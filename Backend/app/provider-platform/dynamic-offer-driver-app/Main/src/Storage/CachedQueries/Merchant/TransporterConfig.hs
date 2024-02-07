@@ -32,10 +32,10 @@ import qualified Data.Aeson as DA
 -- import qualified Data.ByteString.Lazy.Char8 as BL
 -- import qualified Data.Text.Encoding as DTE
 import Data.Aeson.Types as DAT
-import Data.Coerce (coerce)
+-- import Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as Text
-import Domain.Types.Common
+-- import Domain.Types.Common
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Kernel.Prelude
@@ -46,32 +46,76 @@ import qualified Storage.Queries.Merchant.TransporterConfig as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
 create = Queries.create
+import Domain.Types.Person
+-- import qualified Data.ByteString.Lazy.Char8 as BSL
+import System.Random
+import qualified System.Environment as Se
 
-findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
-findByMerchantOpCityId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
-    Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
+
+
+getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity ->  Int  -> m (Maybe TransporterConfig)
+getConfig id toss = do
+  confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(Text.pack "merchantOperatingCityId", DA.String (getId id))])
+  logDebug $ "transporterConfig Cond: " <> show confCond
+  tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
+  context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant)  confCond toss
+  logDebug $ "transporterConfig: " <> show context'
+  let ans = case context' of
+        Left err -> error $ (Text.pack "error in fetching the context value ") <> (Text.pack err)
+        Right contextValue' ->
+          case (DAT.parse jsonToTransporterConfig contextValue') of
+            Success dpc -> dpc
+            DAT.Error err -> error $ (Text.pack "error in parsing the context value for transporter config ") <> (Text.pack err)
+  -- pure $ Just ans
+  logDebug $ "transporterConfig: " <> show ans
+  pure $ Just ans
+
+findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person)-> m (Maybe TransporterConfig)
+findByMerchantOpCityId id (Just personId) =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACTransporterConfigKey personId) >>= \case
+    Just (a :: Int) -> do
+      getConfig id a
     Nothing -> do
-      confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(Text.pack "merchantOperatingCityId", DA.String (getId id))])
-      logDebug $ "transporterConfig Cond: " <> show confCond
-      context' <- liftIO $ CM.evalCtx "test" confCond
-      logDebug $ "transporterConfig: " <> show context'
-      let ans = case context' of
-            Left err -> error $ (Text.pack "error in fetching the context value ") <> (Text.pack err)
-            Right contextValue' ->
-              case (DAT.parse jsonToTransporterConfig contextValue') of
-                Success dpc -> dpc
-                DAT.Error err -> error $ (Text.pack "error in parsing the context value for transporter config ") <> (Text.pack err)
-      -- pure $ Just ans
-      logDebug $ "transporterConfig: " <> show ans
-      cacheTransporterConfig ans
-      pure $ Just ans
+      gen <- newStdGen
+      let (toss,_) = randomR (1, 100) gen :: (Int, StdGen)
+      logDebug $ "the toss value is for transporter config " <> show toss
+      _ <- cacheToss personId toss
+      getConfig id toss
 
-cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
-cacheTransporterConfig cfg = do
+findByMerchantOpCityId id Nothing = do
+  gen <- newStdGen
+  let (toss,_) = randomR (1, 100) gen :: (Int, StdGen)
+  logDebug $ "the toss value is for transporter config " <> show toss
+  tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
+  confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(Text.pack "merchantOperatingCityId", DA.String (getId id))])
+  logDebug $ "transporterConfig Cond: " <> show confCond
+  context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant)  confCond toss
+  logDebug $ "transporterConfig: " <> show context'
+  let ans = case context' of
+        Left err -> error $ (Text.pack "error in fetching the context value ") <> (Text.pack err)
+        Right contextValue' ->
+          case (DAT.parse jsonToTransporterConfig contextValue') of
+            Success dpc -> dpc
+            DAT.Error err -> error $ (Text.pack "error in parsing the context value for transporter config ") <> (Text.pack err)
+  -- pure $ Just ans
+  logDebug $ "transporterConfig: " <> show ans
+  pure $ Just ans
+      
+
+-- cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
+-- cacheTransporterConfig cfg = do
+--   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+--   let merchantIdKey = makeMerchantOpCityIdKey cfg.merchantOperatingCityId
+--   Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @TransporterConfig @(TransporterConfigD 'Unsafe) cfg) expTime
+
+
+cacheToss :: (CacheFlow m r) => Id Person -> Int -> m ()
+cacheToss personId toss = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantOpCityIdKey cfg.merchantOperatingCityId
-  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @TransporterConfig @(TransporterConfigD 'Unsafe) cfg) expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeCACTransporterConfigKey personId) toss expTime
+
+makeCACTransporterConfigKey :: Id Person -> Text
+makeCACTransporterConfigKey id = "driver-offer:CAC:CachedQueries:TransporterConfig:PersonId-" <> id.getId
 
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:TransporterConfig:MerchantOperatingCityId-" <> id.getId

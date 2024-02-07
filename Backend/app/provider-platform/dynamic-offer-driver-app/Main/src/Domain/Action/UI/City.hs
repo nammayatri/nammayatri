@@ -31,7 +31,7 @@ listCities mId = do
   mapM mkCityRes merchantOperatingCities
   where
     mkCityRes MerchantOperatingCity {..} = do
-      transporterConfig <- CQMTC.findByMerchantOpCityId id >>= fromMaybeM (TransporterConfigNotFound id.getId)
+      transporterConfig <- CQMTC.findByMerchantOpCityId id Nothing >>= fromMaybeM (TransporterConfigNotFound id.getId)
       return $
         DTC.CityRes
           { code = city,

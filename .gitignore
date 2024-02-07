@@ -29,3 +29,5 @@ docker-compose.yml
 docker-compose.yaml
 stack.yaml
 
+# Specific Ignore 
+/Backend/temp.sh

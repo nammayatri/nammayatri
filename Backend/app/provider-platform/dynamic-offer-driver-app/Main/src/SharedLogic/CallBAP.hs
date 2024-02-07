@@ -280,7 +280,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
-  mbTransporterConfig <- CQTC.findByMerchantOpCityId booking.merchantOperatingCityId -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+  mbTransporterConfig <- CQTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just driver.id) -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)

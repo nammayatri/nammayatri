@@ -188,9 +188,13 @@ instance FromJSON (TransporterConfigD 'Unsafe)
 
 instance ToJSON (TransporterConfigD 'Unsafe)
 
+
+replaceSingleQuotes :: Text -> Text
+replaceSingleQuotes = Text.replace "'" "\""
+
 readWithInfo :: (Read a, Show a) => Value -> a
 readWithInfo s = case s of
-  String str -> case KP.readMaybe (Text.unpack str) of
+  String str -> case KP.readMaybe (Text.unpack (replaceSingleQuotes str)) of
     Just val -> val
     Nothing -> error . Text.pack $ "Failed to parse: " ++ Text.unpack str
   Number scientific -> case KP.readMaybe (show scientific) of
@@ -200,7 +204,7 @@ readWithInfo s = case s of
 
 readWithInfo' :: (Read a, Show a) => Value -> Maybe a
 readWithInfo' s = case s of
-  String str -> case KP.readMaybe (Text.unpack str) of
+  String str -> case KP.readMaybe (Text.unpack (replaceSingleQuotes str)) of
     Just val -> Just val
     Nothing -> Nothing
   Number scientific -> case KP.readMaybe (show scientific) of
@@ -210,9 +214,9 @@ readWithInfo' s = case s of
 
 parseFCMConfig :: Object -> Parser FCMConfig
 parseFCMConfig v = do
-  url <- v .: DAK.fromText (Text.pack "fcmUrl")
-  serviceAccount <- v .: DAK.fromText (Text.pack "fcmServiceAccount")
-  tokenKeyPrefix <- v .: DAK.fromText (Text.pack "fcmTokenKeyPrefix")
+  url <- v .: DAK.fromText (Text.pack "transporterConfig:fcmUrl")
+  serviceAccount <- v .: DAK.fromText (Text.pack "transporterConfig:fcmServiceAccount")
+  tokenKeyPrefix <- v .: DAK.fromText (Text.pack "transporterConfig:fcmTokenKeyPrefix")
   return $ FCM.FCMConfig url serviceAccount tokenKeyPrefix
 
 valueToMaybe :: FromJSON a => A.Value -> Maybe a
