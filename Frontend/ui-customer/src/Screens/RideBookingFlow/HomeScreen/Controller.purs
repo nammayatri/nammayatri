@@ -1118,15 +1118,15 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
                                 else if fareProductType == "INTER_CITY" then INTERCITY
                                 else if (fareProductType == "RENTAL") then RENTALS 
                                 else ESTIMATES
-      otp = if searchResultType == QUOTES then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if (((fareProductType == "RENTAL") || (fareProductType == "INTER_CITY"))  && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
-      newState = state{data{driverInfoCardState {rentalData{startTimeUTC = fromMaybe "" resp.rideStartTime, baseDuration = spy "estimatedDuration ::: " ((fromMaybe 0 resp.estimatedDuration) / 3600) , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000 },destination =  decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))) , destinationLat = toLocation.lat , destinationLng = toLocation.lon , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))} 
+      otp =if (((fareProductType == "RENTAL") || (fareProductType == "INTER_CITY")) && state.props.currentStage == RideStarted) then fromMaybe "" rideList.endOtp else if searchResultType == QUOTES then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
+      newState = state{data{driverInfoCardState {otp = otp, rentalData{startTimeUTC = fromMaybe "" resp.rideStartTime, baseDuration = spy "estimatedDuration ::: " ((fromMaybe 0 resp.estimatedDuration) / 3600) , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000 },destination =  decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))) , destinationLat = toLocation.lat , destinationLng = toLocation.lon , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))} 
                         }
                       , props{stopLoc = Just {lat : stopLocationDetails^._lat, lng : stopLocationDetails^._lon, stopLocAddress : decodeAddress (Booking stopLocationDetails) }}}
       _ = spy "newSattte" newState
   if stage == "REALLOCATED" then
     exit $ NotificationHandler "REALLOCATE_PRODUCT" newState
   else if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
-    exit $ NotificationHandler "TRIP_STARTED" newState
+    updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "TRIP_FINISHED" newState
   else if (stage == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
@@ -1407,9 +1407,10 @@ eval BackPressed state = do
                       -- _ <- pure $ updateLocalStage HomeScreen
                       -- let newState = state{props{rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
                       -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
+    ConfirmingQuotes -> continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "" } }
     QuoteList       -> do
                       _ <- pure $ performHapticFeedback unit
-                      if state.props.isPopUp == NoPopUp then continue $ state { props{isPopUp = ConfirmBack}} else continue state
+                      if state.props.isPopUp == NoPopUp then continue $ state { props{isPopUp = ConfirmBack}} else continue state                      
     PricingTutorial -> do
                       _ <- pure $ performHapticFeedback unit
                       continue state { props { currentStage = SettingPrice}}

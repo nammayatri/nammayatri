@@ -1137,12 +1137,13 @@ quoteListModelViewState state = let vehicleVariant = case (getSelectedEstimatesO
                                 , selectedQuote: state.props.selectedQuote
                                 , autoSelecting: state.props.autoSelecting
                                 , searchExpire: state.props.searchExpire
-                                , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
+                                , showProgress : isLocalStageOn ConfirmingQuotes || (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
                                 , tipViewProps : getTipViewProps state.props.tipViewProps
                                 , findingRidesAgain : state.props.findingRidesAgain
                                 , progress : state.props.findingQuotesProgress
                                 , appConfig : state.data.config
                                 , vehicleVariant : vehicleVariant
+                                , isRentalSearch : isLocalStageOn ConfirmingQuotes
                                 }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1378,22 +1379,25 @@ getTipViewData dummy =
 
 getTipViewProps :: TipViewProps -> TipViewProps
 getTipViewProps tipViewProps =
-  case tipViewProps.stage of
-    DEFAULT ->  tipViewProps{ stage = DEFAULT
-                            , onlyPrimaryText = false
-                            , isprimaryButtonVisible = false
-                            , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
-                            , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-                            }
-    TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
-                                       , onlyPrimaryText = false
-                                       , isprimaryButtonVisible = true
-                                       , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
-                                       , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-                                       , primaryButtonText = getTipViewText tipViewProps (getString CONTINUE_SEARCH_WITH)
-                                       }
-    TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString CONTINUING_SEARCH_WITH) }
-    RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString SEARCHING_WITH) }
+  if isLocalStageOn ConfirmingQuotes
+    then tipViewProps{ isVisible = false}
+    else 
+      case tipViewProps.stage of
+        DEFAULT ->  tipViewProps{ stage = DEFAULT
+                                , onlyPrimaryText = false
+                                , isprimaryButtonVisible = false
+                                , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
+                                , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                                }
+        TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
+                                          , onlyPrimaryText = false
+                                          , isprimaryButtonVisible = true
+                                          , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
+                                          , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                                          , primaryButtonText = getTipViewText tipViewProps (getString CONTINUE_SEARCH_WITH)
+                                          }
+        TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString CONTINUING_SEARCH_WITH) }
+        RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString SEARCHING_WITH) }
 
 
 

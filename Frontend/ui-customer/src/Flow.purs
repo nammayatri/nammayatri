@@ -92,7 +92,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketBookingFlow.PlaceList.ScreenData as PlaceListData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), RentalScreenStage(..))
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), RentalScreenStage(..), SearchResultType(..))
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig, getTipViewData, setTipViewData)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
@@ -154,6 +154,7 @@ import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduled
 import Helpers.API (callApiBT)
 import Effect.Unsafe ( unsafePerformEffect)
 import Common.Types.App (RideType(..)) as RideType
+import Screens.Types (SearchResultType(..)) as SearchResultType
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -794,9 +795,9 @@ homeScreenFlow = do
       homeScreenFlow
     CONFIRM_RIDE state -> do
       pure $ enableMyLocation false
-      let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == ST.QUOTES 
+      let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == SearchResultType.QUOTES 
                             then state.data.specialZoneSelectedQuote 
-                          else if state.data.currentSearchResultType == ST.INTER_CITY 
+                          else if state.data.currentSearchResultType == SearchResultType.INTERCITY 
                             then state.data.selectedQuoteId
                           else state.props.selectedQuote
       
@@ -4028,7 +4029,13 @@ rentalScreenFlow = do
           modifyScreenState $ RideScheduledScreenStateType (\state -> state{data{bookingId = resp.bookingId}})
           let diffInSeconds = unsafePerformEffect $ EHC.compareUTCDate (updatedState.data.startTimeUTC) (getCurrentUTC "" )
               isNow = ((fromMaybe 0 (INT.fromString diffInSeconds ))< 60 * 30 * 1000)
+          PlaceName address <- getPlaceName (fromMaybe 0.0 updatedState.data.pickUpLoc.lat) (fromMaybe 0.0 updatedState.data.pickUpLoc.lon) HomeScreenData.dummyLocation
+          let source = address.formattedAddress
+          let dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo updatedState.data.dropLoc
+          PlaceName destAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation
+          let dest = destAddress.formattedAddress
           if isNow then do 
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{source = source, destination = if (isJust updatedState.data.dropLoc) then dest else ""}})
             enterRentalRideSearchFlow resp.bookingId
             else rideScheduledFlow
         Left err -> pure unit
@@ -4099,12 +4106,15 @@ updateRideScheduledTime _ = do
     Right (RideBookingListRes listResp) -> do 
       case (head listResp.list) of 
         Just (RideBookingRes resp )-> do 
-          when (resp.bookingDetails ^._fareProductType == "RENTAL") $ do 
+          if (resp.bookingDetails ^._fareProductType == "RENTAL") then do 
             let rideScheduledTime = fromMaybe "" resp.rideScheduledTime
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideType = RideType.RENTAL_RIDE, rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id } }})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id } }})
             pure unit 
+            else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = Nothing}})
           pure unit
-        Nothing -> pure unit
+        Nothing -> do 
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = Nothing}})
+          pure unit
     Left (err) -> pure unit
   pure unit
 
@@ -4113,5 +4123,5 @@ enterRentalRideSearchFlow bookingId = do
   (GlobalState globalState) <- getState 
   updateLocalStage ConfirmingQuotes
   void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, rideRequestFlow = true , bookingId = bookingId, isPopUp = NoPopUp}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingQuotes, rideRequestFlow = true , bookingId = bookingId, isPopUp = NoPopUp}})
   homeScreenFlow 

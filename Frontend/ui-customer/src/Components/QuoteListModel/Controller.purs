@@ -45,4 +45,5 @@ type QuoteListModelState = {
   , progress :: Number
   , appConfig :: AppConfig
   , vehicleVariant :: String
+  , isRentalSearch :: Boolean
 }
