@@ -227,6 +227,7 @@ contactListPrimaryButtonConfig state =
         , background = if enableBtn then Color.black900 else Color.black600
         , isClickable = if enableBtn then true else false
         , id = "ContactListPrimaryButton"
+        , enableRipple = if enableBtn then true else false
         }
   in
     primaryButtonConfig'
