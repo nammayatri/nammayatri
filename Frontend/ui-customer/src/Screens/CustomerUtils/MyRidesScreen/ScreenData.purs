@@ -108,4 +108,5 @@ dummyIndividualCard = {
   , isSrcServiceable : true
   , optionsVisibility : true
   , merchantExoPhone : ""
+  , showRepeatRide : ""
 }

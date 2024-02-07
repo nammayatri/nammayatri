@@ -113,4 +113,5 @@ dummyIndividualCard = {
   , optionsVisibility : false
   , vehicleVariant : Nothing
   , merchantExoPhone : ""
+  , showRepeatRide : ""
 }

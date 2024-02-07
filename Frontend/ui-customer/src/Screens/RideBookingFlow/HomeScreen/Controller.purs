@@ -2626,7 +2626,7 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
   case tag of 
     "RENTALS" -> exit $ GoToRentalsFlow state
-    "INTER_CITY" -> continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
+    "INTER_CITY" -> continue state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
     -- exit $ Go_To_Search_Location_Flow state false
     _ -> continue state
   

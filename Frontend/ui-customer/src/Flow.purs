@@ -2515,6 +2515,7 @@ referralScreenFlow = do
     BACK_TO_HOME -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreen.initData)
       _ <- lift $ lift $ liftFlow $ adjustViewWithKeyboard "true"
+      void $ pure $ hideKeyboardOnNavigation true 
       homeScreenFlow
 
 drawDottedRoute :: HomeScreenState -> FlowBT String Unit
@@ -4067,6 +4068,7 @@ updateRideScheduledTime _ = do
 enterRentalRideSearchFlow :: String -> FlowBT String Unit 
 enterRentalRideSearchFlow bookingId = do 
   (GlobalState globalState) <- getState 
-  updateLocalStage ConfirmRentalRide
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmRentalRide, rideRequestFlow = true , bookingId = bookingId, isPopUp = NoPopUp}})
+  updateLocalStage ConfirmingRide
+  void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, rideRequestFlow = true , bookingId = bookingId, isPopUp = NoPopUp}})
   homeScreenFlow 

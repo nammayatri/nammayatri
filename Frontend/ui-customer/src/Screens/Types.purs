@@ -609,6 +609,7 @@ type IndividualRideCardState =
   , isSrcServiceable :: Boolean
   , optionsVisibility :: Boolean
   , merchantExoPhone :: String
+  , showRepeatRide :: String
   }
 
 
@@ -639,7 +640,8 @@ type ItemState =
     status :: PropValue,
     rideEndTimeUTC :: PropValue,
     alpha :: PropValue,
-    zoneVisibility :: PropValue
+    zoneVisibility :: PropValue,
+    showRepeatRide :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################

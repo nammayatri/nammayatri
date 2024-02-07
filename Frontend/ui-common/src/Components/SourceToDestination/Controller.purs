@@ -43,6 +43,7 @@ type Config =
   , id :: Maybe String
   , overrideSeparatorCount :: Int
   , horizontalSeperatorConfig :: SeparatorConfig
+  , showDestination :: Boolean
   }
 
 type SeparatorConfig = {
@@ -173,4 +174,5 @@ config = {
   }
   , id : Nothing
   , overrideSeparatorCount : 0
+  , showDestination : true
   }

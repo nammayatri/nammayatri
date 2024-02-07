@@ -29,6 +29,7 @@ import Constants (defaultSeparatorCount, getSeparatorFactor)
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Data.Function.Uncurried (runFn1)
 import JBridge (getLayoutBounds)
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -47,6 +48,7 @@ view push config =
         , orientation VERTICAL
         , width MATCH_PARENT
         , margin $ MarginTop config.separatorMargin
+        , visibility $ boolToVisibility config.showDestination
         ][SeparatorView.view $ separatorConfig config
       , destinationLayout config push]
       , sourceLayout config
@@ -120,6 +122,7 @@ destinationLayout config push =
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , margin config.destinationMargin
+  , visibility $ boolToVisibility config.showDestination
   ][  linearLayout
       [ height MATCH_PARENT
       , width WRAP_CONTENT
