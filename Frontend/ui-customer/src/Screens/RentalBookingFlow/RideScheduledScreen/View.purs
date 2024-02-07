@@ -134,7 +134,7 @@ rideDetailsView push state =
             ] <> FontStyle.h1 TypoGraphy
         , textView $
             [ textSize FontSize.a_14
-            , text $ state.baseDistance <> "km"
+            , text $ state.baseDistance <> " km"
             , color Color.black800
             ] <> FontStyle.subHeading1 TypoGraphy
         ]

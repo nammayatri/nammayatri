@@ -705,7 +705,9 @@ dummyRideHistoryItem = RidesInfo {
       actualRideDistance : Nothing,
       stopLocationId : Nothing,
       estimatedDuration : Nothing,
-      actualDuration : Nothing
+      actualDuration : Nothing,
+      startOdometerReading : Nothing,
+      endOdometerReading : Nothing
   }
 
 dummyLocationInfo :: LocationInfo

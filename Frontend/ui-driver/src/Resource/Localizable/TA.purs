@@ -404,6 +404,7 @@ getTA stringKey =
         ENTER_CURRENT_ODOMETER_READING -> "தற்போதைய ஓட்டமிட்டர் வாசிப்பை உள்ளிடவும்"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "ஓட்டமிட்டரின் கடைசி 4 இலக்கங்களை உள்ளிடவும்"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ஓடோமீட்டரின் இலக்கங்களை உள்ளிடவும்"
+        ODOMETER_READING_VALIDATION_FAILED -> "சரியான ஓடோமீட்டர் வாசிப்பை உள்ளிடவும்"
         DELETE ->  "அழி"
         VIEW ->  "பார்வை"
         ISSUE_NO ->  "வெளியீடு எண்"

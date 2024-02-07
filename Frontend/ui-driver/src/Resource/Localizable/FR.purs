@@ -399,6 +399,7 @@ getFR stringKey =
         ENTER_CURRENT_ODOMETER_READING -> "Entrez la lecture actuelle du compteur kilométrique"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "Entrez les 4 derniers chiffres du compteur kilométrique"
         ENTER_THE_DIGITS_OF_ODOMETER -> "Entrez les chiffres du compteur kilométrique"
+        ODOMETER_READING_VALIDATION_FAILED -> "Veuillez saisir un kilométrage valide"
         DELETE -> "Supprimer"
         VIEW -> "Voir"
         ISSUE_NO -> "numéro de problème"

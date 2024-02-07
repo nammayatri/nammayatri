@@ -405,6 +405,7 @@ getKN stringKey =
         ENTER_CURRENT_ODOMETER_READING -> "ಪ್ರಸ್ತುತ ಓಡೋಮೀಟರ್ ಓದುವಿಕೆಯನ್ನು ನಮೂದಿಸಿ"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "ಓಡೋಮೀಟರ್ ಕ್ರಮಾಂಕದ ಕೊನೆಯ 4 ಅಂಕಿಗಳನ್ನು ನಮೂದಿಸಿ"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ಓಡೋಮೀಟರ್‌ನ ಅಂಕೆಗಳನ್ನು ನಮೂದಿಸಿ"
+        ODOMETER_READING_VALIDATION_FAILED -> "ದಯವಿಟ್ಟು ಮಾನ್ಯ ದೂರಮಾಪಕ ಓದುವಿಕೆಯನ್ನು ನಮೂದಿಸಿ"
         DELETE ->  "ಅಳಿಸಿ"
         VIEW ->  "ನೋಟ"
         ISSUE_NO ->  "ಸಂಚಿಕೆ ಸಂಖ್ಯೆ"

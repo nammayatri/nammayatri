@@ -342,7 +342,7 @@ instance encodeEndRideResponse :: Encode EndRideResponse where encode = defaultE
 data ArrivedAtStopRequest = ArrivedAtStopRequest String LatLong
 
 newtype ArrivedAtStopResponse = ArrivedAtStopResponse {
-  response :: String
+  result :: String
 }
 
 instance makeArrivedStopReq :: RestEndpoint ArrivedAtStopRequest ArrivedAtStopResponse where
@@ -591,8 +591,23 @@ newtype RidesInfo = RidesInfo
       stopLocationId :: Maybe String,
       tripScheduledAt :: Maybe String,
       estimatedDuration :: Maybe Int,
-      actualDuration :: Maybe Int
+      actualDuration :: Maybe Int,
+      startOdometerReading :: Maybe OdometerReading,
+      endOdometerReading :: Maybe OdometerReading
   }
+
+newtype OdometerReading = OdometerReading
+  {
+    value :: Number,
+    fileId :: Maybe String
+  }
+
+derive instance genericOdometerReading :: Generic OdometerReading _
+derive instance newtypeOdometerReading :: Newtype OdometerReading _
+instance standardEncodeOdometerReading :: StandardEncode OdometerReading where standardEncode (OdometerReading req) = standardEncode req
+instance showOdometerReading :: Show OdometerReading where show = genericShow
+instance decodeOdometerReading :: Decode OdometerReading where decode = defaultDecode
+instance encodeOdometerReading :: Encode OdometerReading where encode = defaultEncode
 
 newtype StopLocationAddress = StopLocationAddress
   { street :: Maybe String,

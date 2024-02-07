@@ -1038,7 +1038,9 @@ type ActiveRide = {
   nextStopLon :: Maybe Number,
   tripActualDistance :: Maybe Int,
   lastStopLat :: Maybe Number,
-  lastStopLon :: Maybe Number
+  lastStopLon :: Maybe Number,
+  startOdometerReading :: Maybe Number,
+  endOdometerReading :: Maybe Number
 }
 
 type HomeScreenProps =  {
@@ -1053,6 +1055,7 @@ type HomeScreenProps =  {
   odometerValue :: String,
   enterOdometerReadingModal :: Boolean,
   endRideOdometerReadingModal :: Boolean,
+  endRideOdometerReadingValidationFailed :: Boolean,
   showNewStopPopup :: Boolean,
   odometerConfig :: OdometerConfig,
   enterOtpFocusIndex :: Int,

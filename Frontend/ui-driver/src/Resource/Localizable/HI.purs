@@ -407,6 +407,7 @@ getHI stringKey =
         PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP ->  "कृपया ग्राहक से ओटीपी के लिए पूछें"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "ओडोमीटर के अंतिम 4 अंक दर्ज करें"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ओडोमीटर के अंक दर्ज करें"
+        ODOMETER_READING_VALIDATION_FAILED -> "कृपया वैध ओडोमीटर रीडिंग दर्ज करें"
         ENTER_CURRENT_ODOMETER_READING -> "वर्तमान ओडोमीटर पढ़ना दर्ज करें"
         DELETE ->  "मिटाना"
         VIEW ->  "देखना"
