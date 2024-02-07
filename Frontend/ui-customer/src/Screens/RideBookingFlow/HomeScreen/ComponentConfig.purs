@@ -187,11 +187,10 @@ skipButtonConfig state =
   let
     config = PrimaryButton.config
     buttonText =
-      if state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow 
-      then
-        REPORT_ISSUE_
-      else
-        DONE
+      -- if state.props.nightSafetyFlow || state.data.ratingViewState.selectedYesNoButton /= -1
+      if state.props.nightSafetyFlow && state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow
+        then REPORT_ISSUE_
+        else DONE
     primaryButtonConfig' =
       config
         { textConfig
@@ -203,7 +202,7 @@ skipButtonConfig state =
         , margin = MarginTop 22
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
-        , visibility = boolToVisibility $ doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
+        , visibility = boolToVisibility $ state.data.rideType == RideType.RENTAL_RIDE || doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
         , isClickable = state.data.rideType == RideType.RENTAL_RIDE || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
         , alpha = if state.data.rideType == RideType.RENTAL_RIDE || issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
         , enableRipple = state.data.rideType == RideType.RENTAL_RIDE || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0

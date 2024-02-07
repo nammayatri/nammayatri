@@ -1165,7 +1165,8 @@ eval OnResumeCallback state =
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
-eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = 
+eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = do
+  let _ = spy "sakfljhs" state
   case state.data.ratingViewState.issueFacedView of
     true -> continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = true}}}
     false -> continue state {data { ratingViewState{selectedYesNoButton = index, doneButtonVisibility = true, wasOfferedAssistance = Just (index==0)}}} 
@@ -1679,9 +1680,9 @@ eval WhereToClick state = do
   -- -- updateAndExit updateState $ Go_To_Search_Location_Flow updateState false
   -- exit $ UpdateSavedLocation updateState 
 
-eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
-  if state.data.rideType == RideType.RENTAL_RIDE then 
-    continue state {data {rideType = RideType.NORMAL_RIDE}}
+eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = do
+  let _ = spy (show state.data.rideType) state
+  if state.data.rideType == RideType.RENTAL_RIDE then continue state {data {rideType = RideType.NORMAL_RIDE}}
   else   
     case state.data.ratingViewState.issueFacedView of
       true -> do

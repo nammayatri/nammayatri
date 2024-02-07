@@ -256,6 +256,7 @@ rideCustomerExperienceView config push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , gravity CENTER
   ]
   [ customerIssueView config push
   , customerRatingDriverView config push
