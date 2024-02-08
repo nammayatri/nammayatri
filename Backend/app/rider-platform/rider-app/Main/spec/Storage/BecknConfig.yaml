@@ -2,6 +2,8 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   BaseUrl: Servant.Client.Core
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
 
 BecknConfig:
   tableName: beckn_config
@@ -38,11 +40,11 @@ BecknConfig:
     registryUrl: Text
 
   toTType:
-    subscriberUrl: showBaseUrl
-    gatewayUrl: showBaseUrl
-    registryUrl: showBaseUrl
+    subscriberUrl: showBaseUrl|I
+    gatewayUrl: showBaseUrl|I
+    registryUrl: showBaseUrl|I
 
   fromTType:
-    subscriberUrl: parseBaseUrl
-    gatewayUrl: parseBaseUrl
-    registryUrl: parseBaseUrl
+    subscriberUrl: parseBaseUrl|MI
+    gatewayUrl: parseBaseUrl|IM
+    registryUrl: parseBaseUrl|MI
