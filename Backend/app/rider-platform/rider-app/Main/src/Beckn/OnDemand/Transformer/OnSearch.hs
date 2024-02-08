@@ -34,8 +34,9 @@ tfProviderInfo req = do
   name_ <- Beckn.OnDemand.Utils.OnSearch.getProviderName req
   let ridesCompleted_ = 0
   providerId_ <- req.onSearchReqContext.contextBppId & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing bpp_id")
+  domain_ <- req.onSearchReqContext.contextDomain & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing domain")
   url_ <- Beckn.OnDemand.Utils.Common.getContextBppUri req.onSearchReqContext >>= Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing bpp_uri")
-  pure $ Domain.Action.Beckn.OnSearch.ProviderInfo {mobileNumber = mobileNumber_, name = name_, providerId = providerId_, ridesCompleted = ridesCompleted_, url = url_}
+  pure $ Domain.Action.Beckn.OnSearch.ProviderInfo {mobileNumber = mobileNumber_, name = name_, providerId = providerId_, ridesCompleted = ridesCompleted_, url = url_, domain = domain_}
 
 builRentalQuoteInfo :: BecknV2.OnDemand.Types.Item -> Text -> Maybe Domain.Action.Beckn.OnSearch.RentalQuoteDetails
 builRentalQuoteInfo item quoteId_ = do

@@ -57,6 +57,7 @@ data ProviderInfo = ProviderInfo
   { providerId :: Text,
     name :: Text,
     url :: BaseUrl,
+    domain :: Text,
     mobileNumber :: Text,
     ridesCompleted :: Int
   }

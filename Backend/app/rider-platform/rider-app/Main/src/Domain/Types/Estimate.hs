@@ -17,6 +17,7 @@
 module Domain.Types.Estimate where
 
 import Data.Aeson
+import Domain.Types.BppDetails
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSearchRequest
@@ -24,13 +25,16 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Tools.Error
 
 data Estimate = Estimate
   { id :: Id Estimate,
@@ -118,6 +122,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     providerName :: Text,
+    providerLogoUrl :: Maybe Text,
+    providerDescription :: Maybe Text,
     providerId :: Text,
     isValueAddNP :: Bool
   }
@@ -139,6 +145,7 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
 mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -> m EstimateAPIEntity
 mkEstimateAPIEntity Estimate {..} = do
   valueAddNPRes <- QNP.isValueAddNP providerId
+  (bppDetails :: BppDetails) <- CQBppDetails.findBySubscriberIdAndDomain providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found " <> providerId)
   return
     EstimateAPIEntity
       { agencyName = providerName,
@@ -149,7 +156,9 @@ mkEstimateAPIEntity Estimate {..} = do
         driversLatLong = driversLocation,
         nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
         providerId = providerId,
-        providerName = providerName,
+        providerName = bppDetails.name,
+        providerLogoUrl = bppDetails.logoUrl,
+        providerDescription = bppDetails.description,
         isValueAddNP = valueAddNPRes,
         ..
       }
