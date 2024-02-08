@@ -2016,7 +2016,6 @@ type TicketStatusScreenData = {
   keyValArray :: Array KeyVal,
   transactionId :: String,
   bookedForArray :: Array String,
-  ticketName :: String,
   totalAmount :: Int,
   placeInfo :: Maybe TicketPlaceResp,
   servicesInfo :: Array TicketServiceData,
