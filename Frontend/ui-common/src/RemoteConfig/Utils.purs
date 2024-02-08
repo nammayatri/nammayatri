@@ -18,6 +18,9 @@ module Common.RemoteConfig.Utils where
 
 import Common.RemoteConfig.Types (RemoteConfig, RCCarousel)
 import DecodeUtil (decodeForeignObject, parseJSON)
+import Data.String (null)
+import Data.Maybe (Maybe(..))
+import Prelude (not)
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -37,13 +40,15 @@ defaultRemoteConfig ={
     pondicherry : [],
     goa : [],
     pune : [],
-    default : []
+    default : [],
+    config : Nothing
 }
 
-carouselConfigData :: String -> String -> Array RCCarousel
-carouselConfigData city configKey = 
+carouselConfigData :: String -> String -> String -> Array RCCarousel 
+carouselConfigData city configKey default = 
     let remoteConfig = fetchRemoteConfigString configKey
-        decodedConfg = decodeForeignObject (parseJSON remoteConfig) defaultRemoteConfig
+        parseVal = if not null remoteConfig then remoteConfig else fetchRemoteConfigString default
+        decodedConfg = decodeForeignObject (parseJSON parseVal) defaultRemoteConfig
     in getCityBasedConfig decodedConfg city
 
 

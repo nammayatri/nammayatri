@@ -37,7 +37,7 @@ getBannerConfigs state action =
       let location = toLower $ show city
           language = getLanguage $ getLanguageLocale languageKey
           configName = "customer_carousel_banner" <> language
-          datas = RC.carouselConfigData location configName
+          datas = RC.carouselConfigData location configName "customer_carousel_banner_en"
       BannerCarousel.remoteConfigTransformer datas action
     getLanguage :: String -> String
     getLanguage lang = 
