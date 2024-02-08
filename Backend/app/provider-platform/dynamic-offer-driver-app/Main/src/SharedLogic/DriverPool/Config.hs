@@ -48,6 +48,20 @@ getSearchDriverPoolConfig merchantOpCityId mbDist = do
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
   findDriverPoolConfig configs vehicle tripCategory distance
 
+getDriverPoolConfigFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
+getDriverPoolConfigFromDB merchantOpCityId Nothing dist = do
+  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+  getDefaultDriverPoolConfig configs dist
+getDriverPoolConfigFromDB merchantOpCityId (Just vehicle) dist = do
+  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+  let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
+  case configs of
+    [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
+    _ ->
+      case mbApplicableConfig of
+        Just applicableConfig -> return applicableConfig
+        Nothing -> getDefaultDriverPoolConfig configs dist
+
 getDriverPoolConfig ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->

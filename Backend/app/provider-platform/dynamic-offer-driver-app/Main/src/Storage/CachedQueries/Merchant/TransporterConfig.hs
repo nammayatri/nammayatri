@@ -71,6 +71,12 @@ getConfig id toss = do
   logDebug $ "transporterConfig: " <> show ans
   pure $ Just ans
 
+getTransporterConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+getTransporterConfigFromDB id = do
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
+    Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
+    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
+
 findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person) -> m (Maybe TransporterConfig)
 findByMerchantOpCityId id mPersonId = do
   systemConfigs <- L.getOption KBT.Tables
@@ -107,24 +113,8 @@ findByMerchantOpCityIdCAC id Nothing = do
       gen <- newStdGen
       let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
       logDebug $ "the toss value is for transporter config " <> show toss
-      tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
-      confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(Text.pack "merchantOperatingCityId", DA.String (getId id))])
-      logDebug $ "transporterConfig Cond: " <> show confCond
-      context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
-      logDebug $ "transporterConfig: " <> show context'
-      let ans = case context' of
-            Left err -> error $ (Text.pack "error in fetching the context value ") <> (Text.pack err)
-            Right contextValue' ->
-              case (DAT.parse jsonToTransporterConfig contextValue') of
-                Success dpc -> dpc
-                DAT.Error err -> error $ (Text.pack "error in parsing the context value for transporter config ") <> (Text.pack err)
-      -- pure $ Just ans
-      logDebug $ "transporterConfig: " <> show ans
-      pure $ Just ans
-    False -> do
-      Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
-        Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
-        Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
+      getConfig id toss
+    False -> getTransporterConfigFromDB id
 
 cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do

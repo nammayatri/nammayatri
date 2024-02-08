@@ -148,7 +148,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing)
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
-          goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId
+          goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just driverId)
           dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
           (cancellationCount, isGoToDisabled) <-
             if dghInfo.status == Just DDGR.ACTIVE
