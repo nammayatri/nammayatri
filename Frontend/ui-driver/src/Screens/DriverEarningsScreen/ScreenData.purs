@@ -19,6 +19,7 @@ import Screens.Types (AnimationState(..), DriverEarningsScreenState, DriverEarni
 import Engineering.Helpers.Commons (getCurrentUTC)
 import Data.Maybe (Maybe(..))
 import MerchantConfig.DefaultConfig as DC
+import Foreign.Object (empty)
 
 initData :: DriverEarningsScreenState
 initData =
@@ -73,6 +74,7 @@ initData =
             specialZoneImage : "",
             specialZoneText : ""
         }
+      , logField : empty
       }
   , props:
       { subView: EARNINGS_VIEW

@@ -50,7 +50,7 @@ import Effect.Uncurried (runEffectFn4)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer)
-import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
 import Language.Strings (getString)
@@ -100,6 +100,7 @@ import PrestoDOM.Core
 import PrestoDOM.List
 import RemoteConfig as RC
 import Locale.Utils
+import Foreign (unsafeToForeign)
 
 
 instance showAction :: Show Action where
@@ -1055,7 +1056,9 @@ eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetai
 
 eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
 
-eval (CoinsPopupAC PopUpModal.OnButton1Click) state = exit $ EarningsScreen state true
+eval (CoinsPopupAC PopUpModal.OnButton1Click) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_coins_intro_popup_check_now_click"
+  exit $ EarningsScreen state true
 
 eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = do
   void $ pure $ setValueToLocalNativeStore COINS_POPUP_SHOWN_DATE (getCurrentUTC "")
@@ -1071,7 +1074,9 @@ eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerIte
 
 eval ToggleStatsModel state = continue state { props { isStatsModelExpanded = not state.props.isStatsModelExpanded } }
 
-eval (GoToEarningsScreen showCoinsView) state = exit $ EarningsScreen state showCoinsView
+eval (GoToEarningsScreen showCoinsView) state = do
+  let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_coins_click_on_homescreen" $ [{key : "CoinBalance", value : unsafeToForeign state.data.coinBalance}]
+  exit $ EarningsScreen state showCoinsView
 
 eval _ state = continue state
 

@@ -8,7 +8,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types 
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithMultipleParams)
 import Components.GenericHeader as GenericHeader
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, negate, (-), (>), (/=), (<))
@@ -130,13 +130,16 @@ eval (UpdateLeaderBoard (LeaderBoardRes resp)) state = do
         _ -> Nothing
   continue state {data {totalEligibleDrivers = resp.totalEligibleDrivers, rank = currentDriverRank}}
 
-eval (ChangeTab tab) state = 
+eval (ChangeTab tab) state = do
+  let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_driver_referral_scn_changetab" $ [{key : "Tab", value : unsafeToForeign (show tab)}]
   continue state {props {driverReferralType = tab}}
 
 eval (ShowReferedInfo referralInfoPopType) state = 
   continue state {props {referralInfoPopType = referralInfoPopType}}
 
-eval GoToLeaderBoard state = exit $ GoToDriverContestScreen state
+eval GoToLeaderBoard state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_go_to_leaderboard"
+  exit $ GoToDriverContestScreen state
 
 eval _ state = continue state
 
