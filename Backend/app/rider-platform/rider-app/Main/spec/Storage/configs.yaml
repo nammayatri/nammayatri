@@ -18,8 +18,8 @@ MerchantOperatingCity:
   excludedFields: [merchantOperatingCityId]
 
   default:
-    lat: '0.0'
-    long: '0.0'
+    lat: "0.0"
+    long: "0.0"
 
   queries:
     findById:
@@ -44,7 +44,7 @@ MerchantState:
   fields:
     merchantId: Id Merchant
     state: IndianState
-    allowedDestinationStates: '[IndianState]'
+    allowedDestinationStates: "[IndianState]"
 
   excludedFields: [merchantOperatingCityId]
 
@@ -60,3 +60,20 @@ MerchantState:
       kvFunction: findOneWithKV
       where:
         and: [merchantId, state]
+
+ValueAddNP:
+  tableName: value_add_np
+
+  fields:
+    subscriberId: Text
+    enabled: Bool
+
+  constraints:
+    subscriberId: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  queries:
+    findAll:
+      kvFunction: findAllWithKV
+      where: enabled
