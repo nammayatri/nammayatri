@@ -923,6 +923,8 @@ type DriverGoToState = {
 
 
 type EndRideData = {
+    actualRideDuration :: Maybe Int,
+    actualRideDistance :: Maybe Int,
     rideId :: String,
     zeroCommision :: Int,
     tip :: Maybe Int,
@@ -1107,7 +1109,8 @@ type HomeScreenProps =  {
   arrivedAtStop :: Boolean,
   rideStartTimer :: Int,
   odometerFileId :: Maybe String,
-  odometerUploadAttempts :: Int
+  odometerUploadAttempts :: Int,
+  odometerImageUploading :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER

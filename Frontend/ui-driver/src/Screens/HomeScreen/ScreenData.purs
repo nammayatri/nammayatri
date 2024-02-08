@@ -133,6 +133,8 @@ initData = {
         triggerPatchCounter : 0,
         peekHeight : 0,
         endRideData : {
+          actualRideDuration : Nothing,
+          actualRideDistance : Nothing,
           rideId : "",
           zeroCommision : 0,
           tip : Nothing,
@@ -241,7 +243,8 @@ initData = {
         },
         rideStartTimer : 0,
         odometerFileId : Nothing,
-        odometerUploadAttempts : 0
+        odometerUploadAttempts : 0,
+        odometerImageUploading : false
     }
 }
 

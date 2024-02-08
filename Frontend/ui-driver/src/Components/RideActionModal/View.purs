@@ -445,7 +445,7 @@ durationText time =
   let seconds = Maybe.maybe 0 (\time -> abs $ runFn2 JB.differenceBetweenTwoUTC time (getCurrentUTC "")) time
       hours = seconds / 3600
       minutes = (seconds `mod` 3600) / 60
-  in (if hours > 0 then (show hours) <> " : " else "0:") <> (show minutes) <> " m"
+  in (if hours > 0 then (show hours) <> ":" else "00:") <> (if minutes > 9 then show minutes else "0" <> show minutes) <> " hrs"
 
 
 rentalRideDescView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -507,62 +507,6 @@ rentalRideDescView config push =
   , stopImageView config push
   ]
 
--- rentalRideDescView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
--- rentalRideDescView config push = 
---   relativeLayout
---   [ height WRAP_CONTENT
---   , width MATCH_PARENT
---   , margin $ MarginTop 20
---   , afterRender push $ const NoAction
---   ]
---   [ linearLayout
---     [ height WRAP_CONTENT
---     , width WRAP_CONTENT
---     , orientation VERTICAL
---     ] 
---     [ if config.startRideActive 
---         then sourceAddressTextView config push
---         else sourceDestinationLayoutView config push
---     ]
---   , stopImageView config push
---   ]
---   where
---     sourceDestinationLayoutView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
---     sourceDestinationLayoutView config push =
---       linearLayout
---       [ height MATCH_PARENT
---       , width MATCH_PARENT
---       , orientation VERTICAL
---       ]
---       [ startTimeAndODOReadingView config push true 
---       , startTimeAndODOReadingView config push false 
---       , stopTextView config push
---       ]
-    
---     startTimeAndODOReadingView :: forall w . Config -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
---     startTimeAndODOReadingView config push toShowStartTime =
---       let showText = if toShowStartTime then (getString START_TIME) else (getString START_ODO_READING)
---           showDescription = if toShowStartTime 
---                               then (Maybe.fromMaybe (getCurrentUTC "") config.rideStartTime) 
---                               else config.startODOReading <> " Kms"
---       in linearLayout
---           [ height WRAP_CONTENT
---           , width MATCH_PARENT
---           , margin (Margin 25 8 0 0)
---           ]
---           [ textView $ 
---             [ text $ showText <> ": "
---             , height WRAP_CONTENT
---             , width WRAP_CONTENT
---             , color Color.black700
---             ] <> FontStyle.body1 TypoGraphy
---           , textView $ 
---             [ height WRAP_CONTENT
---             , width WRAP_CONTENT
---             , color Color.black800
---             , text $ showDescription
---             ] <> FontStyle.body1 TypoGraphy
---           ]  
 
 stopTextView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 stopTextView config push = 
@@ -838,8 +782,17 @@ rideInfoView push config =
 
 rentalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
 rentalRideInfoView push config = 
-  [ estimatedFareView push config
-    , separator true
+  [ linearLayout[
+    height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , gravity LEFT
+    ][estimatedFareView push config]
+    , linearLayout
+      [  width $ V 1
+      , background Color.lightGrey
+      , height MATCH_PARENT
+      , margin $ Margin 24 0 24 0
+      ][]
     , rentalDurationView push config
   ] 
   <> if config.startRideActive then (
