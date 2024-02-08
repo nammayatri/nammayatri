@@ -245,7 +245,7 @@ instance FromTType' BeamB.Booking Booking where
                 vehicleVariant = vehicleVariant,
                 estimatedDistance = estimatedDistance,
                 maxEstimatedDistance = maxEstimatedDistance,
-                estimatedFare = estimatedFare,
+                estimatedFare = roundToIntegral estimatedFare,
                 estimatedDuration = estimatedDuration,
                 fareParams = fromJust fp, -- This fromJust is safe because of the check above.
                 paymentMethodId = Id <$> paymentMethodId,
@@ -255,7 +255,7 @@ instance FromTType' BeamB.Booking Booking where
                 updatedAt = updatedAt,
                 stopLocationId = Id <$> stopLocationId,
                 isScheduled = fromMaybe False isScheduled,
-                distanceToPickup = distanceToPickup
+                distanceToPickup = roundToIntegral <$> distanceToPickup
               }
       else do
         logError $ "FareParameters not found for booking: " <> show id
@@ -293,7 +293,7 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.vehicleVariant = vehicleVariant,
         BeamB.estimatedDistance = estimatedDistance,
         BeamB.maxEstimatedDistance = maxEstimatedDistance,
-        BeamB.estimatedFare = estimatedFare,
+        BeamB.estimatedFare = realToFrac estimatedFare,
         BeamB.estimatedDuration = estimatedDuration,
         BeamB.fareParametersId = getId fareParams.id,
         BeamB.paymentMethodId = getId <$> paymentMethodId,
@@ -301,7 +301,7 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.riderName = riderName,
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt,
-        BeamB.distanceToPickup = distanceToPickup,
+        BeamB.distanceToPickup = realToFrac <$> distanceToPickup,
         BeamB.isScheduled = Just isScheduled,
         BeamB.stopLocationId = getId <$> stopLocationId
       }
