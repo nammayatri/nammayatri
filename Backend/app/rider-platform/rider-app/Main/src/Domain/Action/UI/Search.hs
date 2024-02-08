@@ -114,6 +114,7 @@ data OneWaySearchReq = OneWaySearchReq
     destination :: SearchReqLocation,
     isSourceManuallyMoved :: Maybe Bool,
     isSpecialLocation :: Maybe Bool,
+    startTime :: Maybe UTCTime,
     isReallocationEnabled :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -209,7 +210,7 @@ search personId req bundleVersion clientVersion device = do
   let (riderPreferredOption, origin, stops, isSourceManuallyMoved, isSpecialLocation, startTime, isReallocationEnabled) =
         case req of
           OneWaySearch oneWayReq ->
-            (SearchRequest.OneWay, oneWayReq.origin, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, now, oneWayReq.isReallocationEnabled)
+            (SearchRequest.OneWay, oneWayReq.origin, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, fromMaybe now oneWayReq.startTime, oneWayReq.isReallocationEnabled)
           RentalSearch rentalReq ->
             (SearchRequest.Rental, rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing)
   unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
