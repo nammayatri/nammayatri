@@ -1107,24 +1107,44 @@ getRateYourRideString str driverName = case getLanguageLocale languageKey of
     _   -> driverName <> " " <> str
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
-searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation
-                                    , locationList: state.data.locationList
-                                    , source: state.data.source
-                                    , destination: state.data.destination
-                                    , isSource: state.props.isSource
-                                    , isSrcServiceable: state.props.isSrcServiceable
-                                    , isDestServiceable: state.props.isDestServiceable
-                                    , isRideServiceable: state.props.isRideServiceable
-                                    , savedlocationList: state.data.savedLocations
-                                    , appConfig : state.data.config
-                                    , logField : state.data.logField
-                                    , crossBtnSrcVisibility: state.props.searchLocationModelProps.crossBtnSrcVisibility
-                                    , crossBtnDestVisibility: state.props.searchLocationModelProps.crossBtnDestVisibility
-                                    , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
-                                    , showLoader: state.props.searchLocationModelProps.showLoader
-                                    , prevLocation: state.data.searchLocationModelData.prevLocation
-                                    , findPlaceIllustration : state.props.searchLocationModelProps.findPlaceIllustration
+searchLocationModelViewState state = let 
+  suffixButtonText = if state.data.startTimeUTC == ""
+                          then getString NOW
+                          else formatDate "hh" <> ":" <> formatDate "mm" <> " " <> formatDate "A" <> ", " <> formatDate "MMM" <> " " <> formatDate "D"
+  in { isSearchLocation: state.props.isSearchLocation
+      , locationList: state.data.locationList
+      , source: state.data.source
+      , destination: state.data.destination
+      , isSource: state.props.isSource
+      , isSrcServiceable: state.props.isSrcServiceable
+      , isDestServiceable: state.props.isDestServiceable
+      , isRideServiceable: state.props.isRideServiceable
+      , savedlocationList: state.data.savedLocations
+      , appConfig : state.data.config
+      , logField : state.data.logField
+      , crossBtnSrcVisibility: state.props.searchLocationModelProps.crossBtnSrcVisibility
+      , crossBtnDestVisibility: state.props.searchLocationModelProps.crossBtnDestVisibility
+      , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
+      , showLoader: state.props.searchLocationModelProps.showLoader
+      , prevLocation: state.data.searchLocationModelData.prevLocation
+      , headerVisibility : state.props.canScheduleRide
+      , suffixButtonVisibility : boolToVisibility $ state.props.canScheduleRide
+      , suffixButton : {
+          text : suffixButtonText
+        , fontStyle : FontStyle.subHeading2 LanguageStyle
+        , prefixImage : "ny_ic_clock_unfilled"
+        , suffixImage : "ny_ic_chevron_down"
+        , padding : Padding 8 0 8 1
+        , gravity : CENTER_VERTICAL
+      }
+      , headerText : getString TRIP_DETAILS_
+      , findPlaceIllustration : state.props.searchLocationModelProps.findPlaceIllustration
                                     }
+  where 
+    formatDate :: String -> String
+    formatDate formatSTR =
+      let startTime = if state.data.startTimeUTC == "" then EHC.getCurrentUTC "" else state.data.startTimeUTC
+      in EHC.convertUTCtoISC startTime formatSTR
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
 quoteListModelViewState state = let vehicleVariant = case (getSelectedEstimatesObject "Lazy") of
@@ -1793,8 +1813,8 @@ locationTagBarConfig state  = let
             id : item.id
           })
         [ { image : "ny_ic_intercity", text : "Intercity", id : "INTER_CITY" },
-          { image : "ny_ic_rental" , text : "Rentals", id : "RENTALS" },
-          { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
+          { image : "ny_ic_rental" , text : "Rentals", id : "RENTALS" }] --,
+          -- { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
   in 
     { tagList : locTagList }
   

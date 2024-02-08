@@ -779,6 +779,8 @@ type HomeScreenStateData =
   , contactList :: Array NewContacts
   , followers :: Maybe (Array Followers)
   , rideType :: RideType
+  , startTimeUTC :: String
+  , selectedDateTimeConfig :: DateTimeConfig
   }
 
 type RentalsInfo = 
@@ -852,6 +854,7 @@ type HomeScreenStateProps =
   , sourceLong :: Number
   , destinationLat :: Number
   , destinationLong :: Number
+  , canScheduleRide :: Boolean
   , stopLoc :: Maybe {
       lat :: Number
     , lng :: Number
@@ -961,6 +964,7 @@ type HomeScreenStateProps =
   , rideDurationTimer :: String
   , rideDurationTimerId :: String
   , showRentalInfo :: Boolean
+  , maxDateBooking :: Int
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

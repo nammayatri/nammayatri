@@ -61,6 +61,13 @@ initData = {
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
+    , selectedDateTimeConfig : {
+        year : 0
+      , month : 0
+      , day : 0
+      , hour : 0
+      , minute : 0
+    }
     , rateCard : {
        additionalFare : 0,
        nightShiftMultiplier : 0.0,
@@ -156,11 +163,14 @@ initData = {
     , followers : Nothing
     , rentalsInfo : Nothing 
     , rideType : NORMAL_RIDE
+    , startTimeUTC : ""
     },
     props: {
       rideRequestFlow : false
+    , maxDateBooking : 5
     , nightSafetyFlow : false
     , isHomescreenExpanded : false
+    , canScheduleRide : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
     , showCallPopUp : false

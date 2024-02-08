@@ -128,7 +128,7 @@ eval (GetRentalQuotes (GetQuotesRes quoteRes)) state = do
     in { quoteDetails : quoteDetails, index : currIndex, activeIndex : 0 , fareDetails : fareDetails}
     ) filteredQuoteList)
   let _ = spy "rentalsQuoteList GetRentalQuotes" rentalsQuoteList
-  continue state { data{rentalsQuoteList = rentalsQuoteList}, props{showShimmer = false, showPrimaryButton = not (DA.null rentalsQuoteList)}}
+  continue state { data{rentalsQuoteList = rentalsQuoteList}, props{showShimmer = false, showPrimaryButton = if state.data.currentStage == RENTAL_SELECT_VARIANT then not (DA.null rentalsQuoteList) else true}}
 
 eval (CheckFlowStatusAction) state = continue state{data{currentStage = RENTAL_SELECT_PACKAGE}, props{showShimmer = false, showPrimaryButton = false}}
 
