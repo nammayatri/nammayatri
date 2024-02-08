@@ -128,11 +128,8 @@ settingUpView state push =
 settingUpContentView :: ContentViewDataType -> NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 settingUpContentView config state push =
   let
-    headerBounds = JB.getLayoutBounds $ EHC.getNewIDWithTag "SettingUpContentViewHeader"
-    exactHeightHeader = getDefaultPixelSize headerBounds.height
     footerBounds = JB.getLayoutBounds $ EHC.getNewIDWithTag "SettingUpContentViewFooter"
     exactHeightFooter = getDefaultPixelSize footerBounds.height
-    scrollViewHeight = EHC.screenHeight unit - exactHeightHeader - exactHeightFooter
   in
     relativeLayout
       [ height MATCH_PARENT
@@ -143,6 +140,7 @@ settingUpContentView config state push =
           [ height MATCH_PARENT
           , width MATCH_PARENT
           , orientation VERTICAL
+          , padding $ PaddingBottom $ exactHeightFooter + 24
           ]
           [ linearLayout
               [ height WRAP_CONTENT
@@ -152,10 +150,14 @@ settingUpContentView config state push =
               ]
               [ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderData config.step)
               ]
-          , scrollView
-              [ height $ V scrollViewHeight
+          , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , weight 1.0
+            ][
+            scrollView
+              [ height MATCH_PARENT
               , width MATCH_PARENT
-              , padding $ PaddingBottom exactHeightFooter
               ]
               [ linearLayout
                   [ height WRAP_CONTENT
@@ -213,6 +215,7 @@ settingUpContentView config state push =
                       [ recommendContactsToInstallView Language
                       ]
                   ]
+                ]
               ]
           ]
       , linearLayout

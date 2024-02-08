@@ -205,7 +205,7 @@ videoView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , gradient (Linear 180.0 [ "#00D9D9D9", "#269F9F9F", Color.black ])
+        , gradient $ Linear gradientAngle [ "#00D9D9D9", "#269F9F9F", Color.black ]
         ]
         [ linearLayout
             [ height WRAP_CONTENT
@@ -219,6 +219,7 @@ videoView push state =
             , alignParentBottom "true,-1"
             , gravity CENTER_VERTICAL
             , padding $ Padding 16 16 16 16
+            , weight 1.0
             ]
             [ textView
                 $ [ text viewConfig.title
@@ -235,7 +236,7 @@ videoView push state =
     ]
   where
   index = fromMaybe (-1) state.props.educationViewIndex
-
+  gradientAngle = if EHC.os == "IOS" then 270.0 else 180.0
   viewConfig = fromMaybe { videoId: "", title: "", coverImageUrl: "" } (state.data.videoList !! index)
 
 arrowButtonView :: forall w. Boolean -> Int -> Boolean -> (Action -> Effect Unit) -> Action -> PrestoDOM (Effect Unit) w

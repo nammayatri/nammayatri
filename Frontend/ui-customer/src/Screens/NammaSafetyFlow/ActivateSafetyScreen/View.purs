@@ -142,25 +142,32 @@ view push state =
 ------------------------------------- dashboardView -----------------------------------
 activateSafetyView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 activateSafetyView state push =
-  scrollView
-    [ height MATCH_PARENT
+  linearLayout
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
+    , weight 1.0
     ]
-    [ linearLayout
+    [ scrollView
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
         ]
-        [ sosButtonView state push
-        , emergencyContactsView state push
-        , otherActionsView state push
+        [ linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            [ sosButtonView state push true
+            , emergencyContactsView state push
+            , otherActionsView state push
+            ]
         ]
     ]
 
 -- ---------------------------------- sosButtonView -----------------------------------
-sosButtonView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-sosButtonView state push =
+sosButtonView :: forall w. NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
+sosButtonView state push useMargin =
   let
     buttonText = case state.props.triggeringSos, state.props.showTestDrill of
       true, _ -> show state.props.timerValue
@@ -176,15 +183,20 @@ sosButtonView state push =
             false, false -> PRESS_THE_BUTTON_ON_EMERGENCY
   in
     linearLayout
-      [ width MATCH_PARENT
+      ([ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
       , gravity CENTER
       ]
+      <>  if useMargin 
+            then [ ]
+          else
+            [weight 1.0]
+                )
       [ textView
           $ [ text descText
             , color Color.white900
-            , margin $ Margin 16 20 16 0
+            , margin $ Margin 16 20 16 20
             , width MATCH_PARENT
             , gravity CENTER
             ]
@@ -192,19 +204,24 @@ sosButtonView state push =
       , relativeLayout
           ( [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , margin $ MarginVertical 40 40
             , gravity CENTER
             ]
-              <> if not state.props.triggeringSos then
-                  [ onClick
-                      ( \action -> do
-                          void $ startTimer state.props.timerValue "triggerSos" "1" push CountDown
-                          void $ push action
-                      )
-                      (const TriggerSosCountdown)
-                  ]
-                else
-                  []
+              <> ( if not state.props.triggeringSos then
+                    [ onClick
+                        ( \action -> do
+                            void $ startTimer state.props.timerValue "triggerSos" "1" push CountDown
+                            void $ push action
+                        )
+                        (const TriggerSosCountdown)
+                    ]
+                  else
+                    []
+                )
+              <> ( if useMargin then
+                    [ margin $ MarginVertical 40 40 ]
+                  else
+                    []
+                )
           )
           [ imageView
               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos_button"
@@ -634,7 +651,7 @@ dismissSoSButtonView state push =
     ]
     [ case state.props.showTestDrill of
         true -> emptyTextView
-        false -> separatorView Color.black700 $ MarginVertical 40 16
+        false -> separatorView Color.black700 $ MarginVertical 10 16
     , textView
         $ [ text $ getString $ INDICATION_TO_EMERGENCY_CONTACTS "INDICATION_TO_EMERGENCY_CONTACTS"
           , color Color.black500
@@ -711,8 +728,7 @@ triggeringSosView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     ]
-    [ sosButtonView state push
-    , layoutWithWeight
+    [ sosButtonView state push false
     , disclaimerView state push
     , warningView state
     , dismissSoSButtonView state push
