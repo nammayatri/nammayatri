@@ -23,14 +23,18 @@ where
 import Domain.Types.WhiteListOrg
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Beckn.Domain (Domain (..))
 import Kernel.Types.Id
 import Kernel.Types.Registry.Subscriber (Subscriber)
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.WhiteListOrg as BeamBLO
 
-findBySubscriberId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe WhiteListOrg)
-findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId]
+findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> m (Maybe WhiteListOrg)
+findBySubscriberIdAndDomain subscriberId domain = findOneWithKV [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId, Se.Is BeamBLO.domain $ Se.Eq domain]
+
+countTotalSubscribers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m Int
+countTotalSubscribers = findAllWithKV [Se.Is BeamBLO.id $ Se.Not $ Se.Eq ""] <&> length
 
 instance FromTType' BeamBLO.WhiteListOrg WhiteListOrg where
   fromTType' BeamBLO.WhiteListOrgT {..} = do
@@ -39,7 +43,8 @@ instance FromTType' BeamBLO.WhiteListOrg WhiteListOrg where
         WhiteListOrg
           { id = Id id,
             subscriberId = ShortId subscriberId,
-            _type = orgType
+            _type = orgType,
+            domain = domain
           }
 
 instance ToTType' BeamBLO.WhiteListOrg WhiteListOrg where
@@ -47,5 +52,6 @@ instance ToTType' BeamBLO.WhiteListOrg WhiteListOrg where
     BeamBLO.WhiteListOrgT
       { BeamBLO.id = getId id,
         BeamBLO.subscriberId = getShortId subscriberId,
-        BeamBLO.orgType = _type
+        BeamBLO.orgType = _type,
+        BeamBLO.domain = domain
       }
