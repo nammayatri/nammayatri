@@ -16,7 +16,7 @@
 module Screens.TicketBookingFlow.MetroTicketStatus.Handler where
 
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, discard, ($), (<$>), unit)
+import Prelude (bind, pure, discard, ($), (<$>), unit, void)
 import Screens.TicketBookingFlow.MetroTicketStatus.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
@@ -26,6 +26,7 @@ import Screens.TicketBookingFlow.MetroTicketStatus.View as MetroTicketStatusView
 import Types.App 
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
 import Screens.Types as ST
+import Storage (setValueToLocalStore, KeyStore(..))
 
 metroTicketStatusScreen :: FlowBT String METRO_TICKET_STATUS_SCREEN_OUTPUT
 metroTicketStatusScreen = do
@@ -33,6 +34,7 @@ metroTicketStatusScreen = do
   action <- lift $ lift $ runScreen $ MetroTicketStatusView.screen state.metroTicketStatusScreen
   case action of
     GoBack ->  do
+      void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
       modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
       App.BackT $ pure App.GoBack 
     NoOutput -> pure NO_OUTPUT_METRO_TICKET_STATUS_SCREEN
