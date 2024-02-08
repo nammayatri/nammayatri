@@ -19,6 +19,7 @@ module Domain.Types.Merchant.TransporterConfig where
 import Data.Aeson as A
 import Data.Aeson.Key as DAK
 import Data.Aeson.Types
+import Data.ByteString.Lazy.Char8 as LB
 import Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.Location (DummyLocationInfo, dummyToLocationData)
@@ -30,8 +31,6 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id
-
--- import  Data.ByteString.Lazy as LB
 
 -- import Data.Time.Clock.POSIX
 
@@ -188,7 +187,6 @@ instance FromJSON (TransporterConfigD 'Unsafe)
 
 instance ToJSON (TransporterConfigD 'Unsafe)
 
-
 replaceSingleQuotes :: Text -> Text
 replaceSingleQuotes = Text.replace "'" "\""
 
@@ -228,6 +226,14 @@ valueToText :: Value -> Text
 valueToText val = case val of
   String text -> text
   _ -> error "Not a string"
+
+jsonDecode :: FromJSON a => Value -> a
+jsonDecode val =
+  case val of
+    String txt -> case A.decode (LB.pack (Text.unpack (replaceSingleQuotes txt))) of
+      Just a -> a
+      Nothing -> error . Text.pack $ "Failed to decode the value " <> Text.unpack txt
+    _ -> error . Text.pack $ "Not a string" <> show val
 
 valueToTextList :: Value -> [Text]
 valueToTextList val =
@@ -300,7 +306,7 @@ jsonToTransporterConfig v =
     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canSuvDowngradeToTaxi")))
     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:rcLimit")))
     <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:automaticRCActivationCutOff")))
-    <*> ((readWithInfo :: (Value -> [Language])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:languagesToBeTranslated")))
+    <*> ((jsonDecode :: (Value -> [Language])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:languagesToBeTranslated")))
     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:isAvoidToll")))
     <*> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:aadhaarImageResizeConfig"))) :: Parser (Maybe AadhaarImageResizeConfig))
     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:enableFaceVerification")))
