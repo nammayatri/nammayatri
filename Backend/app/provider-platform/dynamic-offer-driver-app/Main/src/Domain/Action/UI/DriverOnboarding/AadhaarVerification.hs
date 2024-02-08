@@ -91,7 +91,7 @@ generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
   let tryKey = makeGenerateOtpTryKey person.id
   numberOfTries :: Maybe Int <- Redis.safeGet tryKey
   let tried = fromMaybe 0 numberOfTries
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (isDashboard || tried < transporterConfig.onboardingTryLimit) $ throwError (GenerateAadhaarOtpExceedLimit personId.getId)
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId merchantOpCityId req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
