@@ -190,7 +190,7 @@ processStop booking loc isEdit = do
   whenJust mbRide $ \ride -> do
     person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     let entityData = Notify.StopReq {bookingId = booking.id, stop = Just (mkLocationAPIEntity loc), ..}
-    Notify.notifyStopModification person.merchantOperatingCityId person.id person.deviceToken entityData
+    when (ride.status == DRide.INPROGRESS) $ Notify.notifyStopModification person.merchantOperatingCityId person.id person.deviceToken entityData
 
 validateStopReq :: DBooking.Booking -> Bool -> Flow ()
 validateStopReq booking isEdit = do

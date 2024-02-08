@@ -85,8 +85,8 @@ searchReqFromUpdatesList updList =
               destination = SearchReqLocation (NE.last $ NE.last updList) defaultSearchReqAddress,
               isSourceManuallyMoved = Nothing,
               isSpecialLocation = Nothing,
-              startTime = Nothing,
-              isReallocationEnabled = Nothing
+              isReallocationEnabled = Nothing,
+              startTime = Nothing
             }
    in (origin, destination, req)
 
@@ -99,8 +99,8 @@ mkSearchReqFromLocations origin destination =
               destination = SearchReqLocation destination defaultSearchReqAddress,
               isSourceManuallyMoved = Nothing,
               isSpecialLocation = Nothing,
-              startTime = Nothing,
-              isReallocationEnabled = Nothing
+              isReallocationEnabled = Nothing,
+              startTime = Nothing
             }
    in (origin, destination, req)
 
