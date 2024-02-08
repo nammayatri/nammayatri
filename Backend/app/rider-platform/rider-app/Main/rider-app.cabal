@@ -329,6 +329,7 @@ library
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
       Storage.CachedQueries.Sos
+      Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.WhiteListOrg
       Storage.Queries.AadhaarVerification.AadhaarOtp
       Storage.Queries.AadhaarVerification.AadhaarVerification
@@ -432,6 +433,7 @@ library
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Storage.Beam.AutoCompleteData
+      Domain.Types.ValueAddNP
       Storage.Beam.BecknConfig
       Storage.Beam.BusinessHour
       Storage.Beam.FRFSQuote
@@ -458,6 +460,7 @@ library
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Queries.AutoCompleteData
+      Storage.Beam.ValueAddNP
       Storage.Queries.BecknConfig
       Storage.Queries.BusinessHour
       Storage.Queries.FRFSQuote
@@ -483,6 +486,7 @@ library
       Storage.Queries.TicketBookingServiceCategory
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
+      Storage.Queries.ValueAddNP
   other-modules:
       Paths_rider_app
   hs-source-dirs:
