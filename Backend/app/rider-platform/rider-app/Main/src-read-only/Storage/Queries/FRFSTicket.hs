@@ -23,24 +23,24 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSTicket
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSTicket.FRFSTicket] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findAllByStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicket.FRFSTicketStatus -> m (Maybe (Domain.Types.FRFSTicket.FRFSTicket))
 findAllByStatus status = do
   findOneWithKV
-    [ Se.Is Beam.status $ Se.Eq status
+    [ Se.Is Beam.status $ Se.Eq $ status
     ]
 
 findAllByTicketBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ([Domain.Types.FRFSTicket.FRFSTicket])
 findAllByTicketBookingId (Kernel.Types.Id.Id frfsTicketBookingId) = do
   findAllWithKV
-    [ Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId
+    [ Se.Is Beam.frfsTicketBookingId $ Se.Eq $ frfsTicketBookingId
     ]
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe (Domain.Types.FRFSTicket.FRFSTicket))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
+    [ Se.Is Beam.id $ Se.Eq $ id
     ]
 
 updateStatusByTBookingIdAndTicketNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicket.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Text -> m ()
@@ -51,8 +51,8 @@ updateStatusByTBookingIdAndTicketNumber status (Kernel.Types.Id.Id frfsTicketBoo
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId,
-          Se.Is Beam.ticketNumber $ Se.Eq ticketNumber
+        [ Se.Is Beam.frfsTicketBookingId $ Se.Eq $ frfsTicketBookingId,
+          Se.Is Beam.ticketNumber $ Se.Eq $ ticketNumber
         ]
     ]
 
@@ -60,7 +60,7 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq $ id
         ]
     ]
 
@@ -80,7 +80,7 @@ updateByPrimaryKey Domain.Types.FRFSTicket.FRFSTicket {..} = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
         ]
     ]
 

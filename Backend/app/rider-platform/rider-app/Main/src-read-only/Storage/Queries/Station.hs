@@ -21,40 +21,40 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Station.St
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Station.Station] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe (Domain.Types.Station.Station))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
+    [ Se.Is Beam.id $ Se.Eq $ id
     ]
 
 findByStationCode :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m (Maybe (Domain.Types.Station.Station))
 findByStationCode code = do
   findOneWithKV
-    [ Se.Is Beam.code $ Se.Eq code
+    [ Se.Is Beam.code $ Se.Eq $ code
     ]
 
 getTicketPlacesByMerchantOperatingCityIdAndVehicleType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Station.FRFSVehicleType -> m ([Domain.Types.Station.Station])
 getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOperatingCityId vehicleType = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.vehicleType $ Se.Eq $ vehicleType
         ]
     ]
 
 getTicketPlacesByVehicleType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Station.FRFSVehicleType -> m ([Domain.Types.Station.Station])
 getTicketPlacesByVehicleType vehicleType = do
   findAllWithKV
-    [ Se.Is Beam.vehicleType $ Se.Eq vehicleType
+    [ Se.Is Beam.vehicleType $ Se.Eq $ vehicleType
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe (Domain.Types.Station.Station))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq $ id
         ]
     ]
 
@@ -74,7 +74,7 @@ updateByPrimaryKey Domain.Types.Station.Station {..} = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
         ]
     ]
 

@@ -22,19 +22,19 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.RiderConfi
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.RiderConfig.RiderConfig] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe (Domain.Types.RiderConfig.RiderConfig))
 findByMerchantOperatingCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ merchantOperatingCityId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe (Domain.Types.RiderConfig.RiderConfig))
 findByPrimaryKey (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ merchantOperatingCityId
         ]
     ]
 
@@ -57,7 +57,7 @@ updateByPrimaryKey Domain.Types.RiderConfig.RiderConfig {..} = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]
 
