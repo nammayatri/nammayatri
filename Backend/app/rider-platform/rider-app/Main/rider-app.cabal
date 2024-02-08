@@ -312,6 +312,7 @@ library
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
+      Storage.CachedQueries.BppDetails
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FollowRide
@@ -409,6 +410,7 @@ library
       API.Types.UI.Sos
       API.Types.UI.TicketService
       Domain.Types.BecknConfig
+      Domain.Types.BppDetails
       Domain.Types.BusinessHour
       Domain.Types.FRFSQuote
       Domain.Types.FRFSSearch
@@ -434,6 +436,7 @@ library
       Domain.Types.TicketService
       Domain.Types.ValueAddNP
       Storage.Beam.BecknConfig
+      Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSSearch
@@ -459,6 +462,7 @@ library
       Storage.Beam.TicketService
       Storage.Beam.ValueAddNP
       Storage.Queries.BecknConfig
+      Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSSearch

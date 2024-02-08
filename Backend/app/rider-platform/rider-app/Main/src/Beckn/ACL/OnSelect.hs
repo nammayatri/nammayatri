@@ -55,6 +55,7 @@ buildOnSelectReq req = do
             { providerId = providerId,
               name = "",
               url = providerUrl,
+              domain = encodeToText context.domain,
               mobileNumber = "", ------------TODO remove it or make it as maybe type
               ridesCompleted = 0 -------------TODO remove it or make it as maybe type
             }
@@ -76,6 +77,7 @@ buildOnSelectReqV2 req = do
   handleErrorV2 req $ \message -> do
     providerId <- context.contextBppId & fromMaybeM (InvalidRequest "Missing bpp_id")
     mbProviderUrl <- Utils.getContextBppUri context
+    domain <- context.contextDomain & fromMaybeM (InvalidRequest "Missing domain")
     providerUrl <- mbProviderUrl & fromMaybeM (InvalidRequest "Missing bpp_uri")
     order <- message.onSelectReqMessageOrder & fromMaybeM (InvalidRequest "Missing order")
     items <- order.orderItems & fromMaybeM (InvalidRequest "Missing orderItems")
@@ -92,6 +94,7 @@ buildOnSelectReqV2 req = do
             { providerId = providerId,
               name = "",
               url = providerUrl,
+              domain,
               mobileNumber = "", ------------TODO remove it or make it as maybe type
               ridesCompleted = 0 -------------TODO remove it or make it as maybe type
             }
