@@ -339,9 +339,8 @@ view push state =
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
                   ][ 
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
-                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen" (not (isHomeScreenView state))
+                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen"
                     ]
-                , linearLayout[height MATCH_PARENT, width MATCH_PARENT , background Color.white900, visibility $ boolToVisibility $ isJust state.data.rideHistoryTrip || state.props.isRepeatRide][]
                 , linearLayout
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
@@ -1098,8 +1097,8 @@ bannersCarousal view state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin $ MarginTop 12][]
-  -- ][CarouselHolder.carouselView push $ getCarouselConfig view state] -- uncomment this pleeze
+  , margin $ MarginTop 12
+  ][CarouselHolder.carouselView push $ getCarouselConfig view state] 
 
 emptySuggestionsBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptySuggestionsBanner state push = 
@@ -3009,8 +3008,6 @@ updateRecentTrips action push response = do
 driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> RideBookingRes -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
-  when (isLocalStageOn RideStarted) $ do 
-    void $ pure $ removeMarker "ny_ic_blue_marker"
   void $ pure $ spy "INside state" state
   (GlobalState currentState) <- getState 
   void $ pure $ spy "inside currentState" currentState.homeScreen
@@ -3533,7 +3530,7 @@ homeScreenViewV2 push state =
                                     (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
                                       [locationUnserviceableView push state]
                                     else 
-                                      ( [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" (isHomeScreenView state) else emptyTextView state]
+                                      ( [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state]
                                       <> (maybe [] (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem)
                                       <> [ shimmerView state
                                       , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
@@ -3872,32 +3869,27 @@ pickupLocationView push state =
             ]
         ]
 
-mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Boolean -> PrestoDOM (Effect Unit) w
-mapView push state idTag isMapVisible = 
-  let mapDimensions = spy "getMapDimensions" $ getMapDimensions state
-      _ = spy "Inside mapView" isMapVisible
+mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
+mapView push state idTag = 
+  let mapDimensions = getMapDimensions state
   in
-  PrestoAnim.animationSet [ fadeInWithDelay 250 isMapVisible ] $
+  PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
   relativeLayout
     [ height mapDimensions.height
     , width mapDimensions.width 
     , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
     , stroke $ "1,"<>Color.grey700
     , margin if state.props.currentStage == HomeScreen then (Margin 16 16 16 0) else (Margin 0 0 0 0)
-    , onAnimationEnd
+     , onAnimationEnd
             ( \action -> do
                 _ <- push action
                 _ <- getCurrentPosition push CurrentLocation
-                void $ pure $ spy "INside showMap" "sdfjhgsdjhbjk"
                 _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
                 if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
                 else pure unit
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
-                  RideSearch -> push $ RideSearchAction 
-                  ConfirmRentalRide -> push $ ConfirmRentalRideAction
                   _ -> pure unit
-                -- if state.props.currentStage == RideSearch then push $ RideSearchAction else pure unit
             )
             (const MapReadyAction)
     ]$[ linearLayout

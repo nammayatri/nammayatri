@@ -1578,10 +1578,6 @@ public class MobilityCommonBridge extends HyperBridge {
 
 
                     if (isActual && normalRoutedistance <= 50000) {
-                        // LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
-                        // LatLng toPointObj = new LatLng(destLat, destLong);
-                        // polylineOptions.add(toPointObj);
-                        // polylineOptions.add(fromPointObj);
                         for (int i = coordinates.length() - 1; i >= 0; i--) {
                             JSONObject coordinate = (JSONObject) coordinates.get(i);
                             double lng = coordinate.getDouble("lng");
@@ -1630,6 +1626,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         markers.put(destMarker, tempmarker);
 
                     }
+
                     if (rentalPolylineOption != null && rentalPolylineOption.getPoints().size() > 1 &&stopMarker != null && !stopMarker.equals("")) {
                         List<LatLng> points = rentalPolylineOption.getPoints();
                         LatLng source = points.get(0);

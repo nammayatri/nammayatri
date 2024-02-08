@@ -3475,14 +3475,9 @@ searchLocationFlow = do
         modifyScreenState $ 
           SearchLocationScreenStateType (\slsState -> slsState {props{searchLocStage = PredictionsStage, focussedTextField = Nothing ,locUnserviceable = false, isSpecialZone = true  }
                                                                 , data {latLonOnMap = SearchLocationScreenData.dummyLocationInfo, specialZoneCoordinates = "", confirmLocCategory = "", nearByGates = []}}) -- restoring to previous state
-        -- searchLocationFlow
       else do 
-        if focussedField == SearchLocPickup then 
           modifyScreenState $ 
-            RentalScreenStateType (\rentalScreen -> rentalScreen {data{pickUpLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.srcLoc}})
-          else
-            modifyScreenState $ 
-              RentalScreenStateType (\rentalScreen -> rentalScreen {data{dropLoc = state.data.destLoc}}) 
+            RentalScreenStateType (\rentalScreen -> rentalScreen {data{pickUpLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.srcLoc, dropLoc = state.data.destLoc}})
       if state.data.fromScreen == (Screen.getScreen Screen.RENTAL_SCREEN) then 
         rentalScreenFlow 
         else pure unit
