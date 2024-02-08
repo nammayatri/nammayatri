@@ -130,8 +130,8 @@ data ServiceHandle m = ServiceHandle
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
   }
 
-buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
-buildEndRideHandle merchantId merchantOpCityId = do
+buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DP.Person) -> Flow (ServiceHandle Flow)
+buildEndRideHandle merchantId merchantOpCityId driverId = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId True
   return $
     ServiceHandle
@@ -147,7 +147,7 @@ buildEndRideHandle merchantId merchantOpCityId = do
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
         getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
         clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
-        findConfig = QTConf.findByMerchantOpCityId merchantOpCityId Nothing,
+        findConfig = QTConf.findByMerchantOpCityId merchantOpCityId driverId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId merchantOpCityId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,

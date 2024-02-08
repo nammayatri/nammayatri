@@ -27,6 +27,7 @@ import Kernel.Utils.Error
 import Kernel.Utils.Logging
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import qualified System.Environment as SE
+import System.Random
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   { popupDelayToAddAsPenalty :: Maybe Seconds,
