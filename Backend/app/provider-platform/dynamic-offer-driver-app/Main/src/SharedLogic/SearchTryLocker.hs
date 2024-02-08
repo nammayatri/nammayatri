@@ -18,8 +18,9 @@ module SharedLogic.SearchTryLocker
     markSearchTryAsAssigned,
     isBookingCancelled,
     whenBookingCancellable,
-    markBookingAsAssigned,
-    isBookingAssigned,
+    markBookingAssignmentInprogress,
+    isBookingAssignmentInprogress,
+    markBookingAssignmentCompleted,
   )
 where
 
@@ -76,11 +77,11 @@ isBookingCancelled ::
 isBookingCancelled bookingId = do
   fromMaybe False <$> Hedis.get (mkBookingCancelledKey bookingId)
 
-isBookingAssigned ::
+isBookingAssignmentInprogress ::
   CacheFlow m r =>
   Id Booking ->
   m Bool
-isBookingAssigned bookingId = do
+isBookingAssignmentInprogress bookingId = do
   fromMaybe False <$> Hedis.get (mkBookingAssignedKey bookingId)
 
 whenBookingCancellable ::
@@ -90,17 +91,24 @@ whenBookingCancellable ::
   m ()
 whenBookingCancellable bookingId actions = do
   isBookingCancelled' <- isBookingCancelled bookingId
-  isBookingAssigned' <- isBookingAssigned bookingId
-  unless (isBookingCancelled' || isBookingAssigned') $ do
+  isBookingAssignmentInprogress' <- isBookingAssignmentInprogress bookingId
+  unless (isBookingCancelled' || isBookingAssignmentInprogress') $ do
     Hedis.setExp (mkBookingCancelledKey bookingId) True 120
     actions
 
-markBookingAsAssigned ::
+markBookingAssignmentInprogress ::
   CacheFlow m r =>
   Id Booking ->
   m ()
-markBookingAsAssigned bookingId = do
+markBookingAssignmentInprogress bookingId = do
   Hedis.setExp (mkBookingAssignedKey bookingId) True 120
+
+markBookingAssignmentCompleted ::
+  CacheFlow m r =>
+  Id Booking ->
+  m ()
+markBookingAssignmentCompleted bookingId = do
+  Hedis.del (mkBookingAssignedKey bookingId)
 
 mkBookingCancelledKey :: Id Booking -> Text
 mkBookingCancelledKey bookingId = "Booking:Cancelled:BookingId-" <> bookingId.getId

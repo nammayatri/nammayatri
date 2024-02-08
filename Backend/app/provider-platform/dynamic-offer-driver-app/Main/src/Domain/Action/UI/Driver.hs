@@ -937,16 +937,17 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
       whenJust req.offeredFare $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
       quote <- QQuote.findById (Id searchTry.estimateId) >>= fromMaybeM (QuoteNotFound searchTry.estimateId)
       booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
-      isBookingAssigned' <- CS.isBookingAssigned booking.id
-      when isBookingAssigned' $ throwError RideRequestAlreadyAccepted
+      isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
+      when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted
       isBookingCancelled' <- CS.isBookingCancelled booking.id
       when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
-      CS.markBookingAsAssigned booking.id
+      CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
       unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
       QST.updateStatus searchTry.id DST.COMPLETED
       (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing booking.id.getId
       driverFCMPulledList <- deactivateExistingQuotes merchantOpCityId merchantId driver.id searchTry.id quote.estimatedFare
       void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
+      CS.markBookingAssignmentCompleted booking.id
       return driverFCMPulledList
 
 getStats ::
