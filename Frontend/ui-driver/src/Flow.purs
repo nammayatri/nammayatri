@@ -62,7 +62,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Suggestions as EHS
-import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar, getCityFromCode)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar, getCityFromCode, handleUpdatedTerms)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig)
@@ -299,12 +299,14 @@ loginFlow :: FlowBT String Unit
 loginFlow = do
   liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
+  appConfig <- getAppConfigFlowBT Constants.appConfig
   (GlobalState allState) <- getState
   when (allState.globalProps.addTimestamp) $ do
     liftFlowBT $ setEventTimestamp "loginFlow"
     logData <- liftFlowBT $ getTimeStampObject unit
     liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
     modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
+  setValueToLocalStore T_AND_C_VERSION (show appConfig.termsVersion)
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
@@ -1846,6 +1848,7 @@ homeScreenFlow = do
     liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = false}})
     modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
+  liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED
   action <- UI.homeScreen
   case action of
     GO_TO_PROFILE_SCREEN -> do

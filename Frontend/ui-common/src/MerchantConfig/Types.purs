@@ -28,6 +28,7 @@ type CommonAppConfig = (
   , appData :: AppDatas
   , otpRegex :: String
   , termsLink :: String
+  , termsVersion :: Number
   , privacyLink :: String
   , dashboard :: DashboardConfig
   , logFunctionCalls :: Boolean

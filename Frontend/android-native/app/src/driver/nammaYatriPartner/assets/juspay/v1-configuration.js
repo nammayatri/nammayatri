@@ -163,6 +163,7 @@ window.getMerchantConfig = function () {
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "termsLink" : "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc"
+    , "termsVersion" : 1.0
     , "privacyLink" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
     , "feature" : {
       "enableBonus" : true

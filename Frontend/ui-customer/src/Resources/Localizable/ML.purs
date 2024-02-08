@@ -783,4 +783,4 @@ getML stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "ഡ്രൈവർ വിളിക്കാൻ റൈഡ് തിരഞ്ഞെടുക്കുക"
         ADD_IMAGE_S -> "ചിത്രം ചേർക്കുക"
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "ഇതിനകം നിങ്ങളുടെ റൈഡ് പ്രവർത്തിക്കുന്നു"
-
+        TERMS_AND_CONDITIONS_UPDATED -> "ടി&സിയും സ്വകാര്യതാ നയവും അപ്ഡേറ്റ് ചെയ്തിട്ടുണ്ട്"

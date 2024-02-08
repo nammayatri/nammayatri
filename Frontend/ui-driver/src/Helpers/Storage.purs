@@ -119,6 +119,7 @@ data KeyStore = USER_NAME
                 | REFERRAL_CODE_ADDED
                 | SAVED_GOTO_COUNT
                 | OLD_COIN_BALANCE
+                | T_AND_C_VERSION
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

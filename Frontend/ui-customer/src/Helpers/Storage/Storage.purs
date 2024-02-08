@@ -91,6 +91,7 @@ data KeyStore
   | REALLOCATE_PRODUCT_ENABLED
   | UPDATE_REPEAT_TRIPS
   | CUSTOMER_LOCATION
+  | T_AND_C_VERSION
 
 derive instance genericKeyStore :: Generic KeyStore _
 

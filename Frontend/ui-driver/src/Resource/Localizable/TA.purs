@@ -1209,4 +1209,4 @@ getTA stringKey =
         MAX -> "அதிகமாக"
         COINS -> "நாணயங்கள்"
         COINS_ADDED -> "நாணயங்கள் சேர்க்கப்பட்டன"
-
+        TERMS_AND_CONDITIONS_UPDATED -> "T&Cகள் மற்றும் தனியுரிமைக் கொள்கைகள் புதுப்பிக்கப்பட்டுள்ளன"

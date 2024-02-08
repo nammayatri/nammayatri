@@ -1209,3 +1209,4 @@ getEN stringKey =
         COINS -> "Coins"
         COINS_ADDED -> "Coins Added"
         CANT_FIND_OPTION -> "Can't find option"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C's and Privacy policy have been updated"
