@@ -974,7 +974,9 @@ eval GoToFollowRide state = exit $ ExitToFollowRide state
 eval (UpdateRepeatTrips rideList) state = do
   void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
   let shimmerState = state{props{showShimmer = false}}
-      list = rideListToTripsTransformer (rideList ^._list)
+      listResp = rideList ^._list
+      filteredList = filter (\(RideBookingRes item) -> item.bookingDetails ^._fareProductType /= "RENTAL") listResp
+      list = rideListToTripsTransformer filteredList
   if not (null list) then do
     let updatedMap = updateMapWithPastTrips list shimmerState
     void $ pure $ setSuggestionsMap updatedMap
