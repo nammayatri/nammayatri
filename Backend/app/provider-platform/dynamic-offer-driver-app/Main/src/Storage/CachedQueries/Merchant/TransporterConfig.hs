@@ -39,6 +39,8 @@ import Domain.Types.Common
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -70,7 +72,18 @@ getConfig id toss = do
   pure $ Just ans
 
 findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person) -> m (Maybe TransporterConfig)
-findByMerchantOpCityId id (Just personId) = do
+findByMerchantOpCityId id mPersonId = do
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
+  if useCACConfig
+    then findByMerchantOpCityIdCAC id mPersonId
+    else findByMerchantOpCityIdDB id
+
+findByMerchantOpCityIdDB :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+findByMerchantOpCityIdDB (Id merchantOperatingCityId) = Queries.findByMerchantOpCityId (Id merchantOperatingCityId)
+
+findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person) -> m (Maybe TransporterConfig)
+findByMerchantOpCityIdCAC id (Just personId) = do
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
   case isExp of
@@ -86,7 +99,7 @@ findByMerchantOpCityId id (Just personId) = do
           getConfig id toss
     False -> do
       getConfig id 1
-findByMerchantOpCityId id Nothing = do
+findByMerchantOpCityIdCAC id Nothing = do
   enableCAC' <- liftIO $ Se.lookupEnv "ENABLE_CAC"
   let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
   case enableCAC of
