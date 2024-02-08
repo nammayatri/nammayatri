@@ -33,13 +33,12 @@ import Kernel.Types.App
 import Kernel.Types.Cache
 import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
-import Kernel.Types.Error
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig, throwError)
+import Kernel.Utils.Common (CacheConfig)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -273,12 +272,12 @@ instance Registry Flow where
       fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id
         >>>= \registryUrl -> do
           subId <- Registry.registryLookup registryUrl sub
-          checkBlacklist <- Registry.whitelisting isWhiteListed subId
-          if isJust checkBlacklist
+          totalSubIds <- QWhiteList.countTotalSubscribers
+          if totalSubIds == 0
             then do
-              validateWhitelisting validateWhiteListed subId
+              Registry.checkBlacklisted blackListed subId
             else do
-              pure checkBlacklist
+              Registry.validateWhitelisting validateWhiteListed subId
     where
       fetchFromDB subscriberId uniqueId merchantId = do
         mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId subscriberId uniqueId
@@ -288,12 +287,8 @@ instance Registry Flow where
             do
               mbMerchant <- CM.findById (Id merchantId)
               pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
-      isWhiteListed subscriberId = QBlackList.findBySubscriberId (ShortId subscriberId) <&> isNothing
-      validateWhiteListed subscriberId = QWhiteList.findBySubscriberId (ShortId subscriberId) <&> isNothing
-      validateWhitelisting p = maybe (pure Nothing) \sub -> do
-        whenM (p sub.subscriber_id) . throwError . InvalidRequest $
-          "Not Whitelisted subscriber " <> sub.subscriber_id
-        pure (Just sub)
+      blackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
+      validateWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

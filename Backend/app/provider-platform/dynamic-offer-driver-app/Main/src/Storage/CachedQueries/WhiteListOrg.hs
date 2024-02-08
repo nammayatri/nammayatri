@@ -14,7 +14,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.WhiteListOrg
-  ( findBySubscriberId,
+  ( findBySubscriberIdAndDomain,
+    countTotalSubscribers,
   )
 where
 
@@ -23,23 +24,37 @@ import Domain.Types.Common
 import Domain.Types.WhiteListOrg
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Beckn.Domain (Domain (..))
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
 import qualified Storage.Queries.WhiteListOrg as Queries
 
-findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe WhiteListOrg)
-findBySubscriberId subscriberId =
-  Hedis.safeGet (makeShortIdKey subscriberId) >>= \case
+findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> m (Maybe WhiteListOrg)
+findBySubscriberIdAndDomain subscriberId domain =
+  Hedis.safeGet (makeShortIdKey subscriberId domain) >>= \case
     Just a -> return . Just $ coerce @(WhiteListOrgD 'Unsafe) @WhiteListOrg a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheOrganization /=<< Queries.findBySubscriberId subscriberId
+    findAndCache = flip whenJust cacheOrganization /=<< Queries.findBySubscriberIdAndDomain subscriberId domain
 
 cacheOrganization :: (CacheFlow m r) => WhiteListOrg -> m ()
 cacheOrganization org = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeShortIdKey org.subscriberId) (coerce @WhiteListOrg @(WhiteListOrgD 'Unsafe) org) expTime
+  Hedis.setExp (makeShortIdKey org.subscriberId org.domain) (coerce @WhiteListOrg @(WhiteListOrgD 'Unsafe) org) expTime
 
-makeShortIdKey :: ShortId Subscriber -> Text
-makeShortIdKey subscriberId = "CachedQueries:WhiteListOrg:SubscriberId-" <> subscriberId.getShortId
+makeShortIdKey :: ShortId Subscriber -> Domain -> Text
+makeShortIdKey subscriberId domain = "CachedQueries:WhiteListOrg:SubscriberId-" <> subscriberId.getShortId <> "-Domain-" <> show domain
+
+countTotalSubscribers :: (CacheFlow m r, EsqDBFlow m r) => m Int
+countTotalSubscribers = do
+  Hedis.safeGet "CachedQueries:WhiteListOrg:TotalSubscribers" >>= \case
+    Just a -> return a
+    Nothing -> findAndCache
+  where
+    findAndCache = cacheTotalSubscribers /=<< Queries.countTotalSubscribers
+
+cacheTotalSubscribers :: (CacheFlow m r) => Int -> m ()
+cacheTotalSubscribers orgsLen = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp "CachedQueries:WhiteListOrg:TotalSubscribers" orgsLen expTime

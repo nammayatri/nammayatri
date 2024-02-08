@@ -19,12 +19,14 @@ module Storage.Beam.WhiteListOrg where
 import qualified Database.Beam as B
 import qualified Domain.Types.WhiteListOrg as Domain
 import Kernel.Prelude
+import Kernel.Types.Beckn.Domain (Domain)
 import Tools.Beam.UtilsTH
 
 data WhiteListOrgT f = WhiteListOrgT
   { id :: B.C f Text,
     subscriberId :: B.C f Text,
-    orgType :: B.C f Domain.WhiteListOrgType
+    orgType :: B.C f Domain.WhiteListOrgType,
+    domain :: B.C f Domain
   }
   deriving (Generic, B.Beamable)
 

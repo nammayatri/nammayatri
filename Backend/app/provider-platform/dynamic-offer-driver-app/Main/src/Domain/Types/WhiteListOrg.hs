@@ -13,12 +13,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.WhiteListOrg where
 
 import Data.Aeson
 import Domain.Types.Common
 import Kernel.Prelude
+import Kernel.Types.Beckn.Domain (Domain (..))
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
@@ -26,7 +28,8 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data WhiteListOrgType
   = PROVIDER
-  | APP
+  | BAP
+  | BPP
   | GATEWAY
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -35,10 +38,17 @@ $(mkBeamInstancesForEnum ''WhiteListOrgType)
 
 $(mkFromHttpInstanceForEnum ''WhiteListOrgType)
 
+$(mkBeamInstancesForEnum ''Domain)
+
+$(mkFromHttpInstanceForEnum ''Domain)
+
+deriving instance Ord Domain
+
 data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
   { id :: Id WhiteListOrg,
     subscriberId :: ShortId Subscriber,
-    _type :: WhiteListOrgType
+    _type :: WhiteListOrgType,
+    domain :: Domain
   }
   deriving (Generic)
 

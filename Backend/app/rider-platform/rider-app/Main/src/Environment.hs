@@ -49,7 +49,7 @@ import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig, fromMaybeM, throwError)
+import Kernel.Utils.Common (CacheConfig, fromMaybeM)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -264,22 +264,18 @@ instance Registry Flow where
     Registry.withSubscriberCache $ \sub -> do
       fetchFromDB sub.merchant_id >>= \registryUrl -> do
         subId <- Registry.registryLookup registryUrl sub
-        checkBlacklist <- Registry.whitelisting isWhiteListed subId
-        if isJust checkBlacklist
+        totalSubIds <- QWhiteList.countTotalSubscribers
+        if totalSubIds == 0
           then do
-            validateWhitelisting validateWhiteListed subId
+            Registry.checkBlacklisted blackListed subId
           else do
-            pure checkBlacklist
+            Registry.validateWhitelisting validateWhiteListed subId
     where
       fetchFromDB merchantId = do
         merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
         pure $ merchant.registryUrl
-      isWhiteListed subscriberId = QBlackList.findBySubscriberId (ShortId subscriberId) <&> isNothing
-      validateWhiteListed subscriberId = QWhiteList.findBySubscriberId (ShortId subscriberId) <&> isNothing
-      validateWhitelisting p = maybe (pure Nothing) \sub -> do
-        whenM (p sub.subscriber_id) . throwError . InvalidRequest $
-          "Not Whitelisted subscriber " <> sub.subscriber_id
-        pure (Just sub)
+      blackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
+      validateWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
