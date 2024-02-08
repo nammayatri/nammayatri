@@ -196,7 +196,7 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
   void $ QST.create newSearchTry
   -- void $ QRB.updateStatus booking.id SRB.REALLOCATED
   void $ QSR.updateAutoAssign searchReq.id True
-  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
+  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing
   let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   (res, _) <-
     sendSearchRequestToDrivers'

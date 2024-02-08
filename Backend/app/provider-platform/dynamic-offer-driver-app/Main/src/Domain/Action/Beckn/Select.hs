@@ -74,7 +74,7 @@ handler merchant sReq estimate = do
   -- logDebug $ "contextValueEvaluated: " <> show value
   searchTry <- createNewSearchTry farePolicy searchReq searchReq.customerCancellationDues
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
-  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
+  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   (res, isGoHomeBatch) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg
   let inTime = fromIntegral (if isGoHomeBatch then goHomeCfg.goHomeBatchDelay else driverPoolConfig.singleBatchProcessTime)

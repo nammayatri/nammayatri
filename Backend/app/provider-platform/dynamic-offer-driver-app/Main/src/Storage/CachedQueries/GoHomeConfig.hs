@@ -23,6 +23,7 @@ import Data.HashMap.Strict as HashMap
 import Data.Text
 import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.Person as DP
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.CacheFlow (CacheFlow)
@@ -32,39 +33,77 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
 import qualified Storage.Queries.GoHomeConfig as Queries
 import qualified System.Environment as SE
+import qualified System.Environment as Se
 import System.Random
 import Tools.Error (GenericError (..))
 
-findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
-findByMerchantOpCityId id = do
-  ghcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id))]
-  logDebug $ "the context is " <> show ghcCond
-  tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
-  gen <- newStdGen
-  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-  logDebug $ "the toss value is for gohomeConig " <> show toss
-  contextValue <- liftIO $ CM.evalExperiment (fromMaybe "atlas_driver_offer_bpp_v2" tenant) ghcCond toss
-  case contextValue of
-    Left err -> error $ (pack "error in fetching the context value for GoHomeConfig ") <> (pack err)
-    Right contextValue' -> do
-      logDebug $ "the fetched context value is :" <> show contextValue'
-      --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
-      valueHere <- buildGhcType contextValue'
-      logDebug $ "the build context value is : " <> show valueHere
-      return valueHere
-  where
-    buildGhcType cv =
-      case (DAT.parse jsonToGoHomeConfig cv) of
-        Success ghc -> pure ghc
-        Error err -> do
-          logError $ (pack "error in parsing the context value for GoHomeConfig : ") <> (pack err)
-          expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-          Hedis.safeGet (makeGoHomeKey id) >>= \case
-            Just cfg -> return cfg
+getGoHomeConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
+getGoHomeConfig id toss = do
+  confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id))])
+  logDebug $ "goHomeConfig Cond: " <> show confCond
+  tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
+  context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
+  logDebug $ "goHomeConfig: " <> show context'
+  let ans = case context' of
+        Left err -> error $ (pack "error in fetching the context value ") <> (pack err)
+        Right contextValue' ->
+          case (DAT.parse jsonToGoHomeConfig contextValue') of
+            Success dpc -> dpc
+            DAT.Error err -> error $ (pack "error in parsing the context value for go home config ") <> (pack err)
+  -- pure $ Just ans
+  logDebug $ "goHomeConfig: " <> show ans
+  pure ans
+
+getGoHomeConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
+getGoHomeConfigFromDB id = do
+  logDebug $ "Fetching goHomeConfig from DB"
+  Hedis.safeGet (makeGoHomeKey id) >>= \case
+    Just cfg -> return cfg
+    Nothing -> do
+      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+      cfg <- fromMaybeM (InternalError ("Could not find Go-To config corresponding to the stated merchant id" <> show id)) =<< Queries.findByMerchantOpCityId id
+      Hedis.setExp (makeGoHomeKey id) cfg expTime
+      return cfg
+
+findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id DP.Person) -> m GoHomeConfig
+findByMerchantOpCityId id (Just personId) = do
+  enableCAC' <- liftIO $ SE.lookupEnv "ENABLE_CAC"
+  let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
+  case enableCAC of
+    False -> getGoHomeConfigFromDB id
+    True -> do
+      tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
+      isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+      case isExp of
+        True -> do
+          Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACGoHomeConfigKey personId) >>= \case
+            (Just (a :: Int)) -> do
+              getGoHomeConfig id a
             Nothing -> do
-              cfg <- fromMaybeM (InternalError ("Could not find Go-To config corresponding to the stated merchant id" <> show id)) =<< Queries.findByMerchantOpCityId id
-              Hedis.setExp (makeGoHomeKey id) cfg expTime
-              return cfg
+              gen <- newStdGen
+              let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+              logDebug $ "the toss value is for goHomeConfig " <> show toss
+              _ <- cacheToss personId toss
+              getGoHomeConfig id toss
+        False -> getGoHomeConfig id 1
+findByMerchantOpCityId id Nothing = do
+  enableCAC' <- liftIO $ SE.lookupEnv "ENABLE_CAC"
+  let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
+  case enableCAC of
+    True -> do
+      gen <- newStdGen
+      let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+      logDebug $ "the toss value is for goHomeConfig " <> show toss
+      getGoHomeConfig id toss
+    False -> getGoHomeConfigFromDB id
 
 makeGoHomeKey :: Id MerchantOperatingCity -> Text
 makeGoHomeKey id = "driver-offer:CachedQueries:GoHomeConfig:MerchantOpCityId-" <> id.getId
+
+cacheToss :: (CacheFlow m r) => Id Person -> Int -> m ()
+cacheToss personId toss = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeCACGoHomeConfigKey personId) toss expTime
+
+makeCACGoHomeConfigKey :: Id Person -> Text
+makeCACGoHomeConfigKey id = "driver-offer:CAC:CachedQueries:GoHomeConfig:PersonId-" <> id.getId

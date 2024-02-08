@@ -35,16 +35,28 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
 import qualified System.Environment as SE
+import System.Random
 
-findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
-findByMerchantOpCityId id =
+getDriverIntelligentPoolConfigFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
+getDriverIntelligentPoolConfigFromDB id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(DriverIntelligentPoolConfigD 'Unsafe) @DriverIntelligentPoolConfig a
-    Nothing -> do
+    Nothing -> flip whenJust cacheDriverIntelligentPoolConfig /=<< Queries.findByMerchantOpCityId id
+
+findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
+findByMerchantOpCityId id = do
+  enableCAC' <- liftIO $ SE.lookupEnv "ENABLE_CAC"
+  let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
+  case enableCAC of
+    False -> getDriverIntelligentPoolConfigFromDB id
+    True -> do
       dipcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id))])
       logDebug $ "dipc: the context value is " <> show dipcCond
+      gen <- newStdGen
+      let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+      logDebug $ "the toss value is for driver pool config " <> show toss
       tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
-      contextValue <- liftIO $ CM.evalCtx (fromMaybe "test" tenant) dipcCond
+      contextValue <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant) dipcCond toss
       case contextValue of
         Left err -> error $ (pack "dipc: error in fetching the context value ") <> (pack err)
         Right contextValue' -> do

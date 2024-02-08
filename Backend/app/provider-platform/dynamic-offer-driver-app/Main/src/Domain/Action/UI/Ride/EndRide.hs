@@ -257,7 +257,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     CallBasedReq _ -> do
       pure $ getCoordinates booking.toLocation
 
-  goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId
+  goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just driverId)
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
 
   homeLocationReached' <-

@@ -46,6 +46,20 @@ data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   }
   deriving (Generic)
 
+getDriverPoolConfigFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
+getDriverPoolConfigFromDB merchantOpCityId Nothing dist = do
+  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+  getDefaultDriverPoolConfig configs dist
+getDriverPoolConfigFromDB merchantOpCityId (Just vehicle) dist = do
+  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+  let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
+  case configs of
+    [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
+    _ ->
+      case mbApplicableConfig of
+        Just applicableConfig -> return applicableConfig
+        Nothing -> getDefaultDriverPoolConfig configs dist
+
 getDriverPoolConfig ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
@@ -53,39 +67,33 @@ getDriverPoolConfig ::
   Meters ->
   m DriverPoolConfig
 getDriverPoolConfig merchantOpCityId mbvt dist = do
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))
-  logDebug $ "the context value is " <> show dpcCond
-  tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
-  gen <- newStdGen
-  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-  logDebug $ "the toss value is for driver pool config " <> show toss
-  contextValue <- liftIO $ CM.evalExperiment (fromMaybe "atlas_driver_offer_bpp_v2" tenant) dpcCond toss
-  case contextValue of
-    Left err -> error $ (pack "error in fetching the context value ") <> (pack err)
-    Right contextValue' -> do
-      logDebug $ "the fetched context value is " <> show contextValue'
-      --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
-      valueHere <- buildDpcType contextValue'
-      logDebug $ "the build context value is1 " <> show valueHere
-      return valueHere
-  where
-    buildDpcType cv =
-      case (DAT.parse jsonToDriverPoolConfig cv) of
-        Success dpc -> pure $ dpc
-        Error err -> do
-          logError $ (pack "error in parsing the context value ") <> (pack err)
-
-          configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-          case mbvt of
-            Nothing -> getDefaultDriverPoolConfig configs dist
-            (Just vehicle) -> do
-              let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
-              case configs of
-                [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
-                _ ->
-                  case mbApplicableConfig of
-                    Just applicableConfig -> return applicableConfig
-                    Nothing -> getDefaultDriverPoolConfig configs dist
+  enableCAC' <- liftIO $ SE.lookupEnv "ENABLE_CAC"
+  let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
+  case enableCAC of
+    False -> getDriverPoolConfigFromDB merchantOpCityId mbvt dist
+    True -> do
+      dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))
+      logDebug $ "the context value is " <> show dpcCond
+      tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
+      gen <- newStdGen
+      let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+      logDebug $ "the toss value is for driver pool config " <> show toss
+      contextValue <- liftIO $ CM.evalExperiment (fromMaybe "atlas_driver_offer_bpp_v2" tenant) dpcCond toss
+      case contextValue of
+        Left err -> error $ (pack "error in fetching the context value ") <> (pack err)
+        Right contextValue' -> do
+          logDebug $ "the fetched context value is " <> show contextValue'
+          --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
+          valueHere <- buildDpcType contextValue'
+          logDebug $ "the build context value is1 " <> show valueHere
+          return valueHere
+      where
+        buildDpcType cv =
+          case (DAT.parse jsonToDriverPoolConfig cv) of
+            Success dpc -> pure $ dpc
+            Error err -> do
+              logError $ (pack "error in parsing the context value ") <> (pack err)
+              getDriverPoolConfigFromDB merchantOpCityId mbvt dist
 
 filterByDistAndDveh :: Maybe Variant.Variant -> Meters -> DriverPoolConfig -> Bool
 filterByDistAndDveh mbVehicle_ dist cfg =
