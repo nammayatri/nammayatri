@@ -468,14 +468,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             double editLon = Double.NaN;
             if (driverPayloadJsonObject.has("stop")) {
                 JSONObject stopObject = driverPayloadJsonObject.getJSONObject("stop");
-                if (stopObject.has("gps")) {
-                    JSONObject gpsObject = stopObject.getJSONObject("gps");
-                    if (gpsObject.has("lat")) {
-                        editLat = gpsObject.getDouble("lat");
-                    }
-                    if (gpsObject.has("lon")) {
-                        editLon = gpsObject.getDouble("lon");
-                    }
+                if (stopObject.has("lat")) {
+                    editLat = stopObject.getDouble("lat");
+                }
+                if (stopObject.has("lon")) {
+                    editLon = stopObject.getDouble("lon");
                 }
             }
             driverPayloadJsonObject.put("editlat", editLat);
