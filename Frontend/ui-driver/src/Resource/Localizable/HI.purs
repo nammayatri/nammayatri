@@ -1209,3 +1209,4 @@ getHI stringKey =
         MAX -> "अधिकतम"
         COINS -> "सिक्के"
         COINS_ADDED -> "सिक्के जोड़े गए"
+        TERMS_AND_CONDITIONS_UPDATED -> "नियम एवं शर्तें और गोपनीयता नीति अद्यतन कर दी गई है"

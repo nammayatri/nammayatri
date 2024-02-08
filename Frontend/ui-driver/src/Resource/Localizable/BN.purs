@@ -1209,3 +1209,4 @@ getBN stringKey =
         COINS -> "কয়েন"
         COINS_ADDED -> "কয়েন যোগ করা হয়েছে"
         CANT_FIND_OPTION -> "বিকল্প খুঁজে পাচ্ছি না"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C এবং গোপনীয়তা নীতি আপডেট করা হয়েছে"

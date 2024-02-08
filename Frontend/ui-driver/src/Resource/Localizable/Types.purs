@@ -1219,3 +1219,4 @@ data STR = LETS_GET_STARTED
         | MAX
         | COINS
         | COINS_ADDED
+        | TERMS_AND_CONDITIONS_UPDATED

@@ -1210,4 +1210,4 @@ getTE stringKey =
         MAX -> "గరిష్ట"
         COINS -> "నాణేలు"
         COINS_ADDED -> "నాణేలు జోడించబడ్డాయి"
-    
+        TERMS_AND_CONDITIONS_UPDATED -> "T&Cలు మరియు గోప్యతా విధానం నవీకరించబడ్డాయి"

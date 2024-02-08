@@ -766,4 +766,5 @@ getHI stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "ड्राइवर को कॉल करने के लिए सवारी का चयन करें"
         ADD_IMAGE_S -> "छवि जोड़ें" 
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "पहले से ही एक सक्रिय सवारी है"
+        TERMS_AND_CONDITIONS_UPDATED -> "नियम एवं शर्तें और गोपनीयता नीति अद्यतन कर दी गई है"
 

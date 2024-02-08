@@ -15,12 +15,12 @@
 module Engineering.Helpers.Utils where
 
 import Prelude
-import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..))
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.String (length, trim, toLower)
 import Data.Maybe (Maybe(..))
 import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
@@ -47,8 +47,14 @@ import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, dela
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Data.Array (find)
+import Data.Array (find, elem)
 import Data.Tuple (Tuple(..), fst, snd)
+import ConfigProvider
+import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
+import Data.Number (fromString)
+import JBridge (toast, setKeyInSharedPref)
+import Language.Strings (getString)
+import Language.Types
 
 -- Common Utils
 foreign import reboot :: Effect Unit
@@ -332,4 +338,14 @@ fetchLanguage currLang = case currLang of
                   "KN_IN" -> "kn"
                   "TA_IN" -> "ta"
                   _       -> "en"
-                  
+
+handleUpdatedTerms :: String -> Effect Unit
+handleUpdatedTerms message = do
+  appConfig <- runEffectFn1 getAppConfigEff appConfig
+  let termsVersion = getValueToLocalStore T_AND_C_VERSION
+  if (termsVersion `elem` ["__failed", "(null)"]) then void $ pure $ runFn2 setKeyInSharedPref "T_AND_C_VERSION" "1.0" else pure unit
+  let isTermsUpdated = (fromMaybe 0.0 (fromString $ getValueToLocalStore T_AND_C_VERSION)) < appConfig.termsVersion
+  if isTermsUpdated then do
+      void $ pure $ runFn2 setKeyInSharedPref "T_AND_C_VERSION" (show appConfig.termsVersion)
+      void $ pure $ toast $ message
+  else pure unit              

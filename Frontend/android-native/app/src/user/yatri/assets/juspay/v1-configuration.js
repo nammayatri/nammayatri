@@ -130,7 +130,7 @@ window.getMerchantConfig = function () {
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri from the settings app to start looking for rides.",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri will try to resolve it in under 24 hours.",
       "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Yatri Support. Do you want to proceed?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at nammayatri.support@juspay.in for any queries."
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at support@nammayatri.in for any queries."
     },
     "malayalamStrings": {
       "WELCOME_TEXT" : "യാത്രയിലേക്ക് സ്വാഗതം",
@@ -156,7 +156,7 @@ window.getMerchantConfig = function () {
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രവർത്തനക്ഷമമാക്കുക.",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "നിങ്ങളുടെ പ്രശ്നം വിവരിക്കുക. 24 മണിക്കൂറിനുള്ളിൽ അത് പരിഹരിക്കാൻ യാത്രി ശ്രമിക്കും.",
       "CALL_SUPPORT_DESCRIPTION" : "നിങ്ങൾ യാത്രി സപ്പോർട്ടിലേക്ക് ഒരു കോൾ ചെയ്യാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "പ്രശ്‌നം പരിഹരിച്ചുവെന്ന് ഞങ്ങൾ പ്രതീക്ഷിക്കുന്നു, എന്തെങ്കിലും ചോദ്യങ്ങൾക്ക് nammayatri.support@juspay.in എന്ന വിലാസത്തിൽ ഞങ്ങൾക്ക് എഴുതാൻ മടിക്കേണ്ടതില്ല."
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "പ്രശ്‌നം പരിഹരിച്ചുവെന്ന് ഞങ്ങൾ പ്രതീക്ഷിക്കുന്നു, എന്തെങ്കിലും ചോദ്യങ്ങൾക്ക് support@nammayatri.in എന്ന വിലാസത്തിൽ ഞങ്ങൾക്ക് എഴുതാൻ മടിക്കേണ്ടതില്ല."
     },
     "languageList": [{
       "name": "English",
@@ -194,7 +194,7 @@ window.getMerchantConfig = function () {
       "query" : "google.navigation:q=%f,%f"
       , "packageName" : "com.google.android.apps.maps"
     }
-    , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
+    , "SUPPORT_EMAIL" : "support@nammayatri.in"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
     , "showDisabilityBanner" : false
   
@@ -233,10 +233,11 @@ window.getMerchantConfig = function () {
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
     , "termsLink" :"https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
+    , "termsVersion" : 1.0
     , "privacyLink" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8"
     , "appData" : {
       "link" : getAppLink(window.__OS)
-      , "supportMail" :"nammayatri.support@juspay.in"
+      , "supportMail" :"support@nammayatri.in"
       , "name" : "Yatri"
       , "website" : "https://www.getyatri.com"
     },

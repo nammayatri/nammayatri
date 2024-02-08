@@ -12,7 +12,7 @@ defaultColors = {
 defaultAppData :: AppDatas
 defaultAppData =  {
     link : ""
-  , supportMail :"nammayatri.support@juspay.in"
+  , supportMail :"support@nammayatri.in"
   , name : ""
   , website : "https://nammayatri.in"
   }

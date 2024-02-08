@@ -241,6 +241,7 @@ config =
   , loaderConfig : defaultLoaderConfig
   , otpRegex :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   , termsLink : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA"
+  , termsVersion : 1.0
   , privacyLink : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F"
   , navigationAppConfig : defaultNavigationAppConfig
   , genericHeaderConfig : defaultGenericHeader

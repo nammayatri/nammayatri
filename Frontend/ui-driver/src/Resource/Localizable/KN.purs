@@ -1209,3 +1209,4 @@ getKN stringKey =
         MAX -> "ಗರಿಷ್ಠ"
         COINS -> "ನಾಣ್ಯಗಳು"
         COINS_ADDED -> "ನಾಣ್ಯಗಳನ್ನು ಸೇರಿಸಲಾಗಿದೆ"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&Cಗಳು ಮತ್ತು ಗೌಪ್ಯತೆ ನೀತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"

@@ -766,3 +766,4 @@ getEN stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "Please select the ride to call the driver"
         ADD_IMAGE_S -> "Add Image(s)"
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "You already have an active ride"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C's and Privacy policy have been updated"

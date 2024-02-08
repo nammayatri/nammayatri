@@ -920,4 +920,5 @@ getFR stringKey =
         MAX -> "Max"
         COINS -> "Pièces"
         COINS_ADDED -> "Pièces ajoutées"
+        TERMS_AND_CONDITIONS_UPDATED -> "Les conditions générales et la politique de confidentialité ont été mises à jour"
         _ -> ""
