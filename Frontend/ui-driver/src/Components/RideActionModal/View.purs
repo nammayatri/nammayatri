@@ -1073,7 +1073,7 @@ getRideStartRemainingTimeTitle config =
   let hour = config.rideStartTimer `div` 3600
       min = (config.rideStartTimer `mod` 3600) `div` 60
       sec = config.rideStartTimer `mod` 60
-      time = ([(if hour > 0 then (show hour <> " : ") else "") <> show min <> " : " <> show sec ])
+      time = ([(if hour > 0 then (show hour <> " : ") else "") <> (if min < 10 then "0" else "") <> show min <> " : " <> (if sec < 10 then "0" else "") <> show sec  ])
   in case config.rideType of
       ST.Rental -> getVarString YOUR_RENTAL_RIDE_STARTS_IN time
       ST.Intercity -> getVarString YOUR_INTERCITY_RIDE_STARTS_IN time

@@ -116,7 +116,7 @@ rideActionModalConfig state =
     rideScheduledTime = state.data.activeRide.tripScheduledAt,
     rideType = state.data.activeRide.tripType,
     rideStartTimer = state.props.rideStartTimer,
-    tripDuration = (\tripDuration -> (show ( tripDuration / 3600)) <> ":" <> (show ( (tripDuration `mod` 3600) / 60)) <> " Hr") <$> state.data.activeRide.tripDuration,
+    tripDuration = (\tripDuration -> (if ( tripDuration / 3600) < 10 then "0" else "") <> (show ( tripDuration / 3600) <> ":") <> (if (tripDuration `mod` 3600) / 60 < 10 then "0" else "") <> show ( (tripDuration `mod` 3600) / 60)  <> " Hr") <$> state.data.activeRide.tripDuration,
     rideStartTime = state.data.activeRide.tripStartTime,
     startODOReading = maybe (getValueToLocalStore RIDE_START_ODOMETER_READING) show state.data.activeRide.startOdometerReading
     }
