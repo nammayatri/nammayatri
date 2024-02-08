@@ -1,0 +1,18 @@
+BppDetails:
+  tableName: bpp_details
+
+  fields:
+    id: Id BppDetails
+    domain: Text # TODO: Use Domain type here
+    subscriberId: Text
+    name: Text
+    logoUrl: Maybe Text
+    description: Maybe Text
+
+  queries:
+    findBySubscriberIdAndDomain:
+      kvFunction: findOneWithKV
+      where:
+        and: [subscriberId, domain]
+
+  excludedFields: [merchantId, merchantOperatingCityId]
