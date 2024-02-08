@@ -20,6 +20,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
@@ -769,7 +770,7 @@ sendSearchRequestToDriverNotification merchantId merchantOpCityId req = Notifica
 
 data StopReq = StopReq
   { bookingId :: Id Booking,
-    stop :: Maybe Common.Location,
+    stop :: Maybe LocationAPIEntity,
     isEdit :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
