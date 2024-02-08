@@ -1230,6 +1230,7 @@ getAccessibilityHeaderText state =
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 getRideCompletedConfig state = let 
+  
   isRentalRide = state.data.activeRide.tripType == ST.Rental
   config = RideCompletedCard.config
   autoPayBanner = state.props.autoPayBanner
@@ -1325,8 +1326,8 @@ getRideCompletedConfig state = let
     rideEndODOReading = (getValueToLocalStore RIDE_END_ODOMETER_READING) <> "Km",
     baseRideDuration =  (show $ (fromMaybe 0 state.data.activeRide.tripDuration) / 3600) <> " hr " <> (show $ ((fromMaybe 0 state.data.activeRide.tripDuration) `mod` 3600 / 60)) <> " m",
     baseRideDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
-    actualRideDuration = getActualDuration (fromMaybe 0 state.data.activeRide.actualRideDuration),
-    actualRideDistance = show ((fromMaybe 0 state.data.activeRide.tripActualDistance) / 1000) <> " km",
+    actualRideDuration = getActualDuration (fromMaybe (fromMaybe 0 $ Int.fromNumber state.data.activeRide.distance) state.data.endRideData.actualRideDuration),
+    actualRideDistance = show ((fromMaybe 0 state.data.endRideData.actualRideDistance) / 1000) <> " km",
     startRideOdometerImage = getValueToLocalStore RIDE_START_ODOMETER,
     endRideOdometerImage = getValueToLocalStore RIDE_END_ODOMETER
   },  
