@@ -91,7 +91,7 @@ view push state =
       ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
         , separatorView push state ]
     , scrollView
-      [ height $ V $ EHC.screenHeight unit
+      [ height $ V $ (EHC.screenHeight unit) - 60
       , width MATCH_PARENT
       , margin $ MarginTop 60
       ][linearLayout

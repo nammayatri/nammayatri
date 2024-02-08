@@ -60,7 +60,7 @@ decodeAddress :: DecodeAddress -> String
 decodeAddress addressWithCons =
   let
     (BookingLocationAPIEntity address) = case addressWithCons of
-      Booking bookingLocation -> spy "Inside decodeAddress :: " bookingLocation
+      Booking bookingLocation -> bookingLocation
       SavedLoc savedLocation -> getBookingEntity savedLocation
   in
     if (all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then

@@ -428,7 +428,7 @@ noQuotesErrorModel state =
     , gravity CENTER
     , background Color.white900
     , accessibility DISABLE
-    , margin $ MarginVertical ((EHC.screenHeight unit)/6) 60
+    , margin $ MarginVertical ((EHC.screenHeight unit)/7) 60
     ][ linearLayout
        [ weight 1.0
        , width MATCH_PARENT

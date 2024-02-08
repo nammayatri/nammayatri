@@ -3146,7 +3146,7 @@ confirmRide action count duration push state = do
 
 rentalAndIntercityConfirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 rentalAndIntercityConfirmRide action count duration push state = do -- TODO-codex : refactor current confirm Ride on the basis of fareProductType for Rental, Intercity and SpecialZone
-  if (count /= 0) && (isLocalStageOn ConfirmingRide) && (state.props.bookingId /= "")then do
+  if (count /= 0) && (isLocalStageOn ConfirmingQuotes) && (state.props.bookingId /= "")then do
     resp <- rideBooking (state.props.bookingId)
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
     case resp of
@@ -3164,7 +3164,7 @@ rentalAndIntercityConfirmRide action count duration push state = do -- TODO-code
       Left err -> do
         _ <- pure $ printLog "api error " err
         void $ delay $ Milliseconds duration
-        confirmRide action (count - 1) duration push state
+        rentalAndIntercityConfirmRide action (count - 1) duration push state
   else
     pure unit
 

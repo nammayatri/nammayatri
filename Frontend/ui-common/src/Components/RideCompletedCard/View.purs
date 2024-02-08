@@ -9,7 +9,7 @@ import Data.Functor (map)
 import PrestoDOM.Animation as PrestoAnim
 import Animation (fadeIn,fadeInWithDelay) as Anim
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), mod)
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -683,7 +683,7 @@ contactSupportPopUpView config push =
 
 ---------------------------------------------- (Driver Card 7) rentalRideDetailsView  ------------------------------------------------------------------------------------------------------------------------------------------
 
-rentalTripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rentalTripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w -- TODO-codex : Refactor for generic use
 rentalTripDetailsView config push =
   let rentalRowDetails = config.rentalRowDetails
   in 
@@ -788,9 +788,11 @@ rentalTripRowView config push description =
       rideDurationOrDistanceProp :: Config -> RentalRowView -> Array (Prop (Effect Unit))
       rideDurationOrDistanceProp config description =
         let rentalBookingData = config.rentalBookingData
+            finalHours = (rentalBookingData.finalDuration / 60)
+            finalMins = (rentalBookingData.finalDuration `mod` 60)
         in 
           case description of
-            RideTime -> [text $ show rentalBookingData.finalDuration <> "hr"] <> showRedOrBlackColor (rentalBookingData.finalDuration > rentalBookingData.baseDuration)
+            RideTime -> [text $ show finalHours <> " : " <> (if finalMins < 10 then "0" else "") <> show finalMins <> "hr"] <> showRedOrBlackColor (rentalBookingData.finalDuration > rentalBookingData.baseDuration)
             RideDistance -> [text $ show rentalBookingData.finalDistance <> "km"] <> showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance)
             _ -> if any (_ == description) [RideStartedAt, RideEndedAt] then [color Color.black600] else []
 
