@@ -1954,6 +1954,7 @@ homeScreenFlow = do
       case startRideResp of
         Right startRideResp -> do
           _ <- pure $ setValueToLocalNativeStore RIDE_ID id
+          _ <- pure $ hideKeyboardOnNavigation true
           liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,enterOdometerReadingModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
@@ -1976,7 +1977,7 @@ homeScreenFlow = do
           
           liftFlowBT $ logEvent logField_ "incorrect flow"
           if ( errorPayload.code == 400 && codeMessage == "INCORRECT_OTP") then do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = "",enterOdometerReadingModal= false,enterOtpFocusIndex = 0} })
               void $ lift $ lift $ toggleLoader false
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = "",enterOtpFocusIndex = 0} })
@@ -2000,7 +2001,6 @@ homeScreenFlow = do
           let errResp = errorPayload.response
           let codeMessage = decodeErrorCode errResp.errorMessage
           let errorMessage = decodeErrorMessage errResp.errorMessage
-          _ <- updateStage $ HomeScreenStage RideAccepted
           if ( errorPayload.code == 400 && (codeMessage == "BOOKING_NOT_FOUND_FOR_SPECIAL_ZONE_OTP")) then do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {wrongVehicleVariant = false, otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = ""} })
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
@@ -2027,97 +2027,99 @@ homeScreenFlow = do
       let fileId = if state.data.activeRide.tripType == ST.Rental then
           state.props.odometerFileId
         else Nothing 
+        
       (endRideResp) <- lift $ lift $ callApi $ API.EndRideRequest id (Remote.makeEndRideReq endRideOtp endRideOdometerReading fileId (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation tripDistance tripDistanceWithAcc ts)
+      
+      _ <- pure $ printLog "endRideResp" (show endRideResp)
       case (endRideResp) of
         Left errorPayload -> do
-          let errResp = errorPayload.response
-          let codeMessage = decodeErrorCode errResp.errorMessage
-          
-          liftFlowBT $ logEvent logField_ "incorrect flow"
-          if ( errorPayload.code == 400 && codeMessage == "INCORRECT_OTP") then do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, endRideOtpModal = true, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
-              void $ lift $ lift $ toggleLoader false
-            else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, endRideOtpModal = true, rideOtp = "",enterOtpFocusIndex = 0} })
-              void $ lift $ lift $ toggleLoader false
-              else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, endRideOtpModal = true,endRideOdometerReadingModal=false, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
+          void $ lift $ lift $ toggleLoader false
           homeScreenFlow
         Right (response) -> do
-          API.EndRideResponse (endRideResp) <- pure (response.response)
-          when state.data.driverGotoState.isGotoEnabled do
-            getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-            modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
-              { driverInformation = Just getDriverInfoResp,
-                gotoPopupType = case endRideResp.homeLocationReached of 
-                  Nothing -> ST.NO_POPUP_VIEW
-                  Just true -> ST.REACHED_HOME
-                  Just false -> ST.MORE_GOTO_RIDES
-              })
-          _ <- pure $ cleverTapCustomEvent "ny_driver_ride_ended"
-          _ <- pure $ metaLogEvent "ny_driver_ride_ended"
-          liftFlowBT $ firebaseLogEvent "ny_driver_ride_ended"
-          _ <- pure $ removeAllPolylines ""
-          void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
-          void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
-          _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
-          void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
-          _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
-          _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
-          _ <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
-          _ <- pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
-          liftFlowBT $ logEvent logField_ "ny_driver_ride_completed"
-          resp <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
-          modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = Just resp}
-          if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
-            getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-            let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
-            modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
-            if (isJust getDriverInfoResp.numberOfRides && (fromMaybe 0 getDriverInfoResp.numberOfRides == 1))
-              then do
-                let currdate = getcurrentdate ""
-                liftFlowBT $ logEventWithParams logField_ "ny_driver_first_ride_completed" "Date" currdate
-              else pure unit
-            setValueToLocalStore HAS_TAKEN_FIRST_RIDE "false"
-            else pure unit
-          (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "null" "null"
-          case (head rideHistoryResponse.list) of
-            Nothing -> pure unit
-            Just (RidesInfo response) -> do
-              let specialZoneConfig = HU.getRideLabelData response.specialLocationTag
-              modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
-                  tripId = response.shortRideId,
-                  date = (convertUTCtoISC (response.createdAt) "D MMM"),
-                  time = (convertUTCtoISC (response.createdAt )"h:mm A"),
-                  source = (decodeAddress response.fromLocation false),
-                  destination = maybe "" (\toLocation -> decodeAddress toLocation false) response.toLocation,
-                  vehicleType = response.vehicleVariant,
-                  totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
-                  distance = parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2,
-                  status = response.status,
-                  rider = (fromMaybe "" response.riderName),
-                  customerExtraFee = response.customerExtraFee,
-                  purpleTagVisibility = isJust response.disabilityTag,
-                  gotoTagVisibility = isJust response.driverGoHomeRequestId,
-                  spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag),
-                  specialZoneLayoutBackground = specialZoneConfig.backgroundColor,
-                  specialZoneImage = specialZoneConfig.imageUrl,
-                  specialZoneText = specialZoneConfig.text
-                }})
-              let payerVpa = fromMaybe "" response.payerVpa
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
-                { data { 
-                    endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }
-                  },
-                  props {
-                    isFreeRide = fromMaybe false response.isFreeRide
-                  }
+          let endRideRespCode = response.code
+          if endRideRespCode /= 200 then do
+
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, endRideOtpModal = true,endRideOdometerReadingModal=false, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
+            void $ lift $ lift $ toggleLoader false
+          else do
+            let API.EndRideResponse endRideResp = response.response
+            when state.data.driverGotoState.isGotoEnabled do
+              getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+              modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
+                { driverInformation = Just getDriverInfoResp,
+                  gotoPopupType = case endRideResp.homeLocationReached of 
+                    Nothing -> ST.NO_POPUP_VIEW
+                    Just true -> ST.REACHED_HOME
+                    Just false -> ST.MORE_GOTO_RIDES
                 })
-            
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {endRideOdometerReadingModal = false, showRideCompleted = true}})
-          _ <- updateStage $ HomeScreenStage RideCompleted
-          void $ lift $ lift $ toggleLoader false
-          updateDriverDataToStates
-          homeScreenFlow
+            _ <- pure $ cleverTapCustomEvent "ny_driver_ride_ended"
+            _ <- pure $ metaLogEvent "ny_driver_ride_ended"
+            liftFlowBT $ firebaseLogEvent "ny_driver_ride_ended"
+            _ <- pure $ removeAllPolylines ""
+            void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
+            void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+            _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
+            void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
+            _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
+            _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
+            _ <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
+            _ <- pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
+            liftFlowBT $ logEvent logField_ "ny_driver_ride_completed"
+            resp <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
+            modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = Just resp}
+            if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
+              getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+
+              let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
+              modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
+              if (isJust getDriverInfoResp.numberOfRides && (fromMaybe 0 getDriverInfoResp.numberOfRides == 1))
+                then do
+                  let currdate = getcurrentdate ""
+                  liftFlowBT $ logEventWithParams logField_ "ny_driver_first_ride_completed" "Date" currdate
+                else pure unit
+              setValueToLocalStore HAS_TAKEN_FIRST_RIDE "false"
+              else pure unit
+            (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "null" "null"
+            case (head rideHistoryResponse.list) of
+              Nothing -> pure unit
+              Just (RidesInfo response) -> do
+                let specialZoneConfig = HU.getRideLabelData response.specialLocationTag
+                modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
+                    tripId = response.shortRideId,
+                    date = (convertUTCtoISC (response.createdAt) "D MMM"),
+                    time = (convertUTCtoISC (response.createdAt )"h:mm A"),
+                    source = (decodeAddress response.fromLocation false),
+                    destination = maybe "" (\toLocation -> decodeAddress toLocation false) response.toLocation,
+                    vehicleType = response.vehicleVariant,
+                    totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
+                    distance = parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2,
+                    status = response.status,
+                    rider = (fromMaybe "" response.riderName),
+                    customerExtraFee = response.customerExtraFee,
+                    purpleTagVisibility = isJust response.disabilityTag,
+                    gotoTagVisibility = isJust response.driverGoHomeRequestId,
+                    spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag),
+                    specialZoneLayoutBackground = specialZoneConfig.backgroundColor,
+                    specialZoneImage = specialZoneConfig.imageUrl,
+                    specialZoneText = specialZoneConfig.text
+                  }})
+                let payerVpa = fromMaybe "" response.payerVpa
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
+                  { data { 
+                      
+                      endRideData {actualRideDuration = response.actualDuration,actualRideDistance = response.chargeableDistance, finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }
+                    },
+                    props {
+                      isFreeRide = fromMaybe false response.isFreeRide
+                    }
+                  })
+              
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {endRideOdometerReadingModal = false, showRideCompleted = true}})
+            _ <- updateStage $ HomeScreenStage RideCompleted
+            void $ lift $ lift $ toggleLoader false
+            updateDriverDataToStates
+            homeScreenFlow
     GO_TO_CANCEL_RIDE {id, info , reason} state -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_cancelled" $ [{key : "Reason code", value : unsafeToForeign reason},
                                                                                         {key : "Additional info", value : unsafeToForeign $ if info == "" then "null" else info},
@@ -2186,7 +2188,14 @@ homeScreenFlow = do
         Right _ -> do
           _ <- pure $ printLog "GO_TO_ARRIVED_AT_STOP" "Arrived at stop"
           _ <- pure $ removeAllPolylines ""
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = [],activeRide{nextStopAddress=Nothing,nextStopLat=Nothing,nextStopLon=Nothing}}, props {routeVisible = true, arrivedAtStop = true}})          
+          (GetRidesHistoryResp rideList) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
+          case (rideList.list DA.!! 0) of
+            Just ( rideInfo) -> do
+              let currActiveRideDetails = activeRideDetail state rideInfo
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = [],activeRide = currActiveRideDetails}, props {routeVisible = true, arrivedAtStop = true}})
+              pure unit
+            Nothing -> pure unit
+            
       homeScreenFlow
     NOTIFY_CUSTOMER state -> do
       driverArrived <- lift $ lift $ Remote.driverArrived (state.data.activeRide.id) (DriverArrivedReq {

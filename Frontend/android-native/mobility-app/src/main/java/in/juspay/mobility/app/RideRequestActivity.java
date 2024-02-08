@@ -57,14 +57,10 @@ public class RideRequestActivity extends AppCompatActivity {
     private Timer countDownTimer;
     private CountDownTimer rideStatusListener;
     private TextView indicatorText1, indicatorText2, indicatorText3;
-    private TextView indicatorRental1, indicatorRental2, indicatorRental3;
-    private TextView indicatorIntercity1, indicatorIntercity2, indicatorIntercity3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
     private ArrayList<TextView> indicatorTextList;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
-    private ArrayList<TextView> rentalList;
-    private ArrayList<TextView> intercityList;
     private SharedPreferences sharedPref;
 
     private String service = "";
@@ -561,19 +557,11 @@ public class RideRequestActivity extends AppCompatActivity {
             progressIndicator3 = findViewById(R.id.progress_indicator_3);
 
 
-            indicatorRental1 = findViewById(R.id.rental_view_0);
-            indicatorRental2 = findViewById(R.id.rental_view_1);
-            indicatorRental3 = findViewById(R.id.rental_view_2);
-
-            indicatorIntercity1 = findViewById(R.id.intercity_view_0);
-            indicatorIntercity2 = findViewById(R.id.intercity_view_1);
-            indicatorIntercity3 = findViewById(R.id.intercity_view_2);
+            
             
 
             indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1, indicatorText2, indicatorText3));
-            rentalList = new ArrayList<>(Arrays.asList(indicatorRental1, indicatorRental2, indicatorRental3));
-            intercityList = new ArrayList<>(Arrays.asList(indicatorIntercity1, indicatorIntercity2, indicatorIntercity3));
-            
+           
             progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1, progressIndicator2, progressIndicator3));
             indicatorList = new ArrayList<>(Arrays.asList(
                     findViewById(R.id.indicator1),
@@ -596,25 +584,13 @@ public class RideRequestActivity extends AppCompatActivity {
 
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
 
-                    if (sheetArrayList.get(i).getRideProductType().equals(RENTAL)) {
-                        rentalList.get(i).setVisibility(View.VISIBLE);
-
-                    } else {
-                        rentalList.get(i).setVisibility(View.INVISIBLE);
-                    }
-
+//                   
                     if(viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getRideProductType().equals(RENTAL))
                     {
                         indicatorList.get(i).setBackgroundColor(getColor(R.color.turquoise10));
                     }
 
-                    if (sheetArrayList.get(i).getRideProductType().equals(INTERCITY)) {
-                        intercityList.get(i).setVisibility(View.VISIBLE);
-                    }
-                    else {
-                        intercityList.get(i).setVisibility(View.INVISIBLE);
-                    }
-
+//                   
                     if(viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getRideProductType().equals(INTERCITY))
                     {
                         indicatorList.get(i).setBackgroundColor(getColor(R.color.blue800));

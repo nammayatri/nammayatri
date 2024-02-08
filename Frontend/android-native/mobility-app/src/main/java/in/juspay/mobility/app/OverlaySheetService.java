@@ -184,7 +184,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.reqButton.setTextColor(getColor(R.color.white));
                 holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.blue800)));
                 holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
-
+                holder.gotoTag.setVisibility(View.GONE);
+                holder.customerTipTag.setVisibility(View.GONE);
+                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
+                holder.gotoTag.setVisibility(View.GONE);
             }
             else if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
                 String pickupChargesText = model.getCustomerTip() > 0 ?
@@ -1096,6 +1099,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     vehicleVariantList.get(i).setVisibility(View.GONE);
                     progressIndicatorsList.get(i).setVisibility(View.GONE);
                     tipsList.get(i).setVisibility(View.INVISIBLE);
+                    intercityList.get(i).setVisibility(View.INVISIBLE);
+                    rentalList.get(i).setVisibility(View.INVISIBLE);
                 }
             }
         });

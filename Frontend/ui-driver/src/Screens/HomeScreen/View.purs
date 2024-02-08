@@ -270,7 +270,6 @@ view push state =
       , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
-      , if state.props.showNewStopPopup && state.data.activeRide.tripType == ST.Rental then newStopPopup push state else dummyTextView
       , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
       , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && state.data.config.subscriptionConfig.enableSubscriptionPopups
            then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig state) 
@@ -1801,7 +1800,7 @@ rentalRideStatusPolling pollingId duration state push action = do
       Right (GetRidesHistoryResp rideList) -> do
         case (rideList.list DA.!! 0) of
           Just (RidesInfo {nextStopLocation,lastStopLocation}) -> do
-            if not (checkNextStopLocationIsSame nextStopLocation (constructLocationInfo state.data.activeRide.nextStopLat state.data.activeRide.nextStopLon)) && not state.props.showNewStopPopup then do
+            if not (checkNextStopLocationIsSame nextStopLocation (constructLocationInfo state.data.activeRide.nextStopLat state.data.activeRide.nextStopLon)) then do
               currentLocation <- doAff do liftEffect JB.getCurrentLatLong 
               doAff do liftEffect $ push $ action currentLocation nextStopLocation lastStopLocation
             else do pure unit
