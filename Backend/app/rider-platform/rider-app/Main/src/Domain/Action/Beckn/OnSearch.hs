@@ -206,7 +206,13 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterEstimtesByPrefference _estimateInfo =
       case _searchRequest.riderPreferredOption of
         Rental -> []
-        _ -> _estimateInfo
+        OneWay ->
+          case quotesInfo of
+            (qInfo : _) ->
+              case qInfo.quoteDetails of
+                OneWaySpecialZoneDetails _ -> []
+                _ -> _estimateInfo
+            _ -> _estimateInfo
 
 buildEstimate ::
   MonadFlow m =>
