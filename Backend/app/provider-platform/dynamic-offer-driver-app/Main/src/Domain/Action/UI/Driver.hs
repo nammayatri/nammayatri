@@ -1581,7 +1581,7 @@ data DriverFeeResp = DriverFeeResp
 
 getDownloadInvoiceData :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Day -> m [DriverFeeResp]
 getDownloadInvoiceData (personId, _merchantId, merchantOpCityId) from mbTo = do
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just personId)>>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just personId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let today = utctDay now
       to = fromMaybe today mbTo

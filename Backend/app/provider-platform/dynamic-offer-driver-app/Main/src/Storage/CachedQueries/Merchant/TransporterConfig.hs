@@ -37,24 +37,23 @@ import qualified Data.Text as Text
 -- import Domain.Types.Common
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.TransporterConfig as Queries
-import Domain.Types.Person
 -- import qualified Data.ByteString.Lazy.Char8 as BSL
-import System.Random
+
 import qualified System.Environment as Se
+import System.Random
 
-
-
-getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity ->  Int  -> m (Maybe TransporterConfig)
+getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
 getConfig id toss = do
   confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(Text.pack "merchantOperatingCityId", DA.String (getId id))])
   logDebug $ "transporterConfig Cond: " <> show confCond
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
-  context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant)  confCond toss
+  context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
   logDebug $ "transporterConfig: " <> show context'
   let ans = case context' of
         Left err -> error $ (Text.pack "error in fetching the context value ") <> (Text.pack err)
@@ -66,26 +65,25 @@ getConfig id toss = do
   logDebug $ "transporterConfig: " <> show ans
   pure $ Just ans
 
-findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person)-> m (Maybe TransporterConfig)
+findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person) -> m (Maybe TransporterConfig)
 findByMerchantOpCityId id (Just personId) =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACTransporterConfigKey personId) >>= \case
     Just (a :: Int) -> do
       getConfig id a
     Nothing -> do
       gen <- newStdGen
-      let (toss,_) = randomR (1, 100) gen :: (Int, StdGen)
+      let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
       logDebug $ "the toss value is for transporter config " <> show toss
       _ <- cacheToss personId toss
       getConfig id toss
-
 findByMerchantOpCityId id Nothing = do
   gen <- newStdGen
-  let (toss,_) = randomR (1, 100) gen :: (Int, StdGen)
+  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   logDebug $ "the toss value is for transporter config " <> show toss
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
   confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(Text.pack "merchantOperatingCityId", DA.String (getId id))])
   logDebug $ "transporterConfig Cond: " <> show confCond
-  context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant)  confCond toss
+  context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
   logDebug $ "transporterConfig: " <> show context'
   let ans = case context' of
         Left err -> error $ (Text.pack "error in fetching the context value ") <> (Text.pack err)
@@ -96,14 +94,12 @@ findByMerchantOpCityId id Nothing = do
   -- pure $ Just ans
   logDebug $ "transporterConfig: " <> show ans
   pure $ Just ans
-      
 
 -- cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 -- cacheTransporterConfig cfg = do
 --   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
 --   let merchantIdKey = makeMerchantOpCityIdKey cfg.merchantOperatingCityId
 --   Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @TransporterConfig @(TransporterConfigD 'Unsafe) cfg) expTime
-
 
 cacheToss :: (CacheFlow m r) => Id Person -> Int -> m ()
 cacheToss personId toss = do

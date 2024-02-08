@@ -32,8 +32,8 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
 import qualified Storage.Queries.GoHomeConfig as Queries
 import qualified System.Environment as SE
-import Tools.Error (GenericError (..))
 import System.Random
+import Tools.Error (GenericError (..))
 
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
 findByMerchantOpCityId id = do
@@ -41,7 +41,7 @@ findByMerchantOpCityId id = do
   logDebug $ "the context is " <> show ghcCond
   tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
   gen <- newStdGen
-  let (toss,_) = randomR (1, 100) gen :: (Int, StdGen)
+  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   logDebug $ "the toss value is for gohomeConig " <> show toss
   contextValue <- liftIO $ CM.evalExperiment (fromMaybe "atlas_driver_offer_bpp_v2" tenant) ghcCond toss
   case contextValue of

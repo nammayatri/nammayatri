@@ -16,7 +16,6 @@ module SharedLogic.DriverPool.Config where
 
 import Client.Main as CM
 import Data.Aeson as DA
-import System.Random
 -- import Domain.Types.Merchant.DriverPoolConfig as DPC
 
 -- import Data.Aeson.Key
@@ -38,6 +37,7 @@ import Kernel.Utils.Error
 import Kernel.Utils.Logging
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import qualified System.Environment as SE
+import System.Random
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   { popupDelayToAddAsPenalty :: Maybe Seconds,
@@ -57,7 +57,7 @@ getDriverPoolConfig merchantOpCityId mbvt dist = do
   logDebug $ "the context value is " <> show dpcCond
   tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
   gen <- newStdGen
-  let (toss,_) = randomR (1, 100) gen :: (Int, StdGen)
+  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   logDebug $ "the toss value is for driver pool config " <> show toss
   contextValue <- liftIO $ CM.evalExperiment (fromMaybe "atlas_driver_offer_bpp_v2" tenant) dpcCond toss
   case contextValue of

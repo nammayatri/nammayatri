@@ -68,7 +68,7 @@ rideEnd merchantShortId opCity reqRideId Common.EndRideReq {point} = withFlowHan
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
   let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId, merchantOperatingCityId}
-  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId
+  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId Nothing
   EHandler.dashboardEndRide shandle rideId dashboardReq
 
 currentActiveRide :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler (Id Common.Ride)
