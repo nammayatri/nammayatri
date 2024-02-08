@@ -792,7 +792,7 @@ rentalTripRowView config push description =
             finalMins = (rentalBookingData.finalDuration `mod` 60)
         in 
           case description of
-            RideTime -> [text $ show finalHours <> " : " <> (if finalMins < 10 then "0" else "") <> show finalMins <> "hr"] <> showRedOrBlackColor (rentalBookingData.finalDuration > rentalBookingData.baseDuration)
+            RideTime -> [text $ (if finalMins < 10 then "0" else "") <> show finalHours <> " : " <> (if finalMins < 10 then "0" else "") <> show finalMins <> "hr"] <> showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration)
             RideDistance -> [text $ show rentalBookingData.finalDistance <> "km"] <> showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance)
             _ -> if any (_ == description) [RideStartedAt, RideEndedAt] then [color Color.black600] else []
 

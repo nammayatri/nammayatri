@@ -975,7 +975,7 @@ homeScreenFlow = do
                         , driverInfoCardState 
                             { initDistance = Nothing
                             , rentalData 
-                                { finalDuration = (fromMaybe 0 resp.duration) / (60*60)
+                                { finalDuration = (fromMaybe 0 resp.duration) / 60
                                 , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
                                 }
                             }
@@ -3967,6 +3967,7 @@ sosActiveFlow = do
     SosActiveScreen.GoToEducationScreen state -> safetyEducationFlow
     _ -> sosActiveFlow
   pure unit
+
 rentalScreenFlow :: FlowBT String Unit
 rentalScreenFlow = do
   (GlobalState currentState) <- getState
@@ -4041,6 +4042,9 @@ rentalScreenFlow = do
             enterRentalRideSearchFlow resp.bookingId
             else rideScheduledFlow
         Left err -> pure unit
+      rentalScreenFlow
+    RentalScreenController.GoToSelectPackage updatedState -> do
+      modifyScreenState $ RentalScreenStateType (\_ -> updatedState)
       rentalScreenFlow
     _ -> pure unit
     

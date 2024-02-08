@@ -253,7 +253,7 @@ screen initialState =
                 _ <- push RemoveChat
                 pure unit
                 if initialState.data.rideType == RideType.RENTAL_RIDE then 
-                  void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.createdAt ))/60) "1" "RideDurationTimer" push (RideDurationTimer)
+                  void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ))/60) "1" "RideDurationTimer" push (RideDurationTimer)
                   else pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit

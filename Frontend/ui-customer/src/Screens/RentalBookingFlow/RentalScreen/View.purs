@@ -60,7 +60,7 @@ rentalScreen initialState =
   { initialState
   , view
   , name: "RentalScreen"
-  , globalEvents: [getEstimateEvent] 
+  , globalEvents: [getEstimateEvent]
   , eval:
       \action state -> do
         let _ = spy "RentalScreen action " action

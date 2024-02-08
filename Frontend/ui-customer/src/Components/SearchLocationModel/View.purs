@@ -111,11 +111,11 @@ view push state =
       backPressView state push =
        linearLayout
         [ height WRAP_CONTENT
-        , width WRAP_CONTENT
+        , width MATCH_PARENT
         , disableClickFeedback true
         , margin (Margin 5 17 0 0)
         , gravity CENTER
-        , padding (Padding 4 4 4 4)
+        , padding (Padding 4 4 16 4)
         , cornerRadius 20.0
         ][ imageView
           [ height $ V 23
@@ -133,6 +133,11 @@ view push state =
           , color Color.white900  
           , margin $ MarginLeft 8
           ] <> (FontStyle.subHeading2 LanguageStyle)
+        , linearLayout 
+          [ weight 1.0
+          , height WRAP_CONTENT
+          , visibility $ state.suffixButtonVisibility
+          ] []
         , dateTimePickerButton state push
       ]
     

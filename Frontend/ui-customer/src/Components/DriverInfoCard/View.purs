@@ -1059,7 +1059,7 @@ addStopView push state =
         , color Color.blue800
         , onClick push $ const AddStop
         , width WRAP_CONTENT
-        , padding $ PaddingVertical 2 2
+        , padding $ Padding 16 4 16 4
         ] <> FontStyle.body1 TypoGraphy
       ]
     ]

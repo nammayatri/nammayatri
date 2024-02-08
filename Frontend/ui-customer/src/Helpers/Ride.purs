@@ -207,7 +207,7 @@ checkRideStatus rideAssigned = do
                             price = resp.estimatedTotalFare,
                             rideId = currRideListItem.id,
                             rentalData 
-                                { finalDuration = (fromMaybe 0 resp.duration) / (60*60)
+                                { finalDuration = (fromMaybe 0 resp.duration) / (60)
                                 , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
                                 , baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
                                 , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000

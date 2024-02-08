@@ -94,6 +94,7 @@ data ScreenOutput = NoScreen
                   | OnRentalRideConfirm RentalScreenState
                   | DoRentalSearch RentalScreenState
                   | UpdateQuoteList RentalScreenState
+                  | GoToSelectPackage RentalScreenState
                   
 data FareBreakupRowType = BookingTime | BookingDistance | BaseFare | TollFee
 
@@ -218,7 +219,7 @@ eval _ state = continue state
 genericBackPressed :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 genericBackPressed state = case state.data.currentStage of
   RENTAL_SELECT_PACKAGE -> exit GoToHomeScreen
-  RENTAL_SELECT_VARIANT -> continue state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}
+  RENTAL_SELECT_VARIANT -> exit $ GoToSelectPackage state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}
   RENTAL_CONFIRMATION -> continue state { data { currentStage = RENTAL_SELECT_VARIANT }}
   _ -> continue state
 
