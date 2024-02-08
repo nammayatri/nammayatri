@@ -1264,7 +1264,7 @@ getBannerConfigs state =
       let driverLocation = toLower $ getValueToLocalStore DRIVER_LOCATION
           language = getLanguage $ getLanguageLocale languageKey
           configName = "driver_carousel_banner" <> language
-          datas = RC.carouselConfigData driverLocation configName
+          datas = RC.carouselConfigData driverLocation configName "driver_carousel_banner_en"
       BannerCarousel.remoteConfigTransformer datas BannerCarousal
     getLanguage :: String -> String
     getLanguage lang = 

@@ -37,7 +37,8 @@ type RemoteConfig a = {
     pondicherry :: a,
     goa :: a,
     pune :: a,
-    default :: a
+    default :: a,
+    config :: Maybe Config
 }
 
 newtype RCCarousel = RCCarousel {
@@ -54,6 +55,11 @@ newtype RCCarousel = RCCarousel {
     cta_corner_radius:: String,
     cta_image_url:: String
 }
-
 derive instance genericRCCarousel :: Generic RCCarousel _
 instance decodeRCCarousel :: Decode RCCarousel where decode = defaultDecode
+
+newtype Config = Config {
+    randomOrder:: Boolean
+}
+derive instance genericConfig :: Generic Config _
+instance decodeConfig :: Decode Config where decode = defaultDecode
