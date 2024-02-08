@@ -50,9 +50,7 @@ onUpdate _ reqBS = withFlowHandlerBecknAPI do
       messageId <- Utils.getMessageIdText reqV2.onUpdateReqContext
       pure (mbDOnSelectReq, messageId)
     Left reqV1 -> do
-      mbDOnSelectReq <- withTransactionIdLogTag reqV1 $ ACL.buildOnUpdateReq reqV1
-      let messageId = reqV1.context.message_id
-      pure (mbDOnSelectReq, messageId)
+      throwError $ InvalidRequest $ "onUpdate req shouldn't come" <> show reqV1
 
   whenJust mbDOnUpdateReq $ \onUpdateReq ->
     Redis.whenWithLockRedis (onUpdateLockKey messageId) 60 $ do

@@ -1,7 +1,8 @@
 module Beckn.OnDemand.Utils.Init where
 
-import Beckn.ACL.Common (getTagV2)
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.Utils as Utils
 import Data.Text as T
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM (PaymentCollector (..), PaymentInstrument (..), PaymentMethodInfo (..), PaymentType (..))
 import qualified Domain.Types.Vehicle.Variant as VehVar
@@ -21,8 +22,7 @@ castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVarian
   _ -> Nothing
 
 castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
-castPaymentType "ON_ORDER" = return DMPM.PREPAID -- TODO::Beckn, this is not present in spec
-castPaymentType "ON_FULFILLMENT" = return DMPM.POSTPAID
+castPaymentType "ON_FULFILLMENT" = return DMPM.ON_FULFILLMENT
 castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
@@ -38,7 +38,7 @@ castPaymentInstrument params = do
 
 getMaxEstimateDistance :: [Spec.TagGroup] -> Maybe HighPrecMeters
 getMaxEstimateDistance tagGroups = do
-  tagValue <- getTagV2 "estimations" "max_estimated_distance" tagGroups
+  tagValue <- Utils.getTagV2 Tag.ESTIMATIONS Tag.MAX_ESTIMATED_DISTANCE (Just tagGroups)
   maxEstimatedDistance <- readMaybe $ T.unpack tagValue
   Just $ HighPrecMeters maxEstimatedDistance
 

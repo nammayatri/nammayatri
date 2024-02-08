@@ -14,38 +14,15 @@
 
 module Beckn.ACL.Cancel where
 
-import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import Data.Maybe (fromJust)
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import EulerHS.Prelude
-import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-
-buildCancelReq ::
-  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
-  Cancel.CancelReq ->
-  m (Either DCancel.CancelReq DCancel.CancelSearchReq)
-buildCancelReq req = do
-  validateContext Context.CANCEL req.context
-  if req.message.item_id == ""
-    then do
-      let bookingId = Id req.message.order_id
-      return $
-        Left $
-          DCancel.CancelReq
-            { ..
-            }
-    else do
-      let transactionId = req.message.item_id
-      return $
-        Right $
-          DCancel.CancelSearchReq
-            { ..
-            }
 
 buildCancelReqV2 ::
   (HasFlowEnv m r '["_version" ::: Text]) =>
@@ -56,10 +33,12 @@ buildCancelReqV2 req = do
   if isJust (req.cancelReqMessage.cancelReqMessageDescriptor)
     then do
       let bookingId = Id $ req.cancelReqMessage.cancelReqMessageOrderId
+      let descriptor = fromJust $ req.cancelReqMessage.cancelReqMessageDescriptor
       return $
         Left $
           DCancel.CancelReq
-            { ..
+            { cancelStatus = descriptor.descriptorCode,
+              ..
             }
     else do
       let transactionId = req.cancelReqMessage.cancelReqMessageOrderId

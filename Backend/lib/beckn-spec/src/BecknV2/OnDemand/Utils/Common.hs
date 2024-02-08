@@ -13,6 +13,7 @@
 -}
 module BecknV2.OnDemand.Utils.Common where
 
+import BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import Data.Data (Data, gmapQ)
@@ -27,31 +28,17 @@ import Kernel.Utils.Common
 allNothing :: (Data d) => d -> Bool
 allNothing = not . or . gmapQ (const True `ext1Q` isJust)
 
-type TagGroupCode = Text
-
-type TagCode = Text
-
-getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
-getTagV2 tagGroupCode tagCode tagGroups = do
-  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just tagGroupCode) tagGroups
-  case tagGroup.tagGroupList of
-    Nothing -> Nothing
-    Just tagGroupList -> do
-      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
-      tag.tagValue
-  where
-    descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
-    descriptorCode (Just desc) = desc.descriptorCode
-    descriptorCode Nothing = Nothing
-
 getStartLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getStartLocation = find (\stop -> stop.stopType == Just "START")
+getStartLocation = find (\stop -> stop.stopType == Just (show Enums.START))
 
 getDropLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getDropLocation = find (\stop -> stop.stopType == Just "END")
+getDropLocation = find (\stop -> stop.stopType == Just (show Enums.END))
 
 getTransactionId :: (MonadFlow m) => Spec.Context -> m Text
 getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
+
+getMessageId :: (MonadFlow m) => Spec.Context -> m Text
+getMessageId context = context.contextMessageId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
 
 decodeReq :: (MonadFlow m, A.FromJSON v1, A.FromJSON v2) => ByteString -> m (Either v1 v2)
 decodeReq reqBS =

@@ -20,7 +20,6 @@ import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
-import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Common as DCT
@@ -43,8 +42,7 @@ castDPaymentCollector DMPM.BAP = Payment.BAP
 castDPaymentCollector DMPM.BPP = Payment.BPP
 
 castDPaymentType :: DMPM.PaymentType -> Payment.PaymentType
-castDPaymentType DMPM.PREPAID = Payment.ON_ORDER
-castDPaymentType DMPM.POSTPAID = Payment.ON_FULFILLMENT
+castDPaymentType DMPM.ON_FULFILLMENT = Payment.ON_FULFILLMENT
 
 castDPaymentInstrument :: DMPM.PaymentInstrument -> Payment.PaymentInstrument
 castDPaymentInstrument (DMPM.Card DMPM.DefaultCardType) = Payment.Card Payment.DefaultCardType
@@ -58,8 +56,7 @@ castPaymentCollector Payment.BAP = DMPM.BAP
 castPaymentCollector Payment.BPP = DMPM.BPP
 
 castPaymentType :: Payment.PaymentType -> DMPM.PaymentType
-castPaymentType Payment.ON_ORDER = DMPM.PREPAID
-castPaymentType Payment.ON_FULFILLMENT = DMPM.POSTPAID
+castPaymentType Payment.ON_FULFILLMENT = DMPM.ON_FULFILLMENT
 
 castPaymentInstrument :: Payment.PaymentInstrument -> DMPM.PaymentInstrument
 castPaymentInstrument (Payment.Card Payment.DefaultCardType) = DMPM.Card DMPM.DefaultCardType
@@ -164,17 +161,4 @@ mkFulfillmentType = \case
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
   DCT.Rental _ -> "RENTAL"
   DCT.InterCity _ -> "INTER_CITY"
-  _ -> "RIDE"
-
-getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
-getTagV2 tagGroupCode tagCode tagGroups = do
-  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just tagGroupCode) tagGroups
-  case tagGroup.tagGroupList of
-    Nothing -> Nothing
-    Just tagGroupList -> do
-      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
-      tag.tagValue
-  where
-    descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
-    descriptorCode (Just desc) = desc.descriptorCode
-    descriptorCode Nothing = Nothing
+  _ -> "DELIVERY"

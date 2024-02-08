@@ -24,6 +24,7 @@ module SharedLogic.FareCalculator
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (Variant (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
@@ -41,50 +42,42 @@ mkFareParamsBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice
 mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
   let dayPartRate = fromMaybe 1.0 fareParams.nightShiftRateIfApplies -- Temp fix :: have to fix properly
       baseFareFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate -- Temp fix :: have to fix properly
-      baseFareCaption = "BASE_FARE"
+      baseFareCaption = show Enums.BASE_FARE
       baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinalRounded)
-      baseFareDistanceCaption = "BASE_DISTANCE_FARE" --TODO: deprecated, to be removed
-      baseFareDistanceItem = mkBreakupItem baseFareDistanceCaption (mkPrice fareParams.baseFare)
 
-      serviceChargeCaption = "SERVICE_CHARGE"
+      serviceChargeCaption = show Enums.SERVICE_CHARGE
       mbServiceChargeItem = fmap (mkBreakupItem serviceChargeCaption) (mkPrice <$> fareParams.serviceCharge)
 
-      mkSelectedFareCaption = "DRIVER_SELECTED_FARE"
+      mkSelectedFareCaption = show Enums.DRIVER_SELECTED_FARE
       mbSelectedFareItem =
         fareParams.driverSelectedFare <&> \selFare ->
           mkBreakupItem mkSelectedFareCaption (mkPrice selFare)
 
-      customerExtraFareCaption = "CUSTOMER_SELECTED_FARE"
+      customerExtraFareCaption = show Enums.CUSTOMER_SELECTED_FARE
       mkCustomerExtraFareItem =
         fareParams.customerExtraFee <&> \ceFare -> do
           mkBreakupItem customerExtraFareCaption (mkPrice ceFare)
 
-      extraTimeFareCaption = "EXTRA_TIME_FARE"
+      extraTimeFareCaption = show Enums.EXTRA_TIME_FARE
       mkExtraTimeFareCaption =
         fareParams.rideExtraTimeFare <&> \tbCharge -> do
           mkBreakupItem extraTimeFareCaption (mkPrice tbCharge)
 
-      totalFareFinalRounded = fareSum fareParams
-      totalFareCaption = "TOTAL_FARE"
-      totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
-
-      nightShiftCaption = "NIGHT_SHIFT_CHARGE"
+      nightShiftCaption = show Enums.NIGHT_SHIFT_CHARGE
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
-      waitingChargesCaption = "WAITING_OR_PICKUP_CHARGES"
+      waitingChargesCaption = show Enums.WAITING_OR_PICKUP_CHARGES
       mbWaitingChargesItem = mkBreakupItem waitingChargesCaption . mkPrice <$> fareParams.waitingCharge
 
-      mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
+      mbFixedGovtRateCaption = show Enums.FIXED_GOVERNMENT_RATE
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
 
-      customerCancellationDuesCaption = "CUSTOMER_CANCELLATION_DUES"
+      customerCancellationDuesCaption = show Enums.CUSTOMER_CANCELLATION_DUES
       customerCancellationDues = mkBreakupItem customerCancellationDuesCaption (mkPrice $ round fareParams.customerCancellationDues)
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
-    [ Just totalFareItem,
-      Just baseFareItem,
-      Just baseFareDistanceItem,
+    [ Just baseFareItem,
       mbNightShiftChargeItem,
       mbWaitingChargesItem,
       mbFixedGovtRateItem,
@@ -102,10 +95,10 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       DFParams.RentalDetails det -> mkFPRentalDetailsBreakupList det
 
     mkFPProgressiveDetailsBreakupList dayPartRate det = do
-      let deadKmFareCaption = "DEAD_KILOMETER_FARE"
+      let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
 
-          extraDistanceFareCaption = "EXTRA_DISTANCE_FARE"
+          extraDistanceFareCaption = show Enums.EXTRA_DISTANCE_FARE
           mbExtraKmFareRounded = det.extraKmFare <&> roundToIntegral . (* dayPartRate) . fromIntegral -- temp fix :: have to fix properly
           extraDistanceFareItem =
             mbExtraKmFareRounded <&> \extraKmFareRounded ->
@@ -113,18 +106,18 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       catMaybes [Just deadKmFareItem, extraDistanceFareItem]
 
     mkFPSlabDetailsBreakupList det = do
-      let platformFeeCaption = "PLATFORM_FEE"
+      let platformFeeCaption = show Enums.PLATFORM_FEE
           mbPlatformFeeItem = mkBreakupItem platformFeeCaption . mkPrice . roundToIntegral <$> det.platformFee
-          sgstCaption = "SGST"
+          sgstCaption = show Enums.SGST
           mbSgstItem = mkBreakupItem sgstCaption . mkPrice . roundToIntegral <$> det.sgst
-          cgstCaption = "CGST"
+          cgstCaption = show Enums.CGST
           mbCgstItem = mkBreakupItem cgstCaption . mkPrice . roundToIntegral <$> det.cgst
       catMaybes [mbPlatformFeeItem, mbSgstItem, mbCgstItem]
 
     mkFPRentalDetailsBreakupList det = do
-      let timeBasedFareCaption = "TIME_BASED_FARE"
+      let timeBasedFareCaption = show Enums.TIME_BASED_FARE
           mbTimeBasedFare = mkBreakupItem timeBasedFareCaption (mkPrice det.timeBasedFare)
-          distBasedCaption = "DIST_BASED_FARE"
+          distBasedCaption = show Enums.DIST_BASED_FARE
           mbDistBasedFare = mkBreakupItem distBasedCaption (mkPrice det.distBasedFare)
       catMaybes [Just mbTimeBasedFare, Just mbDistBasedFare]
 

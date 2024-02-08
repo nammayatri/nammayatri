@@ -17,6 +17,7 @@ module Beckn.ACL.OnInit where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils hiding (mkStops)
 import Beckn.Types.Core.Taxi.OnInit as OnInit
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.FareParameters as DFParams
@@ -213,12 +214,12 @@ tfPayments res = do
   let paymentMethodInfo = res.paymentMethodInfo
   Just
     [ Spec.Payment
-        { paymentCollectedBy = Just "BPP",
+        { paymentCollectedBy = Just $ show Enums.BPP,
           paymentId = Nothing,
           paymentParams = mkParams paymentMethodInfo,
           paymentStatus = Nothing,
           paymentTags = Nothing,
-          paymentType = Just $ maybe "ON_FULFILLMENT" (Utils.castDPaymentType . (.paymentType)) paymentMethodInfo
+          paymentType = Just $ maybe (show Enums.ON_FULFILLMENT) (Utils.castDPaymentType . (.paymentType)) paymentMethodInfo
         }
     ]
   where
@@ -293,39 +294,39 @@ mkQuotationBreakup res =
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->
-          breakup.quotationBreakupInnerTitle == Just "BASE_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "SERVICE_CHARGE"
-            || breakup.quotationBreakupInnerTitle == Just "DEAD_KILOMETER_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "EXTRA_DISTANCE_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "DRIVER_SELECTED_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "CUSTOMER_SELECTED_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "TOTAL_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "WAITING_OR_PICKUP_CHARGES"
-            || breakup.quotationBreakupInnerTitle == Just "EXTRA_TIME_FARE"
+          breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_DISTANCE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
         DFParams.Slab ->
-          breakup.quotationBreakupInnerTitle == Just "BASE_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "SERVICE_CHARGE"
-            || breakup.quotationBreakupInnerTitle == Just "WAITING_OR_PICKUP_CHARGES"
-            || breakup.quotationBreakupInnerTitle == Just "PLATFORM_FEE"
-            || breakup.quotationBreakupInnerTitle == Just "SGST"
-            || breakup.quotationBreakupInnerTitle == Just "CGST"
-            || breakup.quotationBreakupInnerTitle == Just "FIXED_GOVERNMENT_RATE"
-            || breakup.quotationBreakupInnerTitle == Just "CUSTOMER_SELECTED_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "TOTAL_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "NIGHT_SHIFT_CHARGE"
-            || breakup.quotationBreakupInnerTitle == Just "EXTRA_TIME_FARE"
+          breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PLATFORM_FEE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.SGST)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CGST)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.FIXED_GOVERNMENT_RATE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
         DFParams.Rental ->
-          breakup.quotationBreakupInnerTitle == Just "BASE_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "SERVICE_CHARGE"
-            || breakup.quotationBreakupInnerTitle == Just "DEAD_KILOMETER_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "EXTRA_DISTANCE_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "TIME_BASED_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "DRIVER_SELECTED_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "CUSTOMER_SELECTED_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "NIGHT_SHIFT_CHARGE"
-            || breakup.quotationBreakupInnerTitle == Just "TOTAL_FARE"
-            || breakup.quotationBreakupInnerTitle == Just "WAITING_OR_PICKUP_CHARGES"
-            || breakup.quotationBreakupInnerTitle == Just "EXTRA_TIME_FARE"
+          breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_DISTANCE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TIME_BASED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do

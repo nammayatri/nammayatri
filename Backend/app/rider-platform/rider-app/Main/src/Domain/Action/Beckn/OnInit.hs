@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -45,7 +46,6 @@ data OnInitRes = OnInitRes
   { bookingId :: Id DRB.Booking,
     bppBookingId :: Id DRB.BPPBooking,
     bookingDetails :: DRB.BookingDetails,
-    driverId :: Maybe Text,
     paymentUrl :: Maybe Text,
     vehicleVariant :: Veh.VehicleVariant,
     itemId :: Text,
@@ -62,19 +62,24 @@ data OnInitRes = OnInitRes
     transactionId :: Text,
     merchant :: DM.Merchant,
     city :: Context.City,
-    nightSafetyCheck :: Bool
+    nightSafetyCheck :: Bool,
+    isValueAddNP :: Bool
   }
   deriving (Generic, Show)
 
-onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m OnInitRes
+onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
 onInit req = do
   void $ QRideB.updateBPPBookingId req.bookingId req.bppBookingId
   void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare req.paymentUrl
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   decRider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId) >>= decrypt
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
-  riderPhoneNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  riderPhoneNumber <-
+    if isValueAddNP
+      then decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      else pure booking.primaryExophone
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   city <-
     CQMOC.findById booking.merchantOperatingCityId
@@ -86,24 +91,24 @@ onInit req = do
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DRB.InterCityDetails details -> Just details.toLocation
-  return $
-    OnInitRes
-      { bookingId = booking.id,
-        driverId = booking.driverId,
-        paymentUrl = booking.paymentUrl,
-        itemId = booking.itemId,
-        vehicleVariant = booking.vehicleVariant,
-        fulfillmentId = booking.fulfillmentId,
-        bookingDetails = booking.bookingDetails,
-        bppId = booking.providerId,
-        bppUrl = booking.providerUrl,
-        estimatedTotalFare = booking.estimatedTotalFare,
-        estimatedFare = booking.estimatedFare,
-        fromLocation = fromLocation,
-        mbToLocation = mbToLocation,
-        mbRiderName = decRider.firstName,
-        transactionId = booking.transactionId,
-        merchant = merchant,
-        nightSafetyCheck = decRider.nightSafetyChecks,
-        ..
-      }
+  let onInitRes =
+        OnInitRes
+          { bookingId = booking.id,
+            paymentUrl = booking.paymentUrl,
+            itemId = booking.itemId,
+            vehicleVariant = booking.vehicleVariant,
+            fulfillmentId = booking.fulfillmentId,
+            bookingDetails = booking.bookingDetails,
+            bppId = booking.providerId,
+            bppUrl = booking.providerUrl,
+            estimatedTotalFare = booking.estimatedTotalFare,
+            estimatedFare = booking.estimatedFare,
+            fromLocation = fromLocation,
+            mbToLocation = mbToLocation,
+            mbRiderName = decRider.firstName,
+            transactionId = booking.transactionId,
+            merchant = merchant,
+            nightSafetyCheck = decRider.nightSafetyChecks,
+            ..
+          }
+  pure (onInitRes, booking)

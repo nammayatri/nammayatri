@@ -14,6 +14,8 @@
 
 module Beckn.OnDemand.Utils.OnSearch where
 
+import qualified BecknV2.OnDemand.Enums as Enums
+import BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import qualified Data.Aeson as A
@@ -30,7 +32,6 @@ import EulerHS.Prelude hiding (id, view, (^?))
 import GHC.Float (double2Int)
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
-import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 
 data Pricing = Pricing
@@ -53,7 +54,7 @@ convertEstimateToPricing (DEst.Estimate {..}, mbDriverLocations) =
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
       pricingMinFare = minFare,
-      fulfillmentType = "RIDE",
+      fulfillmentType = show Enums.DELIVERY,
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       ..
     }
@@ -71,12 +72,12 @@ convertQuoteToPricing (DQuote.Quote {..}, mbDriverLocations) =
       ..
     }
   where
-    mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = "RIDE_OTP"
-    mapToFulfillmentType (DTC.RoundTrip DTC.RideOtp) = "RIDE_OTP"
-    mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = "RIDE_OTP"
-    mapToFulfillmentType (DTC.Rental _) = "RENTAL"
-    mapToFulfillmentType (DTC.InterCity _) = "INTER_CITY"
-    mapToFulfillmentType _ = "RIDE_OTP" -- backward compatibility
+    mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.RoundTrip DTC.RideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.Rental _) = show Enums.RENTAL
+    mapToFulfillmentType (DTC.InterCity _) = show Enums.INTER_CITY
+    mapToFulfillmentType _ = show Enums.RIDE_OTP -- backward compatibility
 
 mkProviderLocations :: [Maybe NearestDriverInfo] -> [Spec.Location]
 mkProviderLocations driverLocationsInfo =
@@ -100,7 +101,7 @@ mkProviderLocation NearestDriverInfo {..} = do
 
 mkItemTags :: Pricing -> [Spec.TagGroup]
 mkItemTags pricing =
-  [mkGeneralInfoTag pricing, mkFareParamsTag pricing, mkRateCardTag pricing]
+  [mkGeneralInfoTag pricing, mkRateCardTag pricing]
 
 mkGeneralInfoTag :: Pricing -> Spec.TagGroup
 mkGeneralInfoTag pricing =
@@ -110,8 +111,8 @@ mkGeneralInfoTag pricing =
           tagGroupDescriptor =
             Just
               Spec.Descriptor
-                { descriptorCode = Just "general_info",
-                  descriptorName = Just "General Information",
+                { descriptorCode = Just $ show Tag.INFO,
+                  descriptorName = Just "Information",
                   descriptorShortDesc = Nothing
                 },
           tagGroupList =
@@ -129,7 +130,7 @@ mkGeneralInfoTag pricing =
               tagDescriptor =
                 Just
                   Spec.Descriptor
-                    { descriptorCode = Just "special_location_tag",
+                    { descriptorCode = Just $ show Tag.SPECIAL_LOCATION_TAG,
                       descriptorName = Just "Special Location Tag",
                       descriptorShortDesc = Nothing
                     },
@@ -144,8 +145,8 @@ mkGeneralInfoTag pricing =
             tagDescriptor =
               Just
                 Spec.Descriptor
-                  { descriptorCode = Just "distance_to_nearest_driver",
-                    descriptorName = Just "Distance To Nearest Driver",
+                  { descriptorCode = Just $ show Tag.DISTANCE_TO_NEAREST_DRIVER_METER,
+                    descriptorName = Just "Distance To Nearest Driver Meter",
                     descriptorShortDesc = Nothing
                   },
             tagValue = Just $ show . double2Int . realToFrac $ distanceToNearestDriver
@@ -175,22 +176,6 @@ data FareParamsBreakupItem = FareParamsBreakupItem
 
 mkFareParamsBreakupItem :: Text -> Money -> FareParamsBreakupItem
 mkFareParamsBreakupItem = FareParamsBreakupItem
-
-mkFareParamsTag :: Pricing -> Spec.TagGroup
-mkFareParamsTag pricing = do
-  let fareParamsBreakups = maybe [] (mkFareParamsBreakups mkPrice mkFareParamsBreakupItem) pricing.fareParams
-      fareParamsBreakupsTags = buildFareParamsBreakupsTags <$> fareParamsBreakups
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just
-          Spec.Descriptor
-            { descriptorCode = Just "fare_breakup",
-              descriptorName = Just "Fare Breakup",
-              descriptorShortDesc = Nothing
-            },
-      tagGroupList = Just fareParamsBreakupsTags
-    }
 
 buildRateCardTags :: RateCardBreakupItem -> Spec.Tag
 buildRateCardTags RateCardBreakupItem {..} = do
@@ -226,8 +211,8 @@ mkRateCardTag pricing = do
       tagGroupDescriptor =
         Just
           Spec.Descriptor
-            { descriptorCode = Just "rate_card",
-              descriptorName = Just "Rate Card",
+            { descriptorCode = Just $ show Tag.FARE_POLICY,
+              descriptorName = Just "Fare Policy",
               descriptorShortDesc = Nothing
             },
       tagGroupList = Just farePolicyBreakupsTags

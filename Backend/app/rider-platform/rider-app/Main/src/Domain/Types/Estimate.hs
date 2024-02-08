@@ -17,6 +17,7 @@
 module Domain.Types.Estimate where
 
 import Data.Aeson
+import Domain.Types.BppDetails
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSearchRequest
@@ -24,11 +25,16 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import qualified Storage.CachedQueries.BppDetails as CQBppDetails
+import qualified Storage.CachedQueries.ValueAddNP as QNP
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Tools.Error
 
 data Estimate = Estimate
   { id :: Id Estimate,
@@ -114,7 +120,12 @@ data EstimateAPIEntity = EstimateAPIEntity
     waitingCharges :: WaitingCharges,
     driversLatLong :: [LatLong],
     specialLocationTag :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    providerName :: Text,
+    providerLogoUrl :: Maybe Text,
+    providerDescription :: Maybe Text,
+    providerId :: Text,
+    isValueAddNP :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -131,18 +142,26 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-mkEstimateAPIEntity :: Estimate -> EstimateAPIEntity
+mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -> m EstimateAPIEntity
 mkEstimateAPIEntity Estimate {..} = do
-  EstimateAPIEntity
-    { agencyName = providerName,
-      agencyNumber = providerMobileNumber,
-      agencyCompletedRidesCount = providerCompletedRidesCount,
-      tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
-      estimateFareBreakup = mkEstimateBreakupAPIEntity <$> estimateBreakupList,
-      driversLatLong = driversLocation,
-      nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
-      ..
-    }
+  valueAddNPRes <- QNP.isValueAddNP providerId
+  (bppDetails :: BppDetails) <- CQBppDetails.findBySubscriberIdAndDomain providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found " <> providerId)
+  return
+    EstimateAPIEntity
+      { agencyName = providerName,
+        agencyNumber = providerMobileNumber,
+        agencyCompletedRidesCount = providerCompletedRidesCount,
+        tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
+        estimateFareBreakup = mkEstimateBreakupAPIEntity <$> estimateBreakupList,
+        driversLatLong = driversLocation,
+        nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
+        providerId = providerId,
+        providerName = bppDetails.name,
+        providerLogoUrl = bppDetails.logoUrl,
+        providerDescription = bppDetails.description,
+        isValueAddNP = valueAddNPRes,
+        ..
+      }
 
 mkNightShiftRateAPIEntity :: NightShiftInfo -> NightShiftRateAPIEntity
 mkNightShiftRateAPIEntity NightShiftInfo {..} = do

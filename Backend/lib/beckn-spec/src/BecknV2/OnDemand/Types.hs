@@ -46,6 +46,7 @@ module BecknV2.OnDemand.Types
     Intent (..),
     Item (..),
     Location (..),
+    OnCancelReq (..),
     OnConfirmReq (..),
     OnInitReq (..),
     OnSearchReq (..),
@@ -964,6 +965,37 @@ optionsLocation =
         ("locationState", "state")
       ]
 
+-- |
+data OnCancelReq = OnCancelReq
+  { -- |
+    onCancelReqContext :: Context,
+    -- |
+    onCancelReqError :: Maybe Error,
+    -- |
+    onCancelReqMessage :: Maybe ConfirmReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON OnCancelReq where
+  parseJSON = genericParseJSON optionsOnCancelReq
+
+instance ToJSON OnCancelReq where
+  toJSON = genericToJSON optionsOnCancelReq
+
+optionsOnCancelReq :: Options
+optionsOnCancelReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("onCancelReqContext", "context"),
+        ("onCancelReqError", "error"),
+        ("onCancelReqMessage", "message")
+      ]
+
+-- |
 -- |
 data OnConfirmReq = OnConfirmReq
   { -- |

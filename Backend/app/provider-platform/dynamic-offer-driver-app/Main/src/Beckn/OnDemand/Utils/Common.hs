@@ -16,6 +16,8 @@
 module Beckn.OnDemand.Utils.Common where
 
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
+import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import Data.Aeson
@@ -41,10 +43,10 @@ import Kernel.Utils.Common
 import Tools.Error
 
 firstStop :: [Spec.Stop] -> Maybe Spec.Stop
-firstStop = find (\stop -> Spec.stopType stop == Just "START")
+firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))
 
 lastStop :: [Spec.Stop] -> Maybe Spec.Stop
-lastStop = find (\stop -> Spec.stopType stop == Just "END")
+lastStop = find (\stop -> Spec.stopType stop == Just (show Enums.END))
 
 mkStops :: LatLong -> Maybe LatLong -> Maybe [Spec.Stop]
 mkStops origin mbDestination = do
@@ -65,7 +67,7 @@ mkStops origin mbDestination = do
                       locationState = Nothing,
                       locationId = Nothing
                     },
-              stopType = Just "START",
+              stopType = Just $ show Enums.START,
               stopAuthorization = Nothing,
               stopTime = Nothing
             },
@@ -82,7 +84,7 @@ mkStops origin mbDestination = do
                         locationState = Nothing,
                         locationId = Nothing
                       },
-                stopType = Just "END",
+                stopType = Just $ show Enums.END,
                 stopAuthorization = Nothing,
                 stopTime = Nothing
               }
@@ -152,28 +154,27 @@ mkBppUri merchantId =
     <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId)
 
 castVariant :: Variant.Variant -> (Text, Text)
-castVariant Variant.SEDAN = ("CAB", "SEDAN")
-castVariant Variant.HATCHBACK = ("CAB", "HATCHBACK")
-castVariant Variant.SUV = ("CAB", "SUV")
-castVariant Variant.AUTO_RICKSHAW = ("AUTO_RICKSHAW", "AUTO_RICKSHAW")
-castVariant Variant.TAXI = ("CAB", "TAXI")
-castVariant Variant.TAXI_PLUS = ("CAB", "TAXI_PLUS")
+castVariant Variant.SEDAN = (show Enums.CAB, "SEDAN")
+castVariant Variant.HATCHBACK = (show Enums.CAB, "HATCHBACK")
+castVariant Variant.SUV = (show Enums.CAB, "SUV")
+castVariant Variant.AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
+castVariant Variant.TAXI = (show Enums.CAB, "TAXI")
+castVariant Variant.TAXI_PLUS = (show Enums.CAB, "TAXI_PLUS")
 
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
-  DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
-  DCT.RoundTrip DCT.RideOtp -> "RIDE_OTP"
-  DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
-  DCT.Rental _ -> "RENTAL"
-  DCT.InterCity _ -> "INTER_CITY"
-  _ -> "RIDE"
+  DCT.OneWay DCT.OneWayRideOtp -> show Enums.RIDE_OTP
+  DCT.RoundTrip DCT.RideOtp -> show Enums.RIDE_OTP
+  DCT.RideShare DCT.RideOtp -> show Enums.RIDE_OTP
+  DCT.Rental _ -> show Enums.RENTAL
+  DCT.InterCity _ -> show Enums.INTER_CITY
+  _ -> show Enums.DELIVERY
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
 
 castDPaymentType :: DMPM.PaymentType -> Text
-castDPaymentType DMPM.PREPAID = "ON_ORDER" -- TODO::Beckn, not there in spec.
-castDPaymentType DMPM.POSTPAID = "ON_FULFILLMENT"
+castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe Variant.Variant
 parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
@@ -237,7 +238,7 @@ mkStops' origin mbDestination mAuthorization =
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing
                         },
-                  stopType = Just "START",
+                  stopType = Just $ show Enums.START,
                   stopAuthorization = mAuthorization >>= mkAuthorization,
                   stopTime = Nothing
                 },
@@ -254,7 +255,7 @@ mkStops' origin mbDestination mAuthorization =
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing
                           },
-                    stopType = Just "END",
+                    stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
                     stopTime = Nothing
                   }
@@ -267,7 +268,7 @@ mkStops' origin mbDestination mAuthorization =
       Just $
         Spec.Authorization
           { authorizationToken = Just auth,
-            authorizationType = Just "OTP"
+            authorizationType = Just $ show Enums.OTP
           }
 
 mkAddress :: DLoc.LocationAddress -> Text
@@ -306,12 +307,12 @@ mkStopsOUS booking ride rideOtp =
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing
                         },
-                  stopType = Just "START",
+                  stopType = Just $ show Enums.START,
                   stopAuthorization =
                     Just $
                       Spec.Authorization
                         { authorizationToken = Just rideOtp,
-                          authorizationType = Just "OTP"
+                          authorizationType = Just $ show Enums.OTP
                         },
                   stopTime = Just $ Spec.Time {timeTimestamp = ride.tripStartTime}
                 },
@@ -328,7 +329,7 @@ mkStopsOUS booking ride rideOtp =
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing
                           },
-                    stopType = Just "END",
+                    stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
                     stopTime = Just $ Spec.Time {timeTimestamp = ride.tripEndTime}
                   }
@@ -430,7 +431,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "driver_details",
+                { descriptorCode = Just $ show Tags.DRIVER_DETAILS,
                   descriptorName = Just "Driver Details",
                   descriptorShortDesc = Nothing
                 },
@@ -450,7 +451,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "registered_at",
+                  { descriptorCode = Just $ show Tags.REGISTERED_AT,
                     descriptorName = Just "Registered At",
                     descriptorShortDesc = Nothing
                   },
@@ -466,7 +467,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "rating",
+                    { descriptorCode = Just $ show Tags.RATING,
                       descriptorName = Just "rating",
                       descriptorShortDesc = Nothing
                     },
@@ -482,7 +483,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "is_driver_birthday",
+                    { descriptorCode = Just $ show Tags.IS_DRIVER_BIRTHDAY,
                       descriptorName = Just "Is Driver BirthDay",
                       descriptorShortDesc = Nothing
                     },
@@ -498,7 +499,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "is_free_ride",
+                    { descriptorCode = Just $ show Tags.IS_FREE_RIDE,
                       descriptorName = Just "Is Free Ride",
                       descriptorShortDesc = Nothing
                     },
@@ -513,7 +514,7 @@ mkLocationTagGroupV2 location =
         tagGroupDescriptor =
           Just $
             Spec.Descriptor
-              { descriptorCode = Just "current_location",
+              { descriptorCode = Just $ show Tags.CURRENT_LOCATION,
                 descriptorName = Just "Current Location",
                 descriptorShortDesc = Nothing
               },
@@ -524,7 +525,7 @@ mkLocationTagGroupV2 location =
                   tagDescriptor =
                     Just $
                       Spec.Descriptor
-                        { descriptorCode = Just "current_location_lat",
+                        { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LAT,
                           descriptorName = Just "Current Location Lat",
                           descriptorShortDesc = Nothing
                         },
@@ -535,7 +536,7 @@ mkLocationTagGroupV2 location =
                   tagDescriptor =
                     Just $
                       Spec.Descriptor
-                        { descriptorCode = Just "current_location_lon",
+                        { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LON,
                           descriptorName = Just "Current Location Lon",
                           descriptorShortDesc = Nothing
                         },
@@ -552,7 +553,7 @@ mkArrivalTimeTagGroupV2 arrivalTime =
         tagGroupDescriptor =
           Just $
             Spec.Descriptor
-              { descriptorCode = Just "driver_arrived_info",
+              { descriptorCode = Just $ show Tags.DRIVER_ARRIVED_INFO,
                 descriptorName = Just "Driver Arrived Info",
                 descriptorShortDesc = Nothing
               },
@@ -563,7 +564,7 @@ mkArrivalTimeTagGroupV2 arrivalTime =
                   tagDescriptor =
                     Just $
                       Spec.Descriptor
-                        { descriptorCode = Just "arrival_time",
+                        { descriptorCode = Just $ show Tags.ARRIVAL_TIME,
                           descriptorName = Just "Chargeable Distance",
                           descriptorShortDesc = Nothing
                         },
@@ -580,7 +581,7 @@ mkOdometerTagGroupV2 startOdometerReading =
         tagGroupDescriptor =
           Just $
             Spec.Descriptor
-              { descriptorCode = Just "ride_odometer_details",
+              { descriptorCode = Just $ show Tags.RIDE_ODOMETER_DETAILS,
                 descriptorName = Just "Ride Odometer Details",
                 descriptorShortDesc = Nothing
               },
@@ -591,7 +592,7 @@ mkOdometerTagGroupV2 startOdometerReading =
                   tagDescriptor =
                     Just $
                       Spec.Descriptor
-                        { descriptorCode = Just "start_odometer_reading",
+                        { descriptorCode = Just $ show Tags.START_ODOMETER_READING,
                           descriptorName = Just "Start Odometer Reading",
                           descriptorShortDesc = Nothing
                         },

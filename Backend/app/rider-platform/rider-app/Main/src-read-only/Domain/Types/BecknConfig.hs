@@ -12,15 +12,18 @@ import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data BecknConfig = BecknConfig
-  { domain :: Kernel.Prelude.Text,
+  { collectedBy :: Domain.Types.BecknConfig.PaymentCollectedBy,
+    domain :: Kernel.Prelude.Text,
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registryUrl :: Servant.Client.Core.BaseUrl,
     settlementType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    staticTermsUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
     subscriberId :: Kernel.Prelude.Text,
     subscriberUrl :: Servant.Client.Core.BaseUrl,
     uniqueKeyId :: Kernel.Prelude.Text,
+    vehicleCategory :: Domain.Types.BecknConfig.VehicleCategory,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -28,9 +31,12 @@ data BecknConfig = BecknConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BknPaymentParams = BknPaymentParams
-  { bankAccNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    bankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+data PaymentCollectedBy = BAP | BPP
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehicleCategory = CAB | AUTO_RICKSHAW | METRO
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleCategory)

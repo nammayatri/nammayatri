@@ -38,6 +38,11 @@ import Tools.Auth
 
 type API =
   CancelAPI
+    :<|> "rideBooking"
+      :> Capture "rideBookingId" (Id SRB.Booking)
+      :> "softCancel"
+      :> TokenAuth
+      :> Post '[JSON] APISuccess
     :<|> "dispute"
       :> "cancellationDues"
       :> TokenAuth
@@ -62,6 +67,7 @@ type GetCancellationDuesDetailsAPI =
 handler :: FlowServer API
 handler =
   cancel
+    :<|> softCancel
     :<|> disputeCancellationDues
     :<|> getCancellationDuesDetails
 
@@ -73,12 +79,17 @@ cancel ::
 cancel bookingId (personId, merchantId) req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
-    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-    if isBecknSpecVersion2
-      then do
-        void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
-      else do
-        void $ withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
+    void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
+    return Success
+
+softCancel ::
+  Id SRB.Booking ->
+  (Id Person.Person, Id Merchant.Merchant) ->
+  FlowHandler APISuccess
+softCancel bookingId (personId, merchantId) =
+  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+    dCancelRes <- DCancel.softCancel bookingId (personId, merchantId)
+    void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
     return Success
 
 disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler APISuccess

@@ -18,6 +18,8 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
+import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.List as List
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -83,46 +85,46 @@ mkRideCompletedQuote ride fareParams = do
       case fParamsType of
         DFParams.Progressive ->
           title
-            `elem` [ Just "BASE_FARE",
-                     Just "SERVICE_CHARGE",
-                     Just "DEAD_KILOMETER_FARE",
-                     Just "EXTRA_DISTANCE_FARE",
-                     Just "DRIVER_SELECTED_FARE",
-                     Just "CUSTOMER_SELECTED_FARE",
-                     Just "TOTAL_FARE",
-                     Just "WAITING_OR_PICKUP_CHARGES",
-                     Just "EXTRA_TIME_FARE",
-                     Just "CUSTOMER_CANCELLATION_DUES"
+            `elem` [ Just (show Enums.BASE_FARE),
+                     Just (show Enums.SERVICE_CHARGE),
+                     Just (show Enums.DEAD_KILOMETER_FARE),
+                     Just (show Enums.EXTRA_DISTANCE_FARE),
+                     Just (show Enums.DRIVER_SELECTED_FARE),
+                     Just (show Enums.CUSTOMER_SELECTED_FARE),
+                     Just (show Enums.TOTAL_FARE),
+                     Just (show Enums.WAITING_OR_PICKUP_CHARGES),
+                     Just (show Enums.EXTRA_TIME_FARE),
+                     Just (show Enums.CUSTOMER_CANCELLATION_DUES)
                    ]
         DFParams.Slab ->
           title
-            `elem` [ Just "BASE_FARE",
-                     Just "SERVICE_CHARGE",
-                     Just "WAITING_OR_PICKUP_CHARGES",
-                     Just "PLATFORM_FEE",
-                     Just "SGST",
-                     Just "CGST",
-                     Just "FIXED_GOVERNMENT_RATE",
-                     Just "TOTAL_FARE",
-                     Just "CUSTOMER_SELECTED_FARE",
-                     Just "NIGHT_SHIFT_CHARGE",
-                     Just "EXTRA_TIME_FARE",
-                     Just "CUSTOMER_CANCELLATION_DUES"
+            `elem` [ Just (show Enums.BASE_FARE),
+                     Just (show Enums.SERVICE_CHARGE),
+                     Just (show Enums.WAITING_OR_PICKUP_CHARGES),
+                     Just (show Enums.PLATFORM_FEE),
+                     Just (show Enums.SGST),
+                     Just (show Enums.CGST),
+                     Just (show Enums.FIXED_GOVERNMENT_RATE),
+                     Just (show Enums.TOTAL_FARE),
+                     Just (show Enums.CUSTOMER_SELECTED_FARE),
+                     Just (show Enums.NIGHT_SHIFT_CHARGE),
+                     Just (show Enums.EXTRA_TIME_FARE),
+                     Just (show Enums.CUSTOMER_CANCELLATION_DUES)
                    ]
         DFParams.Rental ->
           title
-            `elem` [ Just "BASE_FARE",
-                     Just "SERVICE_CHARGE",
-                     Just "DEAD_KILOMETER_FARE",
-                     Just "DIST_BASED_FARE",
-                     Just "TIME_BASED_FARE",
-                     Just "DRIVER_SELECTED_FARE",
-                     Just "CUSTOMER_SELECTED_FARE",
-                     Just "TOTAL_FARE",
-                     Just "WAITING_OR_PICKUP_CHARGES",
-                     Just "NIGHT_SHIFT_CHARGE",
-                     Just "EXTRA_TIME_FARE",
-                     Just "CUSTOMER_CANCELLATION_DUES"
+            `elem` [ Just (show Enums.BASE_FARE),
+                     Just (show Enums.SERVICE_CHARGE),
+                     Just (show Enums.DEAD_KILOMETER_FARE),
+                     Just (show Enums.DIST_BASED_FARE),
+                     Just (show Enums.TIME_BASED_FARE),
+                     Just (show Enums.DRIVER_SELECTED_FARE),
+                     Just (show Enums.CUSTOMER_SELECTED_FARE),
+                     Just (show Enums.TOTAL_FARE),
+                     Just (show Enums.WAITING_OR_PICKUP_CHARGES),
+                     Just (show Enums.NIGHT_SHIFT_CHARGE),
+                     Just (show Enums.EXTRA_TIME_FARE),
+                     Just (show Enums.CUSTOMER_CANCELLATION_DUES)
                    ]
 
 mkRideCompletedPayment :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> [Spec.Payment]
@@ -159,7 +161,7 @@ mkDistanceTagGroup ride = do
           { tagGroupDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "ride_distance_details",
+                  { descriptorCode = Just $ show Tags.RIDE_DISTANCE_DETAILS,
                     descriptorName = Just "Ride Distance Details",
                     descriptorShortDesc = Nothing
                   },
@@ -178,7 +180,7 @@ mkDistanceTagGroup ride = do
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "chargeable_distance",
+                  { descriptorCode = Just $ show Tags.CHARGEABLE_DISTANCE,
                     descriptorName = Just "Chargeable Distance",
                     descriptorShortDesc = Nothing
                   },
@@ -192,7 +194,7 @@ mkDistanceTagGroup ride = do
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "traveled_distance",
+                  { descriptorCode = Just $ show Tags.TRAVELED_DISTANCE,
                     descriptorName = Just "Traveled Distance",
                     descriptorShortDesc = Nothing
                   },
@@ -206,7 +208,7 @@ mkDistanceTagGroup ride = do
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "end_odometer_reading",
+                  { descriptorCode = Just $ show Tags.END_ODOMETER_READING,
                     descriptorName = Just "End Odometer Reading",
                     descriptorShortDesc = Nothing
                   },
@@ -221,7 +223,7 @@ mkPreviousCancellationReasonsTags cancellationSource =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "previous_cancellation_reasons",
+                { descriptorCode = Just $ show Tags.PREVIOUS_CANCELLATION_REASONS,
                   descriptorName = Just "Previous Cancellation Reasons",
                   descriptorShortDesc = Nothing
                 },
@@ -238,7 +240,7 @@ mkPreviousCancellationReasonsTags cancellationSource =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "cancellation_reason",
+                  { descriptorCode = Just $ show Tags.CANCELLATION_REASON,
                     descriptorName = Just "Chargeable Distance",
                     descriptorShortDesc = Nothing
                   },
@@ -261,7 +263,7 @@ mkNewMessageTags message =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "driver_new_message",
+                { descriptorCode = Just $ show Tags.DRIVER_NEW_MESSAGE,
                   descriptorName = Just "Driver New Message",
                   descriptorShortDesc = Nothing
                 },
@@ -278,7 +280,7 @@ mkNewMessageTags message =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "message",
+                  { descriptorCode = Just $ show Tags.MESSAGE,
                     descriptorName = Just "New Message",
                     descriptorShortDesc = Nothing
                   },
@@ -293,7 +295,7 @@ mkSafetyAlertTags reason code =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "safety_alert",
+                { descriptorCode = Just $ show Tags.SAFETY_ALERT,
                   descriptorName = Just "Safety Alert",
                   descriptorShortDesc = Nothing
                 },

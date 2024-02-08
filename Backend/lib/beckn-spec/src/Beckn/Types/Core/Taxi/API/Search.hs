@@ -19,7 +19,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
-import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchReq = BecknReq SearchMessage
@@ -30,8 +29,7 @@ type SearchRes = AckResponse
 
 type SearchAPI =
   "search"
-    -- :> ReqBody '[JSON] SearchReq
-    :> ReqBody '[JSONBS] ByteString
+    :> ReqBody '[JSON] SearchReqV2
     :> Post '[JSON] SearchRes
 
 searchAPI :: Proxy SearchAPI

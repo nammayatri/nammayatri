@@ -13,180 +13,21 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Confirm (buildConfirmReq, buildConfirmReqV2) where
+module Beckn.ACL.Confirm (buildConfirmReqV2) where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
-import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Location as DL
-import qualified Domain.Types.LocationAddress as DLA
-import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common hiding (id)
-import Kernel.Types.Id
 import Kernel.Utils.Common
-
-buildConfirmReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DOnInit.OnInitRes ->
-  m (BecknReq Confirm.ConfirmMessage)
-buildConfirmReq res = do
-  messageId <- generateGUID
-  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country False
-  message <- mkConfirmMessage res
-  pure $ BecknReq context message
-
-mkConfirmMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessage
-mkConfirmMessage res = do
-  let vehicleVariant = castVehicleVariant res.vehicleVariant
-      nightSafetyCheck = res.nightSafetyCheck
-  pure
-    Confirm.ConfirmMessage
-      { order =
-          Confirm.Order
-            { id = getId res.bppBookingId,
-              items =
-                [ Confirm.OrderItem
-                    { id = res.itemId,
-                      price = Nothing
-                    }
-                ],
-              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant nightSafetyCheck,
-              payment = mkPayment res.estimatedTotalFare res.paymentUrl,
-              quote =
-                Confirm.Quote
-                  { price =
-                      Confirm.QuotePrice
-                        { value = fromIntegral res.estimatedFare,
-                          offered_value = fromIntegral res.estimatedTotalFare,
-                          currency = "INR"
-                        },
-                    breakup = Nothing
-                  },
-              provider =
-                res.driverId >>= \dId ->
-                  Just
-                    Confirm.Provider
-                      { id = dId
-                      }
-            }
-      }
-  where
-    castVehicleVariant = \case
-      VehVar.SEDAN -> Confirm.SEDAN
-      VehVar.SUV -> Confirm.SUV
-      VehVar.HATCHBACK -> Confirm.HATCHBACK
-      VehVar.AUTO_RICKSHAW -> Confirm.AUTO_RICKSHAW
-      VehVar.TAXI -> Confirm.TAXI
-      VehVar.TAXI_PLUS -> Confirm.TAXI_PLUS
-    fulfillmentType = case res.bookingDetails of
-      DRB.OneWaySpecialZoneDetails _ -> "RIDE_OTP"
-      DRB.RentalDetails _ -> "RENTAL"
-      DRB.InterCityDetails _ -> "INTER_CITY"
-      _ -> "RIDE"
-
-mkFulfillment :: Maybe Text -> Text -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Bool -> Confirm.FulfillmentInfo
-mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant nightSafetyCheck =
-  Confirm.FulfillmentInfo
-    { id = fulfillmentId,
-      _type = fulfillmentType,
-      start =
-        Confirm.StartInfo
-          { location =
-              Confirm.Location
-                { gps =
-                    Confirm.Gps
-                      { lat = startLoc.lat,
-                        lon = startLoc.lon
-                      },
-                  address = mkAddress startLoc.address
-                },
-            authorization = Nothing
-          },
-      end =
-        mbStopLoc <&> \stopLoc ->
-          Confirm.StopInfo
-            { location =
-                Confirm.Location
-                  { gps =
-                      Confirm.Gps
-                        { lat = stopLoc.lat,
-                          lon = stopLoc.lon
-                        },
-                    address = mkAddress stopLoc.address
-                  }
-            },
-      customer =
-        Confirm.Customer
-          { contact =
-              Confirm.Contact
-                { phone =
-                    Confirm.Phone
-                      { phoneNumber = riderPhoneNumber,
-                        phoneCountryCode = riderPhoneCountryCode
-                      }
-                },
-            person =
-              mbRiderName <&> \riderName ->
-                Confirm.OrderPerson
-                  { name = riderName,
-                    tags = Just $ Confirm.TG [mkCustomerInfoTags]
-                  }
-          },
-      vehicle =
-        Confirm.Vehicle
-          { category = vehicleVariant
-          }
-    }
-  where
-    mkCustomerInfoTags =
-      Tags.TagGroup
-        { display = False,
-          code = "customer_info",
-          name = "Customer Information",
-          list =
-            [ Tags.Tag
-                { display = (\_ -> Just False) =<< Just nightSafetyCheck,
-                  code = (\_ -> Just "night_safety_check") =<< Just nightSafetyCheck,
-                  name = (\_ -> Just "Night Safety Check") =<< Just nightSafetyCheck,
-                  value = (Just . show) =<< Just nightSafetyCheck
-                }
-            ]
-        }
-
-mkAddress :: DLA.LocationAddress -> Confirm.Address
-mkAddress DLA.LocationAddress {..} =
-  Confirm.Address
-    { area_code = areaCode,
-      locality = area,
-      ward = ward,
-      door = door,
-      ..
-    }
-
-mkPayment :: Money -> Maybe Text -> Confirm.Payment
-mkPayment estimatedTotalFare uri =
-  Confirm.Payment
-    { _type = Confirm.ON_FULFILLMENT,
-      params =
-        Confirm.PaymentParams
-          { collected_by = Confirm.BPP,
-            instrument = Nothing,
-            currency = "INR",
-            amount = Just $ realToFrac estimatedTotalFare
-          },
-      uri
-    }
 
 buildConfirmReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -217,7 +58,7 @@ tfOrder res =
       orderId = Just res.bppBookingId.getId,
       orderItems = tfItems res,
       orderPayments = tfPayments res,
-      orderProvider = tfProvider res,
+      orderProvider = Nothing,
       orderQuote = tfQuotation res,
       orderStatus = Nothing
     }
@@ -238,10 +79,10 @@ tfFulfillments res =
     ]
   where
     mkFulfillmentType = \case
-      DRB.OneWaySpecialZoneDetails _ -> "RIDE_OTP"
-      DRB.RentalDetails _ -> "RENTAL"
-      DRB.InterCityDetails _ -> "INTER_CITY"
-      _ -> "RIDE"
+      DRB.OneWaySpecialZoneDetails _ -> show Enums.RIDE_OTP
+      DRB.RentalDetails _ -> show Enums.RENTAL
+      DRB.InterCityDetails _ -> show Enums.INTER_CITY
+      _ -> show Enums.DELIVERY
 
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]
 tfItems res =
@@ -262,12 +103,12 @@ tfPayments :: DOnInit.OnInitRes -> Maybe [Spec.Payment]
 tfPayments res =
   Just
     [ Spec.Payment
-        { paymentCollectedBy = Just "BPP",
+        { paymentCollectedBy = Just $ show Enums.BPP,
           paymentId = Nothing,
           paymentParams = mkParams,
           paymentStatus = Nothing,
           paymentTags = Nothing,
-          paymentType = Just "ON_FULFILLMENT"
+          paymentType = Just $ show Enums.ON_FULFILLMENT
         }
     ]
   where
@@ -280,19 +121,6 @@ tfPayments res =
             paymentParamsCurrency = Just "INR",
             paymentParamsVirtualPaymentAddress = Nothing
           }
-
-tfProvider :: DOnInit.OnInitRes -> Maybe Spec.Provider
-tfProvider res = do
-  driverId <- res.driverId
-  return $
-    Spec.Provider
-      { providerDescriptor = Nothing,
-        providerFulfillments = Nothing,
-        providerId = Just driverId,
-        providerItems = Nothing,
-        providerLocations = Nothing,
-        providerPayments = Nothing
-      }
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
 tfQuotation res =
@@ -327,6 +155,7 @@ tfCustomer res =
       Just $
         Spec.Contact
           { contactPhone = Just res.riderPhoneNumber
+          -- handling of passing virtual number at on_init domain handler.
           }
 
     mkPerson = do
@@ -339,20 +168,22 @@ tfCustomer res =
             personTags = mkPersonTags
           }
 
-    mkPersonTags =
-      Just
-        [ Spec.TagGroup
-            { tagGroupDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just "customer_info",
-                      descriptorName = Just "Customer Information",
-                      descriptorShortDesc = Nothing
-                    },
-              tagGroupDisplay = Just False,
-              tagGroupList = mkPersonTag
-            }
-        ]
+    mkPersonTags
+      | not res.isValueAddNP = Nothing
+      | otherwise =
+        Just
+          [ Spec.TagGroup
+              { tagGroupDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.CUSTOMER_INFO,
+                        descriptorName = Just "Customer Information",
+                        descriptorShortDesc = Nothing
+                      },
+                tagGroupDisplay = Just False,
+                tagGroupList = mkPersonTag
+              }
+          ]
 
     mkPersonTag =
       Just
@@ -360,7 +191,7 @@ tfCustomer res =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "night_safety_check",
+                    { descriptorCode = Just $ show Tags.NIGHT_SAFETY_CHECK,
                       descriptorName = Just "Night Safety Check",
                       descriptorShortDesc = Nothing
                     },

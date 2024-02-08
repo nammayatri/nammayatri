@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Cancel
   ( cancel,
+    softCancel,
     disputeCancellationDues,
     CancelReq (..),
     CancelRes (..),
@@ -25,6 +26,7 @@ module Domain.Action.UI.Cancel
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -76,6 +78,7 @@ data CancelRes = CancelRes
     cancellationSource :: SBCR.CancellationSource,
     transactionId :: Text,
     merchant :: DM.Merchant,
+    cancelStatus :: Text,
     city :: Context.City
   }
 
@@ -96,6 +99,26 @@ data CancellationDuesDetailsRes = CancellationDuesDetailsRes
     canBlockCustomer :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+softCancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m CancelRes
+softCancel bookingId _ = do
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
+  city <-
+    CQMOC.findById booking.merchantOperatingCityId
+      >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+  return $
+    CancelRes
+      { bppBookingId = bppBookingId,
+        bppId = booking.providerId,
+        bppUrl = booking.providerUrl,
+        cancellationSource = SBCR.ByUser,
+        transactionId = booking.transactionId,
+        merchant = merchant,
+        cancelStatus = show Enums.SOFT_CANCEL,
+        ..
+      }
 
 cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
@@ -133,6 +156,7 @@ cancel bookingId _ req = do
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
         merchant = merchant,
+        cancelStatus = show Enums.CONFIRM_CANCEL,
         ..
       }
   where

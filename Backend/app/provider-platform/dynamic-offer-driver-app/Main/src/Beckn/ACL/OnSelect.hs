@@ -14,10 +14,11 @@
 
 module Beckn.ACL.OnSelect where
 
-import Beckn.ACL.Common hiding (filterRequiredBreakups)
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.Types.Core.Taxi.OnSelect as OS
+import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Data.List as L
 import qualified Data.Text as T
 import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
 import qualified Domain.Types.DriverQuote as DQuote
@@ -44,46 +45,20 @@ data TransporterInfo = TransporterInfo
     ridesConfirmed :: Int
   }
 
-mkOnSelectMessage ::
-  DOnSelectReq ->
-  OS.OnSelectMessage
-mkOnSelectMessage req@DOnSelectReq {..} = do
-  let fulfillment = mkFulfillment req driverQuote
-      item = mkItem fulfillment.id driverQuote transporterInfo
-      items = [item]
-      quote = mkQuote driverQuote req.now
-      payment =
-        OS.Payment
-          { params =
-              OS.PaymentParams
-                { collected_by = OS.BPP,
-                  instrument = Nothing,
-                  currency = "INR",
-                  amount = Nothing
-                },
-            _type = OS.ON_FULFILLMENT,
-            uri = Nothing
-          }
-  let provider =
-        OS.Provider
-          { id = driverQuote.driverId.getId
-          }
-  OS.OnSelectMessage $
-    OS.Order {..}
-
 mkOnSelectMessageV2 ::
+  Bool ->
   DOnSelectReq ->
   Spec.OnSelectReqMessage
-mkOnSelectMessageV2 req@DOnSelectReq {..} = do
-  let fulfillments = [mkFulfillmentV2 req driverQuote]
+mkOnSelectMessageV2 isValueAddNP req@DOnSelectReq {..} = do
+  let fulfillments = [mkFulfillmentV2 req driverQuote isValueAddNP]
   Spec.OnSelectReqMessage $
     Just
       Spec.Order
         { orderFulfillments = Just fulfillments,
-          orderItems = Just $ map (\fulf -> mkItemV2 fulf driverQuote transporterInfo) fulfillments,
+          orderItems = Just $ map (\fulf -> mkItemV2 fulf driverQuote transporterInfo isValueAddNP) fulfillments,
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           orderPayments = Just [mkPaymentV2],
-          orderProvider = Just $ mkProviderV2 driverQuote,
+          orderProvider = Nothing,
           orderBilling = Nothing,
           orderCancellation = Nothing,
           orderCancellationTerms = Nothing,
@@ -91,65 +66,14 @@ mkOnSelectMessageV2 req@DOnSelectReq {..} = do
           orderStatus = Nothing
         }
 
-mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
-mkFulfillment dReq quote = do
-  let fromLocation = dReq.searchRequest.fromLocation
-  let mbToLocation = dReq.searchRequest.toLocation -- have to take last or all ?
-  OS.FulfillmentInfo
-    { id = quote.estimateId.getId,
-      start =
-        OS.StartInfo
-          { location = makeLocation fromLocation
-          },
-      end =
-        ( \toLocation ->
-            OS.StopInfo
-              { location = makeLocation toLocation
-              }
-        )
-          <$> mbToLocation,
-      vehicle =
-        OS.Vehicle
-          { category = castVariant quote.vehicleVariant
-          },
-      _type = "RIDE",
-      agent =
-        OS.Agent
-          { name = Just quote.driverName,
-            rateable = Just True,
-            tags = OS.TG [mkAgentTags]
-          }
-    }
-  where
-    mkAgentTags =
-      OS.TagGroup
-        { display = False,
-          code = "agent_info",
-          name = "Agent Info",
-          list =
-            [ OS.Tag
-                { display = (\_ -> Just False) =<< quote.driverRating,
-                  code = (\_ -> Just "rating") =<< quote.driverRating,
-                  name = (\_ -> Just "Agent Rating") =<< quote.driverRating,
-                  value = (\rating -> Just $ show $ rating.getCenti) =<< quote.driverRating
-                },
-              OS.Tag
-                { display = Just False,
-                  code = Just "duration_to_pickup_in_s",
-                  name = Just "Agent Duration to Pickup in Seconds",
-                  value = Just $ show $ quote.durationToPickup.getSeconds
-                }
-            ]
-        }
-
-mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Spec.Fulfillment
-mkFulfillmentV2 dReq quote = do
+mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillment
+mkFulfillmentV2 dReq quote isValueAddNP = do
   Spec.Fulfillment
-    { fulfillmentId = Just quote.estimateId.getId,
+    { fulfillmentId = Just quote.id.getId,
       fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation Nothing,
       fulfillmentVehicle = Just $ mkVehicleV2 quote,
-      fulfillmentType = Just "RIDE",
-      fulfillmentAgent = Just $ mkAgentV2 quote,
+      fulfillmentType = Just $ show Enums.DELIVERY,
+      fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP,
       fulfillmentCustomer = Nothing,
       fulfillmentState = Nothing,
       fulfillmentTags = Nothing
@@ -159,8 +83,8 @@ mkPaymentV2 :: Spec.Payment
 mkPaymentV2 =
   Spec.Payment
     { paymentParams = Just mkPaymentParamsV2,
-      paymentType = Just "ON_FULFILLMENT",
-      paymentCollectedBy = Just "BPP",
+      paymentType = Just $ show Enums.ON_FULFILLMENT,
+      paymentCollectedBy = Just $ show Enums.BPP,
       paymentId = Nothing,
       paymentStatus = Nothing,
       paymentTags = Nothing
@@ -176,17 +100,6 @@ mkPaymentParamsV2 =
       paymentParamsVirtualPaymentAddress = Nothing
     }
 
-mkProviderV2 :: DQuote.DriverQuote -> Spec.Provider
-mkProviderV2 quote =
-  Spec.Provider
-    { providerId = Just quote.driverId.getId,
-      providerDescriptor = Nothing,
-      providerFulfillments = Nothing,
-      providerItems = Nothing,
-      providerLocations = Nothing,
-      providerPayments = Nothing
-    }
-
 mkVehicleV2 :: DQuote.DriverQuote -> Spec.Vehicle
 mkVehicleV2 quote =
   let (category, variant) = Utils.castVariant quote.vehicleVariant
@@ -199,29 +112,32 @@ mkVehicleV2 quote =
           vehicleRegistration = Nothing
         }
 
-mkAgentV2 :: DQuote.DriverQuote -> Spec.Agent
-mkAgentV2 quote =
+mkAgentV2 :: DQuote.DriverQuote -> Bool -> Spec.Agent
+mkAgentV2 quote isValueAddNP =
   Spec.Agent
     { agentContact = Nothing,
-      agentPerson = Just $ mkAgentPersonV2 quote
+      agentPerson = Just $ mkAgentPersonV2 quote isValueAddNP
     }
 
-mkAgentPersonV2 :: DQuote.DriverQuote -> Spec.Person
-mkAgentPersonV2 quote =
+mkAgentPersonV2 :: DQuote.DriverQuote -> Bool -> Spec.Person
+mkAgentPersonV2 quote isValueAddNP =
   Spec.Person
     { personId = Nothing,
       personImage = Nothing,
       personName = Just quote.driverName,
-      personTags = Just [mkAgentTagsV2 quote]
+      personTags = Just . L.singleton =<< mkAgentTagsV2 quote isValueAddNP
     }
 
-mkAgentTagsV2 :: DQuote.DriverQuote -> Spec.TagGroup
-mkAgentTagsV2 quote =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor = Just $ Spec.Descriptor (Just "agent_info") (Just "Agent Info") Nothing,
-      tagGroupList = Just $ mkAgentTagList quote
-    }
+mkAgentTagsV2 :: DQuote.DriverQuote -> Bool -> Maybe Spec.TagGroup
+mkAgentTagsV2 quote isValueAddNP
+  | not isValueAddNP = Nothing
+  | otherwise =
+    Just $
+      Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor = Just $ Spec.Descriptor (Just $ show Tags.AGENT_INFO) (Just "Agent Info") Nothing,
+          tagGroupList = Just $ mkAgentTagList quote
+        }
 
 mkAgentTagList :: DQuote.DriverQuote -> [Spec.Tag]
 mkAgentTagList quote =
@@ -230,7 +146,7 @@ mkAgentTagList quote =
         tagDescriptor =
           Just
             Spec.Descriptor
-              { descriptorCode = (\_ -> Just "rating") =<< quote.driverRating,
+              { descriptorCode = (\_ -> Just $ show Tags.RATING) =<< quote.driverRating,
                 descriptorName = (\_ -> Just "Agent Rating") =<< quote.driverRating,
                 descriptorShortDesc = Nothing
               },
@@ -241,7 +157,7 @@ mkAgentTagList quote =
         tagDescriptor =
           Just
             Spec.Descriptor
-              { descriptorCode = Just "duration_to_pickup_in_s",
+              { descriptorCode = Just $ show Tags.DURATION_TO_PICKUP_IN_S,
                 descriptorName = Just "Agent Duration to Pickup in Seconds",
                 descriptorShortDesc = Nothing
               },
@@ -249,50 +165,14 @@ mkAgentTagList quote =
       }
   ]
 
-mkItem :: Text -> DQuote.DriverQuote -> TransporterInfo -> OS.Item
-mkItem fulfillmentId q provider =
-  OS.Item
-    { id = mkItemId provider.merchantShortId.getShortId q.vehicleVariant,
-      fulfillment_id = fulfillmentId,
-      price = mkPrice q,
-      tags = Just $ OS.TG [mkItemTags]
-    }
-  where
-    mkItemTags =
-      OS.TagGroup
-        { display = False,
-          code = "general_info",
-          name = "General Info",
-          list =
-            [ OS.Tag
-                { display = (\_ -> Just False) =<< q.specialLocationTag,
-                  code = (\_ -> Just "special_location_tag") =<< q.specialLocationTag,
-                  name = (\_ -> Just "Special Zone Tag") =<< q.specialLocationTag,
-                  value = q.specialLocationTag
-                },
-              OS.Tag
-                { display = Just False,
-                  code = Just "distance_to_nearest_driver_in_m",
-                  name = Just "Distance To Nearest Driver In Meters",
-                  value = Just $ show $ q.distanceToPickup.getMeters
-                },
-              OS.Tag
-                { display = Just False,
-                  code = Just "bpp_quote_id",
-                  name = Just "BPP Quote Id",
-                  value = Just q.id.getId
-                }
-            ]
-        }
-
-mkItemV2 :: Spec.Fulfillment -> DQuote.DriverQuote -> TransporterInfo -> Spec.Item
-mkItemV2 fulfillment quote provider = do
-  let fulfillmentId = fromMaybe "" fulfillment.fulfillmentId
+mkItemV2 :: Spec.Fulfillment -> DQuote.DriverQuote -> TransporterInfo -> Bool -> Spec.Item
+mkItemV2 fulfillment quote provider isValueAddNP = do
+  let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
   Spec.Item
     { itemId = Just $ provider.merchantShortId.getShortId <> show quote.vehicleVariant,
       itemFulfillmentIds = Just [fulfillmentId],
       itemPrice = Just $ mkPriceV2 quote,
-      itemTags = Just [mkItemTagsV2 quote],
+      itemTags = Just . L.singleton =<< mkItemTagsV2 quote isValueAddNP,
       itemDescriptor = Nothing,
       itemLocationIds = Nothing,
       itemPaymentIds = Nothing
@@ -309,13 +189,16 @@ mkPriceV2 quote =
       priceComputedValue = Nothing
     }
 
-mkItemTagsV2 :: DQuote.DriverQuote -> Spec.TagGroup
-mkItemTagsV2 quote =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor = Just $ Spec.Descriptor (Just "general_info") (Just "General Info") Nothing,
-      tagGroupList = Just $ mkItemTagList quote
-    }
+mkItemTagsV2 :: DQuote.DriverQuote -> Bool -> Maybe Spec.TagGroup
+mkItemTagsV2 quote isValueAddNP
+  | not isValueAddNP = Nothing
+  | otherwise =
+    Just $
+      Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor = Just $ Spec.Descriptor (Just $ show Tags.GENERAL_INFO) (Just "General Info") Nothing,
+          tagGroupList = Just $ mkItemTagList quote
+        }
 
 mkItemTagList :: DQuote.DriverQuote -> [Spec.Tag]
 mkItemTagList quote =
@@ -324,7 +207,7 @@ mkItemTagList quote =
         tagDescriptor =
           Just
             Spec.Descriptor
-              { descriptorCode = (\_ -> Just "special_location_tag") =<< quote.specialLocationTag,
+              { descriptorCode = (\_ -> Just $ show Tags.SPECIAL_LOCATION_TAG) =<< quote.specialLocationTag,
                 descriptorName = (\_ -> Just "Special Zone Tag") =<< quote.specialLocationTag,
                 descriptorShortDesc = Nothing
               },
@@ -335,61 +218,13 @@ mkItemTagList quote =
         tagDescriptor =
           Just
             Spec.Descriptor
-              { descriptorCode = Just "distance_to_nearest_driver_in_m",
+              { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
                 descriptorName = Just "Distance To Nearest Driver In Meters",
                 descriptorShortDesc = Nothing
               },
         tagValue = Just $ show $ quote.distanceToPickup.getMeters
-      },
-    Spec.Tag
-      { tagDisplay = Just False,
-        tagDescriptor =
-          Just
-            Spec.Descriptor
-              { descriptorCode = Just "bpp_quote_id",
-                descriptorName = Just "BPP Quote Id",
-                descriptorShortDesc = Nothing
-              },
-        tagValue = Just $ quote.id.getId
       }
   ]
-
-mkPrice :: DQuote.DriverQuote -> OS.Price
-mkPrice quote =
-  let value_ = fromIntegral quote.estimatedFare
-   in OS.Price
-        { currency = "INR",
-          value = value_
-        }
-
-mkQuote :: DQuote.DriverQuote -> UTCTime -> OS.Quote
-mkQuote driverQuote now = do
-  let currency = "INR"
-      breakup_ =
-        mkFareParamsBreakups (OS.Price currency . fromIntegral) OS.PriceBreakup driverQuote.fareParams
-          & filter filterRequiredBreakups'
-  let nominalDifferenceTime = diffUTCTime driverQuote.validTill now
-  OS.Quote
-    { price = mkPrice driverQuote,
-      ttl = Just $ T.pack $ formatTimeDifference nominalDifferenceTime, --------- todo
-      breakup = breakup_
-    }
-  where
-    filterRequiredBreakups' breakup =
-      breakup.title == "BASE_FARE"
-        || breakup.title == "SERVICE_CHARGE"
-        || breakup.title == "DEAD_KILOMETER_FARE"
-        || breakup.title == "EXTRA_DISTANCE_FARE"
-        || breakup.title == "DRIVER_SELECTED_FARE"
-        || breakup.title == "CUSTOMER_SELECTED_FARE"
-        || breakup.title == "TOTAL_FARE"
-        || breakup.title == "WAITING_OR_PICKUP_CHARGES"
-        || breakup.title == "EXTRA_TIME_FARE"
-    formatTimeDifference duration =
-      let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
-          (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)
-          (minutes, seconds) = divMod remainingSeconds 60
-       in "PT" <> show hours <> "H" <> show minutes <> "M" <> show seconds <> "S"
 
 mkQuoteV2 :: DQuote.DriverQuote -> UTCTime -> Spec.Quotation
 mkQuoteV2 quote now = do
@@ -427,15 +262,15 @@ mkQuoteBreakupInner quote = do
           quotationBreakupInnerTitle = Just title
         }
     filterRequiredBreakups breakup =
-      breakup.quotationBreakupInnerTitle == Just "BASE_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "SERVICE_CHARGE"
-        || breakup.quotationBreakupInnerTitle == Just "DEAD_KILOMETER_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "EXTRA_DISTANCE_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "DRIVER_SELECTED_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "CUSTOMER_SELECTED_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "TOTAL_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "WAITING_OR_PICKUP_CHARGES"
-        || breakup.quotationBreakupInnerTitle == Just "EXTRA_TIME_FARE"
+      breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_DISTANCE_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
 
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
 mkQuotationPrice quote =

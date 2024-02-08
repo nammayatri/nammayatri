@@ -17,15 +17,18 @@ import qualified Servant.Client.Core
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
-  { domain :: B.C f Kernel.Prelude.Text,
+  { collectedBy :: B.C f Domain.Types.BecknConfig.PaymentCollectedBy,
+    domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registryUrl :: B.C f Kernel.Prelude.Text,
     settlementType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    staticTermsUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     subscriberId :: B.C f Kernel.Prelude.Text,
     subscriberUrl :: B.C f Kernel.Prelude.Text,
     uniqueKeyId :: B.C f Kernel.Prelude.Text,
+    vehicleCategory :: B.C f Domain.Types.BecknConfig.VehicleCategory,
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

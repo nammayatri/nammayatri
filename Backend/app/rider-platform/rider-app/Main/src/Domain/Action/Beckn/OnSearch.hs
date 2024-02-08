@@ -32,6 +32,7 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
+import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -47,9 +48,11 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -178,6 +181,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   let merchantOperatingCityId = _searchRequest.merchantOperatingCityId
+  mkBppDetails >>= CQBppDetails.createIfNotPresent
+
   estimates <- traverse (buildEstimate providerInfo now _searchRequest) (filterEstimtesByPrefference estimatesInfo)
   quotes <- traverse (buildQuote requestId providerInfo now _searchRequest) (filterQuotesByPrefference quotesInfo)
   merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
@@ -213,6 +218,23 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 OneWaySpecialZoneDetails _ -> []
                 _ -> _estimateInfo
             _ -> _estimateInfo
+
+    mkBppDetails :: Flow BppDetails
+    mkBppDetails = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        BppDetails
+          { id,
+            subscriberId = providerInfo.providerId,
+            domain = show Domain.MOBILITY,
+            name = providerInfo.name,
+            supportNumber = Nothing,
+            logoUrl = Nothing, -- TODO: Parse this from on_search req
+            description = Nothing, -- TODO: Parse this from on_search req
+            createdAt = now,
+            updatedAt = now
+          }
 
 buildEstimate ::
   MonadFlow m =>
@@ -282,9 +304,6 @@ buildQuote requestId providerInfo now _searchRequest QuoteInfo {..} = do
   pure
     DQuote.Quote
       { id = uid,
-        providerMobileNumber = providerInfo.mobileNumber,
-        providerName = providerInfo.name,
-        providerCompletedRidesCount = providerInfo.ridesCompleted,
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
         createdAt = now,

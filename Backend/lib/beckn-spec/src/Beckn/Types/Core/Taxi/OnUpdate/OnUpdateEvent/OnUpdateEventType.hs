@@ -17,12 +17,12 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType where
 import Kernel.Prelude
 
 data OnUpdateEventType
-  = RIDE_COMPLETED
+  = RIDE_ENDED
   | RIDE_STARTED
   | RIDE_ASSIGNED
-  | RIDE_BOOKING_CANCELLED
+  | RIDE_CANCELLED
+  | RIDE_ARRIVED_PICKUP
   | RIDE_BOOKING_REALLOCATION
-  | DRIVER_ARRIVED
   | ESTIMATE_REPETITION
   | NEW_MESSAGE
   | SAFETY_ALERT

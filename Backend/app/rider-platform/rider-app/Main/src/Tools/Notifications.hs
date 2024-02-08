@@ -19,6 +19,7 @@ import qualified Data.Text as T
 import Data.Time hiding (secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant
@@ -27,7 +28,7 @@ import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageCon
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
-import Domain.Types.Quote (makeQuoteAPIEntity)
+import Domain.Types.Quote (mkQAPIEntityList)
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
@@ -49,6 +50,7 @@ import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
@@ -102,22 +104,25 @@ runWithServiceConfig func getCfg merchantId merchantOperatingCityId req = do
     _ -> throwError $ InternalError "Unknown ServiceConfig"
 
 notifyOnDriverOfferIncoming ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id Estimate ->
   [DQuote.Quote] ->
   Person.Person ->
+  [DBppDetails.BppDetails] ->
   m ()
-notifyOnDriverOfferIncoming estimateId quotes person = do
+notifyOnDriverOfferIncoming estimateId quotes person bppDetailList = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_QUOTE_INCOMING merchantOperatingCityId
   let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
+  -- entityData <- traverse makeQuoteAPIEntity quotes
+  isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_QUOTE_INCOMING,
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
-            entity = Notification.Entity Notification.Product estimateId.getId $ map makeQuoteAPIEntity quotes,
+            entity = Notification.Entity Notification.Product estimateId.getId $ mkQAPIEntityList quotes bppDetailList isValueAddNPList,
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,
@@ -265,9 +270,7 @@ notifyOnRideCompleted booking ride = do
       emContacts <- QPDEN.findAllByPersonId personId
       let followingContacts = filter (.enableForFollowing) emContacts
       mapM_
-        ( \contact -> case contact.contactPersonId of
-            Just id -> updateFollowRideCount id
-            Nothing -> return ()
+        ( \contact -> maybe (pure ()) updateFollowRideCount contact.contactPersonId
         )
         followingContacts
       where
@@ -355,8 +358,9 @@ notifyOnBookingCancelled ::
   ServiceFlow m r =>
   SRB.Booking ->
   SBCR.CancellationSource ->
+  DBppDetails.BppDetails ->
   m ()
-notifyOnBookingCancelled booking cancellationSource = do
+notifyOnBookingCancelled booking cancellationSource bppDetails = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   tag <- getDisabilityTag person.hasDisability person.id
@@ -365,7 +369,7 @@ notifyOnBookingCancelled booking cancellationSource = do
     SBCR.ByUser -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT_USER merchantOperatingCityId
     _ -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT merchantOperatingCityId
   notificationSound <- getNotificationSound tag notificationSoundFromConfig
-  notifyPerson person.merchantId merchantOperatingCityId (notificationData booking.providerName person notificationSound)
+  notifyPerson person.merchantId merchantOperatingCityId (notificationData bppDetails.name person notificationSound)
   where
     notificationData orgName person notificationSound =
       Notification.NotificationReq
@@ -704,8 +708,8 @@ notifyRideStartToEmergencyContacts booking ride = do
   let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   riderConfig <- QRC.findByMerchantOperatingCityId rider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
-  case (rider.shareTripWithEmergencyContacts == Just True && checkTimeConstraintForFollowRide riderConfig now) of
-    True -> do
+  if rider.shareTripWithEmergencyContacts == Just True && checkTimeConstraintForFollowRide riderConfig now
+    then do
       unless (checkTimeConstraintForFollowRide riderConfig now) $ return ()
       let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
       emContacts <- QPDEN.findAllByPersonId booking.riderId
@@ -717,7 +721,7 @@ notifyRideStartToEmergencyContacts booking ride = do
             updateFollowsRideCount personId
             sendFCM personId rider.firstName notificationSound
           Nothing -> sendSMS contact rider.firstName trackLink
-    False -> logInfo "Follow ride is not enabled"
+    else logInfo "Follow ride is not enabled"
   where
     updateFollowsRideCount emPersonId = do
       _ <- CQFollowRide.incrementFollowRideCount emPersonId

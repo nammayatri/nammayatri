@@ -34,6 +34,7 @@ import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (objectWithSingleFieldParsing)
@@ -41,7 +42,9 @@ import qualified Kernel.Utils.Schema as S
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.PublicTransport as PublicTransport
+import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
@@ -97,15 +100,20 @@ getOffers searchRequest = do
   logDebug $ "search Request is : " <> show searchRequest
   case searchRequest.toLocation of
     Just _ -> do
-      quoteList <- runInReplica $ QQuote.findAllBySRId searchRequest.id
-      logDebug $ "quotes are : " <> show quoteList
-      let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
+      quoteList <- sortByNearestDriverDistance <$> runInReplica (QQuote.findAllBySRId searchRequest.id)
+      logDebug $ "quotes are :-" <> show quoteList
+      bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
+      isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
+      let quotes = OnDemandCab <$> SQuote.mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       metroOffers <- map Metro <$> Metro.getMetroOffers searchRequest.id
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
     Nothing -> do
-      quoteList <- runInReplica $ QQuote.findAllBySRId searchRequest.id
-      let quotes = OnRentalCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
+      quoteList <- sortByEstimatedFare <$> runInReplica (QQuote.findAllBySRId searchRequest.id)
+      logDebug $ "quotes are :-" <> show quoteList
+      bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
+      isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
+      let quotes = OnRentalCab <$> SQuote.mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
@@ -115,7 +123,7 @@ getOffers searchRequest = do
       case quote.quoteDetails of
         SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
         SQuote.RentalDetails _ -> Nothing
-        SQuote.DriverOfferDetails details -> Just details.distanceToPickup
+        SQuote.DriverOfferDetails details -> details.distanceToPickup
         SQuote.OneWaySpecialZoneDetails _ -> Just $ metersToHighPrecMeters $ Meters 0
         SQuote.InterCityDetails _ -> Just $ metersToHighPrecMeters $ Meters 0
     creationTime :: OfferRes -> UTCTime
@@ -127,7 +135,7 @@ getOffers searchRequest = do
 getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-  let estimates = DEstimate.mkEstimateAPIEntity <$> sortByEstimatedFare estimateList
+  estimates <- mapM DEstimate.mkEstimateAPIEntity (sortByEstimatedFare estimateList)
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
 sortByEstimatedFare :: (HasField "estimatedFare" r Money) => [r] -> [r]

@@ -16,6 +16,7 @@
 module Domain.Types.Quote where
 
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -39,10 +40,7 @@ data Quote = Quote
     estimatedTotalFare :: Money,
     providerId :: Text,
     providerUrl :: BaseUrl,
-    providerName :: Text,
-    providerMobileNumber :: Text,
     itemId :: Text,
-    providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
     quoteDetails :: QuoteDetails,
@@ -74,12 +72,12 @@ data QuoteAPIEntity = QuoteAPIEntity
     estimatedTotalFare :: Money,
     discount :: Maybe Money,
     agencyName :: Text,
-    agencyNumber :: Text,
-    agencyCompletedRidesCount :: Int,
+    agencyNumber :: Maybe Text,
     tripTerms :: [Text],
     quoteDetails :: QuoteAPIDetails,
     specialLocationTag :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    isValueAddNP :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -119,13 +117,18 @@ mkQuoteAPIDetails = \case
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity {..}
 
-makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
-makeQuoteAPIEntity Quote {..} = do
+mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
+mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =
+  makeQuoteAPIEntity q bpp isValueAddNP : mkQAPIEntityList qRemaining bppRemaining remVNP
+mkQAPIEntityList [] [] [] = []
+mkQAPIEntityList _ _ _ = error "This should never happen as all the list are of same length"
+
+makeQuoteAPIEntity :: Quote -> DBppDetails.BppDetails -> Bool -> QuoteAPIEntity
+makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
   QuoteAPIEntity
-    { agencyName = providerName,
-      agencyNumber = providerMobileNumber,
-      agencyCompletedRidesCount = providerCompletedRidesCount,
-      tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
+    { agencyName = bppDetails.name,
+      agencyNumber = bppDetails.supportNumber,
+      tripTerms = maybe [] (.descriptions) tripTerms,
       quoteDetails = mkQuoteAPIDetails quoteDetails,
       ..
     }

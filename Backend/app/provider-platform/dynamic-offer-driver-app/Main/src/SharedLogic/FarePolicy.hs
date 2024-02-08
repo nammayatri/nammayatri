@@ -9,6 +9,7 @@
 
 module SharedLogic.FarePolicy where
 
+import BecknV2.OnDemand.Tags as Tags
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NE
@@ -101,19 +102,19 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
       nightShiftBounds = farePolicy.nightShiftBounds
 
       driverMinExtraFee = driverExtraFeeBounds <&> (.minFee)
-      driverMinExtraFeeCaption = "DRIVER_MIN_EXTRA_FEE"
+      driverMinExtraFeeCaption = show Tags.DRIVER_MIN_EXTRA_FEE
       driverMinExtraFeeItem = mkBreakupItem driverMinExtraFeeCaption . (mkValue . show . (.getMoney)) <$> driverMinExtraFee
 
       driverMaxExtraFee = driverExtraFeeBounds <&> (.maxFee)
-      driverMaxExtraFeeCaption = "DRIVER_MAX_EXTRA_FEE"
+      driverMaxExtraFeeCaption = show Tags.DRIVER_MAX_EXTRA_FEE
       driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption . (mkValue . show . (.getMoney)) <$> driverMaxExtraFee
 
       nightShiftStart = nightShiftBounds <&> (.nightShiftStart)
-      nightShiftStartCaption = "night_shift_start"
+      nightShiftStartCaption = show Tags.NIGHT_SHIFT_START_TIME
       nightShiftStartItem = mkBreakupItem nightShiftStartCaption . (mkValue . show) <$> nightShiftStart
 
       nightShiftEnd = nightShiftBounds <&> (.nightShiftEnd)
-      nightShiftEndCaption = "night_shift_end"
+      nightShiftEndCaption = show Tags.NIGHT_SHIFT_END_TIME
       nightShiftEndItem = mkBreakupItem nightShiftEndCaption . (mkValue . show) <$> nightShiftEnd
 
       additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
@@ -131,22 +132,22 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
       FarePolicyD.RentalDetails det -> mkAdditionalRentalBreakups det
 
     mkAdditionalRentalBreakups det = do
-      let minFareCaption = "MIN_FARE"
+      let minFareCaption = show Tags.MIN_FARE
           minFareItem = mkBreakupItem minFareCaption . mkValue $ show det.baseFare
 
-          perHourChargeCaption = "PER_HOUR_CHARGE"
+          perHourChargeCaption = show Tags.PER_HOUR_CHARGE
           perHourChargeItem = mkBreakupItem perHourChargeCaption . mkValue $ show det.perHourCharge
 
-          perExtraMinRateCaption = "PER_MINUTE_CHARGE"
+          perExtraMinRateCaption = show Tags.PER_MINUTE_CHARGE
           perExtraMinRateItem = mkBreakupItem perExtraMinRateCaption . mkValue $ show det.perExtraMinRate
 
-          perExtraKmRateCaption = "UNPLANNED_PER_KM_CHARGE"
+          perExtraKmRateCaption = show Tags.UNPLANNED_PER_KM_CHARGE
           perExtraKmRateItem = mkBreakupItem perExtraKmRateCaption . mkValue $ show det.perExtraKmRate
 
-          includedKmPerHrCaption = "PER_HOUR_DISTANCE_KM"
+          includedKmPerHrCaption = show Tags.PER_HOUR_DISTANCE_KM
           includedKmPerHrItem = mkBreakupItem includedKmPerHrCaption . mkValue $ show det.includedKmPerHr
 
-          plannedPerKmRateCaption = "PLANNED_PER_KM_CHARGE"
+          plannedPerKmRateCaption = show Tags.PLANNED_PER_KM_CHARGE
           plannedPerKmRateItem = mkBreakupItem plannedPerKmRateCaption . mkValue $ show det.plannedPerKmRate
 
       [minFareItem, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem]
@@ -155,7 +156,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
     mkAdditionalProgressiveBreakups det = do
       let perExtraKmFareSections = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
           mkPerExtraKmFareItem section = do
-            let perExtraKmFareCaption = "EXTRA_PER_KM_FARE"
+            let perExtraKmFareCaption = show Tags.EXTRA_PER_KM_FARE
             mkBreakupItem perExtraKmFareCaption (mkValue $ show (round section.perExtraKmRate :: Money))
 
           perExtraKmFareItems = mkPerExtraKmFareItem <$> (toList perExtraKmFareSections)
@@ -175,10 +176,10 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
               DPM.PerMinuteWaitingCharge hpm -> (Just $ show (round hpm :: Money), Nothing)
               DPM.ConstantWaitingCharge mo -> (Nothing, Just $ show mo)
 
-          waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
+          waitingOrPickupChargesCaption = show Tags.WAITING_OR_PICKUP_CHARGES
           mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkValue <$> mbWaitingOrPickupCharges
 
-          mbWaitingChargePerMinCaption = "WAITING_CHARGE_PER_MIN"
+          mbWaitingChargePerMinCaption = show Tags.WAITING_CHARGE_PER_MIN
           mbWaitingChargePerMinItem = mkBreakupItem mbWaitingChargePerMinCaption . mkValue <$> mbWaitingChargePerMin
 
       catMaybes [mbWaitingOrPickupChargesItem, mbWaitingChargePerMinItem]
@@ -188,7 +189,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
           getNightShiftChargeValue (DPM.ConstantNightShiftCharge a) = show a
 
       let oldNightShiftCharge = getNightShiftChargeValue <$> nightShiftChargeInfo
-          oldNightShiftChargeCaption = "night_shift_charge"
+          oldNightShiftChargeCaption = show Tags.NIGHT_SHIFT_CHARGE
           oldNightShiftChargeItem = mkBreakupItem oldNightShiftChargeCaption . mkValue <$> oldNightShiftCharge
 
       catMaybes [oldNightShiftChargeItem]

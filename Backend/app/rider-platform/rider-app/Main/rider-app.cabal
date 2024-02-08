@@ -33,6 +33,7 @@ library
       API.Beckn.FRFS.OnInit
       API.Beckn.FRFS.OnSearch
       API.Beckn.FRFS.OnStatus
+      API.Beckn.OnCancel
       API.Beckn.OnConfirm
       API.Beckn.OnInit
       API.Beckn.OnSearch
@@ -115,6 +116,7 @@ library
       Beckn.ACL.Init
       Beckn.ACL.Metro.OnSearch
       Beckn.ACL.Metro.Search
+      Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
       Beckn.ACL.OnSearch
@@ -136,11 +138,13 @@ library
       Beckn.OnDemand.Utils.Init
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.Search
+      Domain.Action.Beckn.Common
       Domain.Action.Beckn.FRFS.Common
       Domain.Action.Beckn.FRFS.OnConfirm
       Domain.Action.Beckn.FRFS.OnInit
       Domain.Action.Beckn.FRFS.OnSearch
       Domain.Action.Beckn.FRFS.OnStatus
+      Domain.Action.Beckn.OnCancel
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch
@@ -310,6 +314,7 @@ library
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
+      Storage.CachedQueries.BppDetails
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FollowRide
@@ -329,6 +334,7 @@ library
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
       Storage.CachedQueries.Sos
+      Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.WhiteListOrg
       Storage.Queries.AadhaarVerification.AadhaarOtp
       Storage.Queries.AadhaarVerification.AadhaarVerification
@@ -407,6 +413,7 @@ library
       API.Types.UI.TicketService
       Domain.Types.AutoCompleteData
       Domain.Types.BecknConfig
+      Domain.Types.BppDetails
       Domain.Types.BusinessHour
       Domain.Types.FRFSQuote
       Domain.Types.FRFSSearch
@@ -431,8 +438,10 @@ library
       Domain.Types.TicketBookingServiceCategory
       Domain.Types.TicketPlace
       Domain.Types.TicketService
+      Domain.Types.ValueAddNP
       Storage.Beam.AutoCompleteData
       Storage.Beam.BecknConfig
+      Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSSearch
@@ -457,8 +466,10 @@ library
       Storage.Beam.TicketBookingServiceCategory
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
+      Storage.Beam.ValueAddNP
       Storage.Queries.AutoCompleteData
       Storage.Queries.BecknConfig
+      Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSSearch
@@ -483,6 +494,7 @@ library
       Storage.Queries.TicketBookingServiceCategory
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
+      Storage.Queries.ValueAddNP
   other-modules:
       Paths_rider_app
   hs-source-dirs:

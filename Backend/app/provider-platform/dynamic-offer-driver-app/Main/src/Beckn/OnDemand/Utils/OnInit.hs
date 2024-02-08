@@ -1,6 +1,7 @@
 module Beckn.OnDemand.Utils.OnInit where
 
 import qualified Beckn.OnDemand.Utils.Common as UCommon
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import qualified Domain.Types.Location as DLoc
@@ -26,7 +27,7 @@ mkStops origin mbDestination =
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing
                         },
-                  stopType = Just "START",
+                  stopType = Just $ show Enums.START,
                   stopAuthorization = Nothing,
                   stopTime = Nothing
                 },
@@ -43,7 +44,7 @@ mkStops origin mbDestination =
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing
                           },
-                    stopType = Just "END",
+                    stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
                     stopTime = Nothing
                   }

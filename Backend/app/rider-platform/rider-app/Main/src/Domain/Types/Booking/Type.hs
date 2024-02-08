@@ -55,7 +55,6 @@ data BPPBooking
 data Booking = Booking
   { id :: Id Booking,
     transactionId :: Text,
-    driverId :: Maybe Text,
     fulfillmentId :: Maybe Text,
     bppBookingId :: Maybe (Id BPPBooking),
     quoteId :: Maybe (Id DQuote.Quote),
@@ -65,8 +64,6 @@ data Booking = Booking
     providerId :: Text,
     providerUrl :: BaseUrl,
     itemId :: Text,
-    providerName :: Text,
-    providerMobileNumber :: Text,
     primaryExophone :: Text,
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
@@ -96,7 +93,7 @@ data BookingDetails
   | InterCityDetails InterCityBookingDetails
   deriving (Show)
 
-data RentalBookingDetails = RentalBookingDetails
+newtype RentalBookingDetails = RentalBookingDetails
   { stopLocation :: Maybe DLoc.Location
   }
   deriving (Show)

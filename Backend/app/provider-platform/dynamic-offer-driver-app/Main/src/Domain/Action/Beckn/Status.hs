@@ -17,10 +17,12 @@ module Domain.Action.Beckn.Status
   ( handler,
     DStatusReq (..),
     DStatusRes (..),
-    OnStatusBuildReq (..),
   )
 where
 
+import Data.Either.Extra (eitherToMaybe)
+import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as Aadhaar
+import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
@@ -30,43 +32,13 @@ import Kernel.Beam.Functions as B
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Beckn.Common as Common
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
-
-newtype DStatusReq = StatusReq
-  { bookingId :: Id DBooking.Booking
-  }
-
-data DStatusRes = DStatusRes
-  { transporter :: DM.Merchant,
-    info :: OnStatusBuildReq
-  }
-
-data OnStatusBuildReq
-  = NewBookingBuildReq
-      { bookingId :: Id DBooking.Booking
-      }
-  | RideAssignedBuildReq
-      { bookingId :: Id DBooking.Booking,
-        newRideInfo :: SyncRide.NewRideInfo
-      }
-  | RideStartedBuildReq
-      { newRideInfo :: SyncRide.NewRideInfo
-      }
-  | RideCompletedBuildReq
-      { newRideInfo :: SyncRide.NewRideInfo,
-        rideCompletedInfo :: SyncRide.RideCompletedInfo
-      }
-  | BookingCancelledBuildReq
-      { bookingCancelledInfo :: SyncRide.BookingCancelledInfo,
-        mbNewRideInfo :: Maybe SyncRide.NewRideInfo
-      }
-  | BookingReallocationBuildReq
-      { bookingReallocationInfo :: SyncRide.BookingReallocationInfo,
-        newRideInfo :: SyncRide.NewRideInfo
-      }
+import Tools.Error
 
 handler ::
   Id DM.Merchant ->
@@ -76,7 +48,7 @@ handler transporterId req = do
   transporter <-
     CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  booking <- B.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
+  booking <- B.runInReplica $ QRB.findByTransactionId req.transactionId >>= fromMaybeM (BookingNotFound req.transactionId)
   mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
@@ -84,25 +56,32 @@ handler transporterId req = do
     Just ride -> do
       case ride.status of
         DRide.NEW -> do
-          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
-          pure $ RideAssignedBuildReq {bookingId = booking.id, newRideInfo = newRideInfo}
+          bookingDetails <- SyncRide.fetchBookingDetails ride booking
+          driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+          resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
+          let image = join (eitherToMaybe resp)
+          let isDriverBirthDay = False
+          let isFreeRide = False
+          pure $ RideAssignedReq DRideAssignedReq {..}
         DRide.INPROGRESS -> do
-          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
-          pure $ RideStartedBuildReq {newRideInfo}
+          bookingDetails <- SyncRide.fetchBookingDetails ride booking
+          let tripStartLocation = bookingDetails.ride.tripStartPos
+          pure $ RideStartedReq DRideStartedReq {..}
         DRide.COMPLETED -> do
-          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
-          rideCompletedInfo <- SyncRide.fetchRideCompletedInfo ride booking
-          pure $ RideCompletedBuildReq {newRideInfo, rideCompletedInfo}
+          bookingDetails <- SyncRide.fetchBookingDetails ride booking
+          SyncRide.RideCompletedInfo {..} <- SyncRide.fetchRideCompletedInfo ride booking
+          let tripEndLocation = bookingDetails.ride.tripEndPos
+          pure $ RideCompletedReq DRideCompletedReq {..}
         DRide.CANCELLED -> do
           case booking.status of
             DBooking.REALLOCATED -> do
-              newRideInfo <- SyncRide.fetchNewRideInfo ride booking
+              bookingDetails <- SyncRide.fetchBookingDetails ride booking
               bookingReallocationInfo <- SyncRide.fetchBookingReallocationInfo (Just ride) booking
-              pure $ BookingReallocationBuildReq {newRideInfo, bookingReallocationInfo}
+              pure $ BookingReallocationBuildReq {bookingDetails, bookingReallocationInfo}
             _ -> do
-              newRideInfo <- SyncRide.fetchNewRideInfo ride booking
-              bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo (Just ride) booking
-              pure $ BookingCancelledBuildReq {mbNewRideInfo = Just newRideInfo, bookingCancelledInfo}
+              bookingDetails <- SyncRide.fetchBookingDetails ride booking
+              SyncRide.BookingCancelledInfo {..} <- SyncRide.fetchBookingCancelledInfo (Just ride)
+              pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Just bookingDetails, ..}
     Nothing -> do
       case booking.status of
         DBooking.NEW -> do
@@ -112,8 +91,8 @@ handler transporterId req = do
         DBooking.COMPLETED -> do
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
         DBooking.CANCELLED -> do
-          bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing booking
-          pure $ BookingCancelledBuildReq {mbNewRideInfo = Nothing, bookingCancelledInfo}
+          bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing
+          pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Nothing, cancellationSource = bookingCancelledInfo.cancellationSource, ..}
         DBooking.REALLOCATED -> do
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
-  pure DStatusRes {transporter, info}
+  pure DStatusRes {transporter, booking, info}

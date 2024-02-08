@@ -112,12 +112,7 @@ cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag 
       result <-
         try @_ @SomeException $
           when sendToBpp . void . withShortRetry $ do
-            isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-            if isBecknSpecVersion2
-              then do
-                CallBPP.cancelV2 dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
-              else do
-                CallBPP.cancel dCancelSearch.providerUrl =<< CACL.buildCancelSearchReq dCancelSearch
+            CallBPP.cancelV2 dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
       case result of
         Left err -> do
           logTagInfo "Failed to cancel" $ show err

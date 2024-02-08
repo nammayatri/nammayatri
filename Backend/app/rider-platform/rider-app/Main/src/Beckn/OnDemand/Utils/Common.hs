@@ -15,6 +15,8 @@
 
 module Beckn.OnDemand.Utils.Common where
 
+import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
@@ -25,7 +27,6 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationAddress as DLoc
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
 import Kernel.External.Maps as Maps
@@ -56,7 +57,7 @@ mkStops origin stops startTime =
                         locationState = Just $ Spec.State origin.address.state,
                         locationId = Nothing
                       },
-                stopType = Just "START",
+                stopType = Just $ show Enums.START,
                 stopAuthorization = Nothing,
                 stopTime = Just Spec.Time {timeTimestamp = Just startTime}
               }
@@ -74,7 +75,7 @@ mkStops origin stops startTime =
                                  locationState = Just $ Spec.State stop.address.state,
                                  locationId = Nothing
                                },
-                         stopType = Just "END",
+                         stopType = Just $ show Enums.END,
                          stopAuthorization = Nothing,
                          stopTime = Nothing
                        }
@@ -95,7 +96,7 @@ mkPaymentTags =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "BUYER_FINDER_FEES",
+                { descriptorCode = Just $ show Tags.BUYER_FINDER_FEES,
                   descriptorName = Nothing,
                   descriptorShortDesc = Nothing
                 },
@@ -106,7 +107,7 @@ mkPaymentTags =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "SETTLEMENT_TERMS",
+                { descriptorCode = Just $ show Tags.SETTLEMENT_TERMS,
                   descriptorName = Nothing,
                   descriptorShortDesc = Nothing
                 },
@@ -125,7 +126,7 @@ mkPaymentTags =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "BUYER_FINDER_FEES_PERCENTAGE",
+                  { descriptorCode = Just $ show Tags.BUYER_FINDER_FEES_PERCENTAGE,
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   },
@@ -138,7 +139,7 @@ mkPaymentTags =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "DELAY_INTEREST",
+                  { descriptorCode = Just $ show Tags.DELAY_INTEREST,
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   },
@@ -151,7 +152,7 @@ mkPaymentTags =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "SETTLEMENT_TYPE",
+                  { descriptorCode = Just $ show Tags.SETTLEMENT_TYPE,
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   },
@@ -164,7 +165,7 @@ mkPaymentTags =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "STATIC_TERMS",
+                  { descriptorCode = Just $ show Tags.STATIC_TERMS,
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   },
@@ -174,12 +175,23 @@ mkPaymentTags =
 
 castVehicleVariant :: VehVar.VehicleVariant -> (Text, Text)
 castVehicleVariant = \case
-  VehVar.SEDAN -> ("CAB", "SEDAN")
-  VehVar.SUV -> ("CAB", "SUV")
-  VehVar.HATCHBACK -> ("CAB", "HATCHBACK")
-  VehVar.AUTO_RICKSHAW -> ("AUTO_RICKSHAW", "AUTO_RICKSHAW")
-  VehVar.TAXI -> ("CAB", "TAXI")
-  VehVar.TAXI_PLUS -> ("CAB", "TAXI_PLUS")
+  VehVar.SEDAN -> (show Enums.CAB, "SEDAN")
+  VehVar.SUV -> (show Enums.CAB, "SUV")
+  VehVar.HATCHBACK -> (show Enums.CAB, "HATCHBACK")
+  VehVar.AUTO_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
+  VehVar.TAXI -> (show Enums.CAB, "TAXI")
+  VehVar.TAXI_PLUS -> (show Enums.CAB, "TAXI_PLUS")
+
+parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
+parseVehicleVariant mbCategory mbVariant =
+  case (mbCategory, mbVariant) of
+    (Just "CAB", Just "SEDAN") -> Just VehVar.SEDAN
+    (Just "CAB", Just "SUV") -> Just VehVar.SUV
+    (Just "CAB", Just "HATCHBACK") -> Just VehVar.HATCHBACK
+    (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
+    (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
+    (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
+    _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource
 castCancellationSourceV2 = \case
@@ -190,14 +202,9 @@ castCancellationSourceV2 = \case
   "ByApplication" -> SBCR.ByApplication
   _ -> SBCR.ByUser
 
-getContextBapId :: MonadFlow m => Spec.Context -> m Text
-getContextBapId context = do
-  context.contextBapId & fromMaybeM (InvalidRequest "Missing contextBapId")
-
-getMessageId :: MonadFlow m => Spec.Context -> m (Id SearchRequest.SearchRequest)
-getMessageId context = do
-  messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
-  pure $ Id $ T.pack $ show messageUuid
+getContextBppId :: MonadFlow m => Spec.Context -> m Text
+getContextBppId context = do
+  context.contextBppId & fromMaybeM (InvalidRequest "Missing contextBppId")
 
 getMessageIdText :: MonadFlow m => Spec.Context -> m Text
 getMessageIdText context = do
@@ -241,7 +248,7 @@ mkStops' origin mDestination =
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing
                         },
-                  stopType = Just "START",
+                  stopType = Just $ show Enums.START,
                   stopAuthorization = Nothing,
                   stopTime = Nothing
                 },
@@ -260,8 +267,20 @@ mkStops' origin mDestination =
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing
                           },
-                    stopType = Just "END",
+                    stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
                     stopTime = Nothing
                   }
           ]
+
+maskBillingNumber :: Text -> Text
+maskBillingNumber billingNumber = do
+  let startingDigitLen = 2
+  let trailingDigitLen = 2
+  let totalDigitLen = startingDigitLen + trailingDigitLen
+  if T.length billingNumber <= totalDigitLen
+    then billingNumber
+    else
+      T.take startingDigitLen billingNumber
+        <> T.replicate (T.length billingNumber - totalDigitLen) "*"
+        <> T.drop (T.length billingNumber - trailingDigitLen) billingNumber

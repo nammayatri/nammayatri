@@ -18,3 +18,11 @@ ALTER TABLE atlas_app.beckn_config ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.beckn_config ADD COLUMN settlement_type text ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN payment_params_json text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.beckn_config ADD COLUMN vehicle_category text NOT NULL default 'CAB';
+ALTER TABLE atlas_app.beckn_config ADD COLUMN static_terms_url text ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN collected_by text NOT NULL default 'BPP';
