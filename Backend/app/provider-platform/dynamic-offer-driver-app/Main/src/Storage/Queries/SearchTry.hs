@@ -59,12 +59,16 @@ findActiveTryByQuoteId ::
   Text ->
   m (Maybe SearchTry)
 findActiveTryByQuoteId quoteId =
-  findOneWithKV
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamST.estimateId $ Se.Eq quoteId,
           Se.Is BeamST.status $ Se.Eq ACTIVE
         ]
     ]
+    (Se.Desc BeamST.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
 cancelActiveTriesByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
