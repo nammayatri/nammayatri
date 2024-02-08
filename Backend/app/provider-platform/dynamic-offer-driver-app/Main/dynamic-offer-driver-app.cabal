@@ -474,6 +474,7 @@ library
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.RegistryMapFallback
+      Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.DriverEdaKafka
       Storage.Queries.BapMetadata
@@ -601,12 +602,15 @@ library
       Domain.Types.DriverPoolConfig
       Domain.Types.InterCityTravelCities
       Domain.Types.MerchantState
+      Domain.Types.ValueAddNP
       Storage.Beam.DriverPoolConfig
       Storage.Beam.InterCityTravelCities
       Storage.Beam.MerchantState
+      Storage.Beam.ValueAddNP
       Storage.Queries.DriverPoolConfig
       Storage.Queries.InterCityTravelCities
       Storage.Queries.MerchantState
+      Storage.Queries.ValueAddNP
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:

@@ -11,32 +11,32 @@ DriverPoolConfig:
   tableName: driver_pool_config
 
   fields:
-    id : Id DriverPoolConfig
-    merchantId : Id Merchant
-    merchantOperatingCityId : Id MerchantOperatingCity
-    minRadiusOfSearch : Meters
-    maxRadiusOfSearch : Meters
-    radiusStepSize : Meters
-    driverPositionInfoExpiry : Maybe Seconds
-    actualDistanceThreshold : Maybe Meters
-    maxDriverQuotesRequired : Int
-    driverQuoteLimit : Int
-    driverRequestCountLimit : Int
-    driverBatchSize : Int
-    distanceBasedBatchSplit : '[BatchSplitByPickupDistance]'
-    maxNumberOfBatches : Int
-    maxParallelSearchRequests : Int
-    poolSortingType : PoolSortingType
-    singleBatchProcessTime : Seconds
-    tripDistance : Meters
-    radiusShrinkValueForDriversOnRide : Meters
-    driverToDestinationDistanceThreshold : Meters
-    driverToDestinationDuration : Seconds
-    scheduleTryTimes : '[Int]'
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    vehicleVariant : Maybe Variant
-    tripCategory : Text
+    id: Id DriverPoolConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    minRadiusOfSearch: Meters
+    maxRadiusOfSearch: Meters
+    radiusStepSize: Meters
+    driverPositionInfoExpiry: Maybe Seconds
+    actualDistanceThreshold: Maybe Meters
+    maxDriverQuotesRequired: Int
+    driverQuoteLimit: Int
+    driverRequestCountLimit: Int
+    driverBatchSize: Int
+    distanceBasedBatchSplit: "[BatchSplitByPickupDistance]"
+    maxNumberOfBatches: Int
+    maxParallelSearchRequests: Int
+    poolSortingType: PoolSortingType
+    singleBatchProcessTime: Seconds
+    tripDistance: Meters
+    radiusShrinkValueForDriversOnRide: Meters
+    driverToDestinationDistanceThreshold: Meters
+    driverToDestinationDuration: Seconds
+    scheduleTryTimes: "[Int]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    vehicleVariant: Maybe Variant
+    tripCategory: Text
 
   constraints:
     id: PrimaryKey
@@ -62,7 +62,7 @@ MerchantState:
   fields:
     merchantId: Id Merchant
     state: IndianState
-    allowedDestinationStates: '[IndianState]'
+    allowedDestinationStates: "[IndianState]"
 
   excludedFields: [merchantOperatingCityId]
 
@@ -100,3 +100,20 @@ InterCityTravelCities:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, state]
+
+ValueAddNP:
+  tableName: value_add_np
+
+  fields:
+    subscriberId: Text
+    enabled: Bool
+
+  constraints:
+    subscriberId: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  queries:
+    findAll:
+      kvFunction: findAllWithKV
+      where: enabled
