@@ -383,22 +383,22 @@ isTimeWithinBounds startTime endTime time =
 
 isNightAllowanceApplicable :: Maybe NightShiftBounds -> UTCTime -> UTCTime -> Seconds -> Bool
 isNightAllowanceApplicable nightShiftBounds tripStartTime now timeDiffFromUtc = do
-  let localRideEndDate = utctDay $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
-      localTripStartTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripStartTime
-      localRideEndTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+  let localTripStartTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripStartTime
+      localTripEndTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
   case nightShiftBounds of
     Nothing -> False
     Just bounds -> do
       let nightShiftStartTime = timeOfDayToDiffTime bounds.nightShiftStart
           nightShiftEndTime = timeOfDayToDiffTime bounds.nightShiftEnd
       if nightShiftStartTime <= 6 * 60 * 60 -- NS starting and ending on same date
-        then isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime localRideEndTime 0 0
-        else isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime localRideEndTime (-1) 0 || isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localRideEndTime localRideEndTime 0 1
+        then isNightShiftOverlap nightShiftStartTime nightShiftEndTime localTripStartTime localTripEndTime 0 0
+        else isNightShiftOverlap nightShiftStartTime nightShiftEndTime localTripStartTime localTripEndTime (-1) 0 || isNightShiftOverlap nightShiftStartTime nightShiftEndTime localTripStartTime localTripEndTime 0 1
 
-isNightShiftOverlap :: Day -> DiffTime -> DiffTime -> UTCTime -> UTCTime -> Integer -> Integer -> Bool
-isNightShiftOverlap rideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime localRideEndTime startAdd endAdd = do
-  let curNightShiftStartTs = UTCTime (addDays startAdd rideEndDate) nightShiftStartTime
-      curNightShiftEndTs = UTCTime (addDays endAdd rideEndDate) nightShiftEndTime
+isNightShiftOverlap :: DiffTime -> DiffTime -> UTCTime -> UTCTime -> Integer -> Integer -> Bool
+isNightShiftOverlap nightShiftStartTime nightShiftEndTime localTripStartTime localRideEndTime startAdd endAdd = do
+  let localRideEndDate = utctDay localRideEndTime
+      curNightShiftStartTs = UTCTime (addDays startAdd localRideEndDate) nightShiftStartTime
+      curNightShiftEndTs = UTCTime (addDays endAdd localRideEndDate) nightShiftEndTime
       curMxStart = max curNightShiftStartTs localTripStartTime
       curMnEnd = min curNightShiftEndTs localRideEndTime
   curMnEnd >= curMxStart
