@@ -54,6 +54,8 @@ import Screens.Types as ST
 import Services.API (Status(..), CoinTransactionRes(..), CoinTransactionHistoryItem(..), CoinsUsageRes(..), CoinUsageHistoryItem(..), RidesInfo(..), LocationInfo(..), DriverProfileSummaryRes(..), RidesSummary(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, getValueToLocalStore)
 import Timers (clearTimerWithId)
+import Debug
+import Foreign (unsafeToForeign)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -162,7 +164,9 @@ eval BackPressed state =
         exit $ ChangeDriverEarningsTab FAQ_VIEW state
       _ -> exit $ HomeScreen (updateToState state)
 
-eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = exit $ PurchasePlan state
+eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
+  let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_convert_coins_click" $ [{key : "Number of Coins", value : unsafeToForeign state.data.coinsToUse}]
+  exit $ PurchasePlan state
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of
@@ -177,7 +181,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
       exit $ SubscriptionScreen (updateToState state)
     _ -> continue (updateToState state)
 
-eval (ChangeTab subView') state = if subView' == state.props.subView then continue state else exit $ ChangeDriverEarningsTab subView' state
+eval (ChangeTab subView') state = do
+  let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_earnings_scn_change_tab" $ [{key : "Tab", value : unsafeToForeign (show subView')}]
+  if subView' == state.props.subView then continue state else exit $ ChangeDriverEarningsTab subView' state
 
 eval RemoveLottie state = do
   continue state { props { showCoinsEarnedAnim = Nothing } }
@@ -398,7 +404,9 @@ eval (RideHistoryAPIResponseAction rideList) state = do
 
 eval (UpdateRidesEver anyRidesAssignedEver) state = continue state { data { anyRidesAssignedEver = anyRidesAssignedEver }, props { weekIndex = 3 } }
 
-eval ShowPaymentHistory state = exit $ PaymentHistory
+eval ShowPaymentHistory state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_view_details_click_coins"
+  exit $ PaymentHistory
 
 eval FaqViewAction state = continue $ state { props { showShimmer = false } }
 

@@ -2832,7 +2832,7 @@ updateDriverDataToStates = do
                           Nothing -> getDriverStatus ""
     , showGenderBanner = showGender
     }})
-
+  void $ pure $ setCleverTapUserProp [{key : "Driver Coin Balance", value : unsafeToForeign resp.coinBalance }]
   setValueToLocalStore DRIVER_SUBSCRIBED $ show $ isJust getDriverInfoResp.autoPayStatus
   setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
   setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant appConfig.rideRequest.negotiationUnit
@@ -3154,6 +3154,7 @@ driverEarningsFlow :: FlowBT String Unit
 driverEarningsFlow = do 
   (GlobalState globalState) <- getState
   appConfig <- getAppConfigFlowBT Constants.appConfig
+  logField_ <- lift $ lift $ getLogFields
   let earningScreenState = globalState.driverEarningsScreen
   modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
   uiAction <- UI.driverEarningsScreen
@@ -3173,6 +3174,7 @@ driverEarningsFlow = do
       driverEarningsFlow
     CONVERT_COIN_TO_CASH state -> do
       resp <- lift $ lift $ Remote.convertCoinToCash state.data.coinsToUse
+      if isRight resp then liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_convert_to_cash_api_success" $ [{key : "Number of Coins", value : unsafeToForeign state.data.coinsToUse}] else pure unit
       let lottieFile = if isRight resp then "ny_ic_coins_redeemed_success.json" else "ny_ic_coins_redeemed_failure.json"
       modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{showCoinsRedeemedAnim = lottieFile, coinConvertedSuccess = isRight resp}})
       driverEarningsFlow

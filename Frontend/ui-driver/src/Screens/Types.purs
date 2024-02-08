@@ -2216,7 +2216,8 @@ type DriverEarningsScreenData = {
   rideHistoryItems :: Array RidesInfo,
   selectedRideHistoryItem :: IndividualRideCardState,
   weeklyEarningData :: Array WeeklyEarning,
-  anyRidesAssignedEver :: Boolean
+  anyRidesAssignedEver :: Boolean,
+  logField :: Object Foreign
 }
 
 type DriverEarningsScreenProps = {
