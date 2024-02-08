@@ -2219,7 +2219,7 @@ export const addMediaPlayer = function (id) {
 };
 
 export const setYoutubePlayer = function (json, viewId, videoStatus, cb, action) {
-  if (JBridge.setYoutubePlayer) {
+  if (window.JBridge.setYoutubePlayer) {
     try {
       const callback = callbackMapper.map(function (id) {
         cb(action(id))();

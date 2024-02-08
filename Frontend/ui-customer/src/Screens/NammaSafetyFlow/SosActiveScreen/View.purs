@@ -86,11 +86,11 @@ view push state =
     , padding padding'
     , onBackPressed push $ const $ BackPressed
     , afterRender
-            ( \_ -> do
-                getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
-                pure unit
-            )
-            (const NoAction)
+        ( \_ -> do
+            getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
+            pure unit
+        )
+        (const NoAction)
     ]
     [ case state.props.showTestDrill of
         true -> testSafetyHeaderView push
@@ -114,7 +114,6 @@ sosActiveView state push =
     ]
     [ sosDescriptionView state push
     , sosActionsView state push
-    , layoutWithWeight
     , separatorView Color.black800 $ MarginTop 0
     , linearLayout
         [ height WRAP_CONTENT
@@ -130,41 +129,52 @@ sosActiveView state push =
 sosDescriptionView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 sosDescriptionView state push =
   linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , margin $ Margin 16 16 16 0
-    , gravity CENTER
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , weight 1.0
     ]
-    [ textView
-        $ [ text title
-          , color Color.white900
-          ]
-        <> FontStyle.h3 TypoGraphy
-    , textView
-        $ [ text desc
-          , color Color.white900
-          , margin $ MarginTop 8
-          , gravity CENTER
-          ]
-        <> FontStyle.body1 TypoGraphy
-    , linearLayout
-        [ width $ V if not $ null state.data.emergencyContactsList then 200 else 250
-        , height $ V if not $ null state.data.emergencyContactsList then 180 else 250
-        , margin $ MarginTop 20
-        , gravity CENTER
+    [ scrollView
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
         ]
-        [ screenAnimationFadeInOut
-          $ lottieAnimationView
-              [ id $ EHC.getNewIDWithTag "SafetylottieAnimationView"
-              , onAnimationEnd
-                  ( \_ -> do
-                      void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig { rawJson = "ny_ic_sos_active.json", lottieId = EHC.getNewIDWithTag "SafetylottieAnimationView", scaleType = "FIT_CENTER", repeat = true }
-                  )
-                  (const NoAction)
-              , height MATCH_PARENT
-              , width MATCH_PARENT
-              ]
+        [ linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            , margin $ Margin 16 16 16 0
+            , gravity CENTER
+            ]
+            [ textView
+                $ [ text title
+                  , color Color.white900
+                  ]
+                <> FontStyle.h3 TypoGraphy
+            , textView
+                $ [ text desc
+                  , color Color.white900
+                  , margin $ MarginTop 8
+                  , gravity CENTER
+                  ]
+                <> FontStyle.body1 TypoGraphy
+            , linearLayout
+                [ width $ V if not $ null state.data.emergencyContactsList then 200 else 250
+                , height $ V if not $ null state.data.emergencyContactsList then 180 else 250
+                , margin $ MarginTop 20
+                , gravity CENTER
+                ]
+                [ screenAnimationFadeInOut
+                    $ lottieAnimationView
+                        [ id $ EHC.getNewIDWithTag "SafetylottieAnimationView"
+                        , onAnimationEnd
+                            ( \_ -> do
+                                void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig { rawJson = "ny_ic_sos_active.json", lottieId = EHC.getNewIDWithTag "SafetylottieAnimationView", scaleType = "FIT_CENTER", repeat = true }
+                            )
+                            (const NoAction)
+                        , height MATCH_PARENT
+                        , width MATCH_PARENT
+                        ]
+                ]
+            ]
         ]
     ]
   where
@@ -242,7 +252,7 @@ emergencyContactsView state push =
                       , width WRAP_CONTENT
                       , gravity CENTER_VERTICAL
                       , background Color.green900
-                      , cornerRadius 24.0
+                      , cornerRadius if EHC.os == "IOS" then 18.0 else 24.0
                       , padding $ Padding 8 8 8 8
                       , onClick push $ const $ CallContact index
                       , rippleColor Color.rippleShade

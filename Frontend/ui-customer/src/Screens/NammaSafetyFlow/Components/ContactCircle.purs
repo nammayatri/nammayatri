@@ -31,7 +31,7 @@ view config push =
           ( [ height $ V 32
             , width $ V 32
             , background backgroundColor
-            , cornerRadius if EHC.os == "IOS" then 12.0 else 20.0
+            , cornerRadius if EHC.os == "IOS" then 16.0 else 20.0
             , gravity CENTER
             , onClick push $ const $ OnClick config.index
             ]
