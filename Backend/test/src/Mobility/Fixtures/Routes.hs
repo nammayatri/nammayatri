@@ -27,6 +27,7 @@ defaultSearchReq =
       { origin = SearchReqLocation (LatLong 10.0739 76.2733) defaultSearchReqAddress,
         destination = SearchReqLocation (LatLong 10.5449 76.4356) defaultSearchReqAddress,
         isSourceManuallyMoved = Nothing,
+        startTime = Nothing,
         isSpecialLocation = Nothing,
         isReallocationEnabled = Nothing
       }
@@ -84,6 +85,7 @@ searchReqFromUpdatesList updList =
               destination = SearchReqLocation (NE.last $ NE.last updList) defaultSearchReqAddress,
               isSourceManuallyMoved = Nothing,
               isSpecialLocation = Nothing,
+              startTime = Nothing,
               isReallocationEnabled = Nothing
             }
    in (origin, destination, req)
@@ -97,6 +99,7 @@ mkSearchReqFromLocations origin destination =
               destination = SearchReqLocation destination defaultSearchReqAddress,
               isSourceManuallyMoved = Nothing,
               isSpecialLocation = Nothing,
+              startTime = Nothing,
               isReallocationEnabled = Nothing
             }
    in (origin, destination, req)
