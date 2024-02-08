@@ -200,6 +200,16 @@ modifyEpassRef f ref = do
 safeMarginTop :: Int
 safeMarginTop = safeMarginTopImpl unit
 
+safeMarginTopWithDefault :: Int -> Int
+safeMarginTopWithDefault def = 
+  let safeMargin = safeMarginTop
+  in if safeMargin == 0 then def else safeMargin
+
+safeMarginBottomWithDefault :: Int -> Int
+safeMarginBottomWithDefault def = 
+  let safeMargin = safeMarginBottom
+  in if safeMargin == 0 then def else safeMargin
+
 safeMarginBottom :: Int
 safeMarginBottom = safeMarginBottomImpl unit
 

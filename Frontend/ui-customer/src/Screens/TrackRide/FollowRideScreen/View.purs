@@ -29,14 +29,14 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap, safeMarginTopWithDefault, screenWidth, safeMarginBottomWithDefault, safeMarginTop)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer)
 import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig)
 import Mobility.Prelude (boolToVisibility)
 import Prelude
-import PrestoDOM (PrestoDOM, Screen, onAnimationEnd, onBackPressed, onClick)
+import PrestoDOM (PrestoDOM, Screen, BottomSheetState(..), onAnimationEnd, onBackPressed, onClick)
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout, frameLayout, imageView, linearLayout, relativeLayout, scrollView, textView)
-import PrestoDOM.Properties (accessibility, alpha, background, clickable, color, cornerRadii, cornerRadius, enableShift, gradient, gravity, height, id, imageWithFallback, margin, orientation, padding, peakHeight, stroke, text, visibility, weight, width)
+import PrestoDOM.Properties (alignParentBottom, accessibility, alpha, background, clickable, color, cornerRadii, cornerRadius, enableShift, gradient, gravity, height, id, imageWithFallback, margin, orientation, padding, peakHeight, stroke, sheetState, text, visibility, weight, width)
 import PrestoDOM.Types.DomAttributes (Accessiblity(..), Corners(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..))
 import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.FollowRideScreen.ScreenData (mockDriverInfo, mockDriverLocation, mockRoute)
@@ -119,33 +119,51 @@ followingRideView push state =
     , height MATCH_PARENT
     ]
     $ [ PrestoAnim.animationSet
-        [ fadeIn state.props.startMapAnimation
-        ] $ linearLayout
+          [ fadeIn state.props.startMapAnimation
+          ]
+          $ linearLayout
+              [ width MATCH_PARENT
+              , height MATCH_PARENT
+              , id $ getNewIDWithTag "FollowRideMap"
+              , onAnimationEnd
+                  getPush
+                  (const NoAction)
+              ]
+              []
+      , relativeLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
-          , id $ getNewIDWithTag "FollowRideMap"
-          , onAnimationEnd
-              getPush
-              (const NoAction)
           ]
-          []
-      , bottomSheetView push state
+          [ bottomSheetView push state ]
       , rideCompletedView push state
       ]
-    <> if state.data.currentStage == RideCompletedStage 
-        then [] 
-        else 
-          case state.data.sosStatus of
-          Just status -> case status of
-            Common.NotResolved -> [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state) ]
-            _ -> [ sosOverlayView push (getSosOverlayConfig state status) ]
-          Nothing -> [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state) ]
+    <> if state.data.currentStage == RideCompletedStage then
+        []
+      else case state.data.sosStatus of
+        Just status -> case status of
+          Common.NotResolved -> [ genericHeaderView push state ]
+          _ -> [ sosOverlayView push (getSosOverlayConfig state status) ]
+        Nothing -> [ genericHeaderView push state ]
   where
   getPush =
     ( \action -> do
         void $ showMap (getNewIDWithTag "FollowRideMap") true "satellite" pickupZoomLevel push MapReady
         push action
     )
+
+genericHeaderView ::
+  forall w.
+  (Action -> Effect Unit) ->
+  FollowRideScreenState ->
+  Layout w
+genericHeaderView push state = 
+      linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , background Color.white900
+      , padding $ PaddingTop safeMarginTop
+      ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)]
 
 followersListView ::
   forall w.
@@ -162,7 +180,7 @@ followersListView push state =
       , orientation VERTICAL
       , background Color.white900
       ]
-      [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+      [ genericHeaderView push state
       , scrollView
           [ height MATCH_PARENT
           , width MATCH_PARENT
@@ -294,70 +312,77 @@ bottomSheetView ::
   FollowRideScreenState ->
   Layout w
 bottomSheetView push state =
-  coordinatorLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , alignParentBottom "true,-1"
     ]
-    [ bottomSheetLayout
+    [ coordinatorLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , peakHeight $ getPeekHeight state
-        , enableShift false
-        , orientation VERTICAL
         ]
-        [ linearLayout
+        [ bottomSheetLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , orientation VERTICAL
+            , peakHeight $ getPeekHeight state
+            , enableShift false
+            , sheetState COLLAPSED
             ]
             [ linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , gravity CENTER
-                , visibility $ boolToVisibility $ any (_ == state.data.emergencyAudioStatus) [ STARTED, RESTARTED ]
-                , padding $ PaddingBottom 10
+                , orientation VERTICAL
                 ]
                 [ linearLayout
                     [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , background Color.white900
-                    , cornerRadius 32.0
-                    , padding $ Padding 20 12 20 12
-                    , onClick push $ const StopAudioPlayer
+                    , width MATCH_PARENT
+                    , gravity CENTER
+                    , visibility $ boolToVisibility $ any (_ == state.data.emergencyAudioStatus) [ STARTED, RESTARTED ]
+                    , padding $ PaddingBottom 10
                     ]
-                    [ imageView
-                        [ height $ V 20
-                        , width $ V 20
-                        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_alarm_new"
+                    [ linearLayout
+                        [ height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , background Color.white900
+                        , cornerRadius 20.0
+                        , padding $ Padding 20 12 20 12
+                        , onClick push $ const StopAudioPlayer
+                        , gravity CENTER
                         ]
-                    , textView
-                        $ [ text $ getString TURN_OFF_ALARM
-                          , color Color.black800
-                          ]
-                        <> FontStyle.tags TypoGraphy
+                        [ imageView
+                            [ height $ V 20
+                            , width $ V 20
+                            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_alarm_new"
+                            ]
+                        , textView
+                            $ [ text $ getString TURN_OFF_ALARM
+                              , color Color.black800
+                              ]
+                            <> FontStyle.tags TypoGraphy
+                        ]
                     ]
-                ]
-            , linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , background Color.grey700
-                , orientation VERTICAL
-                , gravity CENTER
-                , cornerRadii $ Corners 24.0 true true false false
-                ]
-                [ linearLayout
-                    [ width MATCH_PARENT
-                    , height WRAP_CONTENT
+                , linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , background Color.grey700
                     , orientation VERTICAL
                     , gravity CENTER
-                    , id $ getNewIDWithTag "FollowRideHeaderView"
+                    , cornerRadii $ Corners 24.0 true true false false
                     ]
-                    [ knobView
-                    , headerView push state
-                    , emergencyActionsView push state
+                    [ linearLayout
+                        [ width MATCH_PARENT
+                        , height WRAP_CONTENT
+                        , orientation VERTICAL
+                        , gravity CENTER
+                        , id $ getNewIDWithTag "FollowRideHeaderView"
+                        ]
+                        [ knobView
+                        , headerView push state
+                        , emergencyActionsView push state
+                        ]
+                    , addressView push state
+                    , driverInfoView push state
                     ]
-                , addressView push state
-                , driverInfoView push state
                 ]
             ]
         ]
@@ -372,23 +397,33 @@ sosOverlayView push config =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , padding $ Padding 16 10 16 70
+      , padding $ Padding 16 (safeMarginTopWithDefault 10) 16 70
+      , gravity CENTER
       , gradient currentGradient
+      , clickable true
+      , onClick (\_ -> pure unit) $ const NoAction
       ]
       [ linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
+          [ width $ V $ (screenWidth unit) - 16
+          , height $ V 34
           , gravity RIGHT
-          , onClick push $ const BackPressed
           ]
-          [ imageView
-              [ height $ V 24
-              , width $ V 24
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
+          [ linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , gravity CENTER
+              , onClick push $ const BackPressed
+              , padding $ Padding 5 5 5 5
+              ]
+              [ imageView
+                  [ height $ V 24
+                  , width $ V 24
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
+                  ]
               ]
           ]
       , textView
-          $ [ width MATCH_PARENT
+          $ [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text $ config.title
             , color config.color
@@ -429,14 +464,13 @@ driverInfoView push state =
     relativeLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , padding $ PaddingTop 0
       ]
       [ PrestoAnim.animationSet [ fadeIn isRideData ]
           $ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , visibility $ boolToVisibility isRideData
-              , padding $ PaddingBottom 16
+              , padding $ PaddingBottom $ safeMarginBottomWithDefault 16
               ]
               [ driverDetailsView (getDriverDetails state) "FollowRideDriverDetailsView"
               ]
@@ -499,13 +533,12 @@ headerView push state =
       ]
       [ textView
           $ [ text $ (getFollowerName currentFollower state) <> " " <> getString IS_ON_THE_WAY
-            , weight 1.0
             , height WRAP_CONTENT
             , color Color.black900
             ]
           <> FontStyle.body7 TypoGraphy
       , linearLayout
-          []
+          [ weight 1.0 ]
           []
       , linearLayout
           [ height WRAP_CONTENT
@@ -580,38 +613,42 @@ buttonView push state =
 driverLocationTracking :: (Action -> Effect Unit) -> (RideBookingRes -> Action) -> Number -> Int -> String -> Flow GlobalState Unit
 driverLocationTracking push action duration id routeState = do
   (GlobalState gs) <- getState
-  let state = gs.followRideScreen
+  let
+    state = gs.followRideScreen
   trackingId <- liftFlow $ runEffectFn1 getValueFromIdMap "FollowsRide"
-  when (id == trackingId.id) $ do
-    when (isJust state.data.currentFollower)
-      $ do
-          let
-            follower = getCurrentFollower state.data.currentFollower
-          resp <- rideBooking follower.bookingId
-          void $ pure $ runFn2 updatePushInIdMap "FollowsRide" false
-          case resp of
-            Right respBooking -> do
-              updateSosStatus respBooking
-              liftFlow $ push $ action respBooking
-              when ((getPeekHeight state) == 300) $ liftFlow $ push $ UpdatePeekHeight
-            Left err -> pure unit
-    (GlobalState gs) <- getState
-    let state = gs.followRideScreen
-    case state.data.driverInfoCardState of
-      Nothing -> pure unit
-      Just ride -> do
-        response <- getDriverLocation ride.rideId
-        case response of
-          Right resp -> do
-            trackingId <- liftFlow $ runEffectFn1 getValueFromIdMap "FollowsRide"
-            when (id == trackingId.id) $ do
-              case state.data.route of
-                Nothing -> routeNotExist resp ride state
-                Just route -> routeExist resp route ride state
-          Left _ -> do
-            void $ delay $ Milliseconds $ duration * 2.0
-            resetRoute
-            driverLocationTracking push action duration id routeState
+  when (id == trackingId.id)
+    $ do
+        when (isJust state.data.currentFollower)
+          $ do
+              let
+                follower = getCurrentFollower state.data.currentFollower
+              resp <- rideBooking follower.bookingId
+              void $ pure $ runFn2 updatePushInIdMap "FollowsRide" false
+              case resp of
+                Right respBooking -> do
+                  updateSosStatus respBooking
+                  liftFlow $ push $ action respBooking
+                  when ((getPeekHeight state) == 300) $ liftFlow $ push $ UpdatePeekHeight
+                Left err -> pure unit
+        (GlobalState gs) <- getState
+        let
+          state = gs.followRideScreen
+        case state.data.driverInfoCardState of
+          Nothing -> pure unit
+          Just ride -> do
+            response <- getDriverLocation ride.rideId
+            case response of
+              Right resp -> do
+                trackingId <- liftFlow $ runEffectFn1 getValueFromIdMap "FollowsRide"
+                when (id == trackingId.id)
+                  $ do
+                      case state.data.route of
+                        Nothing -> routeNotExist resp ride state
+                        Just route -> routeExist resp route ride state
+              Left _ -> do
+                void $ delay $ Milliseconds $ duration * 2.0
+                resetRoute
+                driverLocationTracking push action duration id routeState
   where
   resetRoute :: Flow GlobalState Unit
   resetRoute =
@@ -625,6 +662,7 @@ driverLocationTracking push action duration id routeState = do
                     }
                   }
                 }
+
   updateSosStatus :: RideBookingRes -> Flow GlobalState Unit
   updateSosStatus (RideBookingRes resp) =
     void
@@ -637,6 +675,7 @@ driverLocationTracking push action duration id routeState = do
                     }
                   }
                 }
+
   routeNotExist :: GetDriverLocationResp -> DriverInfoCard -> FollowRideScreenState -> Flow GlobalState Unit
   routeNotExist (GetDriverLocationResp resp) ride state = do
     let
@@ -783,7 +822,7 @@ updateMockData push state = defaultMockFlow
     localDelay 1000.0
     let
       srcPoint = getPoint mockDriverLocation
-    pushAction $ UpdateMockData mockDriverInfo{vehicleDetails = if state.props.city == Bangalore then "AUTO_RICKSHAW" else mockDriverInfo.vehicleDetails}
+    pushAction $ UpdateMockData mockDriverInfo { vehicleDetails = if state.props.city == Bangalore then "AUTO_RICKSHAW" else mockDriverInfo.vehicleDetails }
     drawDriverRoute mockDriverInfo srcPoint $ Just mockRoute
     pushSOSStatus Common.Pending
     localDelay 10000.0

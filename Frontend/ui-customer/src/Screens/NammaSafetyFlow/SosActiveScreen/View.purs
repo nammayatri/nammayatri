@@ -33,7 +33,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage, getLocationName)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, getLocationName, getAssetsBaseUrl)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -167,7 +167,7 @@ sosDescriptionView state push =
                         [ id $ EHC.getNewIDWithTag "SafetylottieAnimationView"
                         , onAnimationEnd
                             ( \_ -> do
-                                void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig { rawJson = "ny_ic_sos_active.json", lottieId = EHC.getNewIDWithTag "SafetylottieAnimationView", scaleType = "FIT_CENTER", repeat = true }
+                                void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/ny_ic_sos_active.json", lottieId = EHC.getNewIDWithTag "SafetylottieAnimationView", scaleType = "FIT_CENTER", repeat = true }
                             )
                             (const NoAction)
                         , height MATCH_PARENT

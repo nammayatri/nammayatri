@@ -125,7 +125,7 @@ import PrestoDOM.List
 import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
-import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 
 
 instance showAction :: Show Action where
@@ -998,7 +998,8 @@ eval UpdateBanner state = do
   if state.data.bannerData.bannerScrollState == "1" then continue state
   else do
     let nextBanner = state.data.bannerData.currentBanner + 1
-        updatedIdx = if nextBanner >= (length $ getBannerConfigs state BannerCarousel) then 0 else nextBanner
+        bannerArray = if state.props.currentStage == HomeScreen then getBannerConfigs state BannerCarousel else getDriverInfoCardBanners state BannerCarousel
+        updatedIdx = if nextBanner >= (length bannerArray) then 0 else nextBanner
         newState = state{data {bannerData{currentBanner = updatedIdx, currentPage = updatedIdx}}}
     continue newState
 
@@ -1018,7 +1019,7 @@ eval (BannerStateChanged item) state = do
 
 eval (BannerCarousel (BannerCarousel.OnClick idx)) state = 
   continueWithCmd state [do
-    let banners = getBannerConfigs state BannerCarousel
+    let banners = if state.props.currentStage == HomeScreen then getBannerConfigs state BannerCarousel else getDriverInfoCardBanners state BannerCarousel
     case index banners idx of
       Just config -> do
         let _ = runFn2 updatePushInIdMap "bannerCarousel" false

@@ -101,6 +101,7 @@ getDriverDetails state =
     , registrationNumber: ride.registrationNumber
     , config: state.data.config
     , rideStarted: true
+    , enablePaddingBottom: true
     }
 
 
@@ -114,6 +115,7 @@ getTripDetails state color =
     , destination: ride.destination
     , onAnimationEnd: NoAction
     , backgroundColor: color
+    , enablePaddingBottom : false
     }
 
 getCurrentFollower :: Maybe Followers -> Followers

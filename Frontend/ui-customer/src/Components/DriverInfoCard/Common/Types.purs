@@ -15,6 +15,7 @@ type DriverDetailsType
   , registrationNumber :: String
   , config :: AppConfig
   , rideStarted :: Boolean
+  , enablePaddingBottom :: Boolean
     }
 
 type TripDetails a
@@ -23,4 +24,5 @@ type TripDetails a
   , destination :: String
   , onAnimationEnd :: a
   , backgroundColor :: String
+  , enablePaddingBottom :: Boolean
     }
