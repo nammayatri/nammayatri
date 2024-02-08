@@ -60,7 +60,7 @@ import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, un
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Number (fromString, round) as NUM
 import Data.String as STR
 import Debug (spy)
@@ -90,7 +90,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity, filterEstimatesOnUs, estimatesGroupbyProviderId, mkProvidersQuoteList)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..))
@@ -126,6 +126,7 @@ import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
+import Data.Map as Map
 
 
 instance showAction :: Show Action where
@@ -930,6 +931,9 @@ data Action = NoAction
             | DismissShareRide
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
+            | ShowProviderPref
+            | PreferedNy Boolean
+            | GetEstimatesWithAllProviders
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -951,6 +955,11 @@ eval ShowMoreSuggestions state = do
   continue state { props {suggestionsListExpanded = not state.props.suggestionsListExpanded} }
 
 eval RemoveShimmer state = continue state{props{showShimmer = false}}
+
+eval ShowProviderPref state = 
+  if state.props.currentStage == ConfirmingLocation then 
+    continue state { data { iopState { preferenceVisible = not state.data.iopState.preferenceVisible}}}
+  else continue state {props { bookingOptionsVisible = not state.props.bookingOptionsVisible}}
 
 eval (UpdateFollowers (FollowRideRes resp)) state = do
   let followers = map (\(Followers follower) -> follower) resp
@@ -1375,17 +1384,17 @@ eval BackPressed state = do
         continue updatedState{props{showMultipleRideInfo=false}}
       else do
         _ <- pure $ updateLocalStage SearchLocationModel
-        continue updatedState{data{rideHistoryTrip = Nothing},props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
+        continue updatedState{data{rideHistoryTrip = Nothing, iopState { preferenceVisible = false}},props{bookingOptionsVisible = false, showMultipleRideInfo = false, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
     ConfirmingLocation -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ exitLocateOnMap ""
                       _ <- pure $ removeAllPolylines ""
                       _ <- pure $ updateLocalStage SearchLocationModel
-                      continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
+                      continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{iopState {preferenceVisible = false}, polygonCoordinates = "", nearByPickUpPoints = []}}
     FindingEstimate -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
-                      continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
+                      continue state{props{bookingOptionsVisible = false, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
     QuoteList       -> do
                       _ <- pure $ performHapticFeedback unit
                       if state.props.isPopUp == NoPopUp then continue $ state { props{isPopUp = ConfirmBack}} else continue state
@@ -1501,6 +1510,8 @@ eval (UpdatePickupLocation  key lat lon) state =
           exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
         Nothing -> continue state
 
+eval (PreferedNy bool) state = continue state { data { iopState { preferredNy = bool, preferenceVisible = false}}}
+
 eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ performHapticFeedback unit
   let event = if autoAssign then "ny_user_pref_autoassigned" else "ny_user_pref_driveroffers"
@@ -1509,10 +1520,10 @@ eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ if autoAssign then "4" else "17"
   _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ if autoAssign then "8000.0" else "1500.0"
   _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT $ if autoAssign then "22" else "117"
-  continue state{props{flowWithoutOffers = (show autoAssign) == "true"}}
+  continue state{props{bookingOptionsVisible = false, flowWithoutOffers = (show autoAssign) == "true"}}
 
 eval (OnIconClick autoAssign) state = do
-  continue state { props {showMultipleRideInfo = not autoAssign}}
+  continue state { props {showMultipleRideInfo = not autoAssign, bookingOptionsVisible = false}, data { iopState { preferenceVisible = false}}}
 
 eval PreferencesDropDown state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
@@ -2062,13 +2073,27 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
   continue state
 
 
-eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
-  _ <- pure $ clearTimerWithId state.props.timerId
-  void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
-  let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH }
-  let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }, data{nearByDrivers = Nothing}}
-  _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-  updateAndExit newState $ RetryFindingQuotes false newState
+eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = 
+  if state.data.selectedEstimatesObject.isOurQuote then 
+    do
+      _ <- pure $ clearTimerWithId state.props.timerId
+      void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
+      let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH }
+      let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }, data{nearByDrivers = Nothing}}
+      _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+      updateAndExit newState $ RetryFindingQuotes false newState
+  else continueWithCmd state [ pure GetEstimatesWithAllProviders ] -- Click action of try NammaYatri
+
+eval GetEstimatesWithAllProviders state = do
+  _ <- pure $ performHapticFeedback unit
+  _ <- pure $ exitLocateOnMap ""
+  _ <- pure $ updateLocalStage FindingEstimate
+  let updatedState = state{props{currentStage = FindingEstimate, isPopUp = NoPopUp, locateOnMap = false}, data { iopState { preferredNy = false}}}
+  updateAndExit updatedState $  (UpdatedSource updatedState)
+
+eval (PopUpModalAction (PopUpModal.OptionWithHtmlClick)) state = continueWithCmd state [pure GetEstimatesWithAllProviders] -- choose with another provider
+
+eval (QuoteListModelActionController (QuoteListModelController.ChooseAnotherProvider)) state = continueWithCmd state [pure GetEstimatesWithAllProviders]
 
 eval (QuoteListModelActionController (QuoteListModelController.TipBtnClick index value)) state = do
   let check = index == state.props.tipViewProps.activeIndex
@@ -2126,7 +2151,8 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     let tipViewData = state.props.tipViewProps{stage = RETRY_SEARCH_WITH_TIP , isVisible = not (state.props.customerTip.tipActiveIndex == 0) , activeIndex = state.props.customerTip.tipActiveIndex-1 }
     let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData }}
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-    updateAndExit newState $ RetryFindingQuotes true newState
+    if state.data.selectedEstimatesObject.isOurQuote then  updateAndExit newState $ RetryFindingQuotes true newState
+    else continueWithCmd state [pure GetEstimatesWithAllProviders]
   Logout -> continue state{props{isPopUp = NoPopUp}}
   _ -> do
     _ <- pure $ performHapticFeedback unit
@@ -2473,7 +2499,8 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
   if state.data.currentSearchResultType == QUOTES then do
               _ <- pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
               continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
-              else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
+              else continue newState{props{estimateId = config.id, selectedQuote = Just config.id}, data {selectedEstimatesObject = config, iopState{ selectedProviderQuote = config.id}}}
+              -- else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config{ isOurQuote = false}, iopState{ selectedProviderQuote = config.id}}} -- this is to just set to serach for another provider
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state =
   continue state{ props { showRateCard = true }
@@ -2516,6 +2543,9 @@ eval (ChooseYourRideAction (ChooseYourRideController.OnIconClick autoAssign)) st
 
 eval (ChooseYourRideAction ChooseYourRideController.PreferencesDropDown) state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
+
+eval (ChooseYourRideAction (ChooseYourRideController.ProviderClick pId)) state = do
+  continue state { data { iopState { selectedProvider = pId}}}
 
 eval CheckAndAskNotificationPermission state = do 
   _ <- pure $ checkAndAskNotificationPermission false
@@ -2867,7 +2897,9 @@ specialZoneFlow estimatedQuotes state = do
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
-  let estimatesInfo = getEstimatesInfo estimates "" state
+  let filteredEstimates = if state.data.iopState.preferredNy then filterEstimatesOnUs estimates else estimates
+      estimatesInfo = getEstimatesInfo filteredEstimates "" state
+      providersQuoteList = mkProvidersQuoteList filteredEstimates state.data.config.estimateAndQuoteConfig
   void $ pure $ setSelectedEstimatesObject estimatesInfo.defaultQuote
   if ((not (null estimatesInfo.quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
@@ -2890,6 +2922,12 @@ estimatesListFlow estimates state = do
         , selectedEstimatesObject = estimatesInfo.defaultQuote
         , pickUpCharges = estimatesInfo.pickUpCharges
         , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
+        , iopState {
+          providersMapArray = estimatesGroupbyProviderId filteredEstimates state.data.config.estimateAndQuoteConfig, --Map.empty -- construct this from estimates
+          providersQuoteList = providersQuoteList,
+          selectedProvider = maybe "" _.providerId (head providersQuoteList)
+          -- selectedProviderQuote = maybe "" (maybe "" _.id <<< head <<< _.quoteList) (head providersQuoteList)
+        }
         }
       , props
         { currentStage = SettingPrice

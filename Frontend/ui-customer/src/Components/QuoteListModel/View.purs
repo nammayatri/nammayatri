@@ -34,7 +34,7 @@ import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..), QuoteListItemState(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -42,6 +42,7 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
 import Locale.Utils
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -368,6 +369,17 @@ addTipView state push =
           ][
             PrimaryButton.view (push <<< TipViewPrimaryButtonClick) (continueWithTipButtonConfig state)
           ]
+        , textView $
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , color Color.black600
+          , gravity CENTER
+          , textFromHtml "<u>Choose another provider</u>"
+          , margin $ MarginTop 10
+          , padding $ Padding 10 5 10 5
+          , visibility $ boolToVisibility state.isOurQuote
+          , onClick push $ const ChooseAnotherProvider
+          ] <> FontStyle.body20 TypoGraphy
         ]
     ]
 

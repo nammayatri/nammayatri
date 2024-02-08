@@ -585,7 +585,10 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   totalFareRange :: Maybe FareRange,
   nightShiftRate :: Maybe NightShiftRate,
   specialLocationTag :: Maybe String,
-  driversLatLong :: Array LatLong
+  driversLatLong :: Array LatLong,
+  providerName :: Maybe String,
+  providerId :: Maybe String,
+  valueAddNP :: Maybe Boolean --true if entity is from ny
 }
 
 newtype NightShiftRate = NightShiftRate {
@@ -1706,8 +1709,8 @@ newtype FlowStatusRes = FlowStatusRes
 data FlowStatus = IDLE {}
                 | SEARCHING { requestId :: String , validTill :: String }
                 | GOT_ESTIMATE { requestId :: String , validTill :: String }
-                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String }
-                | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String }
+                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String, valueAddNP :: Maybe Boolean }
+                | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String , valueAddNP :: Maybe Boolean}
                 | WAITING_FOR_DRIVER_ASSIGNMENT { bookingId :: String , validTill :: String }
                 | RIDE_ASSIGNED { rideId :: String }
                 | PENDING_RATING { rideId :: String }

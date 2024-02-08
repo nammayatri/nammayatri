@@ -18,7 +18,7 @@ import ConfigProvider
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  let isActiveIndex = config.index == config.activeIndex
+  let isActiveIndex = config.isSelected
   in 
   linearLayout
   [ width MATCH_PARENT

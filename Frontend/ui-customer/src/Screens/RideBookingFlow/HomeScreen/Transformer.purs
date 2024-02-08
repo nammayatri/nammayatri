@@ -28,14 +28,14 @@ import Data.Int (toNumber, round)
 import Data.Lens ((^.), view)
 import Data.Ord
 import Data.Eq
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, fromJust)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
 import Data.Function.Uncurried (runFn1)
 import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import PrestoDOM (Visibility(..))
+import PrestoDOM (Visibility(..), Margin(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
@@ -56,6 +56,14 @@ import Control.Monad.Except.Trans (lift)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import ConfigProvider
 import Locale.Utils
+import Data.Map as Map
+import Data.Tuple (Tuple(..))
+import Data.Foldable (foldl)
+import Components.ChooseVehicle.Controller as CVC
+import Screens.Types as ST
+import Data.Bifunctor (bimap)
+import Data.List as List
+import Data.Foldable (fold)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -422,6 +430,9 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , basePrice = estimate.estimatedTotalFare
       , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       , pickUpCharges = pickUpCharges
+      , providerName = fromMaybe "" estimate.providerName
+      , providerId = fromMaybe "" estimate.providerId
+      , isOurQuote = false -- fromMaybe true estimate.valueAddNP -- this decides providers flow after search
       }
 
 dummyFareRange :: FareRange
@@ -566,6 +577,9 @@ dummyEstimateEntity =
     , nightShiftRate: Nothing
     , specialLocationTag: Nothing
     , driversLatLong : []
+    , providerName : Nothing
+    , providerId : Nothing
+    , valueAddNP : Nothing
     }
 
 getSpecialTag :: Maybe String -> SpecialTags
@@ -608,3 +622,137 @@ fetchPickupCharges estimateFareBreakup =
     deadKmFare = find (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup
   in 
     maybe 0 (\fare -> fare ^. _price) deadKmFare
+
+estimatesGroupbyProviderId :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Map.Map String (Array CVC.Config)
+estimatesGroupbyProviderId estimateArray config =
+  let x = getEstimateList estimateArray config
+      pairsArray = map (\obj -> Tuple obj.providerId [obj]) x
+  in foldl (\acc (Tuple k v) -> Map.insertWith append k v acc) Map.empty pairsArray
+
+filterEstimatesOnUs :: Array EstimateAPIEntity -> Array EstimateAPIEntity
+filterEstimatesOnUs arr = filter (\(EstimateAPIEntity estimate) -> fromMaybe true estimate.valueAddNP) arr
+
+-- mkProvidersQuoteList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array ST.ProvidersQuote
+-- mkProvidersQuoteList estimateArray config = do
+--   let chooseVcArray = getEstimateList estimateArray config
+--       pairsArray = map (\obj -> mkPl obj ) chooseVcArray
+--   DA.nubBy (\a b -> (compare a.providerId b.providerId)) pairsArray
+--   where
+--     mkPl ob = {
+--     providerName : ob.providerName,
+--     providerId : ob.providerId,
+--     isOurProvider : ob.isOurQuote,
+--     quoteList : [ob]
+--     }
+
+
+mkProvidersQuoteList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array ST.ProvidersQuote
+mkProvidersQuoteList estimateArray config = do
+  let chooseVcArray = getEstimateList estimateArray config --arr
+      pairsArray = map (\obj -> mkPl obj ) chooseVcArray
+      groupedQuotes = DA.groupBy (\a b -> (a.providerId == b.providerId)) pairsArray
+  map (mergeGroup <<< DA.fromFoldable) groupedQuotes
+  where 
+    mkPl ob = {
+      providerName : ob.providerName,
+      providerId : ob.providerId,
+      isOurProvider : ob.isOurQuote,
+      quoteList : [ob]
+      }
+    mergeGroup group = 
+      let defaultQuote = { providerName: "", providerId: "", isOurProvider: false, quoteList: [] }
+      in maybe defaultQuote (\firstQuote -> 
+        { providerName: firstQuote.providerName
+        , providerId: firstQuote.providerId
+        , isOurProvider: firstQuote.isOurProvider
+        , quoteList: fold (map _.quoteList group)
+        }) (DA.head group)
+    -- arr = [{ vehicleImage: "ny_ic_black_yellow_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_black_yellow_auto_quote_list.png"
+    --     , isSelected: false
+    --     , vehicleVariant: "AUTO_RICKSHAW"
+    --     , vehicleType: ""
+    --     , capacity: "3"
+    --     , price: "₹50"
+    --     , isCheckBox: false
+    --     , isEnabled: true
+    --     , activeIndex: 0
+    --     , index: 0
+    --     , id: "5b5acf60-8f4e-4733-adf5489d-906465c78a48"
+    --     , maxPrice : 123
+    --     , basePrice : 50 
+    --     , showInfo : false
+    --     , searchResultType : CVC.QUOTES
+    --     , isBookingOption : false
+    --     , pickUpCharges : 10
+    --     , layoutMargin : MarginHorizontal 12 12
+    --     , providerName : "Yarry"
+    --     , providerId : "67fn547487845495gn4875f489"
+    --     , isOurQuote : false
+    --     }
+    --   , { vehicleImage: "ny_ic_black_yellow_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_black_yellow_auto_quote_list.png"
+    --     , isSelected: false
+    --     , vehicleVariant: "SEDAN"
+    --     , vehicleType: ""
+    --     , capacity: "3"
+    --     , price: "₹50"
+    --     , isCheckBox: false
+    --     , isEnabled: true
+    --     , activeIndex: 0
+    --     , index: 0
+    --     , id: "5b5acf60-8f4e598t43-4733-adf5489d-906465c78a48"
+    --     , maxPrice : 123
+    --     , basePrice : 50 
+    --     , showInfo : false
+    --     , searchResultType : CVC.QUOTES
+    --     , isBookingOption : false
+    --     , pickUpCharges : 10
+    --     , layoutMargin : MarginHorizontal 12 12
+    --     , providerName : "Yarry"
+    --     , providerId : "67fn547487845495gn4875f489"
+    --     , isOurQuote : false
+    --     }
+    --   , { vehicleImage: "ny_ic_black_yellow_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_black_yellow_auto_quote_list.png"
+    --     , isSelected: false
+    --     , vehicleVariant: "AUTO_RICKSHAW"
+    --     , vehicleType: ""
+    --     , capacity: "3"
+    --     , price: "₹50"
+    --     , isCheckBox: false
+    --     , isEnabled: true
+    --     , activeIndex: 0
+    --     , index: 0
+    --     , id: "5b5acf60-8f4e-4733-adfd-906465c78a48"
+    --     , maxPrice : 123
+    --     , basePrice : 50 
+    --     , showInfo : false
+    --     , searchResultType : CVC.QUOTES
+    --     , isBookingOption : false
+    --     , pickUpCharges : 10
+    --     , layoutMargin : MarginHorizontal 12 12
+    --     , providerName : "Nammayatri"
+    --     , providerId : "67fn5474875gn4875f489"
+    --     , isOurQuote : true
+    --     }
+    --   , { vehicleImage: "ny_ic_black_yellow_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_black_yellow_auto_quote_list.png"
+    --     , isSelected: false
+    --     , vehicleVariant: "AUTO_RICKSHAW"
+    --     , vehicleType: ""
+    --     , capacity: "3"
+    --     , price: "₹50"
+    --     , isCheckBox: false
+    --     , isEnabled: true
+    --     , activeIndex: 0
+    --     , index: 0
+    --     , id: "5b5acf60-8f4e-4854738435983-adfd-906465c78a48"
+    --     , maxPrice : 123
+    --     , basePrice : 50 
+    --     , showInfo : false
+    --     , searchResultType : CVC.QUOTES
+    --     , isBookingOption : false
+    --     , pickUpCharges : 10
+    --     , layoutMargin : MarginHorizontal 12 12
+    --     , providerName : "Nammayatri"
+    --     , providerId : "67fn5474875gn4875f489"
+    --     , isOurQuote : true
+    --     }
+    --   ]

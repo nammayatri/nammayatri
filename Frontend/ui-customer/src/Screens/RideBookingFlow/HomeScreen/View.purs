@@ -362,6 +362,7 @@ view push state =
             -- , buttonLayoutParentView push state
             , if (not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen] then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
+            , if (any (_ == state.props.currentStage) [ ConfirmingLocation, SettingPrice]) then providerPreferenceView push state else emptyTextView state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then rideInfoView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
@@ -387,7 +388,6 @@ view push state =
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
             , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
             , if state.props.showShareAppPopUp && state.data.config.feature.enableShareApp then shareAppPopUp push state else emptyTextView state
-            , if state.props.showMultipleRideInfo then (requestInfoCardView push state) else emptyTextView state
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
             , if state.props.cancelSearchCallDriver then cancelSearchPopUp push state else emptyTextView state
@@ -1018,10 +1018,12 @@ requestInfoCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> P
 requestInfoCardView push state =
   PrestoAnim.animationSet [ fadeIn true ]
     $ linearLayout
-        [ height MATCH_PARENT
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
-        ]
-        [ RequestInfoCard.view (push <<< RequestInfoCardAction) (requestInfoCardConfig FunctionCall) ]
+        , margin $ MarginTop 10
+        ][ RequestInfoCard.view (push <<< RequestInfoCardAction) infoCardConfig ]
+  where infoCardConfig = if state.props.currentStage == ConfirmingLocation then multipleProvidersInfo state
+                          else requestInfoCardConfig state
 
 buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 buttonLayout state push =
@@ -1462,7 +1464,7 @@ topLeftIconView state push =
                 , weight 1.0
                 ]
                 []
-            , referralView push state
+            -- , referralView push state
             , sosView push state
             , if (not state.data.config.dashboard.enable) || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyTextView state else liveStatsDashboardView push state
             ]
@@ -1739,66 +1741,9 @@ requestRideButtonView push state =
             , margin $ MarginTop 16
             ][]
     ]
-    
-bookingPreferencesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-bookingPreferencesView push state = 
- linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , visibility $ boolToVisibility $ state.data.config.estimateAndQuoteConfig.enableBookingPreference  && not state.props.isRepeatRide && state.props.city /= Kochi 
-  ][ linearLayout
-      [ width MATCH_PARENT
-      , height $ V 1
-      , margin $ Margin 16 12 16 14
-      , background Color.grey900
-      ][]
-  , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      ][ linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , gravity CENTER_HORIZONTAL
-          , onClick push $ const PreferencesDropDown
-          , accessibility DISABLE
-          , margin (MarginBottom 8)
-          ][ textView $
-              [ height $ V 24
-              , width WRAP_CONTENT
-              , color Color.darkCharcoal
-              , text $ getString BOOKING_PREFERENCE
-              , accessibility DISABLE
-              ] <> FontStyle.body1 LanguageStyle
-           , imageView
-              [ width $ V 10
-              , height $ V 10
-              , margin (Margin 9 5 0 0)
-              , accessibility DISABLE
-              , imageWithFallback $ if state.data.showPreferences
-                                      then fetchImage FF_COMMON_ASSET "ny_ic_chevron_up"
-                                      else fetchImage FF_ASSET "ny_ic_chevron_down"
-              ]
-          ]
-        , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , margin $ MarginLeft 20
-            , orientation VERTICAL
-            ][ linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation VERTICAL
-              , visibility if state.data.showPreferences then VISIBLE else GONE
-              ][ showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) (fetchImage FF_ASSET "ny_ic_faster_lightning") true state,
-                showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) (fetchImage FF_ASSET "ny_ic_info") false state]
-            ]
-      ]
-  ]
 
-showMenuButtonView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> HomeScreenState -> PrestoDOM (Effect Unit) w
-showMenuButtonView push menuText menuImage autoAssign state =
+menuButtonView :: forall w action . (Action -> Effect Unit) -> String -> String -> Boolean -> HomeScreenState -> Action -> Action -> Boolean -> PrestoDOM (Effect Unit) w
+menuButtonView push menuText menuImage faster state action infixIconAC isActive =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -1807,12 +1752,12 @@ showMenuButtonView push menuText menuImage autoAssign state =
   ][ linearLayout
      [ height $ V 30
      , width $ V 30
+     , onClick push $ const action
      , gravity CENTER
-     , onClick push $ const $ CheckBoxClick autoAssign
      ][ linearLayout
         [ height $ V 20
         , width $ V 20
-        , stroke if (state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign) then ("2," <> state.data.config.primaryBackground) else ("2," <> Color.black600)
+        , stroke if isActive then ("2," <> state.data.config.primaryBackground) else ("2," <> Color.black600)
         , cornerRadius 10.0
         , gravity CENTER
         ][  linearLayout
@@ -1820,7 +1765,7 @@ showMenuButtonView push menuText menuImage autoAssign state =
             , height $ V 10
             , cornerRadius 5.0
             , background $ state.data.config.primaryBackground
-            , visibility if (state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign) then VISIBLE else GONE
+            , visibility if isActive then VISIBLE else GONE
             ][]
           ]
      ]
@@ -1831,9 +1776,9 @@ showMenuButtonView push menuText menuImage autoAssign state =
       , color state.data.config.estimateAndQuoteConfig.textColor
       , height WRAP_CONTENT
       , margin $ MarginHorizontal 5 10
-      , onClick push (const $ CheckBoxClick autoAssign)
+      , onClick push $ const action
       ] <> FontStyle.paragraphText LanguageStyle
-    , if autoAssign then
+    , if faster then
         linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -1857,11 +1802,12 @@ showMenuButtonView push menuText menuImage autoAssign state =
           ]
         else
           imageView
-          [ height $ V 16
-          , width $ V 16
+          [ height $ V 20
+          , width $ V 20
           , imageWithFallback menuImage
-          , margin $ (MarginHorizontal 5 5)
-          , onClick push (const $ OnIconClick autoAssign)
+          , onClick push $ const infixIconAC
+          , padding $ Padding 2 2 2 2
+          , margin $ MarginHorizontal 5 5
           ]
   ]
 
@@ -3138,101 +3084,6 @@ checkForLatLongInSavedLocations push action state = do
   _ <- runExceptT $ runBackT $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
   pure unit
 
-notinPickUpZoneView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-notinPickUpZoneView push state =
-  linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      , stroke $ "1," <> Color.grey900
-      , gravity CENTER
-      , cornerRadius 8.0
-      , margin $ MarginTop 16
-      , padding $ PaddingVertical 2 10
-      ][linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , orientation HORIZONTAL
-        , margin (MarginLeft 15)]
-        [ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , orientation VERTICAL
-        , gravity CENTER
-        , margin $ MarginTop if os == "IOS" then 10 else 0
-        ][  textView $
-            [ text $ if state.data.rateCard.additionalFare == 0 then (getCurrency appConfig) <> (show state.data.suggestedAmount) else  (getCurrency appConfig) <> (show state.data.suggestedAmount) <> "-" <> (getCurrency appConfig) <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
-            , color Color.black800
-            , margin $ MarginTop 8
-            , gravity CENTER_HORIZONTAL
-            , width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , onClick push $ const ShowRateCard
-            ] <> FontStyle.priceFont LanguageStyle
-            , estimatedTimeAndDistanceView push state
-          ]
-          , imageView
-            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
-            , width $ V 40
-            , height $ V 40
-            , gravity BOTTOM
-            , margin (MarginTop 13)
-            , onClick push $ const ShowRateCard
-            ]
-        ]
-        , linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , orientation VERTICAL
-          ]
-          [ linearLayout
-              [ width MATCH_PARENT
-              , height $ V 1
-              , margin $ Margin 16 12 16 14
-              , background Color.grey900
-              ][]
-          , linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation VERTICAL
-              ]
-              [ linearLayout
-                  [ width MATCH_PARENT
-                  , height WRAP_CONTENT
-                  , gravity CENTER_HORIZONTAL
-                  , onClick push $ const PreferencesDropDown
-                  , margin $ MarginBottom 8
-                  ][ textView $
-                      [ height $ V 24
-                      , width WRAP_CONTENT
-                      , color Color.darkCharcoal
-                      , text $ getString BOOKING_PREFERENCE
-                      ] <> FontStyle.body5 TypoGraphy,
-                      imageView
-                      [ width $ V 10
-                      , height $ V 10
-                      , margin (Margin 9 8 0 0)
-                      , imageWithFallback if state.data.showPreferences then fetchImage FF_COMMON_ASSET "ny_ic_chevron_up" else fetchImage FF_ASSET "ny_ic_chevron_down"
-                      ]
-                  ],
-                  linearLayout
-                    [ width MATCH_PARENT
-                    , height WRAP_CONTENT
-                    , margin $ MarginLeft 20
-                    , orientation VERTICAL
-                    ][ linearLayout
-                       [ width MATCH_PARENT
-                       , height WRAP_CONTENT
-                       , orientation VERTICAL
-                       , visibility if state.data.showPreferences then VISIBLE else GONE
-                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ( fetchImage FF_ASSET "ny_ic_faster") true state,
-                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ( fetchImage FF_ASSET "ny_ic_info") false state ]
-                  ]
-
-              ]
-          ]
-      ]
-
 zoneTimerExpiredView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 zoneTimerExpiredView state push =
   linearLayout
@@ -4485,3 +4336,95 @@ getFollowRide push action = do
     Left err -> do
       _ <- pure $ printLog "api error " err
       pure unit
+
+providerPreferenceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+providerPreferenceView push state = 
+  let layoutVisible = state.data.iopState.preferenceVisible || state.props.bookingOptionsVisible || state.props.showMultipleRideInfo
+  in linearLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , clickable layoutVisible
+      , background if layoutVisible then Color.blackLessTrans else Color.transparent
+      , padding $ Padding 0 20 18 0
+      -- , onClick push $ const ShowProviderPref
+      , orientation VERTICAL
+      , gravity RIGHT
+      ] $ [ linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , gravity RIGHT
+            ][  linearLayout[ weight 1.0 ][]
+              , linearLayout
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , visibility VISIBLE
+                , margin $ MarginHorizontal 16 0
+                , cornerRadius 20.0
+                , background Color.white900
+                , gravity RIGHT
+                , padding $ Padding 16 12 16 12
+                , onClick push $ const $ ShowProviderPref
+                ][
+                  imageView [
+                    imageWithFallback $ fetchImage FF_ASSET "ny_ic_prefer"
+                    , width $ V 20
+                    , height $ V 15
+                    , margin $ Margin 0 3 5 0
+                  ]
+                  , textView $ [
+                    width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , color Color.black800
+                  , text if state.props.currentStage == ConfirmingLocation then "Provider Preference" else "Booking Preference"
+                  ] <> FontStyle.tags TypoGraphy
+                ]
+            ]
+      ] <> if state.data.iopState.preferenceVisible && (state.props.currentStage == ConfirmingLocation) then [providerPreferenceOptions push state] else []
+        <> if state.props.bookingOptionsVisible && (state.props.currentStage == SettingPrice) then [bookingPrefOptions push state] else []
+        <> if state.props.showMultipleRideInfo then [requestInfoCardView push state] else []
+
+providerPreferenceOptions :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+providerPreferenceOptions push state = 
+  PrestoAnim.animationSet [ fadeIn true ] $
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity RIGHT
+  , margin $ MarginTop 10
+  ][ linearLayout[weight 1.0][]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , cornerRadius 20.0
+      , orientation VERTICAL
+      , gravity LEFT
+      , padding $ Padding 16 16 16 16
+      , background Color.white900
+      ][  menuButtonView push ("Prefer Namma Yatri") (fetchImage FF_ASSET "ny_ic_faster_lightning") true state (PreferedNy true) (NoAction) btnActive
+        , menuButtonView push ("Choose between Other Providers") (fetchImage FF_ASSET "ny_ic_info") false  state (PreferedNy false) (OnIconClick false) (not btnActive)
+      ]
+    ]
+    where btnActive = state.data.iopState.preferredNy
+
+bookingPrefOptions :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bookingPrefOptions push state = 
+  PrestoAnim.animationSet [ fadeIn true ] $
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity RIGHT
+  , margin $ MarginTop 10
+  ][ linearLayout[weight 1.0][]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , cornerRadius 20.0
+      , orientation VERTICAL
+      , gravity LEFT
+      , padding $ Padding 16 16 16 16
+      , background Color.white900
+      ][  menuButtonView push (getString AUTO_ASSIGN_DRIVER) (fetchImage FF_ASSET "ny_ic_faster_lightning") true state (CheckBoxClick true) (NoAction) (btnActive true)
+        , menuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) (fetchImage FF_ASSET "ny_ic_info") false  state (CheckBoxClick false) (OnIconClick false) (btnActive false)
+      ]
+    ]
+    where btnActive autoAssign = (state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign)

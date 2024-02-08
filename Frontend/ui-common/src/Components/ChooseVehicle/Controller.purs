@@ -7,6 +7,7 @@ import Data.Show.Generic (genericShow)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Margin(..))
+import Data.Maybe (Maybe(..))
 
 data Action
   = NoAction
@@ -33,6 +34,9 @@ type Config
     , isBookingOption :: Boolean
     , pickUpCharges :: Int 
     , layoutMargin :: Margin 
+    , providerName :: String
+    , providerId :: String
+    , isOurQuote :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -64,4 +68,7 @@ config =
   , isBookingOption : false
   , pickUpCharges : 0
   , layoutMargin : MarginHorizontal 12 12
+  , providerName : ""
+  , providerId : ""
+  , isOurQuote : true
   }

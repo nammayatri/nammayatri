@@ -222,8 +222,8 @@ currentFlowStatus = do
   verifyProfile "LazyCheck"
   flowStatus <- Remote.flowStatusBT "LazyCheck"
   case flowStatus ^. _currentStatus of
-    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
-    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
+    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus false
+    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus true
     RIDE_ASSIGNED _                         -> checkRideStatus true
     _                                       -> checkRideStatus false
   hideLoaderFlow
@@ -283,8 +283,10 @@ currentFlowStatus = do
       when (isNothing language || (getKeyByLanguage (fromMaybe "ENGLISH" language) /= (getLanguageLocale languageKey)))
         $ void $ lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)
 
-    goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
-    goToFindingQuotesStage estimateId driverOfferedQuote = do
+    goToFindingQuotesStage :: { validTill :: String , estimateId :: String , valueAddNP :: Maybe Boolean} -> Boolean -> FlowBT String Unit
+    goToFindingQuotesStage currentStatus driverOfferedQuote = do
+      let estimateId = currentStatus.estimateId
+          isOurQuote = fromMaybe true currentStatus.valueAddNP
       removeChatService ""
       if any (_ == (getValueToLocalStore FINDING_QUOTES_START_TIME)) ["__failed", ""] then do
         updateFlowStatus SEARCH_CANCELLED
@@ -322,7 +324,9 @@ currentFlowStatus = do
                 , data { source = flowStatusData.source.place
                        , destination = flowStatusData.destination.place
                        , sourceAddress = flowStatusData.sourceAddress
-                       , destinationAddress = flowStatusData.destinationAddress }
+                       , destinationAddress = flowStatusData.destinationAddress 
+                       , selectedEstimatesObject { isOurQuote = isOurQuote}
+                       }
                 })
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
@@ -640,7 +644,7 @@ homeScreenFlow = do
         let destServiceable = destServiceabilityResp.serviceable
         let pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
         setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", findingQuotesProgress = 0.0 }})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{ iopState = HomeScreenData.initData.data.iopState, polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", findingQuotesProgress = 0.0 }})
         when (addToRecents) $ do
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations

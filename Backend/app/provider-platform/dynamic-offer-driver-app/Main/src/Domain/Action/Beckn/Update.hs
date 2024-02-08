@@ -163,6 +163,21 @@ buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCity
         ..
       }
 
+mkLocationAPIEntity :: Common.Location -> DL.LocationAPIEntity
+mkLocationAPIEntity location =
+  DL.LocationAPIEntity
+    { lat = location.gps.lat,
+      lon = location.gps.lon,
+      street = location.address.street,
+      city = location.address.city,
+      state = location.address.state,
+      country = location.address.country,
+      building = location.address.building,
+      areaCode = location.address.area_code,
+      area = location.address.ward,
+      fullAddress = mkFullAddress location.address
+    }
+
 processStop :: DBooking.Booking -> Common.Location -> Bool -> Flow ()
 processStop booking loc isEdit = do
   validateStopReq booking isEdit
@@ -174,7 +189,7 @@ processStop booking loc isEdit = do
   mbRide <- QRide.findActiveByRBId booking.id
   whenJust mbRide $ \ride -> do
     person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    let entityData = Notify.StopReq {bookingId = booking.id, stop = Just loc, ..}
+    let entityData = Notify.StopReq {bookingId = booking.id, stop = Just (mkLocationAPIEntity loc), ..}
     Notify.notifyStopModification person.merchantOperatingCityId person.id person.deviceToken entityData
 
 validateStopReq :: DBooking.Booking -> Bool -> Flow ()

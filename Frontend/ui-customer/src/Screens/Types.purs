@@ -44,6 +44,7 @@ import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
 import PrestoDOM.List
+import Data.Map as Map
 
 type Contacts = {
   name :: String,
@@ -766,7 +767,35 @@ type HomeScreenStateData =
   , bannerData :: BannerCarousalData
   , contactList :: Array NewContacts
   , followers :: Maybe (Array Followers)
+  , iopState :: InteroperabilityState
   }
+
+type InteroperabilityState = {
+  preferredNy :: Boolean,
+  selectedProvider :: String,
+  preferenceVisible :: Boolean,
+  selectedProviderQuote :: String,
+  chooseBwProvidersInfo :: Boolean,
+  providersMapArray :: Map.Map String (Array ChooseVehicle.Config),
+  providersQuoteList :: Array ProvidersQuote
+}
+
+-- providersQuoteList = Array ProvidersQuote
+
+type ProvidersQuote = {
+  providerName :: String,
+  providerId :: String,
+  isOurProvider :: Boolean,
+  quoteList :: Array ChooseVehicle.Config
+}
+
+
+
+data ServiceProvider = NammaYatri | Yarry
+
+derive instance genericServiceProvider :: Generic ServiceProvider _
+instance showServiceProvider :: Show ServiceProvider where show = genericShow
+instance eqServiceProvider :: Eq ServiceProvider where eq = genericEq
 
 type RentalsInfo = 
   {
@@ -938,6 +967,7 @@ type HomeScreenStateProps =
   , sosBannerType :: Maybe SosBannerType
   , showShareRide :: Boolean
   , followsRide :: Boolean 
+  , bookingOptionsVisible :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

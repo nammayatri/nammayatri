@@ -30,6 +30,9 @@ import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map 
+import Screens.Types as ST
+import Components.ChooseVehicle.Controller as ChooseVehicleController
+import Data.Tuple (Tuple(..))
 
 initData :: HomeScreenState
 initData = {
@@ -61,6 +64,15 @@ initData = {
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
+    , iopState : {
+      preferredNy : true,
+      preferenceVisible : false,
+      chooseBwProvidersInfo : false,
+      selectedProvider : "",
+      selectedProviderQuote : "",
+      providersQuoteList : [],
+      providersMapArray : Map.empty
+    }
     , rateCard : {
        additionalFare : 0,
        nightShiftMultiplier : 0.0,
@@ -112,6 +124,9 @@ initData = {
       , isBookingOption : false
       , pickUpCharges : 0
       , layoutMargin : Margin 0 0 0 0
+      , providerName : ""
+      , providerId : ""
+      , isOurQuote : true
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -293,9 +308,9 @@ initData = {
     , sosBannerType : Nothing
     , showShareRide : false
     , followsRide: false
+    , bookingOptionsVisible : false
     }
-}
-
+  }
 dummySearchLocationModelProps = {
     isAutoComplete : false
   , showLoader : false

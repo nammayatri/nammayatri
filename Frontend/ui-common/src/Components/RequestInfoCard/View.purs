@@ -34,9 +34,9 @@ view push state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
-  , padding (Padding 16 0 16 0)
+  , padding state.padding
   , gravity CENTER
-  , background Color.black9000
+  , background state.backgroundColor
   , onClick push $ const BackPressed
   ][ linearLayout
      [ width MATCH_PARENT

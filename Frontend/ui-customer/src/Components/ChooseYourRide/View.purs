@@ -8,9 +8,9 @@ import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (mapWithIndex, length, (!!))
+import Data.Array (mapWithIndex, length, (!!), head, concat)
 import Data.Function.Uncurried (runFn1)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils as HU
@@ -20,7 +20,7 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import JBridge (getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-))
+import Prelude (Unit, ($), (<>), map, const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-))
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -30,6 +30,10 @@ import PrestoDOM.Properties (sheetState)
 import Data.Int (toNumber,ceil)
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
+import Data.Tuple(Tuple(..) ,snd, fst)
+import Data.Map as Map
+import Components.ChooseVehicle.Controller as CVC
+import Data.Foldable (traverse_)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -86,8 +90,9 @@ view push config =
       , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
       , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
       ]
-      [ bookingPreferencesView push config
-      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
+      [ 
+        -- bookingPreferencesView push config
+        PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
       ]
     ]
   where
@@ -388,6 +393,7 @@ estimatedTimeAndDistanceView push config =
         <> FontStyle.paragraphText TypoGraphy
     ]
 
+---
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 quoteListView push config =
   linearLayout
@@ -400,22 +406,143 @@ quoteListView push config =
     [ scrollView
       [ height $ getQuoteListViewHeight config
       , width MATCH_PARENT
-      ][  linearLayout
+      ][  
+        if config.preferredNy then  quotesOnUs push config
+        else showQuotesWithProviderInfo push config
+      ]]
+
+showQuotesWithProviderInfo :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+showQuotesWithProviderInfo push config =
+  -- let elements = Map.toUnfoldable config.providersMapArray :: Array (Tuple String (Array CVC.Config))
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ](map (\providersObj ->
+      let providerName = providersObj.providerName
+          isOurProvider = providersObj.isOurProvider
+          providerId = providersObj.providerId
+          isExpended = config.selectedProvider == providerId
+      in relativeLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          ][  linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL 
+              , stroke $ "1," <> Color.grey900
+              , margin $ Margin 16 20 16 0
+              , padding $ PaddingBottom 20
+              , cornerRadius 14.0
+              , onClick push $ const $ ProviderClick providerId
+              ] $ [ providerNameAndLogo providerName isOurProvider isExpended]
+                <> if isExpended then [quotesList push providersObj.quoteList config] else []
+            , linearLayout
+              [ width MATCH_PARENT
+              , gravity RIGHT
+              ][ textView $
+                  [ width WRAP_CONTENT
+                  , gravity RIGHT
+                  , height WRAP_CONTENT
+                  , text "Recommended"
+                  , background Color.green900
+                  , color Color.white900
+                  , visibility $ boolToVisibility isOurProvider
+                  , padding $ Padding 10 5 10 5
+                  , margin $ Margin 0 6 30 0
+                  , cornerRadius 14.0
+                  ] <> FontStyle.tags LanguageStyle
+              ]
+          ]
+    ) config.providersQuoteList),
+    textView $
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , text "No other providers available"
+    , gravity CENTER
+    , margin $ MarginVertical 8 8
+    , color Color.black600
+    , visibility $ boolToVisibility $ length config.providersQuoteList == 1
+    ] <> FontStyle.paragraphText LanguageStyle
+  ]
+
+quotesOnUs :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+quotesOnUs push config =
+  case head config.providersQuoteList of
+    Just providerOb -> 
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ]( mapWithIndex
+            ( \index item ->
+                let selected = config.selectedProviderQuote == item.id
+                in ChooseVehicle.view (push <<< ChooseVehicleAC) (item {isSelected = selected})
+            ) providerOb.quoteList
+        )
+    Nothing -> linearLayout[][]
+
+providerNameAndLogo :: forall w. String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+providerNameAndLogo name valueAddedNy isExpended = 
+  let logo = if valueAddedNy then "ny_ic_ny_network" else "ny_ic_ondc_network"
+  in linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ Margin 16 16 0 16
+      , gravity CENTER_VERTICAL
+      ][  imageView
+          [ height $ V 27
+          , width $ V 27
+          , margin $ MarginRight 4
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET logo
+          ]
+        , textView $
           [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , orientation VERTICAL
-          ]( mapWithIndex
-              ( \index item ->
-                  ChooseVehicle.view (push <<< ChooseVehicleAC) (item)
-              ) config.quoteList
-          )]]
+          , width WRAP_CONTENT
+          , color Color.black800
+          , text name
+          ] <> FontStyle.h2 LanguageStyle
+        , linearLayout[weight 1.0][]
+        , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , color Color.darkCharcoal
+          , text "View Fares"
+          , visibility $ boolToVisibility $ not isExpended
+          ] <> FontStyle.body1 LanguageStyle
+        , imageView
+          [ width $ V 12
+          , height $ V 12
+          , margin $ Margin 9 0 9 0
+          , visibility $ boolToVisibility $ not isExpended
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_down"
+          ]
+
+      ]
+
+quotesList :: forall w. (Action -> Effect Unit) -> (Array ChooseVehicle.Config) -> Config -> PrestoDOM (Effect Unit) w
+quotesList push arr config =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginTop 5
+    ]( map ( \item -> 
+        let selected = config.selectedProviderQuote == item.id
+        in ChooseVehicle.view (push <<< ChooseVehicleAC) (item{isSelected = selected})) 
+      arr)
 
 getQuoteListViewHeight :: Config -> Length
-getQuoteListViewHeight config =
-    let len = length config.quoteList
+getQuoteListViewHeight config = do
+    let len = length $ concat $ map _.quoteList config.providersQuoteList
         quoteHeight = getHeightOfEstimateItem config
         height = if quoteHeight == 0 then 87 else quoteHeight + 7
-    in V $ (if len >= 4 then 3 * height else len * height) + 5
+        heightBasedOnQuote = V $ (if len >= 4 then 3 * height else len * height) + 5
+    if config.preferredNy then heightBasedOnQuote else  V $ ((EHC.screenHeight unit) / 2) - 20
 
 getHeightOfEstimateItem :: Config -> Int
 getHeightOfEstimateItem config = (runFn1 getLayoutBounds $ EHC.getNewIDWithTag (fromMaybe ChooseVehicle.config (config.quoteList !! 0)).id).height

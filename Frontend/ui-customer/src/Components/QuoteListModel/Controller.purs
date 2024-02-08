@@ -31,6 +31,7 @@ data Action = GoBack
             | TipBtnClick Int Int
             | TipViewPrimaryButtonClick PrimaryButtonController.Action
             | HidePopUp
+            | ChooseAnotherProvider
 
 type QuoteListModelState = {
      source :: String
@@ -45,4 +46,5 @@ type QuoteListModelState = {
   , progress :: Number
   , appConfig :: AppConfig
   , vehicleVariant :: String
+  , isOurQuote :: Boolean
 }
