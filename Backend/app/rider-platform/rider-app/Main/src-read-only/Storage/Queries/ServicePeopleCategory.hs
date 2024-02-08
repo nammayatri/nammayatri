@@ -22,19 +22,19 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.ServicePeo
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ServicePeopleCategory.ServicePeopleCategory] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> m (Maybe (Domain.Types.ServicePeopleCategory.ServicePeopleCategory))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
+    [ Se.Is Beam.id $ Se.Eq $ id
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> m (Maybe (Domain.Types.ServicePeopleCategory.ServicePeopleCategory))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq $ id
         ]
     ]
 
@@ -51,7 +51,7 @@ updateByPrimaryKey Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..}
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
         ]
     ]
 

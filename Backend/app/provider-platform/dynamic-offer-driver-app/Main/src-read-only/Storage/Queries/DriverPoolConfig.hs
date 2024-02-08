@@ -24,12 +24,12 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverPool
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DriverPoolConfig.DriverPoolConfig] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findAllByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DriverPoolConfig.DriverPoolConfig])
 findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithOptionsKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ merchantOperatingCityId
     ]
     (Se.Desc Beam.tripDistance)
     limit
@@ -39,7 +39,7 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq $ id
         ]
     ]
 
@@ -74,7 +74,7 @@ updateByPrimaryKey Domain.Types.DriverPoolConfig.DriverPoolConfig {..} = do
       Se.Set Beam.vehicleVariant $ vehicleVariant
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
         ]
     ]
 

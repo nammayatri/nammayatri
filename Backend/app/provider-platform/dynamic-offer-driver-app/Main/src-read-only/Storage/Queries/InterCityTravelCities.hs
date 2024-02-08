@@ -21,14 +21,14 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.InterCityT
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.InterCityTravelCities.InterCityTravelCities] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findByMerchantAndState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m ([Domain.Types.InterCityTravelCities.InterCityTravelCities])
 findByMerchantAndState (Kernel.Types.Id.Id merchantId) state = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
-          Se.Is Beam.state $ Se.Eq state
+        [ Se.Is Beam.merchantId $ Se.Eq $ merchantId,
+          Se.Is Beam.state $ Se.Eq $ state
         ]
     ]
 
@@ -36,8 +36,8 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelud
 findByPrimaryKey cityName (Kernel.Types.Id.Id merchantId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.cityName $ Se.Eq cityName,
-          Se.Is Beam.merchantId $ Se.Eq merchantId
+        [ Se.Is Beam.cityName $ Se.Eq $ cityName,
+          Se.Is Beam.merchantId $ Se.Eq $ merchantId
         ]
     ]
 
@@ -52,8 +52,8 @@ updateByPrimaryKey Domain.Types.InterCityTravelCities.InterCityTravelCities {..}
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.cityName $ Se.Eq cityName,
-          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
+        [ Se.Is Beam.cityName $ Se.Eq $ cityName,
+          Se.Is Beam.merchantId $ Se.Eq $ (Kernel.Types.Id.getId merchantId)
         ]
     ]
 

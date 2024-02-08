@@ -22,13 +22,13 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.NextBillio
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.NextBillionData.NextBillionData] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe (Domain.Types.NextBillionData.NextBillionData))
 findByPrimaryKey (Kernel.Types.Id.Id searchRequestId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.searchRequestId $ Se.Eq searchRequestId
+        [ Se.Is Beam.searchRequestId $ Se.Eq $ searchRequestId
         ]
     ]
 
@@ -44,7 +44,7 @@ updateByPrimaryKey Domain.Types.NextBillionData.NextBillionData {..} = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId searchRequestId)
+        [ Se.Is Beam.searchRequestId $ Se.Eq $ (Kernel.Types.Id.getId searchRequestId)
         ]
     ]
 
