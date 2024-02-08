@@ -21,13 +21,14 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
-import Kernel.Utils.Common (type (:::))
+import Kernel.Utils.Common
 import qualified Tools.Maps
 import qualified Tools.Maps as Maps
 
 buildBecknSearchReqV2 :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Domain.Action.UI.Search.SearchReqLocation -> [Domain.Action.UI.Search.SearchReqLocation] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Domain.Types.Merchant.Merchant -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.Bool -> Data.Time.UTCTime -> Maybe [Maps.RouteInfo] -> m BecknV2.OnDemand.Types.SearchReq
 buildBecknSearchReqV2 action domain origin stops searchId distance duration customerLanguage disabilityTag merchant bapUri city mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
-  searchReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain searchId.getId (Just searchId.getId) merchant.bapId bapUri Nothing Nothing city merchant.country
+  messageId <- generateGUIDText
+  searchReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain messageId (Just searchId.getId) merchant.bapId bapUri Nothing Nothing city merchant.country
   searchReqMessage_ <- buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes
   pure $ BecknV2.OnDemand.Types.SearchReq {searchReqContext = searchReqContext_, searchReqMessage = searchReqMessage_}
 

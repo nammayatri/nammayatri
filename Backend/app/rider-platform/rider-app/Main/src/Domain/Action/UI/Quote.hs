@@ -127,7 +127,7 @@ getOffers searchRequest = do
 getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-  let estimates = DEstimate.mkEstimateAPIEntity <$> sortByEstimatedFare estimateList
+  estimates <- mapM DEstimate.mkEstimateAPIEntity (sortByEstimatedFare estimateList)
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
 sortByEstimatedFare :: (HasField "estimatedFare" r Money) => [r] -> [r]

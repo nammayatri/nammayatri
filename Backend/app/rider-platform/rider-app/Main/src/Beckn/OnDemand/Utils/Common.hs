@@ -25,7 +25,6 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationAddress as DLoc
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
 import Kernel.External.Maps as Maps
@@ -193,11 +192,6 @@ castCancellationSourceV2 = \case
 getContextBapId :: MonadFlow m => Spec.Context -> m Text
 getContextBapId context = do
   context.contextBapId & fromMaybeM (InvalidRequest "Missing contextBapId")
-
-getMessageId :: MonadFlow m => Spec.Context -> m (Id SearchRequest.SearchRequest)
-getMessageId context = do
-  messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
-  pure $ Id $ T.pack $ show messageUuid
 
 getMessageIdText :: MonadFlow m => Spec.Context -> m Text
 getMessageIdText context = do

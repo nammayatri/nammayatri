@@ -26,8 +26,10 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import qualified Storage.CachedQueries.ValueAddNP as QNP
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Estimate = Estimate
@@ -114,7 +116,10 @@ data EstimateAPIEntity = EstimateAPIEntity
     waitingCharges :: WaitingCharges,
     driversLatLong :: [LatLong],
     specialLocationTag :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    providerName :: Text,
+    providerId :: Text,
+    isValueAddNP :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -131,18 +136,23 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-mkEstimateAPIEntity :: Estimate -> EstimateAPIEntity
+mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -> m EstimateAPIEntity
 mkEstimateAPIEntity Estimate {..} = do
-  EstimateAPIEntity
-    { agencyName = providerName,
-      agencyNumber = providerMobileNumber,
-      agencyCompletedRidesCount = providerCompletedRidesCount,
-      tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
-      estimateFareBreakup = mkEstimateBreakupAPIEntity <$> estimateBreakupList,
-      driversLatLong = driversLocation,
-      nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
-      ..
-    }
+  valueAddNPRes <- QNP.isValueAddNP providerId
+  return
+    EstimateAPIEntity
+      { agencyName = providerName,
+        agencyNumber = providerMobileNumber,
+        agencyCompletedRidesCount = providerCompletedRidesCount,
+        tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
+        estimateFareBreakup = mkEstimateBreakupAPIEntity <$> estimateBreakupList,
+        driversLatLong = driversLocation,
+        nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
+        providerId = providerId,
+        providerName = providerName,
+        isValueAddNP = valueAddNPRes,
+        ..
+      }
 
 mkNightShiftRateAPIEntity :: NightShiftInfo -> NightShiftRateAPIEntity
 mkNightShiftRateAPIEntity NightShiftInfo {..} = do
