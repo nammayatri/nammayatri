@@ -51,7 +51,7 @@ data BookingT f = BookingT
     vehicleVariant :: B.C f Veh.Variant,
     estimatedDistance :: B.C f (Maybe Meters),
     maxEstimatedDistance :: B.C f (Maybe HighPrecMeters),
-    estimatedFare :: B.C f Money,
+    estimatedFare :: B.C f HighPrecMoney,
     estimatedDuration :: B.C f (Maybe Seconds),
     fareParametersId :: B.C f Text,
     riderName :: B.C f (Maybe Text),
@@ -60,7 +60,7 @@ data BookingT f = BookingT
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     stopLocationId :: B.C f (Maybe Text),
-    distanceToPickup :: B.C f (Maybe Meters),
+    distanceToPickup :: B.C f (Maybe HighPrecMeters),
     isScheduled :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
