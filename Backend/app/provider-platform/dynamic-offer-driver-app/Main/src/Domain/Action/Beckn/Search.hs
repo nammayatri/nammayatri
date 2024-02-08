@@ -226,7 +226,7 @@ handler ValidatedDSearchReq {..} sReq = do
               let distInKm = distance.getMeters `div` 1000
                   timeInHr = duration.getSeconds `div` 3600
                   includedKm = (timeInHr * det.includedKmPerHr.getKilometers)
-                  maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers (timeInHr * includedKm)) (det.totalAdditionalKmsLimit.getKilometers - (timeInHr * includedKm))
+                  maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers includedKm) (det.totalAdditionalKmsLimit.getKilometers - includedKm)
                in distInKm - includedKm <= maxAllowed
 
     getCancellationDues =
