@@ -997,6 +997,8 @@ getFR stringKey =
         DATE_INVALID_MESSAGE -> "Date invalide. La réservation est disponible uniquement jusqu'à {} jours à l'avance"
         EDIT_PICKUP -> "Modifier la prise en charge"
         ADD_STOP -> "Ajouter un arrêt"
-        ENTER_PICKUP_LOC ->  "Entrer l'emplacement de prise en charge"
-        
+        ENTER_PICKUP_LOC ->  "Entrer l'emplacement de prise en charge"        
         INTERCITY_OPTIONS -> "Options interurbaines"
+        PROCEED -> "Procéder"
+        SCHEDULE_RIDE_AVAILABLE -> "Programme de trajet disponible seulement 30 minutes à partir de maintenant"
+        RENTAL_RIDE_UNTIL -> "Vous êtes en location jusqu'à"

@@ -1598,8 +1598,8 @@ rideCompletedCardConfig state =
         needHelpText = getString NEED_HELP,
         showRentalRideDetails = state.data.rideType == RideType.RENTAL_RIDE,
         rentalBookingData {
-          baseDuration = state.data.driverInfoCardState.rentalData.baseDistance
-        , baseDistance = state.data.driverInfoCardState.rentalData.baseDuration
+          baseDuration = state.data.driverInfoCardState.rentalData.baseDuration
+        , baseDistance = state.data.driverInfoCardState.rentalData.baseDistance
         , finalDuration = state.data.driverInfoCardState.rentalData.finalDuration
         , finalDistance = state.data.driverInfoCardState.rentalData.finalDistance
         , finalFare = state.data.finalAmount

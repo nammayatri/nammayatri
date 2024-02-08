@@ -996,3 +996,6 @@ getEN stringKey =
         ADD_STOP ->  "Add stop"
         ENTER_PICKUP_LOC ->  "Enter pickup location"
         INTERCITY_OPTIONS -> "Intercity Options"
+        PROCEED -> "Proceed"
+        SCHEDULE_RIDE_AVAILABLE -> "Schedule Ride available only 30 minutes from now"
+        RENTAL_RIDE_UNTIL -> "You are on a rental ride until"

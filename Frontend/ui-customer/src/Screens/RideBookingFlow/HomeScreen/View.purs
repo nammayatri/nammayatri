@@ -3154,42 +3154,19 @@ rentalAndIntercityConfirmRide action count duration push state = do -- TODO-code
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
             fareProductType = (resp.bookingDetails) ^. _fareProductType
-            status = if any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"] then "CONFIRMED" else "TRIP_ASSIGNED"
-            willRideListNull = any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"]
-        if  status == resp.status && (willRideListNull || not (null resp.rideList)) then do
+            status = if any ( _ == fareProductType) ["RENTAL", "INTER_CITY"] then "TRIP_ASSIGNED" else "CONFIRMED"
+        if status == resp.status && not (null resp.rideList) then do
             doAff do liftEffect $ push $ action response
-            -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
             pure unit
         else do
             void $ delay $ Milliseconds duration
-            confirmRide action (count - 1) duration push state
+            rentalAndIntercityConfirmRide action (count - 1) duration push state
       Left err -> do
         _ <- pure $ printLog "api error " err
         void $ delay $ Milliseconds duration
         confirmRide action (count - 1) duration push state
   else
     pure unit
-  --   resp <- rideBooking (state.props.bookingId)
-  --   _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
-  --   case resp of
-  --     Right response -> do
-  --       _ <- pure $ printLog "api Results " response
-  --       let (RideBookingRes resp) = response
-  --           fareProductType = (resp.bookingDetails) ^. _fareProductType
-  --           status = if any ( _ == fareProductType) ["RENTAL", "INTER_CITY"] then "TRIP_ASSIGNED" else "CONFIRMED"
-  --       if status == resp.status && not (null resp.rideList) then do
-  --           doAff do liftEffect $ push $ action response
-  --           -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
-  --           pure unit
-  --       else do
-  --           void $ delay $ Milliseconds duration
-  --           rentalAndIntercityConfirmRide action (count - 1) duration push state
-  --     Left err -> do
-  --       _ <- pure $ printLog "api error " err
-  --       void $ delay $ Milliseconds duration
-  --       confirmRide action (count - 1) duration push state
-  -- else
-  --   pure unit
 
 cancelRidePopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelRidePopUpView push state =

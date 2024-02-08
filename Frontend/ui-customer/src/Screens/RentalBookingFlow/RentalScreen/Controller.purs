@@ -54,6 +54,8 @@ import Data.Lens
 import Accessor
 import Data.Maybe (fromMaybe)
 import Data.Int as INT
+import Language.Strings (getString)
+import Language.Types (STR(..)) as STR
 
 instance showAction :: Show Action where
   show _ = ""
@@ -178,14 +180,14 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
                         && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
-    in if validDate && isAfterThirtyMinutes then continue newState 
+    in if validDate && isAfterThirtyMinutes then continue newState {props{showPrimaryButton = true}}
        else 
         if isAfterThirtyMinutes then do 
           void $ pure $ toast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
-          continue state
+          continue state {props{showPrimaryButton = true}}
         else do
-          void $ pure $ toast $ "Schedule Ride available only 30 minutes from now" -- TODO-codex : Translation
-          continue state
+          void $ pure $ toast $ getString STR.SCHEDULE_RIDE_AVAILABLE
+          continue state {props{showPrimaryButton = true}}
 
 eval (InputViewAC (InputViewController.BackPressed)) state = genericBackPressed state
 
@@ -201,7 +203,7 @@ eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFoc
           _ <- launchAff $ showDateTimePicker push DateTimePickerAction
           pure NoAction
         ]
-      else genericBackPressed state
+      else genericBackPressed state {props{showPrimaryButton = true}}
     _ -> continue state
 
 eval (RateCardAC action) state =
@@ -216,7 +218,7 @@ eval _ state = continue state
 genericBackPressed :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 genericBackPressed state = case state.data.currentStage of
   RENTAL_SELECT_PACKAGE -> exit GoToHomeScreen
-  RENTAL_SELECT_VARIANT -> continue state { data { currentStage = RENTAL_SELECT_PACKAGE }, props { showPrimaryButton = true}}
+  RENTAL_SELECT_VARIANT -> continue state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}
   RENTAL_CONFIRMATION -> continue state { data { currentStage = RENTAL_SELECT_VARIANT }}
   _ -> continue state
 

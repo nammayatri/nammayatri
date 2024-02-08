@@ -997,3 +997,6 @@ getHI stringKey =
         ADD_STOP ->  "स्थान जोड़ें"
         ENTER_PICKUP_LOC ->  "पिकअप स्थान दर्ज करें"
         INTERCITY_OPTIONS -> "इंटरसिटी विकल्प"
+        PROCEED -> "आगे बढ़ें"
+        SCHEDULE_RIDE_AVAILABLE -> "स्केड्यूल राइड केवल 30 मिनट के बाद उपलब्ध है"
+        RENTAL_RIDE_UNTIL -> "आप रेंटल राइड पर हैं जब तक"

@@ -999,3 +999,6 @@ getKN stringKey =
         ADD_STOP ->  "ನಿಲ್ಲಿಸಿ ಸೇರಿಸಿ"
         ENTER_PICKUP_LOC ->  "ಪಿಕಪ್ ಸ್ಥಳ ನಮೂದಿಸಿ"
         INTERCITY_OPTIONS -> "ಇಂಟರ್‌ಸಿಟಿ ಆಯ್ಕೆಗಳು"
+        PROCEED -> "ಮುಂದುವರಿಯಿರಿ"
+        SCHEDULE_RIDE_AVAILABLE -> "ಸ್ಕೆಡ್ಯೂಲ್ ರೈಡ್ ಮಾತ್ರ ಇಪ್ಪತ್ತು ನಿಮಿಷಗಳಲ್ಲಿ ಲಭ್ಯವಿದೆ"
+        RENTAL_RIDE_UNTIL -> "ನೀವು ಬಿಕ್ಕಿ ಸವಾರಿಯ ಮೇಲೆ ಇರುತ್ತೀರಿ"

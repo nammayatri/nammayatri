@@ -353,8 +353,7 @@ distanceView push state =
             baseDuration = state.data.rentalData.baseDuration            
             endUTC = if nhiHaiStartTime then  runFn2 getUTCAfterNSecondsImpl startTime (baseDuration * 60 * 60) else ""
             endTimeInHH = if nhiHaiStartTime then convertUTCtoISC endUTC "h" <> convertUTCtoISC endUTC "A" else ""
-            _ = spy "phat raha hai but nhi phat rha" endUTC <> endTimeInHH
-        in if state.data.destination /= "" then "You are on a rental ride until " <> endTimeInHH  -- TODO-codex :: Add Translation
+        in if state.data.destination /= "" then getString RENTAL_RIDE_UNTIL <> " " <> endTimeInHH
           else "Add Stop to continue ride" <> (if state.props.endOTPShown then " or share End-OTP to end ride" else "")
 
 brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> PrestoDOM (Effect Unit) w

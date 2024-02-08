@@ -997,3 +997,6 @@ getBN stringKey =
         ADD_STOP ->  "স্টপ যোগ করুন"
         ENTER_PICKUP_LOC ->  "পিকআপ স্থান লিখুন"
         INTERCITY_OPTIONS -> "ইন্টারসিটি অপশন"
+        PROCEED -> "এগিয়ে যান"
+        SCHEDULE_RIDE_AVAILABLE -> "রাইড সময় এখন থেকে মাত্র ৩০ মিনিট পরে উপলব্ধ"
+        RENTAL_RIDE_UNTIL -> "আপনি একটি রেন্টাল রাইডে আছেন যতক্ষণ না"

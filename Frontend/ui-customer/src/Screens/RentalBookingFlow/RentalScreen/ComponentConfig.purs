@@ -45,7 +45,7 @@ primaryButtonConfig state =
     primaryButtonConfig' = PrimaryButton.config
       { textConfig
         { text = case state.data.currentStage of
-            RENTAL_SELECT_PACKAGE -> "Proceed" -- getString SELECT_VEHICLE -- TODO-codex : Translation
+            RENTAL_SELECT_PACKAGE -> getString PROCEED
             RENTAL_SELECT_VARIANT -> getString BOOK_RENTAL
             RENTAL_CONFIRMATION -> getString CONFIRM_RENTAL
             _ -> ""

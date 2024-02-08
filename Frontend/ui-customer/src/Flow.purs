@@ -800,9 +800,9 @@ homeScreenFlow = do
                           else if state.data.currentSearchResultType == SearchResultType.INTERCITY 
                             then state.data.selectedQuoteId
                           else state.props.selectedQuote
-      
+          currentStage = if state.data.rideType == RideType.INTERCITY then ConfirmingQuotes else ConfirmingRide
       if isJust selectedQuote then do
-        updateLocalStage ConfirmingRide
+        updateLocalStage currentStage
         response  <- lift $ lift $ Remote.rideConfirm (fromMaybe "" selectedQuote)
         case response of
           Right (ConfirmRes resp) -> do
@@ -810,7 +810,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> 
               homeScreen
                 { props
-                    { currentStage = ConfirmingRide
+                    { currentStage = currentStage
                     , bookingId = bookingId
                     , isPopUp = NoPopUp
                     }
@@ -2605,7 +2605,7 @@ saveToRecents :: LocationListItemState -> Number -> Number -> Boolean -> FlowBT 
 saveToRecents item lat lon serviceability = do
   (GlobalState currentState) <- getState
   recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
-  when (serviceability && lat /= 0.0 && lon /= 0.0) $ do
+  when (serviceability && lat /= 0.0 && lon /= 0.0 && isJust item.lat && isJust item.lon) $ do
     modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{recentSearches = addToRecentSearches item{lat = Just lat, lon = Just lon, locationScore = Just 0.0} recentPredictionsObject.predictionArray})
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data { recentSearchs { predictionArray = addToRecentSearches item{lat = Just lat, lon = Just lon, locationScore = Just 0.0} recentPredictionsObject.predictionArray}}})
     (GlobalState modifiedState) <- getState
