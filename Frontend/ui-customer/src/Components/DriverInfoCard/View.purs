@@ -960,10 +960,6 @@ rentalTimeView push state showText showInfo =
     , width WRAP_CONTENT
     , gravity $ if isTime showText then LEFT else CENTER
     , orientation VERTICAL
-    , onAnimationEnd (\_ -> do
-        if isRideStarted then void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") state.data.startedAt))/60) "1" "RideDurationTimer" push RideDurationTimer
-        else pure unit
-      ) (const NoAction)
     ]
     [ linearLayout[height WRAP_CONTENT
       , width WRAP_CONTENT][textView $

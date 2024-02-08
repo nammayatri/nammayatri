@@ -3376,22 +3376,22 @@ searchLocationFlow = do
     SearchLocationController.RideScheduledScreen state -> rideScheduledFlow
     _ -> pure unit
   where 
-    -- decodeStringFromAdress :: Address -> String
-    -- decodeStringFromAdress address =
-    --   if (DA.all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then
-    --   "checking iski maa ka"
-    -- else if (STR.trim (fromMaybe "" address.city) == "" && STR.trim (fromMaybe "" address.area) == "" && STR.trim (fromMaybe "" address.street) == "" && STR.trim (fromMaybe "" address.door) == "" && STR.trim (fromMaybe "" address.building) == "") then
-    --   ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    -- else if (STR.trim (fromMaybe "" address.area) == "" && STR.trim (fromMaybe "" address.street) == "" && STR.trim (fromMaybe "" address.door) == "" && STR.trim (fromMaybe "" address.building) == "") then
-    --   ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    -- else if (STR.trim (fromMaybe "" address.street) == "" && STR.trim (fromMaybe "" address.door) == "" && STR.trim (fromMaybe "" address.building) == "") then
-    --   ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    -- else if (STR.trim (fromMaybe "" address.door) == "" && STR.trim (fromMaybe "" address.building) == "") then
-    --   ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    -- else if (STR.trim (fromMaybe "" address.door) == "") then
-    --   ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    -- else
-    --   ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    decodeStringFromAdress :: Address -> String
+    decodeStringFromAdress address =
+      if (DA.all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then
+      "checking iski maa ka"
+    else if (STR.trim (fromMaybe "" address.city) == "" && STR.trim (fromMaybe "" address.area) == "" && STR.trim (fromMaybe "" address.street) == "" && STR.trim (fromMaybe "" address.door) == "" && STR.trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (STR.trim (fromMaybe "" address.area) == "" && STR.trim (fromMaybe "" address.street) == "" && STR.trim (fromMaybe "" address.door) == "" && STR.trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (STR.trim (fromMaybe "" address.street) == "" && STR.trim (fromMaybe "" address.door) == "" && STR.trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (STR.trim (fromMaybe "" address.door) == "" && STR.trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (STR.trim (fromMaybe "" address.door) == "") then
+      ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else
+      ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
   
     locSelectedOnMapFlow :: SearchLocationScreenState -> FlowBT String Unit
     locSelectedOnMapFlow state = do 

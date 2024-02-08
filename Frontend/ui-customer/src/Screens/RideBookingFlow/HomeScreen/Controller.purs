@@ -782,6 +782,7 @@ data Action = NoAction
             | ChangeToRideAcceptedAction
             | ChangeToRideStartedAction
             | SidebarCloseAnimationCompleted
+            | RideDurationTimer String String Int
             | NotificationListener String
             | OpenSettings
             | ContinueCmd
@@ -1787,6 +1788,9 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.RideDurationTimer timerID timeInHHMM _)) state = 
+  continue state{props{rideDurationTimerId = timerID, rideDurationTimer = timeInHHMM}}
+
+eval (RideDurationTimer timerID timeInHHMM _) state = 
   continue state{props{rideDurationTimerId = timerID, rideDurationTimer = timeInHHMM}}
 
 eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do

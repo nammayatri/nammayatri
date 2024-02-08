@@ -21,15 +21,16 @@ import Screens (getScreen, ScreenName(..))
 import Data.String as STR
 import Data.Array as DA
 import Debug (spy)
-import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap)
+import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker)
 import Data.Maybe as MB
 import Data.Number (fromString) as NUM
-import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag)
+import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker)
 import Data.Ord (comparing)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
 import Resources.Constants (encodeAddress)
+import Storage (getValueToLocalStore, KeyStore(..))
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -253,28 +254,12 @@ eval (SetLocationOnMap) state = do
       { lat, lng } = 
         MB.maybe { lat : currentLat, lng : currentLng} (\loc -> mkLatLong currentLat currentLng loc) focussedField
   void $ pure $ hideKeyboardOnNavigation true
+  pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
   void $ pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lng, geoJson = "", points = [], zoomLevel = 17.0, labelId = getNewIDWithTag "LocateOnMapSLSPin"}
-  let newState = state{props{searchLocStage = LocateOnMapStage, locUnserviceable = false}, data{latLonOnMap = MB.fromMaybe (MB.maybe dummyLocationInfo (\srcLoc -> srcLoc{address = decodeStringFromAdress srcLoc.addressComponents}) state.data.srcLoc) focussedField}}
+  let newState = state{props{searchLocStage = LocateOnMapStage, locUnserviceable = false}, data{latLonOnMap = MB.fromMaybe (MB.fromMaybe dummyLocationInfo state.data.srcLoc) focussedField}}
   updateAndExit newState $ Reload newState
   where 
     mkLatLong currentLat currentLng loc = { lat: MB.fromMaybe currentLat loc.lat, lng: MB.fromMaybe currentLng loc.lon }
-    
-    decodeStringFromAdress :: Address -> String
-    decodeStringFromAdress address =
-      if (DA.all MB.isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then
-      "checking iski maa ka"
-    else if (STR.trim (MB.fromMaybe "" address.city) == "" && STR.trim (MB.fromMaybe "" address.area) == "" && STR.trim (MB.fromMaybe "" address.street) == "" && STR.trim (MB.fromMaybe "" address.door) == "" && STR.trim (MB.fromMaybe "" address.building) == "") then
-      ((MB.fromMaybe "" address.state) <> ", " <> (MB.fromMaybe "" address.country))
-    else if (STR.trim (MB.fromMaybe "" address.area) == "" && STR.trim (MB.fromMaybe "" address.street) == "" && STR.trim (MB.fromMaybe "" address.door) == "" && STR.trim (MB.fromMaybe "" address.building) == "") then
-      ((MB.fromMaybe "" address.city) <> ", " <> (MB.fromMaybe "" address.state) <> ", " <> (MB.fromMaybe "" address.country))
-    else if (STR.trim (MB.fromMaybe "" address.street) == "" && STR.trim (MB.fromMaybe "" address.door) == "" && STR.trim (MB.fromMaybe "" address.building) == "") then
-      ((MB.fromMaybe "" address.area) <> ", " <> (MB.fromMaybe "" address.city) <> ", " <> (MB.fromMaybe "" address.state) <> ", " <> (MB.fromMaybe "" address.country))
-    else if (STR.trim (MB.fromMaybe "" address.door) == "" && STR.trim (MB.fromMaybe "" address.building) == "") then
-      ((MB.fromMaybe "" address.street) <> ", " <> (MB.fromMaybe "" address.area) <> ", " <> (MB.fromMaybe "" address.city) <> ", " <> (MB.fromMaybe "" address.state) <> ", " <> (MB.fromMaybe "" address.country))
-    else if (STR.trim (MB.fromMaybe "" address.door) == "") then
-      ((MB.fromMaybe "" address.building) <> ", " <> (MB.fromMaybe "" address.street) <> ", " <> (MB.fromMaybe "" address.area) <> ", " <> (MB.fromMaybe "" address.city) <> ", " <> (MB.fromMaybe "" address.state) <> ", " <> (MB.fromMaybe "" address.country))
-    else
-      ((MB.fromMaybe "" address.door) <> ", " <> (MB.fromMaybe "" address.building) <> ", " <> (MB.fromMaybe "" address.street) <> ", " <> (MB.fromMaybe "" address.area) <> ", " <> (MB.fromMaybe "" address.city) <> ", " <> (MB.fromMaybe "" address.state) <> ", " <> (MB.fromMaybe "" address.country))
 
 eval (LocFromMap key lat lon) state = do
   case key of 
