@@ -19,6 +19,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Esqueleto.Functions as F
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Lib.Tabular.SpecialLocation
 import qualified Lib.Types.SpecialLocation as D
 
@@ -30,7 +31,11 @@ findById = Esq.findById
 
 findSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLong point = do
-  Esq.findOne $ do
-    specialLocation <- from $ table @SpecialLocationT
-    where_ $ containsPoint (point.lon, point.lat)
-    return (specialLocation, F.getGeomGeoJSON)
+  specialLocation <-
+    Esq.findAll $ do
+      specialLocation <- from $ table @SpecialLocationT
+      where_ $ containsPoint (point.lon, point.lat)
+      return (specialLocation, F.getGeomGeoJSON)
+  when (length specialLocation > 1) $
+    logWarning $ "Multiple Special Locations found for LatLong " <> show point <> " " <> show specialLocation
+  return $ listToMaybe specialLocation
