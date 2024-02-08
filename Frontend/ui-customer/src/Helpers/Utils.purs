@@ -768,8 +768,6 @@ getDefaultPixelSize :: Int -> Int
 getDefaultPixelSize size =
   let pixels = runFn1 getPixels FunctionCall
       androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
-      iosNativeScale = runFn1 getDefaultPixels ""
-      displayZoomFactor = iosNativeScale / pixels
   in if os == "IOS" 
-    then ceil $ ((toNumber size) / displayZoomFactor) / pixels 
+    then size
     else ceil $ (toNumber size / pixels) * androidDensity

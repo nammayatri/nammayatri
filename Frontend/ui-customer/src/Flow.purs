@@ -1531,8 +1531,11 @@ followRideScreenFlow callInitUI = do
       followRideScreenFlow false
     GO_TO_HS_FROM_FOLLOW_RIDE -> do
       void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
+      pure $ removeAllPolylines ""
       void $ liftFlowBT $ runEffectFn1 clearMap ""
-      void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      (GlobalState gs) <- getState
+      let currentMapFragment = if gs.homeScreen.props.currentStage == HomeScreen then "CustomerHomeScreenMap" else "CustomerHomeScreen"
+      void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag currentMapFragment)
       modifyScreenState $ FollowRideScreenStateType (\_  -> FollowRideScreenData.initData)
       currentFlowStatus
     OPEN_GOOGLE_MAPS_FOLLOW_RIDE state -> do

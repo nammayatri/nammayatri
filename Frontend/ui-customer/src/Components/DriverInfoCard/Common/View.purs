@@ -55,7 +55,7 @@ driverDetailsView config uid =
   , padding $ PaddingHorizontal 16 16
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
-  , margin $ Margin 16 (if config.searchType == QUOTES then 12 else 0) 16 0
+  , margin $ Margin 16 (if config.searchType == QUOTES then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
   , background Color.white900
   , cornerRadius 8.0
   , visibility $  boolToVisibility $ if config.searchType == QUOTES then config.rideStarted else true
@@ -263,7 +263,7 @@ sourceDestinationView push config =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , margin $ Margin 16 0 16 (if os == "IOS" && config.rideStarted then safeMarginBottom + 36 else 12)
+  , margin $ Margin 16 0 16 (if os == "IOS" && config.rideStarted && config.enablePaddingBottom then safeMarginBottom + 36 else 12)
   , background config.backgroundColor
   , onAnimationEnd push $ const $ config.onAnimationEnd
   , cornerRadius 8.0

@@ -914,6 +914,7 @@ getDriverDetails state = {
   , registrationNumber : state.data.registrationNumber
   , config : state.data.config
   , rideStarted : state.props.currentStage == RideStarted
+  , enablePaddingBottom : false
 }
 
 getTripDetails :: DriverInfoCardState -> TripDetails Action
@@ -923,4 +924,5 @@ getTripDetails state = {
   , destination : state.data.destination
   , onAnimationEnd : NoAction
   , backgroundColor : Color.white900
+  , enablePaddingBottom : true
 }

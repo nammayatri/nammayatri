@@ -62,7 +62,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -1413,18 +1413,19 @@ topLeftIconView state push =
   let image = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
       onClickAction = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
       isBackPress = (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) 
+      followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
   in 
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , visibility $ boolToVisibility  state.data.config.showHamMenu
-    , margin $ MarginTop safeMarginTop
+    , margin $ MarginTop if followerBar then 0 else safeMarginTop
     ]
     $ []
     <> ( case state.data.followers of
           Nothing -> []
-          Just followers -> if (showFollowerBar followers state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then [ followRideBar push followers (MATCH_PARENT) ] else []
+          Just followers -> if followerBar then [ followRideBar push followers (MATCH_PARENT) true] else []
       )
     <> ( [ linearLayout
             [ width MATCH_PARENT
@@ -3842,19 +3843,19 @@ mapView push state idTag =
         ]
     ] <> case state.data.followers of
           Nothing -> []
-          Just followers -> if (showFollowerBar followers state) && state.props.currentStage == HomeScreen then [followRideBar push followers (MATCH_PARENT)] else []
+          Just followers -> if (showFollowerBar followers state) && state.props.currentStage == HomeScreen then [followRideBar push followers (MATCH_PARENT) false] else []
 
 showFollowerBar :: Array Followers -> HomeScreenState -> Boolean
 showFollowerBar followers state = state.props.followsRide && followers /= []
 
-followRideBar :: forall w. (Action -> Effect Unit) -> Array Followers -> Length -> PrestoDOM (Effect Unit) w
-followRideBar push followers customWidth =
+followRideBar :: forall w. (Action -> Effect Unit) -> Array Followers -> Length -> Boolean -> PrestoDOM (Effect Unit) w
+followRideBar push followers customWidth addSafePadding =
   linearLayout
     [ height WRAP_CONTENT
     , width customWidth
     , background Color.blue800
     , gravity CENTER
-    , padding $ Padding 16 8 16 8
+    , padding $ Padding 16 (if addSafePadding then safeMarginTopWithDefault 8 else 8) 16 8
     , onClick push (const GoToFollowRide)
     ]
     [ textView
@@ -4300,7 +4301,7 @@ locationUnserviceableView push state =
                     , height WRAP_CONTENT
                     , gravity CENTER
                     ]
-                    [ followRideBar push followers $ V $ 328 ]
+                    [ followRideBar push followers (V 328) false]
                 ]
               else
                 []

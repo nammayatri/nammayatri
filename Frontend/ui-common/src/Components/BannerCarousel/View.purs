@@ -92,8 +92,8 @@ bannerView push config =
             , visibilityHolder "actionTextVisibility"
             , margin $ MarginTop 5
             , gravity CENTER_VERTICAL
-            , backgroundHolder "actionTextBackgroundColour"
             , cornerRadiusHolder "actionTextCornerRadius"
+            , backgroundHolder "actionTextBackgroundColour"
             ]
             [ imageView
                 [ height $ V 10
