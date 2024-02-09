@@ -41,6 +41,8 @@ module SharedLogic.DriverPool
     mkBlockListedDriversForRiderKey,
     addDriverToSearchCancelledList,
     addDriverToRiderCancelledList,
+    convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult,
+    filterOutGoHomeDriversAccordingToHomeLocation,
     PoolCalculationStage (..),
     module Reexport,
   )
@@ -492,7 +494,7 @@ calculateGoHomeDriverPool ::
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
   m [DriverPoolWithActualDistResult]
-calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
+calculateGoHomeDriverPool (req@CalculateGoHomeDriverPoolReq {..}) merchantOpCityId = do
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
@@ -511,6 +513,31 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   randomDriverPool <- liftIO $ take goHomeCfg.numDriversForDirCheck <$> Rnd.randomizeList driversWithLessThanNParallelRequests
   logDebug $ "random driver pool" <> show randomDriverPool
+  filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool req merchantOpCityId
+  where
+    getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (dObj.driverId) now
+
+convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult :: Bool -> DriverPoolWithActualDistResult -> QP.NearestGoHomeDriversResult -- # TODO: Lets merge these two types
+convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult onRide DriverPoolWithActualDistResult {driverPoolResult = DriverPoolResult {..}} = do
+  QP.NearestGoHomeDriversResult {QP.distanceToDriver = distanceToPickup, ..}
+
+-- this is not required in the flow where we convert them
+
+filterOutGoHomeDriversAccordingToHomeLocation ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    MonadIO m,
+    HasCoordinates a,
+    LT.HasLocationService m r,
+    CoreMetrics m
+  ) =>
+  [QP.NearestGoHomeDriversResult] ->
+  CalculateGoHomeDriverPoolReq a ->
+  Id DMOC.MerchantOperatingCity ->
+  m [DriverPoolWithActualDistResult]
+filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
   goHomeRequests <-
     mapMaybeM
       ( \driver -> runMaybeT $ do
@@ -548,7 +575,6 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
   return $ take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist
   where
     filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
-    getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (dObj.driverId) now
 
     makeDriverPoolRes nearestGoHomeDrivers =
       DriverPoolResult
@@ -592,6 +618,8 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
           actualDurationToPickup = driverGoHomePoolWithActualDistance.actualDurationToPickup,
           intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing transporterConfig.defaultPopupDelay,
           isPartOfIntelligentPool = False,
+          pickupZone = False,
+          specialZoneExtraTip = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Just ghrId
         }
@@ -807,6 +835,8 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
                 actualDurationToPickup = time,
                 intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
                 isPartOfIntelligentPool = False,
+                pickupZone = False,
+                specialZoneExtraTip = Nothing,
                 keepHiddenForSeconds = Seconds 0,
                 goHomeReqId = Nothing
               }
@@ -864,6 +894,8 @@ computeActualDistance orgId merchantOpCityId pickup driverPoolResults = do
           actualDurationToPickup = distDur.duration,
           intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
           isPartOfIntelligentPool = False,
+          pickupZone = False,
+          specialZoneExtraTip = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing
         }

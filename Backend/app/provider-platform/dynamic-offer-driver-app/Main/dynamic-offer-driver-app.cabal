@@ -196,6 +196,7 @@ library
       Domain.Action.UI.RideRoute
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
+      Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp
@@ -601,7 +602,9 @@ library
       Tools.Verification
       Tools.Whatsapp
       API.Action.UI.LmsModule
+      API.Action.UI.SpecialLocation
       API.Types.UI.LmsModule
+      API.Types.UI.SpecialLocation
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
       Domain.Types.InterCityTravelCities

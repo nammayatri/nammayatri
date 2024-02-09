@@ -42,6 +42,8 @@ data SearchRequestT f = SearchRequestT
     estimatedDistance :: B.C f (Maybe Meters),
     estimatedDuration :: B.C f (Maybe Seconds),
     customerLanguage :: B.C f (Maybe Maps.Language),
+    driverDefaultExtraFee :: B.C f (Maybe Money),
+    pickupZoneGateId :: B.C f (Maybe Text),
     disabilityTag :: B.C f (Maybe Text),
     device :: B.C f (Maybe Text),
     autoAssignEnabled :: B.C f (Maybe Bool),

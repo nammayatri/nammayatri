@@ -132,5 +132,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.startTime = Just startTime,
         BeamSR.validTill = Just validTill,
         BeamSR.isScheduled = Just isScheduled,
+        BeamSR.pickupZoneGateId = pickupZoneGateId,
+        BeamSR.driverDefaultExtraFee = driverDefaultExtraFee,
         BeamSR.createdAt = createdAt
       }

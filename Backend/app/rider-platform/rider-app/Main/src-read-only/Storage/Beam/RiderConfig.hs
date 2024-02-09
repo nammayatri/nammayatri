@@ -25,6 +25,7 @@ data RiderConfigT f = RiderConfigT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,
+    specialZoneRadius :: B.C f Kernel.Prelude.Int,
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
     videoFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,

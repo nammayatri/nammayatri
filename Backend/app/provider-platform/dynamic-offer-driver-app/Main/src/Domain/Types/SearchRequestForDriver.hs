@@ -75,6 +75,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverMaxExtraFee :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds,
     isPartOfIntelligentPool :: Bool,
+    pickupZone :: Bool,
     cancellationRatio :: Maybe Double,
     acceptanceRatio :: Maybe Double,
     driverAvailableTime :: Maybe Double,
@@ -109,6 +110,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
+    specialZoneExtraTip :: Maybe Money,
+    pickupZone :: Bool,
     rideRequestPopupDelayDuration :: Seconds,
     specialLocationTag :: Maybe Text,
     disabilityTag :: Maybe Text,
@@ -120,8 +123,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> Bool -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant isTranslated =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe Money -> Seconds -> Variant.Variant -> Bool -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleVariant isTranslated =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
@@ -153,6 +156,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       customerCancellationDues = nearbyReq.customerCancellationDues,
       tripCategory = searchTry.tripCategory,
       duration = searchRequest.estimatedDuration,
+      pickupZone = nearbyReq.pickupZone,
+      specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation,
       ..
     }
 

@@ -57,6 +57,7 @@ import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
@@ -165,21 +166,32 @@ handler ValidatedDSearchReq {..} sReq = do
         (pool, policies) <- selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled farePolicies
         pure (nonEmpty pool, policies)
       else return (Nothing, catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicies)
-  searchReq <- buildSearchRequest sReq bapCity possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area cancellationDues mbRiderId
+  (mbSpecialZoneId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
+  logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneId, mbDefaultDriverExtra)
+  let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> Just "PickupZone") mbSpecialZoneId
+  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area cancellationDues mbRiderId
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo searchReq.id
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
-  let buildEstimateHelper = buildEstimate searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance allFarePoliciesProduct.specialLocationTag cancellationDues
-  let buildQuoteHelper = buildQuote searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration allFarePoliciesProduct.specialLocationTag cancellationDues
+  let buildEstimateHelper = buildEstimate searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag cancellationDues
+  let buildQuoteHelper = buildQuote searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag cancellationDues
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
   QEst.createMany estimates
   for_ quotes QQuote.create
 
   forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
 
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation allFarePoliciesProduct.specialLocationTag searchMetricsMVar (addNearestDriverInfo driverPool quotes) (addNearestDriverInfo driverPool estimates)
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation specialLocationTag searchMetricsMVar (addNearestDriverInfo driverPool quotes) (addNearestDriverInfo driverPool estimates)
   where
+    getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe Money)
+    getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing)
+    getSpecialPickupZoneInfo (Just _) fromLocation = do
+      mbPickupZone <- findGateInfoByLatLongWithoutGeoJson (LatLong fromLocation.lat fromLocation.lon)
+      if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
+        then pure $ ((.specialLocationId.getId) <$> mbPickupZone, fmap Money . (.defaultDriverExtra) =<< mbPickupZone)
+        else pure (Nothing, Nothing)
+
     combineFarePoliciesProducts :: [FarePoliciesProduct] -> FarePoliciesProduct
     combineFarePoliciesProducts products =
       FarePoliciesProduct
@@ -301,6 +313,8 @@ buildSearchRequest ::
   ) =>
   DSearchReq ->
   Context.City ->
+  Maybe Text ->
+  Maybe Money ->
   UTCTime ->
   Bool ->
   Id DM.Merchant ->
@@ -314,7 +328,7 @@ buildSearchRequest ::
   HighPrecMoney ->
   Maybe (Id RD.RiderDetails) ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} bapCity startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area customerCancellationDues mbRiderId = do
+buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area customerCancellationDues mbRiderId = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -333,6 +347,8 @@ buildSearchRequest DSearchReq {..} bapCity startTime isScheduled providerId merc
         estimatedDuration = mbDuration,
         riderId = mbRiderId,
         createdAt = now,
+        driverDefaultExtraFee = mbDefaultDriverExtra,
+        pickupZoneGateId = mbSpecialZoneId,
         ..
       }
 

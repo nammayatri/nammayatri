@@ -37,9 +37,9 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
-import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CRiderConfig
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.Queries.Geometry (findGeometriesContaining)
 import Tools.Error
@@ -48,7 +48,7 @@ data ServiceabilityRes = ServiceabilityRes
   { serviceable :: Bool,
     city :: Maybe Context.City,
     currentCity :: Maybe Context.City,
-    specialLocation :: Maybe DSpecialLocation.SpecialLocation,
+    specialLocation :: Maybe QSpecialLocation.SpecialLocationFull,
     geoJson :: Maybe Text,
     hotSpotInfo :: [DHotSpot.HotSpotInfo],
     blockRadius :: Maybe Int
@@ -71,9 +71,11 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
   mbNearestOpAndCurrentCity <- getNearestOperatingAndCurrentCity' settingAccessor (personId, merchantId) shouldUpdatePerson location
   case mbNearestOpAndCurrentCity of
     Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
-      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
       let city = Just nearestOperatingCity.city
-      return ServiceabilityRes {serviceable = True, currentCity = Just currentCity.city, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody, ..}
+      merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId nearestOperatingCity.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId:- " <> merchantId.getId <> " ,city:- " <> show nearestOperatingCity.city)
+      cityConfig <- CRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
+      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLongFull location $ maybe 150 (.specialZoneRadius) cityConfig -- default as 150 meters
+      return ServiceabilityRes {serviceable = True, currentCity = Just currentCity.city, specialLocation = specialLocationBody, geoJson = (.geoJson) =<< specialLocationBody, ..}
     Nothing -> return ServiceabilityRes {city = Nothing, currentCity = Nothing, serviceable = False, specialLocation = Nothing, geoJson = Nothing, ..}
 
 data NearestOperatingAndCurrentCity = NearestOperatingAndCurrentCity

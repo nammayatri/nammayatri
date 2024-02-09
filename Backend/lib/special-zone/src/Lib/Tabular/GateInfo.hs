@@ -17,49 +17,51 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Lib.Tabular.SpecialLocation where
+module Lib.Tabular.GateInfo where
 
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import qualified Lib.Types.SpecialLocation as Domain
+import Lib.Tabular.SpecialLocation (SpecialLocationTId)
+import qualified Lib.Types.GateInfo as Domain
 
-deriving instance Read Domain.GatesInfo
-
-derivePersistField "Domain.GatesInfo"
+derivePersistField "LatLong"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    SpecialLocationT sql=special_location
+    GateInfoT sql=gate_info
       id Text
-      locationName Text
-      category Text
-      gates (PostgresList Domain.GatesInfo)
-      merchantOperatingCityId Text Maybe
+      point LatLong
+      specialLocationId SpecialLocationTId
+      defaultDriverExtra Int Maybe
+      name Text
+      address Text Maybe
+      canQueueUpOnGate Bool
       createdAt UTCTime
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey SpecialLocationT where
-  type DomainKey SpecialLocationT = Id Domain.SpecialLocation
-  fromKey (SpecialLocationTKey _id) = Id _id
-  toKey (Id id) = SpecialLocationTKey id
+instance TEntityKey GateInfoT where
+  type DomainKey GateInfoT = Id Domain.GateInfo
+  fromKey (GateInfoTKey _id) = Id _id
+  toKey (Id id) = GateInfoTKey id
 
-instance FromTType SpecialLocationT Domain.SpecialLocation where
-  fromTType SpecialLocationT {..} =
+instance FromTType GateInfoT Domain.GateInfo where
+  fromTType GateInfoT {..} =
     return $
-      Domain.SpecialLocation
+      Domain.GateInfo
         { id = Id id,
-          gates = unPostgresList gates,
+          specialLocationId = fromKey specialLocationId,
           ..
         }
 
-instance ToTType SpecialLocationT Domain.SpecialLocation where
-  toTType Domain.SpecialLocation {..} =
-    SpecialLocationT
+instance ToTType GateInfoT Domain.GateInfo where
+  toTType Domain.GateInfo {..} =
+    GateInfoT
       { id = getId id,
-        gates = PostgresList gates,
+        specialLocationId = toKey specialLocationId,
         ..
       }
