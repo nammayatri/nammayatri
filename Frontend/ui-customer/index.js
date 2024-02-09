@@ -2,6 +2,13 @@ import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
 
+Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
+  return window.MobilityCustomerBridge[fnName];
+}).forEach(fnName => {
+  window.JBridge[fnName] = function () {
+    return window.MobilityCustomerBridge[fnName](...arguments);
+  };
+});
 
 function guid() {
   function s4() {
