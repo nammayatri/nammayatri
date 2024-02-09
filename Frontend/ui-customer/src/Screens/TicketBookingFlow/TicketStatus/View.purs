@@ -56,6 +56,7 @@ import Data.Function.Uncurried (runFn3)
 import Mobility.Prelude (groupAdjacent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Domain.Payments as PP
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =

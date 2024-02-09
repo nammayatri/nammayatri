@@ -288,3 +288,9 @@ redCoin = "#1AE55454"
 
 blackOpacity12 :: Color
 blackOpacity12 = "#373A45"
+
+tealishGreen :: Color 
+tealishGreen = "#E5F5E9"
+
+darkGradientBlue :: Color
+darkGradientBlue = "#E2EAFF"

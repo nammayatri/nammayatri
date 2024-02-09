@@ -1,8 +1,23 @@
+{-
+ 
+  Copyright 2022-23, Juspay India Pvt Ltd
+ 
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ 
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ 
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ 
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ 
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module Screens.SearchLocationScreen.Controller where
 
 import Prelude
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
-import Screens.Types (SearchLocationScreenState, SearchLocationTextField(..), SearchLocationStage(..), LocationListItemState, GlobalProps)
+import Screens.Types
 import Components.LocationTagBarV2 as LocationTagBarController
 import Components.LocationListItem as LocationListItemController
 import Components.FavouriteLocationModel as FavouriteLocModelController
@@ -16,7 +31,7 @@ import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick)
 import Screens (getScreen, ScreenName(..))
-import Data.String(length, trim, toLower) as STR
+import Data.String(length, trim, toLower, null) as STR
 import Data.Array (length, find, sortBy, filter, findIndex) as DA
 import Debug (spy)
 import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus)
@@ -26,7 +41,10 @@ import Helpers.Utils (updateLocListWithDistance, setText)
 import Data.Ord (comparing)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
+import Mobility.Prelude
+import Components.LocationListItem.Controller ( dummyAddress)
+import Data.String (contains, Pattern(..))
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -44,7 +62,9 @@ data Action = NoAction
             | UpdateLocAndLatLong (Array LocationListItemState) String String 
             | RecenterCurrentLocation 
             | SetLocationOnMap 
+            | MetroRouteMapAction
             | ClearTextField SearchLocationTextField
+            | AutoCompleteCallBack String Boolean
             | LocFromMap String String String
             | LocationTagBarAC (Array LocationListItemState) LocationTagBarController.Action
             | LocationListItemAC (Array LocationListItemState) LocationListItemController.Action 
@@ -54,6 +74,7 @@ data Action = NoAction
             | InputViewAC GlobalProps InputViewController.Action 
             | MenuButtonAC MenuButtonController.Action
             | BackpressAction
+            | BackPressed
 
 data ScreenOutput = NoOutput  
                   | Reload SearchLocationScreenState
@@ -67,6 +88,8 @@ data ScreenOutput = NoOutput
                   | HomeScreen SearchLocationScreenState
                   | RentalsScreen SearchLocationScreenState
                   | LocSelectedOnMap SearchLocationScreenState
+                  | MetroTicketBookingScreen SearchLocationScreenState
+                  | GoToMetroRouteMap
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
@@ -86,20 +109,28 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
     else exit $ SaveFavLoc state{data{saveFavouriteCard{ address = item.description , selectedItem = item, tag = "", tagExists = false, isBtnActive = false }}} savedLocations
 
 eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do 
-  void $ pure $ hideKeyboardOnNavigation true
-  MB.maybe (continue state) (\currTextField -> predictionClicked currTextField ) state.props.focussedTextField
-  where 
-    predictionClicked currTextField = do 
-      let updatedLoc = {placeId : item.placeId, address : item.description, lat : item.lat, lon : item.lon, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress}
-          newState = if currTextField == SearchLocPickup then 
-                      state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false }} 
-                      else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false} }
-      pure $ setText (getNewIDWithTag (show currTextField)) $ item.description
+  if state.props.actionType == MetroStationSelectionAction then do
+      let metroLocInfo = {stationName: item.title, stationCode : item.tag }
+      let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : MB.Nothing, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo, stationCode : item.tag}
+          newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
+                          state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
+                          else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
       updateAndExit newState $ PredictionClicked item newState
+    else do
+      void $ pure $ hideKeyboardOnNavigation true
+      MB.maybe (continue state) (\currTextField -> predictionClicked currTextField ) state.props.focussedTextField
+      where 
+        predictionClicked currTextField = do 
+          let updatedLoc = {placeId : item.placeId, address : item.description, lat : item.lat, lon : item.lon, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress, metroInfo : MB.Nothing, stationCode : item.tag}
+              newState = if currTextField == SearchLocPickup then 
+                          state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false }} 
+                          else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false} }
+          pure $ setText (getNewIDWithTag (show currTextField)) $ item.description
+          updateAndExit newState $ PredictionClicked item newState
 
 eval (InputViewAC globalProps (InputViewController.ClearTextField textField)) state = do 
   pure $ setText (getNewIDWithTag textField) $ ""
-  continue state { data {locationList = fetchSortedCachedSearches state globalProps textField }
+  continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations }
                  , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
   
 eval (InputViewAC _ (InputViewController.BackPress)) state = handleBackPress state  
@@ -120,15 +151,16 @@ eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag) ) stat
     "WORK" -> continue state 
     _ -> continue state{ props {searchLocStage = AllFavouritesStage}}
 
-eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText)) state = do
+eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText hasFocus)) state = do
   case textField of 
-    "SearchLocPickup" -> pure $ setText (getNewIDWithTag textField) $ MB.maybe "Current Location" (\srcLoc -> srcLoc.address) state.data.srcLoc
+    "SearchLocPickup" -> pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\srcLoc -> srcLoc.address) state.data.srcLoc
     "SearchLocDrop" ->  pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc
     _ -> pure unit
+  
+  let canClearText = canClear textField
   let sortedCachedLoc = fetchSortedCachedSearches state globalProps textField
-  continue state{ props{focussedTextField = mkTextFieldTag textField}
-                , data {locationList = sortedCachedLoc}}
-
+  continue state{ props{focussedTextField = mkTextFieldTag textField, canClearText = canClearText}
+                , data {locationList = sortedCachedLoc, updatedMetroStations = state.data.metroStations}}
   where
     mkTextFieldTag :: String -> MB.Maybe SearchLocationTextField
     mkTextFieldTag textField =
@@ -136,22 +168,39 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
         "SearchLocPickup" -> MB.Just SearchLocPickup
         "SearchLocDrop" -> MB.Just SearchLocDrop
         _ -> MB.Nothing
-    
+
+    canClear :: String -> Boolean
+    canClear textField = 
+      case textField of 
+        "SearchLocPickup" ->( STR.length $ MB.maybe "" (\srcLoc -> srcLoc.address) state.data.srcLoc) > 2 
+        "SearchLocDrop" ->  (STR.length $ MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc) > 2 
+        _ -> false
 eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do 
-  autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
+  if state.props.actionType == MetroStationSelectionAction then continue state
+    else 
+      autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
 
 eval (InputViewAC _ (InputViewController.InputChanged value)) state = do 
-  let canClearText = STR.length value > 2
-  continueWithCmd state {props { canClearText = canClearText, isAutoComplete = canClearText}} [ do 
-    void $ pure $ updateInputString value 
-    pure NoAction
-  ]
+  if state.props.actionType == MetroStationSelectionAction && not (STR.null value) then do
+    void $ pure $ spy "InputChanged" value
+    let newArray = findStationWithPrefix value state.data.metroStations
+        canClearText = STR.length value > 2
+    continueWithCmd state{ data { updatedMetroStations = newArray},props { canClearText = canClearText, isAutoComplete = canClearText} } [ do
+      void $ pure $ updateInputString value 
+      pure NoAction
+    ]
+    else do
+      let canClearText = STR.length value > 2
+      continueWithCmd state {props { canClearText = canClearText, isAutoComplete = canClearText}} [ do 
+        void $ pure $ updateInputString value 
+        pure NoAction
+      ]
   
 eval (UpdateLocAndLatLong recentSearches lat lng) state = do 
-  let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "Current Location" , lat : NUM.fromString lat , lon : NUM.fromString lng}
+  let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "" , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing, stationCode : ""}
   continue state{ data 
-                    { srcLoc = MB.Just updatedLoc
-                    , currentLoc = MB.Just updatedLoc
+                    { --srcLoc = MB.Just updatedLoc -- need to check
+                      currentLoc = MB.Just updatedLoc
                     , locationList = DA.sortBy (comparing (_.actualDistance)) $ updateLocListWithDistance recentSearches (MB.fromMaybe 0.0 updatedLoc.lat) (MB.fromMaybe 0.0 updatedLoc.lon) true state.appConfig.suggestedTripsAndLocationConfig.locationWithinXDist }
                     }
 
@@ -199,7 +248,13 @@ eval (LocFromMap key lat lon) state = do
           void $ pure $ scrollViewFocus (getNewIDWithTag "scrollViewParentSLS") index
           exit $ UpdateLocName state{data{defaultGate = key}} lat lon
         MB.Nothing -> continue state
-  
+
+eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
+
+eval BackPressed state = do
+ if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
+  else continue state
+
 eval _ state = continue state
 
 
@@ -228,6 +283,13 @@ handleBackPress state = do
       , props{ searchLocStage = PredictionsStage}}
     ConfirmLocationStage -> continue state {props {searchLocStage = PredictionsStage}}
     PredictionsStage -> if state.data.fromScreen == getScreen HOME_SCREEN then 
-      exit $ HomeScreen state 
+      exit $ HomeScreen state
+      else if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state  
       else exit $ RentalsScreen state 
     _ -> continue state
+
+findStationWithPrefix :: String -> Array Station -> Array Station
+findStationWithPrefix prefix arr = DA.filter (\station -> containString prefix station.stationName) arr
+
+containString :: String -> String -> Boolean
+containString prefix str = contains (Pattern (STR.toLower prefix)) (STR.toLower str)

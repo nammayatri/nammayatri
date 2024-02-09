@@ -18,9 +18,10 @@ import Data.String (null,Pattern(..), contains, joinWith, toLower, take, toUpper
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import PrestoDOM as PD
 import Prelude
-import Data.Array (elem, cons)
+import Data.Array
 import Data.Array as DA
 import Data.Foldable (foldl)
+import Data.String as DS
 
 has :: String -> String -> Boolean
 has msg errorPattern = contains (Pattern errorPattern) msg
@@ -86,3 +87,9 @@ dayToIndex day =
     "Sat" -> 5
     "Sun" -> 6
     _ -> 7
+
+findStringWithPrefix :: String -> Array String -> Array String
+findStringWithPrefix prefix arr = filter (\item -> startsWith prefix item) arr
+
+startsWith :: String -> String -> Boolean
+startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)

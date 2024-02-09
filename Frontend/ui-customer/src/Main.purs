@@ -44,19 +44,19 @@ import Timers
 import Effect.Uncurried
 import Engineering.Helpers.BackTrack (liftFlowBT)
 
-main :: Event -> Effect Unit
-main event = do
+main :: Event -> Boolean -> Effect Unit
+main event callInitUI = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
       mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
           _ <- runExceptT $ runBackT $ updateEventData event
-          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' true
+          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' callInitUI
           case resp of
                 Right x → pure unit
                 Left err → do
                   _ <- pure $ printLog "printLog error in main is : " err
-                  _ <- liftFlow $ main event
+                  _ <- liftFlow $ main event callInitUI
                   pure unit
       _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
       JBridge.storeMainFiberOb mainFiber

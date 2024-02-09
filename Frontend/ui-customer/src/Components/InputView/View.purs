@@ -1,3 +1,18 @@
+{-
+ 
+  Copyright 2022-23, Juspay India Pvt Ltd
+ 
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ 
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ 
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ 
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ 
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module Components.InputView.View where
 
 import Prelude
@@ -6,13 +21,13 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable)
+import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, afterRender, clickable)
 import Data.Array (mapWithIndex, length)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
-import JBridge (debounceFunction)
+import JBridge (debounceFunction, showKeyboard)
 import Resources.Constants (getDelayForAutoComplete)
 
 view :: forall w. (Action -> Effect Unit) -> InputViewConfig -> PrestoDOM (Effect Unit) w
@@ -20,7 +35,7 @@ view push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , orientation VERTICAL
+    , orientation HORIZONTAL
     , padding $ PaddingHorizontal 16 16
     , background Color.black900 
     ][  backPressView state push
@@ -40,6 +55,7 @@ backPressView config push =
     , width WRAP_CONTENT
     , padding $ config.backIcon.padding 
     , onClick push $ const $ BackPress
+    , orientation HORIZONTAL
     ][  imageView
         [ height $ config.backIcon.height 
         , width $ config.backIcon.width
@@ -55,7 +71,9 @@ backPressView config push =
 
 
 inputImageView :: forall w. (Action -> Effect Unit ) -> InputViewConfig -> PrestoDOM (Effect Unit) w
-inputImageView push config = 
+inputImageView push config = let 
+  lastIndex = (length config.inputView) - 1
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width $ config.imageLayoutWidth 
@@ -64,29 +82,27 @@ inputImageView push config =
     , gravity CENTER
     ]
     ( mapWithIndex 
-        ( \index item -> imageAndSeparatorView item index config ) 
+        ( \index item ->
+            linearLayout
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , orientation VERTICAL 
+              , gravity CENTER
+              ]
+              [ prefixImageView item.prefixImage
+              , if index /= lastIndex then SeparatorView.view (item.imageSeparator) else textView[height $ V 0, visibility GONE]
+              ]
+        ) 
         (config.inputView))
-
-imageAndSeparatorView :: forall w. InputView -> Int -> InputViewConfig -> PrestoDOM (Effect Unit) w
-imageAndSeparatorView item index config = let 
-  lastIndex = (length config.inputView) - 1
-  imageConfig = item.prefixImage
-  in
-  linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , orientation VERTICAL 
-    , gravity CENTER
-    ]
-    [ imageView
-        [ height $ imageConfig.height
-        , width $ imageConfig.width
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET imageConfig.imageName 
+  where 
+    prefixImageView :: forall w. ImageConfig -> PrestoDOM (Effect Unit) w
+    prefixImageView config =
+      imageView
+        [ height $ config.height
+        , width $ config.width
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET config.imageName 
         ]
-    , if index /= lastIndex then SeparatorView.view (item.imageSeparator) else textView[height $ V 0, visibility GONE]
-    ]
-
-    
+      
 textViews :: forall w. (Action -> Effect Unit ) -> InputViewConfig -> PrestoDOM (Effect Unit) w
 textViews push config = 
   linearLayout
@@ -116,9 +132,9 @@ nonEditableTextView push config = let
     , padding $ config.padding 
     , background Color.squidInkBlue
     , margin $ config.margin
-    , cornerRadius $ config.cornerRadius
+    , cornerRadius $ config.cornerRadius 
+    , onClick push $ const $ (TextFieldFocusChanged config.id true false)
     , clickable $ config.isClickable 
-    , onClick push $ const $ TextFieldFocusChanged config.id true
     , stroke $ strokeValue 
     ]
     [  textView $ 
@@ -164,7 +180,22 @@ inputTextField push config =
               void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.isFocussed
               void $ push action
             ) InputChanged
-          , onFocus push $ const $ TextFieldFocusChanged config.id true
+          , afterRender (\ _ ->  do 
+              if (config.isFocussed) then do 
+                void $ pure $ showKeyboard $ getNewIDWithTag $ config.id
+                pure unit
+                else pure unit) $ const NoAction
+          , onFocus 
+              (\action -> do 
+                case action of 
+                  TextFieldFocusChanged _ _ hasFocus -> do 
+                    if (isTrue hasFocus) then do 
+                      push action
+                      else  
+                        pure unit
+                  _ -> pure unit
+
+              ) $ TextFieldFocusChanged config.id true
           , cursorColor Color.yellow900
           ] <> FontStyle.body6 LanguageStyle
         , crossButtonView push config
@@ -198,4 +229,3 @@ bottomStrokeView bottomStrokeVisibility =
   , background Color.white900
   ][] 
     
-

@@ -226,3 +226,24 @@ shareRide dummy = (getBaseUrl "54") <> "/share/ride"
 
 followRide :: String -> String
 followRide _ = (getBaseUrl "47") <> "/follow/ride"
+
+getMetroStations :: String -> String
+getMetroStations dummy = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"METRO\""
+
+searchMetro :: String -> String
+searchMetro dummy = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"METRO\""
+
+getMetroQuotes :: String -> String
+getMetroQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
+
+confirmMetroQuote :: String -> String
+confirmMetroQuote quoteId = (getBaseUrl "50") <> "/frfs/quote/" <> quoteId <> "/confirm"
+
+getMetroBookingStatus :: String -> String
+getMetroBookingStatus bookingId = (getBaseUrl "51") <> "/frfs/booking/" <> bookingId <> "/status"
+
+getMetroBookingList :: String -> String
+getMetroBookingList dummy = (getBaseUrl "52") <> "/frfs/booking/list"
+
+retryMetrTicketPayment :: String -> String
+retryMetrTicketPayment quoteId = (getBaseUrl "53") <> "/frfs/quote/" <> quoteId <> "/payment/retry"

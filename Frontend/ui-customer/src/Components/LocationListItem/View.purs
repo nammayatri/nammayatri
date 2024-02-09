@@ -144,4 +144,5 @@ subTitleView config =
     , padding (PaddingRight 20)
     , maxLines 1
     , ellipsize true
+    , visibility if config.subTitle == "" then GONE else VISIBLE
     ] <> FontStyle.body3 TypoGraphy)

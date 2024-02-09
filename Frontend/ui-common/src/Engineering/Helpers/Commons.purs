@@ -101,7 +101,7 @@ foreign import updateIdMap :: EffectFn1 String CarouselHolderData
 foreign import updatePushInIdMap :: Fn2 String Boolean Unit
 foreign import getValueFromIdMap :: EffectFn1 String CarouselHolderData
 
-
+foreign import isTrue :: forall a. a -> Boolean
 os :: String
 os = getOs unit
 

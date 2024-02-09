@@ -21,6 +21,10 @@ import RemoteConfig as RC
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
+  (if state.props.city == ST.Chennai
+  then [metroBannerConfig state action]
+  else [])
+  <>
   (if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
     then [sosSetupBannerConfig state action] 
     else [])
@@ -104,8 +108,7 @@ metroBannerConfig state action =
       , title = getString BOOK_METRO_WITH_NY_NOW
       , titleColor = Color.blue800
       , actionText = getString BOOK_NOW
-      , actionTextColor = Color.white900
-      , actionTextBackgroundColour = Color.blue800
+      , actionTextColor = Color.blue700
       , actionTextCornerRadius = "12.0"
       , imageUrl = fetchImage FF_ASSET "ny_ic_metro_banner"
       , margin = MarginTop 0
