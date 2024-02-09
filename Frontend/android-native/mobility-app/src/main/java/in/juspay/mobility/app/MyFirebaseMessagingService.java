@@ -453,10 +453,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void addUpdateStop(JSONObject driverPayloadJsonObject){
         try {
-            String stopTitle = driverPayloadJsonObject.has("isEdit") && driverPayloadJsonObject.getBoolean("isEdit") ? "Customer Edited a stop!": "Customer added a stop!"; // TODO:: Temporary added until this data comes from backend
+            String stopTitle = driverPayloadJsonObject.has("isEdit") && driverPayloadJsonObject.getBoolean("isEdit") ? getString(R.string.customer_edited) : getString(R.string.customer_added); // TODO:: Temporary added until this data comes from backend
             driverPayloadJsonObject.put("title", stopTitle);
-            driverPayloadJsonObject.put("okButtonText", "Navigate to location");
-            driverPayloadJsonObject.put("cancelButtonText", "Close");
+            driverPayloadJsonObject.put("okButtonText", getString(R.string.navigate_to_location));
+            driverPayloadJsonObject.put("cancelButtonText", getString(R.string.close));
             driverPayloadJsonObject.put("imageUrl", "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/do_not%2Fadd_stop.png?alt=media&token=063c3661-3cfe-4950-a043-f7f49ed2c7fc");
             driverPayloadJsonObject.put("titleVisibility", true);
             driverPayloadJsonObject.put("buttonOkVisibility", true);
