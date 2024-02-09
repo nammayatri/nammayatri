@@ -53,7 +53,7 @@ convertEstimateToPricing (DEst.Estimate {..}, mbDriverLocations) =
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
       pricingMinFare = minFare,
-      fulfillmentType = "RIDE",
+      fulfillmentType = "DELIVERY",
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       ..
     }
@@ -100,7 +100,7 @@ mkProviderLocation NearestDriverInfo {..} = do
 
 mkItemTags :: Pricing -> [Spec.TagGroup]
 mkItemTags pricing =
-  [mkGeneralInfoTag pricing, mkFareParamsTag pricing, mkRateCardTag pricing]
+  [mkGeneralInfoTag pricing, mkRateCardTag pricing]
 
 mkGeneralInfoTag :: Pricing -> Spec.TagGroup
 mkGeneralInfoTag pricing =
@@ -110,8 +110,8 @@ mkGeneralInfoTag pricing =
           tagGroupDescriptor =
             Just
               Spec.Descriptor
-                { descriptorCode = Just "general_info",
-                  descriptorName = Just "General Information",
+                { descriptorCode = Just "info",
+                  descriptorName = Just "Information",
                   descriptorShortDesc = Nothing
                 },
           tagGroupList =
@@ -144,8 +144,8 @@ mkGeneralInfoTag pricing =
             tagDescriptor =
               Just
                 Spec.Descriptor
-                  { descriptorCode = Just "distance_to_nearest_driver",
-                    descriptorName = Just "Distance To Nearest Driver",
+                  { descriptorCode = Just "distance_to_nearest_driver_meter",
+                    descriptorName = Just "Distance To Nearest Driver Meter",
                     descriptorShortDesc = Nothing
                   },
             tagValue = Just $ show . double2Int . realToFrac $ distanceToNearestDriver
@@ -226,8 +226,8 @@ mkRateCardTag pricing = do
       tagGroupDescriptor =
         Just
           Spec.Descriptor
-            { descriptorCode = Just "rate_card",
-              descriptorName = Just "Rate Card",
+            { descriptorCode = Just "fare_policy",
+              descriptorName = Just "Fare Policy",
               descriptorShortDesc = Nothing
             },
       tagGroupList = Just farePolicyBreakupsTags
