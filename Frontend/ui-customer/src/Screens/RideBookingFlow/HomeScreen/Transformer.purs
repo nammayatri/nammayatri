@@ -531,7 +531,9 @@ getEstimatesInfo estimates vehicleVariant state =
     nightShiftStart = maybe "" (view _nightShiftStart >>> fromMaybe "") nightShiftRate
     nightShiftEnd = maybe "" (view _nightShiftEnd >>> fromMaybe "") nightShiftRate
     nightShiftMultiplier = maybe 0.0 (view _nightShiftMultiplier >>> fromMaybe 0.0) nightShiftRate
-    nightCharges = withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
+    nightCharges = if isJust nightShiftRate 
+                      then withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
+                      else false
 
     baseFare = maybe 0 calculateBaseFare (find hasBaseDistanceFare estimateFareBreakup)
     hasBaseDistanceFare item = item ^. _title == "BASE_DISTANCE_FARE"
