@@ -4,6 +4,7 @@
 module Beckn.OnDemand.Transformer.Init where
 
 import qualified Beckn.OnDemand.Utils.Common
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.Init
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
@@ -57,7 +58,7 @@ tfOrder uiConfirm fulfillmentType mbBppFullfillmentId mbDriverId = do
 
 tfOrderBilling :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> m BecknV2.OnDemand.Types.Billing
 tfOrderBilling uiConfirm = do
-  let billingPhone_ = uiConfirm.riderPhone
+  let billingPhone_ = uiConfirm.riderPhone <&> Utils.maskBillingNumber
   pure $ BecknV2.OnDemand.Types.Billing {billingPhone = billingPhone_}
 
 tfOrderFulfillments :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> m BecknV2.OnDemand.Types.Fulfillment
