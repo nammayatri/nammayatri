@@ -976,7 +976,7 @@ getFR stringKey =
         STARTING_FROM -> "À partir de"
         FROM -> "De"
         TO -> "À"
-        TRANSACTION_ID -> "Identifiant de transaction"
+        BOOKING_ID -> "ID de réservation"
         PLEASE_WHILE_GEN_TICKET -> "Veuillez patienter pendant que nous générons votre billet"
         PAYMENT_RECEIVED -> "Paiement reçu !"
         PLEASE_CHECK_BACK_FEW_MIN -> "Veuillez vérifier dans quelques minutes."

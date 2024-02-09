@@ -973,7 +973,7 @@ getEN stringKey =
         STARTING_FROM -> "Starting From"
         FROM -> "From"
         TO -> "To"
-        TRANSACTION_ID -> "Transaction ID"
+        BOOKING_ID -> "Booking ID"
         PLEASE_WHILE_GEN_TICKET -> "Please wait while we generate your ticket"
         PAYMENT_RECEIVED -> "Payment Received!"
         PLEASE_CHECK_BACK_FEW_MIN -> "Please check back in a few minutes."

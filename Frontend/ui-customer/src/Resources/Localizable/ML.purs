@@ -975,7 +975,7 @@ getML stringKey =
         STARTING_FROM -> "ഇതിൽ നിന്ന്"
         FROM -> "നിന്ന്"
         TO -> "വരെ"
-        TRANSACTION_ID -> "ഇ.ഡി. ലഭ്യമാക്കിയ വിവരം"
+        BOOKING_ID -> "ബുക്കിംഗ് ഐഡി"
         PLEASE_WHILE_GEN_TICKET -> "ദയവായി നിന്ന് ഞങ്ങളുടെ ടിക്കറ്റ് സൃഷ്ടിക്കുന്നതിനു കാത്തിരിക്കുക"
         PAYMENT_RECEIVED -> "പേയ്മെന്റ് സ്വീകൃതം!"
         PLEASE_CHECK_BACK_FEW_MIN -> "ദയവായി കുറഞ്ഞതോളം മിനിറ്റ് ശേഖരിക്കുക."

@@ -43,6 +43,7 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
     transactionId = case paymentOrder of 
       Just (CreateOrderRes orderResp) -> orderResp.order_id
       Nothing -> ""
+    bookingId' = metroTicketBookingStatus.bookingId
   in
     state {
       data{
@@ -50,6 +51,7 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
       , keyValArray = keyValArray'
       , shortOrderId = transactionId
       , validUntil = validUntil'
+      , bookingId = bookingId'
       }
     , props{
         paymentStatus =  paymentStatus'
@@ -63,7 +65,7 @@ metroTicketDetailsKeyVals (MetroTicketBookingStatus metroTicketBookingStatus) =
     payment = metroTicketBookingStatus.payment
     date = convertUTCtoISC metroTicketBookingStatus.createdAt "hh:mm A, Do MMM YYYY"
     noOfTickets = show $ metroTicketBookingStatus.quantity
-    totalPaid =   show $ metroTicketBookingStatus.price
+    totalPaid =  "₹" <> (show $ metroTicketBookingStatus.price)
     bookingId = metroTicketBookingStatus.bookingId
     paymentOrder = metroTicketBookingStatus.payment >>= (\(FRFSBookingPaymentAPI payment') ->  payment'.paymentOrder)
     transactionId = case paymentOrder of 

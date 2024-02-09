@@ -75,7 +75,7 @@ shimmerView state =
   , height MATCH_PARENT
   , orientation VERTICAL
   , background Color.white900
-  , visibility $ boolToVisibility $  state.props.showShimmer
+  , visibility $ boolToVisibility state.props.showShimmer
   ][ 
     linearLayout [ 
       width MATCH_PARENT
@@ -110,6 +110,7 @@ headerView push state =
   , height WRAP_CONTENT
   , padding $ PaddingBottom 1
   , background Color.grey900
+  , margin $ MarginTop safeMarginTop
   ][
     linearLayout[
       width MATCH_PARENT

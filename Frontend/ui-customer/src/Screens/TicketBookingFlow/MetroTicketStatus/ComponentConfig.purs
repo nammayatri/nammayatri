@@ -29,6 +29,7 @@ import Data.Array as DA
 import JBridge as JB
 import Language.Strings
 import Language.Types
+import Engineering.Helpers.Commons (os)
 
 
 refreshStatusButtonConfig :: ST.MetroTicketStatusScreenState -> PrimaryButton.Config
@@ -42,7 +43,7 @@ refreshStatusButtonConfig state = PrimaryButton.config
       }
       , height = WRAP_CONTENT
       , gravity = CENTER
-      , cornerRadius = 32.0
+      , cornerRadius = (if os == "IOS" then 0.6 else 1.0) *  32.0
       , width = MATCH_PARENT
       , padding =  Padding 0 13 0 13
       , margin = Margin 16 16 16 0

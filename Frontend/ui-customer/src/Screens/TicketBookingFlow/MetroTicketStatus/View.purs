@@ -29,7 +29,7 @@ import Data.String (Pattern(..), Replacement(..), replace)
 import Data.String as DS
 import Data.String.Common (joinWith)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getCurrentUTC, screenWidth, flowRunner)
+import Engineering.Helpers.Commons (getCurrentUTC, screenWidth, flowRunner, os)
 import Data.Foldable (foldl, foldMap)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -144,18 +144,19 @@ view push state =
     , visibility $ boolToVisibility $ not $ state.props.showShimmer
     , afterRender push $ const AfterRender
     ][
-      scrollView
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , background Color.white900
-        , fillViewport true
-        ][ 
-          bookingStatusView state push state.props.paymentStatus
-        ]
-    , linearLayout [
-        width WRAP_CONTENT
+      linearLayout[
+        width MATCH_PARENT
       , weight 1.0
-      ][]
+      , gravity CENTER
+      ][
+        (if state.props.paymentStatus == PP.Failed then linearLayout else scrollView)
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          ][ 
+            bookingStatusView state push state.props.paymentStatus
+          ]
+      ]
     , bookingConfirmationActions state push state.props.paymentStatus
     ]
   ]
@@ -218,23 +219,26 @@ copyTransactionIdView :: forall w. ST.MetroTicketStatusScreenState -> (Action ->
 copyTransactionIdView state push  = 
   linearLayout
   [ height WRAP_CONTENT
-  , width WRAP_CONTENT
+  , width $ V $ screenWidth unit
   , gravity CENTER
+  , margin $ Margin 6 10 6 0
   , onClick push $ const $ Copy state.data.shortOrderId
   ][ 
     textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ getString TRANSACTION_ID
+      , text $ getString BOOKING_ID
       , color Color.black700
+      , margin $ MarginRight 8
       , gravity CENTER
       ] <> (FontStyle.body3 TypoGraphy)
     , textView $ 
-      [ text state.data.shortOrderId
-      , margin $ MarginLeft 3
+      [ text state.data.bookingId
+      , ellipsize true
       , color Color.black700
       , padding $ PaddingBottom 1
-      ] <> FontStyle.h3 TypoGraphy
+      , width $ V $ (screenWidth unit) - 200
+      ] <> FontStyle.body7 TypoGraphy
   , imageView
      [ width $ V 16
      , height $ V 16
@@ -255,21 +259,20 @@ bookingStatusBody state push paymentStatus =
   in 
     linearLayout
     [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , weight 1.0
+    , height MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 16 16 0
     , visibility if paymentStatus == PP.Failed then GONE else VISIBLE
-    ][ scrollView
+    ][ linearLayout
         [ width MATCH_PARENT
-        , height MATCH_PARENT
+        , height WRAP_CONTENT
         ][ linearLayout
             [ width MATCH_PARENT
-            , height MATCH_PARENT
+            , height WRAP_CONTENT
             , gravity CENTER
             , orientation VERTICAL
             , padding $ Padding 10 10 10 10
-            , cornerRadius 8.0
+            , cornerRadius $ (if os == "IOS" then 0.6 else 1.0) * 8.0
             , background Color.white900
             , visibility if paymentStatus == PP.Success then GONE else VISIBLE
             ][ linearLayout
@@ -376,8 +379,8 @@ paymentStatusHeader state push paymentStatus =
           ]
         ]
       ]
-      , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 14 CENTER NoAction
-      , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
+      , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 17 CENTER NoAction
+      , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 10 CENTER NoAction
       , copyTransactionView
       , refreshStatusBtn
     ]
@@ -396,41 +399,56 @@ commonTV push text' color' fontStyle marginTop gravity' action =
 
 keyValueView :: (Action -> Effect Unit) -> ST.MetroTicketStatusScreenState -> String -> String -> Int -> forall w . PrestoDOM (Effect Unit) w
 keyValueView push state key value index = 
-  linearLayout 
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , gravity CENTER_VERTICAL
-  , orientation VERTICAL
-  ][ linearLayout
-      [ width MATCH_PARENT
-      , margin $ Margin 5 12 5 12
-      , height $ V 1
-      , background Color.grey700
-      ][]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , margin $ MarginHorizontal 5 5
-      ][ textView $ 
-        [ text key
-        , margin $ MarginRight 16
-        , color Color.black700
-        ] <> FontStyle.body3 TypoGraphy
+  let 
+    copyField = key == "Booking ID" || key == "Transaction ID"
+  in
+    linearLayout 
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , orientation VERTICAL
+    ][ linearLayout
+        [ width MATCH_PARENT
+        , margin $ Margin 5 12 5 12
+        , height $ V 1
+        , background Color.grey700
+        ][]
       , linearLayout
         [ width MATCH_PARENT
-        , gravity RIGHT
+        , height WRAP_CONTENT
+        , margin $ MarginHorizontal 5 5
         ][ textView $ 
-              [ text value
-              , color Color.black800
-              , onClick push $ const $ 
-                  if key == "Booking ID" || key == "Transaction ID" then
-                    Copy value 
-                  else
-                    NoAction -- needs refactoring
-              ] <> FontStyle.body6 TypoGraphy
+          [ text key
+          , margin $ MarginRight 16
+          , color Color.black700
+          ] <> FontStyle.body3 TypoGraphy
+        , linearLayout [
+            height WRAP_CONTENT
+          , weight 1.0
+          ][]
+        , textView $ 
+            [ text value
+            , color Color.black800
+            , gravity CENTER_VERTICAL
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , ellipsize copyField
+            ] <> FontStyle.body6 TypoGraphy
+        , linearLayout[
+            width WRAP_CONTENT
+          , height MATCH_PARENT
+          , gravity CENTER_VERTICAL
+          , onClick push $ const $ Copy value
+          , visibility $ boolToVisibility copyField
+          ][
+            imageView [
+              width $ V 12
+            , height $ V 12 
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_copy"
+            ]
           ]
       ]
-  ]
+    ]
 
 
 getTransactionConfig :: PP.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}

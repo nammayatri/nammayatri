@@ -976,7 +976,7 @@ getKN stringKey =
         STARTING_FROM -> "ಇಂದ ಪ್ರಾರಂಭ"
         FROM -> "ಇಂದ"
         TO -> "ಗೆ"
-        TRANSACTION_ID -> "ಲೆನ್-ಡೆನ್ ಐಡಿ"
+        BOOKING_ID -> "ಬುಕಿಂಗ್ ಐಡಿ"
         PLEASE_WHILE_GEN_TICKET -> "ದಯವಿಟ್ಟು ನಾವು ನಿಮ್ಮ ಟಿಕೆಟ್ ರಚಿಸುತ್ತಿದ್ದಾಗ ಕಾಯಬಹುದು"
         PAYMENT_RECEIVED -> "ಪಾವತಿ ಸಿಗಿತು!"
         PLEASE_CHECK_BACK_FEW_MIN -> "ದಯವಿಟ್ಟು ಕೆಲವು ನಿಮಿಷಗಳ ನಂತರ ಪರಿಶೀಲಿಸಿ."

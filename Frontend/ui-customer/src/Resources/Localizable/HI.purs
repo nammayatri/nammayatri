@@ -974,7 +974,7 @@ getHI stringKey =
         STARTING_FROM -> "से शुरू होता है"
         FROM -> "से"
         TO -> "तक"
-        TRANSACTION_ID -> "लेन-देन आईडी"
+        BOOKING_ID -> "बुकिंग आईडी"
         PLEASE_WHILE_GEN_TICKET -> "कृपया प्रतीक्षा करें जब हम आपका टिकट तैयार कर रहे हैं"
         PAYMENT_RECEIVED -> "भुगतान प्राप्त हुआ!"
         PLEASE_CHECK_BACK_FEW_MIN -> "कृपया कुछ मिनटों बाद जाँचें।"

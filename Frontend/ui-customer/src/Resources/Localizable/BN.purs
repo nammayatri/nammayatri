@@ -974,7 +974,7 @@ getBN stringKey =
         STARTING_FROM -> "থেকে শুরু"
         FROM -> "থেকে"
         TO -> "পর্যন্ত"
-        TRANSACTION_ID -> "লেনদেন আইডি"
+        BOOKING_ID -> "বুকিং আইডি"
         PLEASE_WHILE_GEN_TICKET -> "দয়া করে আমরা আপনার টিকেট তৈরি করতে অপেক্ষা করুন"
         PAYMENT_RECEIVED -> "পেমেন্ট প্রাপ্ত!"
         PLEASE_CHECK_BACK_FEW_MIN -> "দয়া করে কিছু মিনিট পর চেক করুন।"
