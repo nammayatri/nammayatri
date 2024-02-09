@@ -176,7 +176,7 @@ confirm DConfirmReq {..} = do
       let estimatedDistanceInKm = estimatedDistance `div` 1000
           estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration) now
           estRideEndTimeByDist = addUTCTime (intToNominalDiffTime $ (estimatedDistanceInKm * 3 * 60) + (30 * 60)) now -- TODO: Make config later
-      max estRideEndTimeByDuration estRideEndTimeByDist < addUTCTime (intToNominalDiffTime $ fromMaybe 0 ((.getSeconds) <$> booking.estimatedDuration)) now
+      max estRideEndTimeByDuration estRideEndTimeByDist >= booking.startTime
 
 buildBooking ::
   MonadFlow m =>
