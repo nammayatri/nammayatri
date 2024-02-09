@@ -604,7 +604,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
                     String rideProductType = rideRequestBundle.getString("rideProductType");
-                    String rentalRideDuration = String.format("%d:%d hr", rideRequestBundle.getInt("rentalRideDuration") / 3600 ,( rideRequestBundle.getInt("rentalRideDuration") % 3600 ) / 60);
+                    String rentalRideDuration = String.format("%02d:%02d hr", rideRequestBundle.getInt("rentalRideDuration") / 3600 ,( rideRequestBundle.getInt("rentalRideDuration") % 3600 ) / 60);
                     String rentalRideDistance = String.format("%d km", rideRequestBundle.getInt("rentalRideDistance") / 1000);
                     String rentalStartTime = "";
                     String rentalStartDate= "";

@@ -1351,7 +1351,16 @@ getRideCompletedConfig state = let
     lottieQRAnim {
       visible = state.data.config.rideCompletedCardConfig.lottieQRAnim,
       url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
-    }
+    },
+    rentalRideTextConfig{
+    rideTime = getString RIDE_TIME,
+    rideDistance = getString RIDE_DISTANCE,
+    rideStart = getString RIDE_START,
+    rideStartedAt = getString RIDE_STARTED_AT,
+    rideEnd = getString RIDE_END,
+    rideEndedAt = getString RIDE_ENDED_AT,
+    odometerReading = getString ODOMETER_READING
+  }
   }
   in config'
 

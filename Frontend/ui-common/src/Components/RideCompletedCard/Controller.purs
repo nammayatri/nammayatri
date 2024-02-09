@@ -40,7 +40,8 @@ type RentalRideTextConfig = {
   rideStart :: String,
   rideStartedAt :: String,
   rideEnd :: String,
-  rideEndedAt :: String
+  rideEndedAt :: String,
+  odometerReading :: String
 }
 
 type Config = {
@@ -187,7 +188,8 @@ config = {
     rideStart : "Ride Start",
     rideStartedAt : "Ride Started At",
     rideEnd : "Ride End",
-    rideEndedAt : "Ride Ended At"
+    rideEndedAt : "Ride Ended At",
+    odometerReading : "Odometer Reading"
   },
   enableContactSupport : true,
   lottieQRAnim : {

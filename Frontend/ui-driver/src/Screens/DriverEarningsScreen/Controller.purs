@@ -46,7 +46,7 @@ import Language.Types
 import Log
 import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Resource.Constants (decodeAddress)
+import Resource.Constants (decodeAddress, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverEarningsScreen.Transformer (getEventName)
 import Screens.Types (DriverEarningsScreenState, DriverEarningsSubView(..), AnimationState(..), IndividualRideCardState(..), IndividualRideCardState(..), DisabilityType(..))
@@ -479,6 +479,7 @@ rideHistoryItemTransformer (RidesInfo ride) =
     source : (decodeAddress (ride.fromLocation) false),
     destination : maybe "" (\toLocation -> decodeAddress toLocation false) ride.toLocation,
     vehicleType : ride.vehicleVariant,
+    tripType : rideTypeConstructor ride.tripCategory,
     riderName : fromMaybe "" ride.riderName,
     customerExtraFee : ride.customerExtraFee,
     purpleTagVisibility : isJust ride.disabilityTag,
