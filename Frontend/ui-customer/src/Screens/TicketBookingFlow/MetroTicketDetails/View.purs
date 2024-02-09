@@ -190,32 +190,25 @@ ticketDetailsView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     ][
-    linearLayout[
-      width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , padding $ Padding 16 30 16 16
-    , margin $ Margin 16 24 16 0
-    , background Color.white900
-    , cornerRadii $ Corners 8.0 true true false false
-    ][
-      metroHeaderView push state
-    , qrCodeView push state
-    , ticketNumberAndValidView push state
-    ]
-    , linearLayout 
-     [  height WRAP_CONTENT
-      , width MATCH_PARENT
-      , gravity CENTER
+      linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , padding $ Padding 16 30 16 16
+      , margin $ Margin 16 24 16 0
+      , background Color.white900
+      , cornerRadii $ Corners 8.0 true true false false
+      ][
+        metroHeaderView push state
+      , qrCodeView push state
+      , ticketNumberAndValidView push state
+      ]    
+    , linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
       , margin $ MarginTop 12
-     ][ textView $ [
-        text "Active"
-      , background Color.green900
-      , color Color.white900
-      , padding $ Padding 8 5 8 5
-      , cornerRadius 100.0
-      ] <> FontStyle.tags TypoGraphy
-    ]
+      , gravity CENTER_HORIZONTAL
+      ] [statusPillView]
     ]
   , linearLayout[
       width MATCH_PARENT
@@ -228,6 +221,23 @@ ticketDetailsView push state =
     ][
       originAndDestinationView push state
     ]
+  ]
+
+statusPillView :: forall w . PrestoDOM (Effect Unit) w
+statusPillView  = 
+  linearLayout [
+    width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , padding $ Padding 8 5 8 5
+  , cornerRadius 12.0
+  , background Color.green900
+  ][
+    textView $ [
+      width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , text $ getString ACTIVE_STR
+    , color Color.white900
+    ] <> FontStyle.tags TypoGraphy
   ]
 
 metroHeaderView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
