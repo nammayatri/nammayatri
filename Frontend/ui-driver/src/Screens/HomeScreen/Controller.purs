@@ -551,7 +551,9 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
   ]
 
 eval (UploadImage) state = do
-  if state.props.odometerImageUploading then
+  _ <- pure $ printLog "UploadImage" $ getValueToLocalNativeStore LOCAL_STAGE
+  let stage = getValueToLocalNativeStore LOCAL_STAGE
+  if state.props.odometerImageUploading || ( stage == "RideStarted" && state.props.enterOdometerReadingModal) || ( stage == "RideCompleted" && state.props.endRideOdometerReadingModal) then
     continue state {props {odometerImageUploading = false}}
   else if state.props.odometerUploadAttempts < 3 then do
     continueWithCmd (state {props {odometerUploadAttempts = state.props.odometerUploadAttempts + 1,odometerImageUploading = true}}) [do
