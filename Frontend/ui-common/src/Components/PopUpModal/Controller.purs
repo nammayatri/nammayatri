@@ -436,7 +436,7 @@ config = {
           padding : PaddingHorizontal 16 16,
           margin : MarginVertical 20 20,
           visibility : GONE,
-          textStyle : ParagraphText,
+          textStyle : SubHeading2,
           accessibilityHint : "", 
           suffixImage : {
             visibility : GONE

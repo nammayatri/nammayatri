@@ -1229,5 +1229,5 @@ getBN stringKey =
         SAFETY_IS_OUR_RESPONSIBILITY -> "নিরাপত্তা আমাদের দায়িত্ব"
         CUSTOMER_SAFETY_FIRST -> "গ্রাহকের নিরাপত্তা প্রথমে!"
         LETS_ENSURE_SAFE_RIDE -> "আসুন একটি নিরাপদ এবং নিরাপদ রাইড নিশ্চিত করি"
-        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "গ্রাহকের নিরাপত্তা আমাদের দায়িত্ব। আসুন একটি নিরাপদ এবং সুখী যাত্রা নিশ্চিত করি"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "গ্রাহকের নিরাপত্তা আমাদের<br>দায়িত্ব। আসুন একটি নিরাপদ এবং<br>সুখী যাত্রা নিশ্চিত করি"
         OUR_SAFETY_PARTNER -> "আমাদের নিরাপত্তা অংশীদার"

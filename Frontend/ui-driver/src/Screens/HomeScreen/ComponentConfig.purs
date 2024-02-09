@@ -1065,7 +1065,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
                                     primaryText = "",
                                     secondaryText = "",
                                     coverMediaText = getString CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE, 
-                                    imageUrl = if  driverLocation == "bangalore" then fetchImage FF_COMMON_ASSET "ny_ic_bangalure_city_police" else fetchImage FF_ASSET "ny_ic_disability_illustration" ,
+                                    imageUrl = if  driverLocation == "bangalore" then fetchImage FF_COMMON_ASSET "ny_ic_bangalure_city_police" else fetchImage FF_COMMON_ASSET "ny_ic_general_safety" ,
                                     videoUrl = videoUrl',
                                     mediaType = "Audio",
                                     videoId = ""

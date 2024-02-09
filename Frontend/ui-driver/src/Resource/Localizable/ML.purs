@@ -1229,6 +1229,6 @@ getML stringKey =
         SAFETY_IS_OUR_RESPONSIBILITY -> "സുരക്ഷ നമ്മുടെ ഉത്തരവാദിത്തമാണ്"
         CUSTOMER_SAFETY_FIRST -> "ഉപഭോക്തൃ സുരക്ഷ ആദ്യം!"
         LETS_ENSURE_SAFE_RIDE -> "സുരക്ഷിതവും സുരക്ഷിതവുമായ യാത്ര ഉറപ്പാക്കാം"
-        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ഉപഭോക്തൃ സുരക്ഷ ഞങ്ങളുടെ ഉത്തരവാദിത്തമാണ്. നമുക്ക് സുരക്ഷിതവും സന്തോഷകരവുമായ യാത്ര ഉറപ്പാക്കാം"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ഉപഭോക്തൃ സുരക്ഷ ഞങ്ങളുടെ<br>ഉത്തരവാദിത്തമാണ്. നമുക്ക് സുരക്ഷിതവും<br>സന്തോഷകരവുമായ യാത്ര ഉറപ്പാക്കാം"
         OUR_SAFETY_PARTNER -> "ഞങ്ങളുടെ സുരക്ഷാ പങ്കാളി"
         

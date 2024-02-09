@@ -1229,5 +1229,5 @@ getTE stringKey =
         SAFETY_IS_OUR_RESPONSIBILITY -> "భద్రత మన బాధ్యత"
         CUSTOMER_SAFETY_FIRST -> "మొదట కస్టమర్ భద్రత!"
         LETS_ENSURE_SAFE_RIDE -> "సురక్షితమైన మరియు సురక్షితమైన ప్రయాణాన్ని నిర్ధారిద్దాం"
-        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "కస్టమర్ భద్రత మా బాధ్యత. సురక్షితమైన మరియు సంతోషకరమైన ప్రయాణాన్ని నిర్ధారిద్దాం"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "కస్టమర్ భద్రత<br>మా బాధ్యత. సురక్షితమైన మరియు<br>సంతోషకరమైన ప్రయాణాన్ని నిర్ధారిద్దాం"
         OUR_SAFETY_PARTNER -> "మా భద్రతా భాగస్వామి"
