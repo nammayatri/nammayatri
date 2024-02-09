@@ -922,7 +922,7 @@ getEN stringKey =
         MISUSE_MAY_LEAD_TO_LEGAL_ACTION -> "Misuse may result in legal action"
         USE_TEST_DRILL -> "Use <span style='color:#2194FF'><u>Test safety drill</u></span> for testing"
         INDICATION_TO_EMERGENCY_CONTACTS _ -> "Namma Yatri will indicate to your emergency contacts that this is a test drill, ensuring a stress-free experience."
-        ARE_YOU_READY_TO_START_DRILL -> "Are you ready to start the drill?"
+        ARE_YOU_READY_TO_START_DRILL -> "Are you ready to start the test safety drill?"
         TEST_DRILL_DESC -> "Taking part in the test drill helps you to understand how to act in a real emergency. Take the test drill now, to avoid panic during an emergency."
         SOS_WILL_BE_DISABLED -> "SOS feature will be disabled if misused thrice"
         DIAL_NOW -> "Dial Now"

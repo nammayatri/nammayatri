@@ -115,7 +115,7 @@ view push state =
             , visibility $ boolToVisibility $ not state.props.showShimmer
             ]
             [ case state.props.showTestDrill, state.props.confirmTestDrill || state.props.triggeringSos of
-                true, _ -> testSafetyHeaderView push
+                true, _ -> Header.testSafetyHeaderView (push <<< SafetyHeaderAction)
                 _, true -> emptyTextView
                 false, false -> Header.view (push <<< SafetyHeaderAction) headerConfig
             , case state.props.confirmTestDrill, state.props.triggeringSos, state.props.showCallPolice of
@@ -136,7 +136,7 @@ view push state =
       , useLightColor = true
       , title = getString if not state.props.showCallPolice then SAFETY_CENTER else CALL_POLICE
       , headerVisiblity = boolToInvisibility $ not state.props.confirmTestDrill
-      , showCrossImage = true
+      , showCrossImage = not state.props.showCallPolice
       }
 
 ------------------------------------- dashboardView -----------------------------------
@@ -183,16 +183,16 @@ sosButtonView state push useMargin =
             false, false -> PRESS_THE_BUTTON_ON_EMERGENCY
   in
     linearLayout
-      ([ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      , gravity CENTER
-      ]
-      <>  if useMargin 
-            then [ ]
-          else
-            [weight 1.0]
-                )
+      ( [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , gravity CENTER
+        ]
+          <> if useMargin then
+              []
+            else
+              [ weight 1.0 ]
+      )
       [ textView
           $ [ text descText
             , color Color.white900
@@ -414,72 +414,60 @@ emergencyContactsView state push =
 
 otherActionsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 otherActionsView state push =
-  frameLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , visibility $ boolToVisibility $ not state.props.triggeringSos
-    ]
-    [ linearLayout
-        ( [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , orientation VERTICAL
-          , margin $ Margin 16 16 16 16
-          , cornerRadius 12.0
+  linearLayout
+    ( [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , margin $ Margin 16 16 16 16
+      , cornerRadius 12.0
+      ]
+        <> if state.props.showTestDrill then
+            [ alpha 0.5
+            , clickable false
+            ]
+          else
+            []
+    )
+    [ textView
+        $ [ text $ getString OTHER_SAFETY_ACTIONS
+          , color Color.white900
           ]
-            <> if state.props.showTestDrill then
-                [ alpha 0.5 ]
-              else
-                []
-        )
-        [ textView
-            $ [ text $ getString OTHER_SAFETY_ACTIONS
-              , color Color.white900
-              ]
-            <> FontStyle.subHeading1 TypoGraphy
-        , textView
-            $ [ text $ getString AVAILABLE_IN_REAL_EMERGENCY
-              , color Color.white900
-              , margin $ MarginTop 4
-              , visibility $ boolToVisibility state.props.showTestDrill
-              ]
-            <> FontStyle.captions TypoGraphy
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER_VERTICAL
-            , margin $ MarginTop 20
-            , onClick push $ const ShowPoliceView
-            ]
-            [ imageWithTextView configActionOne
-            , layoutWithWeight
-            , imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_white"
-                , height $ V 20
-                , width $ V 20
-                ]
-            ]
-        , separatorView Color.black700 $ MarginVertical 16 16
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER_VERTICAL
-            , onClick push $ const ShowSafetyIssueView
-            ]
-            [ imageWithTextView configActionTwo
-            , layoutWithWeight
-            , imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_white"
-                , height $ V 20
-                , width $ V 20
-                ]
-            ]
-        ]
+        <> FontStyle.subHeading1 TypoGraphy
+    , textView
+        $ [ text $ getString AVAILABLE_IN_REAL_EMERGENCY
+          , color Color.white900
+          , margin $ MarginTop 4
+          , visibility $ boolToVisibility state.props.showTestDrill
+          ]
+        <> FontStyle.captions TypoGraphy
     , linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , clickable state.props.showTestDrill
+        ([ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER_VERTICAL
+        , margin $ MarginTop 20
+        ] <> if state.props.showTestDrill then [] else [onClick push $ const ShowPoliceView])
+        [ imageWithTextView configActionOne
+        , layoutWithWeight
+        , imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_white"
+            , height $ V 20
+            , width $ V 20
+            ]
         ]
-        []
+    , separatorView Color.black700 $ MarginVertical 16 16
+    , linearLayout
+        ([ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER_VERTICAL
+        ] <> if state.props.showTestDrill then [] else [onClick push $ const ShowSafetyIssueView])
+        [ imageWithTextView configActionTwo
+        , layoutWithWeight
+        , imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_white"
+            , height $ V 20
+            , width $ V 20
+            ]
+        ]
     ]
   where
   configActionOne =
@@ -552,46 +540,6 @@ sfl height' marginTop numberOfBoxes visibility' =
             )
             (1 .. numberOfBoxes)
         )
-    ]
-
-testSafetyHeaderView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-testSafetyHeaderView push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , background Color.yellow800
-    , padding $ Padding 16 16 16 16
-    , gravity CENTER_VERTICAL
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , gravity CENTER_VERTICAL
-        , orientation VERTICAL
-        , weight 1.0
-        ]
-        [ textView
-            $ [ text $ getString TEST_SAFETY_DRILL
-              , color Color.black900
-              ]
-            <> FontStyle.subHeading1 TypoGraphy
-        , textView
-            [ text $ getString THIS_IS_NOT_A_REAL_SOS_SITUATION
-            , color Color.black900
-            ]
-        ]
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        ]
-        [ textView
-            [ textFromHtml $ "<u>" <> getString LEARN_MORE <> "</u>"
-            , color Color.black900
-            , gravity RIGHT
-            , margin $ MarginRight 16
-            , onClick push $ const GoToEducationView
-            ]
-        ]
     ]
 
 disclaimerView :: forall w. NammaSafetyScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -742,7 +690,20 @@ confirmSafetyDrillView state push =
     , orientation VERTICAL
     , padding $ PaddingHorizontal 16 16
     ]
-    [ layoutWithWeight
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , padding $ Padding 0 16 16 16
+        , onClick push $ const BackPressed
+        , visibility $ boolToVisibility $ EHC.os == "IOS"
+        ]
+        [ imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
+            , height $ V 24
+            , width $ V 24
+            ]
+        ]
+    , layoutWithWeight
     , imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
         , width MATCH_PARENT

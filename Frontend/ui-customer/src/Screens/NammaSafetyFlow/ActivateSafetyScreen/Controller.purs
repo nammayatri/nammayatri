@@ -38,6 +38,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
+import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), Sos(..), SosFlow(..))
 import Services.Config (getSupportNumber)
 import Types.App (defaultGlobalState)
@@ -112,13 +113,15 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
 
 eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
 
+eval (SafetyHeaderAction (Header.BackClicked)) state = continueWithCmd state [ pure BackPressed ]
+
 eval (SafetyHeaderAction (Header.LearnMoreClicked)) state = do
   _ <- pure $ clearTimerWithId state.props.timerId
-  exit $ GoToEducationScreen state { props { triggeringSos = false, timerValue = 6, timerId = "", confirmTestDrill = false } }
+  exit $ GoToEducationScreen state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "", confirmTestDrill = false } }
 
 eval (CancelSosTrigger PrimaryButtonController.OnClick) state = do
   _ <- pure $ clearTimerWithId state.props.timerId
-  exit $ GoBack state { props { triggeringSos = false, timerValue = 6, timerId = "" } }
+  exit $ GoBack state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "" } }
 
 eval (BackPressed) state =
   if state.props.showCallPolice then
@@ -134,7 +137,7 @@ eval (StartTestDrill PrimaryButtonController.OnClick) state =
       { props
         { confirmTestDrill = false
         , showTestDrill = true
-        , timerValue = 6
+        , timerValue = defaultTimerValue
         }
       }
 
@@ -170,13 +173,13 @@ eval GoToTestDrill state = do
       { props
         { confirmTestDrill = true
         , showTestDrill = false
-        , timerValue = 6
+        , timerValue = defaultTimerValue
         , triggeringSos = false
         }
       }
 
 eval GoToActiveSos state = do
-  exit $ GoToSosScreen state { props { triggeringSos = false, timerValue = 6, timerId = "" } }
+  exit $ GoToSosScreen state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "" } }
 
 eval (UpdateSosId (Sos sos)) state = do
   if sos.flow /= Police && sos.status /= CTA.Resolved then do
@@ -198,6 +201,6 @@ eval (SelectedCurrentLocation lat lon name) state = continue state { data { curr
 
 eval GoToEducationView state = do
   _ <- pure $ clearTimerWithId state.props.timerId
-  exit $ GoToEducationScreen state { props { triggeringSos = false, timerValue = 6, timerId = "" } }
+  exit $ GoToEducationScreen state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "" } }
 
 eval _ state = continue state

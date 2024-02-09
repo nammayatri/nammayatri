@@ -7,19 +7,20 @@ import Prelude
 import PrestoDOM
 import Screens.Types
 import Styles.Types
-
 import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Screens.NammaSafetyFlow.Components.HelperViews as HV
 import Font.Style as FontStyle
 import Helpers.Utils as HU
 import Mobility.Prelude
 import Styles.Colors as Color
 
-view :: forall w. Config -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
   let
     size = if config.enableCheckmark then 42 else 32
+
     contact = config.contact
   in
     relativeLayout
@@ -43,12 +44,19 @@ view config push =
                 ]
               <> FontStyle.tags TypoGraphy
           ]
-      , imageView
-          [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_tick_black_white"
-          , width $ V 24
-          , height $ V 24
-          , alignParentRight "true,-1"
-          , visibility $ boolToVisibility $ contact.priority == 0 && config.enableCheckmark
+      , linearLayout
+          [ height $ V 24
+          , width MATCH_PARENT
+          ]
+          [ HV.layoutWithWeight
+          , imageView
+              [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_tick_black_white"
+              , width $ V 24
+              , height $ V 24
+              , alignParentRight "true,-1"
+              , gravity RIGHT
+              , visibility $ boolToVisibility $ contact.priority == 0 && config.enableCheckmark
+              ]
           ]
       ]
   where
@@ -57,7 +65,6 @@ view config push =
   textColor = fromMaybe "" (fromMaybe [] (contactColorsList !! config.index) !! 1)
 
   text' = (DS.toUpper ((<>) (getFirstChar config.contact.name) (getLastChar config.contact.name)))
-
 
 getFirstChar :: String -> String
 getFirstChar name = DS.take 1 (fromMaybe "" ((getNameInitials name) !! 0))
@@ -68,31 +75,31 @@ getLastChar name = DS.take 1 (fromMaybe "" ((getNameInitials name) !! 1))
 getNameInitials :: String -> (Array String)
 getNameInitials fullName = (take 2 (DS.split (DS.Pattern " ") (fullName)))
 
-type Config = 
-    { contact :: NewContacts
+type Config
+  = { contact :: NewContacts
     , index :: Int
     , enableCheckmark :: Boolean
     }
 
 config :: Config
-config = 
-    { contact : 
-        { name : ""
-        , priority : 1
-        , number : ""
-        , isSelected : false
-        , enableForFollowing : false
-        }
-    , index : 0
-    , enableCheckmark : true
-    }
+config =
+  { contact:
+      { name: ""
+      , priority: 1
+      , number: ""
+      , isSelected: false
+      , enableForFollowing: false
+      }
+  , index: 0
+  , enableCheckmark: true
+  }
 
 getContactConfig :: NewContacts -> Int -> Boolean -> Config
 getContactConfig contact index enableCheckmark =
-    { contact: contact
-    , index: index
-    , enableCheckmark: enableCheckmark
-    }
+  { contact: contact
+  , index: index
+  , enableCheckmark: enableCheckmark
+  }
 
 contactColorsList :: Array (Array Color)
 contactColorsList =
@@ -101,4 +108,5 @@ contactColorsList =
   , [ Color.orange800, Color.black800 ]
   ]
 
-data Action = OnClick Int
+data Action
+  = OnClick Int

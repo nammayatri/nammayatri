@@ -133,9 +133,9 @@ cardView cardData index push =
             ]
         , imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_play_black_white"
-            , height $ V 90
-            , width $ V 100
-            , padding $ Padding 36 31 36 31
+            , height $ V 28
+            , width $ V 28
+            , margin $ Margin 36 31 36 31
             ]
         ]
     , textView
@@ -193,9 +193,7 @@ videoView push state =
                 , id $ EHC.getNewIDWithTag "SafetyYoutubeVideoView"
                 , onAnimationEnd
                     ( \action -> do
-                        let
-                          _ = spy "onAnimationEnd" "VideoView"
-                        void $ pure $ runFn5 JB.setYoutubePlayer (EHC.getYoutubeData{ videoId = viewConfig.videoId , videoType = "PORTRAIT_VIDEO",  videoHeight = 1500,showFullScreen = true,showSeekBar = false, hideFullScreenButton= true}) (EHC.getNewIDWithTag "SafetyYoutubeVideoView") "PAUSED" push YoutubeVideoStatus
+                        void $ pure $ runFn5 JB.setYoutubePlayer (EHC.getYoutubeData { videoId = viewConfig.videoId, videoType = "PORTRAIT_VIDEO", videoHeight = 1500, showFullScreen = true, showSeekBar = false, hideFullScreenButton = true }) (EHC.getNewIDWithTag "SafetyYoutubeVideoView") "PAUSED" push YoutubeVideoStatus
                     )
                     (const NoAction)
                 ]
@@ -218,19 +216,29 @@ videoView push state =
             , width MATCH_PARENT
             , alignParentBottom "true,-1"
             , gravity CENTER_VERTICAL
-            , padding $ Padding 16 16 16 16
-            , weight 1.0
+            , margin $ Margin 16 16 16 16
             ]
-            [ textView
-                $ [ text viewConfig.title
-                  , color Color.white900
-                  , gravity LEFT
-                  , weight 1.0
-                  , margin $ MarginRight 12
-                  ]
-                <> FontStyle.h1 TypoGraphy
-            , arrowButtonView false 20 (index > 0) push $ ChangeEducationViewIndex (index - 1)
-            , arrowButtonView true 0 (index < length state.data.videoList - 1) push $ ChangeEducationViewIndex (index + 1)
+            [ linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , weight 1.0
+                ]
+                [ textView
+                    $ [ text viewConfig.title
+                      , color Color.white900
+                      , gravity LEFT
+                      , width WRAP_CONTENT
+                      , margin $ MarginRight 12
+                      ]
+                    <> FontStyle.h1 TypoGraphy
+                ]
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                ]
+                [ arrowButtonView false 20 (index > 0) push $ ChangeEducationViewIndex (index - 1)
+                , arrowButtonView true 0 (index < length state.data.videoList - 1) push $ ChangeEducationViewIndex (index + 1)
+                ]
             ]
         ]
     ]
@@ -260,7 +268,7 @@ arrowButtonView isDirectionRight marginRight isActive push action =
             $ fetchImage FF_ASSET
                 if isDirectionRight then
                   "ny_ic_arrow_right_black"
-                else  
+                else
                   "ny_ic_arrow_left_black"
         , height $ V 18
         , width $ V 18

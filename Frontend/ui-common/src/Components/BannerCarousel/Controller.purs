@@ -156,7 +156,7 @@ bannerTransformer = map (
   cornerRadiusMain : toPropValue $ if os == "IOS" then "20.0" else "32.0",
   actionIconUrl : toPropValue item.actionIconUrl,
   actionTextBackgroundColour : toPropValue item.actionTextBackgroundColour,
-  actionTextCornerRadius : toPropValue item.actionTextCornerRadius,
+  actionTextCornerRadius : toPropValue $ if os == "IOS" then "15.0" else "50.0",
   actionIconVisibility : toPropValue $ if item.actionIconVisibility then "visible" else "gone",
   actionImageUrl : toPropValue item.actionImageUrl,
   actionImageVisibility : toPropValue $ if item.actionImageVisibility then "visible" else "gone",

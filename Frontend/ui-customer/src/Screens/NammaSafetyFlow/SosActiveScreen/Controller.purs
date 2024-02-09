@@ -73,7 +73,8 @@ data Action
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval PlaceCall state = do
-  let primaryContact = DA.filter (\item -> item.priority == 0) state.data.emergencyContactsList
+  let
+    primaryContact = DA.filter (\item -> item.priority == 0) state.data.emergencyContactsList
   case primaryContact DA.!! 0, state.props.shouldCallAutomatically, state.data.shareToEmergencyContacts of
     Just contact, true, true -> void $ pure $ showDialer contact.number true
     _, _, _ -> pure unit
@@ -85,6 +86,8 @@ eval PlaceCall state = do
       }
 
 eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
+
+eval (SafetyHeaderAction (Header.BackClicked)) state = continueWithCmd state [ pure BackPressed ]
 
 eval (BackPressed) state =
   if state.props.showCallPolice then
@@ -99,7 +102,6 @@ eval (CallContact contactIndex) state = do
     Just item -> void $ pure $ showDialer item.number true
     Nothing -> pure unit
   exit $ UpdateAction state "Called Emergency Contact"
-
 
 eval ShowPoliceView state = continue state { props { showCallPolice = true } }
 

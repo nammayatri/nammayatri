@@ -55,9 +55,9 @@ safetyPartnerView _lazy =
     [ textView
         $ [ text $ getString OUR_SAFETY_PARTNER
           , color Color.white900
-          , weight 1.0
           ]
         <> FontStyle.tags TypoGraphy
+    , layoutWithWeight
     , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT

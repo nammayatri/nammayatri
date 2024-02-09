@@ -10,13 +10,17 @@ module Screens.NammaSafetyFlow.Components.HeaderView where
 
 import Prelude
 import PrestoDOM
-import Styles.Colors as Color
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Effect (Effect)
+import Engineering.Helpers.Commons as EHC
+import Font.Style as FontStyle
+import Helpers.Utils as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Common.Types.App
-import Mobility.Prelude
+import Mobility.Prelude (boolToVisibility)
+import Screens.NammaSafetyFlow.Components.HelperViews (layoutWithWeight)
+import Styles.Colors as Color
 
 view :: (Action -> Effect Unit) -> Config -> forall w. PrestoDOM (Effect Unit) w
 view push state =
@@ -71,6 +75,7 @@ type Config
 data Action
   = GenericHeaderAC GenericHeader.Action
   | LearnMoreClicked
+  | BackClicked
 
 config :: LazyCheck -> Config
 config _ =
@@ -112,3 +117,52 @@ genericHeaderConfig title useLightColor showCrossImage =
       Color.white900
     else
       Color.black800
+
+testSafetyHeaderView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+testSafetyHeaderView push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , background Color.yellow800
+    , padding $ Padding 16 16 16 16
+    , gravity CENTER_VERTICAL
+    ]
+    [ imageView
+        [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_left"
+        , height $ V 24
+        , width $ V 24
+        , margin $ MarginRight 8
+        , visibility $ boolToVisibility $ EHC.os == "IOS"
+        , onClick push $ const BackClicked
+        ]
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        , orientation VERTICAL
+        ]
+        [ textView
+            $ [ text $ getString TEST_SAFETY_DRILL
+              , color Color.black900
+              ]
+            <> FontStyle.subHeading1 TypoGraphy
+        , textView
+            [ text $ getString THIS_IS_NOT_A_REAL_SOS_SITUATION
+            , color Color.black900
+            ]
+        ]
+    , layoutWithWeight
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        ]
+        [ textView
+            $ [ textFromHtml $ "<u>" <> getString LEARN_MORE <> "</u>"
+              , color Color.black900
+              , gravity RIGHT
+              , margin $ MarginRight 16
+              , onClick push $ const LearnMoreClicked
+              ]
+            <> FontStyle.body2 TypoGraphy
+        ]
+    ]

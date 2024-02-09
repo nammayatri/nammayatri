@@ -31,7 +31,7 @@ sosActiveScreen = do
   case act of
     GoBack updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
-      App.BackT $ pure App.GoBack
+      App.BackT $ App.NoBack <$> (pure $ act)
     UpdateAsSafe updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ act)

@@ -93,7 +93,7 @@ view push state =
         (const NoAction)
     ]
     [ case state.props.showTestDrill of
-        true -> testSafetyHeaderView push
+        true -> Header.testSafetyHeaderView (push <<< SafetyHeaderAction)
         false -> Header.view (push <<< SafetyHeaderAction) headerConfig
     , case state.props.showCallPolice of
         true -> dialPoliceView state push
@@ -102,7 +102,13 @@ view push state =
   where
   padding' = if EHC.os == "IOS" then (PaddingVertical EHC.safeMarginTop (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
-  headerConfig = (Header.config Language) { useLightColor = true, title = getString $ if not state.props.showCallPolice then EMERGENCY_SOS else CALL_POLICE, learnMoreTitle = getString LEARN_ABOUT_NAMMA_SAFETY, showLearnMore = false }
+  headerConfig =
+    (Header.config Language)
+      { useLightColor = true
+      , title = getString $ if not state.props.showCallPolice then EMERGENCY_SOS else CALL_POLICE
+      , learnMoreTitle = getString LEARN_ABOUT_NAMMA_SAFETY
+      , showLearnMore = false
+      }
 
 ------------------------------------- dashboardView -----------------------------------
 sosActiveView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -352,46 +358,6 @@ sfl height' marginTop numberOfBoxes visibility' =
             )
             (1 .. numberOfBoxes)
         )
-    ]
-
-testSafetyHeaderView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-testSafetyHeaderView push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , background Color.yellow800
-    , padding $ Padding 16 16 16 16
-    , gravity CENTER_VERTICAL
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , gravity CENTER_VERTICAL
-        , orientation VERTICAL
-        ]
-        [ textView
-            $ [ text $ getString TEST_SAFETY_DRILL
-              , color Color.black900
-              ]
-            <> FontStyle.subHeading1 TypoGraphy
-        , textView
-            [ text $ getString THIS_IS_NOT_A_REAL_SOS_SITUATION
-            , color Color.black900
-            ]
-        ]
-    , layoutWithWeight
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        ]
-        [ textView
-            [ textFromHtml $ "<u>" <> getString LEARN_MORE <> "</u>"
-            , color Color.black900
-            , gravity RIGHT
-            , margin $ MarginRight 16
-            , onClick push $ const LearnMoreClicked
-            ]
-        ]
     ]
 
 dialPoliceView :: forall w. NammaSafetyScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
