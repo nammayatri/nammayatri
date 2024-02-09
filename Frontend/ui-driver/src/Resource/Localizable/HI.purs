@@ -1229,5 +1229,5 @@ getHI stringKey =
         SAFETY_IS_OUR_RESPONSIBILITY -> "सुरक्षा हमारी जिम्मेदारी है"
         CUSTOMER_SAFETY_FIRST -> "ग्राहक सुरक्षा पहले!"
         LETS_ENSURE_SAFE_RIDE -> "सुनिश्चित करें कि यात्रा सुरक्षित है"
-        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ग्राहक सुरक्षा हमारी जिम्मेदारी है। सुनिश्चित करें कि यात्रा सुरक्षित और खुशहाल है"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ग्राहक सुरक्षा हमारी<br>जिम्मेदारी है। सुनिश्चित<br>करें कि यात्रा सुरक्षित और खुशहाल है"
         OUR_SAFETY_PARTNER -> "हमारा सुरक्षा साथी"

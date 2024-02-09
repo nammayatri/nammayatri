@@ -1228,6 +1228,6 @@ getKN stringKey =
         TERMS_AND_CONDITIONS_UPDATED -> "T&Cಗಳು ಮತ್ತು ಗೌಪ್ಯತೆ ನೀತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"
         CUSTOMER_SAFETY_FIRST -> "ಗ್ರಾಹಕರ ಸುರಕ್ಷತೆ ಮೊದಲು!"
         LETS_ENSURE_SAFE_RIDE -> "ರೈಡ್ ಸುರಕ್ಷಿತವಾಗಿದೆ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ"
-        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ಗ್ರಾಹಕರ ಸುರಕ್ಷತೆ ನಮ್ಮ ಜವಾಬ್ದಾರಿಯಾಗಿದೆ. ಸವಾರಿ ಸುರಕ್ಷಿತ ಮತ್ತು ಸಂತೋಷವಾಗಿದೆ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ಗ್ರಾಹಕರ ಸುರಕ್ಷತೆ ನಮ್ಮ<br>ಜವಾಬ್ದಾರಿಯಾಗಿದೆ. ಸವಾರಿ ಸುರಕ್ಷಿತ<br>ಮತ್ತು ಸಂತೋಷವಾಗಿದೆ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ"
         OUR_SAFETY_PARTNER -> "ನಮ್ಮ ಸುರಕ್ಷತಾ ಪಾಲುದಾರ"
         SAFETY_IS_OUR_RESPONSIBILITY -> "ಸುರಕ್ಷೆ ನಮ್ಮ ಜವಾಬ್ದಾರಿ"
