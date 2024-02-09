@@ -32,7 +32,7 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
-import PrestoDOM (lineHeight, Gravity(..), Length(..), Margin(..), maxLines, ellipsize, Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom)
+import PrestoDOM (scrollBarY, scrollView, lineHeight, Gravity(..), Length(..), Margin(..), maxLines, ellipsize, Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom)
 import Screens.TicketBookingFlow.PlaceList.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -76,19 +76,12 @@ view push state =
             , background Color.white900
             ]
             [ headerView push state
-            , linearLayout
+            , scrollView
                 [ weight 1.0
                 , width MATCH_PARENT
-                , gravity CENTER
+                , scrollBarY false
                 ]
                 [ ticketingList push state ]
-            , linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity BOTTOM
-                , weight 1.0
-                ]
-                []
             ]
         ]
 
@@ -169,19 +162,18 @@ ticketingList push state =
     , margin $ MarginTop 16
     ] if DA.null state.data.placeInfoArray then [sfl 70, sfl 70] else
     ( mapWithIndex
-        (\index item -> ticketingItem push item index)
+        (\index item -> ticketingItem push item index (DA.length state.data.placeInfoArray))
         state.data.placeInfoArray
     )
 
-ticketingItem :: forall w. (Action -> Effect Unit) -> API.TicketPlaceResp -> Int -> PrestoDOM (Effect Unit) w
-ticketingItem push (API.TicketPlaceResp item) index =
+ticketingItem :: forall w. (Action -> Effect Unit) -> API.TicketPlaceResp -> Int -> Int -> PrestoDOM (Effect Unit) w
+ticketingItem push (API.TicketPlaceResp item) index length =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
   , cornerRadius 16.0
-  , background Color.yellow800
-  , margin $ Margin 16 marginTop 16 0
+  , padding $ if index == length - 1 then Padding 16 0 16 32 else Padding 16 0 16 16
   , gravity CENTER
   ] $ [  linearLayout
           [ width MATCH_PARENT
