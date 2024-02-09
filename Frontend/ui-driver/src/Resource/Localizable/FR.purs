@@ -937,6 +937,6 @@ getFR stringKey =
         SAFETY_IS_OUR_RESPONSIBILITY -> "La sécurité est notre responsabilité"
         CUSTOMER_SAFETY_FIRST -> "La sécurité du client d'abord !"
         LETS_ENSURE_SAFE_RIDE -> "Assurons un trajet sûr et sécurisé"
-        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "La sécurité des clients est notre responsabilité. Assurons-nous une conduite sûre et heureuse"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "La sécurité des clients est<br>notre responsabilité. Assurons-nous<br>une conduite sûre et heureuse"
         OUR_SAFETY_PARTNER -> "Notre partenaire de sécurité"
         _ -> ""

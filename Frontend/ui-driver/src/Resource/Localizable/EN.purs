@@ -1229,5 +1229,5 @@ getEN stringKey =
         SAFETY_IS_OUR_RESPONSIBILITY -> "Safety is our responsibility"
         CUSTOMER_SAFETY_FIRST -> "Customer safety First!"
         LETS_ENSURE_SAFE_RIDE -> "Let’s ensure a safe and secure ride"
-        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "Customer safety is our responsibility. Let’s ensure a safe and happy ride"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "Customer safety is our<br>responsibility. Let’s ensure a safe<br>and happy ride"
         OUR_SAFETY_PARTNER -> "Our Safety Partner"
