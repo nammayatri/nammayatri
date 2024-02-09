@@ -237,7 +237,7 @@ calculateFareParameters params = do
           fareByTime = Money $ extraMins * perExtraMinRate.getMoney
 
       let estimatedDistance = (.getMeters) <$> params.estimatedDistance
-          estimatedDistanceInKm = fromMaybe 0 estimatedDistance `div` 1000
+          estimatedDistanceInKm = max (estimatedDurationInHr * includedKmPerHr.getKilometers) (fromMaybe 0 estimatedDistance `div` 1000)
           actualDistance = (.getMeters) <$> params.actualDistance
           actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
