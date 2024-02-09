@@ -22,6 +22,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Notifications
@@ -48,9 +49,12 @@ notifyEmergencyContacts person body title notificationType message useSmsAsBacku
 
 sendNotificationToEmergencyContact :: Person.Person -> Text -> Text -> Notification.Category -> Flow ()
 sendNotificationToEmergencyContact person body title notificationType = do
-  notifyPerson person.merchantId person.merchantOperatingCityId buildNotificationData
+  notificationSoundFromConfig <- SQNSC.findByNotificationType notificationType person.merchantOperatingCityId
+  disabilityTag <- getDisabilityTag person.hasDisability person.id
+  notificationSound <- getNotificationSound disabilityTag notificationSoundFromConfig
+  notifyPerson person.merchantId person.merchantOperatingCityId (buildNotificationData notificationSound)
   where
-    buildNotificationData =
+    buildNotificationData notificationSound =
       Notification.NotificationReq
         { category = notificationType,
           subCategory = Nothing,
@@ -61,7 +65,8 @@ sendNotificationToEmergencyContact person body title notificationType = do
           title = title,
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-          ttl = Nothing
+          ttl = Nothing,
+          sound = notificationSound
         }
 
 sendMessageToEmergencyContact :: Person.Person -> DPDEN.PersonDefaultEmergencyNumberAPIEntity -> Text -> Flow ()
