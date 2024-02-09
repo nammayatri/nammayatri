@@ -47,6 +47,7 @@ import Tools.Error
 data ServiceabilityRes = ServiceabilityRes
   { serviceable :: Bool,
     city :: Maybe Context.City,
+    currentCity :: Maybe Context.City,
     specialLocation :: Maybe DSpecialLocation.SpecialLocation,
     geoJson :: Maybe Text,
     hotSpotInfo :: [DHotSpot.HotSpotInfo],
@@ -69,11 +70,11 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
   DHotSpot.HotSpotResponse {..} <- getHotspot location merchantId
   mbNearestOpAndCurrentCity <- getNearestOperatingAndCurrentCity' settingAccessor (personId, merchantId) shouldUpdatePerson location
   case mbNearestOpAndCurrentCity of
-    Just (NearestOperatingAndCurrentCity {nearestOperatingCity}) -> do
+    Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
       specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
       let city = Just nearestOperatingCity.city
-      return ServiceabilityRes {serviceable = True, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody, ..}
-    Nothing -> return ServiceabilityRes {city = Nothing, serviceable = False, specialLocation = Nothing, geoJson = Nothing, ..}
+      return ServiceabilityRes {serviceable = True, currentCity = Just currentCity.city, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody, ..}
+    Nothing -> return ServiceabilityRes {city = Nothing, currentCity = Nothing, serviceable = False, specialLocation = Nothing, geoJson = Nothing, ..}
 
 data NearestOperatingAndCurrentCity = NearestOperatingAndCurrentCity
   { nearestOperatingCity :: CityState,
