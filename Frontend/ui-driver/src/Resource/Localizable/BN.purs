@@ -1258,3 +1258,4 @@ getBN stringKey =
         PREVIOUS_STOP -> "পূর্ববর্তী স্টপ"
         ENTER_END_RIDE_OTP -> "শেষ রাইড ওটিপি প্রবেশ করুন"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "আপনি স্টপ স্থানে নেই"
+        ARRIVED_AT_STOP -> "স্টপে আগত হয়েছে"

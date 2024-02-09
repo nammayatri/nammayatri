@@ -381,7 +381,7 @@ inputOdometerReading push state =
     visibility if state.modalType == KeyboardModalType.ODOMETER then VISIBLE else GONE
   ][
     editText $
-    [ width $ V 250,
+    [ width $ V 270,
       height WRAP_CONTENT,
       color Color.greyTextColor,
       placeHolder $ "Km",
@@ -411,7 +411,7 @@ inputOdometerReading push state =
       , fontStyle $ FontStyle.bold LanguageStyle
       ],
     editText $
-    [ width $ V 50,
+    [ width $ V 30,
       height WRAP_CONTENT,
       color Color.greyTextColor,
       placeHolder $ "M",

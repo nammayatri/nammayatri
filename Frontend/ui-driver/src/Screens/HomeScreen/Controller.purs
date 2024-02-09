@@ -553,7 +553,7 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
 eval (UploadImage) state = do
   if state.props.odometerImageUploading then
     continue state {props {odometerImageUploading = false}}
-  else if state.props.odometerUploadAttempts < 2 then do
+  else if state.props.odometerUploadAttempts < 3 then do
     continueWithCmd (state {props {odometerUploadAttempts = state.props.odometerUploadAttempts + 1,odometerImageUploading = true}}) [do
       let _ = unsafePerformEffect $ logEvent state.data.logField "UPLOAD odometer reading"
       _ <- liftEffect $ uploadFile false

@@ -27,7 +27,7 @@ import Language.Types (STR(..))
 import Prelude (class Show, bind, discard, map, not, pure, unit, ($), (&&), (+), (/), (/=), (<>), (==), (||))
 import PrestoDOM (Eval, ScrollState(..), continue, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Resource.Constants (decodeAddress)
+import Resource.Constants (decodeAddress, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AnimationState(..), IndividualRideCardState, ItemState, RideSelectionScreenState)
 import Services.API (RidesInfo(..))
@@ -234,6 +234,7 @@ rideListResponseTransformer list categoryAction =
     , specialZoneLayoutBackground : ""
     , specialZoneImage : ""
     , specialZoneText : ""
+    , tripType : rideTypeConstructor ride.tripCategory
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

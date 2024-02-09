@@ -957,4 +957,5 @@ getFR stringKey =
         YOU_ARE_ON_A_RENTAL_RIDE -> "Vous êtes sur un trajet de location"
         ENTER_END_RIDE_OTP -> "Entrez le OTP de fin de trajet"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "Vous n'êtes pas à l'emplacement de l'arrêt"
+        ARRIVED_AT_STOP -> "Arrivé à l'arrêt"
         _ -> ""

@@ -1945,8 +1945,7 @@ homeScreenFlow = do
     GO_TO_START_RIDE {id, otp ,startOdometerReading, startOdometerImage, lat, lon, ts} updatedState -> do
       void $ lift $ lift $ loaderText (getString START_RIDE) ""
       void $ lift $ lift $ toggleLoader true
-      _ <- pure $ printLog ( " OTP FLOW " <> otp  <> " odometerReading" <> startOdometerReading <> "odometerImage" <> startOdometerImage) ""
-      _ <- pure $ printLog "RIDE_START_ODOMETER"  (getValueToLocalStore RIDE_START_ODOMETER)
+      _ <- pure $ printLog ( " OTP FLOW " <> otp  <> " odometerReading" <> startOdometerReading) ""
       let startRideOdometerReading = if updatedState.data.activeRide.tripType == ST.Rental then Just startOdometerReading else Nothing 
       let startRideOdometerImage = if  updatedState.data.activeRide.tripType == ST.Rental then Just startOdometerImage else Nothing
       
@@ -2090,7 +2089,7 @@ homeScreenFlow = do
                     date = (convertUTCtoISC (response.createdAt) "D MMM"),
                     time = (convertUTCtoISC (response.createdAt )"h:mm A"),
                     source = (decodeAddress response.fromLocation false),
-                    destination = maybe "" (\toLocation -> decodeAddress toLocation false) response.toLocation,
+                    destination = if (RC.rideTypeConstructor response.tripCategory) == ST.Rental then "" else maybe "" (\toLocation -> decodeAddress toLocation false) response.toLocation,
                     vehicleType = response.vehicleVariant,
                     totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
                     distance = parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2,
@@ -2212,7 +2211,6 @@ homeScreenFlow = do
         Left _ -> pure unit
       homeScreenFlow
     UPDATE_ROUTE state -> do
-      _ <- pure $ printLog " UPDATE_ROUTE state me hue maa " ""
       let srcLat = if state.props.currentStage == RideAccepted then
           state.data.currentDriverLat 
         else if state.data.activeRide.tripType == ST.Rental then
@@ -3314,7 +3312,7 @@ driverEarningsFlow = do
     GOTO_PAYMENT_HISTORY_FROM_COINS -> paymentHistoryFlow
     GOTO_TRIP_DETAILS  selectedCard -> do
       sourceMod <- translateString selectedCard.source 400
-      destinationMod <- translateString selectedCard.destination 400
+      destinationMod <- if selectedCard.tripType == ST.Rental then pure "" else translateString selectedCard.destination 400
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
       tripId = selectedCard.id,
       date = selectedCard.date,
