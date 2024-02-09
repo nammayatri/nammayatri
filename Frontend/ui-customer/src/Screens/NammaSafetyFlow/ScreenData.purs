@@ -16,9 +16,10 @@ module Screens.NammaSafetyFlow.ScreenData where
 
 import Data.Maybe
 import Screens.Types
-
+import Engineering.Helpers.Commons as EHC
 import MerchantConfig.DefaultConfig as DC
 import RemoteConfig as RC
+import Prelude ((==))
 
 initData :: NammaSafetyScreenState
 initData =
@@ -49,7 +50,7 @@ initData =
       { onRide: false
       , setupStage: SetDefaultEmergencyContacts
       , timerId: ""
-      , timerValue: 6
+      , timerValue: defaultTimerValue
       , recordingState: NOT_RECORDING
       , triggeringSos: false
       , confirmPopup: false
@@ -66,9 +67,5 @@ initData =
       }
   }
 
-educationData :: Array RC.SafetyVideoConfig
-educationData =
-  [ { title: "NAMMA_SAFETY_MEASURES", videoId: "u57l5jwRvLE", coverImageUrl: "ny_ic_namma_safety_measures" }
-  , { title: "SAFETY_GUIDELINES_FOR_YOU", videoId: "N4BpjB3jkjE", coverImageUrl: "ny_ic_namma_safety_guidlines" }
-  , { title: "ABOUT_SOS", videoId: "_vFXj8PlraM", coverImageUrl: "ny_ic_about_sos_icon" }
-  ]
+defaultTimerValue :: Int
+defaultTimerValue = if EHC.os == "IOS" then 5 else 6

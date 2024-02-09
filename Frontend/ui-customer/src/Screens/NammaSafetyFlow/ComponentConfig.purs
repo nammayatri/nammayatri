@@ -67,8 +67,8 @@ cancelSOSBtnConfig state =
     { textConfig
       { text = getString MARK_RIDE_AS_SAFE
       , color = Color.white900
-      , id = "CancelSosButton"
       }
+    , id = "CancelSosButton"
     , margin = MarginTop 10
     , stroke = "1," <> Color.white900
     , enableRipple = true
@@ -178,5 +178,6 @@ startTestDrillButtonConfig state =
     , margin = MarginVertical 48 24
     , background = Color.white900
     , enableRipple = true
+    , id = "SafetyScreenStartTestDrillButton"
     }
 

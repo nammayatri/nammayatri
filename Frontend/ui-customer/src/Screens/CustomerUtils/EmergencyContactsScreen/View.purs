@@ -10,7 +10,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, discard, pure, unit, void, ($), (&&), (-), (<), (<<<), (<>), (==), (>))
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarY, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarY, stroke, text, textSize, textView, visibility, weight, width, adjustViewWithKeyboard)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (EmergencyContactsScreenState)
 import Styles.Colors as Color
@@ -158,11 +158,12 @@ contactListView listItemm push state =
         [ height if os == "IOS" then (V 84) else WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , background Color.white900
-        , padding (Padding 16 16 16 24)
+        , background Color.transparent
+        , padding (Padding 16 16 16 (if os == "IOS" then 50 else 24))
         , stroke $ "1," <> Color.grey900
         , alignParentBottom "true,-1"
         , margin (Margin 0 0 0 0)
+        , adjustViewWithKeyboard "true"
         ]
         [ linearLayout
             [ width MATCH_PARENT

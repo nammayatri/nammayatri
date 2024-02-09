@@ -45,6 +45,7 @@ view push contacts =
         $ [ text $ getString SELECT_PREFERRED_CONTACTS
           , color Color.black700
           , margin $ MarginVertical 14 10
+          , visibility $ boolToVisibility $ length contacts /= 0
           ]
         <> FontStyle.subHeading1 TypoGraphy
     , linearLayout

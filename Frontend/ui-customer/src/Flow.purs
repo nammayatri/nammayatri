@@ -183,6 +183,8 @@ import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
 import Screens.TicketBookingFlow.MetroTicketDetails.Transformer
 import Screens.TicketBookingFlow.MetroMyTickets.Transformer
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
+import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
+
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -1516,7 +1518,7 @@ homeScreenFlow = do
                 nammaSafetyScreen
                   { props
                     { triggeringSos = false
-                    , timerValue = 6
+                    , timerValue = defaultTimerValue
                     , showTestDrill = false
                     , showShimmer = true
                     , confirmTestDrill = showtestDrill
@@ -3876,6 +3878,7 @@ sosActiveFlow = do
       res <- Remote.userSosStatusBT state.data.sosId (Remote.makeSosStatus "Pending" comment)
       sosActiveFlow
     SosActiveScreen.GoToEducationScreen state -> safetyEducationFlow
+    SosActiveScreen.GoBack state -> homeScreenFlow
     _ -> sosActiveFlow
   pure unit
 

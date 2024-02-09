@@ -82,7 +82,6 @@ sosSetupBannerConfig state action =
         Just ST.SETUP_BANNER -> {title: getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE, actionText: getString SETUP_NOW, image : "ny_ic_banner_sos_red"}
         Just ST.MOCK_DRILL_BANNER -> {title: getString COMPLETE_YOUR_TEST_DRILL, actionText: getString TEST_DRILL, image : "ny_ic_mock_drill_banner_red"}
         Nothing -> {title: "", actionText: "", image : ""}
-
     config' =
       config
         { backgroundColor = Color.red200

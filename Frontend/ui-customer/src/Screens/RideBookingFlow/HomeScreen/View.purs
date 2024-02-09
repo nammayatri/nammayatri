@@ -910,65 +910,64 @@ sosView push state =
     , height WRAP_CONTENT
     , gravity CENTER
     , visibility $ boolToVisibility $ state.props.currentStage == RideStarted && state.data.config.feature.enableSafetyFlow
+    , margin $ MarginRight 16
     ]
-    [ textView
-        $ [ text $ getString NEW <> "✨"
-          , color Color.white900
-          , margin $ Margin 22 16 22 0
-          , padding $ PaddingVertical 30 3
-          , background Color.blue900
-          , width $ V 130
-          , gravity CENTER
-          , cornerRadius 20.0
-          ]
-        <> FontStyle.body17 TypoGraphy
-    , linearLayout
+    [ linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , cornerRadius 20.0
         , clipChildren false
+        , background Color.blue900
+        , orientation VERTICAL
+        , gravity CENTER
+        , margin $ Margin 12 12 12 8
         ]
-        [ linearLayout
-            [ height WRAP_CONTENT
-            , width $ V 150
-            , margin $ Margin 12 12 12 12
-            , shadow $ Shadow 0.1 2.0 10.0 24.0 Color.greyBackDarkColor 0.5
-            , background Color.white900
-            , cornerRadius 20.0
-            , onClick push $ const OpenEmergencyHelp
-            , rippleColor Color.rippleShade
-            ]
-            [ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                , padding $ PaddingVertical 10 10
-                ]
-                [ imageView
-                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
-                    , height $ V 24
-                    , width $ V 24
-                    , margin $ MarginRight 8
-                    , accessibilityHint $ "S O S Button, Select to view S O S options"
-                    , accessibility ENABLE
-                    , onClick push $ const OpenEmergencyHelp
-                    ]
-                , textView
-                    $ [ text $ getString SAFETY_CENTER
-                      , color Color.blue900
-                      , margin $ MarginBottom 1
-                      ]
-                    <> FontStyle.body6 TypoGraphy
-                ]
-            , imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ic_red_icon"
-                , height $ V 12
-                , width $ V 12
-                , visibility $ boolToVisibility $ getValueToLocalStore IS_SOS_ACTIVE == "true"
-                ]
-            ]
+        [ safetyCenterView push INVISIBLE
+        , textView
+            $ [ text $ getString NEW <> "✨"
+              , color Color.white900
+              , margin $ MarginVertical 5 3
+              , gravity CENTER
+              ]
+            <> FontStyle.body17 TypoGraphy
+        ]
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width $ WRAP_CONTENT
+        , shadow $ Shadow 0.1 2.0 10.0 24.0 Color.greyBackDarkColor 0.5
+        , background Color.white900
+        , cornerRadius 20.0
+        , onClick push $ const OpenEmergencyHelp
+        , rippleColor Color.rippleShade
+        , padding $ Padding 12 8 12 8
+        ]
+        [ safetyCenterView push VISIBLE
         ]
     ]
+  where
+  safetyCenterView push vis =
+    linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity CENTER
+      , visibility vis
+      ]
+      [ imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
+          , height $ V 24
+          , width $ V 24
+          , margin $ MarginRight 8
+          , accessibilityHint $ "S O S Button, Select to view S O S options"
+          , accessibility ENABLE
+          , onClick push $ const OpenEmergencyHelp
+          ]
+      , textView
+          $ [ text $ getString SAFETY_CENTER
+            , color Color.blue900
+            , margin $ MarginBottom 1
+            ]
+          <> FontStyle.body6 TypoGraphy
+      ]
 
 liveStatsDashboardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 liveStatsDashboardView push state =
@@ -1110,10 +1109,11 @@ emptySuggestionsBanner state push =
           ]
       , linearLayout
         [ height WRAP_CONTENT
-        , weight 1.0
+        , width WRAP_CONTENT
         , padding $ PaddingLeft 20
         , orientation VERTICAL
-        , layoutGravity "center_vertical"
+        , weight 1.0
+        , gravity CENTER_VERTICAL
         ][ textView $
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -1122,12 +1122,7 @@ emptySuggestionsBanner state push =
             , color Color.black800
             , padding $ PaddingBottom 2
             ] <> (FontStyle.body2 LanguageStyle)
-         , linearLayout
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , gravity CENTER_VERTICAL
-            ][
-              textView $
+          ,  textView $
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
               , gravity LEFT
@@ -1135,7 +1130,6 @@ emptySuggestionsBanner state push =
               , color Color.black700
               , padding $ PaddingBottom 2
               ] <> (FontStyle.body3 LanguageStyle)
-            ]
           ]
      ]
 
