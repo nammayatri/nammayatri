@@ -720,7 +720,8 @@ type IndividualRideCardState =
     specialZoneLayoutBackground :: String,
     specialZoneImage :: String,
     specialZoneText :: String,
-    spLocTagVisibility :: Boolean
+    spLocTagVisibility :: Boolean,
+    tripType :: TripType
   }
 
 

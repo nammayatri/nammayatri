@@ -1259,3 +1259,4 @@ getML stringKey =
         YOU_ARE_ON_A_RENTAL_RIDE -> "നിങ്ങൾ ഒരു റെന്റൽ റൈഡിൽ ഉണ്ട്"
         ENTER_END_RIDE_OTP -> "റൈഡ് അവസാനിപ്പിക്കുക ഓടിപി നൽകുക"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "നിങ്ങൾ സ്റ്റോപ്പ് സ്ഥലത്തിലാണ്"
+        ARRIVED_AT_STOP -> "സ്റ്റോപ്പിൽ എത്തി"

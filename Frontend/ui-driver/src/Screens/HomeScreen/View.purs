@@ -141,6 +141,8 @@ screen initialState =
                                   pure unit
                                   else pure unit
             "RideAccepted"   -> do
+                                void $ pure $ setValueToLocalStore RIDE_END_ODOMETER ""
+                                void $ pure $ setValueToLocalStore RIDE_START_ODOMETER "" 
                                 let waitTime = DS.split (DS.Pattern "<$>") (getValueToLocalStore WAITING_TIME_VAL)
                                     id = fromMaybe "" (waitTime DA.!! 0)
                                     isTimerValid = id == initialState.data.activeRide.id

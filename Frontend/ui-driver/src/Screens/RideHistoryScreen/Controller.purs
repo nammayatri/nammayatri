@@ -43,9 +43,9 @@ import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import PrestoDOM (Eval, ScrollState(..), continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Resource.Constants (decodeAddress, tripDatesCount)
+import Resource.Constants (decodeAddress, tripDatesCount, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..))
+import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..), TripType(..))
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -286,7 +286,8 @@ rideListResponseTransformer list =
         spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag) /= Nothing,
         specialZoneLayoutBackground : specialLocationConfig.backgroundColor,
         specialZoneImage : specialLocationConfig.imageUrl,
-        specialZoneText : specialLocationConfig.text
+        specialZoneText : specialLocationConfig.text,
+        tripType : rideTypeConstructor ride.tripCategory
       }) list
 
 
@@ -323,5 +324,6 @@ dummyCard =  {
     spLocTagVisibility : false,
     specialZoneLayoutBackground : "",
     specialZoneImage : "",
-    specialZoneText : ""
+    specialZoneText : "",
+    tripType : OneWay
   }

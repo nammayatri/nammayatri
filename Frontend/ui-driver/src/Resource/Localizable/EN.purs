@@ -1257,4 +1257,5 @@ getEN stringKey =
         LAST_STOP -> "Last Stop"
         PREVIOUS_STOP -> "Previous Stop"
         ENTER_END_RIDE_OTP -> "Enter end ride OTP"
+        ARRIVED_AT_STOP -> "Arrived at stop"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "You are not at the stop location"
