@@ -197,7 +197,7 @@ parseAddress loc@Spec.Location {..} = do
   pure $
     Just $
       DL.LocationAddress
-        { area = locality, -- TODO: Fetch this, discuss with ONDC
+        { area = ward, -- TODO: Fetch this, discuss with ONDC
           city = city',
           state = state',
           country = country',
