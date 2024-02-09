@@ -20,6 +20,7 @@ module SharedLogic.DriverPool.Types
     DriverPoolResultCurrentlyOnRide (..),
     DriverPoolWithActualDistResult (..),
     DriverPoolWithActualDistResultWithFlags (..),
+    PoolType (..),
     PoolRadiusStep,
     PoolBatchNum,
   )
@@ -45,6 +46,8 @@ type PoolBatchNum = Int
 type PoolRadiusStep = Meters
 
 data PoolCalculationStage = Estimate | DriverSelection
+
+data PoolType = NormalPool | GoHomePool | SpecialDriversPool | SpecialZoneQueuePool | SkipPool deriving (Ord, Eq, Show)
 
 data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
   { poolStage :: PoolCalculationStage,
@@ -105,6 +108,8 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     keepHiddenForSeconds :: Seconds,
     intelligentScores :: IntelligentScores,
     isPartOfIntelligentPool :: Bool,
+    pickupZone :: Bool,
+    specialZoneExtraTip :: Maybe Money,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -114,6 +119,7 @@ instance HasCoordinates DriverPoolWithActualDistResult where
 
 data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags
   { driverPoolWithActualDistResult :: [DriverPoolWithActualDistResult],
-    isGoHomeBatch :: Bool,
-    prevBatchDrivers :: [Id Driver]
+    poolType :: PoolType,
+    prevBatchDrivers :: [Id Driver],
+    nextScheduleTime :: Maybe Seconds
   }

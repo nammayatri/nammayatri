@@ -112,6 +112,8 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData =
           customerCancellationDues = 0,
           tripCategory = DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
           duration = Just (Seconds 300),
+          pickupZone = False, -- TODO: make it dynamic ?
+          specialZoneExtraTip = Nothing,
           ..
         }
 

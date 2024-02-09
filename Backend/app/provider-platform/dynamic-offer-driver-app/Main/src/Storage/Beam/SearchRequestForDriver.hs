@@ -55,6 +55,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverMaxExtraFee :: B.C f (Maybe Money),
     rideRequestPopupDelayDuration :: B.C f Seconds,
     isPartOfIntelligentPool :: B.C f Bool,
+    pickupZone :: B.C f Bool,
     cancellationRatio :: B.C f (Maybe Double),
     acceptanceRatio :: B.C f (Maybe Double),
     driverAvailableTime :: B.C f (Maybe Double),

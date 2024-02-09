@@ -20,3 +20,4 @@ ALTER TABLE atlas_app.rider_config ADD PRIMARY KEY ( merchant_operating_city_id)
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN collect_auto_complete_data boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN special_zone_radius integer NOT NULL default 150;

@@ -77,7 +77,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleVariant searchTry.tripCategory jobData.estimatedRideDistance
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
-  (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds goHomeCfg
+  (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds goHomeCfg
   return res
 
 sendSearchRequestToDrivers' ::
@@ -106,7 +106,7 @@ sendSearchRequestToDrivers' ::
   Merchant ->
   Maybe DFP.DriverExtraFeeBounds ->
   GoHomeConfig ->
-  m (ExecutionResult, Bool)
+  m (ExecutionResult, PoolType, Maybe Seconds)
 sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg = do
   -- In case of static offer flow we will have booking created before driver ride request is sent
   mbBooking <- if DTC.isDynamicOfferTrip searchTry.tripCategory then pure Nothing else QRB.findByQuoteId searchTry.estimateId

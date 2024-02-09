@@ -35,6 +35,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getDriverPoolConfig)
+import SharedLogic.DriverPool.Types (PoolType)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
@@ -92,7 +93,7 @@ initiateDriverSearchBatch ::
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
-  (DriverPoolConfig -> DSR.SearchRequest -> DST.SearchTry -> DM.Merchant -> Maybe DFP.DriverExtraFeeBounds -> GoHomeConfig -> m (ExecutionResult, Bool)) ->
+  (DriverPoolConfig -> DSR.SearchRequest -> DST.SearchTry -> DM.Merchant -> Maybe DFP.DriverExtraFeeBounds -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)) ->
   DM.Merchant ->
   DSR.SearchRequest ->
   DTC.TripCategory ->
@@ -109,8 +110,8 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
   if not searchTry.isScheduled
     then do
-      (res, isGoHomeBatch) <- sendSearchRequestToDrivers driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg
-      let inTime = fromIntegral (if isGoHomeBatch then goHomeCfg.goHomeBatchDelay else driverPoolConfig.singleBatchProcessTime)
+      (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg
+      let inTime = maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
       case res of
         ReSchedule _ -> scheduleBatching searchTry driverExtraFeeBounds inTime
         _ -> return ()

@@ -12,25 +12,33 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Lib.Types.SpecialLocation where
+module Lib.Types.GateInfo where
 
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Types.SpecialLocation
 
-data SpecialLocation = SpecialLocation
-  { id :: Id SpecialLocation,
-    locationName :: Text,
-    category :: Text,
-    merchantOperatingCityId :: Maybe Text,
-    gates :: [GatesInfo], --TODO: deprecate this later
-    createdAt :: UTCTime
+data GateInfoFull = GateInfoFull
+  { id :: Id GateInfo,
+    specialLocationId :: Id SpecialLocation,
+    defaultDriverExtra :: Maybe Int,
+    point :: LatLong,
+    name :: Text,
+    address :: Maybe Text,
+    geoJson :: Maybe Text,
+    canQueueUpOnGate :: Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-data GatesInfo = GatesInfo
-  { point :: LatLong,
+data GateInfo = GateInfo
+  { id :: Id GateInfo,
+    point :: LatLong,
+    specialLocationId :: Id SpecialLocation,
+    defaultDriverExtra :: Maybe Int,
     name :: Text,
-    address :: Maybe String
+    address :: Maybe Text,
+    createdAt :: UTCTime,
+    canQueueUpOnGate :: Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

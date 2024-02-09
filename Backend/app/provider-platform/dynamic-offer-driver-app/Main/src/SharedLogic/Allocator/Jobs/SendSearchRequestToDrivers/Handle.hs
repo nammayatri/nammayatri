@@ -53,29 +53,29 @@ data Handle m = Handle
     isScheduledBooking :: Bool
   }
 
-handler :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
+handler :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)
 handler h@Handle {..} goHomeCfg = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
-  measuringDuration (\ms (_, _) -> metrics.putTaskDuration ms) $ do
+  measuringDuration (\ms (_, _, _) -> metrics.putTaskDuration ms) $ do
     isSearchTryValid' <- isSearchTryValid
     if not isSearchTryValid' || not isBookingValid
       then do
         logInfo "Search request is either assigned, cancelled or expired."
-        return (Complete, False)
+        return (Complete, NormalPool, Nothing)
       else do
         isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
         if isReceivedMaxDriverQuotes'
           then do
             logInfo "Received enough quotes from drivers."
-            return (Complete, False)
+            return (Complete, NormalPool, Nothing)
           else processRequestSending h goHomeCfg
 
-processRequestSending :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
+processRequestSending :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, PoolType, Maybe Seconds)
 processRequestSending Handle {..} goHomeCfg = do
   mLastProcTime <- setBatchDurationLock
   case mLastProcTime of
-    Just lastProcTime -> ReSchedule <$> createRescheduleTime lastProcTime <&> (,False)
+    Just lastProcTime -> ReSchedule <$> createRescheduleTime lastProcTime <&> (,NormalPool,Nothing)
     Nothing -> do
       isBatchNumExceedLimit' <- isBatchNumExceedLimit
       if isBatchNumExceedLimit'
@@ -83,15 +83,15 @@ processRequestSending Handle {..} goHomeCfg = do
           if isScheduledBooking
             then do
               initiateDriverSearchBatch
-              return (Complete, False)
+              return (Complete, NormalPool, Nothing)
             else do
               metrics.incrementFailedTaskCounter
               logInfo "No driver accepted"
               cancelSearchTry
               cancelBookingIfApplies
-              return (Complete, False)
+              return (Complete, NormalPool, Nothing)
         else do
           driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
           when (not $ null driverPoolWithFlags.driverPoolWithActualDistResult) $
             sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
-          ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.isGoHomeBatch)
+          ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)

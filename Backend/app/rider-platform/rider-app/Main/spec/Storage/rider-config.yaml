@@ -16,6 +16,7 @@ RiderConfig:
     safetyCheckStartTime: Seconds
     safetyCheckEndTime: Seconds
     trackingShortUrlPattern: Text
+    specialZoneRadius: Int
     appUrl: Text
     collectAutoCompleteData: Maybe Bool
 
@@ -32,6 +33,7 @@ RiderConfig:
     safetyCheckStartTime: "75600"
     safetyCheckEndTime: "21600"
     trackingShortUrlPattern: "'nammayatri.in/t/'"
+    specialZoneRadius: "150"
 
   queries:
     findByMerchantOperatingCityId:
