@@ -772,6 +772,7 @@ data ScreenOutput = LogoutUser
                   | Go_To_Search_Location_Flow HomeScreenState Boolean
                   | RideSearchSO
                   | ConfirmRentalRideSO HomeScreenState
+                  | StayInHomeScreenSO HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -942,8 +943,15 @@ data Action = NoAction
             | GoToFollowRide 
             | ShowEndOTP
             | RentalInfoAction PopUpModal.Action
+            | IntercitySpecialZone PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+eval (IntercitySpecialZone PopUpModal.DismissPopup) state = continue state
+
+eval (IntercitySpecialZone PopUpModal.OnButton1Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false}}
+
+eval (IntercitySpecialZone PopUpModal.OnButton2Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false}}
+
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
   continue state 
     { props 
@@ -2679,7 +2687,7 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
   case tag of 
     "RENTALS" -> exit $ GoToRentalsFlow state
-    "INTER_CITY" -> continue state{props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
+    "INTER_CITY" -> continue state{data{rideType = RideType.INTERCITY, source=(getString CURRENT_LOCATION)}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}}
     -- exit $ Go_To_Search_Location_Flow state false
     _ -> continue state
   

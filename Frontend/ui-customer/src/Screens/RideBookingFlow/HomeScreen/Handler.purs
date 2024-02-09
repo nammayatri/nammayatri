@@ -215,3 +215,6 @@ homeScreen = do
     ConfirmRentalRideSO state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.NoBack <$> (pure $ CONFIRM_RENTAL_RIDE)
+    StayInHomeScreenSO state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
+      App.BackT $ App.NoBack <$> (pure $ STAY_IN_HOME_SCREEN)

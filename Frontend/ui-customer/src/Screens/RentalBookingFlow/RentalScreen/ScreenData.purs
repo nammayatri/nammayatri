@@ -66,5 +66,6 @@ initData =
     , showRateCard : false
     , showShimmer : true
     , showPrimaryButton : true
+    , showPopUpModal : false
     }
   }

@@ -315,6 +315,7 @@ initData = {
     , rideDurationTimerId : ""
     , stopLoc : Nothing
     , showRentalInfo : false
+    , showIntercityUnserviceablePopUp : false
     }
 }
 

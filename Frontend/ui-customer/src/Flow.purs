@@ -487,6 +487,9 @@ homeScreenFlow = do
   let _ = spy "insside homescreenflow" "sdfkjsdghfjgguiweukbj "
   flow <- UI.homeScreen
   case flow of
+    STAY_IN_HOME_SCREEN -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
+      homeScreenFlow
     GO_TO_SEARCH_LOCATION_SCREEN state isSource-> do 
       { currentLoc, sourceLoc, destLoc, address, destAddress } <- fetchSrcAndDestLoc state
       (GlobalState globalState) <- getState
@@ -524,6 +527,7 @@ homeScreenFlow = do
         modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{fromHomeScreen = updateProfile , updateProfile = updateProfile, changeAccessibility = true, isBtnEnabled = true , genderOptionExpanded = false , showOptions = false, expandEnabled = true }})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES updatedState -> do
+      let _ = spy "dsjfhlaskhdlfasdjhfklsahjdfjasdlfhdwalkjhsdlfasjhfklsda" updatedState
       if updatedState.data.source == getString STR.CURRENT_LOCATION then do
         PlaceName address <- getPlaceName updatedState.props.sourceLat updatedState.props.sourceLong HomeScreenData.dummyLocation
         modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing } })
@@ -533,19 +537,32 @@ homeScreenFlow = do
       let state = globalState.homeScreen
       liftFlowBT $  logEventWithTwoParams logField_ "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong) ORIGIN
-      if (not sourceServiceabilityResp.serviceable) then do
-        updateLocalStage SearchLocationModel
-        setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen ,rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false, city = getCityNameFromCode sourceServiceabilityResp.city }})
-        modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{props{focussedTextField = Just SearchLocPickup, locUnserviceable = true}, data{locationList = globalState.globalProps.cachedSearches}})
-        searchLocationFlow
+      if (not sourceServiceabilityResp.serviceable || (state.data.rideType == RideType.INTERCITY && isJust sourceServiceabilityResp.specialLocation)) then do
+          -- updateLocalStage SearchLocationModel
+          -- setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
+          -- modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen ,rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false, city = getCityNameFromCode sourceServiceabilityResp.city }})
+          -- modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{props{focussedTextField = Just SearchLocPickup, locUnserviceable = true}, data{locationList = globalState.globalProps.cachedSearches}})
+          -- searchLocationFlow
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{showIntercityUnserviceablePopUp = true}})
+          homeScreenFlow
         -- homeScreenFlow
         else pure unit
       let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
           currentDate =  getCurrentDate ""
       void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong))},
                                           {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
-      (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress)
+      (ServiceabilityRes sourceServiceabilityRespDest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.destinationLat state.props.destinationLong) DESTINATION -- TODO-codex : Refactor
+      let _ = spy "safasfa" sourceServiceabilityRespDest
+          _ = spy (fromMaybe "" sourceServiceabilityRespDest.currentCity) (fromMaybe "1" sourceServiceabilityResp.currentCity)
+      when (isJust sourceServiceabilityResp.specialLocation && (fromMaybe "1" sourceServiceabilityResp.currentCity) /= (fromMaybe "" sourceServiceabilityRespDest.currentCity)) do
+        -- updateLocalStage SearchLocationModel
+        -- setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{showIntercityUnserviceablePopUp = true}})
+        -- modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{props{focussedTextField = Just SearchLocPickup, locUnserviceable = true}, data{locationList = globalState.globalProps.cachedSearches}})
+        homeScreenFlow
+        -- searchLocationFlow
+      let startTimeUTC = if (state.data.rideType == RideType.INTERCITY) then Just state.data.startTimeUTC else Nothing
+      (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC)
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
       case rideSearchRes.routeInfo of
         Just (Route response) -> do
@@ -565,6 +582,10 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0, isShorterTrip = false}})
             homeScreenFlow
             else if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false ) [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) then do 
+              let _ = spy "jhksgfksadghkjfjds" state
+              when (isJust sourceServiceabilityResp.specialLocation) do
+                modifyScreenState $ HomeScreenStateType (\_ -> state)
+                homeScreenFlow
               let currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
               updateLocalStage currentStage
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = currentStage ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance, isShorterTrip = response.distance < 500, findingQuotesProgress = 0.0}})
@@ -1704,7 +1725,8 @@ rideSearchFlow flowType = do
               currentDate =  getCurrentDate ""
           void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show finalState.props.sourceLat) <> " long: " <> (show finalState.props.sourceLong))},
                                               {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
-          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress)
+          let startTimeUTC = if (finalState.data.rideType == RideType.INTERCITY) then Just finalState.data.startTimeUTC else Nothing
+          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress startTimeUTC)
           void $ liftFlowBT $ setFlowStatusData 
             ( FlowStatusData 
               { source : 
@@ -3764,7 +3786,8 @@ rideSearchFlowV2 = do
   let slsState = globalState.searchLocationScreen
       {currLat, currLon} = {currLat : fromMaybe 0.0 slsState.data.currentLoc.lat, currLon : fromMaybe 0.0 slsState.data.currentLoc.lon}
       {srcLat, srcLon, srcAddressComponents , srcAddress , srcCity, destLat, destLon, destAddressComponents, destAddress, destCity} = getSrcAndDestLoc slsState
-  (SearchRes rideSearchRes) <- Remote.rideSearchBT $ Remote.makeRideSearchReq srcLat srcLon destLat destLon srcAddressComponents destAddressComponents
+  -- let startTimeUTC = if (state.data.rideType == RideType.INTERCITY) then Just state.data.startTimeUTC else Nothing
+  (SearchRes rideSearchRes) <- Remote.rideSearchBT $ Remote.makeRideSearchReq srcLat srcLon destLat destLon srcAddressComponents destAddressComponents Nothing -- startTimeUTC
   let _ = spy "inside rideSearchFlowV2" rideSearchRes
   routeResponse <- Remote.drawMapRoute srcLat srcLon destLat destLon (Remote.normalRoute "") "NORMAL" srcAddress destAddress rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
   case rideSearchRes.routeInfo of 
@@ -3976,16 +3999,23 @@ rentalScreenFlow = do
     RentalScreenController.DoRentalSearch state -> do
       let _ = spy "Inside DoRentalSearch" state
       let dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.dropLoc
-      PlaceName address <- getPlaceName (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon) HomeScreenData.dummyLocation
-      PlaceName destAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation
-      let currentTime = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 60 -- TODO-codex :: Delay, need to check if this is the correct way
-          isTimeAheadOfCurrent = unsafePerformEffect $ runEffectFn2 compareDate (state.data.startTimeUTC) currentTime
-          newState = if state.data.startTimeUTC == "" || not isTimeAheadOfCurrent then state {data {startTimeUTC = currentTime}} else state
-      (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat) (fromMaybe 0.0 newState.data.pickUpLoc.lon) (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) (encodeAddress address.formattedAddress [] Nothing) (encodeAddress destAddress.formattedAddress [] Nothing) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
-      -- (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat)  (fromMaybe 0.0 newState.data.pickUpLoc.lon) 0.0 0.0 (encodeAddress address.formattedAddress [] Nothing) (encodeAddress destAddress.formattedAddress [] Nothing) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
-      modifyScreenState $ RentalScreenStateType (\rentalScreen -> state{data{searchId = rideSearchRes.searchId, currentStage = RENTAL_SELECT_VARIANT}})
-      (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ ->do 
-        rentalScreenFlow)
+          pickupLoc = state.data.pickUpLoc
+      (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) ORIGIN
+      if (isJust sourceServiceabilityResp.specialLocation) then do
+        -- void $ pure $ toast $ "Rental Booking Not Allowed from this location" -- TODO-codex : Translations
+        modifyScreenState $ RentalScreenStateType (\_ -> state {data {currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true, showPopUpModal = true}})
+        rentalScreenFlow 
+      else do
+        PlaceName address <- getPlaceName (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon) HomeScreenData.dummyLocation
+        PlaceName destAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation
+        let currentTime = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 60 -- TODO-codex :: Delay, need to check if this is the correct way
+            isTimeAheadOfCurrent = unsafePerformEffect $ runEffectFn2 compareDate (state.data.startTimeUTC) currentTime
+            newState = if state.data.startTimeUTC == "" || not isTimeAheadOfCurrent then state {data {startTimeUTC = currentTime}} else state
+        (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat) (fromMaybe 0.0 newState.data.pickUpLoc.lon) (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) (encodeAddress address.formattedAddress [] Nothing) (encodeAddress destAddress.formattedAddress [] Nothing) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
+        -- (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat)  (fromMaybe 0.0 newState.data.pickUpLoc.lon) 0.0 0.0 (encodeAddress address.formattedAddress [] Nothing) (encodeAddress destAddress.formattedAddress [] Nothing) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
+        modifyScreenState $ RentalScreenStateType (\rentalScreen -> state{data{searchId = rideSearchRes.searchId, currentStage = RENTAL_SELECT_VARIANT}})
+        (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ ->do 
+          rentalScreenFlow)
     RentalScreenController.GoToHomeScreen -> do 
       updateRideScheduledTime ""
       homeScreenFlow

@@ -21,7 +21,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig, cancelRidePopUpConfig)
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (Action(..), ScreenOutput, eval)
@@ -83,6 +83,7 @@ view push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
+    , onBackPressed push $ const GoBack
     ]
     ([ linearLayout
       [ height WRAP_CONTENT
@@ -93,7 +94,7 @@ view push state =
     , scrollView
       [ height $ V $ (EHC.screenHeight unit) - 60
       , width MATCH_PARENT
-      , margin $ MarginTop 60
+      , margin $ MarginVertical 60 60
       ][linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -142,12 +143,12 @@ scheduledDetailsView push state =
 primaryButtonView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 primaryButtonView push state =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , weight 0.0
     , gravity BOTTOM
     , margin (MarginBottom 24)
+    , alignParentBottom "true,-1"
     ]
     [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
     ]

@@ -233,6 +233,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_SEARCH_LOCATION_SCREEN HomeScreenState Boolean
                         | GO_TO_RIDE_SEARCH_FLOW 
                         | CONFIRM_RENTAL_RIDE
+                        | STAY_IN_HOME_SCREEN
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

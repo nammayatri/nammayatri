@@ -965,6 +965,7 @@ type HomeScreenStateProps =
   , rideDurationTimerId :: String
   , showRentalInfo :: Boolean
   , maxDateBooking :: Int
+  , showIntercityUnserviceablePopUp :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -2167,6 +2168,7 @@ type RentalScreenProps = {
   , showRateCard :: Boolean
   , showShimmer :: Boolean
   , showPrimaryButton :: Boolean
+  , showPopUpModal :: Boolean
 }
 
 type DateTimeConfig = {

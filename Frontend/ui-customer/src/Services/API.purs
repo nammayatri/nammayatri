@@ -484,7 +484,8 @@ data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest Ren
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
   destination :: SearchReqLocation,
-  isReallocationEnabled :: Maybe Boolean
+  isReallocationEnabled :: Maybe Boolean,
+  startTimeUTC :: Maybe String
 }
 
 newtype SearchReqLocation = SearchReqLocation {
@@ -1694,7 +1695,8 @@ newtype ServiceabilityRes = ServiceabilityRes
   { serviceable :: Boolean,
     geoJson :: Maybe String,
     specialLocation :: Maybe SpecialLocation,
-    city :: Maybe String 
+    city :: Maybe String,
+    currentCity :: Maybe String
   }
 
 newtype ServiceabilityResDestination = ServiceabilityResDestination

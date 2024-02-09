@@ -49,6 +49,7 @@ import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
+import Helpers.CommonView (emptyTextView)
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -111,11 +112,11 @@ view push state =
       backPressView state push =
        linearLayout
         [ height WRAP_CONTENT
-        , width MATCH_PARENT
+        , width $ if state.headerVisibility then MATCH_PARENT else WRAP_CONTENT
         , disableClickFeedback true
         , margin (Margin 5 17 0 0)
         , gravity CENTER
-        , padding (Padding 4 4 16 4)
+        , padding (Padding 4 4 4 4)
         , cornerRadius 20.0
         ][ imageView
           [ height $ V 23
@@ -129,7 +130,7 @@ view push state =
           ]
         , textView  $
           [ text $ state.headerText
-          , visibility $ boolToVisibility $ state.headerVisibility
+          , visibility $ state.suffixButtonVisibility
           , color Color.white900  
           , margin $ MarginLeft 8
           ] <> (FontStyle.subHeading2 LanguageStyle)
@@ -148,6 +149,7 @@ view push state =
           , width WRAP_CONTENT
           , layoutGravity "right"
           , orientation HORIZONTAL
+          , margin $ MarginRight 12
           , visibility config.suffixButtonVisibility
           ]
           [ linearLayout
@@ -259,8 +261,8 @@ sourceDestinationImageView state =
   linearLayout
     [ height WRAP_CONTENT
     , width $ V 20
-    , margin $ Margin 4 9 8 0
-    , padding $ PaddingLeft 16
+    , margin $ Margin (if state.headerVisibility then 24 else 4) 9 8 0
+    -- , padding $ PaddingLeft 16
     , orientation VERTICAL
     , gravity CENTER
     ][ linearLayout

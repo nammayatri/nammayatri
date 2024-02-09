@@ -38,7 +38,7 @@ import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookin
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback)
-import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, rentalRateCardConfig)
+import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, rentalRateCardConfig, locUnserviceablePopUpConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval)
 import Screens.Types (RentalScreenState, RentalScreenStage(..), RentalQuoteList)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
@@ -54,6 +54,10 @@ import Data.Lens ((^.))
 import Accessor
 import Mobility.Prelude
 import Helpers.Utils(fetchAndUpdateCurrentLocation)
+import PrestoDOM.Animation as PrestoAnim
+import Animation.Config (translateFullYAnimWithDurationConfig)
+import Animation (translateYAnimFromTop, fadeInWithDelay)
+import Components.PopUpModal.View as PopUpModal
 
 rentalScreen :: RentalScreenState -> Screen Action RentalScreenState ScreenOutput
 rentalScreen initialState =
@@ -70,7 +74,7 @@ rentalScreen initialState =
 
   where 
     getEstimateEvent push = do 
-      when (null initialState.data.rentalsQuoteList && initialState.data.currentStage == RENTAL_SELECT_VARIANT) $ do 
+      when (null initialState.data.rentalsQuoteList) $ do 
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ getRentalQuotes GetRentalQuotes CheckFlowStatusAction 10 1000.0 push initialState
         pure unit
       pure $ pure unit
@@ -88,6 +92,7 @@ view push state =
     ] $
     [ getRentalScreenView push state
     ] <> if state.props.showRateCard then [RateCard.view (push <<< RateCardAC) (rentalRateCardConfig state)] else []
+      <> if state.props.showPopUpModal then [locUnserviceableView push state] else []
 
 getRentalScreenView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 getRentalScreenView push state = 
@@ -222,7 +227,7 @@ rentalVariantSelectionView push state =
           , margin $ MarginBottom 32
           , orientation VERTICAL
           ]
-          [ if spy "Inside rentalsQuoteLIst" (null state.data.rentalsQuoteList) && state.props.showShimmer then shimmerChooseVehicleView push state
+          [ if (null state.data.rentalsQuoteList) && state.props.showShimmer then shimmerChooseVehicleView push state
             else if null state.data.rentalsQuoteList then noQuotesErrorModel state 
             else chooseVehicleView push state
           ]
@@ -245,6 +250,7 @@ chooseVehicleView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
+    , orientation VERTICAL
     ]
     ( map 
       ( \quote ->
@@ -461,3 +467,14 @@ noQuotesErrorModel state =
         ] <> FontStyle.paragraphText TypoGraphy
     ]
     ]
+
+locUnserviceableView :: forall w. (Action -> Effect Unit) -> RentalScreenState ->  PrestoDOM (Effect Unit) w
+locUnserviceableView push state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER 
+    , background Color.blackLessTrans
+    ][ PrestoAnim.animationSet
+        [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  $ 
+        PopUpModal.view (push <<< PopUpModalAC) (locUnserviceablePopUpConfig state) ]

@@ -13,7 +13,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.InputView as InputViewController
 import Components.MenuButton as MenuButtonController
 import Components.SavedLocationCard as SavedLocationCardController
-import Components.PopUpModal as PopUpModalController
+import Components.PopUpModal.Controller as PopUpModalController
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick)
@@ -84,7 +84,7 @@ eval (MapReady _ _ _) state = do
     ]
     else continue state
 
-eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = continue state{props{locUnserviceable = false, isSpecialZone = false}}
+eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = updateAndExit state{props{locUnserviceable = false, isSpecialZone = false}} $ HomeScreen state
 
 eval (MenuButtonAC (MenuButtonController.OnClick config)) state = do 
   continueWithCmd state{data{defaultGate = config.id}} [do

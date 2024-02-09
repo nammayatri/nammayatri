@@ -60,12 +60,15 @@ data Action
   | CancelRidePopUpAction CancelRidePopUp.Action
   | GetBookingList RideBookingListRes
   | CheckFlowStatusAction
+  | GoBack
 
 data ScreenOutput = GoToHomeScreen 
                   | GoToSearchLocationScreen RideScheduledScreenState
                   | CancelRentalRide RideScheduledScreenState
 
 eval :: Action -> RideScheduledScreenState -> Eval Action ScreenOutput RideScheduledScreenState
+
+eval GoBack state = exit $ GoToHomeScreen
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit $ GoToHomeScreen
 

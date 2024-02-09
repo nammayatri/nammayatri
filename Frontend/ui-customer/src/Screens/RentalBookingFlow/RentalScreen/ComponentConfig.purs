@@ -20,6 +20,7 @@ import Components.GenericHeader as GenericHeader
 import Components.IncrementDecrementModel.Controller as IncrementDecrement
 import Components.InputView as InputView
 import Components.PrimaryButton as PrimaryButton
+import Components.PopUpModal as PopUpModal
 import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
 import Data.Array ((!!), singleton, null)
@@ -38,6 +39,7 @@ import Data.String
 import JBridge 
 import Data.Int (fromString)
 import Debug (spy)
+import PrestoDOM.Types.DomAttributes as PTD
 
 primaryButtonConfig :: RentalScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -261,6 +263,43 @@ rentalRateCardConfig _ =
         }
   in rentalRateCardConfig'
 
+locUnserviceablePopUpConfig :: RentalScreenState -> PopUpModal.Config
+locUnserviceablePopUpConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = (MarginHorizontal 16 16),
+    buttonLayoutMargin = (Margin 0 16 16 0),
+    editTextVisibility = GONE,
+    dismissPopupConfig {
+      visibility = GONE
+      },
+    primaryText {
+      text = (getString LOCATION_UNSERVICEABLE), 
+      gravity = CENTER,
+      margin = MarginTop 16
+      },
+    secondaryText { 
+      text = "Locations within special zone are not eligible for rental rides", -- TODO-codex : Add Translation
+      margin = MarginTop 4
+      },
+    option1 {
+      visibility = false
+      },
+    option2 { 
+      text = (getString GOT_IT),
+      padding = (Padding 16 0 16 0)
+    },
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_unavailable"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 24
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+  }
+  in popUpConfig'
 
 separatorConfig :: SeparatorView.Config
 separatorConfig = 

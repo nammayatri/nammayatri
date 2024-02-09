@@ -26,6 +26,7 @@ import Components.GenericHeader.Controller as GenericHeaderController
 import Components.IncrementDecrementModel.Controller as IncrementDecrementModelController
 import Components.InputView.Controller as InputViewController
 import Components.PrimaryButton.Controller as PrimaryButtonController
+import Components.PopUpModal.Controller as PopUpModalController
 import Components.RateCard.Controller as RateCardController
 import Data.Array as DA
 import Data.Eq.Generic (genericEq)
@@ -86,6 +87,7 @@ data Action =
   | CheckFlowStatusAction 
   | GetRideConfirmation RideBookingRes
   | UpdateLocAndLatLong String String
+  | PopUpModalAC PopUpModalController.Action
 
 data ScreenOutput = NoScreen
                   | GoToHomeScreen
@@ -103,6 +105,8 @@ instance showFareBreakupRowType :: Show FareBreakupRowType where show = genericS
 instance eqFareBreakupRowType :: Eq FareBreakupRowType where eq = genericEq
 
 eval :: Action -> RentalScreenState -> Eval Action ScreenOutput RentalScreenState
+
+eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = continue state {props{showPopUpModal = false}}
 
 eval (UpdateLocAndLatLong lat lon) state =
   if fromMaybe 0.0 state.data.pickUpLoc.lat == 0.0 then continue state{data{pickUpLoc{lat = fromString lat, lon = fromString lon}}}
@@ -198,7 +202,7 @@ eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFoc
   case state.data.currentStage of
     RENTAL_SELECT_PACKAGE -> exit $ SearchLocationForRentals state id
     RENTAL_SELECT_VARIANT -> 
-      if (id == "DateAndTime") then continueWithCmd state{data{currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true}} 
+      if (id == "DateAndTime") then continueWithCmd state{data{currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props{showPrimaryButton = true}} 
         [ do 
           push <- getPushFn Nothing "RentalScreen"
           _ <- launchAff $ showDateTimePicker push DateTimePickerAction
