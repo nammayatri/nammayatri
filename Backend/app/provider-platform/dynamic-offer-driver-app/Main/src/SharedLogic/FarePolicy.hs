@@ -109,11 +109,11 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
       driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption . (mkValue . show . (.getMoney)) <$> driverMaxExtraFee
 
       nightShiftStart = nightShiftBounds <&> (.nightShiftStart)
-      nightShiftStartCaption = "night_shift_start"
+      nightShiftStartCaption = "NIGHT_SHIFT_START_TIME"
       nightShiftStartItem = mkBreakupItem nightShiftStartCaption . (mkValue . show) <$> nightShiftStart
 
       nightShiftEnd = nightShiftBounds <&> (.nightShiftEnd)
-      nightShiftEndCaption = "night_shift_end"
+      nightShiftEndCaption = "NIGHT_SHIFT_END_TIME"
       nightShiftEndItem = mkBreakupItem nightShiftEndCaption . (mkValue . show) <$> nightShiftEnd
 
       additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
