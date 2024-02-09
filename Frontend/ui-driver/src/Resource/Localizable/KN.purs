@@ -1258,3 +1258,4 @@ getKN stringKey =
         YOU_ARE_ON_A_RENTAL_RIDE -> "ನೀವು ರೆಂಟಲ್ ಸವಾರಿಯಲ್ಲಿದ್ದೀರಿ"
         ENTER_END_RIDE_OTP -> "ಸವಾರಿ ಮುಗಿಸಲು ಒಟಿಪಿ ನಮೂದಿಸಿ"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "ನೀವು ನಿಲ್ದಾಣ ಸ್ಥಳದಲ್ಲಿ ಇಲ್ಲ"
+        ARRIVED_AT_STOP -> "ನಿಲ್ದಾಣದಲ್ಲಿ ಬಂದಿದ್ದೇನೆ"

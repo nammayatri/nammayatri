@@ -1258,3 +1258,4 @@ getHI stringKey =
         RIDE_TIME -> "सवारी का समय"
         ENTER_END_RIDE_OTP -> "सवारी समाप्त करने के लिए ओटीपी दर्ज करें"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "आप स्टॉप स्थान पर नहीं हैं"
+        ARRIVED_AT_STOP -> "स्टॉप पर पहुंच गए"

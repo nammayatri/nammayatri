@@ -1017,7 +1017,7 @@ arrivedStopView push state =
   [ textView $
     [ width $ V $ (screenWidth unit) - 100 
     , height (V 50)
-    , text "Arrived At Stop"
+    , text (getString ARRIVED_AT_STOP)
     , color Color.white900
     , padding (Padding 0 0 0 4)
     , onClick push (const $ ArrivedAtStop)

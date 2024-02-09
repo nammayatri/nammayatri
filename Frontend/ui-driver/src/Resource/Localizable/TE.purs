@@ -1258,3 +1258,4 @@ getTE stringKey =
         CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "కస్టమర్ భద్రత<br>మా బాధ్యత. సురక్షితమైన మరియు<br>సంతోషకరమైన ప్రయాణాన్ని నిర్ధారిద్దాం"
         OUR_SAFETY_PARTNER -> "మా భద్రతా భాగస్వామి"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "మీరు స్టాప్ లో ఉన్నారు"
+        ARRIVED_AT_STOP -> "స్టాప్ లో చేరింది"

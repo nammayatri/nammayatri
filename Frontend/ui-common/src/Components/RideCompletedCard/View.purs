@@ -752,7 +752,7 @@ rentalRideInfoView push config =
         [ height WRAP_CONTENT
         , margin $ MarginBottom 16
         , width MATCH_PARENT
-        , text $ ("ODOMETER READING") <> ": "
+        , text $ (config.rentalRideTextConfig.odometerReading) <> ": "
         , visibility if config.isDriver then VISIBLE else GONE
         , color Color.black700 
         ] <> FontStyle.body2 TypoGraphy

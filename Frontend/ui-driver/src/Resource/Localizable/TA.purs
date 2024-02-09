@@ -1258,4 +1258,5 @@ getTA stringKey =
         YOU_ARE_ON_A_RENTAL_RIDE -> "நீங்கள் வாடகை சவாரியில் உள்ளீர்கள்"
         ENTER_END_RIDE_OTP -> "சவாரி முடிவு OTP ஐ உள்ளிடவும்"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "நீங்கள் நிறுத்த இடத்தில் இல்லை"
+        ARRIVED_AT_STOP -> "நிறுத்தம் வந்துவிட்டது"
 
