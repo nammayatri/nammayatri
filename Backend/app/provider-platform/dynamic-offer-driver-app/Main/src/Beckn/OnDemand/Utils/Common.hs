@@ -616,5 +616,12 @@ buildAddressFromText fullAddress = do
       locality_ = Just $ splitedAddress List.!! 3
       state_ = Just $ splitedAddress List.!! 5
       street_ = Just $ splitedAddress List.!! 2
-      ward_ = Just $ T.intercalate ", " $ catMaybes [door_, building_, locality_]
-  pure $ OS.Address {area_code = area_code_, building = building_, city = city_, country = country_, door = door_, locality = locality_, state = state_, street = street_, ward = ward_}
+      door = replaceEmpty door_
+      building = replaceEmpty building_
+      locality = replaceEmpty locality_
+      ward_ = Just $ T.intercalate ", " $ catMaybes [door, building, locality]
+      ward = if ward_ == Just "" then city_ else ward_
+  pure $ OS.Address {area_code = area_code_, building = building_, city = city_, country = country_, door = door_, locality = locality_, state = state_, street = street_, ward = ward}
+
+replaceEmpty :: Maybe Text -> Maybe Text
+replaceEmpty string = if string == Just "" then Nothing else string
