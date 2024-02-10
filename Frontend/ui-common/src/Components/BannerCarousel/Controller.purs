@@ -76,7 +76,8 @@ type Config a = {
   actionTextCornerRadius :: String,
   actionIconVisibility :: Boolean,
   actionImageUrl :: String,
-  actionImageVisibility :: Boolean
+  actionImageVisibility :: Boolean,
+  actionArrowIconVisibility :: Boolean
 }
 
 config :: forall a. a -> Config a
@@ -91,7 +92,7 @@ config action = {
     imageWidth : (V 118),
     isBanner : true,
     actionTextStyle : ParagraphText,
-    titleStyle : Body7,
+    titleStyle : Body4,
     showActionArrow : true,
     alertText : "",
     alertTextColor : Color.darkGreen,
@@ -106,11 +107,12 @@ config action = {
     "type" : Gender,
     actionIconUrl : "",
     actionTextBackgroundColour : "",
-    actionTextCornerRadius : "",
+    actionTextCornerRadius : if os == "IOS" then "15.0" else "50.0",
     actionIconVisibility : false,
     actionImageUrl : "",
     showImageAsCTA : false,
-    actionImageVisibility : false
+    actionImageVisibility : false,
+    actionArrowIconVisibility : true
 }
 
 
@@ -132,7 +134,8 @@ type PropConfig = (
   actionTextCornerRadius :: PropValue,
   actionIconVisibility :: PropValue,
   actionImageUrl :: PropValue,
-  actionImageVisibility :: PropValue
+  actionImageVisibility :: PropValue,
+  actionArrowIconVisibility :: PropValue
 )
 
 
@@ -156,7 +159,8 @@ bannerTransformer = map (
   actionTextCornerRadius : toPropValue item.actionTextCornerRadius,
   actionIconVisibility : toPropValue $ if item.actionIconVisibility then "visible" else "gone",
   actionImageUrl : toPropValue item.actionImageUrl,
-  actionImageVisibility : toPropValue $ if item.actionImageVisibility then "visible" else "gone"
+  actionImageVisibility : toPropValue $ if item.actionImageVisibility then "visible" else "gone",
+  actionArrowIconVisibility : toPropValue $ if item.actionArrowIconVisibility then "visible" else "gone"
   }
 )
 
@@ -181,6 +185,7 @@ remoteConfigTransformer remoteConfig action =
         actionImageUrl = remoteConfig.cta_image_url,
         showImageAsCTA = not $ DS.null remoteConfig.cta_image_url,
         actionImageVisibility = not $ DS.null remoteConfig.cta_image_url,
-        actionTextVisibility = DS.null remoteConfig.cta_image_url 
+        actionTextVisibility = DS.null remoteConfig.cta_image_url ,
+        actionArrowIconVisibility = DS.null remoteConfig.cta_image_url
       }
     in config'') remoteConfig
