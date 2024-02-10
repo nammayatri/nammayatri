@@ -72,7 +72,6 @@ module Domain.Action.UI.Driver
 where
 
 import AWS.S3 as S3
-import qualified Client.Main as CM
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.Aeson as DA
@@ -152,6 +151,7 @@ import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
+import SharedLogic.Cac
 import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
@@ -169,7 +169,6 @@ import qualified Storage.CachedQueries.FareProduct as CQFP
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchantOpCity
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -462,25 +461,13 @@ getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
-  city <- (QMerchantOpCity.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)) <&> (.city)
-  frntndfgs <- getFrontendConfigs city
+  frntndfgs <- getFrontendConfigs merchantOpCityId mbToss
   let mbMd5Digest = (T.pack . show . MD5.md5 . DA.encode) <$> frntndfgs
   merchant <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
   makeDriverInformationRes merchantOpCityId driverEntity merchant driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest
-  where
-    getFrontendConfigs city = do
-      ghcCond <- liftIO $ CM.hashMapToString $ HM.fromList [(T.pack "city", (DA.String . T.pack . show) city)]
-      contextValue <- case mbToss of
-        Just toss -> liftIO $ CM.evalExperiment "atlas_driver_ui" ghcCond toss
-        Nothing -> liftIO $ CM.evalCtx "atlas_driver_ui" ghcCond
-      case contextValue of
-        Left err -> do
-          logError $ "Error in getting frontend configs: " <> show err
-          return Nothing
-        Right cfgs -> return $ Just cfgs
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
