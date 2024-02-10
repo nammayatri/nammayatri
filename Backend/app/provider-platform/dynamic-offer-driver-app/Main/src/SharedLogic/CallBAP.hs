@@ -33,10 +33,12 @@ module SharedLogic.CallBAP
 where
 
 import qualified AWS.S3 as S3
+import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
@@ -159,6 +161,24 @@ callOnStatusV2 req retryConfig = do
   let authKey = getHttpManagerKey bppSubscriberId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+  
+callOnCancelV2 ::
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    MonadFlow m,
+    CoreMetrics m,
+    HasHttpClientOptions r c
+  ) =>
+  Spec.OnCancelReq ->
+  RetryCfg ->
+  m ()
+callOnCancelV2 req retryConfig = do
+  bapUri' <- req.onCancelReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
+  bapUri <- parseBaseUrl bapUri'
+  bppSubscriberId <- req.onCancelReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
+  let authKey = getHttpManagerKey bppSubscriberId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
+
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -378,17 +398,10 @@ sendBookingCancelledUpdateToBAP ::
   SRBCR.CancellationSource ->
   m ()
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
-  mbRide <- QRide.findOneByBookingId booking.id
-  bookingDetails <- case mbRide of
-    Just ride -> do
-      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-      return $ Just ACL.BookingDetails {..}
-    Nothing -> return Nothing
-  let bookingCancelledBuildReq = ACL.BookingCancelledReq ACL.DBookingCancelledReq {..}
+  let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  bookingCancelledMsgV2 <- ACL.buildOnStatusReqV2 transporter booking bookingCancelledBuildReq
-  void $ callOnStatusV2 bookingCancelledMsgV2 retryConfig
+  bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry bookingCancelledBuildReqV2
+  void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

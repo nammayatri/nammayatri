@@ -105,6 +105,7 @@ library
       Beckn.ACL.Common.Order
       Beckn.ACL.Confirm
       Beckn.ACL.Init
+      Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
       Beckn.ACL.OnSearch
@@ -126,6 +127,7 @@ library
       Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Utils.Common
       Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.OnCancel
       Beckn.OnDemand.Utils.OnInit
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.OnUpdate
@@ -276,6 +278,7 @@ library
       Domain.Types.Message.MessageTranslation
       Domain.Types.MetaData
       Domain.Types.Notification
+      Domain.Types.OnCancel
       Domain.Types.OnUpdate
       Domain.Types.Person
       Domain.Types.Plan
