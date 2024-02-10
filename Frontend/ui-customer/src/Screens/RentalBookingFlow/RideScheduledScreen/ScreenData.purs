@@ -1,5 +1,6 @@
 module Screens.RentalBookingFlow.RideScheduledScreen.ScreenData where
 
+import Common.Types.App (RideType(..))
 import Data.Maybe (Maybe(..))
 import Screens.Types (RideScheduledScreenState)
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
@@ -18,7 +19,9 @@ initData =
     , baseDistance : ""
     , bookingId : ""
     , cancellationReasons : []
-    , config : getAppConfig appConfig}
+    , config : getAppConfig appConfig
+    , rideType : NORMAL_RIDE
+    }
   , props : {
       isCancelRide : false
     , cancelRideActiveIndex : Nothing

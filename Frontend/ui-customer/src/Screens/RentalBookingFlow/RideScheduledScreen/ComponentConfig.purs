@@ -16,6 +16,7 @@
 module Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig where
 
 import Prelude
+import Common.Types.App (RideType(..)) as RideType
 import Components.GenericHeader.Controller as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.SeparatorView.View as SeparatorView
@@ -89,7 +90,7 @@ sourceToDestinationConfig state =
       , destinationTextConfig
           { text = maybe (getString ADD_FIRST_STOP) (\dest -> dest.address) state.data.destination
           , color = maybe (Color.blue800) (\_ -> Color.black800) state.data.destination
-          , isEditable = true
+          , isEditable = state.data.rideType == RideType.RENTAL_RIDE
           , textStyle = ParagraphText
           , ellipsize = true
           , maxLines = 1

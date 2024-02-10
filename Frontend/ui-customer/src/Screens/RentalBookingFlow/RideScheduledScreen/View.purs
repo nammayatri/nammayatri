@@ -3,6 +3,7 @@ module Screens.RentalBookingFlow.RideScheduledScreen.View where
 import Prelude
 
 import Common.Types.App (LazyCheck(..))
+import Common.Types.App (RideType(..)) as RideType
 import Components.GenericHeader.View as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination.View as SourceToDestinationView
@@ -32,6 +33,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Helpers.CommonView (dummyView)
 import Types.App (GlobalState, defaultGlobalState)
+import Mobility.Prelude (boolToVisibility)
 
 rideScheduledScreen :: RideScheduledScreenState -> Screen Action RideScheduledScreenState ScreenOutput
 rideScheduledScreen initialState =
@@ -94,7 +96,7 @@ view push state =
     , scrollView
       [ height $ V $ (EHC.screenHeight unit) - 60
       , width MATCH_PARENT
-      , margin $ MarginVertical 60 60
+      , margin $ MarginVertical 60 80
       ][linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -173,6 +175,7 @@ rideDetailsView push state =
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , margin $ MarginTop 7
+        , visibility $ boolToVisibility $ state.data.rideType == RideType.RENTAL_RIDE
         ]
         [ textView $
             [ textSize FontSize.a_12
@@ -313,7 +316,7 @@ cancelBookingView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenSta
 cancelBookingView push state =
   textView $
   [ width MATCH_PARENT
-  , textFromHtml $ "<u>" <> getString CANCEL_RENTAL_BOOKING <> "</u>"
+  , textFromHtml $ "<u>" <> if state.data.rideType == RideType.RENTAL_RIDE then getString CANCEL_RENTAL_BOOKING else "Cancel Intercity Booking" <> "</u>"
   , color Color.black700
   , onClick push $ const CancelRide
   , gravity CENTER_HORIZONTAL

@@ -398,10 +398,10 @@ rentalBannerConfig state =
       , imageHeight = V 43
       , imageWidth = V 66
       , imagePadding = PaddingVertical 0 0
-      , title = "Rental booking on " <> (maybe "" (\rentalsInfo -> -- TODO-codex : translation
+      , title = "Rental booking " <> (maybe "" (\rentalsInfo -> -- TODO-codex : translation
                                                       let timeUTC = rentalsInfo.rideScheduledAtUTC
                                                           currentUTC = EHC.getCurrentUTC ""
-                                                          date = if EHC.convertUTCtoISC timeUTC "Do" == EHC.convertUTCtoISC currentUTC "Do" then "" else EHC.convertUTCtoISC timeUTC "ddd" <> ", "
+                                                          date = if EHC.convertUTCtoISC timeUTC "Do" == EHC.convertUTCtoISC currentUTC "Do" then "at " else "on " <>  EHC.convertUTCtoISC timeUTC "ddd" <> ", "
                                                       in date <> EHC.convertUTCtoISC timeUTC "hh" <> ":" <> EHC.convertUTCtoISC timeUTC "mm" <> " " <> EHC.convertUTCtoISC timeUTC "A"
                                                   ) state.data.rentalsInfo)
       , titleColor = Color.blue800

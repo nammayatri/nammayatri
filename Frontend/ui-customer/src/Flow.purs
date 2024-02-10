@@ -554,6 +554,8 @@ homeScreenFlow = do
       (ServiceabilityRes sourceServiceabilityRespDest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.destinationLat state.props.destinationLong) DESTINATION -- TODO-codex : Refactor
       let _ = spy "safasfa" sourceServiceabilityRespDest
           _ = spy (fromMaybe "" sourceServiceabilityRespDest.currentCity) (fromMaybe "1" sourceServiceabilityResp.currentCity)
+          isIntercity = (fromMaybe "1" sourceServiceabilityResp.currentCity) /= (fromMaybe "" sourceServiceabilityRespDest.currentCity)
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{rideType = if isIntercity then RideType.INTERCITY else RideType.NORMAL_RIDE}})
       when (isJust sourceServiceabilityResp.specialLocation && (fromMaybe "1" sourceServiceabilityResp.currentCity) /= (fromMaybe "" sourceServiceabilityRespDest.currentCity)) do
         -- updateLocalStage SearchLocationModel
         -- setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
@@ -828,15 +830,23 @@ homeScreenFlow = do
         case response of
           Right (ConfirmRes resp) -> do
             let bookingId = resp.bookingId
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> 
-              homeScreen
-                { props
-                    { currentStage = currentStage
-                    , bookingId = bookingId
-                    , isPopUp = NoPopUp
-                    }
-                })
-            homeScreenFlow
+            if currentStage == ConfirmingQuotes then do
+              let diffInSeconds = unsafePerformEffect $ EHC.compareUTCDate (maybe (getCurrentUTC "") (\x -> x.rideScheduledAtUTC) (state.data.rentalsInfo)) (getCurrentUTC "" )
+                  isNow = true
+                  -- Backend-Fix : Intercity schedule
+                  -- isNow = ((fromMaybe 0 (INT.fromString diffInSeconds ))< 60 * 30 * 1000)
+              if isNow then enterRentalRideSearchFlow bookingId
+              else rideScheduledFlow
+            else do
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> 
+                homeScreen
+                  { props
+                      { currentStage = currentStage
+                      , bookingId = bookingId
+                      , isPopUp = NoPopUp
+                      }
+                  })
+              homeScreenFlow
           Left err  -> do
             if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") 
             then pure $ toast (getString STR.ERROR_OCCURED_TRY_AGAIN) 
@@ -3327,16 +3337,22 @@ rideScheduledFlow = do
                                             Left _ -> pure dummyRideBooking
   let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
       (RideBookingDetails contents) = bookingDetails.contents
+      rideType = case bookingDetails.fareProductType of
+                            "RENTAL" -> RideType.RENTAL_RIDE
+                            "INTER_CITY" -> RideType.INTERCITY
+                            _ -> RideType.NORMAL_RIDE
   config <- getAppConfigFlowBT appConfig
   modifyScreenState $ RideScheduledScreenStateType (\rideScheduledScreen -> rideScheduledScreen{data{config = config}})
   action <- lift $ lift $ runScreen $ UI.rideScheduledScreen currentState.rideScheduledScreen { data
               { source = SearchLocationScreenData.dummyLocationInfo { lat = Just (resp.fromLocation ^._lat) , lon = Just (resp.fromLocation ^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking resp.fromLocation, address = decodeAddress (Booking resp.fromLocation)}
-              , destination = maybe (Nothing) (\toLocation -> Just $ SearchLocationScreenData.dummyLocationInfo {lat = Just (toLocation^._lat), lon = Just (toLocation^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking toLocation, address = decodeAddress (Booking toLocation)}) contents.stopLocation
+              , destination = maybe (Nothing) (\toLocation -> Just $ SearchLocationScreenData.dummyLocationInfo {lat = Just (toLocation^._lat), lon = Just (toLocation^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking toLocation, address = decodeAddress (Booking toLocation)}) $ if rideType == RideType.INTERCITY then contents.toLocation else contents.stopLocation
               , startTime = fromMaybe "" resp.rideScheduledTime
               , finalPrice = show resp.estimatedTotalFare
               , baseDuration = show $ (fromMaybe 7200 resp.estimatedDuration)/3600
               , baseDistance = show $ (fromMaybe 20000 resp.estimatedDistance)/1000
-              , bookingId = resp.id}
+              , bookingId = resp.id
+              , rideType = rideType
+              }
               , props{driverAllocationTime = "15" } -- TODO-codex : Need to get the driver allocation time from the API 
               }
   

@@ -1905,6 +1905,7 @@ type RideScheduledScreenData = {
   , bookingId :: String
   , cancellationReasons :: Array OptionButtonList
   , config :: AppConfig
+  , rideType :: RideType
 }
 
 type RideScheduledScreenProps = {
