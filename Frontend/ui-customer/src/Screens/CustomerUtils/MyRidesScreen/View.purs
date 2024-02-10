@@ -168,7 +168,7 @@ ridesView listItemm push state =
                     true -> GONE
         , PrestoList.listItem listItemm
         , background Color.white900
-        , PrestoList.listDataV2 $ (DA.filter (\item -> (item.status) == toPropValue("COMPLETED") || (item.status) == toPropValue("CANCELLED")) state.prestoListArrayItems)
+        , PrestoList.listDataV2 $ (DA.filter (\item -> (item.status) == toPropValue("COMPLETED") || (item.status) == toPropValue("CANCELLED") || item.status == toPropValue("REALLOCATED")) state.prestoListArrayItems)
         ]
       , Tuple "NoRides"
         $ linearLayout

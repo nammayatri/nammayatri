@@ -1709,8 +1709,6 @@ eval (SearchExpireCountDown seconds status timerID) state = do
     if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }, customerTip{enableTips = enableTips}} }
       else do
         _ <- pure $ clearTimerWithId timerID
-        let tipViewData = HomeScreenData.initData.props.tipViewProps
-        _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
         continue state { props { searchExpire = (getSearchExpiryTime "LazyCheck") ,timerId = timerID , tipViewProps {isVisible = false}} }
 
 eval CancelSearch state = case state.props.currentStage of
