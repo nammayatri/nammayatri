@@ -48,6 +48,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -84,7 +85,6 @@ data ProviderInfo = ProviderInfo
   { providerId :: Text,
     name :: Text,
     url :: BaseUrl,
-    domain :: Text,
     mobileNumber :: Text,
     ridesCompleted :: Int
   }
@@ -227,7 +227,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         BppDetails
           { id,
             subscriberId = providerInfo.providerId,
-            domain = providerInfo.domain,
+            domain = show Domain.MOBILITY,
             name = providerInfo.name,
             logoUrl = Nothing, -- TODO: Parse this from on_search req
             description = Nothing, -- TODO: Parse this from on_search req

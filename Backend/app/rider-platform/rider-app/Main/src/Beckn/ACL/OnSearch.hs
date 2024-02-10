@@ -98,7 +98,6 @@ searchCbService context catalog = do
           { providerId = providerId,
             name = provider.descriptor.name,
             url = providerUrl,
-            domain = encodeToText context.domain,
             mobileNumber = "", ----------TODO----------Need to remove it or make it maybe in db
             ridesCompleted = 0 ----------TODO----------Need to remove it or make it maybe in db
           }
