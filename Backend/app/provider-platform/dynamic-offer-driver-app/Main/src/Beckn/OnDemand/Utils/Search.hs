@@ -14,9 +14,9 @@
 
 module Beckn.OnDemand.Utils.Search where
 
-import Beckn.ACL.Common (getTagV2)
 import Beckn.OnDemand.Utils.Common (firstStop, lastStop)
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.Utils as Utils
 import Control.Lens
 import Data.Aeson
 import qualified Data.Text as T
@@ -79,7 +79,7 @@ getDistance req = do
       >>= (.intentFulfillment)
       >>= (.fulfillmentTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
-  let tagValue = getTagV2 "route_info" "distance_info_in_m" tagGroups
+  let tagValue = Utils.getTagV2 "route_info" "distance_info_in_m" tagGroups
   return $ tagValue >>= readMaybe . T.unpack >>= Just . Meters
 
 getDuration :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Seconds)
@@ -89,7 +89,7 @@ getDuration req = do
       >>= (.intentFulfillment)
       >>= (.fulfillmentTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
-  let tagValue = getTagV2 "route_info" "duration_info_in_s" tagGroups
+  let tagValue = Utils.getTagV2 "route_info" "duration_info_in_s" tagGroups
   return $ tagValue >>= readMaybe . T.unpack >>= Just . Seconds
 
 buildCustomerLanguage :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Language)
@@ -101,7 +101,7 @@ buildCustomerLanguage req = do
       >>= (.customerPerson)
       >>= (.personTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
-  let tagValue = getTagV2 "customer_info" "customer_language" tagGroups
+  let tagValue = Utils.getTagV2 "customer_info" "customer_language" tagGroups
   return $ tagValue >>= readMaybe . T.unpack >>= Just
 
 buildDisabilityTag :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Text)
@@ -113,7 +113,7 @@ buildDisabilityTag req = do
       >>= (.customerPerson)
       >>= (.personTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
-  let tagValue = getTagV2 "customer_info" "customer_disability" tagGroups
+  let tagValue = Utils.getTagV2 "customer_info" "customer_disability" tagGroups
   return tagValue
 
 buildCustomerPhoneNumber :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Text)
@@ -125,7 +125,7 @@ buildCustomerPhoneNumber req = do
       >>= (.customerPerson)
       >>= (.personTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
-  let tagValue = getTagV2 "customer_info" "customer_phone_number" tagGroups
+  let tagValue = Utils.getTagV2 "customer_info" "customer_phone_number" tagGroups
   return tagValue
 
 -- customerPerson <- req ^? (ix "searchReqMessageIntent" . key "intentFulfillment" . key "fulfillmentCustomer" . key "customerPerson" . key "tags") & fromMaybeM (InvalidRequest "Missing Fields")
@@ -137,7 +137,7 @@ getIsReallocationEnabled req = do
       >>= (.intentFulfillment)
       >>= (.fulfillmentTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
-  let tagValue = getTagV2 "reallocation_info" "is_reallocation_enabled" tagGroups
+  let tagValue = Utils.getTagV2 "reallocation_info" "is_reallocation_enabled" tagGroups
   return $ tagValue >>= readMaybe . T.unpack >>= Just
 
 buildRoutePoints :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe [Maps.LatLong])
@@ -147,4 +147,4 @@ buildRoutePoints req = do
       >>= (.intentFulfillment)
       >>= (.fulfillmentTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
-  return $ getTagV2 "route_info" "route_points" tagGroups >>= decode . encodeUtf8 >>= Just
+  return $ Utils.getTagV2 "route_info" "route_points" tagGroups >>= decode . encodeUtf8 >>= Just
