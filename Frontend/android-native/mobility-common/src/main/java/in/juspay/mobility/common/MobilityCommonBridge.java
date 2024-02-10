@@ -1598,7 +1598,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         polylineOptions.add(fromPointObj);
                     }
 
-                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0 && normalRoutedistance <= 50000) {
+                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
                         double destinationLat = rentalDestLat == 0.0 ? destLat : rentalDestLat;
                         double destinationLong = rentalDestLong == 0.0 ? destLong : rentalDestLong;
                         moveCameraV2(sourceLat, sourceLong, destinationLat, destinationLong, abc, purescriptId);
@@ -1703,16 +1703,12 @@ public class MobilityCommonBridge extends HyperBridge {
                         moveCamera(sourceLat, sourceLong, destLat, destLong, coordinates);
                     }
                     if (isActual) {
-//                        for (int i = coordinates.length() - 1; i >= 0; i--) {
-//                            JSONObject coordinate = (JSONObject) coordinates.get(i);
-//                            double lng = coordinate.getDouble("lng");
-//                            double lat = coordinate.getDouble("lat");
-//                            polylineOptions.add(new LatLng(lat, lng));
-//                        }
-                        LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
-                        LatLng toPointObj = new LatLng(destLat, destLong);
-                        polylineOptions.add(toPointObj);
-                        polylineOptions.add(fromPointObj);
+                        for (int i = coordinates.length() - 1; i >= 0; i--) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            polylineOptions.add(new LatLng(lat, lng));
+                        }
                     } else {
                         LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
                         LatLng toPointObj = new LatLng(destLat, destLong);

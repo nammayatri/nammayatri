@@ -30,7 +30,7 @@ import Screens (getScreen, ScreenName(..))
 import Helpers.Utils (performHapticFeedback)
 import Screens.Types (RideScheduledScreenState, City(..))
 import Resources.Constants (cancelReasons, dummyCancelReason)
-import JBridge (hideKeyboardOnNavigation)
+import JBridge (hideKeyboardOnNavigation, toast)
 import Services.API
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
@@ -62,21 +62,21 @@ data Action
   | CheckFlowStatusAction
   | GoBack
 
-data ScreenOutput = GoToHomeScreen 
+data ScreenOutput = GoToHomeScreen RideScheduledScreenState
                   | GoToSearchLocationScreen RideScheduledScreenState
                   | CancelRentalRide RideScheduledScreenState
 
 eval :: Action -> RideScheduledScreenState -> Eval Action ScreenOutput RideScheduledScreenState
 
-eval GoBack state = exit $ GoToHomeScreen
+eval GoBack state = exit $ GoToHomeScreen state
 
-eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit $ GoToHomeScreen
+eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit $ GoToHomeScreen state
 
 eval AddFirstStop state = exit $ GoToSearchLocationScreen state
 
 eval (SourceToDestinationAC (SourceToDestinationActionController.DestinationClicked)) state = exit $ GoToSearchLocationScreen state
 
-eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoToHomeScreen
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoToHomeScreen state
 
 eval CancelRide state = continue state{ props{isCancelRide = true}, data{cancellationReasons = cancelReasons ""}}
 
@@ -117,5 +117,9 @@ eval (GetBookingList resp) state =
       , bookingId = resp.id}
       , props{driverAllocationTime = "15" } -- TODO-codex : Need to get the driver allocation time from the API 
       }
+
+eval CheckFlowStatusAction state = do
+  void $ pure $ toast "No rides scheduled yet!" -- TODO-codex : Translation
+  continue state
 
 eval _ state = continue state

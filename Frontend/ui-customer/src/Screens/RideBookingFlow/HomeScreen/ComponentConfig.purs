@@ -398,7 +398,7 @@ rentalBannerConfig state =
       , imageHeight = V 43
       , imageWidth = V 66
       , imagePadding = PaddingVertical 0 0
-      , title = "Rental booking " <> (maybe "" (\rentalsInfo -> -- TODO-codex : translation
+      , title = "Ride Booking " <> (maybe "" (\rentalsInfo -> -- TODO-codex : translation
                                                       let timeUTC = rentalsInfo.rideScheduledAtUTC
                                                           currentUTC = EHC.getCurrentUTC ""
                                                           date = if EHC.convertUTCtoISC timeUTC "Do" == EHC.convertUTCtoISC currentUTC "Do" then "at " else "on " <>  EHC.convertUTCtoISC timeUTC "ddd" <> ", "

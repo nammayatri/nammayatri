@@ -335,12 +335,12 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> Maybe String -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTimeUTC=
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime=
     let appConfig = CP.getAppConfig CP.appConfig
     in  SearchReq { "contents" : OneWaySearchRequest (
                                         OneWaySearchReq{
-                                                  "startTime" : startTimeUTC,
+                                                  "startTime" : Just startTime,
                                                   "destination" : SearchReqLocation {
                                                            "gps" : LatLong {
                                                                "lat" : dlat ,

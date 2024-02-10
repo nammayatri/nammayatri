@@ -480,6 +480,7 @@ homeScreenFlow = do
   -- modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{previousCurrentLocations = resp}})
 
   -- TODO: HANDLE LOCATION LIST INITIALLY
+  updateRideScheduledTime ""
   _ <- pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
   let _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
@@ -563,7 +564,7 @@ homeScreenFlow = do
         -- modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{props{focussedTextField = Just SearchLocPickup, locUnserviceable = true}, data{locationList = globalState.globalProps.cachedSearches}})
         homeScreenFlow
         -- searchLocationFlow
-      let startTimeUTC = if (state.data.rideType == RideType.INTERCITY) then Just state.data.startTimeUTC else Nothing
+      let startTimeUTC = if (state.data.rideType == RideType.INTERCITY) then state.data.startTimeUTC else (getCurrentUTC "")
       (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC)
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
       case rideSearchRes.routeInfo of
@@ -831,7 +832,7 @@ homeScreenFlow = do
           Right (ConfirmRes resp) -> do
             let bookingId = resp.bookingId
             if currentStage == ConfirmingQuotes then do
-              let diffInSeconds = unsafePerformEffect $ EHC.compareUTCDate (state.data.startTimeUTC) (getCurrentUTC "" )
+              let diffInSeconds = unsafePerformEffect $ EHC.compareUTCDate (if state.data.startTimeUTC == "" then (getCurrentUTC "") else state.data.startTimeUTC) (getCurrentUTC "" )
                   -- isNow = true
                   -- Backend-Fix : Intercity schedule
                   isNow = ((fromMaybe 0 (INT.fromString diffInSeconds ))< 60 * 30 * 1000)
@@ -1030,7 +1031,7 @@ homeScreenFlow = do
                                       setValueToLocalStore PICKUP_DISTANCE "0"
                                       lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       updateUserInfoToState state
-                                      updateRideScheduledTime ""
+                                      -- updateRideScheduledTime ""
                                       _ <- pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
                                       permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
                                       permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
@@ -1735,7 +1736,7 @@ rideSearchFlow flowType = do
               currentDate =  getCurrentDate ""
           void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show finalState.props.sourceLat) <> " long: " <> (show finalState.props.sourceLong))},
                                               {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
-          let startTimeUTC = if (finalState.data.rideType == RideType.INTERCITY) then Just finalState.data.startTimeUTC else Nothing
+          let startTimeUTC = if (finalState.data.rideType == RideType.INTERCITY) then finalState.data.startTimeUTC else (getCurrentUTC "")
           (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress startTimeUTC)
           void $ liftFlowBT $ setFlowStatusData 
             ( FlowStatusData 
@@ -3360,8 +3361,11 @@ rideScheduledFlow = do
     RideScheduledScreenOutput.CancelRentalRide state -> do 
       void $ Remote.cancelRideBT (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
       homeScreenFlow 
-    RideScheduledScreenOutput.GoToHomeScreen -> do 
-      updateRideScheduledTime ""
+    RideScheduledScreenOutput.GoToHomeScreen state -> do 
+      when (state.data.bookingId == "") do 
+        updateLocalStage HomeScreen
+        modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
+      -- updateRideScheduledTime ""
       homeScreenFlow
     RideScheduledScreenOutput.GoToSearchLocationScreen updatedState -> do
       modifyScreenState $ RideScheduledScreenStateType (\_ -> updatedState)
@@ -3803,7 +3807,7 @@ rideSearchFlowV2 = do
       {currLat, currLon} = {currLat : fromMaybe 0.0 slsState.data.currentLoc.lat, currLon : fromMaybe 0.0 slsState.data.currentLoc.lon}
       {srcLat, srcLon, srcAddressComponents , srcAddress , srcCity, destLat, destLon, destAddressComponents, destAddress, destCity} = getSrcAndDestLoc slsState
   -- let startTimeUTC = if (state.data.rideType == RideType.INTERCITY) then Just state.data.startTimeUTC else Nothing
-  (SearchRes rideSearchRes) <- Remote.rideSearchBT $ Remote.makeRideSearchReq srcLat srcLon destLat destLon srcAddressComponents destAddressComponents Nothing -- startTimeUTC
+  (SearchRes rideSearchRes) <- Remote.rideSearchBT $ Remote.makeRideSearchReq srcLat srcLon destLat destLon srcAddressComponents destAddressComponents (getCurrentUTC "") -- startTimeUTC
   let _ = spy "inside rideSearchFlowV2" rideSearchRes
   routeResponse <- Remote.drawMapRoute srcLat srcLon destLat destLon (Remote.normalRoute "") "NORMAL" srcAddress destAddress rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
   case rideSearchRes.routeInfo of 
@@ -4033,7 +4037,7 @@ rentalScreenFlow = do
         (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ ->do 
           rentalScreenFlow)
     RentalScreenController.GoToHomeScreen -> do 
-      updateRideScheduledTime ""
+      -- updateRideScheduledTime ""
       homeScreenFlow
     RentalScreenController.SearchLocationForRentals updatedState locToBeUpdated -> do 
       let locToBeUpdated' = case locToBeUpdated of 
@@ -4158,9 +4162,10 @@ updateRideScheduledTime _ = do
     Right (RideBookingListRes listResp) -> do 
       case (head listResp.list) of 
         Just (RideBookingRes resp )-> do 
-          if (resp.bookingDetails ^._fareProductType == "RENTAL") then do 
+          let fareProductType = resp.bookingDetails ^._fareProductType
+          if (any (_ == fareProductType) ["RENTAL", "INTER_CITY"]) then do 
             let rideScheduledTime = fromMaybe "" resp.rideScheduledTime
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id } }})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id}}})
             pure unit 
             else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = Nothing}})
           pure unit

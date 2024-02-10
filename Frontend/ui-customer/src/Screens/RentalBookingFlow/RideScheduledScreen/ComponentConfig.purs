@@ -93,7 +93,7 @@ sourceToDestinationConfig state =
           , isEditable = state.data.rideType == RideType.RENTAL_RIDE
           , textStyle = ParagraphText
           , ellipsize = true
-          , maxLines = 1
+          , maxLines = if (state.data.rideType == RideType.RENTAL_RIDE) then 2 else 1
           , margin = MarginLeft 12
           , isClickable = true
           }
@@ -104,7 +104,7 @@ sourceToDestinationConfig state =
     sourceToDestinationConfig'
 
 genericHeaderConfig :: RideScheduledScreenState -> GenericHeader.Config
-genericHeaderConfig _ = let
+genericHeaderConfig state = let
   config = GenericHeader.config
   genericHeaderConfig' = config
     {
@@ -118,7 +118,7 @@ genericHeaderConfig _ = let
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {
-        text = "Rental Ride"
+        text = if state.data.rideType == RideType.RENTAL_RIDE then "Rental Ride" else "Intercity Booking"
       , color = Color.black800
       }
     , suffixImageConfig {

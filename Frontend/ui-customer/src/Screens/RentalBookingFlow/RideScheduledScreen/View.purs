@@ -49,13 +49,12 @@ rideScheduledScreen initialState =
   }
   where
     getBookingListEvent push = do
-      when (initialState.data.bookingId == "") do
-        void $ launchAff $ EHC.flowRunner defaultGlobalState $ getBookingList GetBookingList CheckFlowStatusAction 10 1000.0 push initialState
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ getBookingList GetBookingList CheckFlowStatusAction 10 1000.0 push initialState
       pure $ pure unit
 
     getBookingList :: forall action. (RideBookingListRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> RideScheduledScreenState -> Flow GlobalState Unit
     getBookingList action flowStatusAction count duration push state = do
-      if(count > 0) then do
+      if(count > 0 && state.data.bookingId == "") then do
         resp <- Remote.rideBookingListWithStatus "1" "0" "CONFIRMED"
         case resp of
           Right response -> do
@@ -212,6 +211,7 @@ rideDetailsView push state =
         , margin $ MarginLeft 28
         , color Color.blue800
         , onClick push $ const $ AddFirstStop
+        , visibility $ boolToVisibility $ state.data.rideType == RideType.RENTAL_RIDE
         , text $ getString EDIT
         ] <> FontStyle.paragraphText TypoGraphy
 
