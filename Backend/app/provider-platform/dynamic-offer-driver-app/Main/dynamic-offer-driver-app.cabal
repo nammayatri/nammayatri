@@ -160,6 +160,7 @@ library
       Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
+      Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
       Domain.Action.UI.CancellationReason
@@ -313,6 +314,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+      SharedLogic.Cac
       SharedLogic.Beckn.Common
       SharedLogic.Booking
       SharedLogic.CallBAP
@@ -588,6 +590,7 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      API.Action.UI.Cac
       API.Action.UI.LmsModule
       API.Action.UI.Reels
       API.Action.UI.SpecialLocation
