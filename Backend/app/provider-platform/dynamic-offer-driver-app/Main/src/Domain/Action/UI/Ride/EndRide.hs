@@ -230,7 +230,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         case driverReq.endRideOtp of
           Just endRideOtp -> do
             unless ((Just endRideOtp) == rideOld.endOtp) $ throwError IncorrectOTP
-          Nothing -> throwError $ EndRideOtpRequired (show booking.tripCategory)
+          Nothing -> pure ()
+      -- throwError $ EndRideOtpRequired (show booking.tripCategory)
       uiDistanceCalculation rideOld.id driverReq.uiDistanceCalculationWithAccuracy driverReq.uiDistanceCalculationWithoutAccuracy
       case requestor.role of
         DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
