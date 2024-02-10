@@ -15,6 +15,7 @@
 module App where
 
 import qualified App.Server as App
+import Client.Main as CM
 import qualified Data.Text as T
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -56,6 +57,10 @@ import "utils" Utils.Common.Events as UE
 runRiderApp :: (AppCfg -> AppCfg) -> IO ()
 runRiderApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "rider-app"
+  _ <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  _ <- CM.runSuperPositionPolling appCfg.cacConfig.tenants
+  _ <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  _ <- CM.startCACPolling appCfg.cacConfig.tenants
   Metrics.serve (appCfg.metricsPort)
   runRiderApp' appCfg
 

@@ -58,12 +58,27 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
+import Numeric.Natural
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.Merchant as CM
 import Tools.Metrics
 import Tools.Streaming.Kafka
+
+data CacConfig = CacConfig
+  { host :: String,
+    interval :: Natural,
+    tenants :: [String]
+  }
+  deriving (Generic, FromDhall)
+
+data SuperPositionConfig = SuperPositionConfig
+  { host :: String,
+    interval :: Natural,
+    tenants :: [String]
+  }
+  deriving (Generic, FromDhall)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -127,7 +142,9 @@ data AppCfg = AppCfg
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
     _version :: Text,
-    hotSpotExpiry :: Seconds
+    hotSpotExpiry :: Seconds,
+    cacConfig :: CacConfig,
+    superPositionConfig :: SuperPositionConfig
   }
   deriving (Generic, FromDhall)
 
@@ -197,7 +214,9 @@ data AppEnv = AppEnv
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
     _version :: Text,
-    hotSpotExpiry :: Seconds
+    hotSpotExpiry :: Seconds,
+    cacConfig :: CacConfig,
+    superPositionConfig :: SuperPositionConfig
   }
   deriving (Generic)
 
