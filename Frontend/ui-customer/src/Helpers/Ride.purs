@@ -197,7 +197,7 @@ getFlowStatusData dummy =
     Left err -> Nothing
 
 showNightSafetyFlow :: Maybe Boolean -> Maybe String -> Maybe String -> Boolean
-showNightSafetyFlow hasNightIssue rideStartTime rideEndTime = not (fromMaybe true hasNightIssue) && (isNightRide rideStartTime || isNightRide rideEndTime)
+showNightSafetyFlow hasNightIssue rideStartTime rideEndTime = (isNightRide rideStartTime || isNightRide rideEndTime)
 
 isNightRide :: Maybe String -> Boolean
 isNightRide = maybe false (\time -> withinTimeRange "21:00:00" "06:00:00" $ convertUTCtoISC time "HH:mm:ss")

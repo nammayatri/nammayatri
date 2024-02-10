@@ -935,7 +935,7 @@ sosView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER
-                , padding $ PaddingVertical 6 6
+                , padding $ PaddingVertical 10 10
                 ]
                 [ imageView
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"

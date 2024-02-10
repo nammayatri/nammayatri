@@ -86,20 +86,22 @@ bannerView push config =
           , visibilityHolder "actionImageVisibility"
           ]  
           , linearLayout
-            [ height $ V 25
+            [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , visibility GONE
             , visibilityHolder "actionTextVisibility"
             , margin $ MarginTop 5
             , gravity CENTER_VERTICAL
-            , backgroundHolder "actionTextBackgroundColour"
             , cornerRadiusHolder "actionTextCornerRadius"
+            , backgroundHolder "actionTextBackgroundColour"
+            , padding $ Padding 10 4 10 4
             ]
             [ imageView
-                [ height $ V 10
-                , width $ V 15
+                [ height $ V 16
+                , width $ V 16
                 , imageUrlHolder "actionIconUrl"
                 , visibilityHolder "actionIconVisibility"
+                , margin $ MarginRight 4
                 ]
             , textView
                 $ [ height WRAP_CONTENT
@@ -119,6 +121,7 @@ bannerView push config =
                   , colorHolder "actionTextColor"
                   , padding $ PaddingBottom 3
                   , margin $ MarginLeft 5
+                  , visibilityHolder "actionArrowIconVisibility"
                   ]
                 <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
             ]

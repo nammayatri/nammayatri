@@ -51,9 +51,8 @@ instance loggableAction :: Loggable Action where
 
 data ScreenOutput
   = GoBack NammaSafetyScreenState
-  | PostEmergencySettings NammaSafetyScreenState
-  | GoToEmergencyContactScreen NammaSafetyScreenState
   | Refresh NammaSafetyScreenState
+  | GoToHomeScreen NammaSafetyScreenState
 
 data Action
   = BackPressed
@@ -65,9 +64,12 @@ data Action
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
 
-eval (BackPressed) state = 
-  if isNothing state.props.educationViewIndex then
-    exit $ GoBack state
+eval (BackPressed) state =
+  if isNothing state.props.educationViewIndex then do
+    let newState = state { props { fromDeepLink = false } }
+    case state.props.fromDeepLink of
+      true -> exit $ GoToHomeScreen newState
+      false -> exit $ GoBack newState
   else do
     void $ pure $ releaseYoutubeView unit
     continue state { props { educationViewIndex = Nothing } }
@@ -75,6 +77,7 @@ eval (BackPressed) state =
 eval (ChangeEducationViewIndex index) state = do
   let
     newState = state { props { educationViewIndex = Just index } }
+
     video = fromMaybe { videoId: "", title: "", coverImageUrl: "" } (state.data.videoList DA.!! index)
   void $ pure $ switchYoutubeVideo video.videoId
   continue newState

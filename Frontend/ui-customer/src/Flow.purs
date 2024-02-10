@@ -167,8 +167,8 @@ import Screens.NammaSafetyFlow.SafetySettingsScreen.Controller as SafetySettings
 import Screens.NammaSafetyFlow.SetupSafetySettingsScreen.Controller as SetupSafetySettingsScreen
 import Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller as ActivateSafetyScreen
 import Screens.NammaSafetyFlow.SosActiveScreen.Controller as SosActiveScreen
+import Screens.NammaSafetyFlow.SafetyEducationScreen.Controller as SafetyEducationScreen
 import Screens.NammaSafetyFlow.Components.SafetyUtils
-import Screens.NammaSafetyFlow.SafetyFlow (updateEmergencySettings, safetyEducationFlow)
 import RemoteConfig as RC
 import Engineering.Helpers.RippleCircles (clearMap)
 import Types.App
@@ -219,6 +219,13 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
           "lang" -> hideSplashAndCallFlow selectLanguageScreenFlow
           "tkts" -> hideSplashAndCallFlow placeListFlow
           "mt" -> hideSplashAndCallFlow metroTicketBookingFlow
+          "safety" -> hideSplashAndCallFlow safetySettingsFlow
+          "smd" -> do
+            modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen{props{confirmTestDrill = true}})
+            hideSplashAndCallFlow activateSafetyScreenFlow
+          "sedu" -> do
+            modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen{props{fromDeepLink = true}})
+            hideSplashAndCallFlow safetyEducationFlow
           _ -> if skipDefaultCase then pure unit else currentFlowStatus
         Nothing -> currentFlowStatus
     Nothing -> do
@@ -1474,7 +1481,6 @@ homeScreenFlow = do
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
     GO_TO_NAMMASAFETY state triggerSos showtestDrill -> do
       let rideId = currentState.homeScreen.data.driverInfoCardState.rideId
-          videoList = RC.safetyVideoConfigData (toLower $ getValueToLocalStore CUSTOMER_LOCATION) $ fetchLanguage $ getLanguageLocale languageKey
       modifyScreenState
         $ NammaSafetyScreenStateType
             ( \nammaSafetyScreen ->
@@ -1489,7 +1495,6 @@ homeScreenFlow = do
                   , data
                     { rideId = rideId
                     , vehicleDetails = currentState.homeScreen.data.driverInfoCardState.registrationNumber
-                    , videoList = videoList
                     }
                   }
             )
@@ -3821,3 +3826,46 @@ sosActiveFlow = do
     SosActiveScreen.GoToEducationScreen state -> safetyEducationFlow
     _ -> sosActiveFlow
   pure unit
+
+safetyEducationFlow :: FlowBT String Unit
+safetyEducationFlow = do
+  let videoList = RC.safetyVideoConfigData (DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION) $ fetchLanguage $ getLanguageLocale languageKey
+  modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { data { videoList = videoList}})
+  void $ pure $ cleverTapCustomEvent "ny_user_safety_learn_more_clicked"
+  flow <- UI.safetyEducationScreen
+  case flow of
+    SafetyEducationScreen.Refresh _ -> safetyEducationFlow
+    SafetyEducationScreen.GoToHomeScreen _ -> homeScreenFlow
+    _ -> safetyEducationFlow
+  pure unit
+
+updateEmergencySettings :: NammaSafetyScreenState -> FlowBT String Unit
+updateEmergencySettings state = do
+  let
+    req =
+      UpdateEmergencySettingsReq
+        { shareEmergencyContacts: Just state.data.shareToEmergencyContacts
+        , shareTripWithEmergencyContacts: Just state.data.shareTripWithEmergencyContacts
+        , nightSafetyChecks: Just state.data.nightSafetyChecks
+        , hasCompletedSafetySetup: Just $ not state.props.onRide
+        }
+
+    wasSetupAlreadyDone = state.data.hasCompletedSafetySetup
+  void $ lift $ lift $ Remote.updateEmergencySettings req
+  modifyScreenState $ NammaSafetyScreenStateType (\_ -> state { data { hasCompletedSafetySetup = not state.props.onRide } })
+  modifyScreenState
+    $ HomeScreenStateType
+        ( \homeScreen ->
+            homeScreen
+              { props
+                { sosBannerType = if not state.data.hasCompletedMockSafetyDrill 
+                                    then Just MOCK_DRILL_BANNER 
+                                    else Nothing
+                }
+              , data { settingSideBar { hasCompletedSafetySetup = true } }
+              }
+        )
+  if not state.props.onRide && not wasSetupAlreadyDone then
+    pure $ toast $ getString STR.NAMMA_SAFETY_IS_SET_UP
+  else
+    pure unit

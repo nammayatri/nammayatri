@@ -2,11 +2,12 @@ module Screens.RideBookingFlow.HomeScreen.BannerConfig where
 
 import Prelude
 
+import Common.Types.App (LazyCheck(..))
 import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Components.BannerCarousel as BannerCarousel
 import Data.Maybe (Maybe(..), isJust)
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, getAssetLink)
 import Language.Types (STR(..))
 import Screens.Types (City, HomeScreenState)
 import Screens.Types as ST
@@ -17,7 +18,6 @@ import Data.String (null, take, toLower)
 import Prelude (not, show, ($), (&&), (<>), (==))
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
-
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
@@ -79,18 +79,22 @@ sosSetupBannerConfig state action =
 
     bannerConfig =
       case state.props.sosBannerType of
-        Just ST.SETUP_BANNER -> {title: getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE, actionText: getString SETUP_NOW, image : "ny_ic_banner_sos"}
-        Just ST.MOCK_DRILL_BANNER -> {title: getString COMPLETE_YOUR_TEST_DRILL, actionText: getString TEST_DRILL, image : "ny_ic_mock_drill_banner"}
+        Just ST.SETUP_BANNER -> {title: getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE, actionText: getString SETUP_NOW, image : "ny_ic_banner_sos_red"}
+        Just ST.MOCK_DRILL_BANNER -> {title: getString COMPLETE_YOUR_TEST_DRILL, actionText: getString TEST_DRILL, image : "ny_ic_mock_drill_banner_red"}
         Nothing -> {title: "", actionText: "", image : ""}
 
     config' =
       config
-        { backgroundColor = Color.lightMintGreen
+        { backgroundColor = Color.red200
         , title = bannerConfig.title
-        , titleColor = Color.elfGreen
+        , titleColor = Color.darkRed
         , actionText = bannerConfig.actionText
-        , actionTextColor = Color.elfGreen
-        , imageUrl = fetchImage FF_ASSET bannerConfig.image
+        , actionTextColor = Color.white900
+        , actionTextBackgroundColour = Color.darkRed
+        , imageUrl = (getAssetLink FunctionCall) <> bannerConfig.image <> ".png"
+        , actionIconUrl = fetchImage FF_ASSET "ny_ic_shield_red"
+        , actionIconVisibility = true
+        , actionArrowIconVisibility = false
         , type = BannerCarousel.Safety
         }
   in
@@ -108,8 +112,8 @@ metroBannerConfig state action =
       , title = getString BOOK_METRO_WITH_NY_NOW
       , titleColor = Color.blue800
       , actionText = getString BOOK_NOW
-      , actionTextColor = Color.blue700
-      , actionTextCornerRadius = "12.0"
+      , actionTextBackgroundColour = Color.blue800
+      , actionTextColor = Color.white900
       , imageUrl = fetchImage FF_ASSET "ny_ic_metro_banner"
       , margin = MarginTop 0
       , imageHeight = V 100
