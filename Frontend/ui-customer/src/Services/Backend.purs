@@ -340,7 +340,7 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTimeUTC=
     let appConfig = CP.getAppConfig CP.appConfig
     in  SearchReq { "contents" : OneWaySearchRequest (
                                         OneWaySearchReq{
-                                                  "startTimeUTC" : startTimeUTC,
+                                                  "startTime" : startTimeUTC,
                                                   "destination" : SearchReqLocation {
                                                            "gps" : LatLong {
                                                                "lat" : dlat ,

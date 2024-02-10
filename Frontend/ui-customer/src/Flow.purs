@@ -831,10 +831,10 @@ homeScreenFlow = do
           Right (ConfirmRes resp) -> do
             let bookingId = resp.bookingId
             if currentStage == ConfirmingQuotes then do
-              let diffInSeconds = unsafePerformEffect $ EHC.compareUTCDate (maybe (getCurrentUTC "") (\x -> x.rideScheduledAtUTC) (state.data.rentalsInfo)) (getCurrentUTC "" )
-                  isNow = true
+              let diffInSeconds = unsafePerformEffect $ EHC.compareUTCDate (state.data.startTimeUTC) (getCurrentUTC "" )
+                  -- isNow = true
                   -- Backend-Fix : Intercity schedule
-                  -- isNow = ((fromMaybe 0 (INT.fromString diffInSeconds ))< 60 * 30 * 1000)
+                  isNow = ((fromMaybe 0 (INT.fromString diffInSeconds ))< 60 * 30 * 1000)
               if isNow then enterRentalRideSearchFlow bookingId
               else rideScheduledFlow
             else do

@@ -485,7 +485,7 @@ newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
   destination :: SearchReqLocation,
   isReallocationEnabled :: Maybe Boolean,
-  startTimeUTC :: Maybe String
+  startTime :: Maybe String
 }
 
 newtype SearchReqLocation = SearchReqLocation {
