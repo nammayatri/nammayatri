@@ -25,9 +25,12 @@ import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 
@@ -79,7 +82,8 @@ data QuoteAPIEntity = QuoteAPIEntity
     tripTerms :: [Text],
     quoteDetails :: QuoteAPIDetails,
     specialLocationTag :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    isValueAddNP :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -119,13 +123,15 @@ mkQuoteAPIDetails = \case
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity {..}
 
-makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
+makeQuoteAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Quote -> m QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} = do
-  QuoteAPIEntity
-    { agencyName = providerName,
-      agencyNumber = providerMobileNumber,
-      agencyCompletedRidesCount = providerCompletedRidesCount,
-      tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
-      quoteDetails = mkQuoteAPIDetails quoteDetails,
-      ..
-    }
+  isValueAddNP <- CQVAN.isValueAddNP providerId
+  return $
+    QuoteAPIEntity
+      { agencyName = providerName,
+        agencyNumber = providerMobileNumber,
+        agencyCompletedRidesCount = providerCompletedRidesCount,
+        tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
+        quoteDetails = mkQuoteAPIDetails quoteDetails,
+        ..
+      }
