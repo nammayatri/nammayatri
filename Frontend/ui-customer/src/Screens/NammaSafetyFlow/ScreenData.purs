@@ -62,6 +62,7 @@ initData =
       , educationViewIndex : Nothing
       , showCallPolice : false
       , shouldCallAutomatically : false
+      , fromDeepLink : false
       }
   }
 

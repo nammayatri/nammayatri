@@ -32,12 +32,9 @@ safetyEducationScreen = do
     GoBack updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ pure App.GoBack
-    PostEmergencySettings updatedState -> do
+    Refresh updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ act)
-    GoToEmergencyContactScreen updatedState -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ act)
-    Refresh updatedState -> do
+    GoToHomeScreen updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ act)
