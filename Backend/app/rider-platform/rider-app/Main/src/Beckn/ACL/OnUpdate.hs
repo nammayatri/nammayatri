@@ -26,6 +26,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified BecknV2.Utils as Utils
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
