@@ -115,6 +115,7 @@ dependencies:
   - singletons
   - singletons-th
   - regex-posix
+  - pureMD5
 
 ghc-options:
   - -fwrite-ide-info
@@ -148,6 +149,7 @@ library:
           - -j4
   dependencies:
     - mobility-core
+    - haskell-cac
     - beckn-spec
     - beckn-services
     - special-zone-a

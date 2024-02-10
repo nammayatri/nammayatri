@@ -245,6 +245,7 @@ library
       Domain.Types.WhiteListOrg
       Environment
       Lib.Mesh
+      SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.CallFRFSBPP
@@ -560,6 +561,7 @@ library
     , extra
     , filepath
     , geohash ==1.0.1
+    , haskell-cac
     , http-media
     , http-types
     , lens
@@ -571,6 +573,7 @@ library
     , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
+    , pureMD5
     , random
     , raw-strings-qq
     , record-dot-preprocessor
@@ -684,6 +687,7 @@ executable rider-app-exe
     , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
+    , pureMD5
     , random
     , raw-strings-qq
     , record-dot-preprocessor

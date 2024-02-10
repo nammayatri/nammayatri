@@ -44,6 +44,7 @@ import Tools.Auth
 type API =
   "profile"
     :> ( TokenAuth
+           :> QueryParam "toss" Int
            :> Get '[JSON] DProfile.ProfileRes
            :<|> TokenAuth
              :> ReqBody '[JSON] DProfile.UpdateProfileReq
@@ -74,8 +75,8 @@ handler =
     :<|> updateDefaultEmergencyNumbers
     :<|> getDefaultEmergencyNumbers
 
-getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.ProfileRes
-getPersonDetails = withFlowHandlerAPI . DProfile.getPersonDetails
+getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> FlowHandler DProfile.ProfileRes
+getPersonDetails (personId, merchantId) = withFlowHandlerAPI . DProfile.getPersonDetails (personId, merchantId)
 
 updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
 updatePerson (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId
