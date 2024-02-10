@@ -14,9 +14,9 @@
 
 module Beckn.OnDemand.Utils.OnSearch where
 
-import Beckn.ACL.Common (getTagV2)
 import Beckn.OnDemand.Utils.Common as Common
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.Utils as Utils
 import Control.Lens
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
@@ -149,64 +149,64 @@ buildNightShiftInfo item = do
 
 getNightShiftCharge :: [Spec.TagGroup] -> Maybe Money
 getNightShiftCharge tagGroup = do
-  tagValue <- getTagV2 "rate_card" "night_shift_charge" tagGroup
+  tagValue <- Utils.getTagV2 "rate_card" "night_shift_charge" tagGroup
   nightShiftCharge <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral nightShiftCharge
 
 getOldNightShiftCharge :: [Spec.TagGroup] -> Maybe DecimalValue
 getOldNightShiftCharge tagGroups = do
-  tagValue <- getTagV2 "rate_card" "old_night_shift_charge" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "old_night_shift_charge" tagGroups
   DecimalValue.valueFromString tagValue
 
 getNightShiftStart :: [Spec.TagGroup] -> Maybe TimeOfDay
 getNightShiftStart tagGroups = do
-  tagValue <- getTagV2 "rate_card" "night_shift_start" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "night_shift_start" tagGroups
   readMaybe $ T.unpack tagValue
 
 getNightShiftEnd :: [Spec.TagGroup] -> Maybe TimeOfDay
 getNightShiftEnd tagGroups = do
-  tagValue <- getTagV2 "rate_card" "night_shift_end" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "night_shift_end" tagGroups
   readMaybe $ T.unpack tagValue
 
 getRentalBaseFare :: [Spec.TagGroup] -> Maybe Money
 getRentalBaseFare tagGroups = do
-  tagValue <- getTagV2 "rate_card" "MIN_FARE" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "MIN_FARE" tagGroups
   baseFare <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral baseFare
 
 getRentalPerHourCharge :: [Spec.TagGroup] -> Maybe Money
 getRentalPerHourCharge tagGroups = do
-  tagValue <- getTagV2 "rate_card" "PER_HOUR_CHARGE" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "PER_HOUR_CHARGE" tagGroups
   perHourCharge <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral perHourCharge
 
 getRentalPerExtraMinRate :: [Spec.TagGroup] -> Maybe Money
 getRentalPerExtraMinRate tagGroups = do
-  tagValue <- getTagV2 "rate_card" "PER_MINUTE_CHARGE" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "PER_MINUTE_CHARGE" tagGroups
   perExtraMinRate <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral perExtraMinRate
 
 getRentalPerExtraKmRate :: [Spec.TagGroup] -> Maybe Money
 getRentalPerExtraKmRate tagGroups = do
-  tagValue <- getTagV2 "rate_card" "UNPLANNED_PER_KM_CHARGE" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "UNPLANNED_PER_KM_CHARGE" tagGroups
   perExtraKmRate <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral perExtraKmRate
 
 getRentalIncludedKmPerHr :: [Spec.TagGroup] -> Maybe Kilometers
 getRentalIncludedKmPerHr tagGroups = do
-  tagValue <- getTagV2 "rate_card" "PER_HOUR_DISTANCE_KM" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "PER_HOUR_DISTANCE_KM" tagGroups
   includedKmPerHr <- DecimalValue.valueFromString tagValue
   Just . Kilometers $ roundToIntegral includedKmPerHr
 
 getRentalPlannedPerKmRate :: [Spec.TagGroup] -> Maybe Money
 getRentalPlannedPerKmRate tagGroups = do
-  tagValue <- getTagV2 "rate_card" "PLANNED_PER_KM_CHARGE" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "PLANNED_PER_KM_CHARGE" tagGroups
   plannedPerKmRate <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral plannedPerKmRate
 
 buildWaitingChargeInfo' :: [Spec.TagGroup] -> Maybe Money
 buildWaitingChargeInfo' tagGroups = do
-  tagValue <- getTagV2 "rate_card" "waiting_charge_per_min" tagGroups
+  tagValue <- Utils.getTagV2 "rate_card" "waiting_charge_per_min" tagGroups
   waitingChargeValue <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral waitingChargeValue
 
@@ -232,4 +232,4 @@ makeLatLong location = do
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item = do
   itemTags <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tags")
-  return $ getTagV2 "general_info" "special_location_tag" itemTags
+  return $ Utils.getTagV2 "general_info" "special_location_tag" itemTags

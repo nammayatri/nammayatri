@@ -14,11 +14,12 @@
 
 module Beckn.ACL.Select (buildSelectReq, buildSelectReqV2) where
 
-import Beckn.ACL.Common (getTag, getTagV2)
+import Beckn.ACL.Common (getTag)
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Select
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.Select as DSelect
@@ -118,13 +119,13 @@ getCustomerExtraFee tagGroups = do
 
 getCustomerExtraFeeV2 :: [Spec.TagGroup] -> Maybe Money
 getCustomerExtraFeeV2 tagGroups = do
-  tagValue <- getTagV2 "customer_tip_info" "customer_tip" tagGroups
+  tagValue <- Utils.getTagV2 "customer_tip_info" "customer_tip" tagGroups
   customerExtraFee <- readMaybe $ T.unpack tagValue
   Just $ Money customerExtraFee
 
 getAutoAssignEnabledV2 :: [Spec.TagGroup] -> Maybe Bool
 getAutoAssignEnabledV2 tagGroups = do
-  tagValue <- getTagV2 "auto_assign_enabled" "auto_assign_enabled" tagGroups
+  tagValue <- Utils.getTagV2 "auto_assign_enabled" "auto_assign_enabled" tagGroups
   case tagValue of
     "True" -> Just True
     "False" -> Just False
