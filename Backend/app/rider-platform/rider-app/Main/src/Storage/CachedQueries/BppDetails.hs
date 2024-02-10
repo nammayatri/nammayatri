@@ -41,7 +41,7 @@ createIfNotPresent bppDetails = do
 
 findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => SubscriberId -> Context.Domain -> m (Maybe BppDetails)
 findBySubscriberIdAndDomain subscriberId domain = do
-  let domainText = encodeToText domain
+  let domainText = show domain
   findBySubscriberIdAndDomain' subscriberId domainText
 
 findBySubscriberIdAndDomain' :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => SubscriberId -> Domain -> m (Maybe BppDetails)
