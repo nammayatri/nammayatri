@@ -116,12 +116,13 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
     requestedVehicleVariant :: Variant.Variant,
     isTranslated :: Bool,
-    customerCancellationDues :: HighPrecMoney
+    customerCancellationDues :: HighPrecMoney,
+    isValueAddNP :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> Bool -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant isTranslated =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> Bool -> Bool -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant isTranslated isValueAddNP =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
