@@ -1,0 +1,12 @@
+imports:
+module: Cac
+types: {}
+apis:
+ # GET /driver/getUiConfigs
+  - GET:
+      endpoint: /driver/getUiConfigs
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        toss: Int
+      response:
+        type: "Data.Aeson.Object"

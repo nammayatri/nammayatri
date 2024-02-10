@@ -158,6 +158,7 @@ library
       Domain.Action.Internal.CustomerCancellationDues
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
+      Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
       Domain.Action.UI.CancellationReason
@@ -315,6 +316,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+      SharedLogic.Cac
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.DeleteDriver
@@ -586,6 +588,7 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      API.Action.UI.Cac
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
