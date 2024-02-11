@@ -188,14 +188,14 @@ let jobInfoMapx =
 let cacConfig =
         { host = "http://localhost:8080"
         , interval = 10
-        , tenants = [ "atlas_customer_ui" ]
+        , tenants = [ "dev", "test", "atlas_customer_ui" ]
         }
       : { host : Text, interval : Natural, tenants : List Text }
 
 let superPositionConfig =
         { host = "http://localhost:8080"
         , interval = 10
-        , tenants = [ "atlas_customer_ui" ]
+        , tenants = [ "dev", "test", "atlas_customer_ui" ]
         }
       : { host : Text, interval : Natural, tenants : List Text }
 

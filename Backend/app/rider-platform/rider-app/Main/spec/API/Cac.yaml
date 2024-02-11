@@ -1,0 +1,12 @@
+imports:
+module: Cac
+types: {}
+apis:
+ # GET /getUiConfigs
+  - GET:
+      endpoint: /getUiConfigs
+      auth: TokenAuth
+      mandatoryQuery:
+        toss: Int
+      response:
+        type: "Data.Aeson.Object"
