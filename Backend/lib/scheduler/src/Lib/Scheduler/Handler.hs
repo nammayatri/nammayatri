@@ -25,8 +25,11 @@ import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
+import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude hiding (mask, throwIO)
+import qualified Kernel.Storage.Beam.SystemConfigs as BeamSC
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Tools.Logging
 import Kernel.Tools.LoopGracefully (loopGracefully)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
@@ -51,7 +54,7 @@ data SchedulerHandle t = SchedulerHandle
     reScheduleOnError :: Text -> AnyJob t -> Int -> UTCTime -> SchedulerM ()
   }
 
-handler :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> SchedulerM ()
+handler :: forall t. (HasSchemaName BeamSC.SystemConfigsT, JobProcessor t, FromJSON t) => SchedulerHandle t -> SchedulerM ()
 handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
@@ -60,10 +63,13 @@ handler hnd = do
     DbBased -> loopGracefully $ replicate maxThreads (dbBasedHandlerLoop hnd runTask)
   where
     runTask :: AnyJob t -> SchedulerM ()
-    runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId) $ do
-      res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
-      registerExecutionResult hnd anyJob res
-      releaseLock parentJobId
+    runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> do
+      let jobType' = show (fromSing $ jobType jobInfo)
+      withDynamicLogLevel jobType' $
+        withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId <> "jobType = " <> jobType') $ do
+          res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+          registerExecutionResult hnd anyJob res
+          releaseLock parentJobId
 
 dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 dbBasedHandlerLoop hnd runTask = do
