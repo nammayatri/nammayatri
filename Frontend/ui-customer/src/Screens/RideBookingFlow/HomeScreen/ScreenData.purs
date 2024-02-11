@@ -30,6 +30,7 @@ import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map 
+import MerchantConfig.DefaultConfig as MRC
 
 initData :: HomeScreenState
 initData = {
@@ -61,6 +62,15 @@ initData = {
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
+    , currentCityConfig : MRC.defaultCityConfig
+    , iopState : {
+      filterFavProvider : false,
+      favProvider : "",
+      preferenceVisible : false,
+      chooseBwProvidersInfo : false,
+      selectedProvider : "",
+      providersQuoteList : []
+    }
     , rateCard : {
        additionalFare : 0,
        nightShiftMultiplier : 0.0,
@@ -113,6 +123,9 @@ initData = {
       , isBookingOption : false
       , pickUpCharges : 0
       , layoutMargin : Margin 0 0 0 0
+      , providerName : ""
+      , providerId : ""
+      , isOurQuote : true
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -298,6 +311,7 @@ initData = {
         referralStatus : NO_REFERRAL,
         referralCode : Nothing
       }
+    , bookingOptionsVisible : false
     }
 }
 

@@ -581,7 +581,7 @@ logOutPopUpModelConfig state =
           , dismissIconMargin = Margin 0 0 14 13
           , dismissIconVisibility = if isLocalStageOn ST.QuoteList then GONE else VISIBLE
           , backgroundClickable = true
-          , customerTipAvailable = true
+          , customerTipAvailable = state.data.selectedEstimatesObject.isOurQuote
           , fareEstimateText = getString FARE_ESTIMATE
           , tipSelectedText = getString TIP_SELECTED
           , fareEstimate = getValueToLocalStore FARE_ESTIMATE_DATA
@@ -606,7 +606,9 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP else getString SEARCH_AGAIN_WITH  <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex)) <>" "<> getString TIP
+            text =  if not state.data.selectedEstimatesObject.isOurQuote then getString SEARCH_AGAIN_WITH <> "NammaYatri"
+                    else if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP 
+                    else getString SEARCH_AGAIN_WITH  <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex)) <>" "<> getString TIP
           , width = MATCH_PARENT
           , color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
@@ -619,11 +621,24 @@ logOutPopUpModelConfig state =
           , background = Color.white900
           , strokeColor = Color.white900
           , margin = MarginTop 14
-          , padding = PaddingBottom $ getBottomMargin
+          -- , padding = PaddingBottom $ getBottomMargin --// need to handle
           , color = Color.black650
           , height = WRAP_CONTENT
           },
-          cornerRadius = (Corners 15.0 true true false false)
+          cornerRadius = (Corners 15.0 true true false false),
+          optionWithHtml {
+            visibility = true,
+            strokeColor = "0,#000000",
+            background = "#ffffff",
+            padding = PaddingBottom $ getBottomMargin,
+            textOpt2 {
+              visibility = VISIBLE,
+              text = if state.data.selectedEstimatesObject.isOurQuote then "<u>Choose another provider</u>" else "Search with other providers",
+              color = Color.black600,
+              padding = PaddingBottom $ getBottomMargin,
+              textStyle = SubHeading2
+            }
+          }
 
       }
     _ ->
@@ -1259,11 +1274,12 @@ quoteListModelViewState state = let vehicleVariant = case (getSelectedEstimatesO
                                 , autoSelecting: state.props.autoSelecting
                                 , searchExpire: state.props.searchExpire
                                 , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
-                                , tipViewProps : getTipViewProps state.props.tipViewProps
+                                , tipViewProps : getTipViewProps state
                                 , findingRidesAgain : state.props.findingRidesAgain
                                 , progress : state.props.findingQuotesProgress
                                 , appConfig : state.data.config
                                 , vehicleVariant : vehicleVariant
+                                , isOurQuote : state.data.selectedEstimatesObject.isOurQuote -- true if selected quote is nammayatri
                                 }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1338,6 +1354,42 @@ callSupportConfig state = let
     }
   }
   in popUpConfig'
+
+addFavProviderConfig :: ST.HomeScreenState ->  PopUpModal.Config
+addFavProviderConfig state = PopUpModal.config{
+    gravity = CENTER
+  , cornerRadius = Corners 15.0 true true true true
+  , dismissPopup = true
+  , optionButtonOrientation = "VERTICAL"
+  , margin = MarginHorizontal 16 16
+  , primaryText {
+      text = "Set Favourite Provider"
+    }
+  , secondaryText {
+      text = "Simplify your booking experience by setting your favourite provider."
+    , margin = Margin 24 12 24 12
+    , color = Color.black700
+    }
+  , option1 {
+      text =  "Set Namma Yatri as Favourite"
+    , color = state.data.config.primaryTextColor
+    , background = state.data.config.primaryBackground
+    , strokeColor = state.data.config.primaryBackground
+    , enableRipple = true
+    , margin = Margin 16 6 16 6
+    , width = MATCH_PARENT
+    }
+  , option2 {
+      text =  "Choose manually",
+      background = Color.white900, 
+      width = MATCH_PARENT, 
+      height = WRAP_CONTENT ,
+      color =  Color.black650,
+      strokeColor = Color.white900, 
+      padding = Padding 16 6 16 6, 
+      margin = Margin 0 8 0 0
+    }
+  }
 
 confirmAndBookButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 confirmAndBookButtonConfig state = 
@@ -1429,7 +1481,13 @@ chooseYourRideConfig state = ChooseYourRide.config
     nearByDrivers = state.data.nearByDrivers,
     showPreferences = state.data.showPreferences,
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city /= Kochi,
-    flowWithoutOffers = state.props.flowWithoutOffers
+    flowWithoutOffers = state.props.flowWithoutOffers,
+    selectedProvider = state.data.iopState.selectedProvider,
+    selectedProviderQuote = state.props.estimateId,
+    filterFavProvider = state.data.iopState.filterFavProvider,
+    providersQuoteList = state.data.iopState.providersQuoteList,
+    iopEnabled = state.data.currentCityConfig.iopConfig.enable,
+    favProvider = state.data.iopState.favProvider
   }
 
 
@@ -1470,24 +1528,29 @@ getTipViewData dummy =
     Right res -> Just res
     Left err -> Nothing
 
-getTipViewProps :: TipViewProps -> TipViewProps
-getTipViewProps tipViewProps =
-  case tipViewProps.stage of
-    DEFAULT ->  tipViewProps{ stage = DEFAULT
+getTipViewProps :: ST.HomeScreenState -> TipViewProps
+getTipViewProps state =
+  let tipViewProps = state.props.tipViewProps 
+      isOurQuote = state.data.selectedEstimatesObject.isOurQuote
+      updatedTipsState = tipViewProps { customerTipArray = if isOurQuote then tipViewProps.customerTipArray else []}
+  in
+  case updatedTipsState.stage of
+    DEFAULT ->  updatedTipsState{ stage = DEFAULT
                             , onlyPrimaryText = false
-                            , isprimaryButtonVisible = false
-                            , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
+                            , isprimaryButtonVisible = not isOurQuote
+                            , primaryText = if isOurQuote then getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER else "For a better experience, try Namma Yatri"
                             , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                            , primaryButtonText = if isOurQuote then state.props.tipViewProps.primaryButtonText else "Try Namma Yatri"
                             }
-    TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
+    TIP_AMOUNT_SELECTED -> updatedTipsState{ stage = TIP_AMOUNT_SELECTED
                                        , onlyPrimaryText = false
                                        , isprimaryButtonVisible = true
                                        , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                                        , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
                                        , primaryButtonText = getTipViewText tipViewProps (getString CONTINUE_SEARCH_WITH)
                                        }
-    TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString CONTINUING_SEARCH_WITH) }
-    RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString SEARCHING_WITH) }
+    TIP_ADDED_TO_SEARCH -> updatedTipsState{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString CONTINUING_SEARCH_WITH) }
+    RETRY_SEARCH_WITH_TIP -> updatedTipsState{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString SEARCHING_WITH) }
 
 
 
@@ -1497,7 +1560,7 @@ getTipViewText tipViewProps prefixString =
     "EN_US" -> prefixString <> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP)
     _ -> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP) <> " " <> prefixString
 
-requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
+requestInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 requestInfoCardConfig _ = let
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
@@ -1515,6 +1578,29 @@ requestInfoCardConfig _ = let
   , buttonConfig {
       text = getString GOT_IT
     }
+  , backgroundColor = Color.transparent
+  }
+  in requestInfoCardConfig'
+
+multipleProvidersInfo :: ST.HomeScreenState -> RequestInfoCard.Config
+multipleProvidersInfo _ = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = "Choose between Multiple Providers"
+    }
+  , primaryText {
+      text = "Enable this feature to choose your preferred ride provider"
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_multiple_providers",
+      height = V 122,
+      width = V 116
+    }
+  , buttonConfig {
+      text = getString GOT_IT
+    }
+  , backgroundColor = Color.transparent
   }
   in requestInfoCardConfig'
 

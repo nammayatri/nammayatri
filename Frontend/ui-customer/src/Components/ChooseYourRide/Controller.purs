@@ -5,6 +5,10 @@ import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import ConfigProvider
 import MerchantConfig.Types
+import PrestoDOM
+import Data.Map as Map
+import Screens.Types as ST
+
 
 data Action
   = NoAction
@@ -13,6 +17,7 @@ data Action
   | PreferencesDropDown
   | RadioButtonClick Boolean
   | OnIconClick Boolean
+  | ProviderClick String
 
 
 type Config
@@ -25,6 +30,12 @@ type Config
     , showPreferences :: Boolean
     , bookingPreferenceEnabled :: Boolean
     , flowWithoutOffers :: Boolean
+    , filterFavProvider :: Boolean
+    , selectedProvider :: String
+    , selectedProviderQuote :: String
+    , providersQuoteList :: Array ST.ProvidersQuote
+    , iopEnabled :: Boolean
+    , favProvider :: String
     }
 
 config :: Config
@@ -38,4 +49,10 @@ config =
   , showPreferences : false
   , bookingPreferenceEnabled : false
   , flowWithoutOffers : false
+  , filterFavProvider : true
+  , selectedProvider : ""
+  , selectedProviderQuote : ""
+  , providersQuoteList : []
+  , iopEnabled : false
+  , favProvider : ""
   }

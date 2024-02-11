@@ -117,9 +117,9 @@ homeScreen = do
     InAppTrackStatus updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ IN_APP_TRACK_STATUS updatedState)
-    UpdatedSource updatedState -> do
+    UpdatedSource updatedState cancelSearch -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_FIND_ESTIMATES updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_FIND_ESTIMATES updatedState cancelSearch)
     UpdateSavedLocation screenState -> do
        modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
        App.BackT $ App.BackPoint <$> (pure $ UPDATE_SAVED_LOCATION )

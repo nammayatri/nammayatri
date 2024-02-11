@@ -206,7 +206,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GET_LOCATION_NAME HomeScreenState
                         | GO_TO_FAVOURITES_
                         | SUBMIT_RATING HomeScreenState
-                        | GO_TO_FIND_ESTIMATES HomeScreenState
+                        | GO_TO_FIND_ESTIMATES HomeScreenState Boolean
                         | OPEN_GOOGLE_MAPS HomeScreenState
                         | IN_APP_TRACK_STATUS HomeScreenState
                         | UPDATE_SAVED_LOCATION

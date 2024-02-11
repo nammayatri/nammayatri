@@ -361,10 +361,22 @@ type HotSpotConfig = {
 type CityConfig = {
   cityName :: String,
   cityCode :: String,
-  geoCodeConfig :: GeoCodeConfig
+  geoCodeConfig :: GeoCodeConfig,
+  iopConfig :: InteroperabilityConfig
 }
 
 type GeoCodeConfig = {
   radius :: Int,
   strictBounds :: Boolean
+}
+
+
+type InteroperabilityConfig = {
+  enable :: Boolean,
+  providersList :: Array Provider
+}
+
+type Provider = {
+  id :: String,
+  name :: String
 }

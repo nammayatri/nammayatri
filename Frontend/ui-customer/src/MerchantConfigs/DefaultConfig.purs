@@ -329,6 +329,10 @@ config =
             { radius : 50000
             , strictBounds : true
             }
+        , iopConfig : {
+            enable : true,
+            providersList : [{id : "00000-11111", name : "NammaYatri"}, {id : "99999-22222", name : "Yarry"}]
+        }
         }
       ]
   , bannerCarousel : defaultBannerCarousel
@@ -341,5 +345,9 @@ defaultCityConfig =
     geoCodeConfig :
       { radius : 100000
       , strictBounds : false
-      }
+      },
+    iopConfig : {
+      enable : false,
+      providersList : []
+    }
   }
