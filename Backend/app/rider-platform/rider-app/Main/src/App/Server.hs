@@ -28,7 +28,7 @@ import Servant
 import Tools.Auth
 
 run :: Env -> Application
-run = withModifiedEnv $ \modifiedEnv ->
+run = withModifiedEnv' $ \modifiedEnv ->
   BU.run appAPI API.handler context modifiedEnv
     & logRequestAndResponse modifiedEnv
     -- & logBecknRequest modifiedEnv
