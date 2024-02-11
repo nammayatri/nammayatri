@@ -267,15 +267,15 @@ instance Registry Flow where
         totalSubIds <- QWhiteList.countTotalSubscribers
         if totalSubIds == 0
           then do
-            Registry.checkBlacklisted blackListed subId
+            Registry.checkBlacklisted isBlackListed subId
           else do
-            Registry.validateWhitelisting validateWhiteListed subId
+            Registry.checkWhitelisted isNotWhiteListed subId
     where
       fetchFromDB merchantId = do
         merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
         pure $ merchant.registryUrl
-      blackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
-      validateWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
+      isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
+      isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
