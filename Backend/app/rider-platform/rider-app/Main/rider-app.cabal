@@ -163,6 +163,7 @@ library
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.Booking
+      Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
@@ -410,6 +411,7 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.UI.Cac
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Sos
