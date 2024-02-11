@@ -31,6 +31,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Screens.Types as ST
+import JBridge as JB
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
 import ConfigProvider
 import Data.String as DS
@@ -76,12 +77,14 @@ decodeAddress addressWithCons =
     else
       ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
 
-encodeAddress :: String -> Array AddressComponents -> Maybe String -> ST.Address
-encodeAddress fullAddress addressComponents placeId =
+encodeAddress :: String -> Array AddressComponents -> Maybe String -> Number -> Number -> ST.Address
+encodeAddress fullAddress addressComponents placeId lat lon =
   let
     totalAddressComponents = length $ split (Pattern ", ") fullAddress
     areaCodeFromFullAdd = runFn2 extractKeyByRegex areaCodeRegex fullAddress
     areaCodeFromAddComp = getValueByComponent addressComponents "postal_code"
+    areaCodeComp = if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
+    areaCodeVal = Just if (trim areaCodeComp) == "" then (runFn2 extractKeyByRegex areaCodeRegex $ runFn2 JB.getLocationNameV2 lat lon) else areaCodeComp
     splitedAddress = split (Pattern ", ") fullAddress
     gateName = getValueByComponent addressComponents "sublocality"
   in

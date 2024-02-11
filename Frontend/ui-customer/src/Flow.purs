@@ -539,7 +539,7 @@ homeScreenFlow = do
     GO_TO_FIND_ESTIMATES updatedState -> do
       if updatedState.data.source == getString STR.CURRENT_LOCATION then do
         PlaceName address <- getPlaceName updatedState.props.sourceLat updatedState.props.sourceLong HomeScreenData.dummyLocation
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing } })
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing updatedState.props.sourceLat updatedState.props.sourceLong } })
       else
         pure unit
       (GlobalState globalState) <- getState
@@ -1187,11 +1187,11 @@ homeScreenFlow = do
               selectedLocationListItem = currentLocationItem, 
               source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source,
               sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
-                Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
-                _ , _-> encodeAddress homeScreen.data.source [] state.props.sourcePlaceId,
+                Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
+                _ , _-> encodeAddress homeScreen.data.source [] state.props.sourcePlaceId lat lon,
               destinationAddress = case state.props.isSource,(state.props.currentStage /= ConfirmingLocation) of
-                Just false , true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
-                _ , _ -> encodeAddress homeScreen.data.destination [] state.props.destinationPlaceId
+                Just false , true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
+                _ , _ -> encodeAddress homeScreen.data.destination [] state.props.destinationPlaceId lat lon
             }
             })
         else do
@@ -1249,7 +1249,7 @@ homeScreenFlow = do
           homeScreen {
             data {
               source = address.formattedAddress ,
-              sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing }
+              sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon }
             })
         else do
           _ <- liftFlowBT $ logEvent logField_ "ny_user_placename_cache_cpu_onDrag"
@@ -2839,8 +2839,8 @@ checkAndUpdateLocations = do
               data {
                 source = (fromMaybe "" source.name)
               , destination = (fromMaybe "" destination.name)
-              , sourceAddress = encodeAddress (fromMaybe "" source.name) [] Nothing
-              , destinationAddress = encodeAddress (fromMaybe "" destination.name) [] Nothing
+              , sourceAddress = encodeAddress (fromMaybe "" source.name) [] Nothing source.lat source.lon
+              , destinationAddress = encodeAddress (fromMaybe "" destination.name) [] Nothing destination.lat destination.lon
               }, props {
                   sourceLat = source.lat
                 , sourceLong = source.lon
@@ -2907,7 +2907,7 @@ updateSourceLocation _ = do
                       Nothing -> Just ""
   when (disabled == Just "BLIND_LOW_VISION" ) $ do
     PlaceName address <- getPlaceName currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong HomeScreenData.dummyLocation
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing } })
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong } })
     pure unit
   pure unit 
 
@@ -3199,7 +3199,7 @@ getCurrentLocationItem placeDetails state lat lon =
   , description = placeDetails.formattedAddress
   , tagType = Just $ show LOC_LIST
   , locationItemType = Just SUGGESTED_DESTINATIONS
-  , fullAddress = encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
+  , fullAddress = encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing latLon.lat latLon.lon
   }) 
   where
     getTitle :: LocationDetails -> String
@@ -3309,7 +3309,7 @@ searchLocationFlow = do
           gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoint)
       when (isDistMoreThanThreshold ) do  
         PlaceName address <- getPlaceName lat lon gateAddress 
-        let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing}
+        let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing lat lon}
         modifyScreenState 
           $ SearchLocationScreenStateType 
               (\ slsState -> slsState { data  {latLonOnMap = updatedAddress, confirmLocCategory = ""} }) 
@@ -3491,7 +3491,7 @@ predictionClickedFlow prediction state = do
 
     mkSrcAndDestLoc :: Number -> Number -> SearchLocationScreenState -> SearchLocationTextField -> LocationListItemState -> Maybe String -> {sourceLoc :: Maybe LocationInfo, destinationLoc :: Maybe LocationInfo, updatedState :: LocationInfo}
     mkSrcAndDestLoc placeLat placeLon state currTextField prediction city = 
-      let updatedState = {lat : Just placeLat, lon : Just placeLon, city : Just (getCityNameFromCode city ), addressComponents : encodeAddress prediction.description [] Nothing , placeId : prediction.placeId, address : prediction.description} 
+      let updatedState = {lat : Just placeLat, lon : Just placeLon, city : Just (getCityNameFromCode city ), addressComponents : encodeAddress prediction.description [] Nothing placeLat placeLon, placeId : prediction.placeId, address : prediction.description} 
           sourceLoc = if currTextField == SearchLocPickup then Just updatedState else state.data.srcLoc
           destinationLoc = if currTextField == SearchLocPickup then state.data.destLoc else Just updatedState
       in {sourceLoc, destinationLoc, updatedState}
