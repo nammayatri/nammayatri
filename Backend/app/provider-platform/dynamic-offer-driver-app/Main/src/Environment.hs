@@ -275,9 +275,9 @@ instance Registry Flow where
           totalSubIds <- QWhiteList.countTotalSubscribers
           if totalSubIds == 0
             then do
-              Registry.checkBlacklisted blackListed subId
+              Registry.checkBlacklisted isBlackListed subId
             else do
-              Registry.validateWhitelisting validateWhiteListed subId
+              Registry.checkWhitelisted isNotWhiteListed subId
     where
       fetchFromDB subscriberId uniqueId merchantId = do
         mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId subscriberId uniqueId
@@ -287,8 +287,8 @@ instance Registry Flow where
             do
               mbMerchant <- CM.findById (Id merchantId)
               pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
-      blackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
-      validateWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
+      isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
+      isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

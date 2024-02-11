@@ -13,7 +13,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.BlackListOrg where
 
@@ -27,8 +26,7 @@ import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data BlackListOrgType
-  = PROVIDER
-  | BAP
+  = BAP
   | BPP
   | GATEWAY
   deriving stock (Show, Eq, Read, Ord, Generic)
@@ -37,12 +35,6 @@ data BlackListOrgType
 $(mkBeamInstancesForEnum ''BlackListOrgType)
 
 $(mkFromHttpInstanceForEnum ''BlackListOrgType)
-
-$(mkBeamInstancesForEnum ''Domain)
-
-$(mkFromHttpInstanceForEnum ''Domain)
-
-deriving instance Ord Domain
 
 data BlackListOrgD (s :: UsageSafety) = BlackListOrg
   { id :: Id BlackListOrg,
