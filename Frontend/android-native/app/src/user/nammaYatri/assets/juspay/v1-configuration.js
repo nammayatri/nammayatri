@@ -180,8 +180,9 @@ window.getMerchantConfig = function () {
     , "enableContactSupport" : false
     , "enableGeocoder" : true
     , "estimateAndQuoteConfig" :
-                { "enableOnlyAuto" : true
-                }
+        { "enableOnlyAuto" : true
+        , "variantOrder" : ["AUTO_RICKSHAW"]
+        }
     , "feature" : {
       "enableSupport" : false
       , "enableSuggestions" : true
