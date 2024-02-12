@@ -41,6 +41,7 @@ import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
 import Tools.Maps as Maps
@@ -95,7 +96,8 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
           if needTranslation
             then fromMaybe searchReq $ M.lookup language languageDictionary
             else searchReq
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation
+    isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation isValueAddNP
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
     Notify.sendSearchRequestToDriverNotification searchReq.providerId searchReq.merchantOperatingCityId notificationData

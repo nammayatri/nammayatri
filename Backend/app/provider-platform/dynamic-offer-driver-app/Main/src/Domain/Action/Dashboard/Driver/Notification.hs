@@ -73,16 +73,17 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
   let dummyFromLocation = transporterConfig.dummyFromLocation
       dummyToLocation = transporterConfig.dummyToLocation
+  let isValueAddNP = True
 
   now <- getCurrentTime
-  let entityData = mkDummyNotificationEntityData now vehicle.variant dummyFromLocation dummyToLocation
+  let entityData = mkDummyNotificationEntityData now vehicle.variant dummyFromLocation dummyToLocation isValueAddNP
   notificationData <- TN.buildSendSearchRequestNotificationData driver.id driver.deviceToken entityData TN.EmptyDynamicParam
   logDebug $ "Sending dummy notification to driver:-" <> show driver.id <> ",entityData:-" <> show entityData <> ",triggeredByDashboard:-" <> show isDashboardTrigger
   void $ TN.sendSearchRequestToDriverNotification driver.merchantId driver.merchantOperatingCityId notificationData
   pure Success
 
-mkDummyNotificationEntityData :: UTCTime -> DVeh.Variant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> DSearchReq.SearchRequestForDriverAPIEntity
-mkDummyNotificationEntityData now driverVehicle fromLocData toLocData =
+mkDummyNotificationEntityData :: UTCTime -> DVeh.Variant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> Bool -> DSearchReq.SearchRequestForDriverAPIEntity
+mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAddNP =
   let searchRequestValidTill = addUTCTime 30 now
       fromLocation = mkDummySearchReqFromLocation now fromLocData
       toLocation = Just $ mkDummySearchReqToLocation now toLocData

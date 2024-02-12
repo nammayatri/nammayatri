@@ -99,20 +99,21 @@ runWithServiceConfig func getCfg merchantId merchantOperatingCityId req = do
     _ -> throwError $ InternalError "Unknown ServiceConfig"
 
 notifyOnDriverOfferIncoming ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id Estimate ->
   [DQuote.Quote] ->
   Person.Person ->
   m ()
 notifyOnDriverOfferIncoming estimateId quotes person = do
   let merchantOperatingCityId = person.merchantOperatingCityId
+  entityData <- traverse makeQuoteAPIEntity quotes
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_QUOTE_INCOMING,
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
-            entity = Notification.Entity Notification.Product estimateId.getId $ map makeQuoteAPIEntity quotes,
+            entity = Notification.Entity Notification.Product estimateId.getId entityData,
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,

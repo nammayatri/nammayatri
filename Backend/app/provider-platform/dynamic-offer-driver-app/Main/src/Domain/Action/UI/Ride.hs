@@ -76,6 +76,7 @@ import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
 import Storage.CachedQueries.Merchant.TransporterConfig as QMTC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Location as QLoc
@@ -159,7 +160,8 @@ data DriverRideRes = DriverRideRes
     lastStopLocation :: Maybe DLoc.Location,
     startOdometerReading :: Maybe DRide.OdometerReading,
     endOdometerReading :: Maybe DRide.OdometerReading,
-    tripScheduledAt :: UTCTime
+    tripScheduledAt :: UTCTime,
+    isValueAddNP :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -196,8 +198,9 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findById (Id booking.bapId)
+    isValueAddNP <- CQVAN.isValueAddNP booking.bapId
     let goHomeReqId = ride.driverGoHomeRequestId
-    mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo)
+    mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
@@ -213,8 +216,9 @@ mkDriverRideRes ::
   Maybe DSM.BapMetadata ->
   Maybe (Id DDGR.DriverGoHomeRequest) ->
   Maybe DI.DriverInformation ->
+  Bool ->
   m DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
         fareSum $
@@ -270,7 +274,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         tripCategory = booking.tripCategory,
         nextStopLocation = nextStopLocation,
         lastStopLocation = lastStopLocation,
-        tripScheduledAt = booking.startTime
+        tripScheduledAt = booking.startTime,
+        isValueAddNP
       }
 
 calculateLocations ::
@@ -327,7 +332,8 @@ otpRideCreate driver otpCode booking = do
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findById (Id booking.bapId)
-  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
