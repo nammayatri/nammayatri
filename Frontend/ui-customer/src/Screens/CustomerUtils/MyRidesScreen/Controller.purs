@@ -188,7 +188,7 @@ eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController Prima
 eval _ state = continue state
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
-myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED"))) (map (\(RideBookingRes ride) -> {
+myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED") || item.status == (toPropValue "REALLOCATED"))) (map (\(RideBookingRes ride) -> {
     date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source : toPropValue (decodeAddress (Booking ride.fromLocation)),
@@ -197,7 +197,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     cardVisibility : toPropValue "visible",
     shimmerVisibility : toPropValue "gone",
     driverImage : toPropValue $ fetchImage FF_ASSET "ny_ic_user",
-    isCancelled : toPropValue (if ride.status == "CANCELLED" then "visible" else "gone"),
+    isCancelled : toPropValue (if ride.status == "CANCELLED" || ride.status == "REALLOCATED" then "visible" else "gone"),
     isSuccessfull : toPropValue (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : toPropValue (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
     driverName : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName),
@@ -205,7 +205,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     rideEndTime : toPropValue (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
     vehicleNumber : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
     rideId : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
-    status : toPropValue (ride.status),
+    status : toPropValue (if ride.status == "COMPLETED" then "COMPLETED" else "CANCELLED"),
     rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
     zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone"
@@ -213,7 +213,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) ->
+myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED" || item.status == "REALLOCATED")) (map (\(RideBookingRes ride) ->
   let
     fares = getFares ride.fareBreakup
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
@@ -231,7 +231,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
     driverImage : fetchImage FF_ASSET  "ny_ic_user",
-    isCancelled :  (if ride.status == "CANCELLED" then "visible" else "gone"),
+    isCancelled :  (if ride.status == "CANCELLED" || ride.status == "REALLOCATED" then "visible" else "gone"),
     isSuccessfull :  (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),
     driverName : (rideDetails.driverName),
@@ -239,7 +239,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
     vehicleNumber : (rideDetails.vehicleNumber),
     rideId : (rideDetails.id),
-    status : ride.status,
+    status : if ride.status == "COMPLETED" then "COMPLETED" else "CANCELLED",
     shortRideId : (rideDetails.shortRideId),
     bookingId : ride.id,
     rideEndTimeUTC : fromMaybe "" (ride.rideEndTime),
