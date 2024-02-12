@@ -170,7 +170,7 @@ fetchRideCompletedInfo ride booking = do
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId ride.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-  let paymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
+  let paymentUrl = Nothing -- DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod -- TODO : Remove paymentUrl altogether
   let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
   pure RideCompletedInfo {..}
 

@@ -68,7 +68,6 @@ splitAddressInSearchReq SH.OneWaySearchReq {..} = do
       destinationGps = destination.gps
       splitOriginAddress = splitAddress originAddress
       splitDestinationAddress = splitAddress destinationAddress
-  -- logDebug $ "shrey00: Search OriginAddress: " <> show splitOriginAddress
   SH.OneWaySearchReq
     { origin =
         SH.SearchReqLocation

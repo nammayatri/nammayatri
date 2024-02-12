@@ -67,7 +67,7 @@ data PaymentStatus = PAID | NOT_PAID
 
 handler :: DUpdateReq -> Flow ()
 handler req@PaymentCompletedReq {} = do
-  unless (req.paymentMethodInfo.paymentType == DMPM.POSTPAID) $
+  unless (req.paymentMethodInfo.paymentType == DMPM.ON_FULFILLMENT) $
     throwError $ InvalidRequest "Payment completed update available only for POSTPAID payments."
   unless (req.paymentMethodInfo.collectedBy == DMPM.BAP) $
     throwError $ InvalidRequest "Payment completed update available only when BAP collect payment."

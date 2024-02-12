@@ -147,7 +147,7 @@ confirm DConfirmReq {..} = do
       { booking,
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
-        itemId = quote.itemId,
+        itemId = booking.itemId,
         fromLoc = fromLocation,
         toLoc = mbToLocation,
         vehicleVariant = quote.vehicleVariant,

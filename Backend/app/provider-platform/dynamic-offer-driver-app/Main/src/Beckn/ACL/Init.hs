@@ -50,7 +50,7 @@ buildInitReq subscriber req = do
   fulfillmentId <- do
     fId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
     case order.fulfillment._type of
-      "RIDE" -> pure $ DInit.EstimateId (Id fId)
+      "DELIVERY" -> pure $ DInit.EstimateId (Id fId)
       "RIDE_OTP" -> pure $ DInit.QuoteId (Id fId)
       "RENTAL" -> pure $ DInit.QuoteId (Id fId)
       "INTER_CITY" -> pure $ DInit.QuoteId (Id fId)

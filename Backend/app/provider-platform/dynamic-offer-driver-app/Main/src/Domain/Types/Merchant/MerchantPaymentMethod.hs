@@ -45,7 +45,7 @@ instance FromJSON (MerchantPaymentMethodD 'Unsafe)
 
 instance ToJSON (MerchantPaymentMethodD 'Unsafe)
 
-data PaymentType = PREPAID | POSTPAID
+data PaymentType = ON_FULFILLMENT
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, Ord)
 
 data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash
@@ -141,15 +141,9 @@ data PaymentMethodInfo = PaymentMethodInfo
 mkPaymentMethodInfo :: MerchantPaymentMethod -> PaymentMethodInfo
 mkPaymentMethodInfo MerchantPaymentMethod {..} = PaymentMethodInfo {..}
 
-getPrepaidPaymentUrl :: MerchantPaymentMethod -> Maybe Text
-getPrepaidPaymentUrl mpm = do
-  if mpm.paymentType == PREPAID && mpm.collectedBy == BPP && mpm.paymentInstrument /= Cash
-    then Just $ mkDummyPaymentUrl mpm
-    else Nothing
-
 getPostpaidPaymentUrl :: MerchantPaymentMethod -> Maybe Text
 getPostpaidPaymentUrl mpm = do
-  if mpm.paymentType == POSTPAID && mpm.collectedBy == BPP && mpm.paymentInstrument /= Cash
+  if mpm.paymentType == ON_FULFILLMENT && mpm.collectedBy == BPP && mpm.paymentInstrument /= Cash
     then Just $ mkDummyPaymentUrl mpm
     else Nothing
 

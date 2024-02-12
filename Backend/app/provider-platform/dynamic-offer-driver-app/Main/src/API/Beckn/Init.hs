@@ -121,53 +121,6 @@ initLockKey id = "Driver:Init:DriverQuoteId-" <> id
 initProcessingLockKey :: Text -> Text
 initProcessingLockKey id = "Driver:Init:Processing:DriverQuoteId-" <> id
 
--- initV1Flow :: Id DM.Merchant -> SignatureAuthResult -> Init.InitReq -> FlowHandler AckResponse
--- initV1Flow transporterId (SignatureAuthResult _ subscriber) req =
---   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
---     logTagInfo "Init API Flow" "Reached"
---     dInitReq <- ACL.buildInitReq subscriber req
---     Redis.whenWithLockRedis (initLockKey dInitReq.estimateId) 60 $ do
---       let context = req.context
---       validatedRes <- DInit.validateRequest transporterId dInitReq
---       fork "init request processing" $ do
---         Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
---           dInitRes <- DInit.handler transporterId dInitReq validatedRes
---           internalEndPointHashMap <- asks (.internalEndPointHashMap)
---           void . handle (errHandler dInitRes.booking) $
---             CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV1 context context.bap_uri internalEndPointHashMap $
---               pure $ ACL.mkOnInitMessage dInitRes
---       return ()
---     pure Ack
---   where
---     errHandler booking exc
---       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking booking transporterId
---       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking booking transporterId
---       | otherwise = throwM exc
-
--- _initV2Flow :: Id DM.Merchant -> SignatureAuthResult -> Init.InitReqV2 -> FlowHandler AckResponse
--- _initV2Flow transporterId (SignatureAuthResult _ subscriber) req = do
---   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
---     logTagInfo "Init API Flow" "Reached"
---     dInitReq <- ACL.buildInitReqV2 subscriber req
---     Redis.whenWithLockRedis (initLockKey dInitReq.estimateId) 60 $ do
---       let context = req.initReqContext
---       validatedRes <- DInit.validateRequest transporterId dInitReq
---       fork "init request processing" $ do
---         Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
---           dInitRes <- DInit.handler transporterId dInitReq validatedRes
---           internalEndPointHashMap <- asks (.internalEndPointHashMap)
---           void . handle (errHandler dInitRes.booking) $ do
---             bap_url <- fromMaybeM (InvalidRequest "bap_uri not found") context.contextBapUri >>= parseBaseUrl
---             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 context bap_url internalEndPointHashMap $
---               pure $ ACL.mkOnInitMessageV2 dInitRes
---       return ()
---     pure Ack
---   where
---     errHandler booking exc
---       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking booking transporterId
---       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking booking transporterId
---       | otherwise = throwM exc
-
 decodeReq :: MonadFlow m => ByteString -> m (Either Init.InitReq Init.InitReqV2)
 decodeReq reqBS =
   case A.eitherDecodeStrict reqBS of

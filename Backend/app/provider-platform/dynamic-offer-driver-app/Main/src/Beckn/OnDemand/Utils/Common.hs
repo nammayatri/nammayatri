@@ -166,14 +166,13 @@ mkFulfillmentType = \case
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
   DCT.Rental _ -> "RENTAL"
   DCT.InterCity _ -> "INTER_CITY"
-  _ -> "RIDE"
+  _ -> "DELIVERY"
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
 
 castDPaymentType :: DMPM.PaymentType -> Text
-castDPaymentType DMPM.PREPAID = "ON_ORDER" -- TODO::Beckn, not there in spec.
-castDPaymentType DMPM.POSTPAID = "ON_FULFILLMENT"
+castDPaymentType DMPM.ON_FULFILLMENT = "ON_FULFILLMENT"
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe Variant.Variant
 parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
