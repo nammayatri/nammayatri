@@ -147,6 +147,9 @@ import Screens.NammaSafetyFlow.Components.SafetyUtils
 import Screens.NammaSafetyFlow.SafetyFlow (updateEmergencySettings, safetyEducationFlow)
 import RemoteConfig as RC
 import Engineering.Helpers.RippleCircles (clearMap)
+import Data.Array (groupBy)
+import Data.Foldable (maximumBy)
+import Data.Ord (comparing)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -2508,6 +2511,7 @@ fetchAndModifyLocationLists :: Array (LocationListItemState) -> FlowBT String Un
 fetchAndModifyLocationLists savedLocationResp = do 
     (GlobalState currentState) <- getState
     let state = currentState.homeScreen
+        suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
     recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
     let {savedLocationsWithOtherTag, recents, suggestionsMap, tripArrWithNeighbors, updateFavIcon} = getHelperLists savedLocationResp recentPredictionsObject currentState.homeScreen
         sortedTripList =  
@@ -2516,6 +2520,7 @@ fetchAndModifyLocationLists savedLocationResp = do
                 (\item -> isPointWithinXDist item state state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
             $ Arr.reverse 
                 (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
+        
         updatedLocationList = updateLocListWithDistance updateFavIcon state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
     
     updateSavedLocations savedLocationResp 
@@ -2531,10 +2536,28 @@ fetchAndModifyLocationLists savedLocationResp = do
               , locationList = updatedLocationList
               , destinationSuggestions = updatedLocationList
               , suggestionsData{suggestionsMap = suggestionsMap}
-              , tripSuggestions = sortedTripList
+              , tripSuggestions = removeDuplicateTrips sortedTripList suggestionsConfig.destinationGeohashPrecision
               }
             })
     where
+
+      removeDuplicateTrips :: Array Trip -> Int -> Array Trip
+      removeDuplicateTrips trips precision = 
+        let 
+          grouped = groupBy 
+            (\trip1 trip2 -> 
+              (getGeoHash trip1.destLat trip1.destLong precision) 
+              == 
+              (getGeoHash trip2.destLat trip2.destLong precision)
+            ) 
+            trips
+
+          maxScoreTrips = map 
+            (maximumBy (comparing (\trip -> trip.locationScore))) 
+            grouped
+        in 
+          catMaybes maxScoreTrips
+
       isPointWithinXDist :: Trip -> HomeScreenState -> Number -> Boolean
       isPointWithinXDist item state thresholdDist =
         let sourceLat = if state.props.sourceLat == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT else state.props.sourceLat

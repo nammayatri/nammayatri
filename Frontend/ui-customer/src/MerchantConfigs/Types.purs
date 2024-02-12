@@ -179,7 +179,8 @@ type SuggestedDestinationAndTripsConfig = {
   repeatRideTime :: Int,
   autoScrollTime :: Int,
   tripWithinXDist :: Number,
-  locationWithinXDist :: Number
+  locationWithinXDist :: Number,
+  destinationGeohashPrecision :: Int
 }
 
 type Language =  {
