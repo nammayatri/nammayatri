@@ -33,6 +33,7 @@ import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/),
 import Screens.Types as ST
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
 import ConfigProvider
+import Data.String as DS
 
 type Language
   = { name :: String
@@ -81,10 +82,10 @@ encodeAddress fullAddress addressComponents placeId =
     totalAddressComponents = length $ split (Pattern ", ") fullAddress
     areaCodeFromFullAdd = runFn2 extractKeyByRegex areaCodeRegex fullAddress
     areaCodeFromAddComp = getValueByComponent addressComponents "postal_code"
-
     splitedAddress = split (Pattern ", ") fullAddress
+    gateName = getValueByComponent addressComponents "sublocality"
   in
-    { area: splitedAddress !! (totalAddressComponents - 4)
+    { area: if DS.null gateName then splitedAddress !! (totalAddressComponents - 4) else (Just gateName)
     , areaCode: Just if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
     , building: splitedAddress !! (totalAddressComponents - 6)
     , city: splitedAddress !! (totalAddressComponents - 3)
