@@ -36,7 +36,6 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.FareBreakup as QFareBreakup
-import qualified Storage.Queries.Issues as QIssue
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -207,7 +206,7 @@ buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
 buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id
-  nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
+  -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   let merchantOperatingCityId = booking.merchantOperatingCityId
@@ -216,4 +215,4 @@ buildBookingAPIEntity booking personId = do
     CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability (isJust nightIssue) mbSosStatus
+  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus

@@ -51,12 +51,6 @@ findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 findByMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByEmailAndPassword :: ((MonadFlow m, CacheFlow m r, EsqDBFlow m r), EncFlow m r) => Text -> Text -> m (Maybe Person)
-findByEmailAndPassword email_ password = do
-  emailDbHash <- getDbHash email_
-  passwordDbHash <- getDbHash password
-  findOneWithKV [Se.And [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash), Se.Is BeamP.passwordHash $ Se.Eq (Just passwordDbHash)]]
-
 findByEmail :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> m (Maybe Person)
 findByEmail email_ = do
   emailDbHash <- getDbHash email_
@@ -64,9 +58,6 @@ findByEmail email_ = do
 
 findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-
-findByRoleAndMobileNumberAndMerchantIdWithoutCC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Role -> DbHash -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 updateMultiple :: MonadFlow m => Id Person -> Person -> m ()
 updateMultiple (Id personId) person = do
@@ -250,7 +241,7 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
 
 findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
 findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash =
-  findAllWithOptionsKV
+  findAllWithOptionsDb
     [ Se.And
         ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchant.id)),
             Se.Is BeamP.role (Se.Eq USER)
@@ -307,6 +298,43 @@ updateCityInfoById (Id personId) currentCity (Id merchantOperatingCityId) = do
   updateOneWithKV
     [ Se.Set BeamP.currentCity (Just currentCity),
       Se.Set BeamP.merchantOperatingCityId (Just merchantOperatingCityId),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateEmergencyInfo ::
+  MonadFlow m =>
+  Id Person ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  m ()
+updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContacts nightSafetyChecks hasCompletedSafetySetup = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [Se.Set BeamP.updatedAt now]
+        <> [Se.Set BeamP.shareEmergencyContacts (fromJust shareEmergencyContacts) | isJust shareEmergencyContacts]
+        <> [Se.Set BeamP.shareTripWithEmergencyContacts shareTripWithEmergencyContacts | isJust shareEmergencyContacts]
+        <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
+        <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
+    )
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateFollowsRide :: MonadFlow m => Id Person -> Bool -> m ()
+updateFollowsRide (Id personId) followsRide = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.followsRide followsRide,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateSafetyDrillStatus :: MonadFlow m => Id Person -> Maybe Bool -> m ()
+updateSafetyDrillStatus (Id personId) hasCompletedMockSafetyDrill = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
@@ -397,40 +425,3 @@ instance ToTType' BeamP.Person Person where
         BeamP.registrationLon = registrationLon,
         BeamP.followsRide = followsRide
       }
-
-updateEmergencyInfo ::
-  MonadFlow m =>
-  Id Person ->
-  Maybe Bool ->
-  Maybe Bool ->
-  Maybe Bool ->
-  Maybe Bool ->
-  m ()
-updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContacts nightSafetyChecks hasCompletedSafetySetup = do
-  now <- getCurrentTime
-  updateWithKV
-    ( [Se.Set BeamP.updatedAt now]
-        <> [Se.Set BeamP.shareEmergencyContacts (fromJust shareEmergencyContacts) | isJust shareEmergencyContacts]
-        <> [Se.Set BeamP.shareTripWithEmergencyContacts shareTripWithEmergencyContacts | isJust shareEmergencyContacts]
-        <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
-        <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
-    )
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-updateFollowsRide :: MonadFlow m => Id Person -> Bool -> m ()
-updateFollowsRide (Id personId) followsRide = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.followsRide followsRide,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
-
-updateSafetyDrillStatus :: MonadFlow m => Id Person -> Maybe Bool -> m ()
-updateSafetyDrillStatus (Id personId) hasCompletedMockSafetyDrill = do
-  now <- getCurrentTime
-  updateWithKV
-    [ Se.Set BeamP.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill,
-      Se.Set BeamP.updatedAt now
-    ]
-    [Se.Is BeamP.id (Se.Eq personId)]
