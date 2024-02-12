@@ -28,7 +28,7 @@ import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.DecimalValue (DecimalValue)
+import Kernel.Types.Beckn.DecimalValue (DecimalValue, valueFromString)
 import Kernel.Types.Id (Id (Id))
 import Kernel.Utils.Common
 import Tools.Error (GenericError (InvalidRequest))
@@ -308,8 +308,8 @@ buildRideCompletedInfo order = do
     fromMaybeM (InvalidRequest "traveled_distance tag is not present in ride_distance_details tagGroup") $
       readMaybe . T.unpack
         =<< Utils.getTagV2 "ride_distance_details" "traveled_distance" tagGroups
-  fare :: DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "order.quote.price.value is not present in on_status RideCompletedOrder request.")
-  totalFare :: DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceComputedValue) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "order.quote.price.computed_value is not present in on_status RideCompletedOrder request.")
+  fare :: DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= valueFromString & fromMaybeM (InvalidRequest "order.quote.price.value is not present in on_status RideCompletedOrder request.")
+  totalFare :: DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceComputedValue) >>= valueFromString & fromMaybeM (InvalidRequest "order.quote.price.computed_value is not present in on_status RideCompletedOrder request.")
   breakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "order.quote.breakup is not present in on_status RideCompletedOrder request.")
   fareBreakups <- traverse mkOnStatusFareBreakupV2 breakup
   pure
@@ -324,7 +324,7 @@ buildRideCompletedInfo order = do
       }
   where
     mkOnStatusFareBreakupV2 breakup = do
-      amount :: DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "breakup.price.value is not present in on_status RideCompletedOrder request.")
+      amount :: DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= valueFromString & fromMaybeM (InvalidRequest "breakup.price.value is not present in on_status RideCompletedOrder request.")
       description <- breakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "breakup.title is not present in on_status RideCompletedOrder request.")
       pure
         DOnStatus.OnStatusFareBreakup
