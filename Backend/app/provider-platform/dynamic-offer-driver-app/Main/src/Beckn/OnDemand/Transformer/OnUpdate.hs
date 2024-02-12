@@ -17,16 +17,19 @@ module Beckn.OnDemand.Transformer.OnUpdate
   )
 where
 
+import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import qualified Data.List as List
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.OnUpdate as OU
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
+import SharedLogic.Beckn.Common
 
 buildOnUpdateReqV2 ::
   (MonadFlow m, EncFlow m r) =>
@@ -37,274 +40,521 @@ buildOnUpdateReqV2 ::
   BaseUrl ->
   Context.City ->
   Context.Country ->
+  DRB.Booking ->
   OU.OnUpdateBuildReq ->
   m Spec.OnUpdateReq
-buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country = \case
-  OU.RideAssignedBuildReq OU.DRideAssignedReq {..} -> do
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image Nothing Nothing isDriverBirthDay isFreeRide (Just $ show Event.RIDE_ASSIGNED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
-    pure $
-      Spec.OnUpdateReq
-        { onUpdateReqError = Nothing,
-          onUpdateReqContext = context,
-          onUpdateReqMessage =
-            Just $
-              Spec.ConfirmReqMessage
-                { confirmReqMessageOrder =
-                    Spec.Order
-                      { orderId = Just booking.id.getId,
-                        orderFulfillments = Just [fulfillment],
-                        orderBilling = Nothing,
-                        orderCancellation = Nothing,
-                        orderCancellationTerms = Nothing,
-                        orderItems = Nothing,
-                        orderPayments = Nothing,
-                        orderProvider = Nothing,
-                        orderQuote = Nothing,
-                        orderStatus = Just "ACTIVE"
-                      }
-                }
-        }
-  OU.RideStartedBuildReq OU.DRideStartedReq {..} -> do
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    let personTag = Utils.mkLocationTagGroupV2 tripStartLocation -- why are we sending trip start and end location in personTags?
-        odometerTag = Utils.mkOdometerTagGroupV2 ((.value) <$> ride.startOdometerReading)
-    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just odometerTag) (Just personTag) False False (Just $ show Event.RIDE_STARTED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
-    pure $
-      Spec.OnUpdateReq
-        { onUpdateReqError = Nothing,
-          onUpdateReqContext = context,
-          onUpdateReqMessage =
-            Just $
-              Spec.ConfirmReqMessage
-                { confirmReqMessageOrder =
-                    Spec.Order
-                      { orderId = Just booking.id.getId,
-                        orderFulfillments = Just [fulfillment],
-                        orderBilling = Nothing,
-                        orderCancellation = Nothing,
-                        orderCancellationTerms = Nothing,
-                        orderItems = Nothing,
-                        orderPayments = Nothing,
-                        orderProvider = Nothing,
-                        orderQuote = Nothing,
-                        orderStatus = Nothing
-                      }
-                }
-        }
-  OU.RideCompletedBuildReq OU.DRideCompletedReq {..} -> do
-    let personTag = Utils.mkLocationTagGroupV2 tripEndLocation
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    distanceTagGroup <- Utils.mkDistanceTagGroup ride
-    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing distanceTagGroup (Just personTag) False False (Just $ show Event.RIDE_COMPLETED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
-    quote <- Utils.mkRideCompletedQuote ride fareParams
-    pure $
-      Spec.OnUpdateReq
-        { onUpdateReqError = Nothing,
-          onUpdateReqContext = context,
-          onUpdateReqMessage =
-            Just $
-              Spec.ConfirmReqMessage
-                { confirmReqMessageOrder =
-                    Spec.Order
-                      { orderId = Just booking.id.getId,
-                        orderQuote = Just quote,
-                        orderPayments = Just $ Utils.mkRideCompletedPayment paymentMethodInfo paymentUrl,
-                        orderFulfillments = Just [fulfillment],
-                        orderBilling = Nothing,
-                        orderCancellation = Nothing,
-                        orderCancellationTerms = Nothing,
-                        orderItems = Nothing,
-                        orderProvider = Nothing,
-                        orderStatus = Nothing
-                      }
-                }
-        }
-  OU.BookingCancelledBuildReq OU.DBookingCancelledReq {..} -> do
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    pure $
-      Spec.OnUpdateReq
-        { onUpdateReqError = Nothing,
-          onUpdateReqContext = context,
-          onUpdateReqMessage =
-            Just $
-              Spec.ConfirmReqMessage
-                { confirmReqMessageOrder =
-                    Spec.Order
-                      { orderId = Just booking.id.getId,
-                        orderStatus = Just "CANCELLED",
-                        orderFulfillments =
-                          Just . List.singleton $
-                            Spec.Fulfillment
-                              { fulfillmentState =
-                                  Just $
-                                    Spec.FulfillmentState
-                                      { fulfillmentStateDescriptor =
-                                          Just $
-                                            Spec.Descriptor
-                                              { descriptorCode = Just $ show Event.RIDE_BOOKING_CANCELLED, -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
-                                                descriptorName = Nothing,
-                                                descriptorShortDesc = Nothing
-                                              }
-                                      },
-                                fulfillmentId = Nothing,
-                                fulfillmentStops = Nothing,
-                                fulfillmentType = Nothing,
-                                fulfillmentAgent = Nothing,
-                                fulfillmentCustomer = Nothing,
-                                fulfillmentTags = Nothing,
-                                fulfillmentVehicle = Nothing
-                              },
-                        orderCancellation =
-                          Just $
-                            Spec.Cancellation
-                              { cancellationCancelledBy = Just . show $ Utils.castCancellationSource cancellationSource
-                              },
-                        orderBilling = Nothing,
-                        orderCancellationTerms = Nothing,
-                        orderItems = Nothing,
-                        orderPayments = Nothing,
-                        orderProvider = Nothing,
-                        orderQuote = Nothing
-                      }
-                }
-        }
-  OU.DriverArrivedBuildReq OU.DDriverArrivedReq {..} -> do
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    let driverArrivedInfoTags = Utils.mkArrivalTimeTagGroupV2 arrivalTime
-    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just driverArrivedInfoTags) Nothing False False (Just $ show Event.DRIVER_ARRIVED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
-    pure $
-      Spec.OnUpdateReq
-        { onUpdateReqError = Nothing,
-          onUpdateReqContext = context,
-          onUpdateReqMessage =
-            Just $
-              Spec.ConfirmReqMessage
-                { confirmReqMessageOrder =
-                    Spec.Order
-                      { orderId = Just ride.bookingId.getId,
-                        orderFulfillments = Just [fulfillment],
-                        orderBilling = Nothing,
-                        orderCancellation = Nothing,
-                        orderCancellationTerms = Nothing,
-                        orderItems = Nothing,
-                        orderPayments = Nothing,
-                        orderProvider = Nothing,
-                        orderQuote = Nothing,
-                        orderStatus = Nothing
-                      }
-                }
-        }
+buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req = do
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+  message <- mkOnUpdateMessageV2 req
+  pure $
+    Spec.OnUpdateReq
+      { onUpdateReqError = Nothing,
+        onUpdateReqContext = context,
+        onUpdateReqMessage = message
+      }
+
+mkOnUpdateMessageV2 ::
+  (MonadFlow m, EncFlow m r) =>
+  OU.OnUpdateBuildReq ->
+  m (Maybe Spec.ConfirmReqMessage)
+mkOnUpdateMessageV2 req = do
+  order <- buildOnUpdateReqOrderV2 req
+  pure . Just $
+    Spec.ConfirmReqMessage
+      { confirmReqMessageOrder = order
+      }
+
+buildOnUpdateReqOrderV2 ::
+  (MonadFlow m, EncFlow m r) =>
+  OU.OnUpdateBuildReq ->
+  m Spec.Order
+buildOnUpdateReqOrderV2 = \case
+  OU.RideAssignedBuildReq req -> Common.tfAssignedReqToOrder req
+  OU.RideStartedBuildReq req -> Common.tfStartReqToOrder req
+  -- let BookingDetails{..} = bookingDetails
+  -- context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+  -- let personTag = Utils.mkLocationTagGroupV2 tripStartLocation -- why are we sending trip start and end location in personTags?
+  --     odometerTag = Utils.mkOdometerTagGroupV2 ((.value) <$> ride.startOdometerReading)
+  -- fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just odometerTag) (Just personTag) False False (Just $ show Event.RIDE_STARTED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+  -- pure $
+  --   Spec.OnUpdateReq
+  --     { onUpdateReqError = Nothing,
+  --       onUpdateReqContext = context,
+  --       onUpdateReqMessage =
+  --         Just $
+  --           Spec.ConfirmReqMessage
+  --             { confirmReqMessageOrder =
+  --                 Spec.Order
+  --                   { orderId = Just booking.id.getId,
+  --                     orderFulfillments = Just [fulfillment],
+  --                     orderBilling = Nothing,
+  --                     orderCancellation = Nothing,
+  --                     orderCancellationTerms = Nothing,
+  --                     orderItems = Nothing,
+  --                     orderPayments = Nothing,
+  --                     orderProvider = Nothing,
+  --                     orderQuote = Nothing,
+  --                     orderStatus = Nothing
+  --                   }
+  --             }
+  --     }
+  OU.RideCompletedBuildReq req -> Common.tfCompleteReqToOrder req
+  -- let BookingDetails{..} = bookingDetails
+  -- let personTag = Utils.mkLocationTagGroupV2 tripEndLocation
+  -- context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+  -- distanceTagGroup <- Utils.mkDistanceTagGroup ride
+  -- fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing distanceTagGroup (Just personTag) False False (Just $ show Event.RIDE_COMPLETED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+  -- quote <- Utils.mkRideCompletedQuote ride fareParams
+  -- pure $
+  --   Spec.OnUpdateReq
+  --     { onUpdateReqError = Nothing,
+  --       onUpdateReqContext = context,
+  --       onUpdateReqMessage =
+  --         Just $
+  --           Spec.ConfirmReqMessage
+  --             { confirmReqMessageOrder =
+  --                 Spec.Order
+  --                   { orderId = Just booking.id.getId,
+  --                     orderQuote = Just quote,
+  --                     orderPayments = Just $ Utils.mkRideCompletedPayment paymentMethodInfo paymentUrl,
+  --                     orderFulfillments = Just [fulfillment],
+  --                     orderBilling = Nothing,
+  --                     orderCancellation = Nothing,
+  --                     orderCancellationTerms = Nothing,
+  --                     orderItems = Nothing,
+  --                     orderProvider = Nothing,
+  --                     orderStatus = Nothing
+  --                   }
+  --             }
+  --     }
+  OU.BookingCancelledBuildReq req -> Common.tfCancelReqToOrder req
+  -- context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+  -- pure $
+  --   Spec.OnUpdateReq
+  --     { onUpdateReqError = Nothing,
+  --       onUpdateReqContext = context,
+  --       onUpdateReqMessage =
+  --         Just $
+  --           Spec.ConfirmReqMessage
+  --             { confirmReqMessageOrder =
+  --                 Spec.Order
+  --                   { orderId = Just booking.id.getId,
+  --                     orderStatus = Just "CANCELLED",
+  --                     orderFulfillments =
+  --                       Just . List.singleton $
+  --                         Spec.Fulfillment
+  --                           { fulfillmentState =
+  --                               Just $
+  --                                 Spec.FulfillmentState
+  --                                   { fulfillmentStateDescriptor =
+  --                                       Just $
+  --                                         Spec.Descriptor
+  --                                           { descriptorCode = Just $ show Event.RIDE_BOOKING_CANCELLED, -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+  --                                             descriptorName = Nothing,
+  --                                             descriptorShortDesc = Nothing
+  --                                           }
+  --                                   },
+  --                             fulfillmentId = Nothing,
+  --                             fulfillmentStops = Nothing,
+  --                             fulfillmentType = Nothing,
+  --                             fulfillmentAgent = Nothing,
+  --                             fulfillmentCustomer = Nothing,
+  --                             fulfillmentTags = Nothing,
+  --                             fulfillmentVehicle = Nothing
+  --                           },
+  --                     orderCancellation =
+  --                       Just $
+  --                         Spec.Cancellation
+  --                           { cancellationCancelledBy = Just . show $ Utils.castCancellationSource cancellationSource
+  --                           },
+  --                     orderBilling = Nothing,
+  --                     orderCancellationTerms = Nothing,
+  --                     orderItems = Nothing,
+  --                     orderPayments = Nothing,
+  --                     orderProvider = Nothing,
+  --                     orderQuote = Nothing
+  --                   }
+  --             }
+  --     }
+  OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req
+  -- let BookingDetails{..} = bookingDetails
+  -- context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+  -- let driverArrivedInfoTags = Utils.mkArrivalTimeTagGroupV2 arrivalTime
+  -- fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just driverArrivedInfoTags) Nothing False False (Just $ show Event.DRIVER_ARRIVED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+  -- pure $
+  --   Spec.OnUpdateReq
+  --     { onUpdateReqError = Nothing,
+  --       onUpdateReqContext = context,
+  --       onUpdateReqMessage =
+  --         Just $
+  --           Spec.ConfirmReqMessage
+  --             { confirmReqMessageOrder =
+  --                 Spec.Order
+  --                   { orderId = Just ride.bookingId.getId,
+  --                     orderFulfillments = Just [fulfillment],
+  --                     orderBilling = Nothing,
+  --                     orderCancellation = Nothing,
+  --                     orderCancellationTerms = Nothing,
+  --                     orderItems = Nothing,
+  --                     orderPayments = Nothing,
+  --                     orderProvider = Nothing,
+  --                     orderQuote = Nothing,
+  --                     orderStatus = Nothing
+  --                   }
+  --             }
+  --     }
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+    let BookingDetails {..} = bookingDetails
     let previousCancellationReasonsTags = Utils.mkPreviousCancellationReasonsTags cancellationSource
     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False (Just $ show Event.ESTIMATE_REPETITION) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
-      Spec.OnUpdateReq
-        { onUpdateReqError = Nothing,
-          onUpdateReqContext = context,
-          onUpdateReqMessage =
-            Just $
-              Spec.ConfirmReqMessage
-                { confirmReqMessageOrder =
-                    Spec.Order
-                      { orderId = Just booking.id.getId,
-                        orderFulfillments = Just [fulfillment],
-                        orderItems =
-                          Just . List.singleton $
-                            Spec.Item
-                              { itemId = Just estimateId.getId,
-                                itemDescriptor = Nothing,
-                                itemFulfillmentIds = Nothing,
-                                itemLocationIds = Nothing,
-                                itemPaymentIds = Nothing,
-                                itemPrice = Nothing,
-                                itemTags = Nothing
-                              },
-                        orderBilling = Nothing,
-                        orderCancellation = Nothing,
-                        orderCancellationTerms = Nothing,
-                        orderPayments = Nothing,
-                        orderProvider = Nothing,
-                        orderQuote = Nothing,
-                        orderStatus = Nothing
-                      }
-                }
+      Spec.Order
+        { orderId = Just booking.id.getId,
+          orderFulfillments = Just [fulfillment],
+          orderItems =
+            Just . List.singleton $
+              Spec.Item
+                { itemId = Just estimateId.getId,
+                  itemDescriptor = Nothing,
+                  itemFulfillmentIds = Nothing,
+                  itemLocationIds = Nothing,
+                  itemPaymentIds = Nothing,
+                  itemPrice = Nothing,
+                  itemTags = Nothing
+                },
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing
         }
   OU.NewMessageBuildReq OU.DNewMessageReq {..} -> do
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+    let BookingDetails {..} = bookingDetails
     let newMessageTags = Utils.mkNewMessageTags message
     fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing newMessageTags Nothing False False (Just $ show Event.NEW_MESSAGE) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
-      Spec.OnUpdateReq
-        { onUpdateReqError = Nothing,
-          onUpdateReqContext = context,
-          onUpdateReqMessage =
-            Just $
-              Spec.ConfirmReqMessage
-                { confirmReqMessageOrder =
-                    Spec.Order
-                      { orderId = Just ride.bookingId.getId,
-                        orderFulfillments = Just [fulfillment],
-                        orderBilling = Nothing,
-                        orderCancellation = Nothing,
-                        orderCancellationTerms = Nothing,
-                        orderItems = Nothing,
-                        orderPayments = Nothing,
-                        orderProvider = Nothing,
-                        orderQuote = Nothing,
-                        orderStatus = Nothing
-                      }
-                }
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing
         }
   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+    let BookingDetails {..} = bookingDetails
     let safetyAlertTags = Utils.mkSafetyAlertTags reason code
     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False (Just $ show Event.SAFETY_ALERT) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
-      Spec.OnUpdateReq
-        { onUpdateReqError = Nothing,
-          onUpdateReqContext = context,
-          onUpdateReqMessage =
-            Just $
-              Spec.ConfirmReqMessage
-                { confirmReqMessageOrder =
-                    Spec.Order
-                      { orderId = Just ride.bookingId.getId,
-                        orderFulfillments = Just [fulfillment],
-                        orderBilling = Nothing,
-                        orderCancellation = Nothing,
-                        orderCancellationTerms = Nothing,
-                        orderItems = Nothing,
-                        orderPayments = Nothing,
-                        orderProvider = Nothing,
-                        orderQuote = Nothing,
-                        orderStatus = Nothing
-                      }
-                }
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing
         }
   OU.StopArrivedBuildReq OU.DStopArrivedBuildReq {..} -> do
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+    let BookingDetails {..} = bookingDetails
     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing Nothing Nothing False False (Just $ show Event.STOP_ARRIVED)
     pure $
-      Spec.OnUpdateReq
-        { onUpdateReqError = Nothing,
-          onUpdateReqContext = context,
-          onUpdateReqMessage =
-            Just $
-              Spec.ConfirmReqMessage
-                { confirmReqMessageOrder =
-                    Spec.Order
-                      { orderId = Just ride.bookingId.getId,
-                        orderFulfillments = Just [fulfillment],
-                        orderBilling = Nothing,
-                        orderCancellation = Nothing,
-                        orderCancellationTerms = Nothing,
-                        orderItems = Nothing,
-                        orderPayments = Nothing,
-                        orderProvider = Nothing,
-                        orderQuote = Nothing,
-                        orderStatus = Nothing
-                      }
-                }
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing
         }
+
+-- buildOnUpdateReqOrderV2 action domain messageId bppSubscriberId bppUri city country = \case
+--   OU.RideAssignedBuildReq OU.DRideAssignedReq {..} -> do
+--     let BookingDetails{..} = bookingDetails
+--     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--     fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image Nothing Nothing isDriverBirthDay isFreeRide (Just $ show Event.RIDE_ASSIGNED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+--     pure $
+--       Spec.OnUpdateReq
+--         { onUpdateReqError = Nothing,
+--           onUpdateReqContext = context,
+--           onUpdateReqMessage =
+--             Just $
+--               Spec.ConfirmReqMessage
+--                 { confirmReqMessageOrder =
+--                     Spec.Order
+--                       { orderId = Just booking.id.getId,
+--                         orderFulfillments = Just [fulfillment],
+--                         orderBilling = Nothing,
+--                         orderCancellation = Nothing,
+--                         orderCancellationTerms = Nothing,
+--                         orderItems = Nothing,
+--                         orderPayments = Nothing,
+--                         orderProvider = Nothing,
+--                         orderQuote = Nothing,
+--                         orderStatus = Just "ACTIVE"
+--                       }
+--                 }
+--         }
+--   OU.RideStartedBuildReq OU.DRideStartedReq {..} -> do
+--     let BookingDetails{..} = bookingDetails
+--     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--     let personTag = Utils.mkLocationTagGroupV2 tripStartLocation -- why are we sending trip start and end location in personTags?
+--         odometerTag = Utils.mkOdometerTagGroupV2 ((.value) <$> ride.startOdometerReading)
+--     fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just odometerTag) (Just personTag) False False (Just $ show Event.RIDE_STARTED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+--     pure $
+--       Spec.OnUpdateReq
+--         { onUpdateReqError = Nothing,
+--           onUpdateReqContext = context,
+--           onUpdateReqMessage =
+--             Just $
+--               Spec.ConfirmReqMessage
+--                 { confirmReqMessageOrder =
+--                     Spec.Order
+--                       { orderId = Just booking.id.getId,
+--                         orderFulfillments = Just [fulfillment],
+--                         orderBilling = Nothing,
+--                         orderCancellation = Nothing,
+--                         orderCancellationTerms = Nothing,
+--                         orderItems = Nothing,
+--                         orderPayments = Nothing,
+--                         orderProvider = Nothing,
+--                         orderQuote = Nothing,
+--                         orderStatus = Nothing
+--                       }
+--                 }
+--         }
+--   OU.RideCompletedBuildReq OU.DRideCompletedReq {..} -> do
+--     let BookingDetails{..} = bookingDetails
+--     let personTag = Utils.mkLocationTagGroupV2 tripEndLocation
+--     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--     distanceTagGroup <- Utils.mkDistanceTagGroup ride
+--     fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing distanceTagGroup (Just personTag) False False (Just $ show Event.RIDE_COMPLETED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+--     quote <- Utils.mkRideCompletedQuote ride fareParams
+--     pure $
+--       Spec.OnUpdateReq
+--         { onUpdateReqError = Nothing,
+--           onUpdateReqContext = context,
+--           onUpdateReqMessage =
+--             Just $
+--               Spec.ConfirmReqMessage
+--                 { confirmReqMessageOrder =
+--                     Spec.Order
+--                       { orderId = Just booking.id.getId,
+--                         orderQuote = Just quote,
+--                         orderPayments = Just $ Utils.mkRideCompletedPayment paymentMethodInfo paymentUrl,
+--                         orderFulfillments = Just [fulfillment],
+--                         orderBilling = Nothing,
+--                         orderCancellation = Nothing,
+--                         orderCancellationTerms = Nothing,
+--                         orderItems = Nothing,
+--                         orderProvider = Nothing,
+--                         orderStatus = Nothing
+--                       }
+--                 }
+--         }
+--   OU.BookingCancelledBuildReq OU.DBookingCancelledReq {..} -> do
+--     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--     pure $
+--       Spec.OnUpdateReq
+--         { onUpdateReqError = Nothing,
+--           onUpdateReqContext = context,
+--           onUpdateReqMessage =
+--             Just $
+--               Spec.ConfirmReqMessage
+--                 { confirmReqMessageOrder =
+--                     Spec.Order
+--                       { orderId = Just booking.id.getId,
+--                         orderStatus = Just "CANCELLED",
+--                         orderFulfillments =
+--                           Just . List.singleton $
+--                             Spec.Fulfillment
+--                               { fulfillmentState =
+--                                   Just $
+--                                     Spec.FulfillmentState
+--                                       { fulfillmentStateDescriptor =
+--                                           Just $
+--                                             Spec.Descriptor
+--                                               { descriptorCode = Just $ show Event.RIDE_BOOKING_CANCELLED, -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+--                                                 descriptorName = Nothing,
+--                                                 descriptorShortDesc = Nothing
+--                                               }
+--                                       },
+--                                 fulfillmentId = Nothing,
+--                                 fulfillmentStops = Nothing,
+--                                 fulfillmentType = Nothing,
+--                                 fulfillmentAgent = Nothing,
+--                                 fulfillmentCustomer = Nothing,
+--                                 fulfillmentTags = Nothing,
+--                                 fulfillmentVehicle = Nothing
+--                               },
+--                         orderCancellation =
+--                           Just $
+--                             Spec.Cancellation
+--                               { cancellationCancelledBy = Just . show $ Utils.castCancellationSource cancellationSource
+--                               },
+--                         orderBilling = Nothing,
+--                         orderCancellationTerms = Nothing,
+--                         orderItems = Nothing,
+--                         orderPayments = Nothing,
+--                         orderProvider = Nothing,
+--                         orderQuote = Nothing
+--                       }
+--                 }
+--         }
+--   OU.DriverArrivedBuildReq OU.DDriverArrivedReq {..} -> do
+--     let BookingDetails{..} = bookingDetails
+--     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--     let driverArrivedInfoTags = Utils.mkArrivalTimeTagGroupV2 arrivalTime
+--     fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just driverArrivedInfoTags) Nothing False False (Just $ show Event.DRIVER_ARRIVED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+--     pure $
+--       Spec.OnUpdateReq
+--         { onUpdateReqError = Nothing,
+--           onUpdateReqContext = context,
+--           onUpdateReqMessage =
+--             Just $
+--               Spec.ConfirmReqMessage
+--                 { confirmReqMessageOrder =
+--                     Spec.Order
+--                       { orderId = Just ride.bookingId.getId,
+--                         orderFulfillments = Just [fulfillment],
+--                         orderBilling = Nothing,
+--                         orderCancellation = Nothing,
+--                         orderCancellationTerms = Nothing,
+--                         orderItems = Nothing,
+--                         orderPayments = Nothing,
+--                         orderProvider = Nothing,
+--                         orderQuote = Nothing,
+--                         orderStatus = Nothing
+--                       }
+--                 }
+--         }
+--   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
+--     let BookingDetails{..} = bookingDetails
+--     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--     let previousCancellationReasonsTags = Utils.mkPreviousCancellationReasonsTags cancellationSource
+--     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False (Just $ show Event.ESTIMATE_REPETITION) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+--     pure $
+--       Spec.OnUpdateReq
+--         { onUpdateReqError = Nothing,
+--           onUpdateReqContext = context,
+--           onUpdateReqMessage =
+--             Just $
+--               Spec.ConfirmReqMessage
+--                 { confirmReqMessageOrder =
+--                     Spec.Order
+--                       { orderId = Just booking.id.getId,
+--                         orderFulfillments = Just [fulfillment],
+--                         orderItems =
+--                           Just . List.singleton $
+--                             Spec.Item
+--                               { itemId = Just estimateId.getId,
+--                                 itemDescriptor = Nothing,
+--                                 itemFulfillmentIds = Nothing,
+--                                 itemLocationIds = Nothing,
+--                                 itemPaymentIds = Nothing,
+--                                 itemPrice = Nothing,
+--                                 itemTags = Nothing
+--                               },
+--                         orderBilling = Nothing,
+--                         orderCancellation = Nothing,
+--                         orderCancellationTerms = Nothing,
+--                         orderPayments = Nothing,
+--                         orderProvider = Nothing,
+--                         orderQuote = Nothing,
+--                         orderStatus = Nothing
+--                       }
+--                 }
+--         }
+--   OU.NewMessageBuildReq OU.DNewMessageReq {..} -> do
+--     let BookingDetails{..} = bookingDetails
+--     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--     let newMessageTags = Utils.mkNewMessageTags message
+--     fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing newMessageTags Nothing False False (Just $ show Event.NEW_MESSAGE) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+--     pure $
+--       Spec.OnUpdateReq
+--         { onUpdateReqError = Nothing,
+--           onUpdateReqContext = context,
+--           onUpdateReqMessage =
+--             Just $
+--               Spec.ConfirmReqMessage
+--                 { confirmReqMessageOrder =
+--                     Spec.Order
+--                       { orderId = Just ride.bookingId.getId,
+--                         orderFulfillments = Just [fulfillment],
+--                         orderBilling = Nothing,
+--                         orderCancellation = Nothing,
+--                         orderCancellationTerms = Nothing,
+--                         orderItems = Nothing,
+--                         orderPayments = Nothing,
+--                         orderProvider = Nothing,
+--                         orderQuote = Nothing,
+--                         orderStatus = Nothing
+--                       }
+--                 }
+--         }
+--   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
+--     let BookingDetails{..} = bookingDetails
+--     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--     let safetyAlertTags = Utils.mkSafetyAlertTags reason code
+--     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False (Just $ show Event.SAFETY_ALERT) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+--     pure $
+--       Spec.OnUpdateReq
+--         { onUpdateReqError = Nothing,
+--           onUpdateReqContext = context,
+--           onUpdateReqMessage =
+--             Just $
+--               Spec.ConfirmReqMessage
+--                 { confirmReqMessageOrder =
+--                     Spec.Order
+--                       { orderId = Just ride.bookingId.getId,
+--                         orderFulfillments = Just [fulfillment],
+--                         orderBilling = Nothing,
+--                         orderCancellation = Nothing,
+--                         orderCancellationTerms = Nothing,
+--                         orderItems = Nothing,
+--                         orderPayments = Nothing,
+--                         orderProvider = Nothing,
+--                         orderQuote = Nothing,
+--                         orderStatus = Nothing
+--                       }
+--                 }
+--         }
+--   OU.StopArrivedBuildReq OU.DStopArrivedBuildReq {..} -> do
+--     let BookingDetails{..} = bookingDetails
+--     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing Nothing Nothing False False (Just $ show Event.STOP_ARRIVED)
+--     pure $
+--       Spec.OnUpdateReq
+--         { onUpdateReqError = Nothing,
+--           onUpdateReqContext = context,
+--           onUpdateReqMessage =
+--             Just $
+--               Spec.ConfirmReqMessage
+--                 { confirmReqMessageOrder =
+--                     Spec.Order
+--                       { orderId = Just ride.bookingId.getId,
+--                         orderFulfillments = Just [fulfillment],
+--                         orderBilling = Nothing,
+--                         orderCancellation = Nothing,
+--                         orderCancellationTerms = Nothing,
+--                         orderItems = Nothing,
+--                         orderPayments = Nothing,
+--                         orderProvider = Nothing,
+--                         orderQuote = Nothing,
+--                         orderStatus = Nothing
+--                       }
+--                 }
+--         }

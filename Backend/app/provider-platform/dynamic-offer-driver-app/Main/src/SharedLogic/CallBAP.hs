@@ -25,6 +25,7 @@ module SharedLogic.CallBAP
     sendDriverOffer,
     callOnConfirm,
     callOnConfirmV2,
+    callOnStatusV2,
     buildBppUrl,
     sendSafetyAlertToBAP,
   )
@@ -32,10 +33,12 @@ where
 
 import qualified AWS.S3 as S3
 import qualified Beckn.ACL.OnSelect as ACL
+import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
+import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
@@ -79,9 +82,11 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
@@ -174,6 +179,24 @@ callOnUpdateV2 req retryConfig = do
   let authKey = getHttpManagerKey bppSubscriberId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
+
+callOnStatusV2 ::
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    MonadFlow m,
+    -- EncFlow m r,
+    CoreMetrics m,
+    HasHttpClientOptions r c
+  ) =>
+  Spec.OnStatusReq ->
+  RetryCfg ->
+  m ()
+callOnStatusV2 req retryConfig = do
+  bapUri' <- req.onStatusReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Ride Assigned request context.")
+  bapUri <- parseBaseUrl bapUri'
+  bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
+  let authKey = getHttpManagerKey bppSubscriberId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -271,22 +294,17 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
                 Left _ -> veh
           else pure veh
       Nothing -> pure veh
+  let bookingDetails = ACL.BookingDetails {..}
   resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
   isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
-  let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
+  let rideAssignedBuildReq = ACL.RideAssignedReq ACL.DRideAssignedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry rideAssignedBuildReq
-      let generatedMsg = A.encode rideAssignedMsgV2
-      logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
-      void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig
-    else do
-      rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
-      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideAssignedMsg retryConfig
+  rideAssignedMsgV2 <- ACL.buildOnStatusReqV2 transporter booking rideAssignedBuildReq
+  let generatedMsg = A.encode rideAssignedMsgV2
+  logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
+  void $ callOnStatusV2 rideAssignedMsgV2 retryConfig
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
@@ -350,18 +368,12 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
-  let rideStartedBuildReq = ACL.RideStartedBuildReq ACL.DRideStartedReq {..}
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId) -- shrey00 : are these 2 lines needed?
+  let bookingDetails = ACL.BookingDetails {..}
+      rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
-
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      rideStartedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry rideStartedBuildReq
-      void $ callOnUpdateV2 rideStartedMsgV2 retryConfig
-    else do
-      rideStartedMsg <- ACL.buildOnUpdateMessage rideStartedBuildReq
-      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideStartedMsg retryConfig
+  rideStartedMsgV2 <- ACL.buildOnStatusReqV2 transporter booking rideStartedBuildReq
+  void $ callOnStatusV2 rideStartedMsgV2 retryConfig
 
 sendRideCompletedUpdateToBAP ::
   ( CacheFlow m r,
@@ -385,17 +397,12 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId) -- shrey00 : are these 2 lines needed?
+  let bookingDetails = ACL.BookingDetails {..}
+      rideCompletedBuildReq = ACL.RideCompletedReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry rideCompletedBuildReq
-      void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig
-    else do
-      rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
-      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideCompletedMsg retryConfig
+  rideCompletedMsgV2 <- ACL.buildOnStatusReqV2 transporter booking rideCompletedBuildReq
+  void $ callOnStatusV2 rideCompletedMsgV2 retryConfig
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -403,6 +410,7 @@ sendBookingCancelledUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasField "isBecknSpecVersion2" r Bool,
+    CacheFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     CoreMetrics m
@@ -412,16 +420,17 @@ sendBookingCancelledUpdateToBAP ::
   SRBCR.CancellationSource ->
   m ()
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
-  let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq ACL.DBookingCancelledReq {..}
+  mbRide <- QRide.findOneByBookingId booking.id
+  bookingDetails <- case mbRide of
+    Just ride -> do
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+      return $ Just ACL.BookingDetails {..}
+    Nothing -> return Nothing
+  let bookingCancelledBuildReq = ACL.BookingCancelledReq ACL.DBookingCancelledReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      bookingCancelledMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry bookingCancelledBuildReq
-      void $ callOnUpdateV2 bookingCancelledMsgV2 retryConfig
-    else do
-      bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
-      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId bookingCancelledMsg retryConfig
+  bookingCancelledMsgV2 <- ACL.buildOnStatusReqV2 transporter booking bookingCancelledBuildReq
+  void $ callOnStatusV2 bookingCancelledMsgV2 retryConfig
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -490,13 +499,14 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  let driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  let bookingDetails = ACL.BookingDetails {..}
+      driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
     then do
-      driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry driverArrivedBuildReq
+      driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking driverArrivedBuildReq
       void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig
     else do
       driverArrivedMsg <- ACL.buildOnUpdateMessage driverArrivedBuildReq
@@ -514,19 +524,23 @@ sendStopArrivalUpdateToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
   m ()
-sendStopArrivalUpdateToBAP booking ride = do
-  transporter <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
-  stopArrivedMsg <- ACL.buildOnUpdateMessage stopArrivedBuildReq
-  let mbCity = booking.bapCity
-  let mbCountry = booking.bapCountry
-  stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry stopArrivedBuildReq
-  retryConfig <- asks (.shortDurationRetryCfg)
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig
-    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId stopArrivedMsg retryConfig
+sendStopArrivalUpdateToBAP booking ride driver vehicle = do
+  isOnUs <- CValueAddNP.isValueAddNP booking.bapId
+  when isOnUs $ do
+    transporter <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    let bookingDetails = ACL.BookingDetails {..}
+        stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
+    stopArrivedMsg <- ACL.buildOnUpdateMessage stopArrivedBuildReq
+    stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking stopArrivedBuildReq
+    retryConfig <- asks (.shortDurationRetryCfg)
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig
+      else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId stopArrivedMsg retryConfig
+  return ()
 
 sendNewMessageToBAP ::
   ( CacheFlow m r,
@@ -543,22 +557,26 @@ sendNewMessageToBAP ::
   T.Text ->
   m ()
 sendNewMessageToBAP booking ride message = do
-  transporter <-
-    CQM.findById booking.providerId
-      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  let newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
-  retryConfig <- asks (.shortDurationRetryCfg)
+  isOnUs <- CValueAddNP.isValueAddNP booking.bapId
+  when isOnUs $ do
+    transporter <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+    let bookingDetails = ACL.BookingDetails {..}
+        newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
+    retryConfig <- asks (.shortDurationRetryCfg)
 
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry newMessageBuildReq
-      void $ callOnUpdateV2 newMessageMsgV2 retryConfig
-    else do
-      newMessageMsg <- ACL.buildOnUpdateMessage newMessageBuildReq
-      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsg retryConfig
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then do
+        newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking newMessageBuildReq
+        void $ callOnUpdateV2 newMessageMsgV2 retryConfig
+      else do
+        newMessageMsg <- ACL.buildOnUpdateMessage newMessageBuildReq
+        void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsg retryConfig
+  return ()
 
 sendSafetyAlertToBAP ::
   ( CacheFlow m r,
@@ -574,22 +592,28 @@ sendSafetyAlertToBAP ::
   SRide.Ride ->
   T.Text ->
   T.Text ->
+  DP.Person ->
+  DVeh.Vehicle ->
   m ()
-sendSafetyAlertToBAP booking ride code reason = do
-  transporter <-
-    CQM.findById booking.providerId
-      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
+sendSafetyAlertToBAP booking ride code reason driver vehicle = do
+  isOnUs <- CValueAddNP.isValueAddNP booking.bapId
+  when isOnUs $ do
+    transporter <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    let bookingDetails = ACL.BookingDetails {..}
+        safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
 
-  retryConfig <- asks (.shortDurationRetryCfg)
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry safetyAlertBuildReq
-      void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig
-    else do
-      safetyAlertMsg <- ACL.buildOnUpdateMessage safetyAlertBuildReq
-      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId safetyAlertMsg retryConfig
+    retryConfig <- asks (.shortDurationRetryCfg)
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then do
+        safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking safetyAlertBuildReq
+        void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig
+      else do
+        safetyAlertMsg <- ACL.buildOnUpdateMessage safetyAlertBuildReq
+        void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId safetyAlertMsg retryConfig
+  return ()
 
 sendEstimateRepetitionUpdateToBAP ::
   ( CacheFlow m r,
@@ -605,20 +629,25 @@ sendEstimateRepetitionUpdateToBAP ::
   SRide.Ride ->
   Id DEst.Estimate ->
   SRBCR.CancellationSource ->
+  DP.Person ->
+  DVeh.Vehicle ->
   m ()
-sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource = do
-  transporter <-
-    CQM.findById booking.providerId
-      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {cancellationSource, booking, estimateId, ride}
+sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource driver vehicle = do
+  isOnUs <- CValueAddNP.isValueAddNP booking.bapId
+  when isOnUs $ do
+    transporter <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    let bookingDetails = ACL.BookingDetails {ride, booking, driver, vehicle}
+        estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
+    retryConfig <- asks (.shortDurationRetryCfg)
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
 
-  retryConfig <- asks (.shortDurationRetryCfg)
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-
-  if isBecknSpecVersion2
-    then do
-      estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry estimateRepetitionBuildReq
-      void $ callOnUpdateV2 estimateRepMsgV2 retryConfig
-    else do
-      estimateRepMsg <- ACL.buildOnUpdateMessage estimateRepetitionBuildReq
-      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId estimateRepMsg retryConfig
+    if isBecknSpecVersion2
+      then do
+        estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking estimateRepetitionBuildReq
+        void $ callOnUpdateV2 estimateRepMsgV2 retryConfig
+      else do
+        estimateRepMsg <- ACL.buildOnUpdateMessage estimateRepetitionBuildReq
+        void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId estimateRepMsg retryConfig
+  return ()

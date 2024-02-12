@@ -22,7 +22,6 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -82,16 +81,22 @@ status transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerB
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
     then do
-      context <- ContextV2.buildContextV2 Context.STATUS Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
-      onStatusMessageV2 <- ACL.mkOnStatusMessageV2 dStatusRes.info
-      Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
-        pure $
-          Spec.OnStatusReq
-            { onStatusReqContext = context,
-              onStatusReqError = Nothing,
-              onStatusReqMessage = onStatusMessageV2
-            }
-    else do
+      -- let bppSubscriberId = getShortId $ dStatusRes.transporter.subscriberId
+      --     city' = fromMaybe dStatusRes.transporter.city dStatusRes.booking.bapCity
+      --     country' = fromMaybe dStatusRes.transporter.country dStatusRes.booking.bapCountry
+      -- bppSubscriberUri <- BUtils.mkBppUri dStatusRes.transporter.id.getId
+      onStautusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info
+      -- context <- ContextV2.buildContextV2 Context.STATUS Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
+      -- onStatusMessageV2 <- ACL.mkOnStatusMessageV2 dStatusRes.info
+      Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStautusReq.onStatusReqContext) $
+        pure onStautusReq
+    else -- pure $
+    --   Spec.OnStatusReq
+    --     { onStatusReqContext = context,
+    --       onStatusReqError = Nothing,
+    --       onStatusReqMessage = onStatusMessageV2
+    --     }
+    do
       onStatusMessage <- ACL.buildOnStatusMessage dStatusRes.info
       context <- buildTaxiContext Context.STATUS msgId txnId bapId callbackUrl bppId bppUri city country False
       CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPIV1 context callbackUrl internalEndPointHashMap $
