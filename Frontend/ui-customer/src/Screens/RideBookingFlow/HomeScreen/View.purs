@@ -197,7 +197,7 @@ screen initialState =
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
                 case initialState.data.rentalsInfo of
                   Just rentalsInfo -> do
-                    when ((fromMaybe 911 $ fromString (unsafePerformEffect $ compareUTCDate (getCurrentUTC "") rentalsInfo.rideScheduledAtUTC)) < 180000) do
+                    when ((fromMaybe 180001 $ fromString (unsafePerformEffect $ compareUTCDate rentalsInfo.rideScheduledAtUTC (getCurrentUTC ""))) < 900) do
                       -- let _ = spy "whenCase-codex" rentalsInfo.rideScheduledAtUTC
                       _ <- pure $ updateLocalStage ConfirmingQuotes
                       void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 15 3000.0 push initialState {props {bookingId = rentalsInfo.bookingId }}
