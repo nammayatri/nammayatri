@@ -363,7 +363,7 @@ data Action = NoAction
             | ToggleBonusPopup
             | GoToEarningsScreen Boolean
             | CustomerSafetyPopupAC PopUpModal.Action
-            | UpdateLastLoc Number Number String
+            | UpdateLastLoc Number Number Boolean
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -843,17 +843,22 @@ eval (TimeUpdate time lat lng) state = do
   void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
   continueWithCmd newState [ do
     void $ if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
-    let timeStamp = EHC.getCurrentUTC ""
-        time = maybe "" (\x -> x.timeStamp) state.data.prevLatLon
-        difference = runFn2 differenceBetweenTwoUTC timeStamp time
-    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, state.data.prevLatLon of
-      true, ST.RideAccepted, false, Just lastLoc -> do
-        let lastTwoHeartbeats = checkTwoDriverHeartbeats {lat : driverLat, lon:driverLong, place: "", timeStamp: timeStamp} {lat:lastLoc.lat, lon : lastLoc.lon, place : "", timeStamp: time} {lat:state.data.activeRide.src_lat, lon : state.data.activeRide.src_lon, place : "" , timeStamp: ""} state.data.config.waitTimeConfig.thresholdDist difference state
-        pure if lastTwoHeartbeats then UpdateAndNotify else (UpdateLastLoc driverLat driverLong timeStamp)
-      _, _, _, _-> pure $ UpdateLastLoc driverLat driverLong timeStamp
+    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, not (Array.null state.data.prevLatLon) of
+      true, ST.RideAccepted, false, true -> do
+        let lastTwoHeartbeats = checkTwoDriverHeartbeats state.data.prevLatLon {lat:state.data.activeRide.src_lat, lon : state.data.activeRide.src_lon, place : "" , driverInsideThreshold : false} state.data.config.waitTimeConfig.thresholdDist state
+        pure $ if lastTwoHeartbeats && state.data.noOfLocations == 3 then UpdateAndNotify else (UpdateLastLoc driverLat driverLong lastTwoHeartbeats)
+      _, _, _, _-> pure $ UpdateLastLoc driverLat driverLong false
     ]
 
-eval (UpdateLastLoc lat lon timeStamp) state = continue state {data { prevLatLon = Just {lat : lat, lon : lon, place : "", timeStamp: timeStamp}}}
+eval (UpdateLastLoc lat lon val) state = do
+  let updatedArray = state.data.prevLatLon <> [{lat : lat, lon : lon, place : "", driverInsideThreshold : val}]
+      array = if Array.length updatedArray > 3
+                then Array.drop 1 updatedArray
+                else updatedArray
+      value = if val then (state.data.noOfLocations + 1) else 0
+      minDisplacement = if val then "0.0" else "5.0"
+      _ = setValueToLocalStore DRIVER_MIN_DISPLACEMENT minDisplacement
+  continue state {data { prevLatLon = array, noOfLocations = value }}
   
 eval (UpdateAndNotify) state =
   continueWithCmd state
@@ -863,11 +868,11 @@ eval (UpdateAndNotify) state =
                   push <- liftFlowBT $ getPushFn Nothing "HomeScreen"
                   GetRouteResp routeApiResponse <- Remote.getRouteBT (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon) "pickup"
                   let shortRoute = (routeApiResponse Array.!! 0)
-                      time = maybe "" (\x -> x.timeStamp) state.data.prevLatLon
+                      _ = setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
                   liftFlowBT $ push $ case shortRoute of
                       Just (Route route) -> do
-                          if (route.distance) <= state.data.config.waitTimeConfig.routeDistance then NotifyAPI else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon time
-                      _ -> UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon time
+                          if (route.distance) <= state.data.config.waitTimeConfig.routeDistance then NotifyAPI else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
+                      _ -> UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
             pure NoAction
         ]
 
@@ -1108,7 +1113,7 @@ constructLatLong lat lon =
   { lat: fromMaybe 0.0 (Number.fromString lat)
   , lon : fromMaybe 0.0 (Number.fromString lon)
   , place : ""
-  , timeStamp : ""
+  , driverInsideThreshold : false
   }
 
 activeRideDetail :: ST.HomeScreenState -> RidesInfo -> ST.ActiveRide
@@ -1285,12 +1290,9 @@ isSafetyPeriod :: ST.HomeScreenState -> String -> Boolean
 isSafetyPeriod state riseStartTime = 
   let timeStamp = EHC.convertUTCtoISC riseStartTime "HH:mm:ss"
   in JB.withinTimeRange state.data.config.safetyRide.startTime state.data.config.safetyRide.endTime timeStamp
-
-checkTwoDriverHeartbeats :: ST.Location -> ST.Location -> ST.Location -> Number -> Int -> ST.HomeScreenState -> Boolean
-checkTwoDriverHeartbeats loc1 loc2 pickupLoc thresholdDist difference state =
-  let dist1 = getDistanceBwCordinates loc1.lat loc1.lon pickupLoc.lat pickupLoc.lon
-      dist2 = getDistanceBwCordinates loc2.lat loc2.lon pickupLoc.lat pickupLoc.lon
+checkTwoDriverHeartbeats :: Array ST.Location -> ST.Location -> Number -> ST.HomeScreenState -> Boolean
+checkTwoDriverHeartbeats locationArray pickupLoc thresholdDist state =
+  let latLon = fromMaybe {lat : 0.0, lon : 0.0, place : "", driverInsideThreshold : false} (Array.last state.data.prevLatLon)
+      dist1 = getDistanceBwCordinates latLon.lat latLon.lon pickupLoc.lat pickupLoc.lon
       h1 = dist1 < thresholdDist
-      h2 = dist2 < thresholdDist
-      res = if difference > state.data.config.waitTimeConfig.diffBtwTwoHeartBeats then h1 else h1 && h2
-  in res
+  in h1
