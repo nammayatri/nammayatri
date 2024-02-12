@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 
 data RiderConfigT f = RiderConfigT
   { appUrl :: B.C f Kernel.Prelude.Text,
+    collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,

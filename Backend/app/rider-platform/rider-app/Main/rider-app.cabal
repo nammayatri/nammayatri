@@ -405,6 +405,7 @@ library
       API.Types.UI.FRFSTicketService
       API.Types.UI.Sos
       API.Types.UI.TicketService
+      Domain.Types.AutoCompleteData
       Domain.Types.BecknConfig
       Domain.Types.BusinessHour
       Domain.Types.FRFSQuote
@@ -429,6 +430,7 @@ library
       Domain.Types.TicketBookingServiceCategory
       Domain.Types.TicketPlace
       Domain.Types.TicketService
+      Storage.Beam.AutoCompleteData
       Storage.Beam.BecknConfig
       Storage.Beam.BusinessHour
       Storage.Beam.FRFSQuote
@@ -453,6 +455,7 @@ library
       Storage.Beam.TicketBookingServiceCategory
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
+      Storage.Queries.AutoCompleteData
       Storage.Queries.BecknConfig
       Storage.Queries.BusinessHour
       Storage.Queries.FRFSQuote

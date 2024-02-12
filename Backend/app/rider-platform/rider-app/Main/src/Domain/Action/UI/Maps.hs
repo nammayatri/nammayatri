@@ -22,11 +22,13 @@ module Domain.Action.UI.Maps
     autoComplete,
     getPlaceDetails,
     getPlaceName,
+    AutoCompleteType (..),
   )
 where
 
 import qualified Data.Geohash as DG
 import Data.Text (pack)
+import qualified Domain.Types.AutoCompleteData as DTA
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -41,8 +43,12 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Person as CQP
+import qualified Storage.Queries.AutoCompleteData as QAutoCompleteData
+import qualified Storage.Queries.RiderConfig as QRiderConfig
 import Tools.Error
 import qualified Tools.Maps as Maps
+
+data AutoCompleteType = PICKUP | DROP deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
 
 data AutoCompleteReq = AutoCompleteReq
   { input :: Text,
@@ -51,14 +57,47 @@ data AutoCompleteReq = AutoCompleteReq
     radius :: Integer,
     language :: Maps.Language,
     strictbounds :: Maybe Bool,
-    origin :: Maybe Maps.LatLong
+    origin :: Maybe Maps.LatLong,
+    autoCompleteType :: Maybe AutoCompleteType
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 autoComplete :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete (personId, merchantId) AutoCompleteReq {..} = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
+  fork "Inserting/Updating autocomplete data" $ do
+    riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
+    whenJust riderConfig $ \config -> do
+      let toCollectData = fromMaybe False config.collectAutoCompleteData
+      when toCollectData $ do
+        let autoCompleteDataCollectionCondition = (isJust sessionToken) && (isJust autoCompleteType)
+        when autoCompleteDataCollectionCondition $ do
+          let token = fromMaybe "" sessionToken
+          let typeOfSearch = fromMaybe DROP autoCompleteType
+          currentRecord <- QAutoCompleteData.findBySessionTokenAndSearchType token (show typeOfSearch)
+          case currentRecord of
+            Just record -> do
+              let currentSting = record.autocompleteInputs
+              QAutoCompleteData.updateInputById (currentSting <> "|" <> input) record.id
+            Nothing -> do
+              now <- getCurrentTime
+              uid <- generateGUID
+              let autoCompleteData =
+                    DTA.AutoCompleteData
+                      { autocompleteInputs = input,
+                        customerId = personId,
+                        id = uid,
+                        isLocationSelectedOnMap = Nothing,
+                        searchRequestId = Nothing,
+                        searchType = show typeOfSearch,
+                        sessionToken = token,
+                        merchantId = Just merchantId,
+                        merchantOperatingCityId = Just merchantOperatingCityId,
+                        createdAt = now,
+                        updatedAt = now
+                      }
+              QAutoCompleteData.create autoCompleteData
   Maps.autoComplete
     merchantId
     merchantOperatingCityId
