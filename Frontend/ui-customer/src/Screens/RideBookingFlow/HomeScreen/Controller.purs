@@ -767,6 +767,8 @@ data ScreenOutput = LogoutUser
                   | GoToNotifyRideShare HomeScreenState
                   | ExitToFollowRide HomeScreenState
                   | GoToReportSafetyIssue HomeScreenState
+                  | GoToMyMetroTickets HomeScreenState
+                  | GoToMetroTicketBookingFlow HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -883,6 +885,7 @@ data Action = NoAction
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
             | SpecialZoneOTPExpiryAction Int String String
             | TicketBookingFlowBannerAC Banner.Action
+            | MetroTicketBookingBannerAC Banner.Action
             | WaitingInfo
             | ShareRide
             | ScrollStateChanged String
@@ -1030,11 +1033,14 @@ eval (BannerCarousel (BannerCarousel.OnClick idx)) state =
           BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
           BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
           BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
+          BannerCarousel.Remote link -> do
+            void $ openUrlInApp link
+            pure NoAction
           _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
 
-eval (MetroTicketBannerClickAC Banner.OnClick) state = continue state -- Handle Metro Ticket Flow
+eval (MetroTicketBannerClickAC Banner.OnClick) state =  exit $ GoToMetroTicketBookingFlow state
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -1094,7 +1100,7 @@ eval StopAutoScrollTimer state =  do
 eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
-  continue state{props{isMockLocation = val}}
+  continue state{props{isMockLocation = false}}
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
@@ -1556,6 +1562,10 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToNammaSafety))
 eval (SettingSideBarActionController (SettingSideBarController.GoToMyTickets)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_zoo_tickets"
   exit $ GoToMyTickets state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+
+eval (SettingSideBarActionController (SettingSideBarController.GoToMyMetroTickets)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_metro_tickets"
+  exit $ GoToMyMetroTickets state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
   do
@@ -2364,6 +2374,8 @@ eval (UpdateProfileButtonAC PrimaryButtonController.OnClick) state = do
 eval (DisabilityBannerAC Banner.OnClick) state = if (addCarouselWithVideoExists unit ) then continue state{props{showEducationalCarousel = true}} else exit $ GoToMyProfile state true
 
 eval (TicketBookingFlowBannerAC Banner.OnClick) state = exit $ GoToTicketBookingFlow state
+
+eval (MetroTicketBookingBannerAC Banner.OnClick) state = exit $ GoToMetroTicketBookingFlow state
 
 eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do 
   _ <- pure $ pauseYoutubeVideo unit

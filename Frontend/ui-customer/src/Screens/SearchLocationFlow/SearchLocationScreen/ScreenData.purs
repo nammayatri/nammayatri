@@ -1,3 +1,18 @@
+{-
+ 
+  Copyright 2022-23, Juspay India Pvt Ltd
+ 
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ 
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ 
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ 
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ 
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module Screens.SearchLocationScreen.ScreenData where
 
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo)
@@ -11,9 +26,7 @@ initData :: SearchLocationScreenState
 initData = {
   data : { srcLoc : Nothing
          , destLoc : Nothing
-         , currentLoc : Just dummyLocationInfo{
-            address = "Current Location"
-         } 
+         , currentLoc : Nothing 
          , locationList : []
          , fromScreen : getScreen HOME_SCREEN -- getScreen RENTAL_SCREEN
          , saveFavouriteCard : {
@@ -28,6 +41,8 @@ initData = {
         , nearByGates : []
         , specialZoneCoordinates : ""
         , confirmLocCategory : ""
+        , metroStations : []
+        , updatedMetroStations : []
   } ,
   props : {
     searchLocStage : PredictionsStage ,
@@ -63,5 +78,7 @@ dummyLocationInfo = {
   placeId : Nothing,
   address : "",
   addressComponents : dummyAddress,
-  city : Nothing 
+  city : Nothing ,
+  stationCode : "",
+  metroInfo : Nothing
 }

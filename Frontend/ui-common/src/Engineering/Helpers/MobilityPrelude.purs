@@ -18,12 +18,12 @@ import Data.String (null,Pattern(..), contains, joinWith, toLower, take, toUpper
 import Data.Maybe (Maybe(..), fromMaybe, maybe, fromJust)
 import PrestoDOM as PD
 import Prelude
-import Data.Array (elem, cons)
 import Data.Array as DA
 import Data.Foldable (foldl)
 import Data.Tuple (Tuple(..))
 import Data.Int (pow)
 import Data.Function.Uncurried (Fn3(..), runFn3)
+import Data.String as DS
 
 foreign import swapElements :: forall a. Fn3 Int Int (Array a) (Array a)
 
@@ -76,7 +76,7 @@ caseInsensitiveCompare str1 str2 =
 
 groupAdjacent :: forall a. Array a -> Array (Array a)
 groupAdjacent [] = []
-groupAdjacent x = cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))
+groupAdjacent x = DA.cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))
 
 sortAccToDayName arr = DA.sortBy (\a b -> compare (dayToIndex a) (dayToIndex b)) arr
 
@@ -109,3 +109,8 @@ shuffleArray seed arr =
             swapped = runFn3 swapElements i j array
         in shuffle newSeed (i - 1) swapped
   in shuffle seed (len - 1) arr
+findStringWithPrefix :: String -> Array String -> Array String
+findStringWithPrefix prefix arr = DA.filter (\item -> startsWith prefix item) arr
+
+startsWith :: String -> String -> Boolean
+startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)
