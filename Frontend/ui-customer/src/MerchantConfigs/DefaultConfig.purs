@@ -135,9 +135,9 @@ config =
   , suggestedTripsAndLocationConfig : {
         geohashLimitForMap : 60,
         geohashPrecision : 7,
-        maxLocationsToBeShown : 5,
+        maxLocationsToBeShown : 10,
         minLocationsToBeShown : 2,
-        maxTripsToBeShown : 5,
+        maxTripsToBeShown : 10,
         minTripsToBeShown : 2,
         locationsToBeStored : 30,
         tripsToBeStored : 30,
@@ -146,7 +146,8 @@ config =
         repeatRideTime : 8,
         autoScrollTime : 5,
         tripWithinXDist : 0.05,
-        locationWithinXDist : 100.0
+        locationWithinXDist : 100.0,
+        destinationGeohashPrecision : 9 
       }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
