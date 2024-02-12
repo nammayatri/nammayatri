@@ -57,6 +57,7 @@ import Data.String as DS
 import ConfigProvider as CP
 import Locale.Utils
 import MerchantConfig.Types (GeoCodeConfig)
+import Debug
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -1160,3 +1161,90 @@ getFollowRide :: String -> Flow GlobalState (Either ErrorResponse FollowRideRes)
 getFollowRide _ = do
   headers <- getHeaders "" false
   withAPIResult (EP.followRide "") identity $ callAPI headers FollowRideReq
+
+-------------------------------------------------------- Metro Booking --------------------------------------------------------
+
+-- getMetroBookingStatus :: String -> FlowBT String GetMetroBookingStatusResp
+getMetroBookingStatus shortOrderID = do 
+  headers <- getHeaders "" false
+  withAPIResult (EP.getMetroBookingStatus shortOrderID) unwrapResponse $ callAPI headers (GetMetroBookingStatusReq shortOrderID)
+  where
+    unwrapResponse x = x
+
+getMetroBookingStatusListBT :: FlowBT String GetMetroBookingListResp
+getMetroBookingStatusListBT = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.getMetroBookingList "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq))
+      where
+        errorHandler _ = do
+            BackT $ pure GoBack
+
+
+retryMetroTicketPaymentBT :: String -> FlowBT String RetryMetrTicketPaymentResp
+retryMetroTicketPaymentBT quoteId = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.retryMetrTicketPayment quoteId) (\x → x) errorHandler (lift $ lift $ callAPI headers (RetryMetrTicketPaymentReq quoteId))
+      where
+        errorHandler _ = do
+            BackT $ pure GoBack
+
+retryMetroTicketPayment quoteId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.retryMetrTicketPayment quoteId) unwrapResponse $ callAPI headers (RetryMetrTicketPaymentReq quoteId)
+  where
+    unwrapResponse x = x
+
+getMetroStationBT :: String -> FlowBT String GetMetroStationResponse
+getMetroStationBT _ = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getMetroStations "") (\x -> x) errorHandler (lift $ lift $ callAPI headers GetMetroStationReq)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack 
+
+searchMetroBT :: SearchMetroReq -> FlowBT String SearchMetroResp
+searchMetroBT  requestBody = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.searchMetro "") (\x -> x) errorHandler (lift $ lift $ callAPI headers requestBody)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack 
+
+makeSearchMetroReq :: String -> String -> Int -> SearchMetroReq
+makeSearchMetroReq srcCode destCode count = SearchMetroReq {
+    "fromStationCode" : srcCode,
+    "toStationCode" : destCode,
+    "quantity" : count
+    }
+
+getMetroQuotesBT :: String -> FlowBT String GetMetroQuotesRes
+getMetroQuotesBT searchId = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getMetroQuotes searchId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroQuotesReq searchId))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
+getMetroQuotes searchId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getMetroQuotes searchId) unwrapResponse $ callAPI headers (GetMetroQuotesReq searchId)
+  where
+  unwrapResponse x = x
+ 
+confirmMetroQuoteBT :: String -> FlowBT String MetroTicketBookingStatus
+confirmMetroQuoteBT quoteId = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.confirmMetroQuote quoteId) (\x → x) errorHandler (lift $ lift $ callAPI headers (ConfirmMetroQuoteReq quoteId))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
+getMetroStatusBT :: String -> FlowBT String GetMetroBookingStatusResp
+getMetroStatusBT bookingId = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getMetroBookingStatus bookingId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingStatusReq bookingId))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
+

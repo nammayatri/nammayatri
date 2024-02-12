@@ -508,13 +508,11 @@ function getRandom(max) {
 }
 
 export const updateIdMap = function (key) {
-  console.log ("updateIdMap")
   idMap[key] = {id : getRandom(10000), shouldPush: true};
   return idMap[key];
 };
 
 export const updatePushInIdMap = function (key, flag) {
-  console.log ("updatePushInIdMap", idMap, flag);
   if (idMap[key]) {
     idMap[key]["shouldPush"] = flag;
   }
@@ -522,10 +520,14 @@ export const updatePushInIdMap = function (key, flag) {
 
 export const getValueFromIdMap = function (key) {
   let val = idMap[key]; 
-  console.log ("getValueFromIdMap", idMap);
   if (!val) {
     idMap[key] = {id : getRandom(10000), shouldPush: true};
     val = idMap[key];
   }
   return val;
 };
+
+export const isTrue = function (a) {
+  const bool = true;
+  return a.toString() === bool.toString();
+}

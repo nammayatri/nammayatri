@@ -970,6 +970,11 @@ export const differenceBetweenTwoUTC = function (date1, date2) {
   return diffInSeconds;
 }
 
+export const differenceBetweenTwoUTCInMinutes = function (date1, date2) {
+  const diffInMinutes = Math.round((new Date(date1) - new Date(date2)) / 60000);
+  return diffInMinutes;
+}
+
 export const isCoordOnPath = function (data) {
   return function (lat) {
     return function (lon) {
@@ -1722,7 +1727,11 @@ export const requestKeyboardShow = function (id) {
 }
 
 export const showKeyboard = function (id) {
-  JBridge.showKeyboard(id); // imeOptions is set to IME_ACTION_SEARCH and IME_ACTION_DONE
+  if ( window.__OS == "IOS")
+    return JBridge.requestKeyboardShow(id);
+  else 
+    return JBridge.showKeyboard(id);
+  // JBridge.showKeyboard(id); // imeOptions is set to IME_ACTION_SEARCH and IME_ACTION_DONE
 }
 
 export const locateOnMap = (configObj) => {
