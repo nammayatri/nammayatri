@@ -82,7 +82,7 @@ status transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerB
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
     then do
-      context <- ContextV2.buildContextV2 Context.STATUS Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
+      context <- ContextV2.buildContextV2 Context.ON_STATUS Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
       onStatusMessageV2 <- ACL.mkOnStatusMessageV2 dStatusRes.info
       Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
         pure $
