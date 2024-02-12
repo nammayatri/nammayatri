@@ -79,23 +79,23 @@ status transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerB
 
   dStatusRes <- DStatus.handler transporterId dStatusReq
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      context <- ContextV2.buildContextV2 Context.ON_STATUS Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
-      onStatusMessageV2 <- ACL.mkOnStatusMessageV2 dStatusRes.info
-      Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
-        pure $
-          Spec.OnStatusReq
-            { onStatusReqContext = context,
-              onStatusReqError = Nothing,
-              onStatusReqMessage = onStatusMessageV2
-            }
-    else do
-      onStatusMessage <- ACL.buildOnStatusMessage dStatusRes.info
-      context <- buildTaxiContext Context.STATUS msgId txnId bapId callbackUrl bppId bppUri city country False
-      CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPIV1 context callbackUrl internalEndPointHashMap $
-        pure onStatusMessage
+  -- isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  -- if isBecknSpecVersion2
+  --   then do
+  --     context <- ContextV2.buildContextV2 Context.ON_STATUS Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
+  --     onStatusMessageV2 <- ACL.mkOnStatusMessageV2 dStatusRes.info
+  --     Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
+  --       pure $
+  --         Spec.OnStatusReq
+  --           { onStatusReqContext = context,
+  --             onStatusReqError = Nothing,
+  --             onStatusReqMessage = onStatusMessageV2
+  --           }
+  --   else do
+  onStatusMessage <- ACL.buildOnStatusMessage dStatusRes.info
+  context <- buildTaxiContext Context.STATUS msgId txnId bapId callbackUrl bppId bppUri city country False
+  CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPIV1 context callbackUrl internalEndPointHashMap $
+    pure onStatusMessage
 
 decodeReq :: MonadFlow m => ByteString -> m (Either Status.StatusReq Status.StatusReqV2)
 decodeReq reqBS =
