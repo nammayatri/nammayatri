@@ -23,6 +23,7 @@ import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.OnDemand.Transformer.Search as Search
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
 import Data.Aeson (encode)
@@ -172,24 +173,24 @@ mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints 
     mkRouteInfoTags =
       Search.TagGroup
         { display = False,
-          code = "route_info",
+          code = Tag.TG_ROUTE_INFO,
           name = "Route Information",
           list =
             [ Search.Tag
                 { display = (\_ -> Just False) =<< distance,
-                  code = (\_ -> Just "distance_info_in_m") =<< distance,
+                  code = (\_ -> Just Tag.T_DISTANCE_INFO_IN_M) =<< distance,
                   name = (\_ -> Just "Distance Information In Meters") =<< distance,
                   value = (\distanceInM -> Just $ show distanceInM.getMeters) =<< distance
                 },
               Search.Tag
                 { display = (\_ -> Just False) =<< duration,
-                  code = (\_ -> Just "duration_info_in_s") =<< duration,
+                  code = (\_ -> Just Tag.T_DURATION_INFO_IN_S) =<< duration,
                   name = (\_ -> Just "Duration Information In Seconds") =<< duration,
                   value = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
                 },
               Search.Tag
                 { display = (\_ -> Just False) =<< mbPoints,
-                  code = (\_ -> Just "route_points") =<< mbPoints,
+                  code = (\_ -> Just Tag.T_WAYPOINTS) =<< mbPoints,
                   name = (\_ -> Just "Route Points") =<< mbPoints,
                   value = LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints
                 }
@@ -199,24 +200,24 @@ mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints 
     mkCustomerInfoTags =
       Search.TagGroup
         { display = False,
-          code = "customer_info",
+          code = Tag.TG_CUSTOMER_INFO,
           name = "Customer Information",
           list =
             [ Search.Tag
                 { display = (\_ -> Just False) =<< customerLanguage,
-                  code = (\_ -> Just "customer_language") =<< customerLanguage,
+                  code = (\_ -> Just Tag.T_CUSTOMER_LANGUAGE) =<< customerLanguage,
                   name = (\_ -> Just "Customer Language") =<< customerLanguage,
                   value = (Just . show) =<< customerLanguage
                 },
               Search.Tag
                 { display = (\_ -> Just False) =<< disabilityTag,
-                  code = (\_ -> Just "customer_disability") =<< disabilityTag,
+                  code = (\_ -> Just Tag.T_CUSTOMER_DISABILITY) =<< disabilityTag,
                   name = (\_ -> Just "Customer Disability") =<< disabilityTag,
                   value = (Just . show) =<< disabilityTag
                 },
               Search.Tag
                 { display = (\_ -> Just False) =<< mbPhoneNumber,
-                  code = (\_ -> Just "customer_phone_number") =<< mbPhoneNumber,
+                  code = (\_ -> Just Tag.T_CUSTOMER_PHONE_NUMBER) =<< mbPhoneNumber,
                   name = (\_ -> Just "Customer Phone Number") =<< mbPhoneNumber,
                   value = (Just . show) =<< mbPhoneNumber
                 }
@@ -226,12 +227,12 @@ mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints 
     mkReallocationInfoTags =
       Search.TagGroup
         { display = False,
-          code = "reallocation_info",
+          code = Tag.TG_REALLOCATION_INFO,
           name = "Reallocation Information",
           list =
             [ Search.Tag
                 { display = (\_ -> Just False) =<< mbIsReallocationEnabled,
-                  code = (\_ -> Just "is_reallocation_enabled") =<< mbIsReallocationEnabled,
+                  code = (\_ -> Just Tag.T_IS_REALLOCATION_ENABLED) =<< mbIsReallocationEnabled,
                   name = (\_ -> Just "Is Reallocation Enabled") =<< mbIsReallocationEnabled,
                   value = (Just . show) =<< mbIsReallocationEnabled
                 }

@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Transformer.Search as TSearch
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
 import Data.Aeson
 import qualified Data.Text as T
@@ -92,37 +93,37 @@ buildSearchReqV2 subscriber req = do
 
 getDistance :: Search.TagGroups -> Maybe Meters
 getDistance tagGroups = do
-  tagValue <- getTag "route_info" "distance_info_in_m" tagGroups
+  tagValue <- getTag Tag.TG_ROUTE_INFO Tag.T_DISTANCE_INFO_IN_M tagGroups
   distanceValue <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceValue
 
 getDuration :: Search.TagGroups -> Maybe Seconds
 getDuration tagGroups = do
-  tagValue <- getTag "route_info" "duration_info_in_s" tagGroups
+  tagValue <- getTag Tag.TG_ROUTE_INFO Tag.T_DURATION_INFO_IN_S tagGroups
   durationValue <- readMaybe $ T.unpack tagValue
   Just $ Seconds durationValue
 
 getIsReallocationEnabled :: Search.TagGroups -> Maybe Bool
 getIsReallocationEnabled tagGroups = do
-  tagValue <- getTag "reallocation_info" "is_reallocation_enabled" tagGroups
+  tagValue <- getTag Tag.TG_REALLOCATION_INFO Tag.T_IS_REALLOCATION_ENABLED tagGroups
   readMaybe $ T.unpack tagValue
 
 buildCustomerLanguage :: Search.Customer -> Maybe Language
 buildCustomerLanguage Search.Customer {..} = do
-  tagValue <- getTag "customer_info" "customer_language" person.tags
+  tagValue <- getTag Tag.TG_CUSTOMER_INFO Tag.T_CUSTOMER_LANGUAGE person.tags
   readMaybe $ T.unpack tagValue
 
 buildDisabilityTag :: Search.Customer -> Maybe Text
 buildDisabilityTag Search.Customer {..} = do
-  tagValue <- getTag "customer_info" "customer_disability" person.tags
+  tagValue <- getTag Tag.TG_CUSTOMER_INFO Tag.T_CUSTOMER_DISABILITY person.tags
   readMaybe $ T.unpack tagValue
 
 buildRoutePoints :: Search.TagGroups -> Maybe [Maps.LatLong]
 buildRoutePoints tagGroups = do
-  tagValue <- getTag "route_info" "route_points" tagGroups
+  tagValue <- getTag Tag.TG_ROUTE_INFO Tag.T_WAYPOINTS tagGroups
   decode $ encodeUtf8 tagValue
 
 buildCustomerPhoneNumber :: Search.Customer -> Maybe Text
 buildCustomerPhoneNumber Search.Customer {..} = do
-  tagValue <- getTag "customer_info" "customer_phone_number" person.tags
+  tagValue <- getTag Tag.TG_CUSTOMER_INFO Tag.T_CUSTOMER_PHONE_NUMBER person.tags
   readMaybe $ T.unpack tagValue
