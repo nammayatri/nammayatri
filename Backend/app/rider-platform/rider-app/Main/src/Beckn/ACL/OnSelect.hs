@@ -20,6 +20,7 @@ import Beckn.ACL.Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.Utils as Utils
@@ -178,7 +179,7 @@ buildQuoteInfoV2 driverId fulfillment quote contextTime order item = do
   let mbVariant = castVehicleVariant vehicle.vehicleCategory vehicle.vehicleVariant
   vehicleVariant <- mbVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicleCategory:-" <> show vehicle.vehicleCategory <> ",vehicleVariant:-" <> show vehicle.vehicleVariant)
   let descriptions = []
-      specialLocationTag = Utils.getTagV2 "general_info" "special_location_tag" =<< item.itemTags
+      specialLocationTag = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG =<< item.itemTags
   case parsedData order of
     Left err -> do
       logTagError "on_select req" $ "on_select error: " <> show err
@@ -268,7 +269,7 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp driverId = do
   distanceToPickup' <- getDistanceToNearestDriverV2 itemTags & fromMaybeM (InvalidRequest "Trip type is DRIVER_OFFER, but distance_to_nearest_driver is Nothing")
   validTill <- (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
   let rating = getDriverRatingV2 agentTags
-  bppQuoteId <- (Utils.getTagV2 "general_info" "bpp_quote_id" =<< item.itemTags) & fromMaybeM (InvalidRequest "Missing bpp quoteId select item")
+  bppQuoteId <- (Utils.getTagV2 Tag.GENERAL_INFO Tag.BPP_QUOTE_ID =<< item.itemTags) & fromMaybeM (InvalidRequest "Missing bpp quoteId select item")
   pure $
     DOnSelect.DriverOfferQuoteDetails
       { distanceToPickup = realToFrac distanceToPickup',
@@ -290,7 +291,7 @@ getDriverRating tagGroups = do
 
 getDriverRatingV2 :: [Spec.TagGroup] -> Maybe Centesimal
 getDriverRatingV2 tagGroups = do
-  tagValue <- Utils.getTagV2 "agent_info" "rating" tagGroups
+  tagValue <- Utils.getTagV2 Tag.AGENT_INFO Tag.RATING tagGroups
   driverRating <- readMaybe $ T.unpack tagValue
   Just $ Centesimal driverRating
 
@@ -306,7 +307,7 @@ getDurationToPickup tagGroups = do
 
 getPickupDurationV2 :: [Spec.TagGroup] -> Maybe Int
 getPickupDurationV2 tagGroups = do
-  tagValue <- Utils.getTagV2 "agent_info" "duration_to_pickup_in_s" tagGroups
+  tagValue <- Utils.getTagV2 Tag.AGENT_INFO Tag.DURATION_TO_PICKUP_IN_S tagGroups
   readMaybe $ T.unpack tagValue
 
 getDistanceToNearestDriver :: OnSelect.TagGroups -> Maybe Meters
@@ -317,7 +318,7 @@ getDistanceToNearestDriver tagGroups = do
 
 getDistanceToNearestDriverV2 :: [Spec.TagGroup] -> Maybe Meters
 getDistanceToNearestDriverV2 tagGroups = do
-  tagValue <- Utils.getTagV2 "general_info" "distance_to_nearest_driver_in_m" tagGroups
+  tagValue <- Utils.getTagV2 Tag.INFO Tag.DISTANCE_TO_NEAREST_DRIVER_METER tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceToPickup
 

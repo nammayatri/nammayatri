@@ -15,6 +15,7 @@
 module Beckn.OnDemand.Utils.OnSearch where
 
 import Beckn.OnDemand.Utils.Common as Common
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import Control.Lens
@@ -104,7 +105,7 @@ buildEstimateBreakupList item = do
       >>= (.priceCurrency)
       & fromMaybeM (InvalidRequest "Missing Currency")
   tagGroups <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tag Groups")
-  tagGroupRateCard <- find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just "fare_policy") tagGroups & fromMaybeM (InvalidRequest "Missing fare policy") -- consume this from now on
+  tagGroupRateCard <- find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just (show Tag.FARE_POLICY)) tagGroups & fromMaybeM (InvalidRequest "Missing fare policy") -- consume this from now on
   tagListRateCard <- tagGroupRateCard.tagGroupList & fromMaybeM (InvalidRequest "Missing Tag List")
   let breakups = map (buildEstimateBreakUpItem currency) tagListRateCard
   return (catMaybes breakups)
@@ -147,64 +148,64 @@ buildNightShiftInfo item = do
 
 getNightShiftCharge :: [Spec.TagGroup] -> Maybe Money
 getNightShiftCharge tagGroup = do
-  tagValue <- Utils.getTagV2 "fare_policy" "night_shift_charge" tagGroup
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_CHARGE_MULTIPLIER tagGroup
   nightShiftCharge <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral nightShiftCharge
 
 getOldNightShiftCharge :: [Spec.TagGroup] -> Maybe DecimalValue
 getOldNightShiftCharge tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "OLD_NIGHT_SHIFT_CHARGE" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.OLD_NIGHT_SHIFT_CHARGE tagGroups
   DecimalValue.valueFromString tagValue
 
 getNightShiftStart :: [Spec.TagGroup] -> Maybe TimeOfDay
 getNightShiftStart tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "NIGHT_SHIFT_START_TIME" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_START_TIME tagGroups
   readMaybe $ T.unpack tagValue
 
 getNightShiftEnd :: [Spec.TagGroup] -> Maybe TimeOfDay
 getNightShiftEnd tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "NIGHT_SHIFT_END_TIME" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_END_TIME tagGroups
   readMaybe $ T.unpack tagValue
 
 getRentalBaseFare :: [Spec.TagGroup] -> Maybe Money
 getRentalBaseFare tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "MIN_FARE" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.MIN_FARE tagGroups
   baseFare <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral baseFare
 
 getRentalPerHourCharge :: [Spec.TagGroup] -> Maybe Money
 getRentalPerHourCharge tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "PER_HOUR_CHARGE" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_HOUR_CHARGE tagGroups
   perHourCharge <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral perHourCharge
 
 getRentalPerExtraMinRate :: [Spec.TagGroup] -> Maybe Money
 getRentalPerExtraMinRate tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "PER_MINUTE_CHARGE" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_MINUTE_CHARGE tagGroups
   perExtraMinRate <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral perExtraMinRate
 
 getRentalPerExtraKmRate :: [Spec.TagGroup] -> Maybe Money
 getRentalPerExtraKmRate tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "UNPLANNED_PER_KM_CHARGE" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.UNPLANNED_PER_KM_CHARGE tagGroups
   perExtraKmRate <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral perExtraKmRate
 
 getRentalIncludedKmPerHr :: [Spec.TagGroup] -> Maybe Kilometers
 getRentalIncludedKmPerHr tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "PER_HOUR_DISTANCE_KM" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_HOUR_DISTANCE_KM tagGroups
   includedKmPerHr <- DecimalValue.valueFromString tagValue
   Just . Kilometers $ roundToIntegral includedKmPerHr
 
 getRentalPlannedPerKmRate :: [Spec.TagGroup] -> Maybe Money
 getRentalPlannedPerKmRate tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "PLANNED_PER_KM_CHARGE" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PLANNED_PER_KM_CHARGE tagGroups
   plannedPerKmRate <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral plannedPerKmRate
 
 buildWaitingChargeInfo' :: [Spec.TagGroup] -> Maybe Money
 buildWaitingChargeInfo' tagGroups = do
-  tagValue <- Utils.getTagV2 "fare_policy" "WAITING_CHARGE_PER_MIN" tagGroups
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.WAITING_CHARGE_PER_MIN tagGroups
   waitingChargeValue <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral waitingChargeValue
 
@@ -230,4 +231,4 @@ makeLatLong location = do
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item = do
   itemTags <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tags")
-  return $ Utils.getTagV2 "info" "special_location_tag" itemTags
+  return $ Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG itemTags

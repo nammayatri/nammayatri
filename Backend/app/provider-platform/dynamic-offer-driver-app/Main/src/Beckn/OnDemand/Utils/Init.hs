@@ -1,5 +1,6 @@
 module Beckn.OnDemand.Utils.Init where
 
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import Data.Text as T
@@ -38,7 +39,7 @@ castPaymentInstrument params = do
 
 getMaxEstimateDistance :: [Spec.TagGroup] -> Maybe HighPrecMeters
 getMaxEstimateDistance tagGroups = do
-  tagValue <- Utils.getTagV2 "estimations" "max_estimated_distance" tagGroups
+  tagValue <- Utils.getTagV2 Tag.ESTIMATIONS Tag.MAX_ESTIMATED_DISTANCE tagGroups
   maxEstimatedDistance <- readMaybe $ T.unpack tagValue
   Just $ HighPrecMeters maxEstimatedDistance
 
