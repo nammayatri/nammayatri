@@ -75,7 +75,8 @@ type Config = {
     topTitle :: TopTitle,
     listViewArray :: Array String,
     coverVideoConfig :: CoverVideoConfig,
-    timerId :: String
+    timerId :: String,
+    dontShowRetry :: Boolean
 }
 
 type CoverVideoConfig = {
@@ -178,6 +179,7 @@ type TopTitle = {
 config :: Config
 config = {
   optionButtonOrientation: "HORIZONTAL"
+  , dontShowRetry : false
   , activeIndex : 1
   , customerTipAvailable : false
   , backgroundClickable : true
