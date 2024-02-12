@@ -128,22 +128,21 @@ getNearestOperatingAndCurrentCity' settingAccessor (personId, merchantId) should
           If the pickup location is in the operating city, then return the city.
           If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
         -}
-        runInReplica $ do
-          geoms <- findGeometriesContaining latLong regions
-          case filter (\geom -> geom.city /= Context.AnyCity) geoms of
-            [] ->
-              find (\geom -> geom.city == Context.AnyCity) geoms & \case
-                Just anyCityGeom -> do
-                  cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters latLong (LatLong m.lat m.long), m.city))
-                  let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)
-                  return $ Just $ NearestOperatingAndCurrentCity {currentCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
-                Nothing -> do
-                  logError $ "No geometry found for latLong: " <> show latLong <> " for regions: " <> show regions
-                  return Nothing
-            (g : _) -> do
-              -- Nearest operating city and source city are same
-              let operatingCityState = CityState {city = g.city, state = g.state}
-              return $ Just $ NearestOperatingAndCurrentCity {nearestOperatingCity = operatingCityState, currentCity = operatingCityState}
+        geoms <- runInReplica $ findGeometriesContaining latLong regions
+        case filter (\geom -> geom.city /= Context.AnyCity) geoms of
+          [] ->
+            find (\geom -> geom.city == Context.AnyCity) geoms & \case
+              Just anyCityGeom -> do
+                cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters latLong (LatLong m.lat m.long), m.city))
+                let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)
+                return $ Just $ NearestOperatingAndCurrentCity {currentCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
+              Nothing -> do
+                logError $ "No geometry found for latLong: " <> show latLong <> " for regions: " <> show regions
+                return Nothing
+          (g : _) -> do
+            -- Nearest operating city and source city are same
+            let operatingCityState = CityState {city = g.city, state = g.state}
+            return $ Just $ NearestOperatingAndCurrentCity {nearestOperatingCity = operatingCityState, currentCity = operatingCityState}
   whenJust mbNearestOpAndCurrentCity $ \NearestOperatingAndCurrentCity {nearestOperatingCity} -> do
     upsertPersonCityInformation personId merchantId shouldUpdatePerson (Just nearestOperatingCity.city)
   return mbNearestOpAndCurrentCity

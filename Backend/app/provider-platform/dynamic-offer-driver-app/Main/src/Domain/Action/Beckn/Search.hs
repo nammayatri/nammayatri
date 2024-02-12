@@ -519,22 +519,21 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
         If the pickup location is in the operating city, then return the city.
         If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
       -}
-      B.runInReplica $ do
-        geoms <- QGeometry.findGeometriesContaining pickupLatLong regions
-        case filter (\geom -> geom.city /= Context.AnyCity) geoms of
-          [] ->
-            find (\geom -> geom.city == Context.AnyCity) geoms & \case
-              Just anyCityGeom -> do
-                cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters pickupLatLong m.location, m.city))
-                let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)
-                return $ NearestOperatingAndSourceCity {sourceCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
-              Nothing -> do
-                logError $ "No geometry found for pickupLatLong: " <> show pickupLatLong <> " for regions: " <> show regions
-                throwError RideNotServiceable
-          (g : _) -> do
-            -- Nearest operating city and source city are same
-            let operatingCityState = CityState {city = g.city, state = g.state}
-            return $ NearestOperatingAndSourceCity {nearestOperatingCity = operatingCityState, sourceCity = operatingCityState}
+      geoms <- B.runInReplica $ QGeometry.findGeometriesContaining pickupLatLong regions
+      case filter (\geom -> geom.city /= Context.AnyCity) geoms of
+        [] ->
+          find (\geom -> geom.city == Context.AnyCity) geoms & \case
+            Just anyCityGeom -> do
+              cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters pickupLatLong m.location, m.city))
+              let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)
+              return $ NearestOperatingAndSourceCity {sourceCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
+            Nothing -> do
+              logError $ "No geometry found for pickupLatLong: " <> show pickupLatLong <> " for regions: " <> show regions
+              throwError RideNotServiceable
+        (g : _) -> do
+          -- Nearest operating city and source city are same
+          let operatingCityState = CityState {city = g.city, state = g.state}
+          return $ NearestOperatingAndSourceCity {nearestOperatingCity = operatingCityState, sourceCity = operatingCityState}
 
 getDestinationCity :: DM.Merchant -> LatLong -> Flow CityState
 getDestinationCity merchant dropLatLong = do
@@ -542,16 +541,15 @@ getDestinationCity merchant dropLatLong = do
   case geoRestriction of
     Unrestricted -> return CityState {city = merchant.city, state = merchant.state}
     Regions regions -> do
-      B.runInReplica $ do
-        geoms <- QGeometry.findGeometriesContaining dropLatLong regions
-        case filter (\geom -> geom.city /= Context.AnyCity) geoms of
-          [] ->
-            find (\geom -> geom.city == Context.AnyCity) geoms & \case
-              Just anyCityGeom -> return CityState {city = anyCityGeom.city, state = anyCityGeom.state}
-              Nothing -> do
-                logError $ "No geometry found for dropLatLong: " <> show dropLatLong <> " for regions: " <> show regions
-                throwError RideNotServiceable
-          (g : _) -> return CityState {city = g.city, state = g.state}
+      geoms <- B.runInReplica $ QGeometry.findGeometriesContaining dropLatLong regions
+      case filter (\geom -> geom.city /= Context.AnyCity) geoms of
+        [] ->
+          find (\geom -> geom.city == Context.AnyCity) geoms & \case
+            Just anyCityGeom -> return CityState {city = anyCityGeom.city, state = anyCityGeom.state}
+            Nothing -> do
+              logError $ "No geometry found for dropLatLong: " <> show dropLatLong <> " for regions: " <> show regions
+              throwError RideNotServiceable
+        (g : _) -> return CityState {city = g.city, state = g.state}
 
 buildSearchReqLocation :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.Location
 buildSearchReqLocation merchantId merchantOpCityId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
