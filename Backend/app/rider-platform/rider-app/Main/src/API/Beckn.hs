@@ -23,12 +23,13 @@ import qualified API.Beckn.OnTrack as OnTrack
 import qualified API.Beckn.OnUpdate as OnUpdate
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =
-  "cab" :> "v1" :> SignatureAuth "Authorization"
+  "cab" :> "v1" :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> ( OnSearch.API
            :<|> OnSelect.API
            :<|> OnInit.API
@@ -41,7 +42,7 @@ type API =
 type APIV2 =
   "beckn" :> "cab" :> "v1"
     :> Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> ( OnSearch.API
            :<|> OnSelect.API
            :<|> OnInit.API

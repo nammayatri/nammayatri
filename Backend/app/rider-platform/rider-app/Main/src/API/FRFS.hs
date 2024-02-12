@@ -20,13 +20,14 @@ import qualified API.Beckn.FRFS.OnSearch as OnSearch
 import qualified API.Beckn.FRFS.OnStatus as OnStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =
   "beckn" :> "frfs" :> "v1"
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.PUBLIC_TRANSPORT "Authorization"
     :> ( OnSearch.API
            :<|> OnInit.API
            :<|> OnConfirm.API
@@ -36,7 +37,7 @@ type API =
 type APIM =
   "beckn" :> "frfs" :> "v1"
     :> Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.PUBLIC_TRANSPORT "Authorization"
     :> ( OnSearch.API
            :<|> OnInit.API
            :<|> OnConfirm.API

@@ -28,6 +28,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -37,7 +38,7 @@ import Tools.Error (GenericError (InvalidRequest))
 
 type API =
   Capture "merchantId" (Id Merchant)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> API.CancelAPI
 
 handler :: FlowServer API

@@ -34,6 +34,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -43,8 +44,8 @@ import Tools.Error (GenericError (InvalidRequest))
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth "Authorization"
-    :> SignatureAuth "X-Gateway-Authorization"
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    :> SignatureAuth 'Domain.MOBILITY "X-Gateway-Authorization"
     :> Search.SearchAPI
 
 handler :: FlowServer API
