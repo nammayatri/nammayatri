@@ -46,7 +46,7 @@ data SearchRequest = SearchRequest
     maxDistance :: Maybe HighPrecMeters,
     estimatedRideDuration :: Maybe Seconds,
     device :: Maybe Text,
-    merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
+    merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,

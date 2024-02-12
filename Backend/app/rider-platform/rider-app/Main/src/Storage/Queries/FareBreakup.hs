@@ -32,7 +32,7 @@ createMany :: MonadFlow m => [FareBreakup] -> m ()
 createMany = traverse_ create
 
 findAllByBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m [FareBreakup]
-findAllByBookingId bookingId = findAllWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
+findAllByBookingId bookingId = findAllWithKVAndConditionalDB [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId] Nothing
 
 deleteAllByBookingId :: MonadFlow m => Id Booking -> m ()
 deleteAllByBookingId bookingId = deleteWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
