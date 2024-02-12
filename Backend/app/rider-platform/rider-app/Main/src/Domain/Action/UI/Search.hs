@@ -20,6 +20,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.OpenApi hiding (Header)
 import qualified Data.OpenApi as OpenApi hiding (Header)
 import Domain.Action.UI.HotSpot
+import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Action.UI.Serviceability as Serviceability
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
@@ -58,9 +59,11 @@ import qualified Storage.CachedQueries.Merchant.MerchantState as QMMS
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
+import qualified Storage.Queries.AutoCompleteData as QAutoCompleteData
 import qualified Storage.Queries.NextBillionData as QNB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonDisability as PD
+import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Event
@@ -113,9 +116,11 @@ data OneWaySearchReq = OneWaySearchReq
   { origin :: SearchReqLocation,
     destination :: SearchReqLocation,
     isSourceManuallyMoved :: Maybe Bool,
+    isDestinationManuallyMoved :: Maybe Bool,
     isSpecialLocation :: Maybe Bool,
     startTime :: Maybe UTCTime,
-    isReallocationEnabled :: Maybe Bool
+    isReallocationEnabled :: Maybe Bool,
+    sessionToken :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -291,6 +296,19 @@ search personId req bundleVersion clientVersion device = do
                         }
                 QNB.create routeData
               _ -> logInfo "MapsServiceConfig config not found for OSRM"
+
+        fork "Updating autocomplete data in search" $ do
+          whenJust oneWayReq.sessionToken $ \token -> do
+            riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
+            whenJust riderConfig $ \config -> do
+              let toCollectData = fromMaybe False config.collectAutoCompleteData
+              when toCollectData $ do
+                pickupRecord <- QAutoCompleteData.findBySessionTokenAndSearchType token (show DMaps.PICKUP)
+                dropRecord <- QAutoCompleteData.findBySessionTokenAndSearchType token (show DMaps.DROP)
+                whenJust pickupRecord $ \record -> do
+                  QAutoCompleteData.updateSearchRequestIdAndisLocationSelectedOnMapById (Just searchRequestId) oneWayReq.isSourceManuallyMoved record.id
+                whenJust dropRecord $ \record -> do
+                  QAutoCompleteData.updateSearchRequestIdAndisLocationSelectedOnMapById (Just searchRequestId) oneWayReq.isDestinationManuallyMoved record.id
 
         let durationWeightage = 100 - merchant.distanceWeightage
         let shortestRouteInfo = getEfficientRouteInfo routeResponse merchant.distanceWeightage durationWeightage

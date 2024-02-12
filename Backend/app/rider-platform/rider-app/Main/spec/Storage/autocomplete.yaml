@@ -1,0 +1,36 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  SearchRequest: Domain.Types.SearchRequest
+  UTCTime: Kernel.Prelude
+
+AutoCompleteData:
+  tableName: autocomplete_data
+
+  fields:
+    id : Text
+    sessionToken : Text
+    customerId : Id Person
+    searchRequestId : Maybe (Id SearchRequest)
+    autocompleteInputs : Text
+    isLocationSelectedOnMap : Maybe Bool
+    searchType : Text
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    updateInputById:
+      kvFunction: updateOneWithKV
+      params: [autocompleteInputs]
+      where: id
+    updateSearchRequestIdAndisLocationSelectedOnMapById:
+      kvFunction: updateOneWithKV
+      params: [searchRequestId, isLocationSelectedOnMap]
+      where: id
+    findBySessionTokenAndSearchType:
+      kvFunction: findOneWithKV
+      where:
+        and: [sessionToken, searchType]

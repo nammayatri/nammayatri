@@ -15,3 +15,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN merchant_id character varying(36) 
 ALTER TABLE atlas_app.rider_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.rider_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.rider_config ADD PRIMARY KEY ( merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN collect_auto_complete_data boolean ;
