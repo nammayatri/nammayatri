@@ -14,11 +14,6 @@ UPDATE atlas_driver_offer_bpp.search_try AS T1 SET request_id = id;
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN transaction_id DROP NOT NULL;
 
-ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN transaction_id DROP NOT NULL;
-
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN request_id character(36);
-UPDATE atlas_driver_offer_bpp.estimate AS T1 SET request_id = (SELECT T2.id FROM atlas_driver_offer_bpp.search_try AS T2 WHERE T2.estimate_id = T1.id) WHERE T1.created_at > now () - interval '6 hour';
-
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN transaction_id DROP NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.search_request
@@ -58,7 +53,6 @@ UPDATE atlas_driver_offer_bpp.scheduler_job AS T1 SET
 UPDATE atlas_driver_offer_bpp.driver_quote AS T1 SET search_try_id = search_request_id WHERE T1.search_try_id IS NULL;
 UPDATE atlas_driver_offer_bpp.search_request_for_driver AS T1 SET search_try_id = search_request_id WHERE T1.search_try_id IS NULL;
 UPDATE atlas_driver_offer_bpp.search_try AS T1 SET request_id = id WHERE T1.request_id IS NULL;
-UPDATE atlas_driver_offer_bpp.estimate AS T1 SET request_id = (SELECT T2.id FROM atlas_driver_offer_bpp.search_try AS T2 WHERE T2.estimate_id = T1.id limit 1) WHERE T1.request_id IS NULL;
 
 INSERT INTO atlas_driver_offer_bpp.search_try (
   id,
@@ -114,18 +108,11 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD CONSTRAINT
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD CONSTRAINT
   search_step_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request (id);
 
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD CONSTRAINT
-  estimate_to_search_request_fk FOREIGN KEY (request_id) REFERENCES atlas_driver_offer_bpp.search_request (id);
-
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN search_try_id SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN search_try_id SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN request_id SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN request_id SET NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
-    DROP COLUMN transaction_id;
-
-ALTER TABLE atlas_driver_offer_bpp.estimate
     DROP COLUMN transaction_id;
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote

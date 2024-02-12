@@ -1,0 +1,55 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+  FarePolicy: Domain.Types.FarePolicy
+  TripCategory: Domain.Types.Common
+  Variant: Domain.Types.Vehicle
+  SearchRequest: Domain.Types.SearchRequest
+  Money: Kernel.Types.Common
+
+
+Estimate:
+    tableName: estimate
+
+    derives: "Generic,Show"
+
+    beamInstance: MakeTableInstancesWithTModifier []
+
+    fields:
+      id: Id Estimate
+      requestId: Id SearchRequest
+      vehicleVariant: Variant
+      tripCategory: TripCategory
+      minFare: Money
+      maxFare: Money
+      estimatedDistance: Maybe Meters
+      fareParams: Maybe FareParameters|WithIdCreate
+      farePolicy: Maybe FarePolicy|WithCachedId
+      specialLocationTag: Maybe Text
+      isScheduled: Bool
+      createdAt: UTCTime
+      updatedAt: UTCTime
+
+    excludedFields:
+      - merchantId
+      - merchantOperatingCityId
+
+    beamType:
+      updatedAt: Maybe UTCTime
+      isScheduled: Maybe Bool
+      tripCategory: Maybe TripCategory
+
+    fromTType:
+      updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+      isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+      tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
+
+    toTType:
+      updatedAt: Kernel.Prelude.Just|I
+      isScheduled: Kernel.Prelude.Just|I
+      tripCategory: Kernel.Prelude.Just|I
+
+    queries:
+      findById:
+        kvFunction: findOneWithKV
+        where:
+          and: [id]
