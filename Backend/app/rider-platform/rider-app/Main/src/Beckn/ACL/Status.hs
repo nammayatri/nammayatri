@@ -53,7 +53,7 @@ buildStatusReq DStatusReq {..} = do
       bapUrl
       (Just merchant.id.getId)
       (Just booking.providerUrl)
-      merchant.defaultCity
+      city
       merchant.country
       False
   pure $
@@ -81,7 +81,7 @@ buildStatusReqV2 DStatusReq {..} = do
       bapUrl
       (Just merchant.id.getId)
       (Just booking.providerUrl)
-      merchant.defaultCity
+      city
       merchant.country
 
   pure $

@@ -81,6 +81,7 @@ buildSearchReqV2 DSearch.SearchRes {..} = do
     disabilityTag
     merchant
     bapUri
+    city
     (getPoints shortestRouteInfo)
     phoneNumber
     isReallocationEnabled
