@@ -197,9 +197,10 @@ screen initialState =
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
                 case initialState.data.rentalsInfo of
                   Just rentalsInfo -> do
-                    when ((fromMaybe 911 $ fromString (unsafePerformEffect $ compareUTCDate (getCurrentUTC "") rentalsInfo.rideScheduledAtUTC)) < 900) do
-                      let _ = spy "whenCase-codex" rentalsInfo.rideScheduledAtUTC
-                      void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 15 3000.0 push initialState
+                    when ((fromMaybe 911 $ fromString (unsafePerformEffect $ compareUTCDate (getCurrentUTC "") rentalsInfo.rideScheduledAtUTC)) < 180000) do
+                      -- let _ = spy "whenCase-codex" rentalsInfo.rideScheduledAtUTC
+                      _ <- pure $ updateLocalStage ConfirmingQuotes
+                      void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 15 3000.0 push initialState {props {bookingId = rentalsInfo.bookingId }}
                   _ -> pure unit
               SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -3147,6 +3148,10 @@ confirmRide action count duration push state = do
         confirmRide action (count - 1) duration push state
   else
     pure unit
+
+-- rentalAndInterCityConfirmSchedule :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+-- rentalAndInterCityConfirmSchedule action count duration push state = do
+  -- if count /= 0 && state.props/
 
 rentalAndIntercityConfirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 rentalAndIntercityConfirmRide action count duration push state = do -- TODO-codex : refactor current confirm Ride on the basis of fareProductType for Rental, Intercity and SpecialZone

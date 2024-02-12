@@ -37,6 +37,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
 import Data.Lens ((^.))
 import Resources.Constants (getAddressFromBooking, decodeAddress, DecodeAddress(..))
+import Common.Types.App (RideType(..)) as RideType
 
 instance showAction :: Show Action where
   show _ = ""
@@ -112,16 +113,20 @@ eval (GetBookingList resp) state =
                             "RENTAL" -> RideType.RENTAL_RIDE
                             "INTER_CITY" -> RideType.INTERCITY
                             _ -> RideType.NORMAL_RIDE
-    in continue state { data
-      { source = SearchLocationScreenData.dummyLocationInfo { lat = Just (resp.fromLocation ^._lat) , lon = Just (resp.fromLocation ^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking resp.fromLocation, address = decodeAddress (Booking resp.fromLocation)}
-      , destination = maybe (Nothing) (\toLocation -> Just $ SearchLocationScreenData.dummyLocationInfo {lat = Just (toLocation^._lat), lon = Just (toLocation^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking toLocation, address = decodeAddress (Booking toLocation)}) contents.stopLocation
-      , startTime = fromMaybe "" resp.rideScheduledTime
-      , finalPrice = show resp.estimatedTotalFare
-      , baseDuration = show $ (fromMaybe 7200 resp.estimatedDuration)/3600
-      , baseDistance = show $ (fromMaybe 20000 resp.estimatedDistance)/1000
-      , bookingId = resp.id
-      , rideType = rideType}
-      , props{driverAllocationTime = "15" } -- TODO-codex : Need to get the driver allocation time from the API 
+    in continue state 
+      { data
+        { source = SearchLocationScreenData.dummyLocationInfo { lat = Just (resp.fromLocation ^._lat) , lon = Just (resp.fromLocation ^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking resp.fromLocation, address = decodeAddress (Booking resp.fromLocation)}
+        , destination = maybe (Nothing) (\toLocation -> Just $ SearchLocationScreenData.dummyLocationInfo {lat = Just (toLocation^._lat), lon = Just (toLocation^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking toLocation, address = decodeAddress (Booking toLocation)}) $ if rideType == RideType.INTERCITY then contents.toLocation else contents.stopLocation
+        , startTime = fromMaybe "" resp.rideScheduledTime
+        , finalPrice = show resp.estimatedTotalFare
+        , baseDuration = show $ (fromMaybe 7200 resp.estimatedDuration)/3600
+        , baseDistance = show $ (fromMaybe 20000 resp.estimatedDistance)/1000
+        , bookingId = resp.id
+        , rideType = rideType
+        }
+      , props
+        { driverAllocationTime = "15" -- TODO-codex : Need to get the driver allocation time from the API 
+        }
       }
 
 eval CheckFlowStatusAction state = do

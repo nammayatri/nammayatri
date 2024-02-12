@@ -185,13 +185,14 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
                         && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
+        _ = spy "sdfasdfgksadghf" isAfterThirtyMinutes
     in if validDate && isAfterThirtyMinutes then continue newState {props{showPrimaryButton = true}}
        else 
-        if isAfterThirtyMinutes then do 
-          void $ pure $ toast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
+        if validDate then do 
+          void $ pure $ toast $ getString STR.SCHEDULE_RIDE_AVAILABLE
           continue state {props{showPrimaryButton = true}}
         else do
-          void $ pure $ toast $ getString STR.SCHEDULE_RIDE_AVAILABLE
+          void $ pure $ toast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
           continue state {props{showPrimaryButton = true}}
 
 eval (InputViewAC (InputViewController.BackPressed)) state = genericBackPressed state

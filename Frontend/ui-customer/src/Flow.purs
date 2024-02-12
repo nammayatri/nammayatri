@@ -3362,9 +3362,9 @@ rideScheduledFlow = do
       void $ Remote.cancelRideBT (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
       homeScreenFlow 
     RideScheduledScreenOutput.GoToHomeScreen state -> do 
-      when (state.data.bookingId == "") do 
-        updateLocalStage HomeScreen
-        modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
+      -- when (state.data.bookingId == "") do 
+      updateLocalStage HomeScreen
+      modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
       -- updateRideScheduledTime ""
       homeScreenFlow
     RideScheduledScreenOutput.GoToSearchLocationScreen updatedState -> do
