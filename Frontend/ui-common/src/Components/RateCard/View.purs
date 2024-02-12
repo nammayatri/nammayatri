@@ -288,7 +288,7 @@ driverAdditionView push config =
     ]
 
 fareUpdateView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
-fareUpdateView push config = 
+fareUpdateView push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -389,8 +389,6 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
-getAdditionalFare :: String -> Int
-getAdditionalFare additionalFare = DM.fromMaybe 0 $ DI.fromString $ DS.drop 1 additionalFare
 
 commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> PrestoDOM (Effect Unit) w
 commonTV push text' color' theme gravity' marginTop action = 

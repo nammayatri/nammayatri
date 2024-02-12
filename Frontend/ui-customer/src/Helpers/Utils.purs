@@ -96,6 +96,8 @@ foreign import shuffle :: forall a. Array a -> Array a
 
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 
+foreign import isWeekend :: String -> Boolean
+
 foreign import getNewTrackingId :: Unit -> String
 
 foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> String -> Effect Unit

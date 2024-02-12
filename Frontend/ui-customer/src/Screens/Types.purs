@@ -1075,7 +1075,8 @@ type RateCard =
     nightCharges :: Boolean,
     currentRateCardType :: RateCardType,
     onFirstPage :: Boolean,
-    vehicleVariant :: String
+    vehicleVariant :: String,
+    createdTime :: String
   }
 
 type RateCardDetails = {
@@ -1131,7 +1132,8 @@ type EstimateInfo = {
   baseFare :: Int,
   extraFare :: Int,
   showRateCardIcon :: Boolean,
-  zoneType :: SpecialTags
+  zoneType :: SpecialTags,
+  createdTime :: String
 }
 
 -- ################################## SelectLanguageScreenState ###############################
