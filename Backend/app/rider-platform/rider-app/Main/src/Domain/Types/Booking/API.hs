@@ -35,6 +35,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Sos as CQSos
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -69,7 +70,8 @@ data BookingAPIEntity = BookingAPIEntity
     hasDisability :: Maybe Bool,
     sosStatus :: Maybe DSos.SosStatus,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    isValueAddNP :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -125,8 +127,9 @@ makeBookingAPIEntity ::
   Maybe Bool ->
   Bool ->
   Maybe DSos.SosStatus ->
+  Bool ->
   BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue mbSosStatus = do
+makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue mbSosStatus isValueAddNP = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
   BookingAPIEntity
     { id = booking.id,
@@ -155,7 +158,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       createdAt = booking.createdAt,
       updatedAt = booking.updatedAt,
       hasDisability = hasDisability,
-      sosStatus = mbSosStatus
+      sosStatus = mbSosStatus,
+      isValueAddNP
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -215,4 +219,5 @@ buildBookingAPIEntity booking personId = do
     CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus isValueAddNP

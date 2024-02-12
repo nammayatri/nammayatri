@@ -99,13 +99,13 @@ getOffers searchRequest = do
     Just _ -> do
       quoteList <- runInReplica $ QQuote.findAllBySRId searchRequest.id
       logDebug $ "quotes are : " <> show quoteList
-      let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
+      quotes <- sortByNearestDriverDistance quoteList & traverse (\q -> SQuote.makeQuoteAPIEntity q <&> OnDemandCab)
       metroOffers <- map Metro <$> Metro.getMetroOffers searchRequest.id
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
     Nothing -> do
       quoteList <- runInReplica $ QQuote.findAllBySRId searchRequest.id
-      let quotes = OnRentalCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
+      quotes <- sortByEstimatedFare quoteList & traverse (\q -> SQuote.makeQuoteAPIEntity q <&> OnRentalCab)
       return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
