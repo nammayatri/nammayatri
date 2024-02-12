@@ -26,6 +26,7 @@ import Environment
 import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
@@ -33,7 +34,7 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Error (GenericError (InvalidRequest))
 
 type API =
-  SignatureAuth "X-Gateway-Authorization"
+  SignatureAuth 'Domain.MOBILITY "X-Gateway-Authorization"
     :> OnSearch.OnSearchAPI
 
 handler :: SignatureAuthResult -> FlowServer API

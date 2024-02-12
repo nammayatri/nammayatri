@@ -16,12 +16,13 @@ module API.MetroBeckn (API, handler) where
 
 import qualified API.MetroBeckn.OnSearch as OnSearch
 import Environment
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =
   "metro" :> "v1"
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.PUBLIC_TRANSPORT "Authorization"
     :> OnSearch.API
 
 handler :: FlowServer API

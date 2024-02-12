@@ -19,6 +19,7 @@ import Beckn.Types.Core.Metro.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Metro.API.OnSearch as Metro
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -27,7 +28,7 @@ import qualified SharedLogic.MetroOffer as MetroOffers
 import Storage.Beam.SystemConfigs ()
 
 type API =
-  SignatureAuth "X-Gateway-Authorization"
+  SignatureAuth 'Domain.PUBLIC_TRANSPORT "X-Gateway-Authorization"
     :> Metro.OnSearchAPI
 
 handler :: SignatureAuthResult -> FlowServer API

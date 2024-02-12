@@ -30,6 +30,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -42,7 +43,7 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> Confirm.ConfirmAPI
 
 handler :: FlowServer API
