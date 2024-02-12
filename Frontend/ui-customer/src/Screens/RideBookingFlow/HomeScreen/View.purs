@@ -175,7 +175,7 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
               ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
                 
-              ConfirmingQuotes -> void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 100 3000.0 push initialState
+              ConfirmingQuotes -> void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation CheckFlowStatusAction 100 3000.0 push initialState
 
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
@@ -3153,8 +3153,8 @@ confirmRide action count duration push state = do
 -- rentalAndInterCityConfirmSchedule action count duration push state = do
   -- if count /= 0 && state.props/
 
-rentalAndIntercityConfirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-rentalAndIntercityConfirmRide action count duration push state = do -- TODO-codex : refactor current confirm Ride on the basis of fareProductType for Rental, Intercity and SpecialZone
+rentalAndIntercityConfirmRide :: forall action. (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+rentalAndIntercityConfirmRide action checkFlowStatusAction count duration push state = do -- TODO-codex : refactor current confirm Ride on the basis of fareProductType for Rental, Intercity and SpecialZone
   if (count /= 0) && (isLocalStageOn ConfirmingQuotes) && (state.props.bookingId /= "")then do
     resp <- rideBooking (state.props.bookingId)
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
@@ -3167,13 +3167,16 @@ rentalAndIntercityConfirmRide action count duration push state = do -- TODO-code
         if status == resp.status && not (null resp.rideList) then do
             doAff do liftEffect $ push $ action response
             pure unit
+        else if resp.status == "CANCELLED" then do
+            doAff do liftEffect $ push $ checkFlowStatusAction
+            pure unit
         else do
             void $ delay $ Milliseconds duration
-            rentalAndIntercityConfirmRide action (count - 1) duration push state
+            rentalAndIntercityConfirmRide action checkFlowStatusAction (count - 1) duration push state
       Left err -> do
         _ <- pure $ printLog "api error " err
         void $ delay $ Milliseconds duration
-        rentalAndIntercityConfirmRide action (count - 1) duration push state
+        rentalAndIntercityConfirmRide action checkFlowStatusAction (count - 1) duration push state
   else
     pure unit
 
