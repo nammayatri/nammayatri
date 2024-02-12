@@ -18,6 +18,7 @@ import Beckn.ACL.Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as Utils
@@ -113,6 +114,6 @@ getNightSafetyCheckTag tagGroups' = do
   maybe True getTagValue tagGroups'
   where
     getTagValue tagGroups = do
-      let tagValue = Utils.getTagV2 "customer_info" "night_safety_check" tagGroups
+      let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.NIGHT_SAFETY_CHECK tagGroups
           res = maybe (Just True) ((\val -> readMaybe val :: Maybe Bool) . T.unpack) tagValue
       fromMaybe True res
