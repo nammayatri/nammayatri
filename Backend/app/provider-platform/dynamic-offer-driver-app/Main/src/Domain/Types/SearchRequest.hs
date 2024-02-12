@@ -19,6 +19,7 @@ import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.RiderDetails as RD
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -32,6 +33,7 @@ data SearchRequest = SearchRequest
     messageId :: Maybe Text,
     providerId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    riderId :: Maybe (Id RD.RiderDetails),
     fromLocation :: DLoc.Location,
     area :: Maybe FareProductD.Area,
     bapId :: Text,

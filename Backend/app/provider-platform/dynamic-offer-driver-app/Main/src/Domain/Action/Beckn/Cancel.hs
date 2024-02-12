@@ -33,7 +33,7 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchTry as ST
 import EulerHS.Prelude
 import Kernel.External.Maps
-import Kernel.Prelude (roundToIntegral)
+import Kernel.Prelude (NominalDiffTime, roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -43,6 +43,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.SearchTryLocker as CS
@@ -83,6 +84,7 @@ cancel ::
     EventStreamFlow m r,
     LT.HasLocationService m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "isBecknSpecVersion2" r Bool
   ) =>
@@ -119,6 +121,7 @@ cancel req merchant booking = do
         DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
         transporterConfig <- SCT.findByMerchantOpCityId booking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
 
+        whenJust booking.riderId (DP.addDriverToRiderCancelledList ride.driverId)
         when transporterConfig.canAddCancellationFee do
           customerCancellationChargesCalculation transporterConfig booking disToPickup
 

@@ -38,6 +38,9 @@ module SharedLogic.DriverPool
     getDriverAverageSpeed,
     mkAvailableTimeKey,
     mkBlockListedDriversKey,
+    mkBlockListedDriversForRiderKey,
+    addDriverToSearchCancelledList,
+    addDriverToRiderCancelledList,
     PoolCalculationStage (..),
     module Reexport,
   )
@@ -58,12 +61,13 @@ import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores (Int
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
-import Kernel.Prelude (head)
+import Kernel.Prelude (NominalDiffTime, head)
 import qualified Kernel.Randomizer as Rnd
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -438,6 +442,42 @@ getDriverAverageSpeed merchantOpCityId driverId = Redis.withCrossAppRedis $ do
 
 mkBlockListedDriversKey :: Id SearchRequest -> Text
 mkBlockListedDriversKey searchReqId = "Block-Listed-Drivers-Key:SearchRequestId-" <> searchReqId.getId
+
+mkBlockListedDriversForRiderKey :: Id RiderDetails -> Text
+mkBlockListedDriversForRiderKey riderId = "Block-Listed-Drivers-Key:RiderId-" <> riderId.getId
+
+addDriverToSearchCancelledList ::
+  ( CacheFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+  ) =>
+  Id SearchRequest ->
+  Id DP.Person ->
+  m ()
+addDriverToSearchCancelledList searchReqId driverId = do
+  let keyForDriverCancelledList = mkBlockListedDriversKey searchReqId
+  cacheBlockListedDrivers keyForDriverCancelledList driverId
+
+addDriverToRiderCancelledList ::
+  ( CacheFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+  ) =>
+  Id DP.Person ->
+  Id RiderDetails ->
+  m ()
+addDriverToRiderCancelledList driverId riderId = do
+  let keyForDriverCancelledList = mkBlockListedDriversForRiderKey riderId
+  cacheBlockListedDrivers keyForDriverCancelledList driverId
+
+cacheBlockListedDrivers ::
+  ( CacheFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
+  ) =>
+  Text ->
+  Id DP.Person ->
+  m ()
+cacheBlockListedDrivers key driverId = do
+  searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+  Redis.withCrossAppRedis $ Redis.rPushExp key [driverId] (round searchRequestExpirationSeconds)
 
 calculateGoHomeDriverPool ::
   ( EncFlow m r,

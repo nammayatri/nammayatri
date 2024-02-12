@@ -41,6 +41,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.TransporterConfig as DTMT
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RideRoute
+import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
@@ -141,7 +142,7 @@ handler ValidatedDSearchReq {..} sReq = do
   let merchantId = merchant.id
   sessiontoken <- generateGUIDText
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-  cancellationDues <- getCancellationDues
+  (cancellationDues, mbRiderId) <- getCancellationDuesAndRider
 
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration) <-
     case sReq.dropLocation of
@@ -164,7 +165,7 @@ handler ValidatedDSearchReq {..} sReq = do
         (pool, policies) <- selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled farePolicies
         pure (nonEmpty pool, policies)
       else return (Nothing, catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicies)
-  searchReq <- buildSearchRequest sReq bapCity possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area cancellationDues
+  searchReq <- buildSearchRequest sReq bapCity possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area cancellationDues mbRiderId
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo searchReq.id
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
@@ -229,19 +230,18 @@ handler ValidatedDSearchReq {..} sReq = do
                   maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers includedKm) (det.totalAdditionalKmsLimit.getKilometers - includedKm)
                in distInKm - includedKm <= maxAllowed
 
-    getCancellationDues =
-      if transporterConfig.canAddCancellationFee
-        then do
-          case sReq.customerPhoneNum of
-            Just number -> do
-              now <- getCurrentTime
-              (riderDetails, isNewRider) <- SRD.getRiderDetails merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
-              when isNewRider $ QRD.create riderDetails
-              return riderDetails.cancellationDues
-            Nothing -> do
-              logWarning "Failed to calculate Customer Cancellation Dues as BAP Phone Number is NULL"
-              return 0
-        else return 0
+    getCancellationDuesAndRider =
+      case sReq.customerPhoneNum of
+        Just number -> do
+          now <- getCurrentTime
+          (riderDetails, isNewRider) <- SRD.getRiderDetails merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
+          when isNewRider $ QRD.create riderDetails
+          if transporterConfig.canAddCancellationFee
+            then return (riderDetails.cancellationDues, Just riderDetails.id)
+            else return (0, Just riderDetails.id)
+        Nothing -> do
+          logWarning "Failed to calculate Customer Cancellation Dues as BAP Phone Number is NULL"
+          return (0, Nothing)
 
 addNearestDriverInfo ::
   (HasField "vehicleVariant" a DVeh.Variant) =>
@@ -312,8 +312,9 @@ buildSearchRequest ::
   Maybe Text ->
   DFareProduct.Area ->
   HighPrecMoney ->
+  Maybe (Id RD.RiderDetails) ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} bapCity startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area customerCancellationDues = do
+buildSearchRequest DSearchReq {..} bapCity startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area customerCancellationDues mbRiderId = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -330,6 +331,7 @@ buildSearchRequest DSearchReq {..} bapCity startTime isScheduled providerId merc
         toLocation = mbToLocation,
         estimatedDistance = mbDistance,
         estimatedDuration = mbDuration,
+        riderId = mbRiderId,
         createdAt = now,
         ..
       }

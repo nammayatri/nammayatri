@@ -23,7 +23,6 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
@@ -88,7 +87,7 @@ cancelRideImpl rideId bookingCReason = do
                 && fromMaybe False searchReq.isReallocationEnabled
         if isRepeatSearch
           then do
-            void $ addDriverToSearchCancelledList searchReq.id ride
+            DP.addDriverToSearchCancelledList searchReq.id ride.driverId
             result <- try @_ @SomeException (initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq driverQuote.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId)
             case result of
               Right _ -> BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source
@@ -102,14 +101,6 @@ cancelRideImpl rideId bookingCReason = do
         void $ clearCachedFarePolicyByEstOrQuoteId estimateId
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
       BP.sendBookingCancelledUpdateToBAP booking merchant bookingCancellationReason
-
-    addDriverToSearchCancelledList searchReqId ride = do
-      let keyForDriverCancelledList = DP.mkBlockListedDriversKey searchReqId
-      cacheBlockListedDrivers keyForDriverCancelledList ride.driverId
-
-    cacheBlockListedDrivers key driverId = do
-      searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-      Redis.withCrossAppRedis $ Redis.rPushExp key [driverId] (round searchRequestExpirationSeconds)
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,

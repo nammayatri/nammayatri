@@ -33,6 +33,7 @@ data SearchRequestT f = SearchRequestT
     merchantOperatingCityId :: B.C f (Maybe Text),
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
+    riderId :: B.C f (Maybe Text),
     area :: B.C f (Maybe FareProductD.Area),
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
