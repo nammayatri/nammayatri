@@ -17,12 +17,12 @@ module API.Beckn.Status (API, handler) where
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.Status as ACL
 import qualified Beckn.Core as CallBAP
-import qualified Beckn.OnDemand.Utils.Callback as Callback
+-- import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
-import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+-- import qualified BecknV2.OnDemand.Types as Spec
+-- import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -79,23 +79,23 @@ status transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerB
 
   dStatusRes <- DStatus.handler transporterId dStatusReq
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      context <- ContextV2.buildContextV2 Context.ON_STATUS Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
-      onStatusMessageV2 <- ACL.mkOnStatusMessageV2 dStatusRes.info
-      Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
-        pure $
-          Spec.OnStatusReq
-            { onStatusReqContext = context,
-              onStatusReqError = Nothing,
-              onStatusReqMessage = onStatusMessageV2
-            }
-    else do
-      onStatusMessage <- ACL.buildOnStatusMessage dStatusRes.info
-      context <- buildTaxiContext Context.STATUS msgId txnId bapId callbackUrl bppId bppUri city country False
-      CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPIV1 context callbackUrl internalEndPointHashMap $
-        pure onStatusMessage
+  -- isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  -- if isBecknSpecVersion2
+  --   then do
+  --     context <- ContextV2.buildContextV2 Context.ON_STATUS Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
+  --     onStatusMessageV2 <- ACL.mkOnStatusMessageV2 dStatusRes.info
+  --     Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
+  --       pure $
+  --         Spec.OnStatusReq
+  --           { onStatusReqContext = context,
+  --             onStatusReqError = Nothing,
+  --             onStatusReqMessage = onStatusMessageV2
+  --           }
+  --   else do
+  onStatusMessage <- ACL.buildOnStatusMessage dStatusRes.info
+  context <- buildTaxiContext Context.STATUS msgId txnId bapId callbackUrl bppId bppUri city country False
+  CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPIV1 context callbackUrl internalEndPointHashMap $
+    pure onStatusMessage
 
 decodeReq :: MonadFlow m => ByteString -> m (Either Status.StatusReq Status.StatusReqV2)
 decodeReq reqBS =
@@ -106,17 +106,17 @@ decodeReq reqBS =
         Right reqV2 -> pure $ Right reqV2
         Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
 
-errHandler :: Spec.Context -> BecknAPIError -> Spec.OnStatusReq
-errHandler context (BecknAPIError err) =
-  Spec.OnStatusReq
-    { onStatusReqContext = context,
-      onStatusReqError = Just err',
-      onStatusReqMessage = Nothing
-    }
-  where
-    err' =
-      Spec.Error
-        { errorCode = Just err.code,
-          errorMessage = err.message >>= \m -> Just $ encodeToText err._type <> " " <> m,
-          errorPaths = err.path
-        }
+-- errHandler :: Spec.Context -> BecknAPIError -> Spec.OnStatusReq
+-- errHandler context (BecknAPIError err) =
+--   Spec.OnStatusReq
+--     { onStatusReqContext = context,
+--       onStatusReqError = Just err',
+--       onStatusReqMessage = Nothing
+--     }
+--   where
+--     err' =
+--       Spec.Error
+--         { errorCode = Just err.code,
+--           errorMessage = err.message >>= \m -> Just $ encodeToText err._type <> " " <> m,
+--           errorPaths = err.path
+--         }
