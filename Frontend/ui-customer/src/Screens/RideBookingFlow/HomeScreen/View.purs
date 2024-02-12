@@ -212,7 +212,7 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else pure unit
                 push LoadMessages
-                if(not initialState.props.chatcallbackInitiated && not initialState.props.isSpecialZone) then do
+                if(not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= QUOTES) then do
                   _ <- clearChatMessages
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- storeCallBackOpenChatScreen push OpenChatScreen
@@ -315,9 +315,15 @@ view push state =
                 [ linearLayout
                   [ height MATCH_PARENT
                   , width MATCH_PARENT
+                  , clickable false
                   , background Color.transparent
                   , accessibility if any (_ == state.props.currentStage) [RideAccepted, RideStarted, HomeScreen] && not isAnyOverlayEnabled state then ENABLE else DISABLE
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
+                  ][]
+                , linearLayout
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , background Color.transparent
                   ][ 
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
                   , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen"
