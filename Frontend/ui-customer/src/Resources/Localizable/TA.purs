@@ -961,3 +961,4 @@ getTA stringKey =
     COMPLETE_YOUR_TEST_DRILL -> "உங்கள் சோதனை பாதுகாப்பு பயிற்சியை முடிக்கவும்: முதலில் பாதுகாப்பு!"
     TEST_DRILL -> "சோதனை பயிற்சி"
     RIDE_SHARED_WITH_SELECTED_CONTACTS -> "தேர்ந்தெடுக்கப்பட்ட தொடர்புகளுடன் சவாரி பகிரப்பட்டது"
+    TERMS_AND_CONDITIONS_UPDATED -> "T&Cகள் மற்றும் தனியுரிமைக் கொள்கை புதுப்பிக்கப்பட்டது"
