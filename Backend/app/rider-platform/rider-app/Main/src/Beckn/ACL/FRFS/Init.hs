@@ -21,6 +21,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.List (singleton)
+import Domain.Types (BknPaymentParams)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DTBooking
 import Kernel.Prelude

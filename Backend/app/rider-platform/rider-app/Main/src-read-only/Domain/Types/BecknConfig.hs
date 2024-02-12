@@ -31,13 +31,6 @@ data BecknConfig = BecknConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BknPaymentParams = BknPaymentParams
-  { bankAccNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    bankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
 data PaymentCollectedBy = BAP | BPP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson as A
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
+import Domain.Types (BknPaymentParams)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicket as Ticket
 import Kernel.Prelude

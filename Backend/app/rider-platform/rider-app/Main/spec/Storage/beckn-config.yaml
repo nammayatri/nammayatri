@@ -23,11 +23,6 @@ BecknConfig:
     staticTermsUrl: Maybe BaseUrl
 
   types:
-    BknPaymentParams:
-      bankAccNumber: Maybe Text
-      bankCode: Maybe Text
-      vpa: Maybe Text
-
     VehicleCategory:
       enum: "CAB, AUTO_RICKSHAW, METRO"
 

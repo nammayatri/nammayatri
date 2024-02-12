@@ -207,7 +207,9 @@ library
       BecknV2.OnDemand.Types
       BecknV2.OnDemand.Utils.Common
       BecknV2.OnDemand.Utils.Context
+      BecknV2.OnDemand.Utils.Payment
       BecknV2.Utils
+      Domain.Types
   other-modules:
       Paths_beckn_spec
   hs-source-dirs:

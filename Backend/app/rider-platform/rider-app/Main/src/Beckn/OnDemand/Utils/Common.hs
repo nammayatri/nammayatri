@@ -96,7 +96,7 @@ mkPaymentTags =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just $ show Tags.BUYER_FINDER_FEE,
+                { descriptorCode = Just $ show Tags.BUYER_FINDER_FEES,
                   descriptorName = Nothing,
                   descriptorShortDesc = Nothing
                 },
