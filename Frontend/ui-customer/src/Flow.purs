@@ -234,6 +234,7 @@ currentFlowStatus = do
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> do 
       updateLocalStage ConfirmingQuotes
+      hideLoaderFlow
       case (getFlowStatusData "LazyCheck") of
             Just (FlowStatusData flowStatusData) -> do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{

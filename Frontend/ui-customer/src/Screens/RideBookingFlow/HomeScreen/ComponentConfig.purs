@@ -627,6 +627,7 @@ logOutPopUpModelConfig state =
             , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
             , enableRipple = true
+            , visibility = state.data.rideType == RideType.NORMAL_RIDE
             }
             , option2 {
                text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)

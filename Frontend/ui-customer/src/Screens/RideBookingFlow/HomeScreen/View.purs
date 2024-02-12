@@ -175,7 +175,7 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
               ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
                 
-              ConfirmingQuotes -> void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 15 3000.0 push initialState
+              ConfirmingQuotes -> void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 100 3000.0 push initialState
 
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
@@ -195,13 +195,13 @@ screen initialState =
                 _ <- pure $ enableMyLocation true
                 _ <- pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
-                case initialState.data.rentalsInfo of
-                  Just rentalsInfo -> do
-                    when ((fromMaybe 180001 $ fromString (unsafePerformEffect $ compareUTCDate rentalsInfo.rideScheduledAtUTC (getCurrentUTC ""))) < 900) do
+                -- case initialState.data.rentalsInfo of
+                  -- Just rentalsInfo -> do
+                    -- when ((fromMaybe 180001 $ fromString (unsafePerformEffect $ compareUTCDate rentalsInfo.rideScheduledAtUTC (getCurrentUTC ""))) < 900) do
                       -- let _ = spy "whenCase-codex" rentalsInfo.rideScheduledAtUTC
-                      _ <- pure $ updateLocalStage ConfirmingQuotes
-                      void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 15 3000.0 push initialState {props {bookingId = rentalsInfo.bookingId }}
-                  _ -> pure unit
+                      -- _ <- pure $ updateLocalStage ConfirmingQuotes
+                      -- void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 15 3000.0 push initialState {props {bookingId = rentalsInfo.bookingId }}
+                  -- _ -> pure unit
               SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 when 
