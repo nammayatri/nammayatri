@@ -64,10 +64,6 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
         fareParams.rideExtraTimeFare <&> \tbCharge -> do
           mkBreakupItem extraTimeFareCaption (mkPrice tbCharge)
 
-      totalFareFinalRounded = fareSum fareParams
-      totalFareCaption = "TOTAL_FARE"
-      totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
-
       nightShiftCaption = "NIGHT_SHIFT_CHARGE"
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
@@ -82,8 +78,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
-    [ Just totalFareItem,
-      Just baseFareItem,
+    [ Just baseFareItem,
       Just baseFareDistanceItem,
       mbNightShiftChargeItem,
       mbWaitingChargesItem,

@@ -181,8 +181,7 @@ handler merchantId req validatedReq = do
           CQMPM.findAllByMerchantOpCityId merchantOpCityId
         let mbPaymentMethod = find (compareMerchantPaymentMethod paymentMethodInfo) allPaymentMethods
         mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
-      let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
-      pure (mbPaymentMethod, paymentUrl)
+      pure (mbPaymentMethod, Nothing) -- TODO : Remove paymentUrl from here altogether
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOpCityId = do
