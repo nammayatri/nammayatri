@@ -232,6 +232,26 @@ currentFlowStatus = do
   case flowStatus ^. _currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
+    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> do 
+      updateLocalStage ConfirmingQuotes
+      case (getFlowStatusData "LazyCheck") of
+            Just (FlowStatusData flowStatusData) -> do
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
+                props{ sourceLat = flowStatusData.source.lat
+                     , sourceLong = flowStatusData.source.lng
+                     , destinationLat = flowStatusData.destination.lat
+                     , destinationLong = flowStatusData.destination.lng
+                     , currentStage = ConfirmingQuotes
+                     , rideRequestFlow = true
+                     , selectedQuote = Nothing
+                     , city = getCityNameFromCode flowStatusData.source.city}
+                , data { source = flowStatusData.source.place
+                       , destination = flowStatusData.destination.place
+                       , sourceAddress = flowStatusData.sourceAddress
+                       , destinationAddress = flowStatusData.destinationAddress }
+                })
+            Nothing -> updateFlowStatus SEARCH_CANCELLED
+      homeScreenFlow
     RIDE_ASSIGNED _                         -> checkRideStatus true
     _                                       -> checkRideStatus false
   hideLoaderFlow
@@ -564,7 +584,7 @@ homeScreenFlow = do
         -- modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{props{focussedTextField = Just SearchLocPickup, locUnserviceable = true}, data{locationList = globalState.globalProps.cachedSearches}})
         homeScreenFlow
         -- searchLocationFlow
-      let startTimeUTC = if (state.data.rideType == RideType.INTERCITY) then state.data.startTimeUTC else (getCurrentUTC "")
+      let startTimeUTC = if (state.data.rideType == RideType.INTERCITY && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
       (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC)
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
       case rideSearchRes.routeInfo of
@@ -1732,7 +1752,7 @@ rideSearchFlow flowType = do
               currentDate =  getCurrentDate ""
           void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show finalState.props.sourceLat) <> " long: " <> (show finalState.props.sourceLong))},
                                               {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
-          let startTimeUTC = if (finalState.data.rideType == RideType.INTERCITY) then finalState.data.startTimeUTC else (getCurrentUTC "")
+          let startTimeUTC = if (finalState.data.rideType == RideType.INTERCITY && finalState.data.startTimeUTC /= "") then finalState.data.startTimeUTC else (getCurrentUTC "")
           (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress startTimeUTC)
           void $ liftFlowBT $ setFlowStatusData 
             ( FlowStatusData 

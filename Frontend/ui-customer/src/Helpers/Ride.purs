@@ -59,7 +59,7 @@ checkRideStatus rideAssigned = do
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
             bookingStatus = resp.status
-            rideStatus = if status == "NEW" then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
+            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && fareProductType == "OneWaySpecialZoneAPIDetails") then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             fareProductType = ((resp.bookingDetails) ^. _fareProductType)
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
             rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
