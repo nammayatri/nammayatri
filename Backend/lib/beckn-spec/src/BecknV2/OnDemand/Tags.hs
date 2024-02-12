@@ -14,96 +14,124 @@
 
 module BecknV2.OnDemand.Tags where
 
--- ##############################################################################
--- This section contains type aliases for all standard Tags in ONDC:TRV10 domain
--- ##############################################################################
+import Kernel.Prelude
 
--- ## Item tags ##
--- Fare Policy Tag Group
--- Tag group
-type TG_FARE_POLICY = "FARE_POLICY"
+-- ##############################################################
+-- This section contains type aliases for all TagGroups and Tags
+-- ##############################################################
 
--- Tags
-type T_MIN_FARE = "MIN_FARE"
+data TagGroup
+  = -- ONDC standard tag groups for ONDC:TRV10 domain
+    FARE_POLICY
+  | INFO
+  | BUYER_FINDER_FEE
+  | SETTLEMENT_TERMS
+  | ROUTE_INFO
+  | -- Custom tag groups
+    REALLOCATION_INFO
+  | CUSTOMER_INFO
+  | ESTIMATIONS
+  | CURRENT_LOCATION
+  | DRIVER_DETAILS
+  | DRIVER_ARRIVED_INFO
+  | RIDE_DISTANCE_DETAILS
+  | GENERAL_INFO -- TODO: How is this different from INFO?
+  | AGENT_INFO
+  | CUSTOMER_TIP_INFO
+  | AUTO_ASSIGN_ENABLED
+  | SAFETY_ALERT
+  | RIDE_ODOMETER_DETAILS
+  | DRIVER_NEW_MESSAGE
+  | PREVIOUS_CANCELLATION_REASONS
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-type T_MIN_FARE_DISTANCE_KM = "MIN_FARE_DISTANCE_KM"
-
-type T_PER_KM_CHARGE = "PER_KM_CHARGE"
-
-type T_PICKUP_CHARGE = "PICKUP_CHARGE"
-
-type T_WAITING_CHARGE_PER_MIN = "WAITING_CHARGE_PER_MIN"
-
-type T_NIGHT_CHARGE_MULTIPLIER = "NIGHT_CHARGE_MULTIPLIER"
-
-type T_NIGHT_SHIFT_START_TIME = "NIGHT_SHIFT_START_TIME"
-
-type T_NIGHT_SHIFT_END_TIME = "NIGHT_SHIFT_END_TIME"
-
-type T_RESTRICTED_PERSON = "RESTRICTED_PERSON"
-
-type T_RESTRICTION_PROOF = "RESTRICTION_PROOF"
-
--- Info Tag Group
-type TG_INFO = "INFO"
-
-type T_DISTANCE_TO_NEAREST_DRIVER_METER = "DISTANCE_TO_NEAREST_DRIVER_METER"
-
-type T_ETA_TO_NEAREST_DRIVER_MIN = "ETA_TO_NEAREST_DRIVER_MIN"
-
-type TG_BUYER_FINDER_FEE = "BUYER_FINDER_FEE"
-
-type T_BUYER_FINDER_FEES_TYPE = "BUYER_FINDER_FEES_TYPE"
-
-type T_BUYER_FINDER_FEES_PERCENTAGE = "BUYER_FINDER_FEES_PERCENTAGE"
-
-type T_BUYER_FINDER_FEES_AMOUNT = "BUYER_FINDER_FEES_AMOUNT"
-
--- ## Payment tags ##
--- Settlement Tag Group
-type TG_SETTLEMENT_TERMS = "SETTLEMENT_TERMS"
-
-type T_SETTLEMENT_WINDOW = "SETTLEMENT_WINDOW"
-
-type T_SETTLEMENT_BASIS = "SETTLEMENT_BASIS"
-
-type T_SETTLEMENT_TYPE = "SETTLEMENT_TYPE"
-
-type T_MANDATORY_ARBITRATION = "MANDATORY_ARBITRATION"
-
-type T_COURT_JURISDICTION = "COURT_JURISDICTION"
-
-type T_DELAY_INTEREST = "DELAY_INTEREST"
-
-type T_STATIC_TERMS = "STATIC_TERMS"
-
-type T_SETTLEMENT_AMOUNT = "SETTLEMENT_AMOUNT"
-
--- ## Fulfillment tags ##
-type TG_ROUTE_INFO = "ROUTE_INFO"
-
-type T_ENCODED_POLYLINE = "ENCODED_POLYLINE"
-
-type T_WAYPOINTS = "WAYPOINTS"
-
--- ############################################################################
--- Adding below custom tags
--- ############################################################################
--- ## Fulfillment tags ##
-type T_DISTANCE_INFO_IN_M = "DISTANCE_INFO_IN_M"
-
-type T_DURATION_INFO_IN_S = "DURATION_INFO_IN_S"
-
--- Reallocation Tag Group
-type TG_REALLOCATION_INFO = "REALLOCATION_INFO"
-
-type T_IS_REALLOCATION_ENABLED = "IS_REALLOCATION_ENABLED"
-
--- Customer info Tag Group
-type TG_CUSTOMER_INFO = "CUSTOMER_INFO"
-
-type T_CUSTOMER_LANGUAGE = "CUSTOMER_LANGUAGE"
-
-type T_CUSTOMER_DISABILITY = "CUSTOMER_DISABILITY"
-
-type T_CUSTOMER_PHONE_NUMBER = "CUSTOMER_PHONE_NUMBER"
+data Tag
+  = -- ## Item tags ##
+    -- FARE_POLICY
+    MIN_FARE
+  | MIN_FARE_DISTANCE_KM
+  | PER_KM_CHARGE
+  | PICKUP_CHARGE
+  | WAITING_CHARGE_PER_MIN
+  | NIGHT_CHARGE_MULTIPLIER
+  | NIGHT_SHIFT_START_TIME
+  | NIGHT_SHIFT_END_TIME
+  | RESTRICTED_PERSON
+  | RESTRICTION_PROOF
+  | -- INFO
+    DISTANCE_TO_NEAREST_DRIVER_METER
+  | ETA_TO_NEAREST_DRIVER_MIN
+  | BUYER_FINDER_FEES_TYPE
+  | BUYER_FINDER_FEES_PERCENTAGE
+  | BUYER_FINDER_FEES_AMOUNT
+  | -- ## Payment tags ##
+    -- SETTLEMENT_TERMS
+    SETTLEMENT_WINDOW
+  | SETTLEMENT_BASIS
+  | SETTLEMENT_TYPE
+  | MANDATORY_ARBITRATION
+  | COURT_JURISDICTION
+  | DELAY_INTEREST
+  | STATIC_TERMS
+  | SETTLEMENT_AMOUNT
+  | -- ## Fulfillment tags ##
+    -- ROUTE_INFO
+    ENCODED_POLYLINE
+  | WAYPOINTS
+  | MULTIPLE_ROUTES
+  | -- ###################
+    -- Custom tags
+    -- ###################
+    -- Fare policy tags
+    OLD_NIGHT_SHIFT_CHARGE
+  | PER_HOUR_CHARGE
+  | PER_MINUTE_CHARGE
+  | UNPLANNED_PER_KM_CHARGE
+  | PER_HOUR_DISTANCE_KM
+  | PLANNED_PER_KM_CHARGE
+  | -- Info tags
+    SPECIAL_LOCATION_TAG
+  | -- Fulfillment tags
+    DISTANCE_INFO_IN_M
+  | DURATION_INFO_IN_S
+  | ROUTE_POINTS -- TODO: replace with standard tag
+  | -- Reallocation tags
+    IS_REALLOCATION_ENABLED
+  | -- Customer info tags
+    CUSTOMER_LANGUAGE
+  | CUSTOMER_DISABILITY
+  | CUSTOMER_PHONE_NUMBER
+  | NIGHT_SAFETY_CHECK
+  | -- Estimations tags
+    MAX_ESTIMATED_DISTANCE
+  | -- Location tags
+    CURRENT_LOCATION_LAT
+  | CURRENT_LOCATION_LON
+  | -- Driver details tags
+    REGISTERED_AT
+  | RATING
+  | IS_DRIVER_BIRTHDAY
+  | IS_FREE_RIDE
+  | -- Driver arrived info tags
+    ARRIVAL_TIME
+  | -- Ride distance details tags
+    CHARGEABLE_DISTANCE
+  | TRAVELED_DISTANCE
+  | END_ODOMETER_READING
+  | -- General info tags
+    BPP_QUOTE_ID
+  | -- Agent info tags
+    DURATION_TO_PICKUP_IN_S
+  | -- Customer tip info tags
+    CUSTOMER_TIP
+  | -- Auto assign enabled tags
+    IS_AUTO_ASSIGN_ENABLED
+  | -- Safety alert tags
+    DEVIATION
+  | -- Ride odometer details tags
+    START_ODOMETER_READING
+  | -- Driver new message tags
+    MESSAGE
+  | -- Previous cancellation reasons tags
+    CANCELLATION_REASON
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)

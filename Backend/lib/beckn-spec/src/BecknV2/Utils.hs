@@ -13,20 +13,17 @@
 -}
 module BecknV2.Utils where
 
+import BecknV2.OnDemand.Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 
-type TagGroupCode = Text
-
-type TagCode = Text
-
-getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
+getTagV2 :: TagGroup -> Tag -> [Spec.TagGroup] -> Maybe Text
 getTagV2 tagGroupCode tagCode tagGroups = do
-  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just tagGroupCode) tagGroups
+  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just (show tagGroupCode)) tagGroups
   case tagGroup.tagGroupList of
     Nothing -> Nothing
     Just tagGroupList -> do
-      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
+      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just (show tagCode)) tagGroupList
       tag.tagValue
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text

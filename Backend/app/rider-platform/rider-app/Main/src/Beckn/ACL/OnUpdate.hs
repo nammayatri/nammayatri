@@ -23,6 +23,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -83,7 +84,7 @@ getLocationFromTag tagGroup key latKey lonKey =
       tripStartLon :: Maybe Double = readMaybe . T.unpack =<< getTag key lonKey =<< tagGroup
    in Maps.LatLong <$> tripStartLat <*> tripStartLon
 
-getLocationFromTagV2 :: Maybe [Spec.TagGroup] -> Text -> Text -> Text -> Maybe Maps.LatLong
+getLocationFromTagV2 :: Maybe [Spec.TagGroup] -> Tag.TagGroup -> Tag.Tag -> Tag.Tag -> Maybe Maps.LatLong
 getLocationFromTagV2 tagGroup key latKey lonKey =
   let tripStartLat :: Maybe Double = readMaybe . T.unpack =<< Utils.getTagV2 key latKey =<< tagGroup
       tripStartLon :: Maybe Double = readMaybe . T.unpack =<< Utils.getTagV2 key lonKey =<< tagGroup
@@ -286,8 +287,8 @@ parseRideAssignedEvent order = do
   driverName <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & fromMaybeM (InvalidRequest "driverName is not present in RideAssigned Event.")
   driverMobileNumber <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "driverMobileNumber is not present in RideAssigned Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags) & fromMaybeM (InvalidRequest "personTags is not present in RideAssigned Event.")
-  let rating :: Maybe HighPrecMeters = readMaybe . T.unpack =<< Utils.getTagV2 "driver_details" "rating" tagGroups
-  registeredAt :: UTCTime <- fromMaybeM (InvalidRequest "registered_at is not present.") $ readMaybe . T.unpack =<< Utils.getTagV2 "driver_details" "registered_at" tagGroups
+  let rating :: Maybe HighPrecMeters = readMaybe . T.unpack =<< Utils.getTagV2 Tag.DRIVER_DETAILS Tag.RATING tagGroups
+  registeredAt :: UTCTime <- fromMaybeM (InvalidRequest "registered_at is not present.") $ readMaybe . T.unpack =<< Utils.getTagV2 Tag.DRIVER_DETAILS Tag.REGISTERED_AT tagGroups
   let driverImage = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
   vehicleColor <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleColor) & fromMaybeM (InvalidRequest "vehicleColor is not present in RideAssigned Event.")
   vehicleModel <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel) & fromMaybeM (InvalidRequest "vehicleModel is not present in RideAssigned Event.")
@@ -295,8 +296,8 @@ parseRideAssignedEvent order = do
   let castToBool mbVar = case T.toLower <$> mbVar of
         Just "true" -> True
         _ -> False
-  let isDriverBirthDay = castToBool $ Utils.getTagV2 "driver_details" "is_driver_birthday" tagGroups
-      isFreeRide = castToBool $ Utils.getTagV2 "driver_details" "is_free_ride" tagGroups
+  let isDriverBirthDay = castToBool $ Utils.getTagV2 Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
+      isFreeRide = castToBool $ Utils.getTagV2 Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
   return
     DOnUpdate.RideAssignedReq
       { bppBookingId = Id bppBookingId,
@@ -326,8 +327,8 @@ parseRideStartedEvent order = do
       tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
   let startOdometerReading = case tagGroups of
         Nothing -> Nothing
-        Just tg -> readMaybe . T.unpack =<< Utils.getTagV2 "ride_odometer_details" "start_odometer_reading" tg
-  let tripStartLocation = getLocationFromTagV2 personTagsGroup "current_location" "current_location_lat" "current_location_lon"
+        Just tg -> readMaybe . T.unpack =<< Utils.getTagV2 Tag.RIDE_ODOMETER_DETAILS Tag.START_ODOMETER_READING tg
+  let tripStartLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
   pure $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id bppBookingId,
@@ -347,16 +348,16 @@ parseRideCompletedEvent order = do
   chargeableDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "chargeable_distance is not present in RideCompleted Event.") $
       readMaybe . T.unpack
-        =<< Utils.getTagV2 "ride_distance_details" "chargeable_distance" tagGroups
+        =<< Utils.getTagV2 Tag.RIDE_DISTANCE_DETAILS Tag.CHARGEABLE_DISTANCE tagGroups
   traveledDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "traveled_distance is not present in RideCompleted Event.") $
       readMaybe . T.unpack
-        =<< Utils.getTagV2 "ride_distance_details" "traveled_distance" tagGroups
-  let endOdometerReading = readMaybe . T.unpack =<< Utils.getTagV2 "ride_distance_details" "end_odometer_reading" tagGroups
+        =<< Utils.getTagV2 Tag.RIDE_DISTANCE_DETAILS Tag.TRAVELED_DISTANCE tagGroups
+  let endOdometerReading = readMaybe . T.unpack =<< Utils.getTagV2 Tag.RIDE_DISTANCE_DETAILS Tag.END_ODOMETER_READING tagGroups
   fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
   fareBreakups <- traverse mkOnUpdateFareBreakup fareBreakups'
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
-  let tripEndLocation = getLocationFromTagV2 personTagsGroup "current_location" "current_location_lat" "current_location_lon"
+  let tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
   pure $
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id bppBookingId,
@@ -395,7 +396,7 @@ parseDriverArrivedEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in DriverArrived Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DriverArrived Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags) & fromMaybeM (InvalidRequest "fulfillment.agent.tags is not present in DriverArrived Event.")
-  let arrival_time = readMaybe . T.unpack =<< Utils.getTagV2 "driver_arrived_info" "arrival_time" tagGroups
+  let arrival_time = readMaybe . T.unpack =<< Utils.getTagV2 Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
   return $
     DOnUpdate.DriverArrivedReq
       { bppBookingId = Id bppBookingId,
@@ -408,7 +409,7 @@ parseNewMessageEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in NewMessage Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in NewMessage Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in NewMessage Event.")
-  message <- Utils.getTagV2 "driver_new_message" "message" tagGroups & fromMaybeM (InvalidRequest "driver_new_message tag is not present in NewMessage Event.")
+  message <- Utils.getTagV2 Tag.DRIVER_NEW_MESSAGE Tag.MESSAGE tagGroups & fromMaybeM (InvalidRequest "driver_new_message tag is not present in NewMessage Event.")
   return $
     DOnUpdate.NewMessageReq
       { bppBookingId = Id bppBookingId,
@@ -422,7 +423,7 @@ parseEstimateRepetitionEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in EstimateRepetition Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in EstimateRepetition Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in EstimateRepetition Event.")
-  cancellationSource <- Utils.getTagV2 "previous_cancellation_reasons" "cancellation_reason" tagGroups & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in EstimateRepetition Event.")
+  cancellationSource <- Utils.getTagV2 Tag.PREVIOUS_CANCELLATION_REASONS Tag.CANCELLATION_REASON tagGroups & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in EstimateRepetition Event.")
   return $
     DOnUpdate.EstimateRepetitionReq
       { searchRequestId = Id transactionId,
@@ -437,7 +438,7 @@ parseSafetyAlertEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in SafetyAlert Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in SafetyAlert Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in SafetyAlert Event.")
-  deviation <- Utils.getTagV2 "safety_alert" "deviation" tagGroups & fromMaybeM (InvalidRequest "safety_alert tag is not present in SafetyAlert Event.")
+  deviation <- Utils.getTagV2 Tag.SAFETY_ALERT Tag.DEVIATION tagGroups & fromMaybeM (InvalidRequest "safety_alert tag is not present in SafetyAlert Event.")
   return $
     DOnUpdate.SafetyAlertReq
       { bppBookingId = Id bppBookingId,

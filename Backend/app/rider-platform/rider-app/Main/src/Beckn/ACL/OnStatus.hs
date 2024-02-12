@@ -20,6 +20,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
 import Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as OnStatusRideAssigned
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -259,10 +260,10 @@ buildNewRideInfoV2 order = do
   driverRegisteredAt :: UTCTime <-
     fromMaybeM (InvalidRequest "registered_at tag not present in driver_details tagGroups of agent.person.tags") $
       readMaybe . T.unpack
-        =<< Utils.getTagV2 "driver_details" "registered_at" tagGroups
+        =<< Utils.getTagV2 Tag.DRIVER_DETAILS Tag.REGISTERED_AT tagGroups
   let rating :: Maybe HighPrecMeters =
         readMaybe . T.unpack
-          =<< Utils.getTagV2 "driver_details" "rating" tagGroups
+          =<< Utils.getTagV2 Tag.DRIVER_DETAILS Tag.RATING tagGroups
   vehicle <- fulf.fulfillmentVehicle & fromMaybeM (InvalidRequest "fulfillment.vehicle is not present in on_status request.")
   vehicleNumber <- vehicle.vehicleRegistration & fromMaybeM (InvalidRequest "vehicle.registration is not present in on_status request.")
   vehicleColor <- vehicle.vehicleColor & fromMaybeM (InvalidRequest "vehicle.color is not present in on_status request.")
@@ -289,7 +290,7 @@ buildRideStartedInfo order = do
   tagGroups <- fulf.fulfillmentTags & fromMaybeM (InvalidRequest "fulfillment.tags is not present in on_status request.")
   let driverArrivalTime :: Maybe UTCTime =
         readMaybe . T.unpack
-          =<< Utils.getTagV2 "driver_arrived_info" "arrival_time" tagGroups
+          =<< Utils.getTagV2 Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
   pure $
     DOnStatus.RideStartedInfo
       { rideStartTime,
@@ -304,11 +305,11 @@ buildRideCompletedInfo order = do
   chargeableDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "chargeable_distance tag is not present in ride_distance_details tagGroup") $
       readMaybe . T.unpack
-        =<< Utils.getTagV2 "ride_distance_details" "chargeable_distance" tagGroups
+        =<< Utils.getTagV2 Tag.RIDE_DISTANCE_DETAILS Tag.CHARGEABLE_DISTANCE tagGroups
   traveledDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "traveled_distance tag is not present in ride_distance_details tagGroup") $
       readMaybe . T.unpack
-        =<< Utils.getTagV2 "ride_distance_details" "traveled_distance" tagGroups
+        =<< Utils.getTagV2 Tag.RIDE_DISTANCE_DETAILS Tag.TRAVELED_DISTANCE tagGroups
   fare :: DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= valueFromString & fromMaybeM (InvalidRequest "order.quote.price.value is not present in on_status RideCompletedOrder request.")
   totalFare :: DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceComputedValue) >>= valueFromString & fromMaybeM (InvalidRequest "order.quote.price.computed_value is not present in on_status RideCompletedOrder request.")
   breakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "order.quote.breakup is not present in on_status RideCompletedOrder request.")
