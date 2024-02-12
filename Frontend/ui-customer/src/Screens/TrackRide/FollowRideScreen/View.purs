@@ -50,7 +50,8 @@ import Data.String (take)
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Presto.Core.Types.Language.Flow (Flow, delay, getState, modifyState)
+import Presto.Core.Types.Language.Flow (Flow, getState, modifyState)
+import Helpers.Pooling(delay)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
 import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..))

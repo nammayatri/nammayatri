@@ -31,7 +31,8 @@ import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl)
 import JBridge (startLottieProcess, lottieAnimationConfig)
-import Presto.Core.Types.Language.Flow (delay, doAff)
+import Presto.Core.Types.Language.Flow (doAff)
+import Helpers.Pooling(delay)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, background, color, gravity, height, id, linearLayout, lottieAnimationView, margin, orientation, padding, text, textView, width, imageView, imageUrl)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
