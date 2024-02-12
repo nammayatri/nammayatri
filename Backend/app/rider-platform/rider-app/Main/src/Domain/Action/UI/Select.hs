@@ -151,7 +151,7 @@ selectList estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
-  pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
+  SelectListRes <$> traverse DQuote.makeQuoteAPIEntity selectedQuotes
 
 selectResult :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
@@ -164,4 +164,5 @@ selectResult estimateId = do
     Just r -> pure r
     Nothing -> do
       selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
-      return $ QuotesResultResponse {bookingId = Nothing, selectedQuotes = Just $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes}
+      qEntity <- traverse DQuote.makeQuoteAPIEntity selectedQuotes
+      return $ QuotesResultResponse {bookingId = Nothing, selectedQuotes = Just $ SelectListRes qEntity}
