@@ -217,7 +217,9 @@ checkRideStatus rideAssigned = do
                           , rideType = 
                               if fareProductType == "RENTAL" 
                                 then RideType.RENTAL_RIDE 
-                              else RideType.NORMAL_RIDE
+                                else if fareProductType == "INTER_CITY" 
+                                then RideType.INTERCITY
+                                else RideType.NORMAL_RIDE
                          
                           }
                 })

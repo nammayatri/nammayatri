@@ -244,6 +244,7 @@ currentFlowStatus = do
                      , currentStage = ConfirmingQuotes
                      , rideRequestFlow = true
                      , selectedQuote = Nothing
+                     , bookingId = currentStatus.bookingId
                      , city = getCityNameFromCode flowStatusData.source.city}
                 , data { source = flowStatusData.source.place
                        , destination = flowStatusData.destination.place

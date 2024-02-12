@@ -3075,7 +3075,7 @@ normalRideFlow  (RideBookingRes response) state = do
               "INPROGRESS" , _ -> RideStarted
               "COMPLETED", _ -> RideCompleted
               "CANCELLED",_ -> HomeScreen
-              _ , "CONFIRMED" -> HomeScreen
+              _ , "CONFIRMED" -> ConfirmingQuotes
               _ , _ -> RideAccepted
           , isSearchLocation = NoView
           }
@@ -3093,6 +3093,7 @@ normalRideFlow  (RideBookingRes response) state = do
     getRideType fareProductType = case fareProductType of
       "RENTAL" -> RideType.RENTAL_RIDE
       "ONE_WAY" -> RideType.NORMAL_RIDE
+      "INTER_CITY" -> RideType.INTERCITY
       _ -> RideType.NORMAL_RIDE
 
 specialZoneRideFlow :: RideBookingRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
