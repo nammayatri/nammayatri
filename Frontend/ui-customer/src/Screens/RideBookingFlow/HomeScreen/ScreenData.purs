@@ -70,7 +70,8 @@ initData = {
        baseFare : 0,
        extraFare : 0,
        pickUpCharges : 0,
-       vehicleVariant : ""
+       vehicleVariant : "",
+       createdTime : ""
        }
     , speed : 0
     , selectedLocationListItem : Nothing

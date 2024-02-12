@@ -2896,6 +2896,7 @@ estimatesListFlow estimates state = do
           , extraFare = estimatesInfo.extraFare
           , pickUpCharges = estimatesInfo.pickUpCharges
           , additionalFare = estimatesInfo.additionalFare
+          , createdTime = estimatesInfo.createdTime
           }
         , selectedEstimatesObject = estimatesInfo.defaultQuote
         , pickUpCharges = estimatesInfo.pickUpCharges

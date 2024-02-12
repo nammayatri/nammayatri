@@ -285,3 +285,5 @@ _bookedSeats = lens (unwrap >>> _.bookedSeats) (\oldRec newVal -> wrap ((unwrap 
 _peopleCategories :: forall a b c. Newtype a { peopleCategories :: b | c } => Lens' a b
 _peopleCategories = lens (unwrap >>> _.peopleCategories) (\oldRec newVal -> wrap ((unwrap oldRec) { peopleCategories = newVal }))
 
+_createdAt :: forall a b c. Newtype a { createdAt :: b | c } => Lens' a b
+_createdAt = lens (unwrap >>> _.createdAt) (\oldRec newVal -> wrap ((unwrap oldRec) { createdAt = newVal }))

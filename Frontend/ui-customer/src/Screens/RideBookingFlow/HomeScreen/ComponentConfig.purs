@@ -57,7 +57,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -734,10 +734,14 @@ rateCardConfig state =
     config' = RateCard.config
     bangaloreCode = HU.getCityCodeFromCity Bangalore
     fareInfoText =  mkFareInfoText state.props.city
+    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+    nightShiftMultiplier = if city == Delhi then "1.25" else "1.5"
+    freeWaitingTime = " 3 "
+    waitingChargesPerMin = cityBasedWaitingCharge city
     rateCardConfig' =
       config'
         { nightCharges = state.data.rateCard.nightCharges
-        , nightShiftMultiplier = HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)
+        , nightShiftMultiplier = nightShiftMultiplier --HU.toStringJSON (state.data.rateCard.nightShiftMultiplier) -- Change when we have the actual value
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
         , showDetails = state.data.config.searchLocationConfig.showRateCardDetails
@@ -746,20 +750,31 @@ rateCardConfig state =
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
         , driverAdditionsImage = fetchImage FF_ASSET $ if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2"  else "ny_ic_driver_additions_yatri" 
         , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
-                                 else (getString DAY_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+                                 else (getString DAY_TIMES_OF) <> (nightShiftMultiplier) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
         , title = case MU.getMerchant FunctionCall of
-                      MU.NAMMAYATRI -> getString RATE_CARD
+                      MU.NAMMAYATRI ->  case city of
+                                        Delhi -> getString RATE_CARD
+                                        Kochi -> getVehicleTitle state.data.rateCard.vehicleVariant
+                                        Hyderabad -> getString RATE_CARD
+                                        Chennai -> getVehicleTitle state.data.rateCard.vehicleVariant
+                                        Pondicherry -> getString RATE_CARD
+                                        Bangalore -> getString RATE_CARD
+                                        _ -> getString RATE_CARD
                       MU.YATRI -> getVehicleTitle state.data.rateCard.vehicleVariant
                       _ -> ""
         , fareList = case MU.getMerchant FunctionCall of
-                      MU.NAMMAYATRI -> if state.props.city == Delhi then nyRateCardListForDelhi state else nyRateCardList state
+                      MU.NAMMAYATRI -> case city of
+                                        Delhi -> nyRateCardListForDelhi state
+                                        Kochi -> yatriRateCardList state.data.rateCard.vehicleVariant state
+                                        Hyderabad -> hydRateCardList state
+                                        Chennai -> chennaiRateCardList state.data.rateCard.vehicleVariant state
+                                        Pondicherry -> pondicherryRateCardList state
+                                        Bangalore -> nyRateCardList state
+                                        _ -> nyRateCardList state
                       MU.YATRI -> yatriRateCardList state.data.rateCard.vehicleVariant state
                       _ -> []
 
-        , otherOptions  = [
-          {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
-          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-          {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }]
+        , otherOptions  = cityBasedOtherOptions city
         , fareInfoText = fareInfoText
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
@@ -770,10 +785,10 @@ rateCardConfig state =
           {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
           {key : "WAITING_CHARGE", val : (getString WAITING_CHARGE)<> "°"},
-          {key : "WAITING_CHARGE_RATECARD_DESCRIPTION", val : (getString WAITING_CHARGE_RATECARD_DESCRIPTION)},
+          {key : "WAITING_CHARGE_RATECARD_DESCRIPTION", val : (getString $ WAITING_CHARGE_RATECARD_DESCRIPTION waitingChargesPerMin freeWaitingTime)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
           {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))},
-          {key : "WAITING_CHARGES_APPLICABLE", val : ("<span style=\"color:black;\">" <> "2." <> (getString WAITING_CHARGE) <> "</span>" <> " " <> getString FARE_POLICY_WAITING_CHARGES )}]
+          {key : "WAITING_CHARGES_APPLICABLE", val : ("<span style=\"color:black;\">" <> "2." <> (getString WAITING_CHARGE) <> "</span>" <> " "  <> (getString $ WAITING_CHARGE_INFO waitingChargesPerMin freeWaitingTime) )}]
           <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else []
         }
   in
@@ -785,7 +800,46 @@ rateCardConfig state =
       if DA.any ( _ == city) [ Bangalore, Tumakuru , Mysore]
         then (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT") 
         else ""
+    
+    cityBasedOtherOptions :: City -> Array FareList
+    cityBasedOtherOptions city = case city of 
+                                    Delhi -> [
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    Kochi -> [
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    Hyderabad -> [
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    Chennai -> [
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    Pondicherry -> []
+                                    Bangalore -> [
+                                                  {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    _ -> [
+                                          {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
+                                          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                          {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                          ]
 
+    cityBasedWaitingCharge :: City -> String
+    cityBasedWaitingCharge city = case city of
+                                      Delhi -> "₹0.75"
+                                      Kochi -> "₹1.50"
+                                      Hyderabad -> "₹2.00"
+                                      Chennai -> "₹1.00"
+                                      Pondicherry -> ""
+                                      Bangalore -> "₹1.50"
+                                      _ -> "₹1.50"
 
 
 yatriRateCardList :: String -> ST.HomeScreenState -> Array FareList
@@ -820,6 +874,56 @@ yatriRateCardList vehicleVariant state = do
 
     _ -> []
 
+chennaiRateCardList :: String -> ST.HomeScreenState -> Array FareList
+chennaiRateCardList vehicleVariant state = do
+  let lang = getLanguageLocale languageKey
+  case vehicleVariant of
+    "HATCHBACK" -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , val : "₹110"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 4 km" else "4 " <> (getString MORE_THAN), val : "₹24 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+                   ]
+    "SEDAN"     -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO), val : "₹130"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 4 km" else "4 " <> (getString MORE_THAN) ,val : "₹27 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+                   ]
+
+    "SUV"       -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , val : "₹200"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 4 km" else "4 " <> (getString MORE_THAN) , val :"₹36 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+                   ]
+
+    "AUTO_RICKSHAW"  -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 2.0 km" else "2.0 km " <> (getString MIN_FARE_UPTO) , val : "₹40"}
+                        , { key : "2 km - 13 km" , val : "₹16 / km"}
+                        , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 13 km" else "13 " <> (getString MORE_THAN), val : "₹13 / km"}               
+                        , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+                        ]
+    _ -> []
+
+
+hydRateCardList :: ST.HomeScreenState -> Array FareList
+hydRateCardList state = do
+  let isPeakTime = JB.withinTimeRange "17:00:00" "19:30:00" $ EHC.convertUTCtoISC (state.data.rateCard.createdTime) "HH:mm:ss"
+      isDayWeekend = isWeekend state.data.rateCard.createdTime
+  if (isPeakTime && (not isDayWeekend)) then 
+    [{key : ((getString MIN_FARE_UPTO) <> " 2.0 km"), val : ("₹40")},
+    { key : "2.0 km - 12 km" , val : "₹16 / km"},
+    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 12 km" else "12 " <> (getString MORE_THAN) ,val : "₹15 / km"},
+    { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+    ]
+  else
+    [{key : ((getString MIN_FARE_UPTO) <> " 2.0 km"), val : ("₹30")},
+      { key : "2.0 km - 12 km" , val : "₹14 / km"},
+      { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 12 km" else "12 " <> (getString MORE_THAN) ,val : "₹13 / km"},
+      { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+      ]
+
+pondicherryRateCardList :: ST.HomeScreenState -> Array FareList
+pondicherryRateCardList state = do
+  [{key : ((getString MIN_FARE_UPTO) <> " 2.0 km"), val : ("₹35")},
+    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 2km" else "2 " <> (getString MORE_THAN) ,val : "₹18 / km"},
+    { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+    ]
+
 getVehicleTitle :: String -> String
 getVehicleTitle vehicle =
   (case vehicle of
@@ -831,7 +935,7 @@ getVehicleTitle vehicle =
 
 nyRateCardList :: ST.HomeScreenState -> Array FareList
 nyRateCardList state =
-  ([{key : ((getString MIN_FARE_UPTO) <> "2 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
+  ([{key : ((getString MIN_FARE_UPTO) <> " 2.0 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
     {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.extraFare) <> "/ km")},
     {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
@@ -839,9 +943,9 @@ nyRateCardList state =
 
 nyRateCardListForDelhi :: ST.HomeScreenState -> Array FareList
 nyRateCardListForDelhi state = 
-  ([{key : ((getString MIN_FARE_UPTO) <> "1.5 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹30")},
+  ([{key : ((getString MIN_FARE_UPTO) <> " 1.5 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹30")},
     { key : "1.5 km - 5 km" , val : "₹15 / km"},
-    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹11 / km"},
+    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹10 / km"},
     {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
     [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
