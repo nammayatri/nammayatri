@@ -13,13 +13,15 @@ module Storage.Beam.FareParameters.FareParametersRentalDetails where
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import Kernel.Prelude
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FareParametersRentalDetailsT f = FareParametersRentalDetailsT
   { fareParametersId :: B.C f Text,
     timeBasedFare :: B.C f Money,
-    distBasedFare :: B.C f Money
+    distBasedFare :: B.C f Money,
+    extraDuration :: B.C f (Maybe Seconds),
+    extraDistance :: B.C f (Maybe Meters)
   }
   deriving (Generic, B.Beamable)
 

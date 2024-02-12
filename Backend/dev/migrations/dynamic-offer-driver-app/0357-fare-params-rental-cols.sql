@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN extra_duration int default 0;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN extra_distance int default 0;

@@ -109,11 +109,11 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
       driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption . (mkValue . show . (.getMoney)) <$> driverMaxExtraFee
 
       nightShiftStart = nightShiftBounds <&> (.nightShiftStart)
-      nightShiftStartCaption = "NIGHT_SHIFT_START"
+      nightShiftStartCaption = "night_shift_start"
       nightShiftStartItem = mkBreakupItem nightShiftStartCaption . (mkValue . show) <$> nightShiftStart
 
       nightShiftEnd = nightShiftBounds <&> (.nightShiftEnd)
-      nightShiftEndCaption = "NIGHT_SHIFT_END"
+      nightShiftEndCaption = "night_shift_end"
       nightShiftEndItem = mkBreakupItem nightShiftEndCaption . (mkValue . show) <$> nightShiftEnd
 
       additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
@@ -188,7 +188,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
           getNightShiftChargeValue (DPM.ConstantNightShiftCharge a) = show a
 
       let oldNightShiftCharge = getNightShiftChargeValue <$> nightShiftChargeInfo
-          oldNightShiftChargeCaption = "OLD_NIGHT_SHIFT_CHARGE"
+          oldNightShiftChargeCaption = "night_shift_charge"
           oldNightShiftChargeItem = mkBreakupItem oldNightShiftChargeCaption . mkValue <$> oldNightShiftCharge
 
       catMaybes [oldNightShiftChargeItem]

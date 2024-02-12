@@ -32,7 +32,9 @@ instance FromTType' BeamFPRD.FareParametersRentalDetails Domain.FullFareParamete
         ( KTI.Id fareParametersId,
           Domain.FParamsRentalDetails
             { timeBasedFare = timeBasedFare,
-              distBasedFare = distBasedFare
+              distBasedFare = distBasedFare,
+              extraDistance = fromMaybe 0 extraDistance,
+              extraDuration = fromMaybe 0 extraDuration
             }
         )
 
@@ -41,5 +43,7 @@ instance ToTType' FareParametersRentalDetails Domain.FullFareParametersRentalDet
     FareParametersRentalDetailsT
       { fareParametersId = fareParametersId,
         timeBasedFare = Domain.timeBasedFare fParamsRentalDetails,
-        distBasedFare = Domain.distBasedFare fParamsRentalDetails
+        distBasedFare = Domain.distBasedFare fParamsRentalDetails,
+        extraDistance = Just $ Domain.extraDistance fParamsRentalDetails,
+        extraDuration = Just $ Domain.extraDuration fParamsRentalDetails
       }
