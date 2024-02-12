@@ -205,7 +205,7 @@ parseAddress loc@Spec.Location {..} = do
         }
   where
     mkFullAddress OS.Address {..} = do
-      let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, locality, city, state, area_code, country]
+      let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, city, state, area_code, country]
       if null strictFields
         then Nothing
         else Just $ T.intercalate ", " strictFields
