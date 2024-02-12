@@ -894,7 +894,8 @@ type HomeScreenData =  {
   coinBalance :: Int,
   subsRemoteConfig :: RC.RCSubscription,
   bannerData :: BannerCarousalData,
-  prevLatLon :: Maybe Location
+  prevLatLon :: Array Location,
+  noOfLocations :: Int
 }
 
 type BannerCarousalData = {
@@ -1136,7 +1137,7 @@ type Location = {
   place :: String,
   lat :: Number,
   lon :: Number,
-  timeStamp :: String
+  driverInsideThreshold :: Boolean
 }
 
 data LocationType = LATITUDE | LONGITUDE

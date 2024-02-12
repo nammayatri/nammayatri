@@ -152,7 +152,8 @@ initData = {
         , bannerScrollState: "0"
         , currentPage : 0
       },
-      prevLatLon : Nothing
+      prevLatLon : [],
+      noOfLocations : 0
     },
     props: {
         isFreeRide : false,
