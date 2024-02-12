@@ -79,7 +79,7 @@ findByMerchantOpCityId id mPersonId = do
   let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
   if useCACConfig
     then findByMerchantOpCityIdCAC id mPersonId
-    else findByMerchantOpCityIdDB id
+    else getTransporterConfigFromDB id
 
 findByMerchantOpCityIdDB :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 findByMerchantOpCityIdDB (Id merchantOperatingCityId) = Queries.findByMerchantOpCityId (Id merchantOperatingCityId)
@@ -102,15 +102,10 @@ findByMerchantOpCityIdCAC id (Just personId) = do
     False -> do
       getConfig id 1
 findByMerchantOpCityIdCAC id Nothing = do
-  enableCAC' <- liftIO $ Se.lookupEnv "ENABLE_CAC"
-  let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
-  case enableCAC of
-    True -> do
-      gen <- newStdGen
-      let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-      logDebug $ "the toss value is for transporter config " <> show toss
-      getConfig id toss
-    False -> getTransporterConfigFromDB id
+  gen <- newStdGen
+  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+  logDebug $ "the toss value is for transporter config " <> show toss
+  getConfig id toss
 
 cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do

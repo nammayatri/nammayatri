@@ -28,6 +28,8 @@ import Data.Text as Text hiding (find)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant as Variant
+import EulerHS.Language as L (getOption)
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -67,9 +69,9 @@ getDriverPoolConfig ::
   Meters ->
   m DriverPoolConfig
 getDriverPoolConfig merchantOpCityId mbvt dist = do
-  enableCAC' <- liftIO $ SE.lookupEnv "ENABLE_CAC"
-  let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
-  case enableCAC of
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
+  case useCACConfig of
     False -> getDriverPoolConfigFromDB merchantOpCityId mbvt dist
     True -> do
       dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))

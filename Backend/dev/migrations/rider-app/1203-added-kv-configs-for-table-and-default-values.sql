@@ -5,4 +5,4 @@ CREATE TABLE atlas_app.system_configs (
 
 
 INSERT INTO atlas_app.system_configs (id, config_value)
-VALUES ('kv_configs', '{"enableKVForWriteAlso":[{"nameOfTable":"Table1","percentEnable":100}],"enableKVForRead":["Table2"]}');
+VALUES ('kv_configs', '{"enableKVForWriteAlso":[{"nameOfTable":"Table1","percentEnable":100}],"enableKVForRead":["Table2"], "useCAC":false}');
