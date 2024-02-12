@@ -31,7 +31,7 @@ buildDInitReq subscriber req = do
   fulfillmentId__ <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
   fulfillmentType_ <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentType not found")
   let fulfillmentId_ = case fulfillmentType_ of
-        "RIDE" -> Domain.Action.Beckn.Init.EstimateId (Kernel.Types.Id.Id fulfillmentId__)
+        "DELIVERY" -> Domain.Action.Beckn.Init.EstimateId (Kernel.Types.Id.Id fulfillmentId__)
         "RIDE_OTP" -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
         "RENTAL" -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
         "INTER_CITY" -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)

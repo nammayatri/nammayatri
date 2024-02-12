@@ -22,8 +22,7 @@ castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVarian
   _ -> Nothing
 
 castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
-castPaymentType "ON_ORDER" = return DMPM.PREPAID -- TODO::Beckn, this is not present in spec
-castPaymentType "ON_FULFILLMENT" = return DMPM.POSTPAID
+castPaymentType "ON_FULFILLMENT" = return DMPM.ON_FULFILLMENT
 castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector

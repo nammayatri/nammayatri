@@ -46,16 +46,16 @@ buildInitReq res = do
   pure $ BecknReq context initMessage
 
 buildInitReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r) =>
   SConfirm.DConfirmRes ->
   m Spec.InitReq
 buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
-        SConfirm.ConfirmOneWayDetails -> ("RIDE", Nothing, Nothing)
+        SConfirm.ConfirmOneWayDetails -> ("DELIVERY", Nothing, Nothing)
         SConfirm.ConfirmRentalDetails quoteId -> ("RENTAL", Just quoteId, Nothing)
         SConfirm.ConfirmInterCityDetails quoteId -> ("INTER_CITY", Just quoteId, Nothing)
-        SConfirm.ConfirmAutoDetails estimateId driverId -> ("RIDE", Just estimateId, driverId)
+        SConfirm.ConfirmAutoDetails estimateId driverId -> ("DELIVERY", Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> ("RIDE_OTP", Just quoteId, Nothing) --need to be  checked
   let action = Context.INIT
   let domain = Context.MOBILITY

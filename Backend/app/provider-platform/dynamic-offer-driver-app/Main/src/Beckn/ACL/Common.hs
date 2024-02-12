@@ -42,8 +42,7 @@ castDPaymentCollector DMPM.BAP = Payment.BAP
 castDPaymentCollector DMPM.BPP = Payment.BPP
 
 castDPaymentType :: DMPM.PaymentType -> Payment.PaymentType
-castDPaymentType DMPM.PREPAID = Payment.ON_ORDER
-castDPaymentType DMPM.POSTPAID = Payment.ON_FULFILLMENT
+castDPaymentType DMPM.ON_FULFILLMENT = Payment.ON_FULFILLMENT
 
 castDPaymentInstrument :: DMPM.PaymentInstrument -> Payment.PaymentInstrument
 castDPaymentInstrument (DMPM.Card DMPM.DefaultCardType) = Payment.Card Payment.DefaultCardType
@@ -57,8 +56,7 @@ castPaymentCollector Payment.BAP = DMPM.BAP
 castPaymentCollector Payment.BPP = DMPM.BPP
 
 castPaymentType :: Payment.PaymentType -> DMPM.PaymentType
-castPaymentType Payment.ON_ORDER = DMPM.PREPAID
-castPaymentType Payment.ON_FULFILLMENT = DMPM.POSTPAID
+castPaymentType Payment.ON_FULFILLMENT = DMPM.ON_FULFILLMENT
 
 castPaymentInstrument :: Payment.PaymentInstrument -> DMPM.PaymentInstrument
 castPaymentInstrument (Payment.Card Payment.DefaultCardType) = DMPM.Card DMPM.DefaultCardType
