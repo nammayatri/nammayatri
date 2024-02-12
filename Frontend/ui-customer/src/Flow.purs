@@ -607,6 +607,7 @@ homeScreenFlow = do
             homeScreenFlow
             else if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false ) [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) then do 
               let currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
+                  _ = spy "sdfhjsdgaf" "sjkdlfskljh"
               updateLocalStage currentStage
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = currentStage ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance, isShorterTrip = response.distance < 500, findingQuotesProgress = 0.0}})
               homeScreenFlow

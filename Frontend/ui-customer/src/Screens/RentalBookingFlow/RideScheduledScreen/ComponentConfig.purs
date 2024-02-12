@@ -93,9 +93,9 @@ sourceToDestinationConfig state =
           , isEditable = state.data.rideType == RideType.RENTAL_RIDE
           , textStyle = ParagraphText
           , ellipsize = true
-          , maxLines = if (state.data.rideType == RideType.RENTAL_RIDE) then 2 else 1
+          , maxLines = if (state.data.rideType == RideType.RENTAL_RIDE) then 1 else 2
           , margin = MarginLeft 12
-          , isClickable = true
+          , isClickable = state.data.rideType == RideType.RENTAL_RIDE
           }
       , distanceConfig { distanceVisibility = GONE }
       , separatorMargin = 24
