@@ -15,6 +15,7 @@
 module Beckn.OnDemand.Utils.Init where
 
 import qualified Beckn.OnDemand.Utils.Common as UCommon
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import Data.List (singleton)
@@ -116,8 +117,7 @@ mkPayment Nothing =
       }
 
 castDPaymentType :: DMPM.PaymentType -> Text
-castDPaymentType DMPM.PREPAID = "ON_ORDER" -- TODO::Beckn, don't have this in spec.
-castDPaymentType DMPM.POSTPAID = "ON_FULFILLMENT"
+castDPaymentType DMPM.ON_FULFILLMENT = "ON_FULFILLMENT"
 
 mkFulfillmentTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]
 mkFulfillmentTags mbMaxDistance = do
@@ -128,8 +128,8 @@ mkFulfillmentTags mbMaxDistance = do
             { tagGroupDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "estimations",
-                      descriptorName = Just "Estimations",
+                    { descriptorCode = Just $ show Tag.ESTIMATIONS,
+                      descriptorName = Just $ show Tag.ESTIMATIONS,
                       descriptorShortDesc = Nothing
                     },
               tagGroupDisplay = Just True,
@@ -139,8 +139,8 @@ mkFulfillmentTags mbMaxDistance = do
                       { tagDescriptor =
                           Just $
                             Spec.Descriptor
-                              { descriptorCode = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
-                                descriptorName = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
+                              { descriptorCode = (\_ -> Just $ show Tag.MAX_ESTIMATED_DISTANCE) =<< mbMaxDistance,
+                                descriptorName = (\_ -> Just $ show Tag.MAX_ESTIMATED_DISTANCE) =<< mbMaxDistance,
                                 descriptorShortDesc = Nothing
                               },
                         tagDisplay = (\_ -> Just True) =<< mbMaxDistance,
