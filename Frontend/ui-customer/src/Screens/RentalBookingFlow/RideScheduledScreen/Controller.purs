@@ -32,6 +32,7 @@ import Screens.Types (RideScheduledScreenState, City(..))
 import Resources.Constants (cancelReasons, dummyCancelReason)
 import JBridge (hideKeyboardOnNavigation, toast)
 import Services.API
+import Common.Types.App (RideType(..)) as RideType
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
 import Data.Lens ((^.))
@@ -107,6 +108,10 @@ eval (GetBookingList resp) state =
         (RideBookingRes resp) = fromMaybe HomeScreenData.dummyRideBooking $ head listResp.list
         (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
         (RideBookingDetails contents) = bookingDetails.contents
+        rideType = case bookingDetails.fareProductType of
+                            "RENTAL" -> RideType.RENTAL_RIDE
+                            "INTER_CITY" -> RideType.INTERCITY
+                            _ -> RideType.NORMAL_RIDE
     in continue state { data
       { source = SearchLocationScreenData.dummyLocationInfo { lat = Just (resp.fromLocation ^._lat) , lon = Just (resp.fromLocation ^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking resp.fromLocation, address = decodeAddress (Booking resp.fromLocation)}
       , destination = maybe (Nothing) (\toLocation -> Just $ SearchLocationScreenData.dummyLocationInfo {lat = Just (toLocation^._lat), lon = Just (toLocation^._lon), placeId = Nothing, city = AnyCity, addressComponents = getAddressFromBooking toLocation, address = decodeAddress (Booking toLocation)}) contents.stopLocation
@@ -114,7 +119,8 @@ eval (GetBookingList resp) state =
       , finalPrice = show resp.estimatedTotalFare
       , baseDuration = show $ (fromMaybe 7200 resp.estimatedDuration)/3600
       , baseDistance = show $ (fromMaybe 20000 resp.estimatedDistance)/1000
-      , bookingId = resp.id}
+      , bookingId = resp.id
+      , rideType = rideType}
       , props{driverAllocationTime = "15" } -- TODO-codex : Need to get the driver allocation time from the API 
       }
 
