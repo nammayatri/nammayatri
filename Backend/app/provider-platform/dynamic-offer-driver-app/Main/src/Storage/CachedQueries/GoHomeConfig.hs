@@ -24,6 +24,8 @@ import Data.Text
 import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person as DP
+import EulerHS.Language as L (getOption)
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.CacheFlow (CacheFlow)
@@ -32,7 +34,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
 import qualified Storage.Queries.GoHomeConfig as Queries
-import qualified System.Environment as SE
 import qualified System.Environment as Se
 import System.Random
 import Tools.Error (GenericError (..))
@@ -70,9 +71,9 @@ getGoHomeConfigFromDB id = do
 
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id DP.Person) -> m GoHomeConfig
 findByMerchantOpCityId id (Just personId) = do
-  enableCAC' <- liftIO $ SE.lookupEnv "ENABLE_CAC"
-  let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
-  case enableCAC of
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
+  case useCACConfig of
     False -> getGoHomeConfigFromDB id
     True -> do
       tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
@@ -90,9 +91,9 @@ findByMerchantOpCityId id (Just personId) = do
               getGoHomeConfig id toss
         False -> getGoHomeConfig id 1
 findByMerchantOpCityId id Nothing = do
-  enableCAC' <- liftIO $ SE.lookupEnv "ENABLE_CAC"
-  let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
-  case enableCAC of
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
+  case useCACConfig of
     True -> do
       gen <- newStdGen
       let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
