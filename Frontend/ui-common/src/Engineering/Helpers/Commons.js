@@ -503,12 +503,13 @@ export const getTimeStampObject = function(){
   }
 }
 
-function getRandom(max) {
-  return Math.floor(Math.random() * max) + 1; 
+export const getRandomID = function(max) {
+  const id = Math.floor(Math.random() * max) + 1;
+  return id.toString(); 
 }
 
 export const updateIdMap = function (key) {
-  idMap[key] = {id : getRandom(10000), shouldPush: true};
+  idMap[key] = {id : getRandomID(10000), shouldPush: true};
   return idMap[key];
 };
 
@@ -521,7 +522,7 @@ export const updatePushInIdMap = function (key, flag) {
 export const getValueFromIdMap = function (key) {
   let val = idMap[key]; 
   if (!val) {
-    idMap[key] = {id : getRandom(10000), shouldPush: true};
+    idMap[key] = {id : getRandomID(10000), shouldPush: true};
     val = idMap[key];
   }
   return val;
