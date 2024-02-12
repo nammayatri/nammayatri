@@ -142,6 +142,38 @@ public class NotificationUtils {
                 Bundle sheetData = new Bundle();
                 String expiryTime = "";
                 String searchRequestId = "";
+                String rideStartTime = "";
+                String rideStartDate= "";
+                try {
+                    String rentalDateTimeString  = entity_payload.has("startTime") && !entity_payload.isNull("startTime") ? entity_payload.getString("startTime") : "";
+                    final SimpleDateFormat dateTimeWithMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+                    final SimpleDateFormat dateTimeWithoutMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", new Locale("en", "US"));
+                    dateTimeWithMillis.setTimeZone(TimeZone.getTimeZone("UTC"));
+                    dateTimeWithoutMillis.setTimeZone(TimeZone.getTimeZone("UTC"));
+                    Date rentalDateTime;
+                    try {
+                        rentalDateTime = dateTimeWithMillis.parse(rentalDateTimeString);
+                    } catch (Exception e) {
+                        rentalDateTime = dateTimeWithoutMillis.parse(rentalDateTimeString);
+                    }
+                    rentalDateTime.setTime(rentalDateTime.getTime() + (330 * 60 * 1000));
+                    final SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
+                    final SimpleDateFormat tf1 = new SimpleDateFormat("h:mm a");
+                    df1.setTimeZone(TimeZone.getTimeZone("IST"));
+                    tf1.setTimeZone(TimeZone.getTimeZone("IST"));
+                    
+                    String date = df1.format(rentalDateTime);
+                    String time = tf1.format(rentalDateTime);
+                    
+                    rideStartTime = time;
+                    rideStartDate = date.equals(df1.format(new Date())) ? "Today" : date;
+                }
+                catch(Exception e) {
+                    System.out.println("Exception in parsing rental start date and time");
+                    rideStartDate = "Today";
+                    rideStartTime = "now";
+                    e.printStackTrace();
+                }
                 try {
                     JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());
                     JSONObject addressDrop = new JSONObject(entity_payload.has("toLocation") && !entity_payload.isNull("toLocation") ? entity_payload.get("toLocation").toString() : "{}");
@@ -171,7 +203,8 @@ public class NotificationUtils {
                     sheetData.putString("rideProductType", tripType);
                     sheetData.putInt("rentalRideDuration",entity_payload.has("duration") && !entity_payload.isNull("duration") ? entity_payload.getInt("duration") : 0);
                     sheetData.putInt("rentalRideDistance",entity_payload.has("distance") && !entity_payload.isNull("distance") ? entity_payload.getInt("distance") : 0);
-                    sheetData.putString("rentalStartTime",entity_payload.has("startTime") && !entity_payload.isNull("startTime") ? entity_payload.getString("startTime") : "");
+                    sheetData.putString("rideStartTime", rideStartTime);
+                    sheetData.putString("rideStartDate", rideStartDate);
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
 

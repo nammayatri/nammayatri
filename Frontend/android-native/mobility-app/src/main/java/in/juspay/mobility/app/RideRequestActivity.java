@@ -106,30 +106,10 @@ public class RideRequestActivity extends AppCompatActivity {
             }
             SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
-            String rentalStartTime = "";
-            String rentalStartDate= "";
-            try {            
-                final SimpleDateFormat dateTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                dateTime.setTimeZone(TimeZone.getTimeZone("UTC"));
-                final Date rentalDateTime = dateTime.parse(rideRequestBundle.getString("rentalStartTime"));
-                rentalDateTime.setTime(rentalDateTime.getTime() + (330 * 60 * 1000));
-                final SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
-                final SimpleDateFormat tf1 = new SimpleDateFormat("h:mm a");
-                df1.setTimeZone(TimeZone.getTimeZone("IST"));
-                tf1.setTimeZone(TimeZone.getTimeZone("IST"));
-                String date = df1.format(rentalDateTime);
-                String time = tf1.format(rentalDateTime);
-                
-                rentalStartTime = time;
-                rentalStartDate = date.equals(df1.format(new Date())) ? "Today" : date;
-            }
-            catch(Exception e) {
-                System.out.println("Exception in parsing rental start date and time");
-                rentalStartDate = "Today";
-                rentalStartTime = "now";
-                e.printStackTrace();
-            }
-            String rentalRideDuration = String.format("%d:%d hr", rideRequestBundle.getInt("rentalRideDuration") / 3600 ,( rideRequestBundle.getInt("rentalRideDuration") % 3600 ) / 60);
+            String rentalStartTime = rideRequestBundle.getString("rideStartTime");
+            String rentalStartDate= rideRequestBundle.getString("rideStartDate");
+            
+            String rentalRideDuration = String.format("%02d:%02d Hr", rideRequestBundle.getInt("rentalRideDuration") / 3600 ,( rideRequestBundle.getInt("rentalRideDuration") % 3600 ) / 60);
             String rentalRideDistance = String.format("%d km", rideRequestBundle.getInt("rentalRideDistance") / 1000);
                     
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
@@ -170,7 +150,7 @@ public class RideRequestActivity extends AppCompatActivity {
             RideRequestUtils.addRideReceivedEvent(null,rideRequestBundle,null,"ride_request_popped_in_activity", this);
         });
     }
-
+    
     @SuppressLint("SetTextI18n")
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {

@@ -606,32 +606,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String rideProductType = rideRequestBundle.getString("rideProductType");
                     String rentalRideDuration = String.format("%02d:%02d hr", rideRequestBundle.getInt("rentalRideDuration") / 3600 ,( rideRequestBundle.getInt("rentalRideDuration") % 3600 ) / 60);
                     String rentalRideDistance = String.format("%d km", rideRequestBundle.getInt("rentalRideDistance") / 1000);
-                    String rentalStartTime = "";
-                    String rentalStartDate= "";
-                    try {
-                                                
-                        final SimpleDateFormat dateTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                        dateTime.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-                        final Date rentalDateTime = dateTime.parse(rideRequestBundle.getString("rentalStartTime"));
-                        rentalDateTime.setTime(rentalDateTime.getTime() + (330 * 60 * 1000));
-
-                        final SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
-                        final SimpleDateFormat tf1 = new SimpleDateFormat("h:mm a");
-                        df1.setTimeZone(TimeZone.getTimeZone("IST"));
-                        tf1.setTimeZone(TimeZone.getTimeZone("IST"));
-                        String date = df1.format(rentalDateTime);
-                        String time = tf1.format(rentalDateTime);
-                        
-                        rentalStartTime = time;
-                        rentalStartDate = date.equals(df1.format(new Date())) ? "Today" : date;
-                    }
-                    catch(Exception e) {
-                        System.out.println("Exception in parsing rental start date and time");
-                        rentalStartDate = "Today";
-                        rentalStartTime = "now";
-                        e.printStackTrace();
-                    }
+                    String rentalStartTime = rideRequestBundle.getString("rideStartTime");
+                    String rentalStartDate= rideRequestBundle.getString("rideStartDate");
+                   
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
 
