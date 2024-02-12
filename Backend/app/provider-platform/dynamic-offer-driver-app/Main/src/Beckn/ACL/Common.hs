@@ -147,6 +147,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "DEAD_KILOMETER_FARE",
                  "DIST_BASED_FARE",
                  "TIME_BASED_FARE",
+                 "NIGHT_SHIFT_CHARGE",
                  "DRIVER_SELECTED_FARE",
                  "CUSTOMER_SELECTED_FARE",
                  "TOTAL_FARE",

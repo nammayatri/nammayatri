@@ -253,7 +253,9 @@ calculateFareParameters params = do
         DFParams.RentalDetails $
           DFParams.FParamsRentalDetails
             { timeBasedFare = fareByTime,
-              distBasedFare = fareByDist
+              distBasedFare = fareByDist,
+              extraDistance = Meters $ extraDist * 1000,
+              extraDuration = Seconds $ extraMins * 60
             }
         )
 

@@ -322,6 +322,7 @@ mkQuotationBreakup res =
             || breakup.quotationBreakupInnerTitle == Just "TIME_BASED_FARE"
             || breakup.quotationBreakupInnerTitle == Just "DRIVER_SELECTED_FARE"
             || breakup.quotationBreakupInnerTitle == Just "CUSTOMER_SELECTED_FARE"
+            || breakup.quotationBreakupInnerTitle == Just "NIGHT_SHIFT_CHARGE"
             || breakup.quotationBreakupInnerTitle == Just "TOTAL_FARE"
             || breakup.quotationBreakupInnerTitle == Just "WAITING_OR_PICKUP_CHARGES"
             || breakup.quotationBreakupInnerTitle == Just "EXTRA_TIME_FARE"

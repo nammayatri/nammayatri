@@ -120,6 +120,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just "CUSTOMER_SELECTED_FARE",
                      Just "TOTAL_FARE",
                      Just "WAITING_OR_PICKUP_CHARGES",
+                     Just "NIGHT_SHIFT_CHARGE",
                      Just "EXTRA_TIME_FARE",
                      Just "CUSTOMER_CANCELLATION_DUES"
                    ]
