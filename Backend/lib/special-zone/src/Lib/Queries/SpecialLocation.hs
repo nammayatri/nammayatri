@@ -91,7 +91,9 @@ findSpecialLocationByLatLong' point = do
 
 findSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLong point = do
-  Esq.findOne $ do
-    specialLocation <- from $ table @SpecialLocationT
-    where_ $ containsPoint (point.lon, point.lat)
-    return (specialLocation, F.getGeomGeoJSON)
+  specialLocations <-
+    Esq.findAll $ do
+      specialLocation <- from $ table @SpecialLocationT
+      where_ $ containsPoint (point.lon, point.lat)
+      return (specialLocation, F.getGeomGeoJSON)
+  return $ listToMaybe specialLocations
