@@ -18,6 +18,8 @@ import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant as Variant
+import EulerHS.Language as L (getOption)
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
