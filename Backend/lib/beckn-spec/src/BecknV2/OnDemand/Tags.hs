@@ -24,7 +24,7 @@ data TagGroup
   = -- ONDC standard tag groups for ONDC:TRV10 domain
     FARE_POLICY
   | INFO
-  | BUYER_FINDER_FEE
+  | BUYER_FINDER_FEES
   | SETTLEMENT_TERMS
   | ROUTE_INFO
   | -- Custom tag groups
@@ -93,6 +93,7 @@ data Tag
   | UNPLANNED_PER_KM_CHARGE
   | PER_HOUR_DISTANCE_KM
   | PLANNED_PER_KM_CHARGE
+  | SETTLEMENT_DETAILS
   | -- Info tags
     SPECIAL_LOCATION_TAG
   | -- Fulfillment tags
