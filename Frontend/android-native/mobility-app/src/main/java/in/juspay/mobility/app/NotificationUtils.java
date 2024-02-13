@@ -158,7 +158,7 @@ public class NotificationUtils {
                     }
                     rentalDateTime.setTime(rentalDateTime.getTime() + (330 * 60 * 1000));
                     final SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
-                    final SimpleDateFormat tf1 = new SimpleDateFormat("h:mm a");
+                    final SimpleDateFormat tf1 = new SimpleDateFormat("hh:mm a");
                     df1.setTimeZone(TimeZone.getTimeZone("IST"));
                     tf1.setTimeZone(TimeZone.getTimeZone("IST"));
                     

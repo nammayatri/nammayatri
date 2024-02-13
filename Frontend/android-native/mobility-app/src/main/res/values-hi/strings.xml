@@ -62,4 +62,8 @@
     <string name="customer_added">ग्राहक ने एक स्टॉप जोड़ा!</string>
     <string name="navigate_to_location">स्थान पर जाएं</string>
     <string name="close">बंद करें</string>
+    <string name="today">आज</string>
+    <string name="now"> अब</string>
+    <string name="rental"> रेंटल</string>
+    <string name="intercity"> इंटरसिटी</string>
 </resources>

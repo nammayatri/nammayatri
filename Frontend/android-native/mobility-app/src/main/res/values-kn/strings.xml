@@ -62,4 +62,8 @@
     <string name="customer_added">ಗ್ರಾಹಕ ಒಂದು ನಿಲ್ದಾಣವನ್ನು ಸೇರಿಸಿದರು!</string>
     <string name="navigate_to_location">ಸ್ಥಳಕ್ಕೆ ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ</string>
     <string name="close"> ಮುಚ್ಚಿಕೊಳ್ಳಿ</string>
+    <string name="today"> ಇಂದು</string>
+    <string name="now"> ಈಗ</string>
+    <string name="rental"> ರೆಂಟಲ್</string>
+    <string name="intercity"> ಇಂಟರ್‌ಸಿಟಿ </string>
 </resources>

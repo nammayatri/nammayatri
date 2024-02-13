@@ -106,8 +106,8 @@ public class RideRequestActivity extends AppCompatActivity {
             }
             SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
-            String rentalStartTime = rideRequestBundle.getString("rideStartTime");
-            String rentalStartDate= rideRequestBundle.getString("rideStartDate");
+            String rideStartTime = rideRequestBundle.getString("rideStartTime");
+            String rideStartDate = rideRequestBundle.getString("rideStartDate");
             
             String rentalRideDuration = String.format("%02d:%02d Hr", rideRequestBundle.getInt("rentalRideDuration") / 3600 ,( rideRequestBundle.getInt("rentalRideDuration") % 3600 ) / 60);
             String rentalRideDistance = String.format("%d km", rideRequestBundle.getInt("rentalRideDistance") / 1000);
@@ -139,8 +139,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString("rideProductType"),
                     rentalRideDuration,
                     rentalRideDistance,
-                    rentalStartTime,
-                    rentalStartDate
+                    rideStartTime,
+                    rideStartDate
             );
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
@@ -171,12 +171,12 @@ public class RideRequestActivity extends AppCompatActivity {
                     holder.rideTypeText.setText(variant);
                 }
                 holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
-                holder.rentalDateTimeTag.setVisibility(View.VISIBLE);
-                holder.rentalStartTime.setText(model.getRentalRideStartTime());
-                holder.rentalStartDate.setVisibility(View.VISIBLE);
-                if(model.getRentalRideStartDate() != "")
+                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
+                holder.rideStartTime.setText(model.getRideStartTime());
+                holder.rideStartDate.setVisibility(View.VISIBLE);
+                if(model.getRideStartDate() != "")
                 {
-                    holder.rentalStartDate.setText(model.getRentalRideStartDate());
+                    holder.rideStartDate.setText(model.getRideStartDate());
                 }
                 holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
                 holder.rentalRideDuration.setText(model.getRentalRideDuration());
@@ -199,6 +199,13 @@ public class RideRequestActivity extends AppCompatActivity {
                 holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
                 holder.gotoTag.setVisibility(View.GONE);
                 holder.customerTipTag.setVisibility(View.GONE);
+                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
+                holder.rideStartTime.setText(model.getRideStartTime());
+                holder.rideStartDate.setVisibility(View.VISIBLE);
+                if(model.getRideStartDate() != "")
+                {
+                    holder.rideStartDate.setText(model.getRideStartDate());
+                }
             }
             else if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag()) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
