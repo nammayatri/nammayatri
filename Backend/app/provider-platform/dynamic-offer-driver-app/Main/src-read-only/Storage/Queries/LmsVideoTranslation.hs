@@ -27,15 +27,15 @@ getVideoByLanguageAndVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => K
 getVideoByLanguageAndVideoId (Kernel.Types.Id.Id videoId) language = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.videoId $ Se.Eq $ videoId,
-          Se.Is Beam.language $ Se.Eq $ language
+        [ Se.Is Beam.videoId $ Se.Eq videoId,
+          Se.Is Beam.language $ Se.Eq language
         ]
     ]
 
 getVideoTranslationByVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ([Domain.Types.LmsVideoTranslation.LmsVideoTranslation])
 getVideoTranslationByVideoId limit offset (Kernel.Types.Id.Id videoId) = do
   findAllWithOptionsKV
-    [ Se.Is Beam.videoId $ Se.Eq $ videoId
+    [ Se.Is Beam.videoId $ Se.Eq videoId
     ]
     (Se.Desc Beam.createdAt)
     limit
@@ -43,27 +43,27 @@ getVideoTranslationByVideoId limit offset (Kernel.Types.Id.Id videoId) = do
 
 updateCompletedWatchCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ()
 updateCompletedWatchCount completedWatchCount (Kernel.Types.Id.Id videoId) language = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.completedWatchCount $ completedWatchCount,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.completedWatchCount completedWatchCount,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.videoId $ Se.Eq $ videoId,
-          Se.Is Beam.language $ Se.Eq $ language
+        [ Se.Is Beam.videoId $ Se.Eq videoId,
+          Se.Is Beam.language $ Se.Eq language
         ]
     ]
 
 updateViewCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ()
 updateViewCount viewCount (Kernel.Types.Id.Id videoId) language = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.viewCount $ viewCount,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.viewCount viewCount,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.videoId $ Se.Eq $ videoId,
-          Se.Is Beam.language $ Se.Eq $ language
+        [ Se.Is Beam.videoId $ Se.Eq videoId,
+          Se.Is Beam.language $ Se.Eq language
         ]
     ]
 
@@ -71,32 +71,32 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Extern
 findByPrimaryKey language (Kernel.Types.Id.Id videoId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.language $ Se.Eq $ language,
-          Se.Is Beam.videoId $ Se.Eq $ videoId
+        [ Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.videoId $ Se.Eq videoId
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ()
 updateByPrimaryKey Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.completedThresholdInPercentage $ completedThresholdInPercentage,
-      Se.Set Beam.completedWatchCount $ completedWatchCount,
-      Se.Set Beam.description $ description,
-      Se.Set Beam.duration $ duration,
-      Se.Set Beam.startThresholdInPercentage $ startThresholdInPercentage,
-      Se.Set Beam.thresholdEnabled $ thresholdEnabled,
-      Se.Set Beam.thumbnailImage $ thumbnailImage,
-      Se.Set Beam.title $ title,
-      Se.Set Beam.url $ url,
-      Se.Set Beam.viewCount $ viewCount,
-      Se.Set Beam.ytVideoId $ ytVideoId,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.completedThresholdInPercentage completedThresholdInPercentage,
+      Se.Set Beam.completedWatchCount completedWatchCount,
+      Se.Set Beam.description description,
+      Se.Set Beam.duration duration,
+      Se.Set Beam.startThresholdInPercentage startThresholdInPercentage,
+      Se.Set Beam.thresholdEnabled thresholdEnabled,
+      Se.Set Beam.thumbnailImage thumbnailImage,
+      Se.Set Beam.title title,
+      Se.Set Beam.url url,
+      Se.Set Beam.viewCount viewCount,
+      Se.Set Beam.ytVideoId ytVideoId,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.language $ Se.Eq $ language,
-          Se.Is Beam.videoId $ Se.Eq $ (Kernel.Types.Id.getId videoId)
+        [ Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.videoId $ Se.Eq (Kernel.Types.Id.getId videoId)
         ]
     ]
 

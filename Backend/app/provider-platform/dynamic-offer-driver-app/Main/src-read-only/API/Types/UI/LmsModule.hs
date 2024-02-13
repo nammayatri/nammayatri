@@ -124,7 +124,7 @@ data ValidationResult = ValidationResult
   { id :: Data.Text.Text,
     isCorrect :: Kernel.Prelude.Bool
   }
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show, Eq)
 
 data VideoUpdateAPIReq = VideoUpdateAPIReq
   { language :: Kernel.External.Types.Language,

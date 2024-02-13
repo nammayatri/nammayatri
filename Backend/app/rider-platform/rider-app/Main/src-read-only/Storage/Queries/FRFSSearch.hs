@@ -28,39 +28,39 @@ createMany = traverse_ create
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m (Maybe (Domain.Types.FRFSSearch.FRFSSearch))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 getTicketPlaces :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m ([Domain.Types.FRFSSearch.FRFSSearch])
 getTicketPlaces merchantOperatingCityId = do
   findAllWithKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m (Maybe (Domain.Types.FRFSSearch.FRFSSearch))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSSearch.FRFSSearch -> m ()
 updateByPrimaryKey Domain.Types.FRFSSearch.FRFSSearch {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.fromStationId $ (Kernel.Types.Id.getId fromStationId),
-      Se.Set Beam.quantity $ quantity,
-      Se.Set Beam.riderId $ (Kernel.Types.Id.getId riderId),
-      Se.Set Beam.toStationId $ (Kernel.Types.Id.getId toStationId),
-      Se.Set Beam.vehicleType $ vehicleType,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
+      Se.Set Beam.quantity quantity,
+      Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
+      Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

@@ -36,7 +36,7 @@ findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Do
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
@@ -44,7 +44,7 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
@@ -52,21 +52,21 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.Estimate.Estimate {..} = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.estimatedDistance $ estimatedDistance,
-      Se.Set Beam.fareParamsId $ (Kernel.Types.Id.getId . (.id) <$>) (fareParams),
-      Se.Set Beam.farePolicyId $ (Kernel.Types.Id.getId . (.id) <$>) (farePolicy),
-      Se.Set Beam.isScheduled $ Kernel.Prelude.Just $ isScheduled,
-      Se.Set Beam.maxFare $ maxFare,
-      Se.Set Beam.minFare $ minFare,
-      Se.Set Beam.requestId $ (Kernel.Types.Id.getId requestId),
-      Se.Set Beam.specialLocationTag $ specialLocationTag,
-      Se.Set Beam.tripCategory $ Kernel.Prelude.Just $ tripCategory,
-      Se.Set Beam.updatedAt $ Kernel.Prelude.Just $ updatedAt,
-      Se.Set Beam.vehicleVariant $ vehicleVariant
+    [ Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.estimatedDistance estimatedDistance,
+      Se.Set Beam.fareParamsId $ (Kernel.Types.Id.getId . (.id) <$>) fareParams,
+      Se.Set Beam.farePolicyId $ (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
+      Se.Set Beam.isScheduled $ Kernel.Prelude.Just isScheduled,
+      Se.Set Beam.maxFare maxFare,
+      Se.Set Beam.minFare minFare,
+      Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
+      Se.Set Beam.specialLocationTag specialLocationTag,
+      Se.Set Beam.tripCategory $ Kernel.Prelude.Just tripCategory,
+      Se.Set Beam.updatedAt $ Kernel.Prelude.Just updatedAt,
+      Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 
@@ -97,15 +97,15 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     Beam.EstimateT
       { Beam.createdAt = createdAt,
         Beam.estimatedDistance = estimatedDistance,
-        Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) (fareParams),
-        Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) (farePolicy),
+        Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
+        Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.isScheduled = Kernel.Prelude.Just (isScheduled),
+        Beam.isScheduled = Kernel.Prelude.Just isScheduled,
         Beam.maxFare = maxFare,
         Beam.minFare = minFare,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.specialLocationTag = specialLocationTag,
-        Beam.tripCategory = Kernel.Prelude.Just (tripCategory),
-        Beam.updatedAt = Kernel.Prelude.Just (updatedAt),
+        Beam.tripCategory = Kernel.Prelude.Just tripCategory,
+        Beam.updatedAt = Kernel.Prelude.Just updatedAt,
         Beam.vehicleVariant = vehicleVariant
       }

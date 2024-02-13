@@ -23,63 +23,63 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.AutoComple
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.AutoCompleteData.AutoCompleteData] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findBySessionTokenAndSearchType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe (Domain.Types.AutoCompleteData.AutoCompleteData))
 findBySessionTokenAndSearchType sessionToken searchType = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.sessionToken $ Se.Eq $ sessionToken,
-          Se.Is Beam.searchType $ Se.Eq $ searchType
+        [ Se.Is Beam.sessionToken $ Se.Eq sessionToken,
+          Se.Is Beam.searchType $ Se.Eq searchType
         ]
     ]
 
 updateInputById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ()
 updateInputById autocompleteInputs id = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.autocompleteInputs $ autocompleteInputs,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.autocompleteInputs autocompleteInputs,
+      Se.Set Beam.updatedAt _now
     ]
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 updateSearchRequestIdAndisLocationSelectedOnMapById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> m ()
 updateSearchRequestIdAndisLocationSelectedOnMapById searchRequestId isLocationSelectedOnMap id = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.searchRequestId $ (Kernel.Types.Id.getId <$> searchRequestId),
-      Se.Set Beam.isLocationSelectedOnMap $ isLocationSelectedOnMap,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.searchRequestId (Kernel.Types.Id.getId <$> searchRequestId),
+      Se.Set Beam.isLocationSelectedOnMap isLocationSelectedOnMap,
+      Se.Set Beam.updatedAt _now
     ]
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m (Maybe (Domain.Types.AutoCompleteData.AutoCompleteData))
 findByPrimaryKey id = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.AutoCompleteData.AutoCompleteData -> m ()
 updateByPrimaryKey Domain.Types.AutoCompleteData.AutoCompleteData {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.autocompleteInputs $ autocompleteInputs,
-      Se.Set Beam.customerId $ (Kernel.Types.Id.getId customerId),
-      Se.Set Beam.isLocationSelectedOnMap $ isLocationSelectedOnMap,
-      Se.Set Beam.searchRequestId $ (Kernel.Types.Id.getId <$> searchRequestId),
-      Se.Set Beam.searchType $ searchType,
-      Se.Set Beam.sessionToken $ sessionToken,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.autocompleteInputs autocompleteInputs,
+      Se.Set Beam.customerId (Kernel.Types.Id.getId customerId),
+      Se.Set Beam.isLocationSelectedOnMap isLocationSelectedOnMap,
+      Se.Set Beam.searchRequestId (Kernel.Types.Id.getId <$> searchRequestId),
+      Se.Set Beam.searchType searchType,
+      Se.Set Beam.sessionToken sessionToken,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 

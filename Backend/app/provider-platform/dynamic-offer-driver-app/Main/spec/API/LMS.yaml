@@ -111,6 +111,7 @@ types:
   ValidationResult:
     id: Text
     isCorrect: Bool
+    derive: "Show,Eq"
 
 apis:
   - GET:

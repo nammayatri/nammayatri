@@ -29,7 +29,7 @@ createMany = traverse_ create
 findAllByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DriverPoolConfig.DriverPoolConfig])
 findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithOptionsKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ merchantOperatingCityId
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
     ]
     (Se.Desc Beam.tripDistance)
     limit
@@ -39,42 +39,42 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ()
 updateByPrimaryKey Domain.Types.DriverPoolConfig.DriverPoolConfig {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.actualDistanceThreshold $ actualDistanceThreshold,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.distanceBasedBatchSplit $ distanceBasedBatchSplit,
-      Se.Set Beam.driverBatchSize $ driverBatchSize,
-      Se.Set Beam.driverPositionInfoExpiry $ driverPositionInfoExpiry,
-      Se.Set Beam.driverQuoteLimit $ driverQuoteLimit,
-      Se.Set Beam.driverRequestCountLimit $ driverRequestCountLimit,
-      Se.Set Beam.driverToDestinationDistanceThreshold $ driverToDestinationDistanceThreshold,
-      Se.Set Beam.driverToDestinationDuration $ driverToDestinationDuration,
-      Se.Set Beam.maxDriverQuotesRequired $ maxDriverQuotesRequired,
-      Se.Set Beam.maxNumberOfBatches $ maxNumberOfBatches,
-      Se.Set Beam.maxParallelSearchRequests $ maxParallelSearchRequests,
-      Se.Set Beam.maxRadiusOfSearch $ maxRadiusOfSearch,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.minRadiusOfSearch $ minRadiusOfSearch,
-      Se.Set Beam.poolSortingType $ poolSortingType,
-      Se.Set Beam.radiusShrinkValueForDriversOnRide $ radiusShrinkValueForDriversOnRide,
-      Se.Set Beam.radiusStepSize $ radiusStepSize,
-      Se.Set Beam.scheduleTryTimes $ scheduleTryTimes,
-      Se.Set Beam.singleBatchProcessTime $ singleBatchProcessTime,
-      Se.Set Beam.tripCategory $ tripCategory,
-      Se.Set Beam.tripDistance $ tripDistance,
-      Se.Set Beam.updatedAt $ now,
-      Se.Set Beam.vehicleVariant $ vehicleVariant
+    [ Se.Set Beam.actualDistanceThreshold actualDistanceThreshold,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.distanceBasedBatchSplit distanceBasedBatchSplit,
+      Se.Set Beam.driverBatchSize driverBatchSize,
+      Se.Set Beam.driverPositionInfoExpiry driverPositionInfoExpiry,
+      Se.Set Beam.driverQuoteLimit driverQuoteLimit,
+      Se.Set Beam.driverRequestCountLimit driverRequestCountLimit,
+      Se.Set Beam.driverToDestinationDistanceThreshold driverToDestinationDistanceThreshold,
+      Se.Set Beam.driverToDestinationDuration driverToDestinationDuration,
+      Se.Set Beam.maxDriverQuotesRequired maxDriverQuotesRequired,
+      Se.Set Beam.maxNumberOfBatches maxNumberOfBatches,
+      Se.Set Beam.maxParallelSearchRequests maxParallelSearchRequests,
+      Se.Set Beam.maxRadiusOfSearch maxRadiusOfSearch,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.minRadiusOfSearch minRadiusOfSearch,
+      Se.Set Beam.poolSortingType poolSortingType,
+      Se.Set Beam.radiusShrinkValueForDriversOnRide radiusShrinkValueForDriversOnRide,
+      Se.Set Beam.radiusStepSize radiusStepSize,
+      Se.Set Beam.scheduleTryTimes scheduleTryTimes,
+      Se.Set Beam.singleBatchProcessTime singleBatchProcessTime,
+      Se.Set Beam.tripCategory tripCategory,
+      Se.Set Beam.tripDistance tripDistance,
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

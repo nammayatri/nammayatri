@@ -25,15 +25,15 @@ createMany = traverse_ create
 findAllByCompletionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ([Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
 findAllByCompletionId (Kernel.Types.Id.Id completionId) = do
   findAllWithKV
-    [ Se.Is Beam.completionId $ Se.Eq $ completionId
+    [ Se.Is Beam.completionId $ Se.Eq completionId
     ]
 
 findAllByCompletionIdAndEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> m ([Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
 findAllByCompletionIdAndEntity (Kernel.Types.Id.Id completionId) entity = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.completionId $ Se.Eq $ completionId,
-          Se.Is Beam.entity $ Se.Eq $ entity
+        [ Se.Is Beam.completionId $ Se.Eq completionId,
+          Se.Is Beam.entity $ Se.Eq entity
         ]
     ]
 
@@ -41,9 +41,9 @@ findAllByCompletionIdAndEntityAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlo
 findAllByCompletionIdAndEntityAndStatus entity entityStatus (Kernel.Types.Id.Id completionId) = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.entity $ Se.Eq $ entity,
-          Se.Is Beam.entityStatus $ Se.Eq $ entityStatus,
-          Se.Is Beam.completionId $ Se.Eq $ completionId
+        [ Se.Is Beam.entity $ Se.Eq entity,
+          Se.Is Beam.entityStatus $ Se.Eq entityStatus,
+          Se.Is Beam.completionId $ Se.Eq completionId
         ]
     ]
 
@@ -51,9 +51,9 @@ findByCompletionIdAndEntityAndEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow
 findByCompletionIdAndEntityAndEntityId limit offset entity entityId (Kernel.Types.Id.Id completionId) = do
   findAllWithOptionsKV
     [ Se.And
-        [ Se.Is Beam.entity $ Se.Eq $ entity,
-          Se.Is Beam.entityId $ Se.Eq $ entityId,
-          Se.Is Beam.completionId $ Se.Eq $ completionId
+        [ Se.Is Beam.entity $ Se.Eq entity,
+          Se.Is Beam.entityId $ Se.Eq entityId,
+          Se.Is Beam.completionId $ Se.Eq completionId
         ]
     ]
     (Se.Desc Beam.attempt)
@@ -64,27 +64,27 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelud
 findByPrimaryKey attempt (Kernel.Types.Id.Id completionId) entity entityId = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.attempt $ Se.Eq $ attempt,
-          Se.Is Beam.completionId $ Se.Eq $ completionId,
-          Se.Is Beam.entity $ Se.Eq $ entity,
-          Se.Is Beam.entityId $ Se.Eq $ entityId
+        [ Se.Is Beam.attempt $ Se.Eq attempt,
+          Se.Is Beam.completionId $ Se.Eq completionId,
+          Se.Is Beam.entity $ Se.Eq entity,
+          Se.Is Beam.entityId $ Se.Eq entityId
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation -> m ()
 updateByPrimaryKey Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.entityStatus $ entityStatus,
-      Se.Set Beam.selectedEntityId $ selectedEntityId,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.entityStatus entityStatus,
+      Se.Set Beam.selectedEntityId selectedEntityId,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.attempt $ Se.Eq $ attempt,
-          Se.Is Beam.completionId $ Se.Eq $ (Kernel.Types.Id.getId completionId),
-          Se.Is Beam.entity $ Se.Eq $ entity,
-          Se.Is Beam.entityId $ Se.Eq $ entityId
+        [ Se.Is Beam.attempt $ Se.Eq attempt,
+          Se.Is Beam.completionId $ Se.Eq (Kernel.Types.Id.getId completionId),
+          Se.Is Beam.entity $ Se.Eq entity,
+          Se.Is Beam.entityId $ Se.Eq entityId
         ]
     ]
 

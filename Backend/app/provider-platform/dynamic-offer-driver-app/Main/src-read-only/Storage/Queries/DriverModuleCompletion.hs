@@ -29,15 +29,15 @@ createMany = traverse_ create
 findByDriverId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.DriverModuleCompletion.DriverModuleCompletion])
 findByDriverId (Kernel.Types.Id.Id driverId) = do
   findAllWithKV
-    [ Se.Is Beam.driverId $ Se.Eq $ driverId
+    [ Se.Is Beam.driverId $ Se.Eq driverId
     ]
 
 findByDriverIdAndModuleId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe (Domain.Types.DriverModuleCompletion.DriverModuleCompletion))
 findByDriverIdAndModuleId (Kernel.Types.Id.Id driverId) (Kernel.Types.Id.Id moduleId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq $ driverId,
-          Se.Is Beam.moduleId $ Se.Eq $ moduleId
+        [ Se.Is Beam.driverId $ Se.Eq driverId,
+          Se.Is Beam.moduleId $ Se.Eq moduleId
         ]
     ]
 
@@ -45,61 +45,61 @@ findByDriverIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel
 findByDriverIdAndStatus (Kernel.Types.Id.Id driverId) status = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq $ driverId,
-          Se.Is Beam.status $ Se.Eq $ status
+        [ Se.Is Beam.driverId $ Se.Eq driverId,
+          Se.Is Beam.status $ Se.Eq status
         ]
     ]
 
 updateEntitiesCompleted :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> [Domain.Types.DriverModuleCompletion.ModuleCompletionEntity] -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ()
 updateEntitiesCompleted completedAt entitiesCompleted (Kernel.Types.Id.Id completionId) = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.completedAt $ completedAt,
-      Se.Set Beam.entitiesCompleted $ entitiesCompleted,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.completedAt completedAt,
+      Se.Set Beam.entitiesCompleted entitiesCompleted,
+      Se.Set Beam.updatedAt _now
     ]
-    [ Se.Is Beam.completionId $ Se.Eq $ completionId
+    [ Se.Is Beam.completionId $ Se.Eq completionId
     ]
 
 updatedCompletedAt :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> [Domain.Types.DriverModuleCompletion.ModuleCompletionEntity] -> Domain.Types.DriverModuleCompletion.ModuleCompletionStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ()
 updatedCompletedAt completedAt entitiesCompleted status ratingAtTheTimeOfCompletion (Kernel.Types.Id.Id completionId) = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.completedAt $ completedAt,
-      Se.Set Beam.entitiesCompleted $ entitiesCompleted,
-      Se.Set Beam.status $ status,
-      Se.Set Beam.ratingAtTheTimeOfCompletion $ ratingAtTheTimeOfCompletion,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.completedAt completedAt,
+      Se.Set Beam.entitiesCompleted entitiesCompleted,
+      Se.Set Beam.status status,
+      Se.Set Beam.ratingAtTheTimeOfCompletion ratingAtTheTimeOfCompletion,
+      Se.Set Beam.updatedAt _now
     ]
-    [ Se.Is Beam.completionId $ Se.Eq $ completionId
+    [ Se.Is Beam.completionId $ Se.Eq completionId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m (Maybe (Domain.Types.DriverModuleCompletion.DriverModuleCompletion))
 findByPrimaryKey (Kernel.Types.Id.Id completionId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.completionId $ Se.Eq $ completionId
+        [ Se.Is Beam.completionId $ Se.Eq completionId
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ()
 updateByPrimaryKey Domain.Types.DriverModuleCompletion.DriverModuleCompletion {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.completedAt $ completedAt,
-      Se.Set Beam.driverId $ (Kernel.Types.Id.getId driverId),
-      Se.Set Beam.entitiesCompleted $ entitiesCompleted,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.moduleId $ (Kernel.Types.Id.getId moduleId),
-      Se.Set Beam.ratingAtTheTimeOfCompletion $ ratingAtTheTimeOfCompletion,
-      Se.Set Beam.startedAt $ startedAt,
-      Se.Set Beam.status $ status,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.completedAt completedAt,
+      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
+      Se.Set Beam.entitiesCompleted entitiesCompleted,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.moduleId (Kernel.Types.Id.getId moduleId),
+      Se.Set Beam.ratingAtTheTimeOfCompletion ratingAtTheTimeOfCompletion,
+      Se.Set Beam.startedAt startedAt,
+      Se.Set Beam.status status,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.completionId $ Se.Eq $ (Kernel.Types.Id.getId completionId)
+        [ Se.Is Beam.completionId $ Se.Eq (Kernel.Types.Id.getId completionId)
         ]
     ]
 

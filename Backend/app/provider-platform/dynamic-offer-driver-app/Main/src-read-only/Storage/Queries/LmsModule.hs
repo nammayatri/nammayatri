@@ -27,13 +27,13 @@ createMany = traverse_ create
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe (Domain.Types.LmsModule.LmsModule))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 getAllModules :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.LmsModule.LmsModule])
 getAllModules limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithOptionsKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ merchantOperatingCityId
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
     ]
     (Se.Desc Beam.createdAt)
     limit
@@ -43,27 +43,27 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.LmsModule.LmsModule -> m ()
 updateByPrimaryKey Domain.Types.LmsModule.LmsModule {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.category $ category,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.duration $ duration,
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.moduleCompletionCriteria $ moduleCompletionCriteria,
-      Se.Set Beam.noOfVideos $ noOfVideos,
-      Se.Set Beam.rank $ rank,
-      Se.Set Beam.updatedAt $ now,
-      Se.Set Beam.variant $ variant,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId)
+    [ Se.Set Beam.category category,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.duration duration,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.moduleCompletionCriteria moduleCompletionCriteria,
+      Se.Set Beam.noOfVideos noOfVideos,
+      Se.Set Beam.rank rank,
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.variant variant,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

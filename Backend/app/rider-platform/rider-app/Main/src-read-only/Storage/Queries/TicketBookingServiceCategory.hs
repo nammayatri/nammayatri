@@ -28,33 +28,33 @@ createMany = traverse_ create
 findAllByTicketBookingServiceId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ([Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory])
 findAllByTicketBookingServiceId (Kernel.Types.Id.Id ticketBookingServiceId) = do
   findAllWithKV
-    [ Se.Is Beam.ticketBookingServiceId $ Se.Eq $ ticketBookingServiceId
+    [ Se.Is Beam.ticketBookingServiceId $ Se.Eq ticketBookingServiceId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m (Maybe (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ()
 updateByPrimaryKey Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.amount $ amount,
-      Se.Set Beam.bookedSeats $ bookedSeats,
-      Se.Set Beam.name $ name,
-      Se.Set Beam.serviceCategoryId $ serviceCategoryId,
-      Se.Set Beam.ticketBookingServiceId $ (Kernel.Types.Id.getId ticketBookingServiceId),
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.amount amount,
+      Se.Set Beam.bookedSeats bookedSeats,
+      Se.Set Beam.name name,
+      Se.Set Beam.serviceCategoryId serviceCategoryId,
+      Se.Set Beam.ticketBookingServiceId (Kernel.Types.Id.getId ticketBookingServiceId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

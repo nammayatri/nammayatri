@@ -27,40 +27,40 @@ createMany = traverse_ create
 findAllByQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ([Domain.Types.FRFSTrip.FRFSTrip])
 findAllByQuoteId (Kernel.Types.Id.Id quoteId) = do
   findAllWithKV
-    [ Se.Is Beam.quoteId $ Se.Eq $ quoteId
+    [ Se.Is Beam.quoteId $ Se.Eq quoteId
     ]
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTrip.FRFSTrip -> m (Maybe (Domain.Types.FRFSTrip.FRFSTrip))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTrip.FRFSTrip -> m (Maybe (Domain.Types.FRFSTrip.FRFSTrip))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTrip.FRFSTrip -> m ()
 updateByPrimaryKey Domain.Types.FRFSTrip.FRFSTrip {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bppFulfillmentId $ bppFulfillmentId,
-      Se.Set Beam.quoteId $ (Kernel.Types.Id.getId quoteId),
-      Se.Set Beam.stationCode $ stationCode,
-      Se.Set Beam.stationName $ stationName,
-      Se.Set Beam.stationType $ stationType,
-      Se.Set Beam.stopSequence $ stopSequence,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.bppFulfillmentId bppFulfillmentId,
+      Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
+      Se.Set Beam.stationCode stationCode,
+      Se.Set Beam.stationName stationName,
+      Se.Set Beam.stationType stationType,
+      Se.Set Beam.stopSequence stopSequence,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 
