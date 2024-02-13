@@ -110,7 +110,7 @@ confirm DConfirmReq {..} = do
   scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
   let searchDist = round $ fromMaybe 0 $ (.getHighPrecMeters) <$> searchRequest.distance
       searchDur = fromMaybe 0 $ (.getSeconds) <$> searchRequest.estimatedRideDuration
-      overlap = any (checkOverlap searchDist searchDur now) scheduledBookings
+      overlap = any (checkOverlap searchDist searchDur searchRequest.startTime) scheduledBookings
   unless (null activeBooking && not overlap) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
@@ -172,10 +172,10 @@ confirm DConfirmReq {..} = do
       DQuote.DriverOfferDetails driverOffer -> driverOffer.driverId
       _ -> Nothing
     checkOverlap :: Int -> Int -> UTCTime -> DRB.Booking -> Bool
-    checkOverlap estimatedDistance estimatedDuration now booking = do
+    checkOverlap estimatedDistance estimatedDuration curBookingStartTime booking = do
       let estimatedDistanceInKm = estimatedDistance `div` 1000
-          estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration) now
-          estRideEndTimeByDist = addUTCTime (intToNominalDiffTime $ (estimatedDistanceInKm * 3 * 60) + (30 * 60)) now -- TODO: Make config later
+          estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration) curBookingStartTime
+          estRideEndTimeByDist = addUTCTime (intToNominalDiffTime $ (estimatedDistanceInKm * 3 * 60) + (30 * 60)) curBookingStartTime -- TODO: Make config later
       max estRideEndTimeByDuration estRideEndTimeByDist >= booking.startTime
 
 buildBooking ::
