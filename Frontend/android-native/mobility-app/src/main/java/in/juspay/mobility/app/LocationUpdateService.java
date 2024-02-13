@@ -771,8 +771,9 @@ public class LocationUpdateService extends Service {
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             String LOCATION_DESCRIPTION = "LOCATION_IS_UPDATING";
-            NotificationChannel channel = new NotificationChannel(LOCATION_UPDATES, LOCATION_SERVICE, NotificationManager.IMPORTANCE_MIN);
+            NotificationChannel channel = new NotificationChannel(LOCATION_UPDATES, "Location Update Service", NotificationManager.IMPORTANCE_MIN);
             channel.setDescription(LOCATION_DESCRIPTION);
+            channel.setGroup("3_services");
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }
