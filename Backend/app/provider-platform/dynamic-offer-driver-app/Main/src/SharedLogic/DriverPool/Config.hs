@@ -24,6 +24,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
+import Kernel.Utils.Logging
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
@@ -56,12 +57,17 @@ getDriverPoolConfig merchantOpCityId vehicle tripCategory mbDist = do
   let distance = fromMaybe 0 mbDist
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
   let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) (show tripCategory) distance) configs
+  logInfo $ "DriverPool Filters Rupak: " <> show vehicle <> " | " <> show tripCategory <> " | " <> show distance
+  logInfo $ "DriverPool Configs Rupak: " <> show configs
+  logInfo $ "Applicable driverPool Configs Rupak: " <> show mbApplicableConfig
   case configs of
     [] -> throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
     _ ->
       case mbApplicableConfig of
         Just applicableConfig -> return applicableConfig
-        Nothing -> findDriverPoolConfig configs Nothing "All" distance
+        Nothing -> do
+          logInfo "Got Nothing in DriverPool Config Rupak"
+          findDriverPoolConfig configs Nothing "All" distance
 
 filterByDistAndDveh :: Maybe Variant.Variant -> Text -> Meters -> DriverPoolConfig -> Bool
 filterByDistAndDveh vehicle tripCategory dist cfg =
