@@ -93,7 +93,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order item = do
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
   let mbVariant = Utils.parseVehicleVariant vehicle.vehicleCategory vehicle.vehicleVariant
   vehicleVariant <- mbVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicleCategory:-" <> show vehicle.vehicleCategory <> ",vehicleVariant:-" <> show vehicle.vehicleVariant)
-  let specialLocationTag = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG =<< item.itemTags
+  let specialLocationTag = Utils.getTagV2 Tag.GENERAL_INFO Tag.SPECIAL_LOCATION_TAG =<< item.itemTags
   case parsedData order of
     Left err -> do
       logTagError "on_select req" $ "on_select error: " <> show err
@@ -174,7 +174,7 @@ getPickupDurationV2 tagGroups = do
 
 getDistanceToNearestDriverV2 :: [Spec.TagGroup] -> Maybe Meters
 getDistanceToNearestDriverV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.INFO Tag.DISTANCE_TO_NEAREST_DRIVER_METER tagGroups
+  tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.DISTANCE_TO_NEAREST_DRIVER_METER tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceToPickup
 

@@ -232,7 +232,7 @@ mkCustomerTipTagGroup res =
       tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just "customer_tip_info",
+            { descriptorCode = Just Tags.CUSTOMER_TIP_INFO,
               descriptorName = Just "Customer Tip Info",
               descriptorShortDesc = Nothing
             },
@@ -242,7 +242,7 @@ mkCustomerTipTagGroup res =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
-                      { descriptorCode = (\_ -> Just "customer_tip") =<< res.customerExtraFee,
+                      { descriptorCode = (\_ -> Just Tags.CUSTOMER_TIP) =<< res.customerExtraFee,
                         descriptorName = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
                         descriptorShortDesc = Nothing
                       },
@@ -259,7 +259,7 @@ mkAutoAssignEnabledTagGroup res =
       tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just "auto_assign_enabled",
+            { descriptorCode = Just Tags.AUTO_ASSIGN_ENABLED,
               descriptorName = Just "Auto Assign Enabled",
               descriptorShortDesc = Nothing
             },
@@ -269,7 +269,7 @@ mkAutoAssignEnabledTagGroup res =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
-                      { descriptorCode = Just "auto_assign_enabled",
+                      { descriptorCode = Just Tags.IS_AUTO_ASSIGN_ENABLED,
                         descriptorName = Just "Auto Assign Enabled",
                         descriptorShortDesc = Nothing
                       },

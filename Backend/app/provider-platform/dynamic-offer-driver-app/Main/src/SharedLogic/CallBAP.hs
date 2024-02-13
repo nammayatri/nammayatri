@@ -27,6 +27,7 @@ module SharedLogic.CallBAP
     callOnConfirmV2,
     buildBppUrl,
     sendSafetyAlertToBAP,
+    mkTxnIdKey,
   )
 where
 
@@ -115,9 +116,10 @@ callOnSelectV2 transporter searchRequest searchTry content = do
   where
     getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
     getMsgIdByTxnId txnId = do
-      Hedis.withCrossAppRedis (Hedis.safeGet $ mkTxnIdKey txnId) >>= \case
-        Nothing -> pure searchTry.estimateId
-        Just a -> pure a
+      Hedis.safeGet $
+        mkTxnIdKey txnId >>= \case
+          Nothing -> pure searchTry.estimateId
+          Just a -> pure a
 
 mkTxnIdKey :: Text -> Text
 mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId

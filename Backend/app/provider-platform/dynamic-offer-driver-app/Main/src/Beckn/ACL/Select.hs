@@ -28,6 +28,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import SharedLogic.CallBAP (mkTxnIdKey)
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -97,6 +98,3 @@ cacheSelectMessageId :: CacheFlow m r => Text -> Text -> m ()
 cacheSelectMessageId messageId transactionId = do
   let msgKey = mkTxnIdKey transactionId
   Hedis.setExp msgKey messageId 3600
-
-mkTxnIdKey :: Text -> Text
-mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId
