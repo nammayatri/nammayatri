@@ -32,8 +32,6 @@ import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id
 
--- import Data.Time.Clock.POSIX
-
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig
   { height :: Int,
     width :: Int
