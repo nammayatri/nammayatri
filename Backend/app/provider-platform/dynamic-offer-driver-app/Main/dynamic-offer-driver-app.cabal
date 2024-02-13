@@ -95,6 +95,7 @@ library
       API.UI.RideRoute
       API.UI.RideSummary
       API.UI.Route
+      API.UI.SDKEvents
       API.UI.Transporter
       API.UI.Vehicle
       API.UI.Whatsapp
@@ -196,6 +197,7 @@ library
       Domain.Action.UI.RideRoute
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
+      Domain.Action.UI.SDKEvents
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
