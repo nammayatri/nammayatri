@@ -60,6 +60,7 @@ data UpdateBuildReq
         bppId :: Text,
         bppUrl :: BaseUrl,
         transactionId :: Text,
+        city :: Context.City,
         merchant :: DM.Merchant
       }
   | AddStopBuildReq
@@ -68,6 +69,7 @@ data UpdateBuildReq
         bppId :: Text,
         bppUrl :: BaseUrl,
         transactionId :: Text,
+        city :: Context.City,
         merchant :: DM.Merchant
       }
   | EditStopBuildReq
@@ -76,6 +78,7 @@ data UpdateBuildReq
         bppId :: Text,
         bppUrl :: BaseUrl,
         transactionId :: Text,
+        city :: Context.City,
         merchant :: DM.Merchant
       }
 

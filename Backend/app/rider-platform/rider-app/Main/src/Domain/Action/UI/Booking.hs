@@ -94,6 +94,7 @@ processStop bookingId loc merchantId isEdit = do
                 bppUrl = booking.providerUrl,
                 transactionId = booking.transactionId,
                 stops = [mkDomainLocation location],
+                city = merchant.defaultCity, -- TODO: Correct during interoperability
                 ..
               }
           else
@@ -102,6 +103,7 @@ processStop bookingId loc merchantId isEdit = do
                 bppUrl = booking.providerUrl,
                 transactionId = booking.transactionId,
                 stops = [mkDomainLocation location],
+                city = merchant.defaultCity, -- TODO: Correct during interoperability
                 ..
               }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
