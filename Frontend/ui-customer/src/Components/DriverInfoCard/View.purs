@@ -352,7 +352,7 @@ distanceView push state =
             nhiHaiStartTime = startTime /= ""
             baseDuration = state.data.rentalData.baseDuration            
             endUTC = if nhiHaiStartTime then  runFn2 getUTCAfterNSecondsImpl startTime (baseDuration * 60 * 60) else ""
-            endTimeInHH = if nhiHaiStartTime then convertUTCtoISC endUTC "h" <> convertUTCtoISC endUTC "A" else ""
+            endTimeInHH = if nhiHaiStartTime then convertUTCtoISC endUTC "h" <> ":" <> convertUTCtoISC endUTC "mm" <> " " <> convertUTCtoISC endUTC "A" else ""
         in if state.data.destination /= "" then getString RENTAL_RIDE_UNTIL <> " " <> endTimeInHH
           else "Add Stop to continue ride" <> (if state.props.endOTPShown then " or share End-OTP to end ride" else "")
 

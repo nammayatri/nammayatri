@@ -232,38 +232,46 @@ currentFlowStatus = do
   case flowStatus ^. _currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
-    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> do
-      let currentTimeToValid = EHC.getUTCAfterNSeconds (getCurrentUTC "") 1800
-          _ = spy "asdfjkashjkdfs" currentTimeToValid
-      if ((unsafePerformEffect $ EHC.compareUTCDate currentStatus.validTill currentTimeToValid) < "300000") then do  
-        updateLocalStage ConfirmingQuotes
-        hideLoaderFlow
-        case (getFlowStatusData "LazyCheck") of
-              Just (FlowStatusData flowStatusData) -> do
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
-                  props{ sourceLat = flowStatusData.source.lat
-                      , sourceLong = flowStatusData.source.lng
-                      , destinationLat = flowStatusData.destination.lat
-                      , destinationLong = flowStatusData.destination.lng
-                      , currentStage = ConfirmingQuotes
-                      , rideRequestFlow = true
-                      , selectedQuote = Nothing
-                      , bookingId = currentStatus.bookingId
-                      , city = getCityNameFromCode flowStatusData.source.city}
-                  , data { source = flowStatusData.source.place
-                        , destination = flowStatusData.destination.place
-                        , sourceAddress = flowStatusData.sourceAddress
-                        , destinationAddress = flowStatusData.destinationAddress }
-                  })
-              Nothing -> updateFlowStatus SEARCH_CANCELLED
-        homeScreenFlow
-      else pure unit
+    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> checkForOneWaySpecialZone currentStatus
     RIDE_ASSIGNED _                         -> checkRideStatus true
     _                                       -> checkRideStatus false
+  
   hideLoaderFlow
-  void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?
+  void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here 
   homeScreenFlow
   where
+
+    checkForOneWaySpecialZone :: {bookingId :: String, validTill :: String} -> FlowBT String Unit
+    checkForOneWaySpecialZone currentStatus = do
+      (RideBookingRes resp) <- Remote.rideBookingBT (currentStatus.bookingId)
+      let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+          fareProductType = bookingDetails.fareProductType
+      if fareProductType == "OneWaySpecialZoneAPIDetails" then checkRideStatus false
+        else do
+          let currentTimeToValid = EHC.getUTCAfterNSeconds (getCurrentUTC "") 1800
+          if ((unsafePerformEffect $ EHC.compareUTCDate currentStatus.validTill currentTimeToValid) < "300000") then do
+            updateLocalStage ConfirmingQuotes
+            hideLoaderFlow
+            case (getFlowStatusData "LazyCheck") of
+                  Just (FlowStatusData flowStatusData) -> do
+                    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
+                      props{ sourceLat = flowStatusData.source.lat
+                          , sourceLong = flowStatusData.source.lng
+                          , destinationLat = flowStatusData.destination.lat
+                          , destinationLong = flowStatusData.destination.lng
+                          , currentStage = ConfirmingQuotes
+                          , rideRequestFlow = true
+                          , selectedQuote = Nothing
+                          , bookingId = currentStatus.bookingId
+                          , city = getCityNameFromCode flowStatusData.source.city}
+                      , data { source = flowStatusData.source.place
+                            , destination = flowStatusData.destination.place
+                            , sourceAddress = flowStatusData.sourceAddress
+                            , destinationAddress = flowStatusData.destinationAddress }
+                      })
+                  Nothing -> updateFlowStatus SEARCH_CANCELLED
+            homeScreenFlow
+          else pure unit
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
       response <- Remote.getProfileBT ""
@@ -4118,7 +4126,7 @@ rentalScreenFlow = do
           PlaceName address <- getPlaceName pickUpLocLat pickUpLocLon HomeScreenData.dummyLocation
           let source = address.formattedAddress
           PlaceName destAddress <- getPlaceName dropLocLat dropLocLon HomeScreenData.dummyLocation
-          let dest = destAddress.formattedAddress
+          let dest = if isJust updatedState.data.dropLoc then destAddress.formattedAddress else ""
           if isNow then do 
             void $ liftFlowBT $ setFlowStatusData (FlowStatusData { source : {lat : pickUpLocLat, lng : pickUpLocLon, place : source, address : Nothing, city : getCityCodeFromCity updatedState.data.pickUpLoc.city }
                                                       , destination : {lat : dropLocLat , lng : dropLocLon , place : dest , address : Nothing, city : Nothing}
