@@ -52,6 +52,7 @@ type API =
            :<|> Common.ChangeOperatingCityAPI
            :<|> Common.UpdateRCInvalidStatusAPI
            :<|> Common.BulkReviewRCVariantAPI
+           :<|> Common.GetOperatingCityAPI
        )
 
 type BlockDriverWithReasonAPI =
@@ -92,6 +93,7 @@ handler merchantId city =
     :<|> changeOperatingCity merchantId city
     :<|> updateRCInvalidStatus merchantId city
     :<|> bulkReviewRCVariant merchantId city
+    :<|> getOperatingCity merchantId city
 
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo merchantShortId = withFlowHandlerAPI . DDriver.driverDocumentsInfo merchantShortId
@@ -162,3 +164,6 @@ updateRCInvalidStatus merchantShortId opCity _ req = withFlowHandlerAPI $ DDrive
 
 bulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> FlowHandler [Common.ReviewRCVariantRes]
 bulkReviewRCVariant merchantShortId opCity req = withFlowHandlerAPI $ DDriver.bulkReviewRCVariant merchantShortId opCity req
+
+getOperatingCity :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe (Id Common.Ride) -> FlowHandler Common.GetOperatingCityResp
+getOperatingCity merchantShortId opCity mbMobileCountryCode mbMobileNumber mbRideId = withFlowHandlerAPI $ DDriver.getOperatingCity merchantShortId opCity mbMobileCountryCode mbMobileNumber mbRideId

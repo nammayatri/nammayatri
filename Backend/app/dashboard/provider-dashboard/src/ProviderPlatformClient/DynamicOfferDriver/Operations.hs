@@ -101,7 +101,8 @@ data DriverCommonAPIs = DriverCommonAPIs
     sendDummyRideRequestToDriverViaDashboard :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     changeOperatingCity :: Id Driver.Driver -> Driver.ChangeOperatingCityReq -> Euler.EulerClient APISuccess,
     updateRCInvalidStatus :: Id Common.Driver -> Driver.UpdateRCInvalidStatusReq -> Euler.EulerClient APISuccess,
-    bulkReviewRCVariant :: [Driver.ReviewRCVariantReq] -> Euler.EulerClient [Driver.ReviewRCVariantRes]
+    bulkReviewRCVariant :: [Driver.ReviewRCVariantReq] -> Euler.EulerClient [Driver.ReviewRCVariantRes],
+    getOperatingCity :: Maybe Text -> Maybe Text -> Maybe (Id Ride.Ride) -> Euler.EulerClient Driver.GetOperatingCityResp
   }
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
@@ -284,7 +285,8 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> sendDummyRideRequestToDriverViaDashboard
       :<|> changeOperatingCity
       :<|> updateRCInvalidStatus
-      :<|> bulkReviewRCVariant = driverCommonClient
+      :<|> bulkReviewRCVariant
+      :<|> getOperatingCity = driverCommonClient
 
     updateReferralLinkPassword
       :<|> linkDriverReferralCode = referralClient

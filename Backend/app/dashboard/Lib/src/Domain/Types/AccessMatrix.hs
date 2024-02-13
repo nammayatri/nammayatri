@@ -208,6 +208,7 @@ data UserActionType
   | UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
   | UPDATE_RC_INVALID_STATUS
   | BULK_REVIEW_RC_VARIANT
+  | GET_OPERATING_CITY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

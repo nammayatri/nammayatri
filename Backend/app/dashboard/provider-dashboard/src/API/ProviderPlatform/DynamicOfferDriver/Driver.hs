@@ -102,6 +102,7 @@ type API =
            :<|> ChangeOperatingCityAPI
            :<|> UpdateRCInvalidStatusAPI
            :<|> BulkReviewRCVariantAPI
+           :<|> GetOperatingCityAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -316,6 +317,10 @@ type BulkReviewRCVariantAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BULK_REVIEW_RC_VARIANT
     :> Common.BulkReviewRCVariantAPI
 
+type GetOperatingCityAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'GET_OPERATING_CITY
+    :> Common.GetOperatingCityAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverDocuments merchantId city
@@ -371,6 +376,7 @@ handler merchantId city =
     :<|> changeOperatingCity merchantId city
     :<|> updateRCInvalidStatus merchantId city
     :<|> bulkReviewRCVariant merchantId city
+    :<|> getOperatingCity merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -739,3 +745,8 @@ bulkReviewRCVariant merchantShortId opCity apiTokenInfo req =
     transaction <- buildTransaction Common.BulkReviewRCVariantEndPoint apiTokenInfo Nothing (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.bulkReviewRCVariant) req
+
+getOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe (Id Common.Ride) -> FlowHandler Common.GetOperatingCityResp
+getOperatingCity merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbRideId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.getOperatingCity) mbMobileCountryCode mbMobileNumber mbRideId

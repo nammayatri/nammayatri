@@ -68,6 +68,7 @@ module Domain.Action.Dashboard.Driver
     changeOperatingCity,
     updateRCInvalidStatus,
     bulkReviewRCVariant,
+    getOperatingCity,
   )
 where
 
@@ -1689,3 +1690,20 @@ bulkReviewRCVariant _ _ req = do
       whenJust mVehicle $ \vehicle -> do
         whenJust mbVariant $ \variant -> do
           QVehicle.updateVehicleVariant vehicle.driverId variant
+
+getOperatingCity :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe (Id Common.Ride) -> Flow Common.GetOperatingCityResp
+getOperatingCity merchantShortId _ mbMobileCountryCode mbMobileNumber mbRideId = do
+  merchant <- findMerchantByShortId merchantShortId
+  case (mbRideId, mbMobileNumber) of
+    (Just rideId, _) -> do
+      let rId = cast @Common.Ride @SRide.Ride rideId
+      ride <- QRide.findById rId >>= fromMaybeM (RideNotFound rId.getId)
+      city <- CQMOC.findById ride.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId)
+      return $ Common.GetOperatingCityResp {operatingCity = city.city}
+    (_, Just mobileNumber) -> do
+      mobileNumberHash <- getDbHash mobileNumber
+      driver <- QPerson.findByMobileNumberAndMerchant (fromMaybe "+91" mbMobileCountryCode) mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+      let operatingCityId = driver.merchantOperatingCityId
+      city <- CQMOC.findById operatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId)
+      return $ Common.GetOperatingCityResp {operatingCity = city.city}
+    _ -> throwError $ InvalidRequest "Either rideId or mobileNumber is required"
