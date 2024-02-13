@@ -4121,7 +4121,9 @@ rentalScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{source = source, destination = if (isJust updatedState.data.dropLoc) then dest else ""}})
             enterRentalRideSearchFlow resp.bookingId
             else rideScheduledFlow
-        Left err -> pure unit
+        Left err -> do
+          void $ pure $ toast "A Rental Booking is already scheduled within 2 hours. Please Choose another time"
+          pure unit
       rentalScreenFlow
     RentalScreenController.GoToSelectPackage updatedState -> do
       modifyScreenState $ RentalScreenStateType (\_ -> updatedState)
