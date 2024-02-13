@@ -180,16 +180,15 @@ window.onMerchantEvent = function (_event, globalPayload) {
       }
     }
     else {
-      window.__payload = JSON.parse(GlobalPayload);
-      console.log("window Payload: ", window.__payload);
+      console.log("client Payload: ", clientPaylod);
       if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
       }else if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
         purescript.main(makeEvent("CHAT_MESSAGE", ""))();
-      }else if (window.__payload.payload.viewParamNewIntent && window.__payload.payload.viewParamNewIntent.slice(0, 8) == "referrer") {
-        purescript.onNewIntent(makeEvent("REFERRAL", window.__payload.payload.viewParamNewIntent.slice(9)))();
-      }else if (window.__payload.payload.viewParam && window.__payload.payload.viewParam.slice(0, 8) == "referrer") {
-        purescript.onNewIntent(makeEvent("REFERRAL_NEW_INTENT", window.__payload.payload.viewParam.slice(9)))();
+      }else if (clientPaylod.viewParamNewIntent && clientPaylod.viewParamNewIntent.slice(0, 8) == "referrer") {
+        purescript.onNewIntent(makeEvent("REFERRAL", clientPaylod.viewParamNewIntent.slice(9)))();
+      }else if (clientPaylod.viewParam && clientPaylod.viewParam.slice(0, 8) == "referrer") {
+        purescript.onNewIntent(makeEvent("REFERRAL_NEW_INTENT", clientPaylod.viewParam.slice(9)))();
       }else {
         purescript.main(makeEvent("", ""))();
       }
