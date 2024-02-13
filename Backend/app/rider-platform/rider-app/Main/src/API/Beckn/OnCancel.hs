@@ -25,6 +25,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import Tools.Error
 
 type API = OnCancel.OnCancelAPIV2
 
@@ -36,23 +37,28 @@ onCancel ::
   OnCancel.OnCancelReqV2 ->
   FlowHandler AckResponse
 onCancel _ req = withFlowHandlerBecknAPI do
+  cancelMsg <- req.onCancelReqMessage & fromMaybeM (InvalidRequest "Missing onCancel Message")
+  cancelStatus <- cancelMsg.confirmReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "Missing onCancel orderStatus")
+  logDebug $ "cancelStatus in bpp " <> cancelStatus
   (mbDOnCancelReq, messageId) <- do
     transactionId <- Utils.getTransactionId req.onCancelReqContext
     Utils.withTransactionIdLogTag transactionId $ do
-      mbDOnSelectReq <- ACL.buildOnCancelReqV2 req
+      mbDOnCancelReq <- ACL.buildOnCancelReqV2 req
       messageId <- Utils.getMessageIdText req.onCancelReqContext
-      pure (mbDOnSelectReq, messageId)
+      pure (mbDOnCancelReq, messageId)
 
-  whenJust mbDOnCancelReq $ \onCancelReq ->
-    Redis.whenWithLockRedis (onCancelLockKey messageId) 60 $ do
-      validatedOnCancelReq <- DOnCancel.validateRequest onCancelReq
-      fork "on cancel processing" $ do
-        Redis.whenWithLockRedis (onCancelProcessngLockKey messageId) 60 $
-          DOnCancel.onCancel validatedOnCancelReq
+  when (cancelStatus == "CANCELLED") do
+    whenJust mbDOnCancelReq $ \onCancelReq ->
+      Redis.whenWithLockRedis (onCancelLockKey messageId) 60 $ do
+        validatedOnCancelReq <- DOnCancel.validateRequest onCancelReq
+        fork "on cancel processing" $ do
+          Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $
+            DOnCancel.onCancel validatedOnCancelReq
+
   pure Ack
 
 onCancelLockKey :: Text -> Text
 onCancelLockKey id = "Customer:OnCancel:MessageId-" <> id
 
-onCancelProcessngLockKey :: Text -> Text
-onCancelProcessngLockKey id = "Customer:OnCancel:Processing:MessageId-" <> id
+onCancelProcessingLockKey :: Text -> Text
+onCancelProcessingLockKey id = "Customer:OnCancel:Processing:MessageId-" <> id
