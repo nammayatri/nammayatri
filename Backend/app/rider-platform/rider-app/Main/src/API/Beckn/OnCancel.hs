@@ -40,21 +40,20 @@ onCancel _ req = withFlowHandlerBecknAPI do
   cancelMsg <- req.onCancelReqMessage & fromMaybeM (InvalidRequest "Missing onCancel Message")
   cancelStatus <- cancelMsg.confirmReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "Missing onCancel orderStatus")
   logDebug $ "cancelStatus in bpp " <> cancelStatus
-  (mbDOnCancelReq, messageId) <- do
-    transactionId <- Utils.getTransactionId req.onCancelReqContext
-    Utils.withTransactionIdLogTag transactionId $ do
-      mbDOnCancelReq <- ACL.buildOnCancelReqV2 req
-      messageId <- Utils.getMessageIdText req.onCancelReqContext
-      pure (mbDOnCancelReq, messageId)
 
   when (cancelStatus == "CANCELLED") do
+    (mbDOnCancelReq, messageId) <- do
+      transactionId <- Utils.getTransactionId req.onCancelReqContext
+      Utils.withTransactionIdLogTag transactionId $ do
+        mbDOnCancelReq <- ACL.buildOnCancelReqV2 req
+        messageId <- Utils.getMessageIdText req.onCancelReqContext
+        pure (mbDOnCancelReq, messageId)
     whenJust mbDOnCancelReq $ \onCancelReq ->
       Redis.whenWithLockRedis (onCancelLockKey messageId) 60 $ do
         validatedOnCancelReq <- DOnCancel.validateRequest onCancelReq
         fork "on cancel processing" $ do
           Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $
             DOnCancel.onCancel validatedOnCancelReq
-
   pure Ack
 
 onCancelLockKey :: Text -> Text
