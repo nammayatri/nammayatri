@@ -74,7 +74,7 @@ buildCancelReqV2 res = do
   pure
     Spec.CancelReq
       { cancelReqContext = context,
-        cancelReqMessage = mkCancelMessageV2 res
+        cancelReqMessage = mkCancelMessageV2 res -- soft cancel and confirm cancel
       }
 
 mkCancelMessageV2 :: DCancel.CancelRes -> Spec.CancelReqMessage
@@ -86,7 +86,7 @@ mkCancelMessageV2 res =
         Just $
           Spec.Descriptor
             { descriptorName = Just "Cancel Ride",
-              descriptorCode = Just "cancelRide", -- TODO::Beckn, confirm mapping according to spec.
+              descriptorCode = Just res.cancelStatus, -- TODO::Beckn, confirm mapping according to spec.
               descriptorShortDesc = Nothing
             }
     }

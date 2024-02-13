@@ -400,7 +400,7 @@ sendBookingCancelledUpdateToBAP ::
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry bookingCancelledBuildReqV2
+  bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry "CANCELLED" bookingCancelledBuildReqV2
   void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig
 
 sendDriverOffer ::

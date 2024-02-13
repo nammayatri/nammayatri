@@ -17,6 +17,7 @@ module Beckn.ACL.Cancel where
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import Data.Maybe (fromJust)
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import EulerHS.Prelude
 import Kernel.Product.Validation.Context
@@ -37,7 +38,8 @@ buildCancelReq req = do
       return $
         Left $
           DCancel.CancelReq
-            { ..
+            { cancelStatus = Nothing,
+              ..
             }
     else do
       let transactionId = req.message.item_id
@@ -56,10 +58,12 @@ buildCancelReqV2 req = do
   if isJust (req.cancelReqMessage.cancelReqMessageDescriptor)
     then do
       let bookingId = Id $ req.cancelReqMessage.cancelReqMessageOrderId
+      let descriptor = fromJust $ req.cancelReqMessage.cancelReqMessageDescriptor
       return $
         Left $
           DCancel.CancelReq
-            { ..
+            { cancelStatus = descriptor.descriptorCode,
+              ..
             }
     else do
       let transactionId = req.cancelReqMessage.cancelReqMessageOrderId

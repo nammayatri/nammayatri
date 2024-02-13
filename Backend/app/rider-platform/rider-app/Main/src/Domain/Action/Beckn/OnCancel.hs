@@ -133,7 +133,6 @@ mkBookingCancellationReason ::
   Id DMerchant.Merchant ->
   SBCR.BookingCancellationReason
 mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
-  -- cancellationSource merchantId =
   SBCR.BookingCancellationReason
     { bookingId = bookingId,
       rideId = mbRideId,

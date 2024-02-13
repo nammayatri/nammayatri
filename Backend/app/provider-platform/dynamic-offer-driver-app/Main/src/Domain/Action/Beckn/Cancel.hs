@@ -65,13 +65,16 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
 
-newtype CancelReq = CancelReq
-  { bookingId :: Id SRB.Booking
+data CancelReq = CancelReq
+  { bookingId :: Id SRB.Booking,
+    cancelStatus :: Maybe Text
   }
+  deriving (Show)
 
 newtype CancelSearchReq = CancelSearchReq
   { transactionId :: Text
   }
+  deriving (Show)
 
 cancel ::
   ( EsqDBFlow m r,
