@@ -40,7 +40,7 @@ import Effect.Uncurried (runEffectFn2, runEffectFn6)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
-import Screens.HomeScreen.Transformer (getSpecialZoneQuotes, getFilteredQuotes, getSpecialZoneQuote)
+import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote)
 import JBridge (showDateTimePicker, toast)
 import Language.Strings (getVarString)
 import Language.Types (STR(..)) as STR
@@ -125,10 +125,10 @@ eval (UpdateLocAndLatLong lat lon) state =
 eval BackpressAction state = genericBackPressed state 
 
 eval (GetRentalQuotes (GetQuotesRes quoteRes)) state = do 
-  let quoteList = getSpecialZoneQuotes quoteRes.quotes state.data.config.estimateAndQuoteConfig
+  let quoteList = getQuotesTransformer quoteRes.quotes state.data.config.estimateAndQuoteConfig
       filteredQuoteList = (getFilteredQuotes quoteRes.quotes state.data.config.estimateAndQuoteConfig)
       rentalsQuoteList = (DA.mapWithIndex (\index quote -> 
-    let quoteDetails = getSpecialZoneQuote quote index 
+    let quoteDetails = transformQuote quote index 
         currIndex = index 
         activeIndex = 0 
         fareDetails = case quote of 
