@@ -27,6 +27,7 @@ module SharedLogic.CallBAP
     callOnConfirmV2,
     buildBppUrl,
     sendSafetyAlertToBAP,
+    mkTxnIdKey,
   )
 where
 
@@ -38,7 +39,6 @@ import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
-import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -69,6 +69,7 @@ import Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
@@ -79,6 +80,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
@@ -86,34 +88,11 @@ import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
-callOnSelect ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    CoreMetrics m,
-    HasHttpClientOptions r c,
-    HasShortDurationRetryCfg r c
-  ) =>
-  DM.Merchant ->
-  DSR.SearchRequest ->
-  DST.SearchTry ->
-  OnSelect.OnSelectMessage ->
-  m ()
-callOnSelect transporter searchRequest searchTry content = do
-  let bapId = searchRequest.bapId
-      bapUri = searchRequest.bapUri
-  let bppSubscriberId = getShortId $ transporter.subscriberId
-      authKey = getHttpManagerKey bppSubscriberId
-  bppUri <- buildBppUrl (transporter.id)
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  let msgId = searchTry.estimateId
-  context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
-  logDebug $ "on_select request bpp: " <> show content
-  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV1 bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
-
 callOnSelectV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     CoreMetrics m,
+    CacheFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c
   ) =>
@@ -129,10 +108,20 @@ callOnSelectV2 transporter searchRequest searchTry content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  let msgId = searchTry.estimateId
+
+  msgId <- getMsgIdByTxnId searchRequest.transactionId
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry)
   logDebug $ "on_selectV2 request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
+  where
+    getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
+    getMsgIdByTxnId txnId = do
+      Hedis.safeGet (mkTxnIdKey txnId) >>= \case
+        Nothing -> pure searchTry.estimateId
+        Just a -> pure a
+
+mkTxnIdKey :: Text -> Text
+mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId
 
 callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -429,6 +418,8 @@ sendDriverOffer ::
     HasField "isBecknSpecVersion2" r Bool,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    EsqDBFlow m r,
     CoreMetrics m,
     HasPrettyLogger m r
   ) =>
@@ -439,10 +430,8 @@ sendDriverOffer ::
   m ()
 sendDriverOffer transporter searchReq searchTry driverQuote = do
   logDebug $ "on_select ttl request driver: " <> show driverQuote.validTill
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2)
-    else callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
+  isValueAddNP <- CQVNP.isValueAddNP searchReq.bapId
+  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>

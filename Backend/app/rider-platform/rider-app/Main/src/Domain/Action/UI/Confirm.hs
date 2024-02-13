@@ -25,10 +25,13 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Confirm as SConfirm
+import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Tools.Notifications as Notify
@@ -52,7 +55,8 @@ cancelBooking booking = do
   bookingCancellationReason <- buildBookingCancellationReason booking.id
   _ <- QRideB.updateStatus booking.id DRB.CANCELLED
   _ <- QBCR.upsert bookingCancellationReason
-  Notify.notifyOnBookingCancelled booking DBCR.ByApplication
+  bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
+  Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails
   where
     buildBookingCancellationReason bookingId = do
       return $

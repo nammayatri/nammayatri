@@ -180,6 +180,17 @@ castVehicleVariant = \case
   VehVar.TAXI -> ("CAB", "TAXI")
   VehVar.TAXI_PLUS -> ("CAB", "TAXI_PLUS")
 
+parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
+parseVehicleVariant mbCategory mbVariant =
+  case (mbCategory, mbVariant) of
+    (Just "CAB", Just "SEDAN") -> Just VehVar.SEDAN
+    (Just "CAB", Just "SUV") -> Just VehVar.SUV
+    (Just "CAB", Just "HATCHBACK") -> Just VehVar.HATCHBACK
+    (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
+    (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
+    (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
+    _ -> Nothing
+
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource
 castCancellationSourceV2 = \case
   "ByUser" -> SBCR.ByUser

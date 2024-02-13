@@ -73,12 +73,7 @@ mkConfirmMessage res = do
                         },
                     breakup = Nothing
                   },
-              provider =
-                res.driverId >>= \dId ->
-                  Just
-                    Confirm.Provider
-                      { id = dId
-                      }
+              provider = Nothing
             }
       }
   where
@@ -217,7 +212,7 @@ tfOrder res =
       orderId = Just res.bppBookingId.getId,
       orderItems = tfItems res,
       orderPayments = tfPayments res,
-      orderProvider = tfProvider res,
+      orderProvider = Nothing,
       orderQuote = tfQuotation res,
       orderStatus = Nothing
     }
@@ -280,19 +275,6 @@ tfPayments res =
             paymentParamsCurrency = Just "INR",
             paymentParamsVirtualPaymentAddress = Nothing
           }
-
-tfProvider :: DOnInit.OnInitRes -> Maybe Spec.Provider
-tfProvider res = do
-  driverId <- res.driverId
-  return $
-    Spec.Provider
-      { providerDescriptor = Nothing,
-        providerFulfillments = Nothing,
-        providerId = Just driverId,
-        providerItems = Nothing,
-        providerLocations = Nothing,
-        providerPayments = Nothing
-      }
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
 tfQuotation res =
