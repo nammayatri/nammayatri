@@ -21,7 +21,6 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Data.Maybe (listToMaybe)
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -37,9 +36,9 @@ buildOnCancelReqV2 ::
   m (Maybe DOnCancel.OnCancelReq)
 buildOnCancelReqV2 req = do
   ContextV2.validateContext Context.ON_CANCEL $ req.onCancelReqContext
-  transactionId <- Utils.getTransactionId req.onCancelReqContext
+  _transactionId <- Utils.getTransactionId req.onCancelReqContext
   handleErrorV2 req $ \message -> do
-    parseEventV2 transactionId message.confirmReqMessageOrder
+    bookingCancelledEvent message.confirmReqMessageOrder
 
 handleErrorV2 ::
   (MonadFlow m) =>
@@ -54,23 +53,8 @@ handleErrorV2 req action = do
       logTagError "on_update req" $ "on_update error: " <> show err
       pure Nothing
 
-parseEventV2 :: (MonadFlow m) => Text -> Spec.Order -> m DOnCancel.OnCancelReq
-parseEventV2 _transactionId order = do
-  eventType <-
-    order.orderFulfillments
-      >>= listToMaybe
-      >>= (.fulfillmentState)
-      >>= (.fulfillmentStateDescriptor)
-      >>= (.descriptorCode)
-      & fromMaybeM (InvalidRequest "Event type is not present in OnCancelReq.")
-
-  -- TODO::Beckn, fix this codes after correct v2-spec mapping
-  case eventType of
-    "RIDE_BOOKING_CANCELLED" -> parseBookingCancelledEvent order
-    _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
-
-parseBookingCancelledEvent :: (MonadFlow m) => Spec.Order -> m DOnCancel.OnCancelReq
-parseBookingCancelledEvent order = do
+bookingCancelledEvent :: (MonadFlow m) => Spec.Order -> m DOnCancel.OnCancelReq
+bookingCancelledEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in BookingCancelled Event.")
   cancellationSource <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "cancellationSource is not present in BookingCancelled Event.")
   return $

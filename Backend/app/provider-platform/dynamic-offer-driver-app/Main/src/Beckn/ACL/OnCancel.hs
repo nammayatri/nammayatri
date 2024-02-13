@@ -19,8 +19,6 @@ module Beckn.ACL.OnCancel
 where
 
 import qualified Beckn.OnDemand.Utils.Common as BUtils
-import qualified Beckn.OnDemand.Utils.OnCancel as Utils
-import qualified Beckn.Types.Core.Taxi.OnCancel.OnCancelEvent.OnCancelEventType as Event
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import qualified Data.List as List
@@ -117,7 +115,7 @@ tfFulfillments =
           { fulfillmentStateDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just $ show Event.RIDE_BOOKING_CANCELLED, -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+                  { descriptorCode = Just "RIDE_BOOKING_CANCELLED", -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   }
@@ -127,5 +125,5 @@ tfCancellation :: SBCR.CancellationSource -> Maybe Spec.Cancellation
 tfCancellation cancellationSource =
   Just $
     Spec.Cancellation
-      { cancellationCancelledBy = Just . show $ Utils.castCancellationSource cancellationSource
+      { cancellationCancelledBy = Just $ show cancellationSource
       }
