@@ -239,12 +239,15 @@ chooseLanguageFlow = do
 
 checkRideAndInitiate :: Maybe Event -> FlowBT String Unit
 checkRideAndInitiate event = do
-  (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
-  checkAndDownloadMLModel
-  let activeRide = (not (null activeRideResponse.list))
-  activeRide ?
-    currentRideFlow (Just (GetRidesHistoryResp activeRideResponse)) 
-    $ getDriverInfoFlow event (Just (GetRidesHistoryResp activeRideResponse))
+  resp <- lift $ lift $ Remote.getRideHistoryReq "1" "0" "true" "null" "null"
+  case resp of
+    Right (GetRidesHistoryResp activeRideResponse) -> do
+      checkAndDownloadMLModel
+      let activeRide = (not (null activeRideResponse.list))
+      activeRide ?
+        currentRideFlow (Just (GetRidesHistoryResp activeRideResponse)) 
+        $ getDriverInfoFlow event (Just (GetRidesHistoryResp activeRideResponse))
+    Left err -> getDriverInfoFlow Nothing Nothing -- get from db
     where 
       checkAndDownloadMLModel :: FlowBT String Unit
       checkAndDownloadMLModel = do
@@ -2716,7 +2719,7 @@ changeDriverStatus status = do
   let API.DriverGoHomeInfo driverGoHomeInfo = getDriverInfoResp.driverGoHomeInfo
       qParam = toUpper $ show status
       isDriverActive = any ( _ == status) [Online, Silent]
-  void $ Remote.driverActiveInactiveBT (show isDriverActive) qParam
+  void $ lift $ lift $ Remote.driverActiveInactive (show isDriverActive) qParam
   when (driverGoHomeInfo.status == Just "ACTIVE" && status == Offline) do
     void $ lift $ lift $ Remote.deactivateDriverGoTo "" -- disabling goto when driver is Offline
     modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ GetDriverInfoResp getDriverInfoResp {driverGoHomeInfo = API.DriverGoHomeInfo driverGoHomeInfo { status = Nothing} } }
@@ -2734,10 +2737,13 @@ getDriverInfoDataFromCache (GlobalState globalState) mkCall = do
     let driverInfoResp = fromMaybe dummyDriverInfo globalState.globalProps.driverInformation
     pure driverInfoResp
   else do
-    driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq {})
-    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ driverInfoResp}
-    updateDriverDataToStates
-    pure driverInfoResp
+    resp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq {})
+    case resp of
+      Right driverInfoResp -> do
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ driverInfoResp}
+        updateDriverDataToStates
+        pure driverInfoResp
+      Left err -> pure dummyDriverInfo --get from db
 
 getDriverStatesFromCache :: GlobalState -> FlowBT String DriverProfileStatsResp
 getDriverStatesFromCache (GlobalState globalState) = do

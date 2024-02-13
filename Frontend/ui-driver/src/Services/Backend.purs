@@ -268,6 +268,14 @@ driverActiveInactiveBT status status_n = do
             pure if not accountBlocked then toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else unit
             void $ lift $ lift $ toggleLoader false
             BackT $ pure GoBack
+
+driverActiveInactive :: String -> String -> Flow GlobalState (Either ErrorResponse DriverActiveInactiveResp)
+driverActiveInactive status status_n = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.driverActiveInactiveSilent status status_n) unwrapResponse $ callAPI headers (DriverActiveInactiveReq status status_n)
+  where
+    unwrapResponse x = x
+
 --------------------------------- startRide ---------------------------------------------------------------------------------------------------------------------------------
 
 startRide :: String -> StartRideReq -> Flow GlobalState (Either ErrorResponse StartRideResponse)
