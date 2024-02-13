@@ -99,17 +99,14 @@ import Components.MessagingView.Common.Types
 
 messageNotificationView :: forall w action. (action -> Effect Unit) -> (MessageNotificationView action) -> PrestoDOM ( Effect Unit) w
 messageNotificationView push state =
-  let enableChatWidget = not (os == "ANDROID" || state.enableChatWidget)
-  in
   (if state.showChatNotification then 
-    if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeInWithDuration 1000 true]
+    PrestoAnim.animationSet [fadeInWithDuration 1000 true]
   else if state.isNotificationExpanded then 
-    if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeOutWithDuration 1000 true]
+    PrestoAnim.animationSet [fadeOutWithDuration 1000 true]
   else  PrestoAnim.animationSet []) $ 
   linearLayout
-  [ height $ if enableChatWidget then V 1 else V 130
-  , width $ if enableChatWidget then V 1 else MATCH_PARENT
-  , margin $ MarginBottom if enableChatWidget then 0 else 8
+  [ height $ V 130
+  , width $ MATCH_PARENT
   , padding $ Padding 12 12 12 12
   , background Color.black900
   , orientation VERTICAL
@@ -117,11 +114,7 @@ messageNotificationView push state =
   , accessibility $ if state.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
   , accessibilityHint $ "Quick Chat : Widget"
   , onAnimationEnd push $ const state.messageViewAnimationEnd
-  , visibility $ if ((not state.rideStarted) && state.currentSearchResultType /= QUOTES && state.config.feature.enableChat) && state.config.feature.enableSuggestions 
-                  then VISIBLE 
-                  else if state.rideStarted && os == "IOS" 
-                    then INVISIBLE 
-                    else GONE
+  , visibility $ boolToVisibility $ (((any (_ == state.currentStage)) [ RideAccepted, ChatWithDriver]) && state.currentSearchResultType /= QUOTES && state.config.feature.enableChat) && state.config.feature.enableSuggestions && not state.removeNotification
   , cornerRadius 20.0
   ][linearLayout 
     [ height $ WRAP_CONTENT
@@ -365,7 +358,7 @@ quickReplyItem push state item idx =
   , visibility $ boolToVisibility $ not $ DS.null message
   , accessibilityHint $ (getMessageFromKey item $ "EN_US") <> ": Button : Select to send message to driver"
   , onClick (\action -> do
-                when (not $ DS.null state.lastReceivedMessage.sentBy) $ do void $ startTimer 3 ("ChatNotificationRemoval" <> (show $ state.timerCounter)) "3" push state.messageExpiryAction
+                when (not $ DS.null state.lastReceivedMessage.sentBy) $ do void $ startTimer 3 ("ChatNotificationRemoval" <> (show $ state.timerCounter)) "1" push state.messageExpiryAction
                 push action)
             (const $ state.sendQuickMessageAction item)
   , background Color.white900

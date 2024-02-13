@@ -886,15 +886,13 @@ data Action = NoAction
             | SpecialZoneOTPExpiryAction Int String String
             | TicketBookingFlowBannerAC Banner.Action
             | MetroTicketBookingBannerAC Banner.Action
-            | WaitingInfo
-            | ShareRide
             | ScrollStateChanged String
             | RemoveNotification
             | MessageDriver
             | SendQuickMessage String
             | MessageExpiryTimer Int String String
             | NotificationAnimationEnd
-            | RideSupport
+            | ShareRide
             | OpenEmergencyHelp
             | MessageViewAnimationEnd
             | RepeatRide Int Trip
@@ -1270,7 +1268,7 @@ eval RemoveChat state = do
     pure $ NoAction
   ]
 
-eval WaitingInfo state =
+eval (DriverInfoCardActionController (DriverInfoCardController.WaitingInfo)) state =
   if state.props.currentStage == RideAccepted then
     continue state { data { waitTimeInfo = true } }
   else
@@ -1306,7 +1304,7 @@ eval NotificationAnimationEnd state = do
   let isExpanded = state.props.showChatNotification && state.props.chatcallbackInitiated
       areMessagesEmpty = (length (getChatMessages FunctionCall) == 0)
       showNotification = (areMessagesEmpty || state.props.showChatNotification) && state.props.currentStage == RideAccepted && not state.props.isChatNotificationDismissed
-  continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification , removeNotification = not showNotification, enableChatWidget = (isExpanded || areMessagesEmpty) && not state.props.isChatNotificationDismissed}}
+  continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification, removeNotification = not showNotification, enableChatWidget = (isExpanded || areMessagesEmpty) && not state.props.isChatNotificationDismissed}}
 
 eval MessageViewAnimationEnd state = do
   continue state {props { removeNotification = not state.props.showChatNotification}}
@@ -1769,7 +1767,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigateToZone)
   void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng "WALK"
   continue state
 
-eval RideSupport state = do
+eval (DriverInfoCardActionController (DriverInfoCardController.RideSupport)) state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp = true}}
 
@@ -1798,6 +1796,8 @@ eval OpenEmergencyHelp state = do
   exit $ GoToNammaSafety state true false
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = continueWithCmd state [pure $ ShareRide]
 
 eval ShareRide state = do
   continueWithCmd state
@@ -2227,6 +2227,8 @@ eval (ShowCallDialer item) state = do
     ANONYMOUS_CALLER -> callDriver state "ANONYMOUS"
     DIRECT_CALLER -> callDriver state "DIRECT"
 
+eval (DriverInfoCardActionController (DriverInfoCardController.StartLocationTracking item)) state = continueWithCmd state [do pure $ StartLocationTracking item]
+
 eval (StartLocationTracking item) state = do
   _ <- pure $ performHapticFeedback unit
   case item of
@@ -2430,7 +2432,9 @@ eval (UpdateETA currentETA currentDistance) state = do
                                       pure currentDistance
                                       else pure $ fromMaybe 0 (fromString storedDistance)
   let
-    newState = state { data { driverInfoCardState { eta = Just currentETA, distance = currentDistance, initDistance = Just distance } } }
+    sheetState = if isLocalStageOn ChatWithDriver && state.props.currentSheetState == EXPANDED then Just COLLAPSED else state.props.sheetState
+    currentSheetState =  if isLocalStageOn ChatWithDriver && state.props.currentSheetState == EXPANDED then COLLAPSED else state.props.currentSheetState
+    newState = state { data { driverInfoCardState { eta = Just currentETA, distance = currentDistance, initDistance = Just distance } }, props {sheetState = sheetState, currentSheetState = currentSheetState}}
   continue newState
 
 eval (RepeatRide index item) state = do 
@@ -3011,9 +3015,12 @@ getInfoCardPeekHeight :: HomeScreenState -> Int
 getInfoCardPeekHeight state = 
   let bottomSheetLayout = (runFn1 getLayoutBounds $ getNewIDWithTag (if state.data.currentSearchResultType == QUOTES then "driverInfoViewSpecialZone" else "driverInfoView"))
       brandingBanner = runFn1 getLayoutBounds $ getNewIDWithTag "BrandingBanner"
+      actionsView = runFn1 getLayoutBounds $ getNewIDWithTag "DriverInfoCardActionView"
       pixels = runFn1 getPixels FunctionCall
       density = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
-      currentPeekHeight = bottomSheetLayout.height + if state.data.config.driverInfoConfig.footerVisibility then brandingBanner.height else 0
+      currentPeekHeight = if bottomSheetLayout.height == 0 || actionsView.height == 0
+                          then 0
+                          else bottomSheetLayout.height + if state.data.config.driverInfoConfig.footerVisibility then brandingBanner.height else 0 + actionsView.height
       requiredPeekHeight = if os /= "IOS" then ceil (((toNumber currentPeekHeight) /pixels) * density) else currentPeekHeight
     in requiredPeekHeight
 

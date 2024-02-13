@@ -37,6 +37,10 @@ data Action = NoAction
             | OnNavigateToZone
             | ToggleBottomSheet
             | CollapseBottomSheet
+            | ShareRide
+            | RideSupport
+            | StartLocationTracking String
+            | WaitingInfo
             | UpdateBanner
             | BannerChanged String
             | BannerStateChanged String

@@ -92,14 +92,14 @@ messageInAnimConfig :: Boolean -> Common.AnimConfig
 messageInAnimConfig ifAnim = animConfig {
   duration = 1000
 , fromY = 0
-, toY = (-140)
+, toY = (-196)
 , ifAnim = ifAnim
 }
 
 messageOutAnimConfig :: Boolean -> Common.AnimConfig
 messageOutAnimConfig ifAnim = animConfig {
   duration = 1000
-, fromY = (-140)
+, fromY = (-196)
 , toY = 0
 , ifAnim = ifAnim
 }

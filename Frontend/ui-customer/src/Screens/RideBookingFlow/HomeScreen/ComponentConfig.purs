@@ -1125,12 +1125,12 @@ messagingViewConfig state = let
   }
   in messagingViewConfig'
 
-getDefaultPeekHeight :: ST.HomeScreenState -> Int
+getDefaultPeekHeight :: ST.HomeScreenState -> Int  --TODO Update these before final push
 getDefaultPeekHeight state = do
   let isQuotes = state.data.currentSearchResultType == ST.QUOTES
       height = case state.props.currentStage == ST.RideAccepted of 
-                  true -> if isQuotes then 234 else 321
-                  false -> if isQuotes then 334 else 283
+                  true -> if isQuotes then 285 else 381
+                  false -> if isQuotes then 377 else 368
   height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
 metersToKm :: Int -> Boolean -> String
