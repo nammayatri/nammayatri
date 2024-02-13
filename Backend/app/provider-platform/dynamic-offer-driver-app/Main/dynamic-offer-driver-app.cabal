@@ -236,7 +236,6 @@ library
       Domain.Types.DriverQuote
       Domain.Types.DriverReferral
       Domain.Types.DriverStats
-      Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
@@ -384,7 +383,6 @@ library
       Storage.Beam.DriverQuote
       Storage.Beam.DriverReferral
       Storage.Beam.DriverStats
-      Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
@@ -516,7 +514,6 @@ library
       Storage.Queries.DriverQuote.Internal
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
-      Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareParameters
       Storage.Queries.FareParameters.FareParametersProgressiveDetails
@@ -609,6 +606,7 @@ library
       API.Types.UI.SpecialLocation
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
+      Domain.Types.Estimate
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsModule
       Domain.Types.LmsModuleTranslation
@@ -620,6 +618,7 @@ library
       Domain.Types.QuestionModuleMapping
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPoolConfig
+      Storage.Beam.Estimate
       Storage.Beam.InterCityTravelCities
       Storage.Beam.LmsModule
       Storage.Beam.LmsModuleTranslation
@@ -631,6 +630,7 @@ library
       Storage.Beam.QuestionModuleMapping
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPoolConfig
+      Storage.Queries.Estimate
       Storage.Queries.InterCityTravelCities
       Storage.Queries.LmsModule
       Storage.Queries.LmsModuleTranslation

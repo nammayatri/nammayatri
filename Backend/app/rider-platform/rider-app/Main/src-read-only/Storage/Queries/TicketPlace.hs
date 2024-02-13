@@ -26,47 +26,47 @@ createMany = traverse_ create
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m (Maybe (Domain.Types.TicketPlace.TicketPlace))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 getTicketPlaces :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.TicketPlace.TicketPlace])
 getTicketPlaces (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ merchantOperatingCityId
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m (Maybe (Domain.Types.TicketPlace.TicketPlace))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketPlace.TicketPlace -> m ()
 updateByPrimaryKey Domain.Types.TicketPlace.TicketPlace {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.closeTimings $ closeTimings,
-      Se.Set Beam.description $ description,
-      Se.Set Beam.gallery $ gallery,
-      Se.Set Beam.iconUrl $ iconUrl,
-      Se.Set Beam.lat $ lat,
-      Se.Set Beam.lon $ lon,
-      Se.Set Beam.mapImageUrl $ mapImageUrl,
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.name $ name,
-      Se.Set Beam.openTimings $ openTimings,
-      Se.Set Beam.placeType $ placeType,
-      Se.Set Beam.shortDesc $ shortDesc,
-      Se.Set Beam.status $ status,
-      Se.Set Beam.termsAndConditions $ termsAndConditions,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.closeTimings closeTimings,
+      Se.Set Beam.description description,
+      Se.Set Beam.gallery gallery,
+      Se.Set Beam.iconUrl iconUrl,
+      Se.Set Beam.lat lat,
+      Se.Set Beam.lon lon,
+      Se.Set Beam.mapImageUrl mapImageUrl,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.name name,
+      Se.Set Beam.openTimings openTimings,
+      Se.Set Beam.placeType placeType,
+      Se.Set Beam.shortDesc shortDesc,
+      Se.Set Beam.status status,
+      Se.Set Beam.termsAndConditions termsAndConditions,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

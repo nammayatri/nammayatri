@@ -27,23 +27,23 @@ findAllByMerchantIdAndState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ke
 findAllByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq $ merchantId,
-          Se.Is Beam.state $ Se.Eq $ state
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.state $ Se.Eq state
         ]
     ]
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe (Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 findByMerchantIdAndCity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m (Maybe (Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
 findByMerchantIdAndCity (Kernel.Types.Id.Id merchantId) city = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq $ merchantId,
-          Se.Is Beam.city $ Se.Eq $ city
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.city $ Se.Eq city
         ]
     ]
 
@@ -51,8 +51,8 @@ findByMerchantShortIdAndCity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => K
 findByMerchantShortIdAndCity (Kernel.Types.Id.ShortId merchantShortId) city = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantShortId $ Se.Eq $ merchantShortId,
-          Se.Is Beam.city $ Se.Eq $ city
+        [ Se.Is Beam.merchantShortId $ Se.Eq merchantShortId,
+          Se.Is Beam.city $ Se.Eq city
         ]
     ]
 
@@ -60,25 +60,25 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ()
 updateByPrimaryKey Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.city $ city,
-      Se.Set Beam.lat $ lat,
-      Se.Set Beam.long $ long,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantShortId $ (Kernel.Types.Id.getShortId merchantShortId),
-      Se.Set Beam.state $ state,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.city city,
+      Se.Set Beam.lat lat,
+      Se.Set Beam.long long,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantShortId (Kernel.Types.Id.getShortId merchantShortId),
+      Se.Set Beam.state state,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

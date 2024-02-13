@@ -25,28 +25,28 @@ createMany = traverse_ create
 findAllWithModuleId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m ([Domain.Types.QuestionModuleMapping.QuestionModuleMapping])
 findAllWithModuleId (Kernel.Types.Id.Id moduleId) = do
   findAllWithKV
-    [ Se.Is Beam.moduleId $ Se.Eq $ moduleId
+    [ Se.Is Beam.moduleId $ Se.Eq moduleId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe (Domain.Types.QuestionModuleMapping.QuestionModuleMapping))
 findByPrimaryKey (Kernel.Types.Id.Id moduleId) (Kernel.Types.Id.Id questionId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.moduleId $ Se.Eq $ moduleId,
-          Se.Is Beam.questionId $ Se.Eq $ questionId
+        [ Se.Is Beam.moduleId $ Se.Eq moduleId,
+          Se.Is Beam.questionId $ Se.Eq questionId
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ()
 updateByPrimaryKey Domain.Types.QuestionModuleMapping.QuestionModuleMapping {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.moduleId $ Se.Eq $ (Kernel.Types.Id.getId moduleId),
-          Se.Is Beam.questionId $ Se.Eq $ (Kernel.Types.Id.getId questionId)
+        [ Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId),
+          Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)
         ]
     ]
 

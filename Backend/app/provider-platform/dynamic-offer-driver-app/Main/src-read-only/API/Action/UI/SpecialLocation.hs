@@ -15,7 +15,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation
-import qualified Lib.Types.SpecialLocation
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth

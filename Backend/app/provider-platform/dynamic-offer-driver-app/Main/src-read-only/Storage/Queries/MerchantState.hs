@@ -27,8 +27,8 @@ findByMerchantIdAndState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kerne
 findByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq $ merchantId,
-          Se.Is Beam.state $ Se.Eq $ state
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.state $ Se.Eq state
         ]
     ]
 
@@ -36,22 +36,22 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id merchantId) state = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq $ merchantId,
-          Se.Is Beam.state $ Se.Eq $ state
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.state $ Se.Eq state
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.MerchantState.MerchantState -> m ()
 updateByPrimaryKey Domain.Types.MerchantState.MerchantState {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowedDestinationStates $ allowedDestinationStates,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.allowedDestinationStates allowedDestinationStates,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq $ (Kernel.Types.Id.getId merchantId),
-          Se.Is Beam.state $ Se.Eq $ state
+        [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
+          Se.Is Beam.state $ Se.Eq state
         ]
     ]
 

@@ -27,8 +27,8 @@ findByIdAndLanguage :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Typ
 findByIdAndLanguage (Kernel.Types.Id.Id questionId) language = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.questionId $ Se.Eq $ questionId,
-          Se.Is Beam.language $ Se.Eq $ language
+        [ Se.Is Beam.questionId $ Se.Eq questionId,
+          Se.Is Beam.language $ Se.Eq language
         ]
     ]
 
@@ -36,23 +36,23 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Extern
 findByPrimaryKey language (Kernel.Types.Id.Id questionId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.language $ Se.Eq $ language,
-          Se.Is Beam.questionId $ Se.Eq $ questionId
+        [ Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.questionId $ Se.Eq questionId
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.QuestionInformation.QuestionInformation -> m ()
 updateByPrimaryKey Domain.Types.QuestionInformation.QuestionInformation {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.options $ options,
-      Se.Set Beam.question $ question,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.options options,
+      Se.Set Beam.question question,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.language $ Se.Eq $ language,
-          Se.Is Beam.questionId $ Se.Eq $ (Kernel.Types.Id.getId questionId)
+        [ Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)
         ]
     ]
 

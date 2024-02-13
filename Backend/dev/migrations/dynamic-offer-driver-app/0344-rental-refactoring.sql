@@ -28,14 +28,6 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_r
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN trip_category text;
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'driver_quote', 'distance');
 
--- ESTIMATE --
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN trip_category text;
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN estimated_distance integer;
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN fare_params_id character varying(36);
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN fare_policy_id character varying(36);
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE;
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN is_scheduled boolean;
-
 -- FARE PARAMETERS --
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE;
 
@@ -124,12 +116,4 @@ INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
 -- @ WARNING: DO NOT ENTER BEFORE FULL RELEASE - DROP QUERY ZONE @ --
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
-ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN estimate_breakup_list;
-ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN night_shift_charge;
-ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN night_shift_multiplier;
-ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN night_shift_start;
-ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN night_shift_end;
-ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN waiting_charge_per_min;
-ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN waiting_or_pickup_charges;
-
 ALTER TABLE atlas_driver_offer_bpp.fare_product DROP COLUMN flow;

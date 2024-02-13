@@ -29,8 +29,8 @@ getByModuleIdAndLanguage :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kerne
 getByModuleIdAndLanguage (Kernel.Types.Id.Id moduleId) language = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.moduleId $ Se.Eq $ moduleId,
-          Se.Is Beam.language $ Se.Eq $ language
+        [ Se.Is Beam.moduleId $ Se.Eq moduleId,
+          Se.Is Beam.language $ Se.Eq language
         ]
     ]
 
@@ -38,26 +38,26 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Extern
 findByPrimaryKey language (Kernel.Types.Id.Id moduleId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.language $ Se.Eq $ language,
-          Se.Is Beam.moduleId $ Se.Eq $ moduleId
+        [ Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.moduleId $ Se.Eq moduleId
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ()
 updateByPrimaryKey Domain.Types.LmsModuleTranslation.LmsModuleTranslation {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.description $ description,
-      Se.Set Beam.name $ name,
-      Se.Set Beam.thumbnailImage $ thumbnailImage,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.description description,
+      Se.Set Beam.name name,
+      Se.Set Beam.thumbnailImage thumbnailImage,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.language $ Se.Eq $ language,
-          Se.Is Beam.moduleId $ Se.Eq $ (Kernel.Types.Id.getId moduleId)
+        [ Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)
         ]
     ]
 

@@ -27,39 +27,39 @@ createMany = traverse_ create
 findByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe (Domain.Types.RiderConfig.RiderConfig))
 findByMerchantOperatingCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ merchantOperatingCityId
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe (Domain.Types.RiderConfig.RiderConfig))
 findByPrimaryKey (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ merchantOperatingCityId
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.RiderConfig.RiderConfig -> m ()
 updateByPrimaryKey Domain.Types.RiderConfig.RiderConfig {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.appUrl $ appUrl,
-      Se.Set Beam.collectAutoCompleteData $ collectAutoCompleteData,
-      Se.Set Beam.enableEmergencyContactAddedMessage $ enableEmergencyContactAddedMessage,
-      Se.Set Beam.enableLocalPoliceSupport $ enableLocalPoliceSupport,
-      Se.Set Beam.enableSupportForSafety $ enableSupportForSafety,
-      Se.Set Beam.localPoliceNumber $ localPoliceNumber,
-      Se.Set Beam.safetyCheckEndTime $ safetyCheckEndTime,
-      Se.Set Beam.safetyCheckStartTime $ safetyCheckStartTime,
-      Se.Set Beam.specialZoneRadius $ specialZoneRadius,
-      Se.Set Beam.timeDiffFromUtc $ timeDiffFromUtc,
-      Se.Set Beam.trackingShortUrlPattern $ trackingShortUrlPattern,
-      Se.Set Beam.videoFileSizeUpperLimit $ videoFileSizeUpperLimit,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.appUrl appUrl,
+      Se.Set Beam.collectAutoCompleteData collectAutoCompleteData,
+      Se.Set Beam.enableEmergencyContactAddedMessage enableEmergencyContactAddedMessage,
+      Se.Set Beam.enableLocalPoliceSupport enableLocalPoliceSupport,
+      Se.Set Beam.enableSupportForSafety enableSupportForSafety,
+      Se.Set Beam.localPoliceNumber localPoliceNumber,
+      Se.Set Beam.safetyCheckEndTime safetyCheckEndTime,
+      Se.Set Beam.safetyCheckStartTime safetyCheckStartTime,
+      Se.Set Beam.specialZoneRadius specialZoneRadius,
+      Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
+      Se.Set Beam.trackingShortUrlPattern trackingShortUrlPattern,
+      Se.Set Beam.videoFileSizeUpperLimit videoFileSizeUpperLimit,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq $ (Kernel.Types.Id.getId merchantOperatingCityId)
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]
 

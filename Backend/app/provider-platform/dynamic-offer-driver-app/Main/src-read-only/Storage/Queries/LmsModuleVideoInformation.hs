@@ -25,15 +25,15 @@ createMany = traverse_ create
 findByVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation))
 findByVideoId (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 getAllVideos :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> [Domain.Types.LmsModuleVideoInformation.VideoStatus] -> m ([Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation])
 getAllVideos (Kernel.Types.Id.Id moduleId) videoStatus = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.moduleId $ Se.Eq $ moduleId,
-          Se.Is Beam.videoStatus $ Se.In $ videoStatus
+        [ Se.Is Beam.moduleId $ Se.Eq moduleId,
+          Se.Is Beam.videoStatus $ Se.In videoStatus
         ]
     ]
 
@@ -41,22 +41,22 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ()
 updateByPrimaryKey Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.moduleId $ (Kernel.Types.Id.getId moduleId),
-      Se.Set Beam.rank $ rank,
-      Se.Set Beam.updatedAt $ now,
-      Se.Set Beam.videoStatus $ videoStatus
+    [ Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.moduleId (Kernel.Types.Id.getId moduleId),
+      Se.Set Beam.rank rank,
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.videoStatus videoStatus
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

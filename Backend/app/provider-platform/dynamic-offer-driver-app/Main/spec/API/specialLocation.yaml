@@ -1,6 +1,6 @@
 imports:
   Text: Data.Text
-  SpecialLocationFull: Lib.Types.SpecialLocation
+  SpecialLocationFull: Lib.Queries.SpecialLocation
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
 
 module: SpecialLocation

@@ -27,8 +27,8 @@ findByMerchantAndState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.
 findByMerchantAndState (Kernel.Types.Id.Id merchantId) state = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq $ merchantId,
-          Se.Is Beam.state $ Se.Eq $ state
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.state $ Se.Eq state
         ]
     ]
 
@@ -36,24 +36,24 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelud
 findByPrimaryKey cityName (Kernel.Types.Id.Id merchantId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.cityName $ Se.Eq $ cityName,
-          Se.Is Beam.merchantId $ Se.Eq $ merchantId
+        [ Se.Is Beam.cityName $ Se.Eq cityName,
+          Se.Is Beam.merchantId $ Se.Eq merchantId
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.InterCityTravelCities.InterCityTravelCities -> m ()
 updateByPrimaryKey Domain.Types.InterCityTravelCities.InterCityTravelCities {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.lat $ lat,
-      Se.Set Beam.lng $ lng,
-      Se.Set Beam.state $ state,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.lat lat,
+      Se.Set Beam.lng lng,
+      Se.Set Beam.state state,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.cityName $ Se.Eq $ cityName,
-          Se.Is Beam.merchantId $ Se.Eq $ (Kernel.Types.Id.getId merchantId)
+        [ Se.Is Beam.cityName $ Se.Eq cityName,
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
         ]
     ]
 
