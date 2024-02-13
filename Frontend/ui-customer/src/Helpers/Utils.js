@@ -341,7 +341,8 @@ export const withinTimeRange = function (startTime) {
   }
 }
 
-export const isWeekend = function (date) {
+export const isWeekend = function (dateString) {
+  const date = new Date(dateString);
   const dayOfWeek = date.getDay();
   return dayOfWeek === 0 || dayOfWeek === 6; // 0 is Sunday, 6 is Saturday
 }
