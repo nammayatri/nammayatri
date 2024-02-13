@@ -78,7 +78,7 @@ import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import Data.Either.Extra (eitherToMaybe)
-import Data.List (intersect, (\\))
+import Data.List (intersect, nub, (\\))
 import qualified Data.List as DL
 import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
@@ -164,6 +164,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.FareProduct as CQFP
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -237,7 +238,8 @@ data DriverInformationRes = DriverInformationRes
     maskedDeviceToken :: Maybe Text,
     currentDues :: Maybe HighPrecMoney,
     manualDues :: Maybe HighPrecMoney,
-    blockStateModifier :: Maybe Text
+    blockStateModifier :: Maybe Text,
+    isVehicleSupported :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -273,7 +275,8 @@ data DriverEntityRes = DriverEntityRes
     aadhaarCardPhoto :: Maybe Text,
     freeTrialDaysLeft :: Int,
     maskedDeviceToken :: Maybe Text,
-    blockStateModifier :: Maybe Text
+    blockStateModifier :: Maybe Text,
+    isVehicleSupported :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -605,6 +608,9 @@ buildDriverEntityRes (person, driverInfo) = do
         if transporterConfig.ratingAsDecimal
           then SP.roundToOneDecimal <$> person.rating
           else person.rating <&> (\(Centesimal x) -> Centesimal (fromInteger (round x)))
+  fareProductConfig <- CQFP.findAllFareProductByMerchantOpCityId person.merchantOperatingCityId
+  let supportedVehicles = nub $ map (.vehicleVariant) fareProductConfig
+  let isVehicleSupported = maybe False (\vehicle -> vehicle.variant `elem` supportedVehicles) vehicleMB
   return $
     DriverEntityRes
       { id = person.id,
@@ -638,7 +644,8 @@ buildDriverEntityRes (person, driverInfo) = do
         mediaUrl = mediaUrl,
         aadhaarCardPhoto = aadhaarCardPhoto,
         freeTrialDaysLeft = freeTrialDaysLeft,
-        maskedDeviceToken = maskedDeviceToken
+        maskedDeviceToken = maskedDeviceToken,
+        isVehicleSupported = isVehicleSupported
       }
 
 deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess
