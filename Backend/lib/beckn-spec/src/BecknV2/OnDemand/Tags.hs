@@ -58,6 +58,10 @@ data Tag
   | NIGHT_SHIFT_END_TIME
   | RESTRICTED_PERSON
   | RESTRICTION_PROOF
+  | DRIVER_MIN_EXTRA_FEE
+  | DRIVER_MAX_EXTRA_FEE
+  | EXTRA_PER_KM_FARE
+  | WAITING_OR_PICKUP_CHARGES
   | -- INFO
     DISTANCE_TO_NEAREST_DRIVER_METER
   | ETA_TO_NEAREST_DRIVER_MIN
@@ -94,7 +98,6 @@ data Tag
   | -- Fulfillment tags
     DISTANCE_INFO_IN_M
   | DURATION_INFO_IN_S
-  | ROUTE_POINTS -- TODO: replace with standard tag
   | -- Reallocation tags
     IS_REALLOCATION_ENABLED
   | -- Customer info tags
