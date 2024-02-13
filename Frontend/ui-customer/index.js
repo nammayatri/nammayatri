@@ -148,7 +148,8 @@ function callInitiateResult () {
 
 window.onMerchantEvent = function (_event, globalPayload) {
   console.log(globalPayload);
-  const clientPaylod = JSON.parse(globalPayload).payload;
+  window.__payload = JSON.parse(globalPayload);
+  const clientPaylod = window.__payload.payload;
   if (_event == "initiate") {
     let clientId = clientPaylod.clientId;
     if (clientId.includes("_ios"))
@@ -184,13 +185,13 @@ window.onMerchantEvent = function (_event, globalPayload) {
       if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
       }else if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
-        purescript.main(makeEvent("CHAT_MESSAGE", ""))();
+        purescript.main(makeEvent("CHAT_MESSAGE", ""))(true)();
       }else if (clientPaylod.viewParamNewIntent && clientPaylod.viewParamNewIntent.slice(0, 8) == "referrer") {
         purescript.onNewIntent(makeEvent("REFERRAL", clientPaylod.viewParamNewIntent.slice(9)))();
       }else if (clientPaylod.viewParam && clientPaylod.viewParam.slice(0, 8) == "referrer") {
         purescript.onNewIntent(makeEvent("REFERRAL_NEW_INTENT", clientPaylod.viewParam.slice(9)))();
       }else {
-        purescript.main(makeEvent("", ""))();
+        purescript.main(makeEvent("", ""))(true)();
       }
     }
   }
