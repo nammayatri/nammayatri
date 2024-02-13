@@ -79,6 +79,7 @@ suffixImageLayout config push =
   ([ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity RIGHT
+  , onClick push $ const SuffixImgOnClick
   ] <> (if config.suffixImageConfig.enableRipple then [rippleColor config.suffixImageConfig.rippleColor] else []))
   [  imageView
       [
@@ -91,7 +92,15 @@ suffixImageLayout config push =
       , padding config.suffixImageConfig.padding
       , accessibilityHint config.suffixImageConfig.accessibilityHint
       , accessibility ENABLE
-      , onClick push $ const SuffixImgOnClick
       , visibility config.suffixImageConfig.visibility
-      ]
+      ],
+      textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text config.suffixText.text
+      , color config.suffixText.color
+      , visibility config.suffixText.visibility
+      , margin config.suffixText.margin
+      , padding config.suffixText.padding
+      ] <> (FontStyle.getFontStyle config.suffixText.textStyle LanguageStyle)
   ]

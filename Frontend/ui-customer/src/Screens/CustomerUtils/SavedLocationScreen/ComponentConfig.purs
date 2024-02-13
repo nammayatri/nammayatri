@@ -18,6 +18,7 @@ module Screens.CustomerUtils.SavedLocationScreen.ComponentConfig where
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
+import Components.ProviderModel as ProviderModel
 import Components.PopUpModal as PopUpModal
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -32,7 +33,10 @@ import Common.Types.App
 import Engineering.Helpers.Commons as EHC
 import Data.Maybe 
 import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
-import Prelude ((<>))
+import Prelude ((<>), not, ($))
+import Mobility.Prelude (boolToVisibility)
+import Resources.Constants as CONS
+import Helpers.Utils as HU
 
 requestDeletePopUp :: ST.SavedLocationScreenState -> PopUpModal.Config 
 requestDeletePopUp state = let 
@@ -89,7 +93,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
-    , width = WRAP_CONTENT
+    , width = MATCH_PARENT
     , background = Color.white900
     , prefixImageConfig {
         height = V 25
@@ -106,6 +110,11 @@ genericHeaderConfig state = let
     , suffixImageConfig {
         visibility = GONE
       }
+    , suffixText {
+        visibility = boolToVisibility $ not state.props.favLocationTab,
+        text = "Edit",
+        margin = MarginRight 10
+    }
     , visibility = titleVisibility
     }
   in genericHeaderConfig'
@@ -141,3 +150,17 @@ errorModalConfig state = let
       }
     }
   in errorModalConfig' 
+
+providerModelConfig :: ST.SavedLocationScreenState -> String -> ProviderModel.Config
+providerModelConfig state providerId = 
+  let provider = HU.getProviderById providerId state.data.currentCityConfig.iopConfig.providersList
+      ourProvider = providerId == CONS.nyProviderId
+      logo = if ourProvider then "ny_ic_ny_network" else "ny_ic_ondc_network"
+      name = maybe "" _.name provider
+  in ProviderModel.config {
+      isActive = false,
+      name = name,
+      id = providerId,
+      logo = logo,
+      pillsVisibility = boolToVisibility ourProvider
+  }

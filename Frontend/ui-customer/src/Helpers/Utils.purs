@@ -26,11 +26,11 @@ import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Pay
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, union)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
-import Data.Either (Either(..), hush)
+import Data.Either (Either(..), hush, either)
 import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
 import Data.Function.Uncurried (Fn2, runFn3, Fn1, Fn3)
@@ -59,7 +59,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
 import Engineering.Helpers.Utils (class Serializable, serialize)
-import Foreign (MultipleErrors, unsafeToForeign)
+import Foreign (MultipleErrors, unsafeToForeign, readString)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Foreign.Generic (decode)
@@ -71,7 +71,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<), (#))
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<), (#), (>>=))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..))
@@ -80,8 +80,8 @@ import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location, MetroStationsList)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
 import Services.API (Prediction, SavedReqLocationAPIEntity(..))
-import Storage (KeyStore(..), getValueToLocalStore)
-import Types.App (GlobalState(..))
+import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
+import Types.App (GlobalState(..), FlowBT)
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Function.Uncurried
 import Styles.Colors as Color
@@ -91,6 +91,12 @@ import Data.Ord
 import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Constants (defaultDensity)
+import Data.Argonaut.Decode.Class as Decode
+import Data.Argonaut.Encode.Class as Encode
+import Data.Argonaut.Parser (jsonParser)
+import Data.Function (const)
+import Data.Argonaut.Decode (decodeJson)
+import MerchantConfig.Types as MRC
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -757,3 +763,18 @@ getDefaultPixelSize size =
   in if os == "IOS" 
     then size
     else ceil $ (toNumber size / pixels) * androidDensity
+
+setFavProviders :: Array String -> FlowBT String Unit
+setFavProviders array = do
+  let savedProviders = getFavProviders FunctionCall
+      concatinatedArr = union savedProviders array
+  setValueToLocalStore FAV_PROVIDERS $ show concatinatedArr
+
+getFavProviders :: LazyCheck -> Array String
+getFavProviders _ =
+  let json = either (const Nothing) Just (jsonParser $ getValueToLocalStore FAV_PROVIDERS)
+      maybeStr = json >>= (hush <<< decodeJson)
+  in fromMaybe [] maybeStr
+
+getProviderById :: String -> Array MRC.Provider -> Maybe MRC.Provider
+getProviderById id arr = find (\provider -> provider.id == id) arr

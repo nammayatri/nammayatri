@@ -310,3 +310,6 @@ ticketCamId = "d8f47b42-50a5-4a97-8dda-e80a3633d7ab"
 
 maxImageUploadInIssueReporting :: Int  
 maxImageUploadInIssueReporting = 3 
+
+nyProviderId :: String
+nyProviderId = "00000-11111"

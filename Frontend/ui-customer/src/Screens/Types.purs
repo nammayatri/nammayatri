@@ -1367,6 +1367,7 @@ type SavedLocationScreenProps =
   {
     showDeleteLocationModel :: Boolean
   , apiRespReceived :: Boolean
+  , favLocationTab :: Boolean
   }
 
 type SavedLocationScreenData =
@@ -1375,6 +1376,8 @@ type SavedLocationScreenData =
   , deleteTag :: Maybe String
   , config :: AppConfig
   , logField :: Object Foreign
+  , currentCityConfig :: MRC.CityConfig
+  , favProviders :: Array String
   }
 
 type DistInfo =
@@ -2332,3 +2335,21 @@ type MetroTicketStatusScreenProps = {
   showShimmer :: Boolean
 , paymentStatus :: PP.PaymentStatus
 }
+ 
+
+type FavProviderScreenState = {
+  data :: FavProviderScreenData ,
+  props :: FavProviderScreenProps
+}
+
+type FavProviderScreenData = {
+  config :: AppConfig,
+  currentCityConfig :: MRC.CityConfig,
+  favProviders :: Array String,
+  selectedProviders :: Array String
+
+} 
+
+type FavProviderScreenProps = {
+  buttonActive :: Boolean
+} 

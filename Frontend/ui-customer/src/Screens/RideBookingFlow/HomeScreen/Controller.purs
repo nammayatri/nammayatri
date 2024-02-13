@@ -126,6 +126,8 @@ import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
+import Resources.Constants as CONS
+import Helpers.Utils as HU
 
 
 instance showAction :: Show Action where
@@ -2608,8 +2610,9 @@ eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
     exit $ GoToNammaSafety state true false
 
 eval (AddFavProvider PopUpModal.OnButton1Click) state = do 
-  void $ pure $ setValueToLocalNativeStore FAV_PROVIDER "00000-11111" -- nyProviderCode
-  continue state { data { iopState { favProvider = "00000-11111"}}}
+  -- void $ pure $ setValueToLocalNativeStore FAV_PROVIDERS CONS.nyProviderId -- nyProviderCode
+  void $ pure $ HU.setFavProviders [CONS.nyProviderId]
+  continue state { data { iopState { favProvider = CONS.nyProviderId}}}
 
 eval (AddFavProvider PopUpModal.OnButton1Click) state = continue state -- TODO // Go to favScreen
 

@@ -43,6 +43,7 @@ import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
 import Foreign.Object (empty)
 import Effect.Unsafe (unsafePerformEffect)
+import Components.ProviderModel as PM
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -87,6 +88,8 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "option_with_html_clicked"
     SavedLocationListAPIResponseAction respList -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "saved_location_list"
     NoAction -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "no_action"
+    ChangeTab _ -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "change_tab"
+    ProviderModelAC _ -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "provider_modal_ac"
 
     
 
@@ -94,6 +97,7 @@ data ScreenOutput = EditLocation LocationListItemState
                   | DeleteLocation String
                   | AddLocation SavedLocationScreenState
                   | GoBack
+                  | EditProviders SavedLocationScreenState
 
 data Action = BackPressed Boolean
             | NoAction
@@ -104,6 +108,8 @@ data Action = BackPressed Boolean
             | ErrorModalAC ErrorModalController.Action
             | PopUpModalAction PopUpModal.Action
             | AfterRender
+            | ChangeTab Boolean
+            | ProviderModelAC PM.Action
 
 eval :: Action -> SavedLocationScreenState -> Eval Action ScreenOutput SavedLocationScreenState
 
@@ -125,6 +131,8 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocation (fromMaybe "" state.data.deleteTag)
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoBack
 
+eval (GenericHeaderAC (GenericHeaderController.SuffixImgOnClick)) state = exit $ EditProviders state
+
 eval (SavedLocationListAPIResponseAction respList) state = do 
   _ <- pure $ EHU.toggleLoader false
   let home = (filter (\x -> (toLower x.tag) == "home") (getSavedLocation (respList ^. _list)))
@@ -144,6 +152,8 @@ eval (PrimaryButtonAC (PrimaryButtonController.OnClick)) state = do
 eval (ErrorModalAC (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick))state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_add_favourite_click_error_model"
   updateAndExit state $ AddLocation state
+
+eval (ChangeTab favLocationTab) state = continue state { props { favLocationTab = favLocationTab}}
 
 eval _ state = continue state
 

@@ -183,6 +183,7 @@ import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
 import Screens.TicketBookingFlow.MetroTicketDetails.Transformer
 import Screens.TicketBookingFlow.MetroMyTickets.Transformer
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
+import Helpers.Utils as HU
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -545,7 +546,7 @@ homeScreenFlow = do
   void $ lift $ lift $ toggleLoader false
   let _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
   let currentCityConfig = getCityConfig currentState.homeScreen.data.config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE")},data {currentCityConfig = currentCityConfig, iopState { favProvider = getValueToLocalStore FAV_PROVIDER}}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE")},data {currentCityConfig = currentCityConfig, iopState { favProvider = getValueToLocalStore FAV_PROVIDERS}}})
   liftFlowBT $ handleUpdatedTerms $ getString STR.TERMS_AND_CONDITIONS_UPDATED
   flow <- UI.homeScreen
   case flow of
@@ -2229,6 +2230,9 @@ myProfileScreenFlow = do
 savedLocationFlow :: FlowBT String Unit
 savedLocationFlow = do
   void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
+  GlobalState globalState <- getState
+  let currentCityConfig = getCityConfig globalState.favProviderScreen.data.config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
+  modifyScreenState $ SavedLocationScreenStateType $ \ savedLocationScreen -> savedLocationScreen {data {currentCityConfig = currentCityConfig, favProviders = HU.getFavProviders FunctionCall}}
   flow <- UI.savedLocationScreen
   (SavedLocationsListRes savedLocationResp )<- Remote.getSavedLocationBT SavedLocationReq
   case flow of
@@ -2301,6 +2305,7 @@ savedLocationFlow = do
     GO_BACK_FROM_SAVED_LOCATION -> do
       _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
       homeScreenFlow
+    PROVIDERS_SCREEN -> favproviderScreenFlow
   pure unit
 
 addNewAddressScreenFlow ::String -> FlowBT String Unit
@@ -3927,3 +3932,13 @@ updateEmergencySettings state = do
     pure $ toast $ getString STR.NAMMA_SAFETY_IS_SET_UP
   else
     pure unit
+
+favproviderScreenFlow :: FlowBT String Unit 
+favproviderScreenFlow = do 
+  GlobalState globalState <- getState
+  let currentCityConfig = getCityConfig globalState.favProviderScreen.data.config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
+      favProviders = HU.getFavProviders FunctionCall
+  modifyScreenState $ FavProviderScreenStateType $ \ favScreen -> favScreen {data {currentCityConfig = currentCityConfig, favProviders = favProviders, selectedProviders = favProviders}}
+  action <- UI.favProviderScreen
+  case action of
+    GO_TO_SAVED_LOCATION -> savedLocationFlow

@@ -358,65 +358,65 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd =
 
 
 ------------------------------------------------------------------------ GetQuotes Function -------------------------------------------------------------------------------------------
--- getQuotes searchId = do
---         headers <- getHeaders "" true
---         withAPIResult (EP.getQuotes searchId) unwrapResponse $ callAPI headers (GetQuotesReq searchId)
---     where
---         unwrapResponse (x) = x
-
-getQuotes searchId = pure $ Right dummyResp
+getQuotes searchId = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getQuotes searchId) unwrapResponse $ callAPI headers (GetQuotesReq searchId)
     where
-    dummyResp = 
-        GetQuotesRes {
-            "quotes" : [],
-            "toLocation" : Nothing,
-            "fromLocation" : SearchReqLocationAPIEntity {
-                            "lat" : 0.0,
-                            "lon" : 0.0
-                            },
-            "estimates" : [
-                EstimateAPIEntity $ {
-                    "agencyCompletedRidesCount": 0,
-                    "agencyName": "Juspay Transporter",
-                    "agencyNumber": "",
-                    "createdAt": "2024-02-13T08:47:02.375117812Z",
-                    "discount": Nothing,
-                    "driversLatLong": [],
-                    "estimateFareBreakup": Nothing,
-                    "estimatedFare": 55,
-                    "estimatedTotalFare": 55,
-                    "id": "e1606c0b-1935-4650-9527-7ad571b6020e",
-                    "nightShiftRate": Nothing,
-                    "specialLocationTag": Nothing,
-                    "totalFareRange": Nothing,
-                    "tripTerms": [],
-                    "vehicleVariant": "AUTO_RICKSHAW",
-                    "providerName" : Just "NammaYatri",
-                    "providerId" : Just "00000-11111",
-                    "valueAddNP" : Just true
-                },
-                EstimateAPIEntity $ {
-                    "agencyCompletedRidesCount": 0,
-                    "agencyName": "Juspay Transporter",
-                    "agencyNumber": "",
-                    "createdAt": "2024-02-13T08:47:02.375117812Z",
-                    "discount": Nothing,
-                    "driversLatLong": [],
-                    "estimateFareBreakup": Nothing,
-                    "estimatedFare": 55,
-                    "estimatedTotalFare": 55,
-                    "id": "e16086c0b-1935-4650-9527-7ad571b6020e",
-                    "nightShiftRate": Nothing,
-                    "specialLocationTag": Nothing,
-                    "totalFareRange": Nothing,
-                    "tripTerms": [],
-                    "vehicleVariant": "SEDAN",
-                    "providerName" : Just "Yarry",
-                    "providerId" : Just "99999-22222",
-                    "valueAddNP" : Just false
-                }
-            ]
-        }
+        unwrapResponse (x) = x
+
+-- getQuotes searchId = pure $ Right dummyResp
+--     where
+--     dummyResp = 
+--         GetQuotesRes {
+--             "quotes" : [],
+--             "toLocation" : Nothing,
+--             "fromLocation" : SearchReqLocationAPIEntity {
+--                             "lat" : 0.0,
+--                             "lon" : 0.0
+--                             },
+--             "estimates" : [
+--                 EstimateAPIEntity $ {
+--                     "agencyCompletedRidesCount": 0,
+--                     "agencyName": "Juspay Transporter",
+--                     "agencyNumber": "",
+--                     "createdAt": "2024-02-13T08:47:02.375117812Z",
+--                     "discount": Nothing,
+--                     "driversLatLong": [],
+--                     "estimateFareBreakup": Nothing,
+--                     "estimatedFare": 55,
+--                     "estimatedTotalFare": 55,
+--                     "id": "e1606c0b-1935-4650-9527-7ad571b6020e",
+--                     "nightShiftRate": Nothing,
+--                     "specialLocationTag": Nothing,
+--                     "totalFareRange": Nothing,
+--                     "tripTerms": [],
+--                     "vehicleVariant": "AUTO_RICKSHAW",
+--                     "providerName" : Just "NammaYatri",
+--                     "providerId" : Just "00000-11111",
+--                     "valueAddNP" : Just true
+--                 },
+--                 EstimateAPIEntity $ {
+--                     "agencyCompletedRidesCount": 0,
+--                     "agencyName": "Juspay Transporter",
+--                     "agencyNumber": "",
+--                     "createdAt": "2024-02-13T08:47:02.375117812Z",
+--                     "discount": Nothing,
+--                     "driversLatLong": [],
+--                     "estimateFareBreakup": Nothing,
+--                     "estimatedFare": 55,
+--                     "estimatedTotalFare": 55,
+--                     "id": "e16086c0b-1935-4650-9527-7ad571b6020e",
+--                     "nightShiftRate": Nothing,
+--                     "specialLocationTag": Nothing,
+--                     "totalFareRange": Nothing,
+--                     "tripTerms": [],
+--                     "vehicleVariant": "SEDAN",
+--                     "providerName" : Just "Yarry",
+--                     "providerId" : Just "99999-22222",
+--                     "valueAddNP" : Just false
+--                 }
+--             ]
+--         }
 ------------------------------------------------------------------------ RideConfirm Function ---------------------------------------------------------------------------------------
 rideConfirm quoteId = do
         headers <- getHeaders "" false

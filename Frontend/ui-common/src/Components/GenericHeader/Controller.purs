@@ -39,6 +39,7 @@ type Config =
   , textConfig :: TextConfig
   , suffixImageConfig :: ImageConfig
   , visibility :: Visibility
+  , suffixText :: SuffixText
   }
 
 type ImageConfig =
@@ -65,6 +66,16 @@ type TextConfig =
   , textStyle :: Style
   , accessibilityHint :: String
   }
+
+type SuffixText = {
+  visibility :: Visibility
+  , text :: String
+  , margin :: Margin
+  , color :: String
+  , textStyle :: Style
+  , accessibilityHint :: String
+  , padding :: Padding
+}
 
 config :: Config
 config = 
@@ -114,6 +125,15 @@ config =
     , enableRipple : false
     , rippleColor : Color.rippleShade
     }
+  , suffixText : {
+      text : ""
+    , textStyle : Heading3
+    , margin : Margin 0 0 0 0
+    , color : Color.blue900
+    , accessibilityHint : ""
+    , visibility : GONE
+    , padding : Padding 2 2 2 2
+  }
   , visibility : VISIBLE
 }
 
@@ -165,5 +185,14 @@ merchantConfig =
     , enableRipple : false
     , rippleColor : Color.rippleShade
     }
+  , suffixText : {
+      text : ""
+    , textStyle : Body1
+    , margin : Margin 0 0 0 0
+    , color : Color.blue900
+    , accessibilityHint : ""
+    , visibility : GONE
+    , padding : Padding 2 2 2 2
+  }
   , visibility : VISIBLE
 }

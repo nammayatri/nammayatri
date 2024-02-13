@@ -52,9 +52,10 @@ import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, FavProviderScreenState) 
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
+import Screens.FavProviderScreen.ScreenData as FavProviderScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
 import Foreign (Foreign)
@@ -108,6 +109,7 @@ newtype GlobalState = GlobalState {
   , metroMyTicketsScreen :: MetroMyTicketsScreenState
   , metroTicketBookingScreen :: MetroTicketBookingScreenState
   , metroTicketStatusScreen :: MetroTicketStatusScreenState
+  , favProviderScreen :: FavProviderScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -148,6 +150,7 @@ defaultGlobalState = GlobalState {
   , globalProps : defaultGlobalProps
   , metroTicketBookingScreen : MetroTicketBookingScreenData.initData
   , metroTicketStatusScreen : MetroTicketStatusScreenData.initData
+  , favProviderScreen : FavProviderScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -248,7 +251,11 @@ data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectL
 
 data PERMISSION_SCREEN_OUTPUT = REFRESH_INTERNET | TURN_ON_GPS | TURN_ON_INTERNET
 
-data SAVED_LOCATION_SCREEN_OUTPUT = ADD_NEW_LOCATION SavedLocationScreenState | DELETE_LOCATION String | EDIT_LOCATION LocationListItemState | GO_BACK_FROM_SAVED_LOCATION
+data SAVED_LOCATION_SCREEN_OUTPUT = ADD_NEW_LOCATION SavedLocationScreenState 
+                                    | DELETE_LOCATION String 
+                                    | EDIT_LOCATION LocationListItemState 
+                                    | GO_BACK_FROM_SAVED_LOCATION
+                                    | PROVIDERS_SCREEN
 
 data ADD_NEW_ADDRESS_SCREEN_OUTPUT =  SEARCH_ADDRESS String AddNewAddressScreenState
                                     | ADD_LOCATION AddNewAddressScreenState
@@ -304,6 +311,8 @@ data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicke
                                  | GO_TO_METRO_ROUTE_MAP
                                  | GO_TO_HOME_FROM_METRO_TICKET
                                  | REFRESH_METRO_TICKET_SCREEN MetroTicketBookingScreenState
+data FAV_PROVIDER_SCREEN_OUTPUT = GO_TO_SAVED_LOCATION
+
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
@@ -338,3 +347,4 @@ data ScreenType =
   | MetroMyTicketsScreenStateType (MetroMyTicketsScreenState -> MetroMyTicketsScreenState)
   | MetroTicketBookingScreenStateType (MetroTicketBookingScreenState -> MetroTicketBookingScreenState)
   | MetroTicketStatusScreenStateType (MetroTicketStatusScreenState -> MetroTicketStatusScreenState)
+  | FavProviderScreenStateType (FavProviderScreenState -> FavProviderScreenState)

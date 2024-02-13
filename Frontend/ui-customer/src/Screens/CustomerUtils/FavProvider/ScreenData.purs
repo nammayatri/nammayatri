@@ -13,27 +13,21 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.SavedLocationScreen.ScreenData where
+module Screens.FavProviderScreen.ScreenData where
 
-import Screens.Types(SavedLocationScreenState)
-import Data.Maybe(Maybe(..))
-import ConfigProvider
-import Foreign.Object (empty)
+import Screens.Types (FavProviderScreenState)
 import MerchantConfig.DefaultConfig as MRC
+import ConfigProvider
 
-initData :: SavedLocationScreenState
-initData = {
-  data: {
-    savedLocations : []
-  , deleteTag : Nothing
-  , config : getAppConfig appConfig
-  , logField : empty
-  , currentCityConfig : MRC.defaultCityConfig
-  , favProviders : []
+initData :: FavProviderScreenState 
+initData = 
+  { data : {
+    config : getAppConfig appConfig,
+    currentCityConfig : MRC.defaultCityConfig,
+    favProviders : [],
+    selectedProviders : []
   }
   , props : {
-      showDeleteLocationModel : false
-    , apiRespReceived : false
-    , favLocationTab : true
+      buttonActive : false
   }
-}
+  } 

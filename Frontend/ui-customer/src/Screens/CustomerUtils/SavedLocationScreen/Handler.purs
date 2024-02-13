@@ -40,3 +40,6 @@ savedLocationScreen = do
     GoBack -> do
      _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
      App.BackT $ App.NoBack <$> (pure $ GO_BACK_FROM_SAVED_LOCATION)
+    EditProviders updatedState -> do
+      modifyScreenState $ SavedLocationScreenStateType (\_ → updatedState)
+      App.BackT $  App.BackPoint <$> ( pure $ PROVIDERS_SCREEN)

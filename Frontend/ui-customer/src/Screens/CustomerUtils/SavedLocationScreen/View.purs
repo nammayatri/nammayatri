@@ -22,6 +22,7 @@ import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Components.ProviderModel as PM
 import Components.SavedLocationCard as SavedLocationCard
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
@@ -46,13 +47,17 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&))
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility, weight, fillViewport, imageView, imageWithFallback)
 import Screens.SavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.API (SavedLocationReq(..), SavedLocationsListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
+import Mobility.Prelude (boolToVisibility)
+import PrestoDOM.Animation as PrestoAnim
+import Animation (fadeIn)
+import Resources.Constants as CONS
 
 screen :: ST.SavedLocationScreenState -> GlobalState -> Screen Action ST.SavedLocationScreenState ScreenOutput
 screen initialState st =
@@ -95,6 +100,7 @@ view push state =
         ][]
       else
         linearLayout[][]
+    , tabView state push
     , frameLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -102,19 +108,15 @@ view push state =
           [ height MATCH_PARENT
           , width MATCH_PARENT
           , orientation VERTICAL
-          ][  linearLayout
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              ][ savedLocationsView push state
-                ]
+          ][  savedLocationsView push state
+            , favProvidersList state push
             , linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , orientation HORIZONTAL
               , background Color.white900
               , alignParentBottom "true,-1"
-              , visibility if (DA.length state.data.savedLocations )/= 0 && state.props.apiRespReceived then VISIBLE else GONE
+              , visibility if (DA.length state.data.savedLocations )/= 0 && state.props.apiRespReceived && state.props.favLocationTab then VISIBLE else GONE
               ][  PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
             ]
         , linearLayout
@@ -134,9 +136,12 @@ view push state =
 
 savedLocationsView :: forall w.(Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 savedLocationsView push state =
+  PrestoAnim.animationSet [ fadeIn state.props.favLocationTab] $
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
+  , background Color.white900
+  , visibility $ boolToVisibility state.props.favLocationTab
   , padding (PaddingBottom 85)
   ][  scrollView
       [ height MATCH_PARENT
@@ -149,7 +154,6 @@ savedLocationsView push state =
       ][linearLayout
           [ width MATCH_PARENT
           , orientation VERTICAL
-          , margin (MarginTop 8)
           , height WRAP_CONTENT
           ](map (\item -> SavedLocationCard.view (push <<< SavedLocationCardAction)({
                 cardType : Just $ show $ case (DS.toLower item.tag) of
@@ -189,6 +193,59 @@ savedLocationsView push state =
           ][]
         ]]
     ]
+
+tabView :: forall w. ST.SavedLocationScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+tabView state push = 
+  let favLocationTab = state.props.favLocationTab
+  in linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , cornerRadius 24.0 
+    , background Color.grey700
+    , padding $ Padding 4 4 4 4
+    , margin $ Margin 16 12 16 0
+    , visibility $ boolToVisibility state.data.currentCityConfig.iopConfig.enable
+    , gravity CENTER
+    ][  textView $
+        [ height WRAP_CONTENT
+        , weight 1.0 
+        , background if favLocationTab then Color.black900 else Color.grey700
+        , text "Destinations"
+        , cornerRadius 24.0 
+        , padding $ PaddingVertical 6 8
+        , onClick push $ const $ ChangeTab true
+        , gravity CENTER
+        , color if favLocationTab then Color.white900 else Color.black700
+        ] <> FontStyle.tags TypoGraphy
+      , textView $
+        [ height WRAP_CONTENT
+        , weight 1.0 
+        , gravity CENTER
+        , cornerRadius 24.0  
+        , onClick push $ const $ ChangeTab false
+        , padding $ PaddingVertical 6 8
+        , text "Providers"
+        , background if not favLocationTab then Color.black900 else Color.grey700
+        , color if not favLocationTab then Color.white900 else Color.black700
+        ] <> FontStyle.tags TypoGraphy
+    ]
+
+favProvidersList :: forall w. ST.SavedLocationScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+favProvidersList state push = 
+  PrestoAnim.animationSet [ fadeIn (not state.props.favLocationTab)] $
+  scrollView
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.white900
+  , visibility $ boolToVisibility $ not state.props.favLocationTab
+  , margin $ MarginHorizontal 16 16
+  , fillViewport true
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ](map (\element -> PM.view (push <<< ProviderModelAC) (providerModelConfig state element) ) state.data.favProviders)
+  ]
 
 getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> Flow GlobalState Unit
 getSavedLocationsList action push state = do
