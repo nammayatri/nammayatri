@@ -966,6 +966,7 @@ type HomeScreenStateProps =
   , showRentalInfo :: Boolean
   , maxDateBooking :: Int
   , showIntercityUnserviceablePopUp :: Boolean
+  , showNormalRideNotSchedulablePopUp :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

@@ -948,9 +948,9 @@ data Action = NoAction
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (IntercitySpecialZone PopUpModal.DismissPopup) state = continue state
 
-eval (IntercitySpecialZone PopUpModal.OnButton1Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false}}
+eval (IntercitySpecialZone PopUpModal.OnButton1Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}}
 
-eval (IntercitySpecialZone PopUpModal.OnButton2Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false}}
+eval (IntercitySpecialZone PopUpModal.OnButton2Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}}
 
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
   continue state 

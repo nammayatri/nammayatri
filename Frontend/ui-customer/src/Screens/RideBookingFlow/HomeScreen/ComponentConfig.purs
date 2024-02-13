@@ -1926,7 +1926,7 @@ intercityInSpecialZonePopupConfig state = let
       margin = MarginTop 16
       },
     secondaryText { 
-      text = "Locations within special zone are not eligible for intercity rides", -- TODO-codex : Add Translation
+      text = if state.props.showNormalRideNotSchedulablePopUp then "Scheduling is only allowed in Intercity or Rental Rides" else "Locations within special zone are not eligible for intercity rides", -- TODO-codex : Add Translation
       margin = MarginTop 4
       },
     option1 {

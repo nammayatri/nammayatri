@@ -425,7 +425,7 @@ view push state =
             , if state.props.showRentalInfo then rentalInfoPopUp push state else emptyTextView state
             , if showSafetyAlertPopup then safetyAlertPopup push state else  emptyTextView state
             , if state.props.showShareRide then shareRidePopup push state else emptyTextView state
-            , if state.props.showIntercityUnserviceablePopUp then intercityInSpecialZonePopupView push state else emptyTextView state
+            , if state.props.showIntercityUnserviceablePopUp || state.props.showNormalRideNotSchedulablePopUp then intercityInSpecialZonePopupView push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT

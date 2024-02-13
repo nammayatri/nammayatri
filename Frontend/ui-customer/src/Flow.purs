@@ -232,28 +232,32 @@ currentFlowStatus = do
   case flowStatus ^. _currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
-    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> do 
-      updateLocalStage ConfirmingQuotes
-      hideLoaderFlow
-      case (getFlowStatusData "LazyCheck") of
-            Just (FlowStatusData flowStatusData) -> do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
-                props{ sourceLat = flowStatusData.source.lat
-                     , sourceLong = flowStatusData.source.lng
-                     , destinationLat = flowStatusData.destination.lat
-                     , destinationLong = flowStatusData.destination.lng
-                     , currentStage = ConfirmingQuotes
-                     , rideRequestFlow = true
-                     , selectedQuote = Nothing
-                     , bookingId = currentStatus.bookingId
-                     , city = getCityNameFromCode flowStatusData.source.city}
-                , data { source = flowStatusData.source.place
-                       , destination = flowStatusData.destination.place
-                       , sourceAddress = flowStatusData.sourceAddress
-                       , destinationAddress = flowStatusData.destinationAddress }
-                })
-            Nothing -> updateFlowStatus SEARCH_CANCELLED
-      homeScreenFlow
+    WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> do
+      let currentTimeToValid = EHC.getUTCAfterNSeconds (getCurrentUTC "") 1800
+          _ = spy "asdfjkashjkdfs" currentTimeToValid
+      if ((unsafePerformEffect $ EHC.compareUTCDate currentStatus.validTill currentTimeToValid) < "300000") then do  
+        updateLocalStage ConfirmingQuotes
+        hideLoaderFlow
+        case (getFlowStatusData "LazyCheck") of
+              Just (FlowStatusData flowStatusData) -> do
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
+                  props{ sourceLat = flowStatusData.source.lat
+                      , sourceLong = flowStatusData.source.lng
+                      , destinationLat = flowStatusData.destination.lat
+                      , destinationLong = flowStatusData.destination.lng
+                      , currentStage = ConfirmingQuotes
+                      , rideRequestFlow = true
+                      , selectedQuote = Nothing
+                      , bookingId = currentStatus.bookingId
+                      , city = getCityNameFromCode flowStatusData.source.city}
+                  , data { source = flowStatusData.source.place
+                        , destination = flowStatusData.destination.place
+                        , sourceAddress = flowStatusData.sourceAddress
+                        , destinationAddress = flowStatusData.destinationAddress }
+                  })
+              Nothing -> updateFlowStatus SEARCH_CANCELLED
+        homeScreenFlow
+      else pure unit
     RIDE_ASSIGNED _                         -> checkRideStatus true
     _                                       -> checkRideStatus false
   hideLoaderFlow
@@ -576,16 +580,23 @@ homeScreenFlow = do
                                           {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
       (ServiceabilityRes sourceServiceabilityRespDest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.destinationLat state.props.destinationLong) DESTINATION -- TODO-codex : Refactor
       let _ = spy "safasfa" sourceServiceabilityRespDest
+          _ = spy "safasfa" sourceServiceabilityResp
           _ = spy (fromMaybe "" sourceServiceabilityRespDest.currentCity) (fromMaybe "1" sourceServiceabilityResp.currentCity)
-          isIntercity = (fromMaybe "1" sourceServiceabilityResp.currentCity) /= (fromMaybe "" sourceServiceabilityRespDest.currentCity)
+          isIntercity = any (_ == "*") [(fromMaybe "" sourceServiceabilityResp.currentCity), (fromMaybe "" sourceServiceabilityRespDest.currentCity)]
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{rideType = if isIntercity then RideType.INTERCITY else RideType.NORMAL_RIDE}})
       when (isJust sourceServiceabilityResp.specialLocation && (fromMaybe "1" sourceServiceabilityResp.currentCity) /= (fromMaybe "" sourceServiceabilityRespDest.currentCity)) do
         -- updateLocalStage SearchLocationModel
         -- setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{showIntercityUnserviceablePopUp = true}})
+
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{props{showIntercityUnserviceablePopUp = true}})
         -- modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{props{focussedTextField = Just SearchLocPickup, locUnserviceable = true}, data{locationList = globalState.globalProps.cachedSearches}})
         homeScreenFlow
         -- searchLocationFlow
+      let _ = spy "safadsf" state.data.startTimeUTC
+          _ = spy "sdgsagd" isIntercity
+      when (state.data.startTimeUTC /= "" && not isIntercity) do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{props{showNormalRideNotSchedulablePopUp = true}})
+        homeScreenFlow
       let startTimeUTC = if (state.data.rideType == RideType.INTERCITY && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
       (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC)
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 

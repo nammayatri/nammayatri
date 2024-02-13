@@ -316,6 +316,7 @@ initData = {
     , stopLoc : Nothing
     , showRentalInfo : false
     , showIntercityUnserviceablePopUp : false
+    , showNormalRideNotSchedulablePopUp : false
     }
 }
 
