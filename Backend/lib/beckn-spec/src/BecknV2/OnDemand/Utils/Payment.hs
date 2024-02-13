@@ -62,7 +62,7 @@ mkPayment txnCity collectedBy paymentStatus mAmount mTxnId mPaymentParams mSettl
       paymentType = encodeToText' Spec.PRE_ORDER
     }
   where
-    anyTrue = any (== True)
+    anyTrue = elem True
 
 mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe HighPrecMoney -> Spec.PaymentParams
 mkPaymentParams mPaymentParams _mTxnId mAmount =
