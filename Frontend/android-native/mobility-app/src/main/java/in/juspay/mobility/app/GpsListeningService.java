@@ -99,7 +99,8 @@ public class GpsListeningService extends Service {
 
     public void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(channelId, "GPS_SERVICE", NotificationManager.IMPORTANCE_MIN);
+            NotificationChannel channel = new NotificationChannel(channelId, "GPS Service", NotificationManager.IMPORTANCE_MIN);
+            channel.setGroup("3_services");
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }

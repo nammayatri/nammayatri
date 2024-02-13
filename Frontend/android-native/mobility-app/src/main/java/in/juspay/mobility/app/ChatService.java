@@ -382,10 +382,11 @@ public class ChatService extends Service {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "Message";
+            CharSequence name = "Chat Message Service";
             String description = "Service Notification Channel";
             NotificationChannel channel = new NotificationChannel("Message", name, NotificationManager.IMPORTANCE_MIN);
             channel.setDescription(description);
+            channel.setGroup("3_services");
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }

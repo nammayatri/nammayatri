@@ -19,6 +19,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
+import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
@@ -69,10 +70,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.Vector;
@@ -308,8 +311,13 @@ public class MainActivity extends AppCompatActivity {
         initApp(viewParam, deepLinkJson);
 
         mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
+        initNotificationChannel();
         CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(context);
-        CleverTapAPI.createNotificationChannel(context,clientId,clientId,"notification",NotificationManager.IMPORTANCE_MAX,true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CleverTapAPI.createNotificationChannel(context,clientId,"Promotion","Notifications Related to promotion",NotificationManager.IMPORTANCE_MAX, "4_promotional",true);
+        }else{
+            CleverTapAPI.createNotificationChannel(context,clientId,"Promotion","Notifications Related to promotion",NotificationManager.IMPORTANCE_MAX,true);
+        }
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
         CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
@@ -326,7 +334,7 @@ public class MainActivity extends AppCompatActivity {
         }
         registerCallBack();
         inAppNotification = new InAppNotification(this);
-        initNotificationChannel();
+
         if (BuildConfig.DEBUG) {
             FirebaseMessaging.getInstance().subscribeToTopic("test");
         }
@@ -437,13 +445,37 @@ public class MainActivity extends AppCompatActivity {
             try {
                 notificationManager.deleteNotificationChannel("RINGING_ALERT");
                 notificationManager.deleteNotificationChannel("TRIP_STARTED");
+                notificationManager.deleteNotificationChannel("General");
+                notificationManager.deleteNotificationChannel("FLOATING_NOTIFICATION");
             } catch(Exception e) {
                 System.out.println("Notification Channel doesn't exists");
             }
         }
 
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.FLOATING_NOTIFICATION);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            NotificationChannelGroup safetyGroup = new NotificationChannelGroup("1_safety", "Enhanced Safety");
+            safetyGroup.setDescription("Notifications related to Safety");
+            notificationManager.createNotificationChannelGroup(safetyGroup);
+
+            NotificationChannelGroup rideRelatedGroup = new NotificationChannelGroup("2_ride_related", "Essential - Ride related");
+            rideRelatedGroup.setDescription("Notifications related to ride starts, end");
+            notificationManager.createNotificationChannelGroup(rideRelatedGroup);
+
+            NotificationChannelGroup serviceGroup = new NotificationChannelGroup("3_services", "Services");
+            serviceGroup.setDescription("Notifications related to Services");
+            notificationManager.createNotificationChannelGroup(serviceGroup);
+
+            NotificationChannelGroup promotionalGroup = new NotificationChannelGroup("4_promotional", "Promotional");
+            promotionalGroup.setDescription("Notifications related to promotional");
+            notificationManager.createNotificationChannelGroup(promotionalGroup);
+        }
+
+
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_QUOTE_INCOMING);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_ASSIGNMENT);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.REALLOCATE_PRODUCT);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.GENERAL_NOTIFICATION);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.RIDE_STARTED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
