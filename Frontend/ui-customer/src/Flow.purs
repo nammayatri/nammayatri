@@ -857,54 +857,72 @@ homeScreenFlow = do
       homeScreenFlow
     CONFIRM_RIDE state -> do
       pure $ enableMyLocation false
-      let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == SearchResultType.QUOTES 
-                            then state.data.specialZoneSelectedQuote 
-                          else if state.data.currentSearchResultType == SearchResultType.INTERCITY 
-                            then state.data.selectedQuoteId
-                          else state.props.selectedQuote
-          currentStage = if state.data.rideType == RideType.INTERCITY then ConfirmingQuotes else ConfirmingRide
-      if isJust selectedQuote then do
-        updateLocalStage currentStage
-        response  <- lift $ lift $ Remote.rideConfirm (fromMaybe "" selectedQuote)
-        case response of
-          Right (ConfirmRes resp) -> do
-            let bookingId = resp.bookingId
-            if currentStage == ConfirmingQuotes then do
-              let diffInSeconds = unsafePerformEffect $ EHC.compareUTCDate (if state.data.startTimeUTC == "" then (getCurrentUTC "") else state.data.startTimeUTC) (getCurrentUTC "" )
-                  -- isNow = true
-                  -- Backend-Fix : Intercity schedule
-                  isNow = ((fromMaybe 0 (INT.fromString diffInSeconds ))< 60 * 30 * 1000)
-              if isNow then enterRentalRideSearchFlow bookingId
-              else rideScheduledFlow
-            else do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> 
-                homeScreen
-                  { props
-                      { currentStage = currentStage
-                      , bookingId = bookingId
-                      , isPopUp = NoPopUp
-                      }
-                  })
-              homeScreenFlow
-          Left err  -> do
-            if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") 
-            then pure $ toast (getString STR.ERROR_OCCURED_TRY_AGAIN) 
-            else pure unit
-            setValueToLocalStore AUTO_SELECTING "false"
-            updateLocalStage QuoteList
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> 
-              homeScreen
-                { props
-                    { currentStage = QuoteList
-                    , selectedQuote = Nothing
-                    , expiredQuotes = snoc state.props.expiredQuotes (fromMaybe "" state.props.selectedQuote)
-                    }
-                , data 
-                    { quoteListModelState = []
-                    }
-                })
-            homeScreenFlow
-      else homeScreenFlow
+      let selectedQuote = getSelectedQuote state
+          currentStage = getCurrentStage state
+      case selectedQuote of
+        Just quote -> do
+          updateLocalStage currentStage
+          handleRideConfirmation quote currentStage state
+        Nothing -> homeScreenFlow
+      where
+        getSelectedQuote :: HomeScreenState -> Maybe String
+        getSelectedQuote state = 
+          if state.props.isSpecialZone && state.data.currentSearchResultType == SearchResultType.QUOTES 
+            then state.data.specialZoneSelectedQuote 
+          else if state.data.currentSearchResultType == SearchResultType.INTERCITY 
+            then state.data.selectedQuoteId
+          else state.props.selectedQuote
+
+        getCurrentStage :: HomeScreenState -> Stage
+        getCurrentStage state = 
+          if state.data.rideType == RideType.INTERCITY then ConfirmingQuotes else ConfirmingRide
+
+        handleRideConfirmation :: String -> Stage -> HomeScreenState -> FlowBT String Unit
+        handleRideConfirmation quote currentStage state = do
+          response  <- lift $ lift $ Remote.rideConfirm quote
+          case response of
+            Right (ConfirmRes resp) -> do
+              let bookingId = resp.bookingId
+              if currentStage == ConfirmingQuotes then handleConfirmingQuotes bookingId state
+              else handleConfirmingRide bookingId currentStage
+            Left err  -> do
+                  if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") 
+                  then pure $ toast (getString STR.ERROR_OCCURED_TRY_AGAIN) 
+                  else pure unit
+                  setValueToLocalStore AUTO_SELECTING "false"
+                  updateLocalStage QuoteList
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> 
+                    homeScreen
+                      { props
+                          { currentStage = QuoteList
+                          , selectedQuote = Nothing
+                          , expiredQuotes = snoc state.props.expiredQuotes (fromMaybe "" state.props.selectedQuote)
+                          }
+                      , data 
+                          { quoteListModelState = []
+                          }
+                      })
+                  homeScreenFlow
+
+        handleConfirmingQuotes :: String -> HomeScreenState -> FlowBT String Unit
+        handleConfirmingQuotes bookingId state = do
+          let diffInSeconds = unsafePerformEffect $ EHC.compareUTCDate (if state.data.startTimeUTC == "" then (getCurrentUTC "") else state.data.startTimeUTC) (getCurrentUTC "" )
+              isNow = ((fromMaybe 0 (INT.fromString diffInSeconds ))< 60 * 30 * 1000)
+          if isNow then enterRentalRideSearchFlow bookingId
+          else rideScheduledFlow
+
+        handleConfirmingRide :: String -> Stage -> FlowBT String Unit
+        handleConfirmingRide bookingId currentStage = do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> 
+            homeScreen
+              { props
+                  { currentStage = currentStage
+                  , bookingId = bookingId
+                  , isPopUp = NoPopUp
+                  }
+              })
+          homeScreenFlow
+
     ONGOING_RIDE state -> do
       setValueToLocalStore TRACKING_ENABLED "True"
       setValueToLocalStore TRACKING_DRIVER "False"
