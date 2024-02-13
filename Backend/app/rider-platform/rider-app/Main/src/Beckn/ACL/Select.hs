@@ -18,6 +18,7 @@ module Beckn.ACL.Select (buildSelectReq, buildSelectReqV2) where
 import Beckn.ACL.Common (castVariant, mkLocation)
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Beckn.Types.Core.Taxi.Select as Select
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
@@ -232,7 +233,7 @@ mkCustomerTipTagGroup res =
       tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just Tags.CUSTOMER_TIP_INFO,
+            { descriptorCode = Just $ show Tags.CUSTOMER_TIP_INFO,
               descriptorName = Just "Customer Tip Info",
               descriptorShortDesc = Nothing
             },
@@ -242,7 +243,7 @@ mkCustomerTipTagGroup res =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
-                      { descriptorCode = (\_ -> Just Tags.CUSTOMER_TIP) =<< res.customerExtraFee,
+                      { descriptorCode = (\_ -> Just $ show Tags.CUSTOMER_TIP) =<< res.customerExtraFee,
                         descriptorName = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
                         descriptorShortDesc = Nothing
                       },
@@ -259,7 +260,7 @@ mkAutoAssignEnabledTagGroup res =
       tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just Tags.AUTO_ASSIGN_ENABLED,
+            { descriptorCode = Just $ show Tags.AUTO_ASSIGN_ENABLED,
               descriptorName = Just "Auto Assign Enabled",
               descriptorShortDesc = Nothing
             },
@@ -269,7 +270,7 @@ mkAutoAssignEnabledTagGroup res =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
-                      { descriptorCode = Just Tags.IS_AUTO_ASSIGN_ENABLED,
+                      { descriptorCode = Just $ show Tags.IS_AUTO_ASSIGN_ENABLED,
                         descriptorName = Just "Auto Assign Enabled",
                         descriptorShortDesc = Nothing
                       },

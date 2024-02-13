@@ -134,7 +134,7 @@ mkAgentTagsV2 quote isValueAddNP
     Just $
       Spec.TagGroup
         { tagGroupDisplay = Just False,
-          tagGroupDescriptor = Just $ Spec.Descriptor (Just Tags.AGENT_INFO) (Just "Agent Info") Nothing,
+          tagGroupDescriptor = Just $ Spec.Descriptor (Just $ show Tags.AGENT_INFO) (Just "Agent Info") Nothing,
           tagGroupList = Just $ mkAgentTagList quote
         }
 
@@ -145,7 +145,7 @@ mkAgentTagList quote =
         tagDescriptor =
           Just
             Spec.Descriptor
-              { descriptorCode = (\_ -> Just Tags.Rating) =<< quote.driverRating,
+              { descriptorCode = (\_ -> Just $ show Tags.RATING) =<< quote.driverRating,
                 descriptorName = (\_ -> Just "Agent Rating") =<< quote.driverRating,
                 descriptorShortDesc = Nothing
               },
@@ -156,7 +156,7 @@ mkAgentTagList quote =
         tagDescriptor =
           Just
             Spec.Descriptor
-              { descriptorCode = Just Tags.DURATION_TO_PICKUP_IN_S,
+              { descriptorCode = Just $ show Tags.DURATION_TO_PICKUP_IN_S,
                 descriptorName = Just "Agent Duration to Pickup in Seconds",
                 descriptorShortDesc = Nothing
               },
@@ -195,7 +195,7 @@ mkItemTagsV2 quote isValueAddNP
     Just $
       Spec.TagGroup
         { tagGroupDisplay = Just False,
-          tagGroupDescriptor = Just $ Spec.Descriptor (Just Tags.GENERAL_INFO) (Just "General Info") Nothing,
+          tagGroupDescriptor = Just $ Spec.Descriptor (Just $ show Tags.GENERAL_INFO) (Just "General Info") Nothing,
           tagGroupList = Just $ mkItemTagList quote
         }
 
@@ -206,7 +206,7 @@ mkItemTagList quote =
         tagDescriptor =
           Just
             Spec.Descriptor
-              { descriptorCode = (\_ -> Just Tags.SPECIAL_LOCATION_TAG) =<< quote.specialLocationTag,
+              { descriptorCode = (\_ -> Just $ show Tags.SPECIAL_LOCATION_TAG) =<< quote.specialLocationTag,
                 descriptorName = (\_ -> Just "Special Zone Tag") =<< quote.specialLocationTag,
                 descriptorShortDesc = Nothing
               },
@@ -217,7 +217,7 @@ mkItemTagList quote =
         tagDescriptor =
           Just
             Spec.Descriptor
-              { descriptorCode = Just Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
+              { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
                 descriptorName = Just "Distance To Nearest Driver In Meters",
                 descriptorShortDesc = Nothing
               },
