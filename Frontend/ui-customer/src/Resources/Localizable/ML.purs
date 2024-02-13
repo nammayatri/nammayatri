@@ -1018,3 +1018,6 @@ getML stringKey =
         PROCEED -> "പുരോഗമിക്കുക"
         SCHEDULE_RIDE_AVAILABLE -> "ഇപ്പോൾ മാത്രമേ 30 മിനിറ്റിൽ ലഭ്യമായി റൈഡ് ഷെഡ്യൂൽ ചെയ്യാവുന്നു"
         RENTAL_RIDE_UNTIL -> "നിങ്ങൾ രെന്റൽ റൈഡിൽ ഉണ്ടെന്ന്"
+        EXTRA_TIME_CHARGES -> "അതിരിക്കാനുള്ള സമയ ചാർജ്"
+        DIST_BASED_CHARGES -> "ദൂരം അടിസ്ഥാന ചാർജുകൾ"
+        TIME_BASED_CHARGES ->  "സമയ അടിസ്ഥാന ചാർജുകൾ"

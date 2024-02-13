@@ -1002,3 +1002,6 @@ getFR stringKey =
         PROCEED -> "Procéder"
         SCHEDULE_RIDE_AVAILABLE -> "Programme de trajet disponible seulement 30 minutes à partir de maintenant"
         RENTAL_RIDE_UNTIL -> "Vous êtes en location jusqu'à"
+        EXTRA_TIME_CHARGES -> "Frais de temps supplémentaire"
+        DIST_BASED_CHARGES -> "Frais basés sur la distance"
+        TIME_BASED_CHARGES -> "Frais basés sur le temps"

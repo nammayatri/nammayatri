@@ -225,6 +225,9 @@ getFaresList fares baseDistance =
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
                       "SGST" -> getEN PLATFORM_GST
                       "CUSTOMER_CANCELLATION_DUES" -> getEN CUSTOMER_CANCELLATION_DUES
+                      "DIST_BASED_FARE" -> getEN DIST_BASED_CHARGES
+                      "TIME_BASED_FARE" -> getEN TIME_BASED_CHARGES
+                      "EXTRA_TIME_FARE" -> getEN EXTRA_TIME_CHARGES
                       _ -> getEN BASE_FARES
           }
     )

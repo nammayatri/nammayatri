@@ -1002,3 +1002,6 @@ getKN stringKey =
         PROCEED -> "ಮುಂದುವರಿಯಿರಿ"
         SCHEDULE_RIDE_AVAILABLE -> "ಸ್ಕೆಡ್ಯೂಲ್ ರೈಡ್ ಮಾತ್ರ ಇಪ್ಪತ್ತು ನಿಮಿಷಗಳಲ್ಲಿ ಲಭ್ಯವಿದೆ"
         RENTAL_RIDE_UNTIL -> "ನೀವು ಬಿಕ್ಕಿ ಸವಾರಿಯ ಮೇಲೆ ಇರುತ್ತೀರಿ"
+        EXTRA_TIME_CHARGES -> "ಅತಿರಿಕ್ತ ಸಮಯ ಶುಲ್ಕಗಳು"
+        DIST_BASED_CHARGES -> "ದೂರದ ಆಧಾರಿತ ಶುಲ್ಕಗಳು"
+        TIME_BASED_CHARGES -> "ಸಮಯದ ಆಧಾರಿತ ಶುಲ್ಕಗಳು"

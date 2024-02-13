@@ -1000,3 +1000,6 @@ getHI stringKey =
         PROCEED -> "आगे बढ़ें"
         SCHEDULE_RIDE_AVAILABLE -> "स्केड्यूल राइड केवल 30 मिनट के बाद उपलब्ध है"
         RENTAL_RIDE_UNTIL -> "आप रेंटल राइड पर हैं जब तक"
+        EXTRA_TIME_CHARGES -> "अतिरिक्त समय शुल्क"
+        DIST_BASED_CHARGES -> "दूरी आधारित शुल्क"
+        TIME_BASED_CHARGES -> "समय आधारित शुल्क"

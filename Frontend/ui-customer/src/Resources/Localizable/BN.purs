@@ -1000,3 +1000,6 @@ getBN stringKey =
         PROCEED -> "এগিয়ে যান"
         SCHEDULE_RIDE_AVAILABLE -> "রাইড সময় এখন থেকে মাত্র ৩০ মিনিট পরে উপলব্ধ"
         RENTAL_RIDE_UNTIL -> "আপনি একটি রেন্টাল রাইডে আছেন যতক্ষণ না"
+        EXTRA_TIME_CHARGES -> "অতিরিক্ত সময় চার্জ"
+        DIST_BASED_CHARGES -> "দূরত্ব ভিত্তিতে চার্জ"
+        TIME_BASED_CHARGES -> "সময় ভিত্তিতে চার্জ"

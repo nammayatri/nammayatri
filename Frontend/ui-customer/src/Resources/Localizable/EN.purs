@@ -999,3 +999,6 @@ getEN stringKey =
         PROCEED -> "Proceed"
         SCHEDULE_RIDE_AVAILABLE -> "Schedule Ride available only 30 minutes from now"
         RENTAL_RIDE_UNTIL -> "You are on a rental ride until"
+        EXTRA_TIME_CHARGES -> "Extra Time Charges" 
+        DIST_BASED_CHARGES -> "Distance Based Charges"
+        TIME_BASED_CHARGES -> "Time Based Charges"
