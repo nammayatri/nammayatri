@@ -3,7 +3,6 @@
 
 module API.Action.UI.FollowRide where
 
-import API.Types.UI.FollowRide (Followers, ShareRideReq)
 import qualified API.Types.UI.FollowRide
 import qualified Control.Lens
 import qualified Domain.Action.UI.FollowRide as Domain.Action.UI.FollowRide

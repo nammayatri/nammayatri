@@ -603,7 +603,6 @@ library
       API.Action.UI.LmsModule
       API.Action.UI.SpecialLocation
       API.Types.UI.LmsModule
-      API.Types.UI.SpecialLocation
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
       Domain.Types.Estimate

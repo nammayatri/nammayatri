@@ -3,7 +3,6 @@
 
 module API.Action.UI.SpecialLocation where
 
-import API.Types.UI.SpecialLocation ()
 import qualified Control.Lens
 import qualified Domain.Action.UI.SpecialLocation as Domain.Action.UI.SpecialLocation
 import qualified Domain.Types.Merchant
