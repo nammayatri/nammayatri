@@ -50,6 +50,7 @@ type API =
            :<|> Common.ClearOnRideStuckDriversAPI
            :<|> Common.SendDummyRideRequestToDriverAPI
            :<|> Common.ChangeOperatingCityAPI
+           :<|> Common.GetOperatingCityAPI
        )
 
 type BlockDriverWithReasonAPI =
@@ -88,6 +89,7 @@ handler merchantId city =
     :<|> clearOnRideStuckDrivers merchantId city
     :<|> sendDummyRideRequestToDriver merchantId city
     :<|> changeOperatingCity merchantId city
+    :<|> getOperatingCity merchantId city
 
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo merchantShortId = withFlowHandlerAPI . DDriver.driverDocumentsInfo merchantShortId
@@ -152,3 +154,6 @@ sendDummyRideRequestToDriver merchantShortId opCity = withFlowHandlerAPI . DDN.s
 
 changeOperatingCity :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ChangeOperatingCityReq -> FlowHandler APISuccess
 changeOperatingCity merchantShortId opCity driverId_ = withFlowHandlerAPI . DDriver.changeOperatingCity merchantShortId opCity driverId_
+
+getOperatingCity :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe (Id Common.Ride) -> FlowHandler Common.GetOperatingCityResp
+getOperatingCity merchantShortId opCity mbMobileCountryCode mbMobileNumber mbRideId = withFlowHandlerAPI $ DDriver.getOperatingCity merchantShortId opCity mbMobileCountryCode mbMobileNumber mbRideId
