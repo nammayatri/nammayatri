@@ -14,6 +14,7 @@
 
 module Beckn.OnDemand.Utils.OnSearch where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
@@ -53,7 +54,7 @@ convertEstimateToPricing (DEst.Estimate {..}, mbDriverLocations) =
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
       pricingMinFare = minFare,
-      fulfillmentType = "DELIVERY",
+      fulfillmentType = show Enums.DELIVERY,
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       ..
     }
@@ -71,12 +72,12 @@ convertQuoteToPricing (DQuote.Quote {..}, mbDriverLocations) =
       ..
     }
   where
-    mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = "RIDE_OTP"
-    mapToFulfillmentType (DTC.RoundTrip DTC.RideOtp) = "RIDE_OTP"
-    mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = "RIDE_OTP"
-    mapToFulfillmentType (DTC.Rental _) = "RENTAL"
-    mapToFulfillmentType (DTC.InterCity _) = "INTER_CITY"
-    mapToFulfillmentType _ = "RIDE_OTP" -- backward compatibility
+    mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.RoundTrip DTC.RideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.Rental _) = show Enums.RENTAL
+    mapToFulfillmentType (DTC.InterCity _) = show Enums.INTER_CITY
+    mapToFulfillmentType _ = show Enums.RIDE_OTP -- backward compatibility
 
 mkProviderLocations :: [Maybe NearestDriverInfo] -> [Spec.Location]
 mkProviderLocations driverLocationsInfo =

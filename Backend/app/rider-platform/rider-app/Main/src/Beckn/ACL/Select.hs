@@ -18,6 +18,7 @@ module Beckn.ACL.Select (buildSelectReq, buildSelectReqV2) where
 import Beckn.ACL.Common (castVariant, mkLocation)
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Beckn.Types.Core.Taxi.Select as Select
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -147,7 +148,7 @@ tfFulfillment res startLoc endLoc =
       fulfillmentState = Nothing
       fulfillmentCustomer = Nothing
       fulfillmentId = Just res.estimate.bppEstimateId.getId
-      fulfillmentType = Just "DELIVERY"
+      fulfillmentType = Just $ show Enums.DELIVERY
       fulfillmentStops = mkStops startLoc endLoc
       fulfillmentVehicle = tfVehicle res
    in Spec.Fulfillment
@@ -173,7 +174,7 @@ mkStops origin destination =
                       locationState = Just $ Spec.State origin.address.state,
                       locationId = Nothing
                     },
-              stopType = Just "START",
+              stopType = Just $ show Enums.START,
               stopAuthorization = Nothing,
               stopTime = Nothing
             },
@@ -189,7 +190,7 @@ mkStops origin destination =
                       locationState = Just $ Spec.State destination.address.state,
                       locationId = Nothing
                     },
-              stopType = Just "END",
+              stopType = Just $ show Enums.END,
               stopAuthorization = Nothing,
               stopTime = Nothing
             }

@@ -13,6 +13,7 @@
 -}
 module BecknV2.OnDemand.Utils.Common where
 
+import BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import Data.Data (Data, gmapQ)
@@ -28,10 +29,10 @@ allNothing :: (Data d) => d -> Bool
 allNothing = not . or . gmapQ (const True `ext1Q` isJust)
 
 getStartLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getStartLocation = find (\stop -> stop.stopType == Just "START")
+getStartLocation = find (\stop -> stop.stopType == Just (show Enums.START))
 
 getDropLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getDropLocation = find (\stop -> stop.stopType == Just "END")
+getDropLocation = find (\stop -> stop.stopType == Just (show Enums.END))
 
 getTransactionId :: (MonadFlow m) => Spec.Context -> m Text
 getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")

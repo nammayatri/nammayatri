@@ -15,6 +15,7 @@
 module Beckn.ACL.OnSelect where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.List as L
@@ -71,7 +72,7 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
     { fulfillmentId = Just quote.id.getId,
       fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation Nothing,
       fulfillmentVehicle = Just $ mkVehicleV2 quote,
-      fulfillmentType = Just "DELIVERY",
+      fulfillmentType = Just $ show Enums.DELIVERY,
       fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP,
       fulfillmentCustomer = Nothing,
       fulfillmentState = Nothing,
@@ -82,8 +83,8 @@ mkPaymentV2 :: Spec.Payment
 mkPaymentV2 =
   Spec.Payment
     { paymentParams = Just mkPaymentParamsV2,
-      paymentType = Just "ON_FULFILLMENT",
-      paymentCollectedBy = Just "BPP",
+      paymentType = Just $ show Enums.ON_FULFILLMENT,
+      paymentCollectedBy = Just $ show Enums.BPP,
       paymentId = Nothing,
       paymentStatus = Nothing,
       paymentTags = Nothing
@@ -261,15 +262,15 @@ mkQuoteBreakupInner quote = do
           quotationBreakupInnerTitle = Just title
         }
     filterRequiredBreakups breakup =
-      breakup.quotationBreakupInnerTitle == Just "BASE_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "SERVICE_CHARGE"
-        || breakup.quotationBreakupInnerTitle == Just "DEAD_KILOMETER_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "EXTRA_DISTANCE_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "DRIVER_SELECTED_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "CUSTOMER_SELECTED_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "TOTAL_FARE"
-        || breakup.quotationBreakupInnerTitle == Just "WAITING_OR_PICKUP_CHARGES"
-        || breakup.quotationBreakupInnerTitle == Just "EXTRA_TIME_FARE"
+      breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_DISTANCE_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
 
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
 mkQuotationPrice quote =
