@@ -16,6 +16,7 @@
 module Domain.Types.Quote where
 
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -25,12 +26,9 @@ import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty
-import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 
@@ -42,10 +40,7 @@ data Quote = Quote
     estimatedTotalFare :: Money,
     providerId :: Text,
     providerUrl :: BaseUrl,
-    providerName :: Text,
-    providerMobileNumber :: Text,
     itemId :: Text,
-    providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
     quoteDetails :: QuoteDetails,
@@ -77,8 +72,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     estimatedTotalFare :: Money,
     discount :: Maybe Money,
     agencyName :: Text,
-    agencyNumber :: Text,
-    agencyCompletedRidesCount :: Int,
+    agencyNumber :: Maybe Text,
     tripTerms :: [Text],
     quoteDetails :: QuoteAPIDetails,
     specialLocationTag :: Maybe Text,
@@ -123,15 +117,18 @@ mkQuoteAPIDetails = \case
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity {..}
 
-makeQuoteAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Quote -> m QuoteAPIEntity
-makeQuoteAPIEntity Quote {..} = do
-  isValueAddNP <- CQVAN.isValueAddNP providerId
-  return $
-    QuoteAPIEntity
-      { agencyName = providerName,
-        agencyNumber = providerMobileNumber,
-        agencyCompletedRidesCount = providerCompletedRidesCount,
-        tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
-        quoteDetails = mkQuoteAPIDetails quoteDetails,
-        ..
-      }
+mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
+mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =
+  makeQuoteAPIEntity q bpp isValueAddNP : mkQAPIEntityList qRemaining bppRemaining remVNP
+mkQAPIEntityList [] [] [] = []
+mkQAPIEntityList _ _ _ = error "This should never happen as all the list are of same length"
+
+makeQuoteAPIEntity :: Quote -> DBppDetails.BppDetails -> Bool -> QuoteAPIEntity
+makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
+  QuoteAPIEntity
+    { agencyName = bppDetails.name,
+      agencyNumber = bppDetails.supportNumber,
+      tripTerms = maybe [] (.descriptions) tripTerms,
+      quoteDetails = mkQuoteAPIDetails quoteDetails,
+      ..
+    }

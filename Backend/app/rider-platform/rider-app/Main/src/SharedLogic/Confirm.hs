@@ -78,7 +78,7 @@ data ConfirmQuoteDetails
   = ConfirmOneWayDetails
   | ConfirmInterCityDetails Text
   | ConfirmRentalDetails Text
-  | ConfirmAutoDetails Text (Maybe Text)
+  | ConfirmAutoDetails Text
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
 
@@ -102,7 +102,7 @@ confirm DConfirmReq {..} = do
         when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
         when (driverOffer.validTill < now) $
           throwError $ QuoteExpired quote.id.getId
-        pure (Just estimate.bppEstimateId.getId)
+        pure (Just driverOffer.bppQuoteId)
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
       DQuote.InterCityDetails details -> pure (Just details.quoteId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
@@ -117,13 +117,12 @@ confirm DConfirmReq {..} = do
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
-      driverId = getDriverId quote.quoteDetails
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId isScheduled
+  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
@@ -163,14 +162,10 @@ confirm DConfirmReq {..} = do
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
         DQuote.RentalDetails DRental.RentalDetails {id} -> pure $ ConfirmRentalDetails id.getId
         DQuote.InterCityDetails details -> pure $ ConfirmInterCityDetails details.quoteId
-        DQuote.DriverOfferDetails driverOffer -> do
-          bppEstimateId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
-          pure $ ConfirmAutoDetails bppEstimateId driverOffer.driverId
+        DQuote.DriverOfferDetails _ -> do
+          bppQuoteId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
+          pure $ ConfirmAutoDetails bppQuoteId
         DQuote.OneWaySpecialZoneDetails details -> pure $ ConfirmOneWaySpecialZoneDetails details.quoteId
-    getDriverId :: DQuote.QuoteDetails -> Maybe Text
-    getDriverId = \case
-      DQuote.DriverOfferDetails driverOffer -> driverOffer.driverId
-      _ -> Nothing
     checkOverlap :: Int -> Int -> UTCTime -> DRB.Booking -> Bool
     checkOverlap estimatedDistance estimatedDuration now booking = do
       let estimatedDistanceInKm = estimatedDistance `div` 1000
@@ -189,10 +184,9 @@ buildBooking ::
   UTCTime ->
   Maybe Text ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
-  Maybe Text ->
   Bool ->
   m DRB.Booking
-buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId isScheduled = do
+buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $
@@ -200,7 +194,6 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
       { id = Id id,
         transactionId = searchRequest.id.getId,
         bppBookingId = Nothing,
-        driverId,
         fulfillmentId = mbFulfillmentId,
         quoteId = Just quote.id,
         paymentMethodId,
@@ -209,9 +202,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         providerId = quote.providerId,
         primaryExophone = exophone.primaryPhone,
         providerUrl = quote.providerUrl,
-        providerName = quote.providerName,
         itemId = quote.itemId,
-        providerMobileNumber = quote.providerMobileNumber,
         startTime = searchRequest.startTime,
         riderId = searchRequest.riderId,
         fromLocation = fromLoc,

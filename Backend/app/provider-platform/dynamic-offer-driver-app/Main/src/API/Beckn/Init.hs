@@ -23,13 +23,9 @@ import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import qualified Data.Aeson as A
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant as DM
 import Environment
-import EulerHS.Prelude (ByteString)
 import Kernel.Prelude hiding (init)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
@@ -46,7 +42,7 @@ import Storage.Beam.SystemConfigs ()
 type API =
   Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth "Authorization"
-    :> Init.InitAPI
+    :> Init.InitAPIV2
 
 handler :: FlowServer API
 handler = init
@@ -54,60 +50,53 @@ handler = init
 init ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  -- Init.InitReq ->
-  ByteString ->
+  Init.InitReqV2 ->
   FlowHandler AckResponse
-init transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBecknAPI $ do
-  req <- decodeReq reqBS
-  (dInitReq, bapUri, bapId, msgId, city, country, txnId, bppId, bppUri) <- case req of
-    Right reqV2 -> do
-      transactionId <- Utils.getTransactionId reqV2.initReqContext
-      Utils.withTransactionIdLogTag transactionId $ do
-        logTagInfo "Init APIV2 Flow" "Reached"
-        dInitReq <- ACL.buildInitReqV2 subscriber reqV2
-        let context = reqV2.initReqContext
-        callbackUrl <- Utils.getContextBapUri context
-        bppUri <- Utils.getContextBppUri context
-        messageId <- Utils.getMessageId context
-        bapId <- Utils.getContextBapId context
-        city <- Utils.getContextCity context
-        country <- Utils.getContextCountry context
-        pure (dInitReq, callbackUrl, bapId, messageId, city, country, Just transactionId, context.contextBppId, bppUri)
-    Left reqV1 ->
-      withTransactionIdLogTag reqV1 $ do
-        logTagInfo "Init API Flow" "Reached"
-        dInitReq <- ACL.buildInitReq subscriber reqV1
-        pure (dInitReq, reqV1.context.bap_uri, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id, reqV1.context.bpp_id, reqV1.context.bpp_uri)
+init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
+  transactionId <- Utils.getTransactionId reqV2.initReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
+    logTagInfo "Init APIV2 Flow" "Reached"
+    (dInitReq, bapUri, bapId, msgId, city, country, bppId, bppUri) <- do
+      dInitReq <- ACL.buildInitReqV2 subscriber reqV2
+      let context = reqV2.initReqContext
+      callbackUrl <- Utils.getContextBapUri context
+      bppUri <- Utils.getContextBppUri context
+      messageId <- Utils.getMessageId context
+      bapId <- Utils.getContextBapId context
+      city <- Utils.getContextCity context
+      country <- Utils.getContextCountry context
+      pure (dInitReq, callbackUrl, bapId, messageId, city, country, context.contextBppId, bppUri)
 
-  let initFulfillmentId =
-        case dInitReq.fulfillmentId of
-          DInit.EstimateId (Id fId) -> fId
-          DInit.QuoteId (Id fId) -> fId
+    let txnId = Just transactionId
+        initFulfillmentId =
+          case dInitReq.fulfillmentId of
+            DInit.DriverQuoteId (Id fId) -> fId
+            DInit.QuoteId (Id fId) -> fId
 
-  Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
-    validatedRes <- DInit.validateRequest transporterId dInitReq
-    fork "init request processing" $ do
-      Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
-        dInitRes <- DInit.handler transporterId dInitReq validatedRes
-        internalEndPointHashMap <- asks (.internalEndPointHashMap)
-        isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-        if isBecknSpecVersion2
-          then do
-            context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
-            void . handle (errHandler dInitRes.booking dInitRes.transporter) $
-              Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
-                pure $
-                  Spec.OnInitReq
-                    { onInitReqContext = context,
-                      onInitReqError = Nothing,
-                      onInitReqMessage = Just $ ACL.mkOnInitMessageV2 dInitRes
-                    }
-          else do
-            context <- buildTaxiContext Context.ON_SELECT msgId txnId bapId bapUri bppId bppUri city country False
-            void . handle (errHandler dInitRes.booking dInitRes.transporter) $
-              CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV1 context context.bap_uri internalEndPointHashMap $
-                pure $ ACL.mkOnInitMessage dInitRes
-  pure Ack
+    Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
+      validatedRes <- DInit.validateRequest transporterId dInitReq
+      fork "init request processing" $ do
+        Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
+          dInitRes <- DInit.handler transporterId dInitReq validatedRes
+          internalEndPointHashMap <- asks (.internalEndPointHashMap)
+          isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+          if isBecknSpecVersion2
+            then do
+              context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
+              void . handle (errHandler dInitRes.booking dInitRes.transporter) $
+                Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
+                  pure $
+                    Spec.OnInitReq
+                      { onInitReqContext = context,
+                        onInitReqError = Nothing,
+                        onInitReqMessage = Just $ ACL.mkOnInitMessageV2 dInitRes
+                      }
+            else do
+              context <- buildTaxiContext Context.ON_SELECT msgId txnId bapId bapUri bppId bppUri city country False
+              void . handle (errHandler dInitRes.booking dInitRes.transporter) $
+                CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV1 context context.bap_uri internalEndPointHashMap $
+                  pure $ ACL.mkOnInitMessage dInitRes
+    pure Ack
   where
     errHandler booking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking booking Nothing transporter >> pure Ack
@@ -119,15 +108,6 @@ initLockKey id = "Driver:Init:DriverQuoteId-" <> id
 
 initProcessingLockKey :: Text -> Text
 initProcessingLockKey id = "Driver:Init:Processing:DriverQuoteId-" <> id
-
-decodeReq :: MonadFlow m => ByteString -> m (Either Init.InitReq Init.InitReqV2)
-decodeReq reqBS =
-  case A.eitherDecodeStrict reqBS of
-    Right reqV1 -> pure $ Left reqV1
-    Left _ ->
-      case A.eitherDecodeStrict reqBS of
-        Right reqV2 -> pure $ Right reqV2
-        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
 
 errHandlerV2 :: Spec.Context -> BecknAPIError -> Spec.OnInitReq
 errHandlerV2 context (BecknAPIError err) =

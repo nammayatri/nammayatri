@@ -20,6 +20,7 @@ data BppDetailsT f = BppDetailsT
     logoUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     name :: B.C f Kernel.Prelude.Text,
     subscriberId :: B.C f Kernel.Prelude.Text,
+    supportNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

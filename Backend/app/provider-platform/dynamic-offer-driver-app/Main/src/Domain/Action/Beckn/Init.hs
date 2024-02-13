@@ -17,7 +17,6 @@ module Domain.Action.Beckn.Init where
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as DDQ
-import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Merchant as DM
@@ -50,11 +49,10 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
 
-data FulfillmentId = QuoteId (Id DQ.Quote) | EstimateId (Id DE.Estimate)
+data FulfillmentId = QuoteId (Id DQ.Quote) | DriverQuoteId (Id DDQ.DriverQuote)
 
 data InitReq = InitReq
   { fulfillmentId :: FulfillmentId,
-    driverId :: Maybe Text,
     vehicleVariant :: Veh.Variant,
     bapId :: Text,
     bapUri :: BaseUrl,
@@ -200,9 +198,8 @@ validateRequest merchantId req = do
   void $ QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
   case req.fulfillmentId of
-    EstimateId estimateId -> do
-      driverId <- req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
-      driverQuote <- QDQuote.findActiveQuoteByDriverIdAndVehVarAndEstimateId estimateId (Id driverId) req.vehicleVariant now >>= fromMaybeM (EstimateNotFound estimateId.getId)
+    DriverQuoteId driverQuoteId -> do
+      driverQuote <- QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
       when (driverQuote.validTill < now || driverQuote.status == DDQ.Inactive) $
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
