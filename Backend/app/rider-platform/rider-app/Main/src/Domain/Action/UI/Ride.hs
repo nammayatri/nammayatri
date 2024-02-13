@@ -233,6 +233,7 @@ editLocation rideId (_, merchantId) req = do
               bppUrl = booking.providerUrl,
               transactionId = booking.transactionId,
               destination = Nothing,
+              city = merchant.defaultCity, -- TODO: Correct during interoperability
               ..
             }
     becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
