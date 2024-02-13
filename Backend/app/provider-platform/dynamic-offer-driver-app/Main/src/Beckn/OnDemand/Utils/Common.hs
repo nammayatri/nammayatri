@@ -16,6 +16,7 @@
 module Beckn.OnDemand.Utils.Common where
 
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import Data.Aeson
@@ -41,10 +42,10 @@ import Kernel.Utils.Common
 import Tools.Error
 
 firstStop :: [Spec.Stop] -> Maybe Spec.Stop
-firstStop = find (\stop -> Spec.stopType stop == Just "START")
+firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))
 
 lastStop :: [Spec.Stop] -> Maybe Spec.Stop
-lastStop = find (\stop -> Spec.stopType stop == Just "END")
+lastStop = find (\stop -> Spec.stopType stop == Just (show Enums.END))
 
 mkStops :: LatLong -> Maybe LatLong -> Maybe [Spec.Stop]
 mkStops origin mbDestination = do
@@ -65,7 +66,7 @@ mkStops origin mbDestination = do
                       locationState = Nothing,
                       locationId = Nothing
                     },
-              stopType = Just "START",
+              stopType = Just $ show Enums.START,
               stopAuthorization = Nothing,
               stopTime = Nothing
             },
@@ -82,7 +83,7 @@ mkStops origin mbDestination = do
                         locationState = Nothing,
                         locationId = Nothing
                       },
-                stopType = Just "END",
+                stopType = Just $ show Enums.END,
                 stopAuthorization = Nothing,
                 stopTime = Nothing
               }
@@ -152,27 +153,27 @@ mkBppUri merchantId =
     <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId)
 
 castVariant :: Variant.Variant -> (Text, Text)
-castVariant Variant.SEDAN = ("CAB", "SEDAN")
-castVariant Variant.HATCHBACK = ("CAB", "HATCHBACK")
-castVariant Variant.SUV = ("CAB", "SUV")
-castVariant Variant.AUTO_RICKSHAW = ("AUTO_RICKSHAW", "AUTO_RICKSHAW")
-castVariant Variant.TAXI = ("CAB", "TAXI")
-castVariant Variant.TAXI_PLUS = ("CAB", "TAXI_PLUS")
+castVariant Variant.SEDAN = (show Enums.CAB, "SEDAN")
+castVariant Variant.HATCHBACK = (show Enums.CAB, "HATCHBACK")
+castVariant Variant.SUV = (show Enums.CAB, "SUV")
+castVariant Variant.AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
+castVariant Variant.TAXI = (show Enums.CAB, "TAXI")
+castVariant Variant.TAXI_PLUS = (show Enums.CAB, "TAXI_PLUS")
 
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
-  DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
-  DCT.RoundTrip DCT.RideOtp -> "RIDE_OTP"
-  DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
-  DCT.Rental _ -> "RENTAL"
-  DCT.InterCity _ -> "INTER_CITY"
-  _ -> "DELIVERY"
+  DCT.OneWay DCT.OneWayRideOtp -> show Enums.RIDE_OTP
+  DCT.RoundTrip DCT.RideOtp -> show Enums.RIDE_OTP
+  DCT.RideShare DCT.RideOtp -> show Enums.RIDE_OTP
+  DCT.Rental _ -> show Enums.RENTAL
+  DCT.InterCity _ -> show Enums.INTER_CITY
+  _ -> show Enums.DELIVERY
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
 
 castDPaymentType :: DMPM.PaymentType -> Text
-castDPaymentType DMPM.ON_FULFILLMENT = "ON_FULFILLMENT"
+castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe Variant.Variant
 parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
@@ -236,7 +237,7 @@ mkStops' origin mbDestination mAuthorization =
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing
                         },
-                  stopType = Just "START",
+                  stopType = Just $ show Enums.START,
                   stopAuthorization = mAuthorization >>= mkAuthorization,
                   stopTime = Nothing
                 },
@@ -253,7 +254,7 @@ mkStops' origin mbDestination mAuthorization =
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing
                           },
-                    stopType = Just "END",
+                    stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
                     stopTime = Nothing
                   }
@@ -266,7 +267,7 @@ mkStops' origin mbDestination mAuthorization =
       Just $
         Spec.Authorization
           { authorizationToken = Just auth,
-            authorizationType = Just "OTP"
+            authorizationType = Just $ show Enums.OTP
           }
 
 mkAddress :: DLoc.LocationAddress -> Text
@@ -305,12 +306,12 @@ mkStopsOUS booking ride rideOtp =
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing
                         },
-                  stopType = Just "START",
+                  stopType = Just $ show Enums.START,
                   stopAuthorization =
                     Just $
                       Spec.Authorization
                         { authorizationToken = Just rideOtp,
-                          authorizationType = Just "OTP"
+                          authorizationType = Just $ show Enums.OTP
                         },
                   stopTime = Just $ Spec.Time {timeTimestamp = ride.tripStartTime}
                 },
@@ -327,7 +328,7 @@ mkStopsOUS booking ride rideOtp =
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing
                           },
-                    stopType = Just "END",
+                    stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
                     stopTime = Just $ Spec.Time {timeTimestamp = ride.tripEndTime}
                   }

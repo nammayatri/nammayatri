@@ -201,6 +201,7 @@ library
       BecknV2.FRFS.Enums
       BecknV2.FRFS.Types
       BecknV2.FRFS.Utils
+      BecknV2.OnDemand.Enums
       BecknV2.OnDemand.Tags
       BecknV2.OnDemand.Types
       BecknV2.OnDemand.Utils.Common

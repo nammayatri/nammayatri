@@ -18,6 +18,7 @@ module Beckn.ACL.Confirm (buildConfirmReq, buildConfirmReqV2) where
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
@@ -233,10 +234,10 @@ tfFulfillments res =
     ]
   where
     mkFulfillmentType = \case
-      DRB.OneWaySpecialZoneDetails _ -> "RIDE_OTP"
-      DRB.RentalDetails _ -> "RENTAL"
-      DRB.InterCityDetails _ -> "INTER_CITY"
-      _ -> "RIDE"
+      DRB.OneWaySpecialZoneDetails _ -> show Enums.RIDE_OTP
+      DRB.RentalDetails _ -> show Enums.RENTAL
+      DRB.InterCityDetails _ -> show Enums.INTER_CITY
+      _ -> show Enums.DELIVERY
 
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]
 tfItems res =
@@ -257,12 +258,12 @@ tfPayments :: DOnInit.OnInitRes -> Maybe [Spec.Payment]
 tfPayments res =
   Just
     [ Spec.Payment
-        { paymentCollectedBy = Just "BPP",
+        { paymentCollectedBy = Just $ show Enums.BPP,
           paymentId = Nothing,
           paymentParams = mkParams,
           paymentStatus = Nothing,
           paymentTags = Nothing,
-          paymentType = Just "ON_FULFILLMENT"
+          paymentType = Just $ show Enums.ON_FULFILLMENT
         }
     ]
   where

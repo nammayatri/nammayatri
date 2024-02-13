@@ -16,6 +16,7 @@ module Beckn.ACL.OnConfirm (buildOnConfirmReq, buildOnConfirmReqV2) where
 
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -91,7 +92,7 @@ buildOnConfirmReqV2 req = do
               >>= (.fulfillmentStops)
               >>= Utils.getStartLocation
               >>= (.stopAuthorization)
-              >>= \auth -> if auth.authorizationType == Just "OTP" then auth.authorizationToken else Nothing
+              >>= \auth -> if auth.authorizationType == Just (show Enums.OTP) then auth.authorizationToken else Nothing
 
       return (bppBookingId, startOtp)
 
