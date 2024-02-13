@@ -4,7 +4,7 @@ import Prelude
 
 import Common.Types.App (ChatComponent)
 import MerchantConfig.Types (AppConfig)
-import Screens.Types (SearchResultType)
+import Screens.Types (SearchResultType, Stage)
 import Components.ChatView.Controller (ChatComponentConfig)
 
 
@@ -26,4 +26,6 @@ type MessageNotificationView a = {
 , messageExpiryAction :: (Int ->  String ->  String -> a)
 , chatSuggestions :: Array String
 , messages :: Array ChatComponentConfig
+, removeNotification :: Boolean
+, currentStage :: Stage
 }
