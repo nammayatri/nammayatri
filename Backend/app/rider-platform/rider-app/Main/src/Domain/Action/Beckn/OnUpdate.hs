@@ -432,16 +432,16 @@ onUpdate ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
   let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
-  case cancellationSource of
-    SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
-    SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
-    _ -> pure ()
   fork "incrementing fraud counters" $ do
     let merchantOperatingCityId = booking.merchantOperatingCityId
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   case mbRide of
     Just ride -> do
+      case cancellationSource of
+        SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
+        SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
+        _ -> pure ()
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
     Nothing -> do
       logDebug "No ride found for the booking."
