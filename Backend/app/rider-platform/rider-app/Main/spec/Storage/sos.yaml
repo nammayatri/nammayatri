@@ -33,16 +33,9 @@ Sos:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findByRideIdAndStatus:
+    findByRideId:
       kvFunction: findOneWithKV
-      where:
-        and: [rideId, status]
-    findByRideIdinStatusList:
-      kvFunction: findAllWithOptionsKV
-      where:
-        and:
-           - in : [status]
-           - eq: [rideId]
+      where: rideId
 
   constraints:
     id: PrimaryKey

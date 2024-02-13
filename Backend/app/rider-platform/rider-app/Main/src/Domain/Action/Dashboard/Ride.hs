@@ -140,7 +140,7 @@ buildShareRideInfo merchantId ride = do
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
         DB.InterCityDetails details -> Just details.distance
         _ -> Nothing
-  sosDetails <- CQSos.findByRideIdAndStatus ride.id [DSos.Pending, DSos.Resolved]
+  sosDetails <- CQSos.findByRideId ride.id
   return $
     Common.ShareRideInfoRes
       { id = cast ride.id,

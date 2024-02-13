@@ -77,7 +77,7 @@ newtype AddSosVideoRes = AddSosVideoRes
 getSosGetDetails :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DRide.Ride -> Flow SosDetailsRes
 getSosGetDetails (mbPersonId, _) rideId_ = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  mbSosDetails <- CQSos.findByRideIdAndStatus rideId_ [DSos.Pending]
+  mbSosDetails <- CQSos.findByRideId rideId_
   case mbSosDetails of
     Nothing -> throwError $ InvalidRequest "SosId not found"
     Just sosDetails -> do
@@ -127,10 +127,12 @@ enableFollowRideInSos emergencyContacts config = do
 
 createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Text -> Flow (Id DSos.Sos)
 createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition = do
-  sosRes <- QSos.findByRideIdAndStatus ride.id DSos.Pending
+  sosRes <- CQSos.findByRideId ride.id
   case sosRes of
     Just sosDetails -> do
-      CQSos.cacheSosIdByRideId ride.id sosDetails
+      void $ QSos.updateStatus DSos.Pending sosDetails.id
+      void $ callUpdateTicket person sosDetails $ Just "SOS Re-Activated"
+      void $ CQSos.clearCache sosDetails.rideId
       return sosDetails.id
     Nothing -> do
       phoneNumber <- mapM decrypt person.mobileNumber
