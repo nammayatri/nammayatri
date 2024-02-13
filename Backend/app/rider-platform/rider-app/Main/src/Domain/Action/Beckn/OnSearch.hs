@@ -229,6 +229,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
             subscriberId = providerInfo.providerId,
             domain = show Domain.MOBILITY,
             name = providerInfo.name,
+            supportNumber = Nothing,
             logoUrl = Nothing, -- TODO: Parse this from on_search req
             description = Nothing, -- TODO: Parse this from on_search req
             createdAt = now,
@@ -303,9 +304,6 @@ buildQuote requestId providerInfo now _searchRequest QuoteInfo {..} = do
   pure
     DQuote.Quote
       { id = uid,
-        providerMobileNumber = providerInfo.mobileNumber,
-        providerName = providerInfo.name,
-        providerCompletedRidesCount = providerInfo.ridesCompleted,
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
         createdAt = now,

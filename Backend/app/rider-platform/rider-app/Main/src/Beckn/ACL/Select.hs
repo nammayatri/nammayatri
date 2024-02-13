@@ -18,6 +18,7 @@ module Beckn.ACL.Select (buildSelectReq, buildSelectReqV2) where
 import Beckn.ACL.Common (castVariant, mkLocation)
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Beckn.Types.Core.Taxi.Select as Select
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
@@ -32,6 +33,7 @@ import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import Tools.Error
 
 buildSelectReq ::
@@ -48,16 +50,18 @@ buildSelectReq dSelectRes = do
   pure $ BecknReq context $ Select.SelectMessage order
 
 buildSelectReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
   DSelect.DSelectRes ->
   m Spec.SelectReq
 buildSelectReqV2 dSelectRes = do
-  let messageId = dSelectRes.estimate.bppEstimateId.getId
-  let transactionId = dSelectRes.searchRequest.id.getId
+  endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
+  isValueAddNP <- CQVNP.isValueAddNP dSelectRes.providerId
+  let message = buildSelectReqMessage dSelectRes endLoc isValueAddNP
+      messageId = dSelectRes.estimate.bppEstimateId.getId
+      transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- ContextV2.buildContextV2 Context.SELECT Context.MOBILITY messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city dSelectRes.merchant.country
-  message <- buildSelectReqMessage dSelectRes
   pure $ Spec.SelectReq {selectReqContext = context, selectReqMessage = message}
 
 buildOrder :: (Monad m, Log m, MonadThrow m) => DSelect.DSelectRes -> m Select.Order
@@ -111,13 +115,14 @@ buildOrder res = do
             ]
         }
 
-buildSelectReqMessage :: (MonadFlow m) => DSelect.DSelectRes -> m Spec.ConfirmReqMessage
-buildSelectReqMessage res = do
-  selectMessageOrder <- tfOrder res
-  pure $ Spec.ConfirmReqMessage {confirmReqMessageOrder = selectMessageOrder}
+buildSelectReqMessage :: DSelect.DSelectRes -> Location.Location -> Bool -> Spec.ConfirmReqMessage
+buildSelectReqMessage res endLoc isValueAddNP =
+  Spec.ConfirmReqMessage
+    { confirmReqMessageOrder = tfOrder res endLoc isValueAddNP
+    }
 
-tfOrder :: (MonadFlow m) => DSelect.DSelectRes -> m Spec.Order
-tfOrder res = do
+tfOrder :: DSelect.DSelectRes -> Location.Location -> Bool -> Spec.Order
+tfOrder res endLoc isValueAddNP =
   let orderBilling = Nothing
       orderCancellation = Nothing
       orderCancellationTerms = Nothing
@@ -127,32 +132,29 @@ tfOrder res = do
       orderQuote = Nothing
       orderStatus = Nothing
       startLoc = res.searchRequest.fromLocation
-  endLoc <- res.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
-  orderFulfillment <- tfFulfillment res startLoc endLoc
-  orderItem <- tfOrderItem res
-  pure $
-    Spec.Order
-      { orderFulfillments = Just [orderFulfillment],
-        orderItems = Just [orderItem],
-        ..
-      }
+      orderItem = tfOrderItem res isValueAddNP
+      orderFulfillment = tfFulfillment res startLoc endLoc
+   in Spec.Order
+        { orderFulfillments = Just [orderFulfillment],
+          orderItems = Just [orderItem],
+          ..
+        }
 
-tfFulfillment :: (MonadFlow m) => DSelect.DSelectRes -> Location.Location -> Location.Location -> m Spec.Fulfillment
-tfFulfillment res startLoc endLoc = do
+tfFulfillment :: DSelect.DSelectRes -> Location.Location -> Location.Location -> Spec.Fulfillment
+tfFulfillment res startLoc endLoc =
   let fulfillmentAgent = Nothing
       fulfillmentTags = Nothing
       fulfillmentState = Nothing
       fulfillmentCustomer = Nothing
       fulfillmentId = Just res.estimate.bppEstimateId.getId
-      fulfillmentType = Just "RIDE"
+      fulfillmentType = Just "DELIVERY"
       fulfillmentStops = mkStops startLoc endLoc
-  fulfillmentVehicle <- tfVehicle res
-  pure $
-    Spec.Fulfillment
-      { fulfillmentStops = fulfillmentStops,
-        fulfillmentVehicle = Just fulfillmentVehicle,
-        ..
-      }
+      fulfillmentVehicle = tfVehicle res
+   in Spec.Fulfillment
+        { fulfillmentStops = fulfillmentStops,
+          fulfillmentVehicle = Just fulfillmentVehicle,
+          ..
+        }
 
 mkStops :: Location.Location -> Location.Location -> Maybe [Spec.Stop]
 mkStops origin destination =
@@ -193,8 +195,8 @@ mkStops origin destination =
             }
         ]
 
-tfVehicle :: (MonadFlow m) => DSelect.DSelectRes -> m Spec.Vehicle
-tfVehicle res = do
+tfVehicle :: DSelect.DSelectRes -> Spec.Vehicle
+tfVehicle res =
   let (category, variant) = UCommon.castVehicleVariant res.variant
       vehicleColor = Nothing
       vehicleMake = Nothing
@@ -202,27 +204,26 @@ tfVehicle res = do
       vehicleRegistration = Nothing
       vehicleVariant = Just variant
       vehicleCategory = Just category
-  pure $ Spec.Vehicle {..}
+   in Spec.Vehicle {..}
 
-tfOrderItem :: (MonadFlow m) => DSelect.DSelectRes -> m Spec.Item
-tfOrderItem res = do
+tfOrderItem :: DSelect.DSelectRes -> Bool -> Spec.Item
+tfOrderItem res isValueAddNP =
   let itemDescriptor = Nothing
       itemFulfillmentIds = Nothing
       itemLocationIds = Nothing
       itemPaymentIds = Nothing
       itemId = Just res.estimate.itemId
-      itemTags = Just $ mkItemTags res
-  itemPrice <- tfPrice res
-  pure $
-    Spec.Item
-      { itemPrice = Just itemPrice,
-        ..
-      }
+      itemTags = Just $ mkItemTags res isValueAddNP
+      itemPrice = tfPrice res
+   in Spec.Item
+        { itemPrice = Just itemPrice,
+          ..
+        }
 
-mkItemTags :: DSelect.DSelectRes -> [Spec.TagGroup]
-mkItemTags res =
-  let itemTags = [mkAutoAssignEnabledTagGroup res]
-      itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
+mkItemTags :: DSelect.DSelectRes -> Bool -> [Spec.TagGroup]
+mkItemTags res isValueAddNP =
+  let itemTags = [mkAutoAssignEnabledTagGroup res | isValueAddNP]
+      itemTags' = if isJust res.customerExtraFee && isValueAddNP then mkCustomerTipTagGroup res : itemTags else itemTags
    in itemTags'
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
@@ -232,7 +233,7 @@ mkCustomerTipTagGroup res =
       tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just "customer_tip_info",
+            { descriptorCode = Just $ show Tags.CUSTOMER_TIP_INFO,
               descriptorName = Just "Customer Tip Info",
               descriptorShortDesc = Nothing
             },
@@ -242,7 +243,7 @@ mkCustomerTipTagGroup res =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
-                      { descriptorCode = (\_ -> Just "customer_tip") =<< res.customerExtraFee,
+                      { descriptorCode = (\_ -> Just $ show Tags.CUSTOMER_TIP) =<< res.customerExtraFee,
                         descriptorName = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
                         descriptorShortDesc = Nothing
                       },
@@ -259,7 +260,7 @@ mkAutoAssignEnabledTagGroup res =
       tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just "auto_assign_enabled",
+            { descriptorCode = Just $ show Tags.AUTO_ASSIGN_ENABLED,
               descriptorName = Just "Auto Assign Enabled",
               descriptorShortDesc = Nothing
             },
@@ -269,7 +270,7 @@ mkAutoAssignEnabledTagGroup res =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
-                      { descriptorCode = Just "auto_assign_enabled",
+                      { descriptorCode = Just $ show Tags.IS_AUTO_ASSIGN_ENABLED,
                         descriptorName = Just "Auto Assign Enabled",
                         descriptorShortDesc = Nothing
                       },
@@ -279,13 +280,12 @@ mkAutoAssignEnabledTagGroup res =
           ]
     }
 
-tfPrice :: (MonadFlow m) => DSelect.DSelectRes -> m Spec.Price
-tfPrice res = do
+tfPrice :: DSelect.DSelectRes -> Spec.Price
+tfPrice res =
   let priceCurrency = Just "INR"
       priceValue = Just $ show res.estimate.estimatedFare.getMoney
       priceComputedValue = Nothing
       priceMaximumValue = Nothing
       priceMinimumValue = Nothing
       priceOfferedValue = Nothing
-  pure $
-    Spec.Price {..}
+   in Spec.Price {..}

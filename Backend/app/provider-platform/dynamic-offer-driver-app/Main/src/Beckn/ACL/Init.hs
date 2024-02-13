@@ -14,88 +14,17 @@
 
 module Beckn.ACL.Init where
 
-import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Transformer.Init as TInit
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
-import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified BecknV2.OnDemand.Utils.Context as Utils
-import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Init as DInit
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
-import qualified Kernel.Product.Validation.Context as Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Field
-import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Error.Throwing
-
-buildInitReq ::
-  ( MonadThrow m,
-    HasFlowEnv m r '["coreVersion" ::: Text]
-  ) =>
-  Subscriber.Subscriber ->
-  Init.InitReq ->
-  m DInit.InitReq
-buildInitReq subscriber req = do
-  let context = req.context
-  Context.validateContext Context.INIT context
-  let order = req.message.order
-  _ <- case order.items of
-    [it] -> pure it
-    _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
-  fulfillmentId <- do
-    fId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
-    case order.fulfillment._type of
-      "DELIVERY" -> pure $ DInit.EstimateId (Id fId)
-      "RIDE_OTP" -> pure $ DInit.QuoteId (Id fId)
-      "RENTAL" -> pure $ DInit.QuoteId (Id fId)
-      "INTER_CITY" -> pure $ DInit.QuoteId (Id fId)
-      _ -> pure $ DInit.QuoteId (Id fId)
-  let maxEstimatedDistance = getMaxEstimateDistance =<< order.fulfillment.tags
-  -- should we check start time and other details?
-  unless (subscriber.subscriber_id == context.bap_id) $
-    throwError (InvalidRequest "Invalid bap_id")
-  unless (subscriber.subscriber_url == context.bap_uri) $
-    throwError (InvalidRequest "Invalid bap_uri")
-
-  pure
-    DInit.InitReq
-      { bapId = subscriber.subscriber_id,
-        bapUri = subscriber.subscriber_url,
-        bapCity = context.city,
-        bapCountry = context.country,
-        vehicleVariant = castVehicleVariant order.fulfillment.vehicle.category,
-        driverId = order.provider <&> (.id),
-        paymentMethodInfo = mkPaymentMethodInfo order.payment,
-        ..
-      }
-  where
-    castVehicleVariant = \case
-      Init.SEDAN -> VehVar.SEDAN
-      Init.SUV -> VehVar.SUV
-      Init.HATCHBACK -> VehVar.HATCHBACK
-      Init.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
-      Init.TAXI -> VehVar.TAXI
-      Init.TAXI_PLUS -> VehVar.TAXI_PLUS
-
-mkPaymentMethodInfo :: Init.Payment -> Maybe DMPM.PaymentMethodInfo
-mkPaymentMethodInfo Init.Payment {..} =
-  params.instrument <&> \instrument' -> do
-    DMPM.PaymentMethodInfo
-      { collectedBy = Common.castPaymentCollector params.collected_by,
-        paymentType = Common.castPaymentType _type,
-        paymentInstrument = Common.castPaymentInstrument instrument'
-      }
-
-getMaxEstimateDistance :: Init.TagGroups -> Maybe HighPrecMeters
-getMaxEstimateDistance tagGroups = do
-  tagValue <- Common.getTag "estimations" "max_estimated_distance" tagGroups
-  maxEstimatedDistance <- readMaybe $ T.unpack tagValue
-  Just $ HighPrecMeters maxEstimatedDistance
 
 buildInitReqV2 ::
   ( MonadThrow m,

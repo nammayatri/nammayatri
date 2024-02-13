@@ -48,11 +48,13 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -453,8 +455,9 @@ onUpdate ValidatedBookingCancelledReq {..} = do
   unless (cancellationSource == SBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
   QPFS.clearCache booking.riderId
+  bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
   -- notify customer
-  Notify.notifyOnBookingCancelled booking cancellationSource
+  Notify.notifyOnBookingCancelled booking cancellationSource bppDetails
 onUpdate ValidatedBookingReallocationReq {..} = do
   mbRide <- QRide.findActiveByRBId booking.id
   let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
