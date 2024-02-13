@@ -16,6 +16,7 @@
 module Beckn.ACL.Init (buildInitReqV2) where
 
 import qualified Beckn.OnDemand.Transformer.Init as TF
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
 import qualified Data.Text as T
@@ -24,20 +25,21 @@ import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
+import qualified Storage.CachedQueries.ValueAddNP as VNP
 
 buildInitReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
   SConfirm.DConfirmRes ->
   m Spec.InitReq
 buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   let (fulfillmentType, mbBppFullfillmentId) = case res.quoteDetails of
-        SConfirm.ConfirmOneWayDetails -> ("DELIVERY", Nothing)
-        SConfirm.ConfirmRentalDetails quoteId -> ("RENTAL", Just quoteId)
-        SConfirm.ConfirmInterCityDetails quoteId -> ("INTER_CITY", Just quoteId)
-        SConfirm.ConfirmAutoDetails bppQuoteId -> ("DELIVERY", Just bppQuoteId)
-        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> ("RIDE_OTP", Just quoteId) --need to be  checked
+        SConfirm.ConfirmOneWayDetails -> (show Enums.DELIVERY, Nothing)
+        SConfirm.ConfirmRentalDetails quoteId -> (show Enums.RENTAL, Just quoteId)
+        SConfirm.ConfirmInterCityDetails quoteId -> (show Enums.INTER_CITY, Just quoteId)
+        SConfirm.ConfirmAutoDetails bppQuoteId -> (show Enums.DELIVERY, Just bppQuoteId)
+        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (show Enums.RIDE_OTP, Just quoteId) --need to be  checked
   let action = Context.INIT
   let domain = Context.MOBILITY
-
-  TF.buildInitReq res bapUrl action domain fulfillmentType mbBppFullfillmentId
+  isValueAddNP <- VNP.isValueAddNP res.providerId
+  TF.buildInitReq res bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP

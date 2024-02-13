@@ -15,6 +15,7 @@
 
 module Beckn.OnDemand.Utils.Common where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
@@ -55,7 +56,7 @@ mkStops origin stops startTime =
                         locationState = Just $ Spec.State origin.address.state,
                         locationId = Nothing
                       },
-                stopType = Just "START",
+                stopType = Just $ show Enums.START,
                 stopAuthorization = Nothing,
                 stopTime = Just Spec.Time {timeTimestamp = Just startTime}
               }
@@ -73,7 +74,7 @@ mkStops origin stops startTime =
                                  locationState = Just $ Spec.State stop.address.state,
                                  locationId = Nothing
                                },
-                         stopType = Just "END",
+                         stopType = Just $ show Enums.END,
                          stopAuthorization = Nothing,
                          stopTime = Nothing
                        }
@@ -173,12 +174,12 @@ mkPaymentTags =
 
 castVehicleVariant :: VehVar.VehicleVariant -> (Text, Text)
 castVehicleVariant = \case
-  VehVar.SEDAN -> ("CAB", "SEDAN")
-  VehVar.SUV -> ("CAB", "SUV")
-  VehVar.HATCHBACK -> ("CAB", "HATCHBACK")
-  VehVar.AUTO_RICKSHAW -> ("AUTO_RICKSHAW", "AUTO_RICKSHAW")
-  VehVar.TAXI -> ("CAB", "TAXI")
-  VehVar.TAXI_PLUS -> ("CAB", "TAXI_PLUS")
+  VehVar.SEDAN -> (show Enums.CAB, "SEDAN")
+  VehVar.SUV -> (show Enums.CAB, "SUV")
+  VehVar.HATCHBACK -> (show Enums.CAB, "HATCHBACK")
+  VehVar.AUTO_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
+  VehVar.TAXI -> (show Enums.CAB, "TAXI")
+  VehVar.TAXI_PLUS -> (show Enums.CAB, "TAXI_PLUS")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =
@@ -246,7 +247,7 @@ mkStops' origin mDestination =
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing
                         },
-                  stopType = Just "START",
+                  stopType = Just $ show Enums.START,
                   stopAuthorization = Nothing,
                   stopTime = Nothing
                 },
@@ -265,7 +266,7 @@ mkStops' origin mDestination =
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing
                           },
-                    stopType = Just "END",
+                    stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
                     stopTime = Nothing
                   }

@@ -15,6 +15,7 @@
 module Beckn.OnDemand.Utils.Init where
 
 import qualified Beckn.OnDemand.Utils.Common as UCommon
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
@@ -44,14 +45,14 @@ mkStops origin mDestination mStartOtp =
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing
                         },
-                  stopType = Just "START",
+                  stopType = Just $ show Enums.START,
                   stopAuthorization =
                     if isNothing mStartOtp
                       then Nothing
                       else
                         Just $
                           Spec.Authorization
-                            { authorizationType = Just "OTP",
+                            { authorizationType = Just $ show Enums.OTP,
                               authorizationToken = mStartOtp
                             },
                   stopTime = Nothing
@@ -69,7 +70,7 @@ mkStops origin mDestination mStartOtp =
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing
                           },
-                    stopType = Just "END",
+                    stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
                     stopTime = Nothing
                   }
@@ -82,7 +83,7 @@ mkPayment (Just DMPM.PaymentMethodInfo {..}) =
   singleton $
     Spec.Payment
       { paymentId = Nothing,
-        paymentCollectedBy = Just "BPP",
+        paymentCollectedBy = Just $ show Enums.BPP,
         paymentType = Just $ castDPaymentType paymentType,
         paymentParams =
           Just $
@@ -101,8 +102,8 @@ mkPayment Nothing =
   singleton
     Spec.Payment
       { paymentId = Nothing,
-        paymentCollectedBy = Just "BPP",
-        paymentType = Just "ON_FULFILLMENT",
+        paymentCollectedBy = Just $ show Enums.BPP,
+        paymentType = Just $ show Enums.ON_FULFILLMENT,
         paymentParams =
           Just $
             Spec.PaymentParams
@@ -117,7 +118,7 @@ mkPayment Nothing =
       }
 
 castDPaymentType :: DMPM.PaymentType -> Text
-castDPaymentType DMPM.ON_FULFILLMENT = "ON_FULFILLMENT"
+castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
 
 mkFulfillmentTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]
 mkFulfillmentTags mbMaxDistance = do

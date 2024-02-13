@@ -18,6 +18,7 @@ module Beckn.ACL.FRFS.Utils where
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson as A
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
@@ -141,7 +142,7 @@ type Amount = Text
 mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Spec.Payment
 mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType =
   Spec.Payment
-    { paymentCollectedBy = Just "BAP",
+    { paymentCollectedBy = Just $ show Enums.BAP,
       paymentId = mTxnId,
       paymentParams =
         if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]

@@ -17,6 +17,7 @@ module Beckn.ACL.OnConfirm (buildOnConfirmMessage, buildOnConfirmMessageV2) wher
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking as DConfirm
@@ -283,12 +284,12 @@ tfPayments :: DConfirm.DConfirmResp -> Maybe [Spec.Payment]
 tfPayments res =
   Just
     [ Spec.Payment
-        { paymentCollectedBy = Just "BPP",
+        { paymentCollectedBy = Just $ show Enums.BPP,
           paymentId = Nothing,
           paymentParams = mkParams,
           paymentStatus = Nothing,
           paymentTags = Nothing,
-          paymentType = Just "ON_FULFILLMENT"
+          paymentType = Just $ show Enums.ON_FULFILLMENT
         }
     ]
   where

@@ -5,6 +5,7 @@ module Beckn.OnDemand.Transformer.Search where
 
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Search
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
@@ -93,7 +94,7 @@ tfIntent ::
 tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
   let intentTags_ = Nothing
   intentFulfillment_ <- tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes
-  intentPayment_ <- tfPayment "BPP"
+  intentPayment_ <- tfPayment (show Enums.BPP)
   let returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
   let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
