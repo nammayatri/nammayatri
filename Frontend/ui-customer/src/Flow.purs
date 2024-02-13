@@ -3515,35 +3515,33 @@ searchLocationFlow = do
             isEdit = globalState.homeScreen.data.driverInfoCardState.destination /= ""
             destLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.destLoc
             stopLocation = encodeAddress destLoc.address [] Nothing
-        if isEdit then do 
-          let req = Remote.makeEditStopReq  (fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon)) stopLocation
-          response <- callApiBT (EditStopRequest bookingId req)
-          pure unit
-          else do 
-            let req = Remote.makeAddStopReq ( fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon)) stopLocation
-            response <- callApiBT (AddStopRequest bookingId req)
-            pure unit
-          -- addStopFLow 
+        let req = Remote.makeStopReq  (fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon)) stopLocation
+        response <- lift $ lift $ Remote.addOrEditStop bookingId req isEdit
         void $ (setValueToLocalStore TRACKING_DRIVER) "False"
-        let driverInfoCard = if isLocalStageOn RideStarted then globalState.homeScreen.data.driverInfoCardState {destinationLat = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLat destLoc.lat, destinationLng = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLng destLoc.lon} else globalState.homeScreen.data.driverInfoCardState
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ route = Nothing, driverInfoCardState = driverInfoCard}
-                                                          , props {stopLoc = Just {lat : fromMaybe 0.0 destLoc.lat, lng : fromMaybe 0.0 destLoc.lon, stopLocAddress : destLoc.address}}}) --, driverInfoCardState {destinationLat = fromMaybe homeScreen.data.driverInfoCardState.destinationLat destLoc.lat, destinationLng = fromMaybe homeScreen.data.driverInfoCardState.destinationLng destLoc.lon}}})
+        case response of 
+          Right _ -> do
+            let driverInfoCard = if isLocalStageOn RideStarted then globalState.homeScreen.data.driverInfoCardState {destinationLat = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLat destLoc.lat, destinationLng = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLng destLoc.lon} else globalState.homeScreen.data.driverInfoCardState
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ route = Nothing, driverInfoCardState = driverInfoCard}
+                                                              , props {stopLoc = Just {lat : fromMaybe 0.0 destLoc.lat, lng : fromMaybe 0.0 destLoc.lon, stopLocAddress : destLoc.address}}}) --, driverInfoCardState {destinationLat = fromMaybe homeScreen.data.driverInfoCardState.destinationLat destLoc.lat, destinationLng = fromMaybe homeScreen.data.driverInfoCardState.destinationLng destLoc.lon}}})
+            pure unit
+          Left err -> do 
+            void $ pure $  toast $ "Error While " <> (if isEdit then "Editing" else "Adding") <> " Stop"
+            pure unit
         homeScreenFlow
+        
       else if (state.data.fromScreen == (Screen.getScreen Screen.RIDE_SCHEDULED_SCREEN)) then do 
         (GlobalState globalState) <- getState 
         let bookingId = globalState.rideScheduledScreen.data.bookingId 
             isEdit = isJust globalState.rideScheduledScreen.data.destination 
             destLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.destLoc
             stopLocation = encodeAddress destLoc.address [] Nothing
-        if isEdit then do 
-          let req = Remote.makeEditStopReq ( fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon)) stopLocation
-          response <- callApiBT (EditStopRequest bookingId req)
-          pure unit
-          else do 
-            let req = Remote.makeAddStopReq ( fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon)) stopLocation
-            response <- callApiBT (AddStopRequest bookingId req)
+        let req = Remote.makeStopReq  (fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon)) stopLocation
+        response <- lift $ lift $ Remote.addOrEditStop bookingId req isEdit
+        case response of 
+          Right _ -> pure unit
+          Left err -> do 
+            void $ pure $ toast $ "Error While " <> (if isEdit then "Editing" else "Adding") <> " Stop"
             pure unit
-          -- addStopFLow 
         rideScheduledFlow
       else pure unit
 
@@ -3742,7 +3740,7 @@ searchLocationFlow = do
 predictionClickedFlow :: LocationListItemState -> SearchLocationScreenState -> FlowBT String Unit
 predictionClickedFlow prediction state = do 
   modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
-  if state.props.actionType == AddingStopAction || true then do 
+  if state.props.actionType == AddingStopAction then do 
     void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
     void $ lift $ lift $ toggleLoader true
     let {lat, lon, placeId} = {lat : fromMaybe 0.0 prediction.lat, lon : fromMaybe 0.0 prediction.lon, placeId : prediction.placeId}
@@ -4110,15 +4108,36 @@ rentalScreenFlow = do
         Right (ConfirmRes resp) -> do 
           modifyScreenState $ RentalScreenStateType (\_ -> updatedState{data{bookingId = resp.bookingId}})
           modifyScreenState $ RideScheduledScreenStateType (\state -> state{data{bookingId = resp.bookingId}})
+          let dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo updatedState.data.dropLoc
           let diffInSeconds = unsafePerformEffect $ EHC.compareUTCDate (updatedState.data.startTimeUTC) (getCurrentUTC "" )
               isNow = ((fromMaybe 0 (INT.fromString diffInSeconds ))< 60 * 30 * 1000)
-          PlaceName address <- getPlaceName (fromMaybe 0.0 updatedState.data.pickUpLoc.lat) (fromMaybe 0.0 updatedState.data.pickUpLoc.lon) HomeScreenData.dummyLocation
+              pickUpLocLat = fromMaybe 0.0 updatedState.data.pickUpLoc.lat
+              pickUpLocLon = fromMaybe 0.0 updatedState.data.pickUpLoc.lon
+              dropLocLat = fromMaybe 0.0 dropLoc.lat
+              dropLocLon = fromMaybe 0.0 dropLoc.lon
+          PlaceName address <- getPlaceName pickUpLocLat pickUpLocLon HomeScreenData.dummyLocation
           let source = address.formattedAddress
-          let dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo updatedState.data.dropLoc
-          PlaceName destAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation
+          PlaceName destAddress <- getPlaceName dropLocLat dropLocLon HomeScreenData.dummyLocation
           let dest = destAddress.formattedAddress
           if isNow then do 
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{source = source, destination = if (isJust updatedState.data.dropLoc) then dest else ""}})
+            void $ liftFlowBT $ setFlowStatusData (FlowStatusData { source : {lat : pickUpLocLat, lng : pickUpLocLon, place : source, address : Nothing, city : getCityCodeFromCity updatedState.data.pickUpLoc.city }
+                                                      , destination : {lat : dropLocLat , lng : dropLocLon , place : dest , address : Nothing, city : Nothing}
+                                                      , sourceAddress : encodeAddress source [] Nothing
+                                                      , destinationAddress : encodeAddress dest [] Nothing})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
+                props{ sourceLat = pickUpLocLat
+                     , sourceLong = pickUpLocLon
+                     , destinationLat = if (isJust updatedState.data.dropLoc) then dropLocLat else 0.0 
+                     , destinationLong = if (isJust updatedState.data.dropLoc) then dropLocLon else 0.0 
+                     , rideRequestFlow = true
+                     , bookingId = resp.bookingId
+                     , city = updatedState.data.pickUpLoc.city}
+                , data { source = source
+                       , destination = dest
+                       , sourceAddress = encodeAddress source [] Nothing
+                       , destinationAddress = encodeAddress dest [] Nothing }
+                })
+            
             enterRentalRideSearchFlow resp.bookingId
             else rideScheduledFlow
         Left err -> do

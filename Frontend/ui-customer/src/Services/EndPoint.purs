@@ -235,3 +235,6 @@ editStop rideBookingId = (getBaseUrl "48") <> "/rideBooking/" <> rideBookingId <
 
 rentalSearch :: String -> String
 rentalSearch dummy = (getBaseUrl "49") <> "/rental/search"
+
+addOrEditStop :: Boolean -> String -> String 
+addOrEditStop isEdit rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> if isEdit then "/editStop" else "/addStop" 

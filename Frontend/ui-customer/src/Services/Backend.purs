@@ -374,6 +374,12 @@ rideConfirm quoteId = do
     where
         unwrapResponse (x) = x
 
+addOrEditStop bookingId req isEdit = do 
+    headers <- getHeaders "" false
+    withAPIResult (EP.addOrEditStop isEdit bookingId) unwrapResponse $ callAPI headers (StopRequest bookingId isEdit req)
+    where
+        unwrapResponse (x) = x
+
 ------------------------------------------------------------------------ SelectEstimateBT Function ------------------------------------------------------------------------------------
 
 selectEstimateBT :: DEstimateSelect -> String -> FlowBT String SelectEstimateRes
@@ -1172,6 +1178,15 @@ makeAddStopReq lat lon stop  = AddStopReq{
 
 makeEditStopReq :: Number -> Number -> Address -> EditStopReq
 makeEditStopReq lat lon stop  = EditStopReq{
+    "address" :  (LocationAddress stop),
+    "gps" : LatLong {
+        "lat" : lat ,
+        "lon" : lon
+        }
+    }
+
+makeStopReq :: Number -> Number -> Address -> StopReq
+makeStopReq lat lon stop  = StopReq{
     "address" :  (LocationAddress stop),
     "gps" : LatLong {
         "lat" : lat ,

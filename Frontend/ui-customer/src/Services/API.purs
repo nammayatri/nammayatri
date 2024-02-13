@@ -3082,6 +3082,42 @@ newtype EditStopReq = EditStopReq
       gps :: LatLong
   }
 
+newtype StopReq = StopReq
+  { address :: LocationAddress,
+    gps :: LatLong
+  }
+
+newtype StopRes = StopRes 
+  { 
+    result :: String
+  }
+
+data StopRequest = StopRequest String Boolean StopReq 
+
+instance makeStopReq :: RestEndpoint StopRequest StopRes where 
+    makeRequest reqBody@(StopRequest rideBookingId isEdit rqBody) headers = defaultMakeRequest POST (EP.addOrEditStop isEdit rideBookingId) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest (StopRequest rideBookingId isEdit rqBody) = defaultEncode rqBody
+
+derive instance genericStopReq :: Generic StopReq _
+derive instance newtypeStopReq:: Newtype StopReq _
+instance standardEncodeStopReq :: StandardEncode StopReq where standardEncode (StopReq req) = standardEncode req
+instance showStopReq :: Show StopReq where show = genericShow
+instance decodeStopReq :: Decode StopReq where decode = defaultDecode
+instance encodeStopReq :: Encode StopReq where encode = defaultEncode
+
+derive instance genericStopRes :: Generic StopRes _
+derive instance newtypeStopRes:: Newtype StopRes _
+instance standardEncodeStopRes :: StandardEncode StopRes where standardEncode (StopRes req) = standardEncode req
+instance showStopRes :: Show StopRes where show = genericShow
+instance decodeStopRes :: Decode StopRes where decode = defaultDecode
+instance encodeStopRes :: Encode StopRes where encode = defaultEncode
+
+derive instance genericStopRequest :: Generic StopRequest _ 
+instance standardEncodeStopRequest :: StandardEncode StopRequest where standardEncode (StopRequest id isEdit req) = standardEncode req
+instance decodeStopRequest :: Decode  StopRequest where decode = defaultDecode
+instance encodeStopRequest :: Encode StopRequest where encode = defaultEncode
+
 newtype AddStopRes = AddStopRes { 
   result :: String 
   }
