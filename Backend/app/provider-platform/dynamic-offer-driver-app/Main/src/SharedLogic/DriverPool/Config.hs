@@ -91,10 +91,11 @@ getDriverPoolConfig merchantOpCityId mbvt dist = do
           return valueHere
       where
         buildDpcType cv =
+          -- pure $ fromJSONShy (ShyValue (Object cv))
           case (DAT.parse jsonToDriverPoolConfig cv) of
             Success dpc -> pure $ dpc
             Error err -> do
-              logError $ (pack "error in parsing the context value ") <> (pack err)
+              logError $ (pack "error in parsing the context value for driverpoolConfig ") <> (pack err)
               getDriverPoolConfigFromDB merchantOpCityId mbvt dist
 
 filterByDistAndDveh :: Maybe Variant.Variant -> Meters -> DriverPoolConfig -> Bool

@@ -1364,11 +1364,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1707387559,
-        "narHash": "sha256-mAKc+XjE3Q/enxpO1kMGspHB+DsJdHvryAkuF7clIjg=",
+        "lastModified": 1707840198,
+        "narHash": "sha256-JHuTRhpnggQOTHl7aa4FL3x4QrIBOkYGa9uDoKtjUZ8=",
         "owner": "piyushKumar-1",
         "repo": "haskell_cac_client",
-        "rev": "d5e328ad4302c39cc868ecfd5328250465d3a080",
+        "rev": "7da37fa4ff7db4527e4914c5035bcc5656d0ad70",
         "type": "github"
       },
       "original": {
@@ -1671,11 +1671,11 @@
     "namma-dsl": {
       "flake": false,
       "locked": {
-        "lastModified": 1707389884,
-        "narHash": "sha256-Ydc5Afvtj4hw+l7bJQI2UL1NRGgsWopzNvqTeQuiPZ4=",
+        "lastModified": 1707822035,
+        "narHash": "sha256-0szHrU1OIkOudcjXHY9esO5y84cNweqpS612XguhJTU=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "8ba6937313f96a74b0b3c2faf59f834fbccb893f",
+        "rev": "75c6cf7abde032bd86f487a29376c4ced6b5671f",
         "type": "github"
       },
       "original": {
@@ -3167,11 +3167,11 @@
     },
     "services-flake_2": {
       "locked": {
-        "lastModified": 1707323586,
-        "narHash": "sha256-QeP05m82Tt66G632xWO2PbGpAT5UKGlpn9sm06QUNXQ=",
+        "lastModified": 1707832448,
+        "narHash": "sha256-7EDHUsEaqWwJrXP038sW9eIKOB+JnKAyZl/hcQzUP7s=",
         "owner": "juspay",
         "repo": "services-flake",
-        "rev": "a0bde519ed10c5dc34cba4b452583dd367e242b0",
+        "rev": "63ff90eed9ebb637e2981c33a25218e6a22ed04e",
         "type": "github"
       },
       "original": {

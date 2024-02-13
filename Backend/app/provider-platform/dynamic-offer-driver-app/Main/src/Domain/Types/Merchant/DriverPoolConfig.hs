@@ -18,10 +18,12 @@ module Domain.Types.Merchant.DriverPoolConfig where
 
 import Data.Aeson
 import Data.Aeson.Key as DAK
+-- import Data.Time.Clock.POSIX
+
+import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Types
 import Data.Text as Text
 import Data.Time.Clock
--- import Data.Time.Clock.POSIX
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity
@@ -61,7 +63,38 @@ data DriverPoolConfigD u = DriverPoolConfig
   }
   deriving (Generic, Show)
 
+data ShyValue a = ShyValue
+  { shyValue :: Value
+  }
+
 type DriverPoolConfig = DriverPoolConfigD 'Safe
+
+class FromJSONShy a where
+  fromJSONShy :: FromJSON a => ShyValue a -> a
+
+instance FromJSONShy DriverPoolConfig where
+  fromJSONShy ShyValue {..} =
+    case shyValue of
+      Object obj -> do
+        let newObject = KM.mapKeyVal (\key -> DAK.fromText (Text.replace "driverPoolConfig:" "" $ Text.pack $ show key)) (\val -> val) obj
+            finalNewObject =
+              KM.mapWithKey
+                ( \key val -> do
+                    if show key == ("distanceBasedBatchSplit" :: String)
+                      then do
+                        let distanceBasedBatchSplit :: [BatchSplitByPickupDistance] =
+                              case val of
+                                String str -> readWithInfo $ Text.unpack str
+                                _ -> error "Naughty boy this should have been string."
+                        toJSON distanceBasedBatchSplit
+                      else val
+                )
+                newObject
+        let res = fromJSON . toJSON $ finalNewObject
+        case res of
+          Success res' -> res'
+          Error _ -> error "Couldn't parse bhai, maybe you are gay"
+      _ -> error "This looks wrong bro"
 
 -- instance FromJSON DriverPoolConfig where
 --   parseJSON (Object v) = do
@@ -93,9 +126,9 @@ type DriverPoolConfig = DriverPoolConfigD 'Safe
 -- <*> (v.: DAK.fromText (Text.pack "vehicleVariant")) -- Think about something
 --   parseJSON _ = mzero
 readWithInfo :: (Read a, Show a) => String -> a
-readWithInfo s = case KP.readMaybe s of
-  Just val -> val
-  Nothing -> error . Text.pack $ "Failed to parse: " ++ s
+readWithInfo s = case KP.readEither s of
+  Right val -> val
+  Left err -> error . Text.pack $ "Failed to parse: " ++ s ++ " err: " ++ show err
 
 jsonToDriverPoolConfig :: Object -> (Parser DriverPoolConfig)
 jsonToDriverPoolConfig v =
@@ -112,7 +145,7 @@ jsonToDriverPoolConfig v =
     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverQuoteLimit")))
     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverRequestCountLimit")))
     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverBatchSize")))
-    <*> (((readWithInfo :: (String -> BatchSplitByPickupDistance)) <$>) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:distanceBasedBatchSplit")))
+    <*> ((readWithInfo :: (String -> [BatchSplitByPickupDistance])) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:distanceBasedBatchSplit")))
     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxNumberOfBatches")))
     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxParallelSearchRequests")))
     <*> ((readWithInfo :: (String -> PoolSortingType)) <$> v .: DAK.fromText (Text.pack "driverPoolConfig:poolSortingType"))
@@ -126,5 +159,7 @@ jsonToDriverPoolConfig v =
     <*> ((KP.readMaybe :: (String -> Maybe DVeh.Variant)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:vehicleVariant")))
 
 instance FromJSON (DriverPoolConfigD 'Unsafe)
+
+instance FromJSON (DriverPoolConfigD 'Safe)
 
 instance ToJSON (DriverPoolConfigD 'Unsafe)
