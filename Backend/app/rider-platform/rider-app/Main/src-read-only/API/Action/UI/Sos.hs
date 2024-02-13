@@ -3,7 +3,6 @@
 
 module API.Action.UI.Sos where
 
-import API.Types.UI.Sos (SosDetailsRes, SosReq, SosRes, SosUpdateReq)
 import qualified API.Types.UI.Sos
 import qualified Control.Lens
 import qualified Domain.Action.UI.Sos as Domain.Action.UI.Sos

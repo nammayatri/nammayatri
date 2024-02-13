@@ -3,7 +3,6 @@
 
 module API.Action.UI.LmsModule where
 
-import API.Types.UI.LmsModule (LmsEntityCompletionStatus, LmsGetModuleRes, LmsGetVideosRes, LmsModuleRes, LmsQuestionRes, LmsQuestionStatus, LmsQuizHistory, LmsVideoRes, QuestionConfirmReq, QuestionConfirmRes, QuestionValidation, SelectedOption, SelectedOptionValidation, ValidationResult, VideoUpdateAPIReq)
 import qualified API.Types.UI.LmsModule
 import qualified Control.Lens
 import qualified Domain.Action.UI.LmsModule as Domain.Action.UI.LmsModule

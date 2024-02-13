@@ -3,7 +3,6 @@
 
 module Domain.Action.UI.SpecialLocation where
 
-import API.Types.UI.SpecialLocation
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
