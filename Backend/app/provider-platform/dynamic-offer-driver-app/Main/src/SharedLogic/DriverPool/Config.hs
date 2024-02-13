@@ -61,7 +61,11 @@ getDriverPoolConfig merchantOpCityId vehicle tripCategory mbDist = do
     _ ->
       case mbApplicableConfig of
         Just applicableConfig -> return applicableConfig
-        Nothing -> findDriverPoolConfig configs Nothing "All" distance
+        Nothing -> do
+          let alternativeConfigs = find (filterByDistAndDveh (Just vehicle) "All" distance) configs
+          case alternativeConfigs of
+            Just cfg -> return cfg
+            Nothing -> findDriverPoolConfig configs Nothing "All" distance
 
 filterByDistAndDveh :: Maybe Variant.Variant -> Text -> Meters -> DriverPoolConfig -> Bool
 filterByDistAndDveh vehicle tripCategory dist cfg =
