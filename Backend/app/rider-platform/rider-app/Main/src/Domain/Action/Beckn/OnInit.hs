@@ -45,7 +45,6 @@ data OnInitRes = OnInitRes
   { bookingId :: Id DRB.Booking,
     bppBookingId :: Id DRB.BPPBooking,
     bookingDetails :: DRB.BookingDetails,
-    driverId :: Maybe Text,
     paymentUrl :: Maybe Text,
     vehicleVariant :: Veh.VehicleVariant,
     itemId :: Text,
@@ -89,7 +88,6 @@ onInit req = do
   return $
     OnInitRes
       { bookingId = booking.id,
-        driverId = booking.driverId,
         paymentUrl = booking.paymentUrl,
         itemId = booking.itemId,
         vehicleVariant = booking.vehicleVariant,

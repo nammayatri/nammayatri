@@ -8,6 +8,7 @@ BppDetails:
     name: Text
     logoUrl: Maybe Text
     description: Maybe Text
+    supportNumber: Maybe Text
 
   queries:
     findBySubscriberIdAndDomain:

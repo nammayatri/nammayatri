@@ -16,6 +16,7 @@ module Domain.Types.Booking.API where
 
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Domain.Types.Booking.Type
+import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
@@ -30,8 +31,10 @@ import EulerHS.Prelude hiding (id, null)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Sos as CQSos
@@ -47,7 +50,7 @@ data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,
     status :: BookingStatus,
     agencyName :: Text,
-    agencyNumber :: Text,
+    agencyNumber :: Maybe Text,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
@@ -93,7 +96,7 @@ instance FromJSON BookingAPIDetails where
 instance ToSchema BookingAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
-data RentalBookingAPIDetails = RentalBookingAPIDetails
+newtype RentalBookingAPIDetails = RentalBookingAPIDetails
   { stopLocation :: Maybe LocationAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -127,15 +130,16 @@ makeBookingAPIEntity ::
   Maybe Bool ->
   Bool ->
   Maybe DSos.SosStatus ->
+  DBppDetails.BppDetails ->
   Bool ->
   BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue mbSosStatus isValueAddNP = do
+makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
   BookingAPIEntity
     { id = booking.id,
       status = booking.status,
-      agencyName = booking.providerName,
-      agencyNumber = booking.providerMobileNumber,
+      agencyName = bppDetails.name,
+      agencyNumber = bppDetails.supportNumber,
       estimatedFare = booking.estimatedFare,
       discount = booking.discount,
       estimatedTotalFare = booking.estimatedTotalFare,
@@ -213,6 +217,7 @@ buildBookingAPIEntity booking personId = do
   -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+  bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   let merchantOperatingCityId = booking.merchantOperatingCityId
   mbSosStatus <- getActiveSos mbActiveRide
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
@@ -220,4 +225,4 @@ buildBookingAPIEntity booking personId = do
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
-  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus isValueAddNP
+  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus bppDetails isValueAddNP

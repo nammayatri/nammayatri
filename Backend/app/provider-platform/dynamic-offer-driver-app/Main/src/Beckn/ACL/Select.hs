@@ -12,11 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.Select (buildSelectReq, buildSelectReqV2) where
+module Beckn.ACL.Select (buildSelectReqV2) where
 
-import Beckn.ACL.Common (getTag)
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
-import qualified Beckn.Types.Core.Taxi.Common.Tags as Select
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -25,52 +23,19 @@ import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.Select as DSelect
 import Kernel.Prelude hiding (error, setField)
-import Kernel.Product.Validation.Context
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import SharedLogic.CallBAP (mkTxnIdKey)
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
-buildSelectReq ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text],
-    CoreMetrics m
-  ) =>
-  Subscriber.Subscriber ->
-  Select.SelectReq ->
-  m DSelect.DSelectReq
-buildSelectReq subscriber req = do
-  let context = req.context
-  validateContext Context.SELECT context
-  now <- getCurrentTime
-  let order = req.message.order
-  unless (subscriber.subscriber_id == context.bap_id) $
-    throwError (InvalidRequest "Invalid bap_id")
-  unless (subscriber.subscriber_url == context.bap_uri) $
-    throwError (InvalidRequest "Invalid bap_uri")
-  let messageId = context.message_id
-  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
-  item <- case order.items of
-    [item] -> pure item
-    _ -> throwError $ InvalidRequest "There should be only one item"
-  let customerExtraFee = getCustomerExtraFee =<< item.tags
-
-  pure
-    DSelect.DSelectReq
-      { messageId = messageId,
-        transactionId = transactionId,
-        bapId = subscriber.subscriber_id,
-        bapUri = subscriber.subscriber_url,
-        pickupTime = now,
-        autoAssignEnabled = isJust context.max_callbacks && (fromMaybe 0 context.max_callbacks == 1),
-        customerExtraFee = customerExtraFee,
-        estimateId = Id order.fulfillment.id
-      }
-
 buildSelectReqV2 ::
   ( HasFlowEnv m r '["_version" ::: Text],
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r
   ) =>
   Subscriber.Subscriber ->
   Select.SelectReqV2 ->
@@ -91,11 +56,12 @@ buildSelectReqV2 subscriber req = do
   transactionUuid <- context.contextTransactionId & fromMaybeM (InvalidRequest "Missing transaction_id")
   let messageId = UUID.toText messageUuid
       transactionId = UUID.toText transactionUuid
+  void $ cacheSelectMessageId messageId transactionId
   item <- case order.orderItems of
     Just [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
   let customerExtraFee = getCustomerExtraFeeV2 =<< item.itemTags
-  let autoAssignEnabled = getAutoAssignEnabledV2 =<< item.itemTags
+      autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure fulfillment
     _ -> throwError $ InvalidRequest "There should be only one fulfillment"
@@ -107,16 +73,10 @@ buildSelectReqV2 subscriber req = do
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         pickupTime = now,
-        autoAssignEnabled = fromMaybe False autoAssignEnabled,
+        autoAssignEnabled = autoAssignEnabled,
         customerExtraFee = customerExtraFee,
         estimateId = Id estimateIdText
       }
-
-getCustomerExtraFee :: Select.TagGroups -> Maybe Money
-getCustomerExtraFee tagGroups = do
-  tagValue <- getTag "customer_tip_info" "customer_tip" tagGroups
-  customerExtraFee <- readMaybe $ T.unpack tagValue
-  Just $ Money customerExtraFee
 
 getCustomerExtraFeeV2 :: [Spec.TagGroup] -> Maybe Money
 getCustomerExtraFeeV2 tagGroups = do
@@ -124,10 +84,17 @@ getCustomerExtraFeeV2 tagGroups = do
   customerExtraFee <- readMaybe $ T.unpack tagValue
   Just $ Money customerExtraFee
 
-getAutoAssignEnabledV2 :: [Spec.TagGroup] -> Maybe Bool
-getAutoAssignEnabledV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.AUTO_ASSIGN_ENABLED Tag.IS_AUTO_ASSIGN_ENABLED tagGroups
-  case tagValue of
-    "True" -> Just True
-    "False" -> Just False
-    _ -> Just False
+getAutoAssignEnabledV2 :: Maybe [Spec.TagGroup] -> Bool
+getAutoAssignEnabledV2 = \case
+  Nothing -> True -- By default we only need to send one quote
+  Just tagGroups ->
+    let tagValue = Utils.getTagV2 Tag.AUTO_ASSIGN_ENABLED Tag.IS_AUTO_ASSIGN_ENABLED tagGroups
+     in case tagValue of
+          Just "True" -> True
+          Just "False" -> False
+          _ -> False
+
+cacheSelectMessageId :: CacheFlow m r => Text -> Text -> m ()
+cacheSelectMessageId messageId transactionId = do
+  let msgKey = mkTxnIdKey transactionId
+  Hedis.setExp msgKey messageId 3600

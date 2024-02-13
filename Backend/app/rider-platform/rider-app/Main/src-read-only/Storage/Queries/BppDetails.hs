@@ -47,6 +47,7 @@ updateByPrimaryKey Domain.Types.BppDetails.BppDetails {..} = do
       Se.Set Beam.logoUrl $ logoUrl,
       Se.Set Beam.name $ name,
       Se.Set Beam.subscriberId $ subscriberId,
+      Se.Set Beam.supportNumber $ supportNumber,
       Se.Set Beam.createdAt $ createdAt,
       Se.Set Beam.updatedAt $ now
     ]
@@ -66,6 +67,7 @@ instance FromTType' Beam.BppDetails Domain.Types.BppDetails.BppDetails where
             logoUrl = logoUrl,
             name = name,
             subscriberId = subscriberId,
+            supportNumber = supportNumber,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -79,6 +81,7 @@ instance ToTType' Beam.BppDetails Domain.Types.BppDetails.BppDetails where
         Beam.logoUrl = logoUrl,
         Beam.name = name,
         Beam.subscriberId = subscriberId,
+        Beam.supportNumber = supportNumber,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

@@ -15,6 +15,7 @@ data BppDetails = BppDetails
     logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
     subscriberId :: Kernel.Prelude.Text,
+    supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
