@@ -45,6 +45,7 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
+import qualified API.UI.SDKEvents as SDKEvents
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
 import qualified API.UI.Whatsapp as Whatsapp
@@ -87,6 +88,7 @@ type API =
            :<|> RideSummary.API
            :<|> City.API
            :<|> LmsModule.API
+           :<|> SDKEvents.API
        )
 
 handler :: FlowServer API
@@ -122,3 +124,4 @@ handler =
     :<|> RideSummary.handler
     :<|> City.handler
     :<|> LmsModule.handler
+    :<|> SDKEvents.handler

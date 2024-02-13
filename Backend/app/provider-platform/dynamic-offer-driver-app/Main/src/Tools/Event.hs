@@ -19,6 +19,7 @@ import qualified Domain.Types.Booking as DBooking
 import Domain.Types.DriverQuote
 import qualified Domain.Types.Estimate as ES
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSearchRequest
@@ -68,6 +69,7 @@ data Payload
         exophoneNumber :: Maybe Text,
         rideId :: Maybe (Id DRide.Ride)
       }
+  | SDK Text
   deriving (Show, Eq, Generic, FromJSON)
 
 instance ToJSON Payload where
@@ -109,6 +111,13 @@ data ExophoneEventData = ExophoneEventData
     triggeredBy :: EventTriggeredBy,
     personId :: Maybe (Id Person),
     exophoneNumber :: Maybe Text
+  }
+
+data SDKEventData = SDKEventData
+  { personId :: Id Person,
+    merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    payload :: Text
   }
 
 triggerEstimateEvent ::
@@ -221,3 +230,12 @@ triggerExophoneEvent ExophoneEventData {..} = do
   let exophonePayload = Exophone {..}
   exoevent <- createEvent (getId <$> personId) (maybe "" getId merchantId) ExophoneData DYNAMIC_OFFER_DRIVER_APP triggeredBy (Just exophonePayload) Nothing Nothing
   triggerEvent exoevent
+
+triggerSDKEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  SDKEventData ->
+  m ()
+triggerSDKEvent SDKEventData {..} = do
+  sdkEvent <- createEvent (Just $ getId personId) (getId merchantId) SDKData DYNAMIC_OFFER_DRIVER_APP User (Just $ SDK payload) Nothing (Just $ getId merchantOperatingCityId)
+  triggerEvent sdkEvent
