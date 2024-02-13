@@ -133,7 +133,6 @@ screen initialState =
   , globalEvents:
       [ ( \push -> do
             _ <- pure $ printLog "storeCallBackCustomer initially" "." 
-            _ <- pure $ spy "Inside homeScreen" initialState
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
@@ -190,7 +189,6 @@ screen initialState =
                 when (initialState.props.autoScroll) $ do
                   startTimer initialState.data.config.suggestedTripsAndLocationConfig.autoScrollTime "autScroll" "1" push AutoScrollCountDown
                 _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
-                void $ pure $ spy "inside remove all polylines" "hgh"
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
                 _ <- pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
@@ -210,7 +208,6 @@ screen initialState =
               PickUpFarFromCurrentLocation -> 
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
-                _ <- pure $ spy "Inside RideAccepted" (getValueToLocalStore TRACKING_DRIVER)
                 when 
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
                     $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown
@@ -223,7 +220,6 @@ screen initialState =
                       let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
                       void $ startTimer secondsLeft "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
-                  _ <- pure $ spy "Inside RideAccepted" "TRACKING_DRIVER"
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
@@ -242,11 +238,9 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 -- _ <- pure $ enableMyLocation false
-                void $ pure $ spy "inside RideStarted" "Sdfjhgdfjkbk"
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  void $ pure $ spy "Inside RideStarted" (getValueToLocalStore TRACKING_ID)
                   _ <- launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
                   pure unit
                 else
@@ -2297,7 +2291,7 @@ rideTrackingView push state =
                         , background Color.transparent 
                         , accessibility DISABLE
                         , enableShift false
-                        , peakHeight $ spy "PeakHeight is being set to" (getInfoCardPeekHeight state)
+                        , peakHeight $ getInfoCardPeekHeight state
                         , halfExpandedRatio $ halfExpanded
                         , orientation VERTICAL
                         ] <> (if lowVisionDisability || (os == "ANDROID") then 
@@ -2963,7 +2957,7 @@ getQuotesPolling pollingId action retryAction count duration push state = do
       let gotQuote = (getValueToLocalStore GOT_ONE_QUOTE)
       let minimumPollingCount = fromMaybe 0 (fromString (getValueToLocalStore TEST_MINIMUM_POLLING_COUNT))
       let usableCount = if gotQuote == "TRUE" && count > minimumPollingCount then minimumPollingCount else count
-      if (spy "USABLECOUNT :- " usableCount > 0) then do
+      if  usableCount > 0 then do
         resp <- selectList (state.props.estimateId)
         _ <- pure $ printLog "caseId" (state.props.estimateId)
         case resp of
@@ -3014,9 +3008,7 @@ updateRecentTrips action push response = do
 driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> RideBookingRes -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
-  void $ pure $ spy "INside state" state
   (GlobalState currentState) <- getState 
-  void $ pure $ spy "inside currentState" currentState.homeScreen
   let updatedState = currentState.homeScreen
   if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
     when (state.props.bookingId /= "") $ do
@@ -3050,12 +3042,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           Right (GetDriverLocationResp resp) -> do
             -- (GlobalState currentState) <- getState Fget
             let
-              updatedState = spy "UpdatedState" (currentState.homeScreen)
               rideID = state.data.driverInfoCardState.rideId
               srcLat = (resp ^. _lat)
               srcLon = (resp ^. _lon)
-              dstLat = spy "Inside DestLat" $ if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-              dstLon = spy "Inside DestLon" $ if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
+              dstLat = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
+              dstLon = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
               trackingType = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then Remote.DRIVER_TRACKING else Remote.RIDE_TRACKING
               markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.rideType
               sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
@@ -3067,10 +3058,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
             
             
             if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
-              let _ = spy "inside locationosidhkhksdc" "line 3061"
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-                let _ = spy "sourceLat Long" (show srcLat <> "lat ::" <> show srcLon <> " dLat" <> show dstLat <> "dLon" <> show dstLon)
                 
                 if (srcLat /= 0.0 && srcLon /= 0.0 && dstLat /= 0.0 && dstLon /= 0.0) then do 
                   _ <- pure $ removeAllPolylines ""
@@ -3080,12 +3069,10 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
                 pure unit
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
-                let _ = spy "Inside TRACKING_DRIVER" state.props.stopLoc
-                let _ = spy "INside srcLat srcLon" (show srcLat <> "lat ::" <> show srcLon <> " dLat" <> show dstLat <> "dLon" <> show dstLon)
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 
                 {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) --state.data.driverInfoCardState.destinationLng
-                let rentalPoints = spy "RentalPoints" if state.data.rideType == RideType.RENTAL_RIDE && isLocalStageOn RideAccepted then points else Nothing
+                let rentalPoints = if state.data.rideType == RideType.RENTAL_RIDE && isLocalStageOn RideAccepted then points else Nothing
                     rentalRoute = route 
                     rentalDistance = routeDistance
                     rentalDuration = routeDuration
@@ -4634,11 +4621,6 @@ endOTPView push state =
   ]
 
 createRouteHelper routeState startLat startLon endLat endLon = do
-  
-  let _ = spy "Route Response" startLat
-  let _ = spy "Roueyfghjsdf" startLon 
-  let _ = spy "sdfkjhksidyfiosdf" endLat 
-  let _ = spy "sdfjhsdkjflk" endLon
   if (startLat /= 0.0 && startLon /= 0.0 && endLat /= 0.0 && endLon /= 0.0) then do
     routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon
     case routeResp of 

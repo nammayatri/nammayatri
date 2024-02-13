@@ -60,7 +60,7 @@ import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, un
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Number (fromString, round) as NUM
 import Data.String as STR
 import Debug (spy)
@@ -90,7 +90,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity, getOneWaySpecialZoneAPIDetailsQuotes)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getQuotesTransformer, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity, filterSpecialZoneAndInterCityQuotes, getFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..))
@@ -1116,13 +1116,10 @@ eval (IsMockLocation isMock) state = do
 
 eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
   _ <- pure $ spy "updateCurrentStage" stage
-  void $ pure $ spy "Inside UpdateCurrentStage" resp
   let fareProductType = resp.bookingDetails ^._fareProductType
       stopLocation = if fareProductType == "RENTAL" then _stopLocation else _toLocation
       (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
       stopLocationDetails = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^._stopLocation)
-      _ = spy "estimatedDuration" resp.estimatedDuration
-      _ = spy "stopLocationDetails stopLocationDetails" stopLocationDetails
       otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
       (RideAPIEntity rideList) = (fromMaybe dummyRideAPIEntity (head resp.rideList))
       searchResultType = if (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing) then QUOTES 
@@ -1144,7 +1141,6 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
                               }
                         }
                       , props{stopLoc = Just {lat : stopLocationDetails^._lat, lng : stopLocationDetails^._lon, stopLocAddress : decodeAddress (Booking stopLocationDetails) }}}
-      _ = spy "newSattte" newState
   if stage == "REALLOCATED" then
     exit $ NotificationHandler "REALLOCATE_PRODUCT" newState
   else if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
@@ -1188,7 +1184,6 @@ eval OnResumeCallback state =
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
 eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = do
-  let _ = spy "sakfljhs" state
   case state.data.ratingViewState.issueFacedView of
     true -> continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = true}}}
     false -> continue state {data { ratingViewState{selectedYesNoButton = index, doneButtonVisibility = true, wasOfferedAssistance = Just (index==0)}}} 
@@ -1524,10 +1519,6 @@ eval (MAPREADY key latitude longitude) state =
   case key of
     _ -> continueWithCmd state [ do
       _ <- checkPermissionAndUpdatePersonMarker state
-      -- if (isJust state.data.startRideSearch) then do
-      --   let _ = spy "Inside MAPREADY" "hfhjghjghjk"
-      --   pure RideSearchAction 
-      --   else 
       pure AfterRender
     ]
 
@@ -2313,19 +2304,14 @@ eval (StartLocationTracking item) state = do
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
-  let quotes = getOneWaySpecialZoneAPIDetailsQuotes quotesRes.quotes 
-      fareProductType = case head quotes of 
-                          Just (Quotes body) -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                                                    fareProductType = quoteEntity.quoteDetails^._fareProductType
-                                                in fareProductType 
-                          _ -> ""
+  let quotes = filterSpecialZoneAndInterCityQuotes quotesRes.quotes 
+      fareProductType = maybe "" getFareProductType (head quotes)
   case null quotes of
     false -> case fareProductType of 
-              "OneWaySpecialZoneAPIDetails" -> specialZoneFlow quotes state
-              "INTER_CITY" -> interCityFlow quotes state
-              _ -> specialZoneFlow quotes state
+              "OneWaySpecialZoneAPIDetails" -> quoteListFlow "specialZone" quotes state
+              "INTER_CITY" -> quoteListFlow "interCity" quotes state
+              _ -> quoteListFlow "specialZone" quotes state
     true -> estimatesListFlow quotesRes.estimates state 
-
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
   case (getMerchant FunctionCall) of
@@ -2969,40 +2955,39 @@ isTipEnabled state = do
                     "AUTO_RICKSHAW" -> tipConfig.auto
                     _ -> tipConfig.cabs
 
-interCityFlow :: Array OfferRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-interCityFlow estimatedQuotes state = do
-  let quoteList = getSpecialZoneQuotes estimatedQuotes state.data.config.estimateAndQuoteConfig
+quoteListFlow :: String -> Array OfferRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+quoteListFlow flowType estimatedQuotes state = do
+  let quoteList = getQuotesTransformer estimatedQuotes state.data.config.estimateAndQuoteConfig
       defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
   void $ pure $ setSelectedEstimatesObject defaultQuote
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     void $ pure $ updateLocalStage SettingPrice
     void $ pure $ setValueToLocalStore SELECTED_VARIANT (defaultQuote.vehicleVariant)
-    continue state { data {quoteList = quoteList, currentSearchResultType = INTERCITY, selectedQuoteId = Just defaultQuote.id, selectedQuoteVariant = Just defaultQuote.vehicleVariant, intercity = true}, props {currentStage = SettingPrice}}
+    continue $ updateStateWithQuotes flowType state quoteList defaultQuote
   else do
     void $ pure $ hideKeyboardOnNavigation true
-    void $ pure $ updateLocalStage HomeScreen
+    void $ pure $ updateLocalStage SearchLocationModel
     void $ pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-    let newState = state { props {currentStage = HomeScreen}, data{currentSearchResultType = QUOTES}}
-    -- continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
-    updateAndExit newState $ Go_To_Search_Location_Flow newState true
-
-specialZoneFlow :: Array OfferRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-specialZoneFlow estimatedQuotes state = do
-  let quoteList = getSpecialZoneQuotes estimatedQuotes state.data.config.estimateAndQuoteConfig
-      defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
-  void $ pure $ setSelectedEstimatesObject defaultQuote
-  if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
-    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
-    _ <- pure $ updateLocalStage SettingPrice
-    _ <- pure $ setValueToLocalStore SELECTED_VARIANT (defaultQuote.vehicleVariant)
-    continue state { data {specialZoneQuoteList = quoteList, currentSearchResultType = QUOTES, specialZoneSelectedQuote = Just defaultQuote.id, specialZoneSelectedVariant = Just defaultQuote.vehicleVariant}, props {currentStage = SettingPrice, specialZoneType = "OneWaySpecialZoneAPIDetails"}}
-  else do
-    _ <- pure $ hideKeyboardOnNavigation true
-    _ <- pure $ updateLocalStage SearchLocationModel
-    _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
     continue state { props {currentStage = SearchLocationModel}, data{currentSearchResultType = QUOTES}}
-    -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
+  where
+    updateStateWithQuotes :: String -> HomeScreenState -> Array ChooseVehicleController.Config -> ChooseVehicleController.Config -> HomeScreenState
+    updateStateWithQuotes flowType state quoteList defaultQuote = state 
+      { data 
+        { quoteList = quoteList
+        , currentSearchResultType = if flowType == "interCity" then INTERCITY else QUOTES
+        , selectedQuoteId = Just defaultQuote.id
+        , selectedQuoteVariant = Just defaultQuote.vehicleVariant
+        , intercity = flowType == "interCity"
+        , specialZoneSelectedQuote = if flowType == "specialZone" then Just defaultQuote.id else Nothing
+        , specialZoneSelectedVariant = if flowType == "specialZone" then Just defaultQuote.vehicleVariant else Nothing
+        }
+      , props 
+        { currentStage = SettingPrice
+        , specialZoneType = if flowType == "specialZone" then "OneWaySpecialZoneAPIDetails" else ""
+        }
+      }
+
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
