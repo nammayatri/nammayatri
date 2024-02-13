@@ -199,7 +199,7 @@ getActiveSos mbRide = do
   case mbRide of
     Nothing -> return Nothing
     Just ride -> do
-      sosDetails <- CQSos.findByRideIdAndStatus ride.id [DSos.Pending, DSos.Resolved]
+      sosDetails <- CQSos.findByRideId ride.id
       return $ (.status) <$> sosDetails
 
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
