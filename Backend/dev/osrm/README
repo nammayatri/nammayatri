@@ -11,3 +11,7 @@ Usage:
 Generating Docker image
 1. Download the openstreet data file as mentioned above
 2. `docker build . -f Dockerfile.osrm  -t osrm-custom`
+
+Running the Image
+1. docker run osrm-custom
+2. docker cp <container-id>:/data <path-to-local-directory> this will copy /data folder from container to local machine
