@@ -14,6 +14,7 @@
 
 module Beckn.OnDemand.Utils.OnSearch where
 
+import BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import qualified Data.Aeson as A
@@ -30,7 +31,6 @@ import EulerHS.Prelude hiding (id, view, (^?))
 import GHC.Float (double2Int)
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
-import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 
 data Pricing = Pricing
@@ -110,7 +110,7 @@ mkGeneralInfoTag pricing =
           tagGroupDescriptor =
             Just
               Spec.Descriptor
-                { descriptorCode = Just "info",
+                { descriptorCode = Just $ show Tag.INFO,
                   descriptorName = Just "Information",
                   descriptorShortDesc = Nothing
                 },
@@ -129,7 +129,7 @@ mkGeneralInfoTag pricing =
               tagDescriptor =
                 Just
                   Spec.Descriptor
-                    { descriptorCode = Just "special_location_tag",
+                    { descriptorCode = Just $ show Tag.SPECIAL_LOCATION_TAG,
                       descriptorName = Just "Special Location Tag",
                       descriptorShortDesc = Nothing
                     },
@@ -144,7 +144,7 @@ mkGeneralInfoTag pricing =
             tagDescriptor =
               Just
                 Spec.Descriptor
-                  { descriptorCode = Just "distance_to_nearest_driver_meter",
+                  { descriptorCode = Just $ show Tag.DISTANCE_TO_NEAREST_DRIVER_METER,
                     descriptorName = Just "Distance To Nearest Driver Meter",
                     descriptorShortDesc = Nothing
                   },
@@ -175,22 +175,6 @@ data FareParamsBreakupItem = FareParamsBreakupItem
 
 mkFareParamsBreakupItem :: Text -> Money -> FareParamsBreakupItem
 mkFareParamsBreakupItem = FareParamsBreakupItem
-
-mkFareParamsTag :: Pricing -> Spec.TagGroup
-mkFareParamsTag pricing = do
-  let fareParamsBreakups = maybe [] (mkFareParamsBreakups mkPrice mkFareParamsBreakupItem) pricing.fareParams
-      fareParamsBreakupsTags = buildFareParamsBreakupsTags <$> fareParamsBreakups
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just
-          Spec.Descriptor
-            { descriptorCode = Just "fare_breakup",
-              descriptorName = Just "Fare Breakup",
-              descriptorShortDesc = Nothing
-            },
-      tagGroupList = Just fareParamsBreakupsTags
-    }
 
 buildRateCardTags :: RateCardBreakupItem -> Spec.Tag
 buildRateCardTags RateCardBreakupItem {..} = do
@@ -226,7 +210,7 @@ mkRateCardTag pricing = do
       tagGroupDescriptor =
         Just
           Spec.Descriptor
-            { descriptorCode = Just "fare_policy",
+            { descriptorCode = Just $ show Tag.FARE_POLICY,
               descriptorName = Just "Fare Policy",
               descriptorShortDesc = Nothing
             },

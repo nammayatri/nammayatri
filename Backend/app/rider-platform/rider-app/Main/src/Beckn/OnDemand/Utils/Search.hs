@@ -14,6 +14,7 @@
 
 module Beckn.OnDemand.Utils.Search where
 
+import BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import qualified Data.List as List
@@ -35,7 +36,7 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
       { tagGroupDescriptor =
           Just $
             Spec.Descriptor
-              { descriptorCode = Just "route_info",
+              { descriptorCode = Just $ show Tag.ROUTE_INFO,
                 descriptorName = Just "Route Information",
                 descriptorShortDesc = Nothing
               },
@@ -57,7 +58,7 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "distance_info_in_m",
+                    { descriptorCode = Just $ show Tag.DISTANCE_INFO_IN_M,
                       descriptorName = Just "Distance Information In Meters",
                       descriptorShortDesc = Nothing
                     },
@@ -72,7 +73,7 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "duration_info_in_s",
+                    { descriptorCode = Just $ show Tag.DURATION_INFO_IN_S,
                       descriptorName = Just "Duration Information In Seconds",
                       descriptorShortDesc = Nothing
                     },
@@ -87,8 +88,8 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "route_points",
-                      descriptorName = Just "Route Points",
+                    { descriptorCode = Just $ show Tag.WAYPOINTS,
+                      descriptorName = Just "Waypoints",
                       descriptorShortDesc = Nothing
                     },
               tagDisplay = Just False,
@@ -117,7 +118,7 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "customer_info",
+                { descriptorCode = Just $ show Tag.CUSTOMER_INFO,
                   descriptorName = Just "Customer Information",
                   descriptorShortDesc = Nothing
                 },
@@ -138,7 +139,7 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "customer_language",
+                    { descriptorCode = Just $ show Tag.CUSTOMER_LANGUAGE,
                       descriptorName = Just "Customer Language",
                       descriptorShortDesc = Nothing
                     },
@@ -153,7 +154,7 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "customer_disability",
+                    { descriptorCode = Just $ show Tag.CUSTOMER_DISABILITY,
                       descriptorName = Just "Customer Disability",
                       descriptorShortDesc = Nothing
                     },
@@ -168,7 +169,7 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "customer_phone_number",
+                    { descriptorCode = Just $ show Tag.CUSTOMER_PHONE_NUMBER,
                       descriptorName = Just "Customer Phone Number",
                       descriptorShortDesc = Nothing
                     },
@@ -184,7 +185,7 @@ mkReallocationInfoTags = \case
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "reallocation_info",
+                { descriptorCode = Just $ show Tag.REALLOCATION_INFO,
                   descriptorName = Just "Reallocation Information",
                   descriptorShortDesc = Nothing
                 },
@@ -195,7 +196,7 @@ mkReallocationInfoTags = \case
                   { tagDescriptor =
                       Just $
                         Spec.Descriptor
-                          { descriptorCode = Just "is_reallocation_enabled",
+                          { descriptorCode = Just $ show Tag.IS_REALLOCATION_ENABLED,
                             descriptorName = Just "Is Reallocation Enabled",
                             descriptorShortDesc = Nothing
                           },
