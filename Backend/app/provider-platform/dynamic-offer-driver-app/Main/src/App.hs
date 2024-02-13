@@ -17,6 +17,7 @@ module App where
 import AWS.S3
 import qualified App.Server as App
 import qualified Client.Main as CM
+import qualified Control.Concurrent as CC
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -59,13 +60,22 @@ import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
 import "utils" Utils.Common.Events as UE
 
+createCACShit :: AppCfg -> IO ()
+createCACShit appCfg = do
+  x <- (CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants)
+  case x of
+    0 -> CM.startCACPolling appCfg.cacConfig.tenants
+    _ -> error "CAC client failed to start"
+  y <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  case y of
+    0 -> CM.runSuperPositionPolling appCfg.cacConfig.tenants
+    _ -> error "SuperPosition client failed to start"
+
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
-  _ <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
-  _ <- CM.runSuperPositionPolling appCfg.cacConfig.tenants
-  _ <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
-  _ <- CM.startCACPolling appCfg.cacConfig.tenants
+  _ <- CC.forkOS $ createCACShit appCfg
+
   Metrics.serve (appCfg.metricsPort)
   runDynamicOfferDriverApp' appCfg
 

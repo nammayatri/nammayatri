@@ -74,7 +74,7 @@ findByMerchantOpCityId id = do
     buildDipcType cv = case (DAT.parse jsonToDriverIntelligentPoolConfig cv) of
       DA.Success dipc -> pure $ dipc
       DA.Error err ->
-        error $ (pack "error in parsing the context value ") <> (pack err)
+        error $ (pack "error in parsing the context value for driverPoolConfig ") <> (pack err)
 
 cacheDriverIntelligentPoolConfig :: CacheFlow m r => DriverIntelligentPoolConfig -> m ()
 cacheDriverIntelligentPoolConfig cfg = do

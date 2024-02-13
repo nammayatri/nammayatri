@@ -18,6 +18,7 @@ module Domain.Types.FarePolicy.FarePolicySlabsDetails
   )
 where
 
+import Data.Aeson.Types
 import qualified Data.List.NonEmpty as NE
 import Data.Ord
 import Domain.Types.Common
@@ -50,6 +51,13 @@ newtype FPSlabsDetailsAPIEntity = FPSlabsDetailsAPIEntity
   { slabs :: NonEmpty FPSlabsDetailsSlabAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+makeFPSlabsDetails' :: Object -> String -> Parser (Maybe FPSlabsDetails)
+makeFPSlabsDetails' k key = do
+  fpsdsl <- jsonToFPSlabsDetailsSlab k key
+  case NE.nonEmpty fpsdsl of
+    Just fpsdsl' -> pure $ Just (FPSlabsDetails fpsdsl')
+    Nothing -> pure $ Nothing
 
 makeFPSlabsDetailsAPIEntity :: FPSlabsDetails -> FPSlabsDetailsAPIEntity
 makeFPSlabsDetailsAPIEntity FPSlabsDetails {..} =
