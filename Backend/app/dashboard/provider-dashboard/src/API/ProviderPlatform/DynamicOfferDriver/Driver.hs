@@ -100,6 +100,7 @@ type API =
            :<|> SendMessageToDriverViaDashboardAPI
            :<|> SendDummyRideRequestToDriverViaDashboardAPI
            :<|> ChangeOperatingCityAPI
+           :<|> GetOperatingCityAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -306,6 +307,10 @@ type ChangeOperatingCityAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'CHANGE_OPERATING_CITY
     :> Common.ChangeOperatingCityAPI
 
+type GetOperatingCityAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'GET_OPERATING_CITY
+    :> Common.GetOperatingCityAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverDocuments merchantId city
@@ -359,6 +364,7 @@ handler merchantId city =
     :<|> sendMessageToDriverViaDashboard merchantId city
     :<|> sendDummyRideRequestToDriverViaDashboard merchantId city
     :<|> changeOperatingCity merchantId city
+    :<|> getOperatingCity merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -711,3 +717,8 @@ changeOperatingCity merchantShortId opCity apiTokenInfo driverId req =
     transaction <- buildTransaction Common.ChangeOperatingCityEndpoint apiTokenInfo driverId (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.changeOperatingCity) driverId req
+
+getOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe (Id Common.Ride) -> FlowHandler Common.GetOperatingCityResp
+getOperatingCity merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbRideId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.getOperatingCity) mbMobileCountryCode mbMobileNumber mbRideId

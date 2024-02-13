@@ -1031,3 +1031,21 @@ newtype ChangeOperatingCityReq = ChangeOperatingCityReq
 
 instance HideSecrets ChangeOperatingCityReq where
   hideSecrets = identity
+
+-- get operating city Api ------------------------
+-------------------------------------------
+
+type GetOperatingCityAPI =
+  "getOperatingCity"
+    :> QueryParam "mobileCountryCode" Text
+    :> QueryParam "mobileNumber" Text
+    :> QueryParam "rideId" (Id Ride)
+    :> Get '[JSON] GetOperatingCityResp
+
+newtype GetOperatingCityResp = GetOperatingCityResp
+  { operatingCity :: City.City
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets GetOperatingCityResp where
+  hideSecrets = identity
