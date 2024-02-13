@@ -154,7 +154,7 @@ mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType =
       paymentType = encodeToText' Spec.PRE_ORDER
     }
   where
-    anyTrue = any (== True)
+    anyTrue = or
 
 mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe Amount -> Spec.PaymentParams
 mkPaymentParams mPaymentParams mTxnId mAmount =
