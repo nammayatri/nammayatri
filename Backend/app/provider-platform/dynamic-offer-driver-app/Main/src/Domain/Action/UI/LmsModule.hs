@@ -233,7 +233,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, _merchantOpCityId) req = do
             )
             >>= fromMaybeM (LmsCorrectOptionNotFound req.questionId.getId req.language)
         let validationResult = API.Types.UI.LmsModule.ValidationResult {id = optionId, isCorrect = optionId == correctOption.optionId.getId}
-        return (API.Types.UI.LmsModule.SingleSelectedOptionValidation validationResult, optionId == correctOption.optionId.getId, [correctOption.optionId.getId])
+        return (API.Types.UI.LmsModule.SingleSelectedOptionValidation validationResult, optionId == correctOption.optionId.getId, [optionId])
       API.Types.UI.LmsModule.MultiSelectedOption optionIds -> do
         let correctOptionList = case questionInfo.options of
               DTQI.MultiSelect quizOptions -> map (.optionId.getId) $ filter (.isCorrect) quizOptions.options
