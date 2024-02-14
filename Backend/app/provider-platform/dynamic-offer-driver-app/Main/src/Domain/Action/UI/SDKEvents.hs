@@ -23,7 +23,11 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Tools.Event
 
-sdkEvents :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow APISuccess.APISuccess
-sdkEvents (personId, merchantId, merchantOperatingCityId) req = do
-  triggerSDKEvent $ SDKEventData personId merchantId merchantOperatingCityId req
+data SDKEventsReq = SDKEventsReq
+  { event :: Text
+  }
+
+sdkEvents :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> SDKEventsReq -> Flow APISuccess.APISuccess
+sdkEvents (personId, merchantId, merchantOperatingCityId) SDKEventsReq {..} = do
+  triggerSDKEvent $ SDKEventData personId merchantId merchantOperatingCityId event
   return APISuccess.Success

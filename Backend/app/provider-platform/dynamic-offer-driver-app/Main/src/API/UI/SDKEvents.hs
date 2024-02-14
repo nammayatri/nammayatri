@@ -32,10 +32,10 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  "sdk" :> "events" :> TokenAuth :> ReqBody '[PlainText] Text :> Post '[JSON] APISuccess.APISuccess
+  "sdk" :> "events" :> TokenAuth :> ReqBody '[JSON] SDKEventsReq :> Post '[JSON] APISuccess.APISuccess
 
 handler :: FlowServer API
 handler = sdkEvents
 
-sdkEvents :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler APISuccess.APISuccess
+sdkEvents :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> SDKEventsReq -> FlowHandler APISuccess.APISuccess
 sdkEvents (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DSDK.sdkEvents (personId, merchantId, merchantOpCityId)
