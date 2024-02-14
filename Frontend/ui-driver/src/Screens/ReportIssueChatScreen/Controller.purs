@@ -39,7 +39,7 @@ import Data.String.Pattern (Pattern(Pattern))
 import Data.TraversableWithIndex (forWithIndex)
 import Effect.Aff (makeAff, nonCanceler)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn3 , runEffectFn4)
+import Effect.Uncurried (runEffectFn1, runEffectFn3 , runEffectFn4, runEffectFn7)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, getNewIDWithTag)
 import JBridge ( addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, lottieAnimationConfig, clearFocus, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, stopAudioRecording, uploadMultiPartData)
 import Language.Strings (getString)
@@ -391,7 +391,7 @@ eval (RecordAudioModelAction RecordAudioModel.BackPressed) state = do
 
 eval (UpdateRecordModelPlayer url) state = do
   continueWithCmd state { data { recordAudioState { recordedFile = Just url } } } [do
-    void $  addMediaFile (getNewIDWithTag "recordedAudioViewUniqueOne") url (getNewIDWithTag "actionButtonRecord") "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1"
+    void $ runEffectFn7 addMediaFile (getNewIDWithTag "recordedAudioViewUniqueOne") url (getNewIDWithTag "actionButtonRecord") "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1" false
     pure NoAction
   ]
 

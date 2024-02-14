@@ -1747,7 +1747,7 @@ currentRideFlow activeRideResp = do
                 isShown = localVal == "true"
             if withInTime then do
               when (not isShown) $ setValueToLocalStore NIGHT_SAFETY_POP_UP "true"
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showAccessbilityPopup = not isShown}})
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showAccessbilityPopup = not isShown, safetyAudioAutoPlay = not isShown}})
             else
               setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
          

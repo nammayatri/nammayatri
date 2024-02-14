@@ -109,8 +109,8 @@ view push state =
                                             VideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
                                             PortraitVideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "PORTRAIT_VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
                                             Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true "FIT_CENTER"
-                                            Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
-                                            AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
+                                            Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl false
+                                            AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl false
                                             _ -> pure unit
                                       )
                                       (const NoAction)

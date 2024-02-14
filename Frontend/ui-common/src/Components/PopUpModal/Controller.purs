@@ -91,7 +91,8 @@ type CoverMediaConfig = {
   background :: String,
   stroke :: String,
   cornerRadius :: Number,
-  coverMediaText :: TextConfig
+  coverMediaText :: TextConfig,
+  audioAutoPlay :: Boolean
 }
 
 type ContactViewConfig = {
@@ -429,6 +430,7 @@ config = {
         background : Color.transparent,
         stroke : "1," <> Color.transparent,
         cornerRadius : 16.0
+      , audioAutoPlay : false
       , coverMediaText : {
           text : "",
           color : Color.textSecondary,

@@ -939,6 +939,7 @@ accessibilityPopUpConfig state =
         , stroke = if popupData.mediaType == "Audio" then "1," <> Color.grey900 else Color.white900
         , margin = if popupData.mediaType == "Audio" then Margin 16 0 16 12 else Margin 0 0 0 0
         , height =  if popupData.mediaType == "Audio" then V 60 else WRAP_CONTENT
+        , audioAutoPlay = state.props.safetyAudioAutoPlay
         , cornerRadius = 4.0
         , coverMediaText {
             visibility = boolToVisibility $ popupData.coverMediaText /= ""
