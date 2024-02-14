@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant
 import Kernel.External.Encryption
+import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -21,6 +22,7 @@ data LmsModuleT f = LmsModuleT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     duration :: B.C f Kernel.Prelude.Int,
     id :: B.C f Kernel.Prelude.Text,
+    languagesAvailableForQuiz :: B.C f [Kernel.External.Types.Language],
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     moduleCompletionCriteria :: B.C f Domain.Types.LmsModule.ModuleCompletionCriteria,
     noOfVideos :: B.C f Kernel.Prelude.Int,

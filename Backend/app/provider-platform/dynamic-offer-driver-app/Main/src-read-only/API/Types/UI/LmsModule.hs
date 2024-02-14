@@ -9,6 +9,7 @@ import qualified Data.Text
 import qualified Domain.Types.DriverModuleCompletion
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.LmsModuleVideoInformation
+import qualified Domain.Types.LmsVideoTranslation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.QuestionInformation
@@ -44,6 +45,7 @@ data LmsModuleRes = LmsModuleRes
     completedAt :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     description :: Data.Text.Text,
     duration :: Kernel.Prelude.Int,
+    languagesAvailableForQuiz :: [Kernel.External.Types.Language],
     moduleCompletionStatus :: Domain.Types.DriverModuleCompletion.ModuleCompletionStatus,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     name :: Data.Text.Text,
@@ -77,6 +79,7 @@ data LmsQuizHistory = LmsQuizHistory
 
 data LmsVideoRes = LmsVideoRes
   { attemptNumber :: Kernel.Prelude.Int,
+    bottomButtonConfig :: [[Domain.Types.LmsVideoTranslation.ReelButtonConfig]],
     completedAt :: Kernel.Prelude.UTCTime,
     completedThresholdInPercentage :: Data.Maybe.Maybe Kernel.Prelude.Int,
     completedWatchCount :: Kernel.Prelude.Int,
@@ -85,6 +88,7 @@ data LmsVideoRes = LmsVideoRes
     language :: Kernel.External.Types.Language,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     rank :: Kernel.Prelude.Int,
+    sideButtonConfig :: [[Domain.Types.LmsVideoTranslation.ReelButtonConfig]],
     startThresholdInPercentage :: Data.Maybe.Maybe Kernel.Prelude.Int,
     thresholdEnabled :: Kernel.Prelude.Bool,
     thumbnailImage :: Data.Text.Text,

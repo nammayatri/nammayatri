@@ -17,6 +17,7 @@ imports:
   ModuleCompletionStatus: Domain.Types.DriverModuleCompletion
   UTCTime: Kernel.Prelude
   APISuccess: Kernel.Types.APISuccess
+  ReelButtonConfig: Domain.Types.LmsVideoTranslation
 
 module: LmsModule
 
@@ -38,6 +39,7 @@ types:
     moduleCompletionStatus : ModuleCompletionStatus
     completedAt :  Maybe UTCTime
     noOfVideosCompleted : Int
+    languagesAvailableForQuiz : "[Language]"
 
   LmsGetVideosRes:
     completed: "[LmsVideoRes]"
@@ -67,6 +69,8 @@ types:
     attemptNumber : Int
     rank : Int
     completedAt : UTCTime
+    sideButtonConfig : "[[ReelButtonConfig]]"
+    bottomButtonConfig : "[[ReelButtonConfig]]"
 
   LmsQuestionRes:
     questionId : Id QuestionModuleMapping

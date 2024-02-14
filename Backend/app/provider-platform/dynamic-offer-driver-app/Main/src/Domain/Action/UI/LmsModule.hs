@@ -16,6 +16,7 @@ import Domain.Types.LmsModule as LmsModule
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.LmsModule as LmsModule
 import Domain.Types.LmsModuleVideoInformation as LmsModuleVideoInformation
+import qualified Domain.Types.LmsVideoTranslation as DTLVT
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.ModuleCompletionInformation as DTMCI
@@ -119,8 +120,13 @@ getLmsListAllVideos (mbPersonId, _merchantId, _merchantOpCityId) modId mbLanguag
             attemptNumber = maybe 0 (.attempt) mbVideoCompletionInfo,
             completedAt = maybe now (.createdAt) mbVideoCompletionInfo,
             rank = video.rank,
+            sideButtonConfig = generateButtonConfigData translation.sideButtonConfig,
+            bottomButtonConfig = generateButtonConfigData translation.bottomButtonConfig,
             ..
           }
+
+    generateButtonConfigData :: [DTLVT.ReelRowButtonConfig] -> [[DTLVT.ReelButtonConfig]]
+    generateButtonConfigData = foldl' (\acc eachRow -> acc <> [eachRow.row]) [[]]
 
 getLmsListAllQuiz :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow [API.Types.UI.LmsModule.LmsQuestionRes]
 getLmsListAllQuiz (mbPersonId, _merchantId, _merchantOpCityId) modId mbLanguage = do

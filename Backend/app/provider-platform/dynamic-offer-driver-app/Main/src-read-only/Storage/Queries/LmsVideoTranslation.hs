@@ -80,10 +80,12 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..} = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.completedThresholdInPercentage completedThresholdInPercentage,
+    [ Se.Set Beam.bottomButtonConfig bottomButtonConfig,
+      Se.Set Beam.completedThresholdInPercentage completedThresholdInPercentage,
       Se.Set Beam.completedWatchCount completedWatchCount,
       Se.Set Beam.description description,
       Se.Set Beam.duration duration,
+      Se.Set Beam.sideButtonConfig sideButtonConfig,
       Se.Set Beam.startThresholdInPercentage startThresholdInPercentage,
       Se.Set Beam.thresholdEnabled thresholdEnabled,
       Se.Set Beam.thumbnailImage thumbnailImage,
@@ -105,11 +107,13 @@ instance FromTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.Lm
     pure $
       Just
         Domain.Types.LmsVideoTranslation.LmsVideoTranslation
-          { completedThresholdInPercentage = completedThresholdInPercentage,
+          { bottomButtonConfig = bottomButtonConfig,
+            completedThresholdInPercentage = completedThresholdInPercentage,
             completedWatchCount = completedWatchCount,
             description = description,
             duration = duration,
             language = language,
+            sideButtonConfig = sideButtonConfig,
             startThresholdInPercentage = startThresholdInPercentage,
             thresholdEnabled = thresholdEnabled,
             thumbnailImage = thumbnailImage,
@@ -125,11 +129,13 @@ instance FromTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.Lm
 instance ToTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.LmsVideoTranslation where
   toTType' Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..} = do
     Beam.LmsVideoTranslationT
-      { Beam.completedThresholdInPercentage = completedThresholdInPercentage,
+      { Beam.bottomButtonConfig = bottomButtonConfig,
+        Beam.completedThresholdInPercentage = completedThresholdInPercentage,
         Beam.completedWatchCount = completedWatchCount,
         Beam.description = description,
         Beam.duration = duration,
         Beam.language = language,
+        Beam.sideButtonConfig = sideButtonConfig,
         Beam.startThresholdInPercentage = startThresholdInPercentage,
         Beam.thresholdEnabled = thresholdEnabled,
         Beam.thumbnailImage = thumbnailImage,
