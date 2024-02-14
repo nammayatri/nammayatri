@@ -17,14 +17,14 @@ module Components.DriverInfoCard.Controller where
 
 import MerchantConfig.Types
 
-import Common.Types.App (RentalBookingConfig, RideType(..))
+import Common.Types.App (RentalBookingConfig)
 import Components.ChatView.Controller (ChatComponentConfig)
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), FareProductType(..))
 import MerchantConfig.Types
 
 data Action = NoAction
@@ -50,7 +50,6 @@ type DriverInfoCardState =
 type DriverInfoCardProps =
   {
     currentStage :: Stage,
-    currentSearchResultType :: SearchResultType,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
     showCallPopUp :: Boolean,
@@ -60,7 +59,6 @@ type DriverInfoCardProps =
     merchantCity :: City,
     rideDurationTimer :: String,
     rideDurationTimerId :: String,
-    rideType :: RideType,
     endOTPShown :: Boolean
   }
 
@@ -100,4 +98,5 @@ type DriverInfoCardData =
   , defaultPeekHeight :: Int
   , bottomSheetState :: BottomSheetState
   , rentalData :: RentalBookingConfig
+  , fareProductType :: FareProductType
   }

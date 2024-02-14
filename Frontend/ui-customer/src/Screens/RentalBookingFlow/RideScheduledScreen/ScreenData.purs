@@ -1,10 +1,10 @@
 module Screens.RentalBookingFlow.RideScheduledScreen.ScreenData where
 
-import Common.Types.App (RideType(..))
 import Data.Maybe (Maybe(..))
 import Screens.Types (RideScheduledScreenState)
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
 import ConfigProvider
+import Screens.Types (FareProductType(..)) as FPT
 
 initData :: RideScheduledScreenState
 initData =
@@ -20,7 +20,7 @@ initData =
     , bookingId : ""
     , cancellationReasons : []
     , config : getAppConfig appConfig
-    , rideType : NORMAL_RIDE
+    , fareProductType : FPT.RENTAL
     }
   , props : {
       isCancelRide : false

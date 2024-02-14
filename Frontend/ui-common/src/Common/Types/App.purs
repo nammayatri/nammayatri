@@ -469,9 +469,3 @@ type RentalBookingConfig = {
   , nightCharge :: String
 }
 
-data RideType =
-  NORMAL_RIDE | RENTAL_RIDE | INTERCITY 
-
-derive instance genericRideType :: Generic RideType _
-instance showRideType :: Show RideType where show = genericShow
-instance eqRideType :: Eq RideType where eq = genericEq
