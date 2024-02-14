@@ -3,7 +3,6 @@ module Screens.RentalBookingFlow.RideScheduledScreen.View where
 import Prelude
 
 import Common.Types.App (LazyCheck(..))
-import Common.Types.App (RideType(..)) as RideType
 import Components.GenericHeader.View as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination.View as SourceToDestinationView
@@ -34,6 +33,7 @@ import Styles.Colors as Color
 import Helpers.CommonView (dummyView)
 import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
+import Screens.Types (FareProductType(..)) as FPT
 
 rideScheduledScreen :: RideScheduledScreenState -> Screen Action RideScheduledScreenState ScreenOutput
 rideScheduledScreen initialState =
@@ -174,7 +174,7 @@ rideDetailsView push state =
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , margin $ MarginTop 7
-        , visibility $ boolToVisibility $ state.data.rideType == RideType.RENTAL_RIDE
+        , visibility $ boolToVisibility $ state.data.fareProductType == FPT.RENTAL
         ]
         [ textView $
             [ textSize FontSize.a_12
@@ -211,7 +211,7 @@ rideDetailsView push state =
         , margin $ MarginLeft 28
         , color Color.blue800
         , onClick push $ const $ AddFirstStop
-        , visibility $ boolToVisibility $ state.data.rideType == RideType.RENTAL_RIDE
+        , visibility $ boolToVisibility $ state.data.fareProductType == FPT.RENTAL
         , text $ getString EDIT
         ] <> FontStyle.paragraphText TypoGraphy
 
@@ -316,7 +316,7 @@ cancelBookingView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenSta
 cancelBookingView push state =
   textView $
   [ width MATCH_PARENT
-  , textFromHtml $ "<u>" <> if state.data.rideType == RideType.RENTAL_RIDE then getString CANCEL_RENTAL_BOOKING else "Cancel Intercity Booking" <> "</u>"
+  , textFromHtml $ "<u>" <> if state.data.fareProductType == FPT.RENTAL then getString CANCEL_RENTAL_BOOKING else "Cancel Intercity Booking" <> "</u>"
   , color Color.black700
   , onClick push $ const CancelRide
   , gravity CENTER_HORIZONTAL

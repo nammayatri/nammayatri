@@ -94,6 +94,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Locale.Utils
 import Components.MessagingView.Common.Types
+import Screens.Types (FareProductType(..)) as FPT
 
 
 
@@ -117,7 +118,7 @@ messageNotificationView push state =
   , accessibility $ if state.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
   , accessibilityHint $ "Quick Chat : Widget"
   , onAnimationEnd push $ const state.messageViewAnimationEnd
-  , visibility $ if ((not state.rideStarted) && state.currentSearchResultType /= QUOTES && state.config.feature.enableChat) && state.config.feature.enableSuggestions 
+  , visibility $ if ((not state.rideStarted) && state.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && state.config.feature.enableChat) && state.config.feature.enableSuggestions 
                   then VISIBLE 
                   else if state.rideStarted && os == "IOS" 
                     then INVISIBLE 

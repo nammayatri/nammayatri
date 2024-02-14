@@ -25,7 +25,6 @@ import Prelude
 
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _fareProductType, _stopLocation)
 import Common.Types.App (LazyCheck(..), Paths)
-import Common.Types.App (RideType(..)) as RideType
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
 -- import Components.RideActionModal (estimatedFareView)
@@ -58,6 +57,7 @@ import Services.Backend as Remote
 import Storage (isLocalStageOn)
 import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Screens.Types (FareProductType(..)) as FPT
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -126,16 +126,15 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
-      fareProductType = resp.bookingDetails ^._fareProductType
-      stopLocation = if fareProductType == "RENTAL" then _stopLocation else _toLocation
+      fareProductType = getFareProductType $ resp.bookingDetails ^._fareProductType
+      stopLocation = if fareProductType == FPT.RENTAL then _stopLocation else _toLocation
       (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
   in  {
-        otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if (((fareProductType == "RENTAL")|| (fareProductType == "INTER_CITY")) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
+        otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if ((DA.any (_ == fareProductType ) [FPT.RENTAL, FPT.INTER_CITY] ) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
                         (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
       , eta : Nothing
-      , currentSearchResultType : if isQuote then QUOTES else ESTIMATES
       , vehicleDetails : rideList.vehicleModel
       , registrationNumber : rideList.vehicleNumber
       , rating : (fromMaybe 0.0 rideList.driverRatings)
@@ -171,8 +170,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , rentalData : dummyRentalBookingConfig{
           baseDistance = fromMaybe 0 resp.estimatedDistance
         , baseDuration = fromMaybe 0 resp.estimatedDuration
-        
         }
+      , fareProductType : fareProductType
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -487,10 +486,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
       updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
       (RideBookingAPIDetails bookingDetails) = ride.bookingDetails
-      rideType = case bookingDetails.fareProductType of
-                    "RENTAL" -> RideType.RENTAL_RIDE
-                    "INTER_CITY" -> RideType.INTERCITY
-                    _ -> RideType.NORMAL_RIDE
+      rideType = getFareProductType bookingDetails.fareProductType
   state {
     data {
       tripId = rideDetails.shortRideId,
@@ -667,14 +663,26 @@ fetchPickupCharges estimateFareBreakup =
 filterSpecialZoneAndInterCityQuotes :: Array OfferRes -> Array OfferRes
 filterSpecialZoneAndInterCityQuotes quotes = 
   filter 
-  (\quote -> let fareProductType = getFareProductType quote
-             in fareProductType == "OneWaySpecialZoneAPIDetails" || fareProductType == "INTER_CITY" )
+  (\quote -> let fareProductType = getFareProductType $ extractFareProductType quote
+             in DA.any ( _ == fareProductType ) [ FPT.ONE_WAY_SPECIAL_ZONE , FPT.INTER_CITY ])
   quotes
 
-getFareProductType :: OfferRes -> String
-getFareProductType quote = 
+extractFareProductType :: OfferRes -> String
+extractFareProductType quote = 
   case quote of 
     Quotes body ->
       let (QuoteAPIEntity quoteEntity) = body.onDemandCab
       in quoteEntity.quoteDetails^._fareProductType
     _ -> ""
+
+------------------------- fareProductType API transformer -------------------------
+
+getFareProductType :: String -> FPT.FareProductType
+getFareProductType fareProductType = 
+  case fareProductType of 
+    "OneWaySpecialZoneAPIDetails" -> FPT.ONE_WAY_SPECIAL_ZONE
+    "INTER_CITY" -> FPT.INTER_CITY
+    "RENTAL" -> FPT.RENTAL 
+    "ONE_WAY" -> FPT.ONE_WAY
+    "DRIVER_OFFER" -> FPT.DRIVER_OFFER
+    _ -> FPT.ONE_WAY

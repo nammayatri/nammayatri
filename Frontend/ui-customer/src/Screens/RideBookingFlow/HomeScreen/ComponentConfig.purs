@@ -82,7 +82,7 @@ import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
 import Locale.Utils
-import Common.Types.App (RideType(..)) as RideType
+import Screens.Types (FareProductType(..)) as FPT
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -185,6 +185,7 @@ getDistanceString currDistance initDistance zoneType
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
+    isRentalRide = state.data.fareProductType == FPT.RENTAL
     config = PrimaryButton.config
     buttonText =
       -- if state.props.nightSafetyFlow || state.data.ratingViewState.selectedYesNoButton /= -1
@@ -202,10 +203,10 @@ skipButtonConfig state =
         , margin = MarginTop 22
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
-        , visibility = boolToVisibility $ state.data.rideType == RideType.RENTAL_RIDE || doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
-        , isClickable = state.data.rideType == RideType.RENTAL_RIDE || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
-        , alpha = if state.data.rideType == RideType.RENTAL_RIDE || issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
-        , enableRipple = state.data.rideType == RideType.RENTAL_RIDE || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        , visibility = boolToVisibility $ isRentalRide || doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
+        , isClickable = isRentalRide || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        , alpha = if isRentalRide || issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
+        , enableRipple = isRentalRide || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
         , rippleColor = Color.rippleShade
         }
   in
@@ -638,12 +639,13 @@ logOutPopUpModelConfig state =
       }
     _ ->
       let
+        isNormalRide = not (DA.any (_ == state.data.fareProductType) [FPT.INTER_CITY, FPT.RENTAL]) 
         config' = PopUpModal.config
         popUpConfig' =
           config'
             { primaryText { text = if (isLocalStageOn ST.QuoteList) then ((getString TRY_AGAIN) <> "?") else ((getString CANCEL_SEARCH) <> "?")}
             , buttonLayoutMargin = (MarginHorizontal 16 16)
-            , dontShowRetry = state.data.rideType /= RideType.NORMAL_RIDE
+            , dontShowRetry =  not isNormalRide
             , dismissPopup = true
             , optionButtonOrientation = if(isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then  "VERTICAL" else "HORIZONTAL"
             , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH)}
@@ -655,14 +657,14 @@ logOutPopUpModelConfig state =
             , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
             , enableRipple = true
-            , visibility = state.data.rideType == RideType.NORMAL_RIDE
+            , visibility = isNormalRide
             }
             , option2 {
                text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
               , width = MATCH_PARENT
               , background = Color.white900
               , strokeColor = Color.white900
-              , margin = MarginTop $ if ((isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) && state.data.rideType == NORMAL_RIDE) then 14 else 3
+              , margin = MarginTop $ if ((isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) && isNormalRide ) then 14 else 3
               , color = Color.black650
               , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
              }
@@ -805,7 +807,7 @@ isMockLocationConfig state =
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = let
-  waitTimeConfig = textConfig $ state.data.currentSearchResultType == ST.QUOTES && state.data.rideType == RideType.NORMAL_RIDE
+  waitTimeConfig = textConfig $ state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE 
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
     title {
@@ -996,11 +998,9 @@ driverInfoCardViewState state = { props:
                                   , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType.priorityTag
-                                  , currentSearchResultType : state.data.currentSearchResultType
                                   , merchantCity : state.props.city
                                   , rideDurationTimer : state.props.rideDurationTimer
                                   , rideDurationTimerId : state.props.rideDurationTimerId
-                                  , rideType : state.data.rideType
                                   , endOTPShown : state.props.showEndOTP
                                   }
                               , data: driverInfoTransformer state
@@ -1038,7 +1038,7 @@ messagingViewConfig state = let
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int
 getDefaultPeekHeight state = do
-  let isQuotes = state.data.currentSearchResultType == ST.QUOTES && state.data.rideType == RideType.NORMAL_RIDE
+  let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
       height = case state.props.currentStage == ST.RideAccepted of 
                   true -> if isQuotes then 234 else 321
                   false -> if isQuotes then 334 else 283
@@ -1090,6 +1090,7 @@ driverInfoTransformer state =
     , defaultPeekHeight : getDefaultPeekHeight state
     , bottomSheetState : state.props.currentSheetState
     , rentalData : cardState.rentalData
+    , fareProductType : cardState.fareProductType
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1351,18 +1352,20 @@ menuButtonConfig state item = let
     in menuButtonConfig'
 
 chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
-chooseYourRideConfig state = ChooseYourRide.config
-  {
-    rideDistance = state.data.rideDistance,
-    rideDuration = state.data.rideDuration,
-    quoteList = if state.data.intercity then state.data.quoteList else state.data.specialZoneQuoteList,
-    showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
-    nearByDrivers = state.data.nearByDrivers,
-    showPreferences = state.data.showPreferences,
-    bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city /= Kochi,
-    flowWithoutOffers = state.props.flowWithoutOffers,
-    intercity = state.data.intercity
-  }
+chooseYourRideConfig state = let 
+  isIntercity = state.data.fareProductType == FPT.INTER_CITY
+  in ChooseYourRide.config
+    {
+      rideDistance = state.data.rideDistance,
+      rideDuration = state.data.rideDuration,
+      quoteList = if isIntercity then state.data.quoteList else state.data.specialZoneQuoteList,
+      showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
+      nearByDrivers = state.data.nearByDrivers,
+      showPreferences = state.data.showPreferences,
+      bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city /= Kochi,
+      flowWithoutOffers = state.props.flowWithoutOffers,
+      intercity = isIntercity
+    }
 
 
 specialLocationIcons :: ZoneType -> String
@@ -1622,7 +1625,7 @@ rideCompletedCardConfig state =
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.feature.enableSupport,
         needHelpText = getString NEED_HELP,
-        showRentalRideDetails = state.data.rideType == RideType.RENTAL_RIDE,
+        showRentalRideDetails = state.data.fareProductType == FPT.RENTAL,
         rentalBookingData {
           baseDuration = state.data.driverInfoCardState.rentalData.baseDuration
         , baseDistance = state.data.driverInfoCardState.rentalData.baseDistance
