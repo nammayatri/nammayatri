@@ -37,6 +37,7 @@ DriverPoolConfig:
     updatedAt: UTCTime
     vehicleVariant: Maybe Variant
     tripCategory: Text
+    thresholdToIgnoreActualDistanceThreshold: Maybe Meters
 
   constraints:
     id: PrimaryKey

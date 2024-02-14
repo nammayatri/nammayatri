@@ -36,6 +36,7 @@ data DriverPoolConfig = DriverPoolConfig
     radiusStepSize :: Kernel.Types.Common.Meters,
     scheduleTryTimes :: [Kernel.Prelude.Int],
     singleBatchProcessTime :: Kernel.Types.Common.Seconds,
+    thresholdToIgnoreActualDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripCategory :: Kernel.Prelude.Text,
     tripDistance :: Kernel.Types.Common.Meters,
     updatedAt :: Kernel.Prelude.UTCTime,

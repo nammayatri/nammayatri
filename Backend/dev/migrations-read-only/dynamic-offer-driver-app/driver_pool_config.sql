@@ -22,6 +22,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN radius_shrink_v
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN radius_step_size integer NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN schedule_try_times integer[] NOT NULL default '{1800, 900, 300}';
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN single_batch_process_time integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN threshold_to_ignore_actual_distance_threshold integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN trip_category text NOT NULL default 'All';
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN trip_distance integer NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
