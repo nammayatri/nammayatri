@@ -351,6 +351,7 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance vehicleVariant tr
         scheduleTryTimes = [],
         updatedAt = now,
         createdAt = now,
+        thresholdToIgnoreActualDistanceThreshold = Nothing,
         ..
       }
 
