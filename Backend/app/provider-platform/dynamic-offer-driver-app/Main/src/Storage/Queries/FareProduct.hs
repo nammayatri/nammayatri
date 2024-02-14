@@ -65,6 +65,9 @@ findByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory vehicleVari
         ]
     ]
 
+findAllFareProductByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [Domain.FareProduct]
+findAllFareProductByMerchantOpCityId (Id merchantOpCityId) = findAllWithKV [Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId]
+
 instance ToTType' BeamFP.FareProduct FareProduct where
   toTType' FareProduct {..} = do
     BeamFP.FareProductT
