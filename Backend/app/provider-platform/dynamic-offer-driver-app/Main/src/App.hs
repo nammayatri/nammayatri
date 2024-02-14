@@ -60,8 +60,8 @@ import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
 import "utils" Utils.Common.Events as UE
 
-createCACShit :: AppCfg -> IO ()
-createCACShit appCfg = do
+createCAC :: AppCfg -> IO ()
+createCAC appCfg = do
   x <- (CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants)
   case x of
     0 -> CM.startCACPolling appCfg.cacConfig.tenants
@@ -74,7 +74,7 @@ createCACShit appCfg = do
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
-  _ <- CC.forkOS $ createCACShit appCfg
+  _ <- CC.forkOS $ createCAC appCfg
 
   Metrics.serve (appCfg.metricsPort)
   runDynamicOfferDriverApp' appCfg
