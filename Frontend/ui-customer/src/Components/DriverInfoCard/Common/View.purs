@@ -44,7 +44,7 @@ import Helpers.Utils (parseFloat)
 import Data.Int(toNumber)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
-import Common.Types.App (RideType(..)) as RideType
+import Screens.Types (FareProductType(..)) as FPT
 
 ---------------------------------- driverDetailsView ---------------------------------------
 driverDetailsView :: forall w. DriverDetailsType -> String -> PrestoDOM (Effect Unit) w
@@ -55,10 +55,10 @@ driverDetailsView config uid =
   , padding $ PaddingHorizontal 16 16
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
-  , margin $ Margin 16 (if config.searchType == QUOTES then 12 else 0) 16 0
+  , margin $ Margin 16 (if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then 12 else 0) 16 0
   , background Color.white900
   , cornerRadius 8.0
-  , visibility $  boolToVisibility $ if config.searchType == QUOTES then config.rideStarted else true
+  , visibility $  boolToVisibility $ if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then config.rideStarted else true
   , gravity BOTTOM
   ][  linearLayout
       [ orientation VERTICAL
@@ -258,7 +258,7 @@ getVehicleImage variant vehicleDetail city = do
 
 sourceDestinationView :: forall action w.(action -> Effect Unit) -> TripDetails action -> PrestoDOM (Effect Unit) w
 sourceDestinationView push config = 
-  let isNotRentalRide = (config.rideType /= RideType.RENTAL_RIDE)
+  let isNotRentalRide = (config.fareProductType /= FPT.RENTAL)
       bottomMargin = (if os == "IOS" && config.rideStarted then (safeMarginBottom + 36) else 12)
   in 
     PrestoAnim.animationSet [ scaleYAnimWithDelay 100] $ 

@@ -16,7 +16,6 @@
 module Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig where
 
 import Prelude
-import Common.Types.App (RideType(..)) as RideType
 import Components.GenericHeader.Controller as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.SeparatorView.View as SeparatorView
@@ -32,6 +31,7 @@ import Screens.Types (RideScheduledScreenState)
 import Styles.Colors as Color
 import Data.Array as DA
 import Data.String as DS
+import Screens.Types (FareProductType(..)) as FPT
 
 primaryButtonConfig :: RideScheduledScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -65,6 +65,7 @@ separatorConfig =
 sourceToDestinationConfig :: RideScheduledScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state =
   let
+    isRentalRide = state.data.fareProductType == FPT.RENTAL
     config = SourceToDestination.config
     sourceToDestinationConfig' = config
       { sourceTextConfig
@@ -90,12 +91,12 @@ sourceToDestinationConfig state =
       , destinationTextConfig
           { text = maybe (getString ADD_FIRST_STOP) (\dest -> dest.address) state.data.destination
           , color = maybe (Color.blue800) (\_ -> Color.black800) state.data.destination
-          , isEditable = state.data.rideType == RideType.RENTAL_RIDE
+          , isEditable = isRentalRide
           , textStyle = ParagraphText
           , ellipsize = true
-          , maxLines = if (state.data.rideType == RideType.RENTAL_RIDE) then 1 else 2
+          , maxLines = if isRentalRide then 1 else 2
           , margin = MarginLeft 12
-          , isClickable = state.data.rideType == RideType.RENTAL_RIDE
+          , isClickable = isRentalRide
           }
       , distanceConfig { distanceVisibility = GONE }
       , separatorMargin = 24
@@ -118,7 +119,7 @@ genericHeaderConfig state = let
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {
-        text = if state.data.rideType == RideType.RENTAL_RIDE then "Rental Ride" else "Intercity Booking"
+        text = if state.data.fareProductType == FPT.RENTAL then "Rental Ride" else "Intercity Booking"
       , color = Color.black800
       }
     , suffixImageConfig {

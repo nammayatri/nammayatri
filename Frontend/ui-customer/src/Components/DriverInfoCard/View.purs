@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
-import Data.String (Pattern(..), split, length, take, drop, replaceAll, Replacement(..), contains, toLower)
+import Data.String (Pattern(..), split, length, take, drop, replaceAll, Replacement(..), contains, toLower, null)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.String (replaceAll, Pattern, Replacement)
 import Debug (spy)
@@ -60,11 +60,11 @@ import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
 import Components.DriverInfoCard.Common.View
 import Components.DriverInfoCard.Common.Types
-import Common.Types.App (RideType(..)) as RideType
 import Timers (rideDurationTimer)
 import Data.Function.Uncurried (runFn2)
 import Data.Int (floor, toNumber)
 import Effect.Unsafe (unsafePerformEffect)
+import Screens.Types (FareProductType(..)) as FPT
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -84,7 +84,7 @@ driverInfoViewSpecialZone push state =
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility if state.props.currentSearchResultType == QUOTES then VISIBLE else GONE
+  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -209,7 +209,7 @@ navigateView push state =
   , accessibility ENABLE
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
-  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted
+  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE && state.props.currentStage == RideAccepted
   , onClick push $ const $ OnNavigateToZone
   ][ imageView
      [ width $ V 20
@@ -231,7 +231,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility if state.props.currentSearchResultType == QUOTES then GONE else VISIBLE
+  , visibility $ boolToVisibility $ not $  state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE 
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -346,7 +346,7 @@ distanceView push state =
   where 
     getTitleText :: String
     getTitleText = do
-      if state.props.rideType /= RideType.RENTAL_RIDE || state.data.rentalData.startTimeUTC == "" then (getString ENJOY_THE_RIDE)
+      if state.data.fareProductType /= FPT.RENTAL || (null state.data.rentalData.startTimeUTC) then (getString ENJOY_THE_RIDE)
       else 
         let startTime = state.data.rentalData.startTimeUTC
             nhiHaiStartTime = startTime /= ""
@@ -901,8 +901,7 @@ getAnimationDelay dummy = 100
 
 getDriverDetails :: DriverInfoCardState -> DriverDetailsType
 getDriverDetails state = {
-  searchType : state.props.currentSearchResultType
-  , rating : state.data.rating
+  rating : state.data.rating
   , driverName : state.data.driverName
   , vehicleDetails : state.data.vehicleDetails
   , vehicleVariant : state.data.vehicleVariant
@@ -910,6 +909,7 @@ getDriverDetails state = {
   , registrationNumber : state.data.registrationNumber
   , config : state.data.config
   , rideStarted : state.props.currentStage == RideStarted
+  , fareProductType : state.data.fareProductType
 }
 
 getTripDetails :: DriverInfoCardState -> TripDetails Action
@@ -919,7 +919,7 @@ getTripDetails state = {
   , destination : state.data.destination
   , onAnimationEnd : NoAction
   , backgroundColor : Color.white900
-  , rideType : state.props.rideType
+  , fareProductType : state.data.fareProductType
 }
 rentalDetailsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 rentalDetailsView push state =
@@ -931,7 +931,7 @@ rentalDetailsView push state =
   , afterRender push $ const NoAction
   , margin $ Margin 16 12 16 12
   , background Color.white900
-  , visibility $ boolToVisibility $ state.props.rideType == RideType.RENTAL_RIDE
+  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.RENTAL
   ]
   [ rentalTimeView push state TIME false
   , separatorView true
@@ -1020,7 +1020,7 @@ addStopView push state =
     , background Color.white900
     , orientation VERTICAL
     , cornerRadius 8.0
-    , visibility $ boolToVisibility $ state.props.rideType == RideType.RENTAL_RIDE
+    , visibility $ boolToVisibility $ state.data.fareProductType == FPT.RENTAL
     ]
     [ linearLayout
       [ height WRAP_CONTENT

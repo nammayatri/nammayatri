@@ -30,7 +30,7 @@ import Services.API
 import Data.Array (null, head, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag, getFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Data.Lens ((^.))
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
@@ -45,7 +45,7 @@ import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Common.Types.App as Common
-import Common.Types.App (RideType(..)) as RideType
+import Screens.Types (FareProductType(..)) as FPT
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -59,29 +59,20 @@ checkRideStatus rideAssigned = do
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
             bookingStatus = resp.status
-            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && fareProductType == "OneWaySpecialZoneAPIDetails") then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
-            fareProductType = ((resp.bookingDetails) ^. _fareProductType)
+            fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
+            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
             rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
-            searchResultType = if (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing) then QUOTES 
-                                else if fareProductType == "INTER_CITY" then INTERCITY
-                                else if (fareProductType == "RENTAL") then RENTALS 
-                                else ESTIMATES
-            dropLocation = if (fareProductType == "RENTAL") then _stopLocation else _toLocation
+            dropLocation = if (fareProductType == FPT.RENTAL) then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
             newState = 
               state
                 { data
-                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (searchResultType == QUOTES)
+                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE)
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))
-                    , currentSearchResultType = searchResultType
-                    , rideType = 
-                        if fareProductType == "RENTAL" 
-                          then RideType.RENTAL_RIDE 
-                        else if fareProductType == "INTER_CITY" then RideType.INTERCITY
-                        else RideType.NORMAL_RIDE
+                    , fareProductType = fareProductType
                     , rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
                         rideScheduledAtUTC : rideScheduledAt
                       , bookingId : resp.id
@@ -164,7 +155,7 @@ checkRideStatus rideAssigned = do
             when (isNothing currRideListItem.rideRating) $ do
               when (length listResp.list > 0) $ do
                 let nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
-                    fareProductType = ((resp.bookingDetails) ^. _fareProductType)
+                    fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
                     (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
                     (RideBookingDetails contents) = bookingDetails.contents
                     (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
@@ -214,13 +205,7 @@ checkRideStatus rideAssigned = do
                                 }
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}
-                          , rideType = 
-                              if fareProductType == "RENTAL" 
-                                then RideType.RENTAL_RIDE 
-                                else if fareProductType == "INTER_CITY" 
-                                then RideType.INTERCITY
-                                else RideType.NORMAL_RIDE
-                         
+                          , fareProductType = fareProductType
                           }
                 })
                 updateLocalStage RideCompleted
