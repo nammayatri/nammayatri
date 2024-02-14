@@ -650,7 +650,7 @@ driverLocationTracking push action duration id routeState = do
 
       destination = ride.destination
 
-      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING Common.NORMAL_RIDE
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
 
       sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
 
@@ -710,7 +710,7 @@ driverLocationTracking push action duration id routeState = do
 
       dstLon = ride.destinationLng
 
-      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING Common.NORMAL_RIDE
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
 
       sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
 

@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..), RideType(..), RentalBookingConfig)
+import Common.Types.App (RateCardType(..), RentalBookingConfig)
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
@@ -30,6 +30,7 @@ import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map 
+import Screens.Types (FareProductType(..)) as FPT
 
 initData :: HomeScreenState
 initData = {
@@ -37,7 +38,6 @@ initData = {
       suggestedAmount : 0
     , finalAmount : 0
     , startedAt : ""
-    , currentSearchResultType : ESTIMATES
     , endedAt : ""
     , source : ""
     , destination : ""
@@ -47,6 +47,7 @@ initData = {
     , rating : 4.0
     , locationList : []
     , savedLocations : []
+    , fareProductType : FPT.ONE_WAY
     , recentSearchs : { predictionArray : []}
     , destinationSuggestions : []
     , tripSuggestions: []
@@ -103,7 +104,6 @@ initData = {
     , quoteList : []
     , selectedQuoteId : Nothing
     , selectedQuoteVariant : Nothing
-    , intercity : false
     , selectedEstimatesObject : {
       vehicleImage: ""
       , isSelected: false
@@ -162,7 +162,6 @@ initData = {
     , contactList : []
     , followers : Nothing
     , rentalsInfo : Nothing 
-    , rideType : NORMAL_RIDE
     , startTimeUTC : ""
     },
     props: {
@@ -269,7 +268,6 @@ initData = {
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
     , showEducationalCarousel : false
-    , specialZoneType : ""
     , currentLocation : {
         lat : 0.0,
         lng : 0.0,
@@ -390,7 +388,6 @@ dummyDriverInfo =
   , driverName : ""
   , eta : Nothing
   , vehicleDetails : ""
-  , currentSearchResultType : ESTIMATES
   , registrationNumber : ""
   , rating : 0.0
   , startedAt : ""
@@ -420,6 +417,7 @@ dummyDriverInfo =
   , sourceAddress : dummyAddress
   , destinationAddress : dummyAddress
   , rentalData : dummyRentalBookingConfig
+  , fareProductType : FPT.ONE_WAY
   }
 
 dummySettingBar :: SettingSideBarState

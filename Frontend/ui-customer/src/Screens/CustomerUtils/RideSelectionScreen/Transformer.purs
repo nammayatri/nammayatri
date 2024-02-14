@@ -29,13 +29,14 @@ import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||))
 import PrestoDOM.Types.Core (toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
 import Resources.Localizable.EN (getEN)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag, getFareProductType)
 import Screens.Types (Fares, IndividualRideCardState, ItemState, RideSelectionScreenState, Stage(..), ZoneType(..))
 import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..), RideBookingAPIDetails(..))
 import Storage (isLocalStageOn)
 import Data.Ord (abs)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import Screens.Types (FareProductType(..)) as FPT
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED"))) (map (\(RideBookingRes ride) -> 
@@ -64,7 +65,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     rideEndTimeUTC : toPropValue $ fromMaybe ride.createdAt ride.rideEndTime,
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
     zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
-    showRepeatRide : toPropValue if rideApiDetails.fareProductType == "RENTAL" then "gone" else "visible"
+    showRepeatRide : toPropValue if (getFareProductType $ rideApiDetails.fareProductType) == FPT.RENTAL then "gone" else "visible"
   })
   
    listRes)
@@ -126,7 +127,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , isSrcServiceable: state.data.isSrcServiceable
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
   , merchantExoPhone : ride.merchantExoPhone
-  , showRepeatRide : if rideApiDetails.fareProductType == "RENTAL" then "gone" else "visible"
+  , showRepeatRide : if getFareProductType rideApiDetails.fareProductType == FPT.RENTAL then "gone" else "visible"
   }) listRes)
 
 matchRidebyId :: IndividualRideCardState -> IndividualRideCardState -> Boolean

@@ -34,7 +34,7 @@ import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Screens (ScreenName(..), getScreen)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag, getFareProductType)
 import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..), RideBookingAPIDetails(..))
 import Storage (isLocalStageOn)
@@ -50,6 +50,7 @@ import ConfigProvider
 import JBridge (toast)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Debug (spy)
+import Screens.Types (FareProductType(..)) as FPT
 
 instance showAction :: Show Action where
   show _ = ""
@@ -275,7 +276,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , isSrcServiceable: state.data.isSrcServiceable
   , optionsVisibility : true
   , merchantExoPhone : ride.merchantExoPhone
-  , showRepeatRide : if rideApiDetails.fareProductType == "RENTAL" then "gone" else "visible"
+  , showRepeatRide : if (getFareProductType $ rideApiDetails.fareProductType ) == FPT.RENTAL then "gone" else "visible"
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 dummyFareBreakUp :: FareBreakupAPIEntity
