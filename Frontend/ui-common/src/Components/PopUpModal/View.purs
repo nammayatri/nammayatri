@@ -161,19 +161,18 @@ view push state =
                 ]
               , linearLayout[
                  height WRAP_CONTENT
-                , width WRAP_CONTENT
+                , width MATCH_PARENT
                 , gravity CENTER
                 , margin state.coverMediaConfig.margin
                 , background state.coverMediaConfig.background
-                
                 , stroke state.coverMediaConfig.stroke
                 , visibility state.coverMediaConfig.visibility
                 , cornerRadius state.coverMediaConfig.cornerRadius
+                , padding state.coverMediaConfig.padding
                 ][  PrestoAnim.animationSet [Anim.fadeIn (state.coverMediaConfig.visibility == VISIBLE) ] $   linearLayout
                     [ height state.coverMediaConfig.height
                     , width state.coverMediaConfig.width
-                    , gravity CENTER_VERTICAL
-                    , padding state.coverMediaConfig.padding
+                    , gravity CENTER
                     , id (getNewIDWithTag  state.coverMediaConfig.id)
                     , onAnimationEnd
                         ( \action -> do
@@ -181,12 +180,13 @@ view push state =
                                 mediaType = state.coverMediaConfig.mediaType
                                 id = getNewIDWithTag state.coverMediaConfig.id
                                 url = state.coverMediaConfig.mediaUrl
+                                audioAutoPlay = state.coverMediaConfig.audioAutoPlay
                             if (supportsInbuildYoutubePlayer unit) then 
                                 case mediaType of
                                     "VideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig  "VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
                                     "PortraitVideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig  "PORTRAIT_VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
-                                    "Audio" -> addMediaPlayer id url
-                                    "AudioLink" -> addMediaPlayer id url
+                                    "Audio" -> addMediaPlayer id url audioAutoPlay
+                                    "AudioLink" -> addMediaPlayer id url audioAutoPlay
                                     _ -> pure unit
                                 else pure unit
                         )(const NoAction)

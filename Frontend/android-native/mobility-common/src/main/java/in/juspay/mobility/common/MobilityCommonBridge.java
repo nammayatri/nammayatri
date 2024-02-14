@@ -3118,16 +3118,25 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     //region Audio Recorder
-    @JavascriptInterface
+
+    // Deprecated on 16-Feb-24
     public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID) {
+        addMediaFile(viewID, source, actionPlayerID, playIcon,pauseIcon, timerID, false);
+    }
+    @JavascriptInterface
+    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID, boolean autoPlay) {
         if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
-        mediaPlayer.addMediaFile(viewID, source, actionPlayerID, playIcon, pauseIcon, timerID);
+        mediaPlayer.addMediaFile(viewID, source, actionPlayerID, playIcon, pauseIcon, timerID, autoPlay);
     }
 
+    // Deprecated on 16-Feb-24
+    public void addMediaPlayer(String viewID, String source){
+        addMediaPlayer(viewID, source, false);
+    }
     @JavascriptInterface
-    public void addMediaPlayer(String viewID, String source) {
+    public void addMediaPlayer(String viewID, String source, boolean autoPlay) {
         if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
-        mediaPlayer.addMediaPlayer(viewID, source);
+        mediaPlayer.addMediaPlayer(viewID, source, autoPlay);
     }
 
     @JavascriptInterface

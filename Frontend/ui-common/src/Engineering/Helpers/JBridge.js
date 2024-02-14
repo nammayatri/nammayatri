@@ -894,21 +894,14 @@ export const getSuggestionfromKey = function (key) {
   }
 };
 
-export const addMediaFile = function (viewID) {
-  return function (source) {
-    return function (actionButtonID) {
-      return function (playIcon) {
-        return function (pauseIcon) {
-          return function (timerID) {
-            return function () {
-              JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
-            }
-          }
-        }
-      }
-    }
+export const addMediaFile =  (viewID, source,actionButtonID, playIcon,pauseIcon, timerID, autoPlay) => {
+  try {
+    JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID, autoPlay);
+  }catch(e){
+    JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
   }
 }
+
 
 export const clearFocus = function (id){
   if(window.JBridge.clearFocus){
@@ -2226,9 +2219,13 @@ export const scrollViewFocus = function (parentID) {
 
 export const addMediaPlayer = function (id) {
   return function(source) {
-    return function () {
-      if (JBridge.addMediaPlayer) {
-        JBridge.addMediaPlayer(id,source);
+    return function (autoPlay) {
+      return function () {
+        try {
+          JBridge.addMediaPlayer(id,source,autoPlay);
+        }catch (e){
+          JBridge.addMediaPlayer(id,source);
+        }
       }
     }
   };

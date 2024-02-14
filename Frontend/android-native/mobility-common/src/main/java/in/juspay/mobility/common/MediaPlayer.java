@@ -156,9 +156,9 @@ public class MediaPlayer {
         });
     }
 
-    public void addMediaPlayer(String viewID, String source) {
+    public void addMediaPlayer(String viewID, String source, boolean autoPlay) {
         ExecutorManager.runOnMainThread(() -> {
-            MediaPlayerView audioPlayer = new MediaPlayerView(bridgeComponents.getContext(), bridgeComponents.getActivity());
+            MediaPlayerView audioPlayer = new MediaPlayerView(bridgeComponents.getContext(), bridgeComponents.getActivity(), autoPlay);
             try {
                 audioPlayer.inflateView(Integer.parseInt(viewID));
                 if (source.contains(".mp3")) {
@@ -188,7 +188,7 @@ public class MediaPlayer {
         });
     }
 
-    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID) {
+    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID, Boolean autoPlay) {
         Log.d("ADD_MEDIA_FILE", "addMediaFile: " + source);
         Context context = bridgeComponents.getContext();
         Activity activity = bridgeComponents.getActivity();
@@ -196,15 +196,15 @@ public class MediaPlayer {
             MediaPlayerView audioPlayer;
             if (Integer.parseInt(actionPlayerID) != -1) {
                 if (Integer.parseInt(timerID) != -1) {
-                    audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon, Integer.parseInt(timerID));
+                    audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon, Integer.parseInt(timerID), autoPlay);
                     audioPlayer.setTimerColorAndSize(Color.WHITE, 14);
                     audioPlayer.setVisualizerBarPlayedColor(Color.WHITE);
                 } else {
-                    audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon);
+                    audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon, autoPlay);
                     audioPlayer.setTimerColorAndSize(Color.GRAY, 14);
                 }
             } else {
-                audioPlayer = new MediaPlayerView(context, activity);
+                audioPlayer = new MediaPlayerView(context, activity, autoPlay);
             }
             try {
                 audioPlayer.inflateView(Integer.parseInt(viewID));

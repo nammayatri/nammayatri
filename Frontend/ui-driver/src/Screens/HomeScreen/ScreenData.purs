@@ -206,7 +206,8 @@ initData = {
         accountBlockedPopup : false,
         showCoinsPopup : false,
         isStatsModelExpanded : false,
-        tobeLogged : false
+        tobeLogged : false,
+        safetyAudioAutoPlay : false
     }
 }
 
