@@ -158,8 +158,8 @@ genericHeaderView ::
   Layout w
 genericHeaderView push state = 
       linearLayout
-      [ height MATCH_PARENT
-      , width WRAP_CONTENT
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
       , padding $ PaddingTop safeMarginTop
