@@ -13,7 +13,7 @@
 -}
 
 module Storage.CachedQueries.Sos
-  ( findByRideIdAndStatus,
+  ( findByRideId,
     clearCache,
     cacheSosIdByRideId,
   )
@@ -27,11 +27,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Sos as Queries
 
-findByRideIdAndStatus :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> [DSos.SosStatus] -> m (Maybe DSos.Sos)
-findByRideIdAndStatus rideId status = do
+findByRideId :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe DSos.Sos)
+findByRideId rideId = do
   Hedis.safeGet (makeIdKey rideId) >>= \case
     Just a -> pure a
-    Nothing -> flip whenJust (cacheSosIdByRideId rideId) /=<< (listToMaybe <$> Queries.findByRideIdinStatusList (Just 1) (Just 0) status rideId)
+    Nothing -> flip whenJust (cacheSosIdByRideId rideId) /=<< Queries.findByRideId rideId
 
 cacheSosIdByRideId :: (CacheFlow m r) => Id Ride -> DSos.Sos -> m ()
 cacheSosIdByRideId rideId sos = do
