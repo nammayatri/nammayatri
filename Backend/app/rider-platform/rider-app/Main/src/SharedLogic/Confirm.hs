@@ -206,6 +206,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         startTime = searchRequest.startTime,
         riderId = searchRequest.riderId,
         fromLocation = fromLoc,
+        initialPickupLocation = fromLoc,
         estimatedFare = quote.estimatedFare,
         discount = quote.discount,
         estimatedTotalFare = quote.estimatedTotalFare,

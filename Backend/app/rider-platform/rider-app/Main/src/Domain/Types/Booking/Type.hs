@@ -68,6 +68,7 @@ data Booking = Booking
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
     fromLocation :: DLoc.Location,
+    initialPickupLocation :: DLoc.Location,
     estimatedFare :: Money,
     estimatedDistance :: Maybe HighPrecMeters,
     estimatedDuration :: Maybe Seconds,
