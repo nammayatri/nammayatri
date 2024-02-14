@@ -83,7 +83,7 @@ updatePastMappingVersions entityId order = do
 incrementVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LocationMapping -> m ()
 incrementVersion mapping = do
   let newVersion = getNewVersion mapping.version
-  updateVersion mapping.entityId mapping.order newVersion
+  updateVersion mapping.id newVersion
 
 getNewVersion :: Text -> Text
 getNewVersion oldVersion =
@@ -91,14 +91,14 @@ getNewVersion oldVersion =
     ["v", versionNum] -> "v-" <> T.pack (show (read (T.unpack versionNum) + 1))
     _ -> "v-1"
 
-updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Text -> m ()
-updateVersion entityId order version = do
+updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id LocationMapping -> Text -> m ()
+updateVersion id version = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamLM.version version,
       Se.Set BeamLM.updatedAt now
     ]
-    [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]
+    [Se.Is BeamLM.id $ Se.Eq id.getId]
 
 instance FromTType' BeamLM.LocationMapping LocationMapping where
   fromTType' BeamLM.LocationMappingT {..} = do

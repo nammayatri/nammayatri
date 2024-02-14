@@ -316,6 +316,10 @@ instance FromTType' BeamB.Booking Booking where
     tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
     pUrl <- parseBaseUrl providerUrl
     merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId
+    let pickupLocationMap = filter (\map1 -> map1.order == 0) mappings
+        sortedPickupLocationMap = sortBy (comparing (.version)) pickupLocationMap
+        initialPickupLocMapping = last sortedPickupLocationMap
+    initialPickupLocation <- QL.findById initialPickupLocMapping.locationId >>= fromMaybeM (InternalError "Incorrect Location Mapping")
     pure $
       Just
         Booking
@@ -347,7 +351,8 @@ instance FromTType' BeamB.Booking Booking where
             createdAt = createdAt,
             estimatedDistance = estimatedDistance,
             estimatedDuration = estimatedDuration,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            initialPickupLocation = initialPickupLocation
           }
     where
       buildOneWayDetails toLocid = do
