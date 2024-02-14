@@ -219,6 +219,7 @@ config =
     enableSupport: true,
     enableShareApp: false,
     enableReAllocation : true,
+    enableRepeatTripBackfilling : false,
     forceLogReferrerUrl : true,
     enableSelfServe : true,
     enableAdditionalServices : false,
