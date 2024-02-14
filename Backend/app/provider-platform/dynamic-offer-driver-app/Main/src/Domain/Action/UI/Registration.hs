@@ -42,6 +42,7 @@ import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common as BC
@@ -73,7 +74,8 @@ data AuthReq = AuthReq
     merchantId :: Text,
     merchantOperatingCity :: Maybe Context.City,
     registrationLat :: Maybe Double,
-    registrationLon :: Maybe Double
+    registrationLon :: Maybe Double,
+    otpChannel :: Maybe OTPChannel
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -89,6 +91,12 @@ data AuthRes = AuthRes
     attempts :: Int
   }
   deriving (Generic, ToJSON, ToSchema)
+
+data OTPChannel = SMS | WHATSAPP
+  deriving (Generic, Show, Enum, Eq, FromJSON, ToJSON, ToSchema)
+
+defaultOTPChannel :: OTPChannel
+defaultOTPChannel = SMS
 
 type ResendAuthRes = AuthRes
 
@@ -132,6 +140,7 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
+      otpChannel = fromMaybe defaultOTPChannel req.otpChannel
   mobileNumberHash <- getDbHash mobileNumber
   let merchantId = Id req.merchantId :: Id DO.Merchant
   merchant <-
@@ -142,6 +151,7 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
     QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
       >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id merchantOpCityId isDashboard) return
   checkSlidingWindowLimit (authHitsCountKey person)
+  _ <- cachePersonOTPChannel person.id otpChannel
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -154,15 +164,22 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
     let otpCode = SR.authValueHash token
         phoneNumber = countryCode <> mobileNumber
         sender = smsCfg.sender
-    withLogTag ("personId_" <> getId person.id) $ do
-      message <-
-        MessageBuilder.buildSendOTPMessage merchantOpCityId $
-          MessageBuilder.BuildSendOTPMessageReq
-            { otp = otpCode,
-              hash = otpHash
-            }
-      Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
-        >>= Sms.checkSmsResult
+    case otpChannel of
+      SMS ->
+        withLogTag ("personId_" <> getId person.id) $ do
+          message <-
+            MessageBuilder.buildSendOTPMessage merchantOpCityId $
+              MessageBuilder.BuildSendOTPMessageReq
+                { otp = otpCode,
+                  hash = otpHash
+                }
+          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+            >>= Sms.checkSmsResult
+      WHATSAPP ->
+        withLogTag ("personId_" <> getId person.id) $ do
+          _ <- callWhatsappOptApi phoneNumber person.id (Just Whatsapp.OPT_IN) merchant.id merchantOpCityId
+          result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOpCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
+          when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
   let attempts = SR.attempts token
       authId = SR.id token
   return $ AuthRes {attempts, authId}
@@ -393,15 +410,22 @@ resend tokenId = do
   let otpHash = smsCfg.credConfig.otpHash
       phoneNumber = countryCode <> mobileNumber
       sender = smsCfg.sender
-  withLogTag ("personId_" <> entityId) $ do
-    message <-
-      MessageBuilder.buildSendOTPMessage (Id merchantOperatingCityId) $
-        MessageBuilder.BuildSendOTPMessageReq
-          { otp = otpCode,
-            hash = otpHash
-          }
-    Sms.sendSMS person.merchantId (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender)
-      >>= Sms.checkSmsResult
+  otpChannel <- getPersonOTPChannel person.id
+  case otpChannel of
+    SMS -> do
+      withLogTag ("personId_" <> getId person.id) $ do
+        message <-
+          MessageBuilder.buildSendOTPMessage (Id merchantOperatingCityId) $
+            MessageBuilder.BuildSendOTPMessageReq
+              { otp = otpCode,
+                hash = otpHash
+              }
+        Sms.sendSMS person.merchantId (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender)
+          >>= Sms.checkSmsResult
+    WHATSAPP ->
+      withLogTag ("personId_" <> getId person.id) $ do
+        result <- Whatsapp.whatsAppOtpApi person.merchantId (Id merchantOperatingCityId) (Whatsapp.SendOtpApiReq phoneNumber otpCode)
+        when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
   _ <- QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
@@ -428,3 +452,17 @@ logout (personId, _, _) = do
   QR.deleteByPersonId personId
   when (uperson.role == SP.DRIVER) $ void (QD.updateActivity (cast uperson.id) False (Just DriverInfo.OFFLINE))
   pure Success
+
+authHitOTPChannel :: Id SP.Person -> Text
+authHitOTPChannel personId = "BPP:Registration:auth" <> getId personId <> ":OtpChannel"
+
+cachePersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> OTPChannel -> m ()
+cachePersonOTPChannel personId otpChannel = do
+  Hedis.setExp (authHitOTPChannel personId) otpChannel 1800 -- 30 min
+
+getPersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> m OTPChannel
+getPersonOTPChannel personId = do
+  Hedis.get (authHitOTPChannel personId) >>= \case
+    Just a -> pure a
+    Nothing -> do
+      pure SMS

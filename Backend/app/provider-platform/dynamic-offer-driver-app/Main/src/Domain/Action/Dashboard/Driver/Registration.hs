@@ -156,7 +156,8 @@ auth merchantShortId opCity req = do
           merchantId = merchant.id.getId,
           merchantOperatingCity = Just opCity,
           registrationLat = Nothing,
-          registrationLon = Nothing
+          registrationLon = Nothing,
+          otpChannel = Nothing -- need to check this
         }
       Nothing
       Nothing
