@@ -16,6 +16,7 @@ module App where
 
 import qualified App.Server as App
 import Client.Main as CM
+import qualified Control.Concurrent as CC
 import qualified Data.Text as T
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -54,13 +55,21 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
 import "utils" Utils.Common.Events as UE
 
+createCAC :: AppCfg -> IO ()
+createCAC appCfg = do
+  x <- (CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants)
+  case x of
+    0 -> CM.startCACPolling appCfg.cacConfig.tenants
+    _ -> error "CAC client failed to start"
+  y <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  case y of
+    0 -> CM.runSuperPositionPolling appCfg.cacConfig.tenants
+    _ -> error "SuperPosition client failed to start"
+
 runRiderApp :: (AppCfg -> AppCfg) -> IO ()
 runRiderApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "rider-app"
-  _ <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
-  _ <- CM.runSuperPositionPolling appCfg.cacConfig.tenants
-  _ <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
-  _ <- CM.startCACPolling appCfg.cacConfig.tenants
+  _ <- CC.forkOS $ createCAC appCfg
   Metrics.serve (appCfg.metricsPort)
   runRiderApp' appCfg
 
