@@ -186,7 +186,7 @@ foreign import sendMessage :: String -> Unit
 foreign import getSuggestionsfromLocal :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
 foreign import setYoutubePlayer :: forall action. Fn5 YoutubeData String String (action -> Effect Unit) (String -> action) Unit
-foreign import addMediaPlayer :: String -> String -> Effect Unit
+foreign import addMediaPlayer :: String -> String -> Boolean -> Effect Unit
 foreign import switchYoutubeVideo :: String -> Unit
 foreign import addCarouselImpl :: EffectFn2 CarouselModal String Unit
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
@@ -211,7 +211,7 @@ foreign import storeCallBackInternetAction :: forall action. (action -> Effect U
 
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
-foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
+foreign import addMediaFile :: EffectFn7 String String String String String String Boolean Unit
 foreign import clearFocus :: EffectFn1 String Unit
 foreign import removeMediaPlayer :: EffectFn1 String Unit
 foreign import renderBase64ImageFile :: EffectFn4 String String Boolean String Unit

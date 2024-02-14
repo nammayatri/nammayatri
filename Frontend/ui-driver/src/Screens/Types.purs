@@ -1081,7 +1081,8 @@ type HomeScreenProps =  {
   accountBlockedPopup :: Boolean,
   showCoinsPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
-  tobeLogged :: Boolean
+  tobeLogged :: Boolean,
+  safetyAudioAutoPlay :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER

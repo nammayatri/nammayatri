@@ -17,7 +17,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth, os, safeMarginBottom)
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import PrestoDOM.Animation as PrestoAnim
-import Prelude (Unit, bind, const, pure, unit, show, discard, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, ($), negate, (+))
+import Prelude (Unit, bind, const, pure, unit, show, discard, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, ($), negate, (+), void)
 import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth)
 import Font.Size as FontSize
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -36,7 +36,7 @@ import Engineering.Helpers.Suggestions(getMessageFromKey)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude (boolToVisibility)
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (runEffectFn1, runEffectFn7)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -421,7 +421,7 @@ chatComponentView state push config nextConfig isLastItem userType index =
                    , height MATCH_PARENT
                    , orientation HORIZONTAL
                    , onAnimationEnd (\action -> do
-                                    _ <- addMediaFile (getNewIDWithTag "ChatAudioPlayer") config.message (getNewIDWithTag "ChatAudioPlayerLoader") "ny_ic_play_no_background" "ny_ic_pause_no_background" (getNewIDWithTag "ChatAudioPlayerTimer")
+                                    void $ runEffectFn7 addMediaFile (getNewIDWithTag "ChatAudioPlayer") config.message (getNewIDWithTag "ChatAudioPlayerLoader") "ny_ic_play_no_background" "ny_ic_pause_no_background" (getNewIDWithTag "ChatAudioPlayerTimer") false
                                     pure unit
                                   ) (const NoAction)
                    ][ imageView

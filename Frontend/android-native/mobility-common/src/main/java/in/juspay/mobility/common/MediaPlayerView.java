@@ -60,25 +60,28 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
     private int timerID = -1;
     private String playIcon = "ic_play";
     private String pauseIcon = "ic_pause";
+    private boolean autoPlay = false;
 
-    public MediaPlayerView(Context context, Activity activity) {
+    public MediaPlayerView(Context context, Activity activity, boolean autoPlay) {
         super(context);
         this.context = context;
         this.activity = activity;
+        this.autoPlay = autoPlay;
         init(context);
     }
 
-    public MediaPlayerView(Context context, Activity activity, int frameID, String playIcon, String pauseIcon) {
+    public MediaPlayerView(Context context, Activity activity, int frameID, String playIcon, String pauseIcon, boolean autoPlay) {
         super(context);
         this.context = context;
         this.activity = activity;
         this.frameID = frameID;
         this.playIcon = playIcon;
         this.pauseIcon = pauseIcon;
+        this.autoPlay = autoPlay;
         init(context);
     }
 
-    public MediaPlayerView(Context context, Activity activity, int frameID, String playIcon, String pauseIcon, int timerID) {
+    public MediaPlayerView(Context context, Activity activity, int frameID, String playIcon, String pauseIcon, int timerID, boolean autoPlay) {
         super(context);
         this.context = context;
         this.activity = activity;
@@ -86,6 +89,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         this.playIcon = playIcon;
         this.pauseIcon = pauseIcon;
         this.timerID = timerID;
+        this.autoPlay = autoPlay;
         init(context);
     }
 
@@ -304,6 +308,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
                 public void run() {
                     timer.setText(getTime(player.getDuration()));
                     actionButton.setClickable(true);
+                    if(autoPlay) player.play();
                 }
             });
         }

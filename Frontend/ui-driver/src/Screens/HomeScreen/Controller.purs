@@ -500,7 +500,7 @@ eval (KeyboardCallback keyBoardState) state = do
 eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
   if (checkNotificationType notificationType ST.DRIVER_REACHED && (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && (not state.data.activeRide.notifiedCustomer)) then do
-    let newState = state{props{showAccessbilityPopup = isJust state.data.activeRide.disabilityTag}}
+    let newState = state{props{showAccessbilityPopup = isJust state.data.activeRide.disabilityTag, safetyAudioAutoPlay = false}}
     void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "true"
     continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
   else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED]) then do
@@ -650,7 +650,7 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
     pure NoAction
     ] $ CallCustomer state exophoneNumber
 
-eval (RideActionModalAction (RideActionModal.SecondaryTextClick)) state = continue state{props{showAccessbilityPopup = true}}
+eval (RideActionModalAction (RideActionModal.SecondaryTextClick)) state = continue state{props{showAccessbilityPopup = true, safetyAudioAutoPlay = false}}
 
 eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state $ OpenPaymentPage state
 
@@ -881,7 +881,7 @@ eval NotifyAPI state = updateAndExit state $ NotifyDriverArrived state
 
 eval (RideActiveAction activeRide) state = do
   let currActiveRideDetails = activeRideDetail state activeRide
-      updatedState = state { data {activeRide = currActiveRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag)}}
+      updatedState = state { data {activeRide = currActiveRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag), safetyAudioAutoPlay = false}}
   updateAndExit updatedState $ UpdateStage ST.RideAccepted updatedState
 
 eval RecenterButtonAction state = continue state
@@ -986,13 +986,13 @@ eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment 
 eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
 
 eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
-eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false}} [ do 
+eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false, safetyAudioAutoPlay = false}} [ do 
   _ <- pure $ pauseYoutubeVideo unit
   void $ runEffectFn1 removeMediaPlayer ""
   pure NoAction
   ] 
 
-eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false}} [ do 
+eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false, safetyAudioAutoPlay = false}} [ do 
   _ <- pure $ pauseYoutubeVideo unit
   void $ runEffectFn1 removeMediaPlayer ""
   pure NoAction
