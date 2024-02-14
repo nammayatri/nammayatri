@@ -220,7 +220,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
           let onlyNewNormalDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyDrivers
           if length onlyNewNormalDrivers < batchSize && not (isAtMaxRadiusStep radiusStep)
             then do
-              incrementPoolRadiusStep searchTry.id
+              incrementBatchNum searchTry.id
               (batch, _, _) <- prepareDriverPoolBatch' previousBatchesDrivers batchNum False mOCityId
               pure batch
             else do
