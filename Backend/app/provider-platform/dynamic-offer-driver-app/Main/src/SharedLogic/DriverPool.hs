@@ -547,7 +547,6 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       )
       randomDriverPool
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-
   let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) goHomeRequests
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
@@ -558,7 +557,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           Nothing -> return driverGoHomePoolWithActualDistance
           Just threshold -> do
             logDebug $ "Threshold :" <> show threshold
-            let res = filter (\(_, _, dpwAD) -> filterFunc threshold dpwAD) driverGoHomePoolWithActualDistance
+            let res = filter (\(_, driver, dpwAD) -> filterFunc threshold dpwAD driver.distanceToDriver) driverGoHomePoolWithActualDistance
             logDebug $ "secondly filtered go home driver pool" <> show (map snd3 res)
             return res
 
@@ -574,7 +573,11 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult transporterConfig <$> driversOnWayToHome
   return $ take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist
   where
-    filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+    filterFunc threshold estDist distanceToPickup =
+      case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
+        Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
+        Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+    getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (dObj.driverId) now
 
     makeDriverPoolRes nearestGoHomeDrivers =
       DriverPoolResult
@@ -715,11 +718,14 @@ calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant p
       driverPoolWithActualDist <- computeActualDistance merchantId merchantOpCityId pickup (a :| pprox)
       let filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
             Nothing -> NE.toList driverPoolWithActualDist
-            Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActualDist
+            Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip driverPoolWithActualDist (a :| pprox)
       logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist
       return filtDriverPoolWithActualDist
   where
-    filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+    filterFunc threshold estDist distanceToPickup =
+      case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
+        Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
+        Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
