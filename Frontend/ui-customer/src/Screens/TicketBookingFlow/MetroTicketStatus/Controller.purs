@@ -70,15 +70,18 @@ data Action = BackPressed
             | ViewTicketBtnOnClick PrimaryButton.Action
             | CountDown Int String String
 
-data ScreenOutput = NoOutput 
-                  | GoBack
+data ScreenOutput = GoToHomeScreen
                   | GoToMetroTicketDetails MetroTicketStatusScreenState MetroTicketBookingStatus
                   | RefreshPaymentStatus MetroTicketStatusScreenState
                   | GoToTryAgainPayment MetroTicketStatusScreenState
+                  | GoToMyMetroTicketsScreen
 
 eval :: Action -> MetroTicketStatusScreenState -> Eval Action ScreenOutput MetroTicketStatusScreenState
 
-eval (BackPressed) state = exit GoBack
+eval (BackPressed) state = 
+  case state.props.entryPoint of 
+    HomescreenToMetroTicketStaus -> exit GoToHomeScreen 
+    MyMetroTicketsToMetroTicketStatus -> exit GoToMyMetroTicketsScreen
 
 eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatus)) state = do
   case metroTicketBookingStatus.status of 

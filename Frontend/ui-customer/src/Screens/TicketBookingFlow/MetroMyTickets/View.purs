@@ -40,13 +40,23 @@ import Helpers.Utils
 import Animation as Anim
 import Language.Strings
 import Language.Types
+import Services.Backend as Remote
+import Engineering.Helpers.Commons as EHC
+import Services.API as API
 
 screen :: ST.MetroMyTicketsScreenState -> Screen Action ST.MetroMyTicketsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "MetroMyTickets"
-  , globalEvents : []
+  , globalEvents : [
+      ( \push -> do
+        void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+          (API.GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT
+          lift $ lift $ doAff do liftEffect $ push $ MetroBookingListRespAC resp
+        pure $ pure unit
+      )
+    ]
   , eval :
     \action state -> do
         let _ = spy "MetroMyTickets action " action
@@ -255,10 +265,12 @@ activeTicketView push ticketCard =
       , height $ V 1
       , margin $ MarginVertical 16 16
       , background Color.grey900
+      , visibility $ boolToVisibility $ ticketCard.status /= "PAYMENT_PENDING"
       ][]
     , linearLayout [
         width MATCH_PARENT
       , height WRAP_CONTENT
+      , visibility $ boolToVisibility $ ticketCard.status /= "PAYMENT_PENDING"
       ][
         linearLayout [
           width WRAP_CONTENT
@@ -334,19 +346,22 @@ pastTicketView push ticketCard =
         "CONFIRMING" -> getString CONFIRMING_STR 
         "FAILED" -> getString FAILED_STR
         "CONFIRMED" -> getString CONFIRMED_STR
+        "EXPIRED" -> "Exipired" -- getString EXPIRED_STR
         _ -> ""
       statusColor = case ticketCard.status of
         "PAYMENT_PENDING" -> Color.yellow900
         "CONFIRMING" -> Color.yellow900
         "FAILED" -> Color.red900
         "CONFIRMED" -> Color.green900
+        "EXPIRED" -> Color.black800 -- getString EXPIRED_STR
         _ -> Color.black900
       statusIcon = case ticketCard.status of
-        "PAYMENT_PENDING" -> "ny_ic_yellow_clock"
-        "CONFIRMING" -> "ny_ic_yellow_clock"
-        "FAILED" -> "ny_ic_red_cross"
-        "CONFIRMED" -> "ny_ic_green_tick"
-        _ -> ""
+        "PAYMENT_PENDING" -> fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock"
+        "CONFIRMING" -> fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock"
+        "FAILED" -> fetchImage FF_COMMON_ASSET "ny_ic_red_triangle_warning"
+        "CONFIRMED" -> fetchImage FF_COMMON_ASSET "ny_ic_green_tick"
+        "EXPIRED" -> fetchImage FF_ASSET "ny_ic_info"
+        _ ->  ""
   in
   linearLayout [
     width MATCH_PARENT
@@ -416,6 +431,18 @@ pastTicketView push ticketCard =
           , color Color.black700
           ] <> FontStyle.tags TypoGraphy
         ]
+      , linearLayout [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      , margin $ MarginTop 6
+      ][
+        imageView [
+          width $ V 16
+        , height $ V 16
+        , imageWithFallback statusIcon
+        , margin $ MarginRight 4
+        ]
       , textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -425,5 +452,6 @@ pastTicketView push ticketCard =
       ]
     ]
   ]
+]
   
  

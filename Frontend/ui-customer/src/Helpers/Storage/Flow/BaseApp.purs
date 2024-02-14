@@ -60,6 +60,7 @@ baseAppStorage = do
     setValueToLocalStore BUNDLE_TIME_OUT "1000"
     setValueToLocalStore MESSAGES_DELAY "0"
     setValueToLocalStore REALLOCATE_PRODUCT_ENABLED (show appConfig.feature.enableReAllocation)
+    setValueToLocalStore METRO_PAYMENT_SDK_POLLING "false"
     when (sessionId `elem` ["__failed", "(null)"]) do
         setValueToLocalStore SESSION_ID $ generateSessionId unit
     when (countryCode `elem` ["__failed", "(null)"]) do

@@ -292,6 +292,9 @@ qrCodeView push state =
                 Just ticket -> ticket.qrString
                 Nothing -> ""
     ticketStr = " " <> (getString $ if state.data.noOfTickets > 0 then TICKETS else TICKET)
+    headerText = (show $ state.props.currentTicketIndex + 1) 
+                  <> if state.data.noOfTickets > 1 then  "/" <> (show $ length state.data.ticketsInfo) else "" 
+                  <> ticketStr
   in 
     linearLayout [
       width MATCH_PARENT
@@ -304,7 +307,7 @@ qrCodeView push state =
       textView $ [
         width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ (show $ state.props.currentTicketIndex + 1) <> "/" <> (show $ length state.data.ticketsInfo) <> ticketStr
+      , text $ headerText
       , color Color.black800
       , gravity CENTER
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -319,7 +322,7 @@ qrCodeView push state =
         , height $ V 32
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_grey"
         , onClick push $ const PrevTicketClick
-        , visibility $ boolToVisibility $ state.data.noOfTickets > 0
+        , visibility $ boolToVisibility $ state.data.noOfTickets > 1
         ]
       , linearLayout [
           height WRAP_CONTENT
@@ -338,7 +341,7 @@ qrCodeView push state =
       , imageView [
           width $ V 32
         , height $ V 32
-        , visibility $ boolToVisibility $ state.data.noOfTickets > 0
+        , visibility $ boolToVisibility $ state.data.noOfTickets > 1
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
         , onClick push $ const NextTicketClick
         ]

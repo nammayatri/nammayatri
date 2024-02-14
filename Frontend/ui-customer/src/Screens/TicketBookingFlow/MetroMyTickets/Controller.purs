@@ -30,6 +30,8 @@ import Language.Strings
 import Language.Types
 import PrestoDOM.Types.Core (class Loggable)
 import Services.API
+import Debug 
+import Screens.TicketBookingFlow.MetroMyTickets.Transformer (metroTicketListApiToMyTicketsTransformer)
 
 
 instance showAction :: Show Action where
@@ -44,17 +46,24 @@ data Action = NoAction
             | AfterRender
             | ActiveTicketPressed MetroTicketBookingStatus
             | PastTicketPressed MetroTicketBookingStatus
+            | MetroBookingListRespAC (Array MetroTicketBookingStatus)
 
 data ScreenOutput = NoOutput
-                  | GoToMetroTicketDetailsFlow MetroTicketBookingStatus
+                  | GoToMetroTicketDetailsFlow String
                   | GoToMetroTicketStatusFlow MetroTicketBookingStatus
-                  | GoBack
+                  | GoToHomeScreen
+                  | GoToMetroBooking
 
 
 eval :: Action -> MetroMyTicketsScreenState -> Eval Action ScreenOutput MetroMyTicketsScreenState
 
 
-eval (ActiveTicketPressed ticketApiResp) state = exit $ GoToMetroTicketDetailsFlow ticketApiResp
+eval (MetroBookingListRespAC bookingList) state = 
+  continue $ metroTicketListApiToMyTicketsTransformer bookingList state
+
+eval (ActiveTicketPressed (MetroTicketBookingStatus ticketApiResp)) state = do 
+  void $ pure $ spy "Before TicketStatus API Call" ticketApiResp
+  exit $ GoToMetroTicketDetailsFlow ticketApiResp.bookingId
 
 eval (PastTicketPressed ticketApiResp) state = exit $ GoToMetroTicketStatusFlow ticketApiResp
 
@@ -65,6 +74,9 @@ eval AfterRender state =
     }
   }
 
-eval BackPressed state = exit GoBack
+eval BackPressed state = 
+  case state.props.entryPoint of 
+    HomeScreenToMetroMyTickets -> exit GoToHomeScreen
+    MetroTicketBookingToMetroMyTickets -> exit GoToMetroBooking
 
 eval _ state = continue state
