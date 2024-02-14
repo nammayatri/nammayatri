@@ -23,6 +23,7 @@ LmsModule:
     rank : Int
     variant : Maybe Variant
     moduleCompletionCriteria : ModuleCompletionCriteria
+    languagesAvailableForQuiz : "[Language]"
 
   types:
     LmsCategory:
@@ -30,8 +31,12 @@ LmsModule:
     ModuleCompletionCriteria:
       enum : "ONLY_VIDEOS, VIDEOS_AND_QUIZ Int"
 
+  sqlType:
+    languagesAvailableForQuiz : "text[]"
+
   default:
     category : "'Training'"
+    languagesAvailableForQuiz : "'{}'"
 
   queries:
     getAllModules:
@@ -110,13 +115,48 @@ LmsVideoTranslation:
     thresholdEnabled : Bool
     startThresholdInPercentage : Maybe Int
     completedThresholdInPercentage : Maybe Int
+    sideButtonConfig : "[ReelRowButtonConfig]"
+    bottomButtonConfig : "[ReelRowButtonConfig]"
 
   excludedFields: [merchantId, merchantOperatingCityId]
+
+  types:
+    ReelRowButtonConfig:
+      row: "[ReelButtonConfig]"
+      derive: "'ListInstance, Eq, Ord, Read"
+    ReelButtonConfig:
+      prefixImage : Maybe Text
+      suffixImage : Maybe Text
+      actions : Maybe [Text]
+      shareLink : Maybe Text
+      shareText : Maybe Text
+      buttonColor : Maybe Text
+      cornerRadius : Maybe Int
+      text : Maybe Text
+      textSize : Maybe Int
+      textColor : Maybe Text
+      prefixImageHeight : Maybe Int
+      prefixImageWidth : Maybe Int
+      suffixImageHeight : Maybe Int
+      suffixImageWidth : Maybe Int
+      activeIndex : Maybe Text
+      inActiveIndex : Maybe Text
+      activeIndexWidth : Maybe Int
+      activeIndexHeight : Maybe Int
+      inActiveIndexWidth : Maybe Int
+      inActiveIndexHeight : Maybe Int
+      derive: "'ListInstance, Eq, Ord, Read"
 
   default:
     completedWatchCount: "0"
     viewCount: "0"
     thresholdEnabled: "False"
+    sideButtonConfig: "'{}'"
+    bottomButtonConfig: "'{}'"
+
+  sqlType:
+    sideButtonConfig: "text[]"
+    bottomButtonConfig: "text[]"
 
   constraints:
     videoId : PrimaryKey

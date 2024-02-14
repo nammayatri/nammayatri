@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -54,6 +55,7 @@ updateByPrimaryKey Domain.Types.LmsModule.LmsModule {..} = do
     [ Se.Set Beam.category category,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.duration duration,
+      Se.Set Beam.languagesAvailableForQuiz languagesAvailableForQuiz,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.moduleCompletionCriteria moduleCompletionCriteria,
       Se.Set Beam.noOfVideos noOfVideos,
@@ -76,6 +78,7 @@ instance FromTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
             createdAt = createdAt,
             duration = duration,
             id = Kernel.Types.Id.Id id,
+            languagesAvailableForQuiz = languagesAvailableForQuiz,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             moduleCompletionCriteria = moduleCompletionCriteria,
             noOfVideos = noOfVideos,
@@ -92,6 +95,7 @@ instance ToTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
         Beam.createdAt = createdAt,
         Beam.duration = duration,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.languagesAvailableForQuiz = languagesAvailableForQuiz,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.moduleCompletionCriteria = moduleCompletionCriteria,
         Beam.noOfVideos = noOfVideos,
