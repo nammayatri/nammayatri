@@ -60,14 +60,14 @@ accessibilityPopUpConfig selectedDisability purpleRideConfig =
          cornerRadius = (PTD.Corners 15.0 true true true true),
          coverImageConfig {
            imageUrl = popupData.imageUrl
-         , visibility = if popupData.videoUrl == "" || (not (JB.supportsInbuildYoutubePlayer unit)) then VISIBLE else GONE
+         , visibility = if popupData.videoUrl == "" || (not (JB.supportsInbuildYoutubePlayer unit)) || EHC.os == "IOS" then VISIBLE else GONE
          , height = V 160
          , width = MATCH_PARENT
          , margin = Margin 16 20 16 0
          }
          , listViewArray = popupData.listViewArray
           , coverMediaConfig {
-            visibility = if popupData.videoUrl /= "" && (JB.supportsInbuildYoutubePlayer unit) then VISIBLE else GONE 
+            visibility = if popupData.videoUrl /= "" && (JB.supportsInbuildYoutubePlayer unit) && EHC.os /= "IOS" then VISIBLE else GONE 
           , height = V 200
           , width = MATCH_PARENT
           , padding = Padding 16 16 16 0

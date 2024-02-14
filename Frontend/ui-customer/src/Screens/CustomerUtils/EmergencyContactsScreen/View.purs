@@ -60,7 +60,7 @@ view listItemm push state =
         , orientation VERTICAL
         , onBackPressed push (const BackPressed)
         , background Color.white900
-        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 (if safeMarginBottom == 0 && os == "IOS" then 16 else safeMarginBottom)) else (Padding 0 0 0 0)
+        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 marginBottom) else (Padding 0 0 0 0)
         , gravity CENTER
         , afterRender push $ const NoAction
         ]
@@ -94,6 +94,12 @@ view listItemm push state =
           ]
             <> if state.props.showInfoPopUp then [ removeContactPopUpView push state ] else [ emptyTextView state ]
         )
+        where
+          marginBottom = if state.props.showContactList 
+                            then 0 
+                         else if safeMarginBottom == 0 && os == "IOS" 
+                            then 16 
+                         else safeMarginBottom
 
 ------------------------ EmptyTextView ---------------------------
 emptyTextView :: forall w. EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
@@ -155,21 +161,22 @@ contactListView listItemm push state =
         ]
     , showEmergencyContact listItemm push state
     , linearLayout
-        [ height if os == "IOS" then (V 84) else WRAP_CONTENT
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , background Color.transparent
-        , padding (Padding 16 16 16 (if os == "IOS" then 50 else 24))
+        , background Color.white900
+        , padding (Padding 16 16 16 0)
         , stroke $ "1," <> Color.grey900
         , alignParentBottom "true,-1"
         , margin (Margin 0 0 0 0)
         , adjustViewWithKeyboard "true"
+        , alignParentBottom "true,-1"
         ]
         [ linearLayout
             [ width MATCH_PARENT
-            , height if os == "IOS" then (V 52) else WRAP_CONTENT
+            , height if os == "IOS" then (V 68) else WRAP_CONTENT
             , gravity BOTTOM
-            , alignParentBottom "true,-1"
+            , padding $ PaddingBottom 16
             ]
             [ PrimaryButton.view getPushFn $ contactListPrimaryButtonConfig state
             ]
