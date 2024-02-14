@@ -60,6 +60,7 @@ buildSearchReqV1 DSearch.SearchRes {..} =
     (getPoints shortestRouteInfo)
     phoneNumber
     isReallocationEnabled
+    multipleRoutes
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
@@ -86,6 +87,7 @@ buildSearchReqV2 DSearch.SearchRes {..} = do
     phoneNumber
     isReallocationEnabled
     startTime
+    multipleRoutes
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
@@ -104,14 +106,15 @@ buildSearchReq ::
   Maybe [Maps.LatLong] ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe [Maps.RouteInfo] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin stops searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber mbIsReallocationEnabled = do
+buildSearchReq origin stops searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber mbIsReallocationEnabled multipleRoutes = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing _city merchant.country False
-  let intent = mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
+  let intent = mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled multipleRoutes
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
@@ -126,8 +129,9 @@ mkIntent ::
   Maybe [Maps.LatLong] ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe [Maps.RouteInfo] ->
   Search.Intent
-mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled = do
+mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled multipleRoutes = do
   let mbDestination = listToMaybe stops
       startLocation =
         Search.StartInfo
@@ -193,6 +197,12 @@ mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints 
                   code = (\_ -> Just "route_points") =<< mbPoints,
                   name = (\_ -> Just "Route Points") =<< mbPoints,
                   value = LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints
+                },
+              Search.Tag
+                { display = (\_ -> Just False) =<< multipleRoutes,
+                  code = (\_ -> Just "multiple_routes") =<< multipleRoutes,
+                  name = (\_ -> Just "Multiple Routes") =<< multipleRoutes,
+                  value = LT.toStrict . TE.decodeUtf8 . encode <$> multipleRoutes
                 }
             ]
         }

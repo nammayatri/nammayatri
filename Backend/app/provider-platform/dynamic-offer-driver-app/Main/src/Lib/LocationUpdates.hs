@@ -77,38 +77,31 @@ updateDeviation _ _ Nothing _ = do
   return False
 updateDeviation transportConfig safetyCheckEnabled (Just rideId) batchWaypoints = do
   (alreadyDeviated, safetyAlertAlreadyTriggered) <- getDeviationAndSafetyDetails rideId
-  if safetyAlertAlreadyTriggered
+  if safetyAlertAlreadyTriggered && alreadyDeviated
     then do
-      logInfo $ "Safety alert already triggered for rideId: " <> getId rideId
+      logInfo $ "Safety alert and deviation already triggered for rideId: " <> getId rideId
       return True
     else do
       let routeDeviationThreshold = transportConfig.routeDeviationThreshold
-          key = searchRequestKey (getId rideId)
-      routeInfo :: Maybe RI.RouteInfo <- Redis.get key
-      case routeInfo >>= (.points) of
-        Just estimatedRoute -> do
-          currentlyDeviated <-
-            case (safetyCheckEnabled, alreadyDeviated) of
-              (True, _) -> do
-                let deviation = getMaxDeviation estimatedRoute batchWaypoints 0 0 0
-                fork "Performing safety check" $
-                  when (deviation >= transportConfig.nightSafetyRouteDeviationThreshold) $ performSafetyCheck rideId
-                return $ deviation >= routeDeviationThreshold
-              (False, False) -> return $ checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
-              (False, True) -> return True
-          case (alreadyDeviated, currentlyDeviated) of
-            (True, _) -> return True
-            (False, True) -> do
-              logInfo $ "Deviation detected for rideId: " <> getId rideId
-              QRide.updateDriverDeviatedFromRoute rideId True
-              return True
-            (False, False) -> do
-              logInfo $ "No deviation detected for rideId: " <> getId rideId
-              return False
+          nightSafetyRouteDeviationThreshold = transportConfig.nightSafetyRouteDeviationThreshold
+          key = multipleRouteKey $ getId rideId
+          shouldPerformSafetyCheck = safetyCheckEnabled && not safetyAlertAlreadyTriggered
+      multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get key
+      case multipleRoutes of
+        Just routes -> do
+          isRouteDeviated <- checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold rideId shouldPerformSafetyCheck
+          updateRouteDeviationDetails isRouteDeviated alreadyDeviated
         Nothing -> do
-          logWarning $ "Ride route points not found for rideId: " <> getId rideId
-          return False
+          isRouteDeviated <- checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold rideId
+          updateRouteDeviationDetails isRouteDeviated alreadyDeviated
   where
+    updateRouteDeviationDetails :: Bool -> Bool -> Flow Bool
+    updateRouteDeviationDetails isRouteDeviated alreadyDeviated = do
+      when (isRouteDeviated && not alreadyDeviated) $ do
+        logInfo $ "Deviation detected for rideId: " <> getId rideId
+        QRide.updateDriverDeviatedFromRoute rideId True
+      return isRouteDeviated
+
     getDeviationAndSafetyDetails id = do
       mbRideDetails <- QRide.findById id
       case mbRideDetails of
@@ -118,6 +111,70 @@ updateDeviation transportConfig safetyCheckEnabled (Just rideId) batchWaypoints 
         Just rideDetails -> do
           let alreadyDeviated = fromMaybe False rideDetails.driverDeviatedFromRoute
           return (alreadyDeviated, rideDetails.safetyAlertTriggered)
+
+checkMultipleRoutesForDeviation :: [RI.RouteAndDeviationInfo] -> [LatLong] -> Meters -> Meters -> Id Ride -> Bool -> Flow Bool
+checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold rideId safetyCheckEnabled = do
+  logInfo $ "Checking for deviation in multiple routes for rideId: " <> getId rideId
+  let updatedRoutesInfo = map checkRouteForDeviation routes
+  setExp (multipleRouteKey $ getId rideId) updatedRoutesInfo 14400
+  fork "Performing safety check" $
+    when (safetyCheckEnabled && all (\route -> RI.safetyDeviation $ RI.deviationInfo route) updatedRoutesInfo) $ performSafetyCheck rideId
+  return $ all (\route -> RI.deviation $ RI.deviationInfo route) updatedRoutesInfo
+  where
+    checkRouteForDeviation :: RI.RouteAndDeviationInfo -> RI.RouteAndDeviationInfo
+    checkRouteForDeviation route@RI.RouteAndDeviationInfo {..} =
+      case routeInfo.points of
+        Nothing -> route
+        Just points ->
+          if safetyCheckEnabled
+            then
+              route
+                { RI.deviationInfo =
+                    RI.DeviationInfo
+                      { deviation =
+                          checkForDeviation routeDeviationThreshold points batchWaypoints 0,
+                        safetyDeviation = False
+                      }
+                }
+            else do
+              case (deviationInfo.safetyDeviation, deviationInfo.deviation) of
+                (True, _) -> route
+                (False, True) -> do
+                  let isSafetyDeviated = checkForDeviation nightSafetyRouteDeviationThreshold points batchWaypoints 0
+                  route
+                    { RI.deviationInfo =
+                        RI.DeviationInfo
+                          { deviation = True,
+                            safetyDeviation = isSafetyDeviated
+                          }
+                    }
+                (False, False) -> do
+                  let deviation = getMaxDeviation points batchWaypoints 0 0 0
+                  route
+                    { RI.deviationInfo =
+                        RI.DeviationInfo
+                          { deviation = deviation >= routeDeviationThreshold,
+                            safetyDeviation = deviation >= nightSafetyRouteDeviationThreshold
+                          }
+                    }
+
+checkForDeviationInSingleRoute :: [LatLong] -> Meters -> Meters -> Id Ride -> Flow Bool
+checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold rideId = do
+  logInfo $ "Checking for deviation in single route for rideId: " <> getId rideId
+  let key = searchRequestKey (getId rideId)
+  mbRouteInfo :: Maybe RI.RouteInfo <- Redis.get key
+  case mbRouteInfo of
+    Just routeInfo -> do
+      let multipleRoutesEntity =
+            [ RI.RouteAndDeviationInfo
+                { routeInfo = routeInfo,
+                  deviationInfo = RI.DeviationInfo {deviation = False, safetyDeviation = False}
+                }
+            ]
+      checkMultipleRoutesForDeviation multipleRoutesEntity batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold rideId False
+    Nothing -> do
+      logWarning $ "Ride route info not found for rideId: " <> getId rideId
+      return False
 
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do

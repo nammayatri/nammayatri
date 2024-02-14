@@ -152,7 +152,8 @@ data SearchRes = SearchRes
     duration :: Maybe Seconds,
     shortestRouteInfo :: Maybe Maps.RouteInfo,
     phoneNumber :: Maybe Text,
-    isReallocationEnabled :: Maybe Bool
+    isReallocationEnabled :: Maybe Bool,
+    multipleRoutes :: Maybe [Maps.RouteInfo]
   }
 
 hotSpotUpdate ::
@@ -247,7 +248,7 @@ search personId req bundleVersion clientVersion device = do
             "merchantId: " <> merchant.id.getId <> " ,city: " <> show originCity
         )
   searchRequestId <- generateGUID
-  (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo) <-
+  (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, multipleRoutes) <-
     case req of
       OneWaySearch oneWayReq -> do
         let destinationLatLong = oneWayReq.destination.gps
@@ -315,8 +316,8 @@ search personId req bundleVersion clientVersion device = do
         let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
         let shortestRouteDistance = (.distance) =<< shortestRouteInfo
         let shortestRouteDuration = (.duration) =<< shortestRouteInfo
-        return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo)
-      RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Nothing)
+        return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just routeResponse)
+      RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Nothing, Nothing)
 
   fromLocation <- buildSearchReqLoc origin
   stopLocations <- buildSearchReqLoc `mapM` stops

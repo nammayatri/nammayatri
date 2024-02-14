@@ -20,3 +20,15 @@ data RouteInfo = RouteInfo
     points :: Maybe [LatLong]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data DeviationInfo = DeviationInfo
+  { deviation :: Bool,
+    safetyDeviation :: Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data RouteAndDeviationInfo = RouteAndDeviationInfo
+  { routeInfo :: RouteInfo,
+    deviationInfo :: DeviationInfo
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
