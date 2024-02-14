@@ -20,7 +20,6 @@ import Services.API
 
 import Accessor (_deviceToken)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), FeedbackAnswer)
-import Common.Types.App (RideType(..)) as RideType
 import ConfigProvider as CP
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
@@ -59,6 +58,7 @@ import Locale.Utils
 import MerchantConfig.Types (GeoCodeConfig)
 import Helpers.API (callApiBT)
 import Debug(spy)
+import Screens.Types (FareProductType(..)) as FPT
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -752,8 +752,8 @@ type Markers = {
 data TrackingType = RIDE_TRACKING | DRIVER_TRACKING
 
 
-getRouteMarkers :: String -> City -> TrackingType -> RideType.RideType -> Markers
-getRouteMarkers variant city trackingType rideType = 
+getRouteMarkers :: String -> City -> TrackingType -> FPT.FareProductType -> Markers
+getRouteMarkers variant city trackingType fareProductType = 
   { srcMarker : mkSrcMarker ,
     destMarker : mkDestMarker 
   }
@@ -769,7 +769,7 @@ getRouteMarkers variant city trackingType rideType =
     mkDestMarker :: String
     mkDestMarker = 
         case trackingType of 
-            RIDE_TRACKING -> if rideType == RideType.RENTAL_RIDE then "ny_ic_blue_marker" else "ny_ic_dest_marker"
+            RIDE_TRACKING -> if fareProductType == FPT.RENTAL then "ny_ic_blue_marker" else "ny_ic_dest_marker"
             DRIVER_TRACKING -> "ny_ic_src_marker"
 
     getAutoImage :: City -> String

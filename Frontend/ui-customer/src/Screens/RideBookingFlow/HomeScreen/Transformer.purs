@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType, dummyRentalBookingConfig)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), Stage(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
@@ -47,7 +47,6 @@ import JBridge (fromMetersToKm, getLatLonFromAddress)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..), Paths)
-import Common.Types.App (RideType(..)) as RideType
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Resources.Localizable.EN (getEN)
 import MerchantConfig.Types (EstimateAndQuoteConfig)
@@ -60,7 +59,7 @@ import Locale.Utils
 import Debug
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Storage (isLocalStageOn)
-import Screens.Types (Stage(..))
+import Screens.Types (FareProductType(..)) as FPT
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -129,16 +128,15 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
-      fareProductType = resp.bookingDetails ^._fareProductType
-      stopLocation = if fareProductType == "RENTAL" then _stopLocation else _toLocation
+      fareProductType = getFareProductType $ resp.bookingDetails ^._fareProductType
+      stopLocation = if fareProductType == FPT.RENTAL then _stopLocation else _toLocation
       (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
   in  {
-        otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if (((fareProductType == "RENTAL")|| (fareProductType == "INTER_CITY")) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
+        otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if ((DA.any (_ == fareProductType ) [FPT.RENTAL, FPT.INTER_CITY] ) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
                         (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
       , eta : Nothing
-      , currentSearchResultType : if isQuote then QUOTES else ESTIMATES
       , vehicleDetails : rideList.vehicleModel
       , registrationNumber : rideList.vehicleNumber
       , rating : (fromMaybe 0.0 rideList.driverRatings)
@@ -174,8 +172,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , rentalData : dummyRentalBookingConfig{
           baseDistance = fromMaybe 0 resp.estimatedDistance
         , baseDuration = fromMaybe 0 resp.estimatedDuration
-        
         }
+      , fareProductType : fareProductType
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -662,14 +660,26 @@ fetchPickupCharges estimateFareBreakup =
 filterSpecialZoneAndInterCityQuotes :: Array OfferRes -> Array OfferRes
 filterSpecialZoneAndInterCityQuotes quotes = 
   filter 
-  (\quote -> let fareProductType = getFareProductType quote
-             in fareProductType == "OneWaySpecialZoneAPIDetails" || fareProductType == "INTER_CITY" )
+  (\quote -> let fareProductType = getFareProductType $ extractFareProductType quote
+             in DA.any ( _ == fareProductType ) [ FPT.ONE_WAY_SPECIAL_ZONE , FPT.INTER_CITY ])
   quotes
 
-getFareProductType :: OfferRes -> String
-getFareProductType quote = 
+extractFareProductType :: OfferRes -> String
+extractFareProductType quote = 
   case quote of 
     Quotes body ->
       let (QuoteAPIEntity quoteEntity) = body.onDemandCab
       in quoteEntity.quoteDetails^._fareProductType
     _ -> ""
+
+------------------------- fareProductType API transformer -------------------------
+
+getFareProductType :: String -> FPT.FareProductType
+getFareProductType fareProductType = 
+  case fareProductType of 
+    "OneWaySpecialZoneAPIDetails" -> FPT.ONE_WAY_SPECIAL_ZONE
+    "INTER_CITY" -> FPT.INTER_CITY
+    "RENTAL" -> FPT.RENTAL 
+    "ONE_WAY" -> FPT.ONE_WAY
+    "DRIVER_OFFER" -> FPT.DRIVER_OFFER
+    _ -> FPT.ONE_WAY
