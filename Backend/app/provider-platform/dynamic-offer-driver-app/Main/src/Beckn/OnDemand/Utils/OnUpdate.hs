@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.List as List
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -159,7 +160,7 @@ mkDistanceTagGroup ride = do
           { tagGroupDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "ride_distance_details",
+                  { descriptorCode = Just $ show Tags.RIDE_DISTANCE_DETAILS,
                     descriptorName = Just "Ride Distance Details",
                     descriptorShortDesc = Nothing
                   },
@@ -178,7 +179,7 @@ mkDistanceTagGroup ride = do
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "chargeable_distance",
+                  { descriptorCode = Just $ show Tags.CHARGEABLE_DISTANCE,
                     descriptorName = Just "Chargeable Distance",
                     descriptorShortDesc = Nothing
                   },
@@ -192,7 +193,7 @@ mkDistanceTagGroup ride = do
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "traveled_distance",
+                  { descriptorCode = Just $ show Tags.TRAVELED_DISTANCE,
                     descriptorName = Just "Traveled Distance",
                     descriptorShortDesc = Nothing
                   },
@@ -206,7 +207,7 @@ mkDistanceTagGroup ride = do
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "end_odometer_reading",
+                  { descriptorCode = Just $ show Tags.END_ODOMETER_READING,
                     descriptorName = Just "End Odometer Reading",
                     descriptorShortDesc = Nothing
                   },
@@ -221,7 +222,7 @@ mkPreviousCancellationReasonsTags cancellationSource =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "previous_cancellation_reasons",
+                { descriptorCode = Just $ show Tags.PREVIOUS_CANCELLATION_REASONS,
                   descriptorName = Just "Previous Cancellation Reasons",
                   descriptorShortDesc = Nothing
                 },
@@ -238,7 +239,7 @@ mkPreviousCancellationReasonsTags cancellationSource =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "cancellation_reason",
+                  { descriptorCode = Just $ show Tags.CANCELLATION_REASON,
                     descriptorName = Just "Chargeable Distance",
                     descriptorShortDesc = Nothing
                   },
@@ -261,7 +262,7 @@ mkNewMessageTags message =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "driver_new_message",
+                { descriptorCode = Just $ show Tags.DRIVER_NEW_MESSAGE,
                   descriptorName = Just "Driver New Message",
                   descriptorShortDesc = Nothing
                 },
@@ -278,7 +279,7 @@ mkNewMessageTags message =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "message",
+                  { descriptorCode = Just $ show Tags.MESSAGE,
                     descriptorName = Just "New Message",
                     descriptorShortDesc = Nothing
                   },
@@ -293,7 +294,7 @@ mkSafetyAlertTags reason code =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "safety_alert",
+                { descriptorCode = Just $ show Tags.SAFETY_ALERT,
                   descriptorName = Just "Safety Alert",
                   descriptorShortDesc = Nothing
                 },
