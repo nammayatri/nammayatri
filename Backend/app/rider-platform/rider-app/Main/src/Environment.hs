@@ -61,8 +61,8 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
-import Storage.CachedQueries.Merchant as CM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
+import qualified Storage.Queries.BecknConfig as QBC
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -262,7 +262,7 @@ instance AuthenticatingEntity AppEnv where
 instance Registry Flow where
   registryLookup =
     Registry.withSubscriberCache $ \sub -> do
-      fetchFromDB sub.merchant_id >>= \registryUrl -> do
+      fetchFromDB sub >>= \registryUrl -> do
         subId <- Registry.registryLookup registryUrl sub
         totalSubIds <- QWhiteList.countTotalSubscribers
         if totalSubIds == 0
@@ -271,9 +271,9 @@ instance Registry Flow where
           else do
             Registry.checkWhitelisted isNotWhiteListed subId
     where
-      fetchFromDB merchantId = do
-        merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
-        pure $ merchant.registryUrl
+      fetchFromDB sub = do
+        becknConfig <- QBC.findByMerchantIdAndDomain (Just $ Id sub.merchant_id) (show sub.domain) >>= fromMaybeM (InternalError "Beckn Config not found")
+        pure $ becknConfig.registryUrl
       isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
       isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 

@@ -27,7 +27,7 @@ import Servant hiding (throwError)
 
 type API =
   "beckn" :> "frfs" :> "v1"
-    :> SignatureAuth 'Domain.PUBLIC_TRANSPORT "Authorization"
+    :> SignatureAuth 'Domain.FRFS "Authorization"
     :> ( OnSearch.API
            :<|> OnInit.API
            :<|> OnConfirm.API
@@ -37,7 +37,7 @@ type API =
 type APIM =
   "beckn" :> "frfs" :> "v1"
     :> Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth 'Domain.PUBLIC_TRANSPORT "Authorization"
+    :> SignatureAuth 'Domain.FRFS "Authorization"
     :> ( OnSearch.API
            :<|> OnInit.API
            :<|> OnConfirm.API
