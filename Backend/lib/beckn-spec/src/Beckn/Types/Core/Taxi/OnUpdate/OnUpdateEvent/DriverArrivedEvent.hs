@@ -21,7 +21,7 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (DRIVER_ARRIVED))
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_ARRIVED_PICKUP))
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
@@ -42,12 +42,12 @@ instance ToJSON DriverArrivedEvent where
     A.Object $
       "id" .= id
         -- <> "update_target" .= update_target
-        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= DRIVER_ARRIVED <> "name" .= A.String "Driver Arrived") :: A.Object) :: A.Object)))
+        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_ARRIVED_PICKUP <> "name" .= A.String "Driver Arrived") :: A.Object) :: A.Object)))
 
 instance FromJSON DriverArrivedEvent where
   parseJSON = withObject "DriverArrivedEvent" $ \obj -> do
     update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
-    unless (update_type == DRIVER_ARRIVED) $ fail "Wrong update_type."
+    unless (update_type == RIDE_ARRIVED_PICKUP) $ fail "Wrong update_type."
     DriverArrivedEvent
       <$> obj .: "id"
       -- <*> obj .: "update_target"

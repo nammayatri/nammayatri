@@ -20,34 +20,30 @@ module SharedLogic.SyncRide
     fetchBookingCancelledInfo,
     BookingReallocationInfo,
     fetchBookingReallocationInfo,
-    NewRideInfo (..),
-    fetchNewRideInfo,
+    DCommon.BookingDetails (..),
+    fetchBookingDetails,
   )
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
-import Data.Either.Extra (eitherToMaybe)
-import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as Aadhaar
+import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import EulerHS.Prelude (whenNothing_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import qualified SharedLogic.Beckn.Common as DCommon
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
@@ -65,29 +61,19 @@ rideSync mbCancellationSource Nothing booking merchant =
 
 -- NEW --
 
-data NewRideInfo = NewRideInfo
-  { driver :: DP.Person,
-    vehicle :: DVeh.Vehicle,
-    ride :: DRide.Ride,
-    booking :: DB.Booking,
-    image :: Maybe Text
-  }
-
 syncNewRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncNewRide ride' booking' = do
-  NewRideInfo {..} <- fetchNewRideInfo ride' booking'
+  DCommon.BookingDetails {..} <- fetchBookingDetails ride' booking'
   handle (errHandler (Just ride.status) booking.status "ride assigned") $
     CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
   pure $ Common.RideSyncRes Common.RIDE_NEW "Success. Sent ride started update to bap"
 
-fetchNewRideInfo :: DRide.Ride -> DB.Booking -> Flow NewRideInfo
-fetchNewRideInfo ride booking = do
+fetchBookingDetails :: DRide.Ride -> DB.Booking -> Flow DCommon.BookingDetails
+fetchBookingDetails ride booking = do
   driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-  resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage driver driverInfo)
-  let image = join (eitherToMaybe resp)
+
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  pure NewRideInfo {..}
+  pure DCommon.BookingDetails {..}
 
 -- IN_PROGRESS --
 
@@ -99,11 +85,6 @@ syncInProgressRide ride booking = do
 
 -- CANCELLED --
 
-data BookingCancelledInfo = BookingCancelledInfo
-  { booking :: DB.Booking,
-    cancellationSource :: DBCR.CancellationSource
-  }
-
 syncCancelledRide :: Maybe DBCR.CancellationSource -> Maybe DRide.Ride -> DB.Booking -> DM.Merchant -> Flow Common.RideSyncRes
 syncCancelledRide mbCancellationSource mbRide booking merchant = do
   cancellationSource <- maybe (findCancellationSource mbRide) pure mbCancellationSource
@@ -111,8 +92,8 @@ syncCancelledRide mbCancellationSource mbRide booking merchant = do
     CallBAP.sendBookingCancelledUpdateToBAP booking merchant cancellationSource
   pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
-fetchBookingCancelledInfo :: Maybe DRide.Ride -> DB.Booking -> Flow BookingCancelledInfo
-fetchBookingCancelledInfo mbRide booking = do
+fetchBookingCancelledInfo :: Maybe DRide.Ride -> Flow BookingCancelledInfo
+fetchBookingCancelledInfo mbRide = do
   cancellationSource <- findCancellationSource mbRide
   pure BookingCancelledInfo {..}
 
@@ -139,10 +120,8 @@ findCancellationSource Nothing = pure DBCReason.ByMerchant
 
 -- REALLOCATION --
 
-type BookingReallocationInfo = BookingCancelledInfo
-
 fetchBookingReallocationInfo :: Maybe DRide.Ride -> DB.Booking -> Flow BookingCancelledInfo
-fetchBookingReallocationInfo = fetchBookingCancelledInfo
+fetchBookingReallocationInfo ride _ = fetchBookingCancelledInfo ride
 
 -- COMPLETED --
 

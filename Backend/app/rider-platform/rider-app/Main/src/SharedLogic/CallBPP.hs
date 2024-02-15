@@ -211,8 +211,7 @@ callTrack ::
     CoreMetrics m,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["isBecknSpecVersion2" ::: Bool]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   DB.Booking ->
   DRide.Ride ->
@@ -231,12 +230,7 @@ callTrack booking ride = do
             bppRideId = ride.bppRideId,
             ..
           }
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap =<< TrackACL.buildTrackReqV2 trackBuildReq
-    else do
-      void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPIV1 booking.providerUrl internalEndPointHashMap =<< TrackACL.buildTrackReq trackBuildReq
+  void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap =<< TrackACL.buildTrackReqV2 trackBuildReq
 
 data GetLocationRes = GetLocationRes
   { currPoint :: MapSearch.LatLong,
