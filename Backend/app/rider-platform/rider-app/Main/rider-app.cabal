@@ -137,6 +137,7 @@ library
       Beckn.OnDemand.Utils.Init
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.Search
+      Domain.Action.Beckn.Common
       Domain.Action.Beckn.FRFS.Common
       Domain.Action.Beckn.FRFS.OnConfirm
       Domain.Action.Beckn.FRFS.OnInit

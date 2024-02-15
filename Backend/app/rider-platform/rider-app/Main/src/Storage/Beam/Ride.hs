@@ -35,7 +35,7 @@ data RideT f = RideT
     driverRating :: B.C f (Maybe Centesimal),
     driverMobileNumber :: B.C f Text,
     driverMobileCountryCode :: B.C f (Maybe Text),
-    driverRegisteredAt :: B.C f UTCTime,
+    driverRegisteredAt :: B.C f (Maybe UTCTime),
     vehicleNumber :: B.C f Text,
     vehicleModel :: B.C f Text,
     vehicleColor :: B.C f Text,

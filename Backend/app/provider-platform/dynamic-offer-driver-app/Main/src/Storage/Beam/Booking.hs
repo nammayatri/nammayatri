@@ -73,6 +73,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG ''BookingT ['id] [['specialZoneOtpCode], ['quoteId]])
+$(enableKVPG ''BookingT ['id] [['specialZoneOtpCode], ['quoteId], ['transactionId]])
 
 $(mkTableInstances ''BookingT "booking")

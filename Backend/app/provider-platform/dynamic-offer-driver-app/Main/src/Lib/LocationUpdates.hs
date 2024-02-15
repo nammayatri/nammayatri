@@ -39,8 +39,10 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.Ride
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as MTC
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Maps as TMaps
 
@@ -176,4 +178,6 @@ performSafetyCheck rideId = do
     riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound ride.id.getId)
     void $ QRide.updateSafetyAlertTriggered ride.id
     when riderDetails.nightSafetyChecks $ do
-      BP.sendSafetyAlertToBAP booking ride "deviation" "Route Deviation Detected"
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+      BP.sendSafetyAlertToBAP booking ride "deviation" "Route Deviation Detected" driver vehicle

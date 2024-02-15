@@ -17,7 +17,8 @@ module Beckn.ACL.Status where
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import qualified Domain.Action.Beckn.Status as DStatus
+import qualified Data.UUID as UUID
+import qualified Domain.Types.Beckn.Status as DStatus
 import EulerHS.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
@@ -36,8 +37,9 @@ buildStatusReq subscriber req = do
   validateContext Context.STATUS req.context
   unless (subscriber.subscriber_id == req.context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
+  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "TransactionId not found")
 
-  let bookingId = Id req.message.order_id
+  let bookingId = Just $ Id req.message.order_id
   return $
     DStatus.StatusReq
       { ..
@@ -54,7 +56,8 @@ buildStatusReqV2 subscriber req = do
     throwError (InvalidRequest "Invalid bap_id")
 
   statusReqMessageRefId <- req.statusReqMessage.statusReqMessageRefId & fromMaybeM (InvalidRequest "Invalid statusReqMessageRefId")
-  let bookingId = Id statusReqMessageRefId
+  transactionId <- (fmap UUID.toText req.statusReqContext.contextTransactionId) & fromMaybeM (InvalidRequest "TransactionId not found")
+  let bookingId = Just $ Id statusReqMessageRefId
   return $
     DStatus.StatusReq
       { ..
