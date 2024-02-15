@@ -184,7 +184,7 @@ notificationListView notificationListItem push state =
                       , visibility
                           $ case state.shimmerLoader of
                               AnimatedOut -> VISIBLE
-                              _ -> GONE
+                              _ -> KEEP_GONE
                       , PrestoList.listItem notificationListItem
                       , PrestoList.listDataV2 state.prestoListArrayItems
                       ]
@@ -218,7 +218,7 @@ notificationListView notificationListItem push state =
                       , PrestoList.listDataV2 $ shimmerData <$> (1 .. 5)
                       , visibility
                           $ case state.shimmerLoader of
-                              AnimatedOut -> GONE
+                              AnimatedOut -> KEEP_GONE
                               _ -> VISIBLE
                       ]
               , Tuple "NO_NOTIFICATION"
@@ -228,8 +228,8 @@ notificationListView notificationListItem push state =
                       , background Color.white900
                       , visibility
                           $ case state.shimmerLoader of
-                              AnimatedOut -> if length state.prestoListArrayItems > 0 then GONE else VISIBLE
-                              _ -> GONE
+                              AnimatedOut -> if length state.prestoListArrayItems > 0 then KEEP_GONE else VISIBLE
+                              _ -> KEEP_GONE
                       ]
                       [ ErrorModal.view (push <<< ErrorModalActionController) (noNotificationsConfig Config)
                       ]

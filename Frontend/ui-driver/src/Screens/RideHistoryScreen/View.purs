@@ -314,7 +314,7 @@ ridesView rideListItem push state =
                 , onScrollStateChange push (ScrollStateChanged)
                 , visibility $ case state.shimmerLoader of
                             ST.AnimatedOut -> VISIBLE
-                            _ -> if state.props.showPaymentHistory then VISIBLE else GONE
+                            _ -> if state.props.showPaymentHistory then VISIBLE else KEEP_GONE
                 , PrestoList.listItem rideListItem
                 , PrestoList.listDataV2 (prestoListFilter state.currentTab state.prestoListArrayItems)
                 ]
@@ -344,8 +344,8 @@ ridesView rideListItem push state =
                     , PrestoList.listItem rideListItem
                     , PrestoList.listDataV2 $ shimmerData <$> (1..5)
                     , visibility $ case state.shimmerLoader of
-                            ST.AnimatedOut -> GONE
-                            _ -> if state.props.showPaymentHistory then GONE else VISIBLE
+                            ST.AnimatedOut -> KEEP_GONE
+                            _ -> if state.props.showPaymentHistory then KEEP_GONE else VISIBLE
                     ]
               , DT.Tuple "NoRides"
                   $ linearLayout
@@ -353,8 +353,8 @@ ridesView rideListItem push state =
                     , width MATCH_PARENT
                     , padding (PaddingBottom safeMarginBottom)
                     , visibility $ case state.shimmerLoader of
-                              ST.AnimatedOut ->  if showNoRides then GONE else VISIBLE
-                              _ -> if (state.props.showPaymentHistory && not showNoRides) then VISIBLE else GONE
+                              ST.AnimatedOut ->  if showNoRides then KEEP_GONE else VISIBLE
+                              _ -> if (state.props.showPaymentHistory && not showNoRides) then VISIBLE else KEEP_GONE
                     ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
               ])
             ]

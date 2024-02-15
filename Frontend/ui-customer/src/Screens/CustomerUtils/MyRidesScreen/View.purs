@@ -165,7 +165,7 @@ ridesView listItemm push state =
         , onScrollStateChange push (ScrollStateChanged)
         , visibility $ case DA.null state.itemsRides of
                     false -> VISIBLE
-                    true -> GONE
+                    true -> KEEP_GONE
         , PrestoList.listItem listItemm
         , background Color.white900
         , PrestoList.listDataV2 $ (DA.filter (\item -> (item.status) == toPropValue("COMPLETED") || (item.status) == toPropValue("CANCELLED") || item.status == toPropValue("REALLOCATED")) state.prestoListArrayItems)
@@ -183,7 +183,7 @@ ridesView listItemm push state =
           , width MATCH_PARENT
           , background Color.white900
           , gravity CENTER
-          , visibility if state.props.apiFailure then VISIBLE else GONE
+          , visibility if state.props.apiFailure then VISIBLE else KEEP_GONE
           ][  ErrorModal.view (push <<< APIFailureActionController) (apiErrorModalConfig state)]
       , Tuple "LOADER"
           $ PrestoAnim.animationSet
@@ -210,7 +210,7 @@ ridesView listItemm push state =
             , PrestoList.listItem listItemm
             , PrestoList.listDataV2 $ shimmerData <$> (getArray 5)
             , visibility $ case state.shimmerLoader of
-                    ST.AnimatedOut -> GONE
+                    ST.AnimatedOut -> KEEP_GONE
                     _ -> VISIBLE
             ]
       ])
