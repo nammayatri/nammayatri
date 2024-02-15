@@ -41,6 +41,8 @@ import Services.Backend as Remote
 import Data.Array as DA
 import Font.Size as FontSize
 import Mobility.Prelude
+import Debug
+import Engineering.Helpers.Commons as EHC
 
 screen :: ST.TicketingScreenState -> Screen Action ST.TicketingScreenState ScreenOutput
 screen initialState =
@@ -48,7 +50,11 @@ screen initialState =
   , view
   , name: "TicketingScreen"
   , globalEvents: [getPlaceDataEvent]
-  , eval
+  , eval : 
+    \action state -> do
+        let _ = spy "ZooTicketBookingFlow PlaceList action " action
+        let _ = spy "ZooTicketBookingFlow PlaceList state " state
+        eval action state
   }
   where 
   getPlaceDataEvent push = do
@@ -67,6 +73,7 @@ view push state =
         , height MATCH_PARENT
         , background Color.white900
         , onBackPressed push $ const BackPressed
+        , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
         ]
         [ linearLayout
             [ height MATCH_PARENT
@@ -129,7 +136,7 @@ headerView push state =
         , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , cornerRadius 30.0
+            , cornerRadius 20.0
             , padding $ Padding 8 8 8 8
             , gravity CENTER_VERTICAL
             , background Color.black700
@@ -242,7 +249,7 @@ ticketingItem push (API.TicketPlaceResp item) index length =
           [ imageView
               [ width $ V 32
               , height $ V 32
-              , cornerRadius 32.0
+              , cornerRadius 16.0
               , margin $ MarginTop 8
               , padding $ Padding 8 8 8 8
               , imageWithFallback $ fetchImage FF_ASSET "ny_ic_right_arrow_blue"
