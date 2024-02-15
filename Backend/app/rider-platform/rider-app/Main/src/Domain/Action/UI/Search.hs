@@ -317,11 +317,11 @@ search personId req bundleVersion clientVersion device = do
                   QAutoCompleteData.updateSearchRequestIdAndisLocationSelectedOnMapById (Just searchRequestId) oneWayReq.isDestinationManuallyMoved record.id
 
         let durationWeightage = 100 - merchant.distanceWeightage
-        let shortestRouteInfo = getEfficientRouteInfo routeResponse merchant.distanceWeightage durationWeightage
-        let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
-        let shortestRouteDistance = (.distance) =<< shortestRouteInfo
-        let shortestRouteDuration = (.duration) =<< shortestRouteInfo
-        return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just routeResponse)
+            (shortestRouteInfo, shortestRouteIndex) = getEfficientRouteInfo routeResponse merchant.distanceWeightage durationWeightage
+            longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
+            shortestRouteDistance = (.distance) =<< shortestRouteInfo
+            shortestRouteDuration = (.duration) =<< shortestRouteInfo
+        return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ updateEfficientRoutePosition routeResponse shortestRouteIndex)
       RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Nothing, Nothing)
 
   fromLocation <- buildSearchReqLoc origin
@@ -392,16 +392,21 @@ getLongestRouteDistance (routeInfo : routeInfoArray) =
         then route1
         else route2
 
-getEfficientRouteInfo :: [Maps.RouteInfo] -> Int -> Int -> Maybe Maps.RouteInfo
-getEfficientRouteInfo [] _ _ = Nothing
+getEfficientRouteInfo :: [Maps.RouteInfo] -> Int -> Int -> (Maybe Maps.RouteInfo, Int)
+getEfficientRouteInfo [] _ _ = (Nothing, 0)
 getEfficientRouteInfo routeInfos distanceWeight durationWeight = do
   let minD = Search.minDistance routeInfos
       minDur = Search.minDuration routeInfos
       normalizedInfos = Search.normalizeArr (Just minD) (Just minDur) routeInfos
       resultInfoIdx = Search.findMaxWeightedInfoIdx (fromIntegral distanceWeight) (fromIntegral durationWeight) normalizedInfos
   if resultInfoIdx < length routeInfos
-    then Just (routeInfos !! resultInfoIdx)
-    else Nothing
+    then (Just (routeInfos !! resultInfoIdx), resultInfoIdx)
+    else (Nothing, 0)
+
+updateEfficientRoutePosition :: [Maps.RouteInfo] -> Int -> [Maps.RouteInfo]
+updateEfficientRoutePosition routeInfos idx = do
+  let (x, y) = splitAt idx routeInfos
+  y ++ x
 
 buildSearchRequest ::
   ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]),

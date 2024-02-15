@@ -94,7 +94,9 @@ initializeRide merchantId driver booking mbOtpCode routeInfoId = do
     Nothing -> logDebug "Unable to get the key"
   multipleRoutes :: Maybe [RouteAndDeviationInfo] <- Redis.safeGet $ multipleRouteKey routeInfoId
   case multipleRoutes of
-    Just routes -> Redis.setExp (multipleRouteKey $ getId ride.id) routes 14400
+    Just routes -> do
+      logInfo $ "Setting multiple route key for rideId" <> getId ride.id <> " with routes " <> show routes
+      Redis.setExp (multipleRouteKey $ getId ride.id) routes 14400
     Nothing -> logInfo "Unable to get the multiple route key"
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
