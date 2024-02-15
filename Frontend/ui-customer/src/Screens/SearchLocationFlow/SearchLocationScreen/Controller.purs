@@ -415,6 +415,7 @@ handleBackPress state = do
       else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then exit $ RideScheduledScreen state
       else exit $ RentalsScreen state 
     AllFavouritesStage -> continue state{props{searchLocStage = PredictionsStage}}
+    LocateOnMapStage -> continue state{props{searchLocStage = PredictionsStage}}
     _ -> continue state
 
 findStationWithPrefix :: String -> Array Station -> Array Station

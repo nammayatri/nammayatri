@@ -187,6 +187,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
           baseDistance = (fromMaybe 20000 resp.estimatedDistance)/1000
         , baseDuration = (fromMaybe 7200 resp.estimatedDuration)/3600
         , startTimeUTC = fromMaybe "" resp.rideStartTime
+        , startOdometer = show $ fromMaybe 0.0 rideList.startOdometerReading
+        , endOdometer = show $ fromMaybe 0.0 rideList.endOdometerReading
         }
       , fareProductType : fareProductType
         }

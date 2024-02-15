@@ -50,6 +50,7 @@ data Action = NoAction
             | RideDurationTimer String String Int
             | AddStop 
             | RentalInfo
+            | ShowEndOTP
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -69,7 +70,9 @@ type DriverInfoCardProps =
     showBanner :: Boolean,
     rideDurationTimer :: String,
     rideDurationTimerId :: String,
-    endOTPShown :: Boolean
+    endOTPShown :: Boolean,
+    showEndOTP :: Boolean,
+    stageBeforeChatScreen :: Stage
   }
 
 type DriverInfoCardData =

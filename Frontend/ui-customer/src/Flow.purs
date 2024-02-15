@@ -664,7 +664,7 @@ homeScreenFlow = do
       when (state.data.startTimeUTC /= "" && not isIntercity) do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{props{showNormalRideNotSchedulablePopUp = true}})
         homeScreenFlow
-      let startTimeUTC = if (state.data.fareProductType == FPT.INTER_CITY && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
+      let startTimeUTC = if (isIntercity && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
       (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC)
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
       case rideSearchRes.routeInfo of
@@ -1044,7 +1044,7 @@ homeScreenFlow = do
                                           setValueToLocalStore SHARE_APP_COUNT (show ((INT.round $ (fromMaybe 0.0 (fromString (shareAppCount))))+1))
                                         else pure unit
                                         void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
-                                        let newState = homeScreenState{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false, cancelSearchCallDriver = false  }}
+                                        let newState = homeScreenState{data{route = Nothing},props{chatcallbackInitiated = false, isCancelRide = false,waitingTimeTimerIds = [], showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false, cancelSearchCallDriver = false  }}
                                             currTrip = {sourceLat : srcLat, 
                                                         sourceLong : srcLon, 
                                                         destLat : dstLat, 
@@ -3570,8 +3570,12 @@ rideScheduledFlow = do
   action <- lift $ lift $ runScreen $ UI.rideScheduledScreen currentState.rideScheduledScreen
   case action of
     RideScheduledScreenOutput.CancelRentalRide state -> do 
-      void $ Remote.cancelRideBT (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
-      homeScreenFlow 
+      resp <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
+      case resp of 
+        Right resp -> homeScreenFlow
+        Left _ -> do 
+          void $ pure $ toast "Failed To Cancel Ride"
+          rideScheduledFlow
     RideScheduledScreenOutput.GoToHomeScreen state -> do 
       -- when (state.data.bookingId == "") do 
       updateLocalStage HomeScreen

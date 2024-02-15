@@ -978,6 +978,7 @@ export const differenceBetweenTwoUTC = function (date1, date2) {
   if (isNaN(diffInSeconds)){
     return 0;
   }
+  console.log("differenceBetweenTwoUTC", date1, " ", date2, " " , diffInSeconds);
   return diffInSeconds;
 }
 
@@ -1448,7 +1449,7 @@ export const removeAllPolylines = function (str) {
 }
 
 export const removeAllPolylinesAndMarkers = function (array, unit) {
-  const stringifiedArray = JSON.stringify(array)
+  const stringifiedArray = JSON.stringify(array);
   window.JBridge.removeAllPolylines(stringifiedArray);
   return unit;
 }
@@ -2465,7 +2466,7 @@ export const timePickerImpl = function (cb , action, delay){
   if (window.__OS == "IOS")
     window.JBridge.datePicker(callback, "", "TimePicker");
   else 
-    window.JBridge.timePicker(callback, "");
+    window.JBridge.timePicker(callback);
 }
 
 export const renderSliderImpl = (cb, action, config) => {

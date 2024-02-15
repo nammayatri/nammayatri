@@ -22,7 +22,7 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError)
 import JBridge (toast)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig, cancelRidePopUpConfig)
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (Action(..), ScreenOutput, eval)
@@ -88,6 +88,7 @@ view push state =
     , orientation VERTICAL
     , background Color.white900
     , onBackPressed push $ const GoBack
+    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     ]
     ([ linearLayout
       [ height WRAP_CONTENT
@@ -95,26 +96,30 @@ view push state =
       , orientation VERTICAL
       ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
         , separatorView push state ]
-    , scrollView
-      [ height $ V $ (EHC.screenHeight unit) - 60
+    , linearLayout
+      [ height MATCH_PARENT
+      , margin $ MarginTop 60 
       , width MATCH_PARENT
-      , margin $ MarginVertical 60 80
-      ][linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , gravity CENTER_HORIZONTAL
-        ][ if state.data.bookingId == "" then
-            shimmerFrameLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation VERTICAL 
-              , background Color.transparent
-              ] [scheduledDetailsView push state]
-           else scheduledDetailsView push state
-          , notificationView push state
-          , cancelBookingView push state]
-        ]
+      ][  scrollView
+          [ height $ V $ (EHC.screenHeight unit) - 60
+          , width MATCH_PARENT
+          ][  linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , gravity CENTER_HORIZONTAL
+              ][ if state.data.bookingId == "" then
+                  shimmerFrameLayout
+                    [ width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , orientation VERTICAL 
+                    , background Color.transparent
+                    ][ scheduledDetailsView push state]
+                else scheduledDetailsView push state
+                , notificationView push state
+                , cancelBookingView push state]
+            ]
+      ]
     , primaryButtonView push state
     ] <> if state.props.isCancelRide then [cancelRidePopUpView push state] else [dummyView])
 
@@ -125,7 +130,6 @@ scheduledDetailsView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , weight 0.0
   , orientation VERTICAL
   ]
   [ imageView
@@ -177,6 +181,7 @@ rideDetailsView push state =
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , margin $ MarginTop 7
+        , gravity CENTER_VERTICAL
         , visibility $ boolToVisibility $ state.data.fareProductType == FPT.RENTAL
         ]
         [ textView $
@@ -290,7 +295,8 @@ notificationView push state =
         ]
     , textView $
         [ margin $ MarginLeft 8
-        , width WRAP_CONTENT
+        , width MATCH_PARENT
+        , singleLine false
         , text $ getVarString DRIVER_WILL_BE_ASSIGNED_MINUTES_BEFORE_STARTING_THE_RIDE (singleton state.props.driverAllocationTime)  --  getString DRIVER_WILL_BE_ASSIGNED <> " " <> state.driverAllocationTime <> " " <> getString MINUTES_BEFORE_STARTING_THE_RIDE
         , color Color.black800
         ] <> FontStyle.body3 TypoGraphy

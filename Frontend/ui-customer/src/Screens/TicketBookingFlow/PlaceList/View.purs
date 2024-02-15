@@ -43,6 +43,8 @@ import Font.Size as FontSize
 import Mobility.Prelude
 import Debug
 import Engineering.Helpers.Commons as EHC
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 screen :: ST.TicketingScreenState -> Screen Action ST.TicketingScreenState ScreenOutput
 screen initialState =
@@ -52,8 +54,8 @@ screen initialState =
   , globalEvents: [getPlaceDataEvent]
   , eval : 
     \action state -> do
-        let _ = spy "PlaceList action " action
-        let _ = spy "PlaceList state " state
+        let _ = spy "ZooTicketBookingFlow PlaceList action " action
+        let _ = spy "ZooTicketBookingFlow PlaceList state " state
         eval action state
   }
   where 
@@ -144,7 +146,7 @@ headerView push state =
             , visibility $ boolToVisibility (not state.props.hideMyTickets)
             ]
             [ textView
-                $ [ text "My Tickets"
+                $ [ text $ getString MY_TICKETS
                   , color Color.white900
                   , height WRAP_CONTENT
                   , padding $ Padding 3 0 0 3

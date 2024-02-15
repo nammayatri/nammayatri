@@ -66,8 +66,8 @@ screen initialState =
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
-        let _ = spy "TicketList action " action
-        let _ = spy "TicketList state " state
+        let _ = spy "ZooTicketBookingFlow TicketList action " action
+        let _ = spy "ZooTicketBookingFlow TicketList state " state
         eval action state
   }
   where
