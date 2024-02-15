@@ -42,11 +42,24 @@ _:
         category = "Backend";
         description = "Run run-generate to generate code.";
         exec = ''
+          current_commit_hash=$( ${pkgs.jq}/bin/jq -r '.nodes."namma-dsl".locked.rev' "''${FLAKE_ROOT}/flake.lock" || true)
+          latest_commit_hash=$(curl -s "https://api.github.com/repos/nammayatri/namma-dsl/commits/main" | jq -r '.sha' || true)
+          if [[ -z $latest_commit_hash ]];
+          then
+            echo -e "\033[33mNot able to get status of Namma-DSL"
+          else
+            if [[ "$current_commit_hash" != "$latest_commit_hash" ]]; then
+                echo -e "\033[33mWarning: Namma-DSL in not up to date !!\nCurrent commit hash: $current_commit_hash\nLatest commit hash: $latest_commit_hash"
+            else
+                echo -e "\033[32mNamma-DSL is up to date";
+            fi
+          fi
+          echo -e "\033[00m";
           set -x
-          cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
+          cd "''${FLAKE_ROOT}/Backend"
           cabal run alchemist-generator-exe -- "$@"
           cd ..
-          treefmt
+          treefmt --verbose
           hpack
         '';
       };
