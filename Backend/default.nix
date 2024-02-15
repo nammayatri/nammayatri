@@ -85,6 +85,7 @@
       meta.description = "Backend development environment for nammayatri";
       packages = with pkgs; [
         redis # redis-cli is used in scripts.nix
+        jq
       ];
       # cf. https://haskell.flake.page/devshell#composing-devshells
       inputsFrom = [
