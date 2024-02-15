@@ -18,6 +18,7 @@ module Components.Banner.Controller where
 import Styles.Colors as Color
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Font.Style(Style(..))
+import Data.Maybe (Maybe(..))
 
 
 data Action = OnClick
@@ -49,7 +50,11 @@ type Config = {
   titleTextVisibility :: Boolean,
   imagePadding :: Padding,
   cornerRadius :: Number,
-  imageMargin :: Margin
+  imageMargin :: Margin,
+  actionTextBackgroundColor :: Maybe String,
+  actionTextCornerRadius :: Number,
+  actionTextPadding :: Padding,
+  actionTextMargin :: Margin
 }
 
 config :: Config
@@ -78,5 +83,9 @@ config = {
     titleTextVisibility : true,
     imagePadding : PaddingVertical 5 5,
     imageMargin : MarginRight 5,
-    cornerRadius : 12.0
+    cornerRadius : 12.0,
+    actionTextBackgroundColor : Nothing,
+    actionTextCornerRadius : 0.0,
+    actionTextPadding : PaddingHorizontal 0 0,
+    actionTextMargin : MarginTop 0
 }

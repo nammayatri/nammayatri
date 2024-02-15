@@ -24,6 +24,7 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Components.Banner.Controller
 import Common.Types.App (LazyCheck(..))
+import Data.Maybe(fromMaybe, isJust)
 
 
 view :: forall w. (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -72,6 +73,10 @@ view push config =
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
           , visibility if config.actionTextVisibility then VISIBLE else GONE
+          , background $ fromMaybe config.backgroundColor config.actionTextBackgroundColor
+          , cornerRadius config.actionTextCornerRadius
+          , padding config.actionTextPadding
+          , margin config.actionTextMargin
           ]
           [
             textView $
@@ -86,7 +91,7 @@ view push config =
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
-            , textFromHtml "&rarr;"
+            , textFromHtml $ if isJust config.actionTextBackgroundColor then "&darr;" else "&rarr;"
             , color config.actionTextColor
             , padding $ PaddingBottom 3
             , margin $ MarginLeft 5

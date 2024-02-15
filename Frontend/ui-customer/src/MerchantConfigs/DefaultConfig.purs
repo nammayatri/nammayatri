@@ -157,6 +157,7 @@ config =
   , callOptions : ["ANONYMOUS"]
   , autoVariantEnabled : true
   , showDisabilityBanner : false
+  , showCheckoutRentalBanner : false
   , geoCoder: {
       enableLLtoAddress : true
     , enableAddressToLL : true 

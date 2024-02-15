@@ -242,7 +242,7 @@ mapInputViewConfig state =
 
 
 rentalRateCardConfig :: RentalScreenState -> RateCard.Config
-rentalRateCardConfig _ =
+rentalRateCardConfig state =
   let config = RateCard.config
       rentalRateCardConfig' = config
         { currentRateCardType = RentalRateCard
@@ -259,7 +259,7 @@ rentalRateCardConfig _ =
         , additionalStrings = [
             {key : "FINAL_FARE_DESCRIPTION", val : (getString FINAL_FARE_DESCRIPTION)}
           , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION)}
-          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton "")}
+          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton state.data.rentalBookingData.nightCharge)}
           , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
           ]
         }
