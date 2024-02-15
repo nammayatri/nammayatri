@@ -2014,6 +2014,7 @@ homeScreenFlow = do
           endRideOtp = if  state.data.activeRide.tripType == ST.Rental || state.data.activeRide.tripType == ST.Intercity then Just endOtp else Nothing
           endRideOdometerReading = if state.data.activeRide.tripType == ST.Rental then Just endOdometerReading else Nothing
           endRideOdometerImage = if state.data.activeRide.tripType == ST.Rental then Just endOdometerImage else Nothing
+          endRideOtpModalOnError = if state.data.activeRide.tripType == ST.Rental || state.data.activeRide.tripType == ST.Intercity then true else false
       void $ pure $ setValueToLocalStore RIDE_END_ODOMETER_READING endOdometerReading
       _ <- pure $ printLog "endOdometerReading" endOdometerReading
       _ <- pure $ printLog " RIDE_END_ODOMETER_READING"  (getValueToLocalStore RIDE_END_ODOMETER_READING)
@@ -2028,15 +2029,16 @@ homeScreenFlow = do
       _ <- pure $ printLog "endRideResp" (show endRideResp)
       case (endRideResp) of
         Left errorPayload -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, endRideOtpModal = true,endRideOdometerReadingModal=false, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, endRideOtpModal = endRideOtpModalOnError, endRideOdometerReadingModal=false, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
           void $ lift $ lift $ toggleLoader false
           homeScreenFlow
         Right (response) -> do
           let endRideRespCode = response.code
           if endRideRespCode /= 200 then do
 
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, endRideOtpModal = true,endRideOdometerReadingModal=false, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, endRideOtpModal = endRideOtpModalOnError, endRideOdometerReadingModal=false, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
             void $ lift $ lift $ toggleLoader false
+            homeScreenFlow
           else do
             let API.EndRideResponse endRideResp = response.response
             when state.data.driverGotoState.isGotoEnabled do
