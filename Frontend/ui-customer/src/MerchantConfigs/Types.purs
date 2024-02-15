@@ -66,6 +66,7 @@ type AppConfigCustomer a =
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
   , cityConfig :: Array CityConfig
+  , showCheckoutRentalBanner :: Boolean
   | a
   }
 

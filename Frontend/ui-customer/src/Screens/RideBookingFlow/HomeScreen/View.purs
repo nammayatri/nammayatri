@@ -3503,7 +3503,7 @@ homeScreenViewV2 push state =
                           , width WRAP_CONTENT
                           , background Color.white900
                           , margin $ MarginTop 32 
-                          , padding $ PaddingTop 30 
+                          , padding $ PaddingTop 30
                           , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
                           , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.grey700]) else (Linear 180.0 [Color.white900 , Color.grey700])
                           ][ scrollView
@@ -3522,6 +3522,7 @@ homeScreenViewV2 push state =
                                       ( [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state]
                                       <> (maybe [] (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem)
                                       <> [ shimmerView state
+                                      , checkoutRentalBannerView push state
                                       , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
                                       , suggestionsView push state
                                       , emptySuggestionsBanner state push
@@ -3534,6 +3535,16 @@ homeScreenViewV2 push state =
                 ]
             ]
       ]
+  where
+    checkoutRentalBannerView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+    checkoutRentalBannerView push state = 
+      linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , visibility $ boolToVisibility state.data.config.showCheckoutRentalBanner
+      , padding $ PaddingHorizontal 16 16
+      ]
+      [Banner.view (\_ -> pure unit) (checkoutRentalBannerConfig state)]
 
 isHomeScreenView :: HomeScreenState -> Boolean
 isHomeScreenView state = state.props.currentStage == HomeScreen
