@@ -10,6 +10,7 @@ public interface CallBack {
     void imageUploadCallBack(String encImage, String filename, String filePath);
 
     void chatCallBack(String message, String sentBy, String time, String len);
+    void chatsCallBack(String messages);
 
     void inAppCallBack(String onTapAction);
     void bundleUpdatedCallBack(String event, JSONObject description);

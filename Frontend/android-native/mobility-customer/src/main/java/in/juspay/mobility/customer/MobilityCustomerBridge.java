@@ -111,18 +111,23 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
                 @Override
                 public void driverCallBack(String notificationType, String notificationData) {
-                    Log.i(CALLBACK, "No Required");
+                    Log.i(CALLBACK, "Not Required");
                 }
 
                 @Override
                 public void imageUploadCallBack(String encImage, String filename, String filePath) {
-                    Log.i(CALLBACK, "No Required");
+                    Log.i(CALLBACK, "Not Required");
                 }
 
 
                 @Override
                 public void chatCallBack(String message, String sentBy, String time, String len) {
-                    Log.i(CALLBACK, "No Required");
+                    Log.i(CALLBACK, "Not Required");
+                }
+
+                @Override
+                public void chatsCallBack(String messages) {
+                    Log.i(CALLBACK, "Not Required");
                 }
 
                 @Override

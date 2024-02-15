@@ -188,8 +188,8 @@ in  upstream
       , "web-dom"
       , "web-events"
       ]
-    , repo = "https://github.com/juspay/purescript-halogen-vdom.git"
-    , version = "update/github-purescript-halogen-vdom-repo"
+    , repo = "https://github.com/Vignesh-772/purescript-halogen-vdom.git"
+    , version = "nammayatri"
     }
   with foreign-generic =
     { dependencies =

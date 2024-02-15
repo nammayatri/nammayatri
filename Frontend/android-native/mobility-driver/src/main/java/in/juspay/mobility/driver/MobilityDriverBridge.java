@@ -217,12 +217,17 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
                 @Override
                 public void imageUploadCallBack(String encImage, String filename, String filePath) {
-                    Log.i(OTHERS, "No Required");
+                    Log.i(OTHERS, "Not Required");
                 }
 
                 @Override
                 public void chatCallBack(String message, String sentBy, String time, String len) {
-                    Log.i(OTHERS, "No Required");
+                    Log.i(OTHERS, "Not Required");
+                }
+
+                @Override
+                public void chatsCallBack(String messages) {
+                    Log.i(OTHERS, "Not Required");
                 }
 
                 @Override
@@ -232,7 +237,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
                 @Override
                 public void bundleUpdatedCallBack(String event, JSONObject desc) {
-                    Log.i(CALLBACK, "No Required");
+                    Log.i(CALLBACK, "Not Required");
                 }
             };
             NotificationUtils.registerCallback(callBack);

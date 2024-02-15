@@ -10,14 +10,18 @@
 package in.juspay.mobility.app;
 
 import static android.app.Activity.RESULT_OK;
+import static android.content.Context.BIND_AUTO_CREATE;
+import static android.content.Context.BIND_IMPORTANT;
 import static androidx.core.app.ActivityCompat.startIntentSenderForResult;
 
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -27,6 +31,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.RemoteException;
 import android.text.Html;
 import android.util.Log;
@@ -88,6 +93,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.UUID;
 
 import in.juspay.hyper.bridge.HyperBridge;
@@ -98,6 +105,8 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
+import in.juspay.mobility.app.chat.MultiUserChatService;
+import in.juspay.mobility.app.chat.User;
 
 
 public class MobilityAppBridge extends HyperBridge {
@@ -119,10 +128,16 @@ public class MobilityAppBridge extends HyperBridge {
     private MobilityRemoteConfigs remoteConfigs;
     CleverTapAPI clevertapDefaultInstance;
     protected static String storeChatMessageCallBack = null;
+    protected static String storeChatMessagesCallBack = null;
     public static String storeCallBackOpenChatScreen = null;
     public static String storeDetectPhoneNumbersCallBack = null;
     private String storeImageUploadCallBack = null;
     private String storeUploadMultiPartCallBack = null;
+
+    // Chat Variables
+    private ServiceConnection chatConnection;
+    private MultiUserChatService.ChatBinder chatBinder;
+    private Queue<User> chatUsers = new PriorityQueue<>();
 
     // Permission request Code
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
@@ -160,6 +175,11 @@ public class MobilityAppBridge extends HyperBridge {
         }
 
         @Override
+        public void chatsCallBack(String messages) {
+            callChatMessagesCallBack(messages);
+        }
+
+        @Override
         public void inAppCallBack(String inAppCallBack) {
             callInAppNotificationCallBack(inAppCallBack);
         }
@@ -181,6 +201,21 @@ public class MobilityAppBridge extends HyperBridge {
         traceElements = new HashMap<>();
         Utils.registerCallback(callBack);
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
+        chatConnection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                chatBinder = (MultiUserChatService.ChatBinder) service;
+                chatBinder.getService().checkAndStartListeners();
+                while (chatUsers.peek() != null){
+                    chatBinder.getService().addUser(chatUsers.poll());
+                }
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                chatBinder = null;
+            }
+        };
     }
 
     @JavascriptInterface
@@ -222,9 +257,30 @@ public class MobilityAppBridge extends HyperBridge {
         ChatService.chatUserId = uuid;
     }
 
+    @JavascriptInterface
+    public void storeCallBackMessagse(final String channelId, final String uuid, final String name, final String callback) {
+        storeChatMessageCallBack = callback;
+        KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "CHAT_CHANNEL_ID", channelId); // Update the Local Storage Value
+        ChatService.chatChannelID = channelId;
+        ChatService.chatUserId = uuid;
+        User user = new User(channelId,name,uuid);
+        if (chatBinder != null) {
+            chatBinder.getService().addUser(user);
+        } else {
+            chatUsers.add(user);
+        }
+    }
+
     public void callChatMessageCallBack(String message, String sentBy, String dateFormatted, String len) {
         if (storeChatMessageCallBack != null) {
             String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeChatMessageCallBack, message, sentBy, dateFormatted, len);
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+        }
+    }
+
+    public void callChatMessagesCallBack(String message) {
+        if (storeChatMessagesCallBack != null) {
+            String javascript = String.format("window.callUICallback(\"%s\",\"%s\");", storeChatMessagesCallBack, message);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
@@ -448,7 +504,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
     // endregion
 
-    //region Chat Utiils
+    //region Chat Utils
     @JavascriptInterface
     public static void sendMessage(final String message) {
         for (SendMessageCallBack sendMessageCallBack : sendMessageCallBacks) {
@@ -480,6 +536,29 @@ public class MobilityAppBridge extends HyperBridge {
                 manager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(chatListenerService);
+            } else {
+                context.startService(chatListenerService);
+            }
+        } catch (Exception e) {
+            Log.e(CHATS, "Failed to start ChatService : " + e);
+        }
+    }
+
+    @JavascriptInterface
+    public void startMultiChatListenerService() {
+        try {
+            Context context = bridgeComponents.getContext();
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String appState = sharedPref.getString("ACTIVITY_STATUS", "null");
+            Intent chatListenerService = new Intent(context, MultiUserChatService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && appState.equals("onPause")) {
+//                AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+//                Intent alarmIntent = new Intent(context, ChatBroadCastReceiver.class);
+//                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, alarmIntent, PendingIntent.FLAG_IMMUTABLE);
+//                manager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(chatListenerService);
+                context.bindService(chatListenerService,chatConnection,BIND_IMPORTANT);
             } else {
                 context.startService(chatListenerService);
             }
