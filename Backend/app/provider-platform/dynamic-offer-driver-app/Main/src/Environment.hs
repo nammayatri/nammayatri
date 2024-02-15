@@ -52,9 +52,9 @@ import SharedLogic.CallBAPInternal
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
-import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
+import qualified Storage.Queries.BecknConfig as QBC
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
@@ -269,7 +269,7 @@ type Flow = FlowR AppEnv
 instance Registry Flow where
   registryLookup =
     Registry.withSubscriberCache $ \sub ->
-      fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id
+      fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id sub.domain
         >>>= \registryUrl -> do
           subId <- Registry.registryLookup registryUrl sub
           totalSubIds <- QWhiteList.countTotalSubscribers
@@ -279,14 +279,14 @@ instance Registry Flow where
             else do
               Registry.checkWhitelisted isNotWhiteListed subId
     where
-      fetchFromDB subscriberId uniqueId merchantId = do
+      fetchFromDB subscriberId uniqueId merchantId domain = do
         mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId subscriberId uniqueId
         case mbRegistryMapFallback of
           Just registryMapFallback -> pure $ Just registryMapFallback.registryUrl
           Nothing ->
             do
-              mbMerchant <- CM.findById (Id merchantId)
-              pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
+              mbBecknConfig <- QBC.findByMerchantIdAndDomain (Just $ Id merchantId) (show domain)
+              pure ((\becknConfig -> Just becknConfig.registryUrl) =<< mbBecknConfig)
       isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
       isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 

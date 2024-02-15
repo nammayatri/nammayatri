@@ -1,0 +1,50 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  BaseUrl: Servant.Client.Core
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
+
+BecknConfig:
+  tableName: beckn_config
+
+  fields:
+    id: Id BecknConfig
+    domain: Text
+    subscriberId: Text
+    subscriberUrl: BaseUrl
+    gatewayUrl: BaseUrl
+    registryUrl: BaseUrl
+    uniqueKeyId: Text
+    settlementType: Maybe Text
+    paymentParamsJson: Maybe Text
+
+  types:
+    BknPaymentParams:
+      bankAccNumber: Maybe Text
+      bankCode: Maybe Text
+      vpa: Maybe Text
+
+  queries:
+    findByMerchantIdAndDomain:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, domain]
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  beamType:
+    subscriberUrl: Text
+    gatewayUrl: Text
+    registryUrl: Text
+
+  toTType:
+    subscriberUrl: showBaseUrl|I
+    gatewayUrl: showBaseUrl|I
+    registryUrl: showBaseUrl|I
+
+  fromTType:
+    subscriberUrl: parseBaseUrl|MI
+    gatewayUrl: parseBaseUrl|IM
+    registryUrl: parseBaseUrl|MI

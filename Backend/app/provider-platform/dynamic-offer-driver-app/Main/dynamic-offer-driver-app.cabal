@@ -605,6 +605,7 @@ library
       API.Action.UI.LmsModule
       API.Action.UI.SpecialLocation
       API.Types.UI.LmsModule
+      Domain.Types.BecknConfig
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
       Domain.Types.Estimate
@@ -619,6 +620,7 @@ library
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
       Domain.Types.SubscriptionConfig
+      Storage.Beam.BecknConfig
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPoolConfig
       Storage.Beam.Estimate
@@ -633,6 +635,7 @@ library
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.SubscriptionConfig
+      Storage.Queries.BecknConfig
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPoolConfig
       Storage.Queries.Estimate
