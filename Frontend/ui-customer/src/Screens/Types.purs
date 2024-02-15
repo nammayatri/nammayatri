@@ -39,7 +39,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -1956,6 +1956,7 @@ type MetroMyTicketsScreenData = {
 type MetroMyTicketsScreenProps = {
   dummyProps :: String
 , showShimmer :: Boolean
+, entryPoint :: MetroMyTicketsEntry
 }
 
 type MetroTicketCardData = {
@@ -1967,6 +1968,8 @@ type MetroTicketCardData = {
   , status :: String
   , validUntill :: String
 }
+
+data MetroMyTicketsEntry = HomeScreenToMetroMyTickets | MetroTicketBookingToMetroMyTickets
 
 
 -- ######################################### TicketBookingStatus #################################################### 
@@ -2256,6 +2259,7 @@ type MetroTicketBookingScreenData = {
   , ticketPrice :: Int
   , bookingId :: String
   , quoteId :: String
+  , quoteResp :: Array MetroQuote
 }
 
 type MetroTicketBookingScreenProps = {
@@ -2266,7 +2270,7 @@ type MetroTicketBookingScreenProps = {
 , showMetroBookingTimeError :: Boolean
 }
 
-data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote
+data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling
 
 derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
 instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
@@ -2305,4 +2309,7 @@ type MetroTicketStatusScreenData = {
 type MetroTicketStatusScreenProps = {
   showShimmer :: Boolean
 , paymentStatus :: PP.PaymentStatus
+, entryPoint :: MetroTicketStatusScreenEntry
 }
+
+data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicketsToMetroTicketStatus

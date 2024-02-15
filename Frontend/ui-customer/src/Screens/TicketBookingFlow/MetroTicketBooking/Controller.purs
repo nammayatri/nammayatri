@@ -53,7 +53,8 @@ data Action = BackPressed
             | GetMetroQuotesAction (Array MetroQuote)
             | SelectLocation ST.LocationActionId
             | ShowMetroBookingTimeError Boolean
-            | InfoCardAC InfoCard.Action
+            | InfoCardAC InfoCard.Action 
+            | GetSDKPollingAC CreateOrderRes
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
@@ -62,6 +63,7 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | GoToHome
                   | SelectSrcDest ST.LocationActionId ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
+                  | GotoPaymentPage CreateOrderRes String
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
@@ -85,20 +87,27 @@ eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
 
 eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSelected = not state.props.termsAndConditionsSelected, currentStage  = ST.MetroTicketSelection}}
 
-eval (ChangeTicketTab ticketType) state = do
-  let ticketCount = if ticketType == ST.ONE_WAY then state.data.ticketCount else 1
-  continue state { data {ticketType = ticketType, ticketCount = ticketCount }, props {currentStage  = ST.MetroTicketSelection}}
+eval (ChangeTicketTab ticketType) state = do 
+  if state.props.currentStage == ST.ConfirmMetroQuote then do
+    let ticketTypeUpdatedState = state {data {ticketType = ticketType}}
+        quoteData = getquoteData ticketTypeUpdatedState state.data.quoteResp 
+        updatedState = ticketTypeUpdatedState { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId }}
+    updateAndExit updatedState $ Refresh updatedState
+  else do
+    let ticketCount = if ticketType == ST.ONE_WAY then state.data.ticketCount else 1
+    continue state { data {ticketType = ticketType, ticketCount = ticketCount }, props {currentStage  = ST.MetroTicketSelection}}
 
 eval (SelectLocation loc ) state = updateAndExit state{props{currentStage  = ST.MetroTicketSelection}} $ SelectSrcDest loc state{props{currentStage  = ST.MetroTicketSelection}}
 
 eval (GetMetroQuotesAction resp) state = do 
+  void $ pure $ toggleBtnLoader "" false
   if null resp then do
-    _ <- pure $ toast $ getString NO_QOUTES_AVAILABLE
-    _ <- pure $ toggleBtnLoader "" false
+    void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
     continue state
   else do
-    _ <- pure $ toggleBtnLoader "" false
-    updateAndExit state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}} $ Refresh state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}}
+    let quoteData = getquoteData state resp
+        updatedState = state { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = resp }, props { currentStage = ST.ConfirmMetroQuote}}
+    updateAndExit updatedState $ Refresh updatedState
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
@@ -115,6 +124,8 @@ eval (InfoCardAC (InfoCard.Close)) state =
       showMetroBookingTimeError = false
     }
   }
+
+eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId
 
 eval _ state = continue state
 

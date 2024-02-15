@@ -37,7 +37,8 @@ initData =
   }
   , props : {
       showShimmer : true,
-      paymentStatus : PP.Success  
+      paymentStatus : PP.Success,
+      entryPoint : HomescreenToMetroTicketStatus
     }
   }
 
