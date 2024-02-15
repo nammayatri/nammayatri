@@ -500,6 +500,7 @@ newtype LatLong = LatLong {
 
 newtype SearchRes = SearchRes {
   searchId :: String,
+  searchExpiry :: String,
   routeInfo :: Maybe Route
 }
 

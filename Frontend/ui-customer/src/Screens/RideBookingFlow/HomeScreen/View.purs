@@ -88,7 +88,7 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight)
+import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight, findingQuotesSearchExpired)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFareProductType)
@@ -176,10 +176,12 @@ screen initialState =
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
-              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
-                
-              ConfirmingQuotes -> void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation CheckFlowStatusAction 100 3000.0 push initialState
-
+              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation CheckFlowStatusAction 5 3000.0 push initialState
+              ConfirmingQuotes -> do
+                when ((getValueToLocalStore CONFIRM_QUOTES_POLLING) == "false") $ do
+                  void $ pure $ setValueToLocalStore CONFIRM_QUOTES_POLLING "true"
+                  let pollingCount = ceil ((toNumber $ findingQuotesSearchExpired false false)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT))) / 1000.0))
+                  void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation CheckFlowStatusAction pollingCount 3000.0 push initialState
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
@@ -2841,9 +2843,9 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               Nothing -> pure unit
 
 
-confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-confirmRide action count duration push state = do
-  if (count /= 0) && (isLocalStageOn ConfirmingRide) && (state.props.bookingId /= "")then do
+confirmRide :: forall action. (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+confirmRide action checkFlowStatusAction count duration push state = do
+  if (count /= 0) && (isLocalStageOn ConfirmingRide || isLocalStageOn ConfirmingQuotes) && (state.props.bookingId /= "")then do
     resp <- rideBooking (state.props.bookingId)
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
     case resp of
@@ -2851,47 +2853,22 @@ confirmRide action count duration push state = do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
             fareProductType = getFareProductType $ (resp.bookingDetails) ^. _fareProductType
-            receivedQuotes  = any ( _ == fareProductType ) [ FPT.ONE_WAY_SPECIAL_ZONE , FPT.RENTAL, FPT.INTER_CITY ]
-            status = if receivedQuotes then "CONFIRMED" else "TRIP_ASSIGNED"
-        if  status == resp.status && (receivedQuotes || not (null resp.rideList)) then do
-            doAff do liftEffect $ push $ action response
-            -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
-            pure unit
-        else do
-            void $ delay $ Milliseconds duration
-            confirmRide action (count - 1) duration push state
-      Left err -> do
-        _ <- pure $ printLog "api error " err
-        void $ delay $ Milliseconds duration
-        confirmRide action (count - 1) duration push state
-  else
-    pure unit
-
-rentalAndIntercityConfirmRide :: forall action. (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-rentalAndIntercityConfirmRide action checkFlowStatusAction count duration push state = do -- TODO-codex : refactor current confirm Ride on the basis of fareProductType for Rental, Intercity and SpecialZone
-  if (count /= 0) && (isLocalStageOn ConfirmingQuotes) && (state.props.bookingId /= "")then do
-    resp <- rideBooking (state.props.bookingId)
-    _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
-    case resp of
-      Right response -> do
-        _ <- pure $ printLog "api Results " response
-        let (RideBookingRes resp) = response
-            fareProductType = getFareProductType $ (resp.bookingDetails) ^. _fareProductType
-            status = if any ( _ == fareProductType) [ FPT.RENTAL, FPT.INTER_CITY ] then "TRIP_ASSIGNED" else "CONFIRMED"
-        if status == resp.status && not (null resp.rideList) then do
-            doAff do liftEffect $ push $ action response
-            pure unit
+            isSpecialZoneRide = any ( _ == fareProductType ) [FPT.ONE_WAY_SPECIAL_ZONE]
+            status = if isSpecialZoneRide then "CONFIRMED" else "TRIP_ASSIGNED"
+        if status == resp.status && (isSpecialZoneRide || not (null resp.rideList)) then do
+          doAff do liftEffect $ push $ action response
+          pure unit
         else if resp.status == "CANCELLED" then do
-            doAff do liftEffect $ push $ checkFlowStatusAction
-            pure unit
+          doAff do liftEffect $ push $ checkFlowStatusAction
+          pure unit
         else do
-            void $ delay $ Milliseconds duration
-            rentalAndIntercityConfirmRide action checkFlowStatusAction (count - 1) duration push state
+          void $ delay $ Milliseconds duration
+          confirmRide action checkFlowStatusAction (count - 1) duration push state
       Left err -> do
         _ <- pure $ printLog "api error " err
         void $ delay $ Milliseconds duration
-        rentalAndIntercityConfirmRide action checkFlowStatusAction (count - 1) duration push state
-  else
+        confirmRide action checkFlowStatusAction (count - 1) duration push state
+  else do
     pure unit
 
 cancelRidePopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

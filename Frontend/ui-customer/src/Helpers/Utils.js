@@ -452,11 +452,6 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
   }
 }
 
-export const getDifferenceBetweenDates = function (date1, date2) {
-  const diffInSeconds = Math.floor((new Date(date1) - new Date(date2)) / 1000);
-  return diffInSeconds;
-}
-
 export const parseSourceHashArray = function (str) {
   return JSON.parse(str);
 }

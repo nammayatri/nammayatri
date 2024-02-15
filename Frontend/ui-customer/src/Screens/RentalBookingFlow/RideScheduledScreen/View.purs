@@ -19,6 +19,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError)
+import JBridge (toast)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom)
@@ -75,7 +76,9 @@ rideScheduledScreen initialState =
               let response = RideBookingListRes { list : []}
               doAff do liftEffect $ push $ action response
             else getBookingList action flowStatusAction (count - 1) duration push state
-      else pure unit
+      else do
+        void $ pure $ toast "There is no Ride Scheduled for you" -- TODO-codex : Translation
+        pure unit
 
 view :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 view push state =

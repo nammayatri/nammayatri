@@ -1100,7 +1100,7 @@ eval (RepeatRideCountDown seconds status timerID) state = do
     void $ pure $ clearTimerWithId timerID
     void $ pure $ performHapticFeedback unit
     void $ pure $ updateLocalStage FindingQuotes
-    let updatedState = state{data{rideHistoryTrip = Nothing}, props{repeatRideTimerId = "", currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
+    let updatedState = state{data{rideHistoryTrip = Nothing}, props{repeatRideTimerId = "", currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime true)}}
     updateAndExit (updatedState) (GetQuotes updatedState)
   else continue state{props{repeatRideTimer = (show seconds), repeatRideTimerId = timerID}}
 
@@ -1166,14 +1166,14 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
 
 eval OnResumeCallback state =
   if(state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.props.emergencyHelpModelState.waitingDialerCallback then 
-    continue state {props {emergencyHelpModelState {showCallSuccessfulPopUp = true}, rideDurationTimer = unsafePerformEffect $ compareUTCDate (getCurrentUTC "") state.data.driverInfoCardState.rentalData.startTimeUTC}}
+    continue state {props {emergencyHelpModelState {showCallSuccessfulPopUp = true}, rideDurationTimer = show $ compareUTCDate (getCurrentUTC "") state.data.driverInfoCardState.rentalData.startTimeUTC}}
   else 
     case getValueToLocalNativeStore LOCAL_STAGE of
       "FindingQuotes" -> do
-        let secondsLeft = findingQuotesSearchExpired false
+        let secondsLeft = findingQuotesSearchExpired false true
         case (methodArgumentCount "startLottieProcess") == 1 of
           true  -> do
-            let findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
+            let findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime true))
             if secondsLeft > 0 then
               void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
             else pure unit
@@ -1187,10 +1187,14 @@ eval OnResumeCallback state =
               ]
           _ -> continue state
       "QuoteList" -> do
-        let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
+        let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime true))
         void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
         continue state
       "RideAccepted" | (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) -> exit $ Retry state
+      "ConfirmingQuotes" -> do
+        let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime false))
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
+        continue state
       _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
@@ -1700,8 +1704,9 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DateTimePickerButtonClicked)) state = openDateTimePicker state 
 
-eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
-    _ <- pure $ spy "state homeScreen" state
+eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState = do
+    _ <- pure $ spy "state homeScreen" newState
+    let state = newState {data {rentalsInfo = Nothing}}
     case state.props.currentStage of
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
@@ -1719,7 +1724,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       SettingPrice -> do
                         _ <- pure $ performHapticFeedback unit
                         _ <- pure $ updateLocalStage FindingQuotes
-                        let updatedState = state{data{rideHistoryTrip = Nothing}, props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
+                        let updatedState = state{data{rideHistoryTrip = Nothing}, props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime true)}}
                         updateAndExit (updatedState) (GetQuotes updatedState)
       _            -> continue state
 
@@ -1790,10 +1795,10 @@ eval (SearchExpireCountDown seconds status timerID) state = do
     continue state { props { searchExpire = seconds } }
   else do
     let enableTips = isTipEnabled state
-    if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }, customerTip{enableTips = enableTips}} }
+    if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime true)-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }, customerTip{enableTips = enableTips}} }
       else do
         _ <- pure $ clearTimerWithId timerID
-        continue state { props { searchExpire = (getSearchExpiryTime "LazyCheck") ,timerId = timerID , tipViewProps {isVisible = false}} }
+        continue state { props { searchExpire = (getSearchExpiryTime true) ,timerId = timerID , tipViewProps {isVisible = false}} }
 
 eval CancelSearch state = case state.props.currentStage of
   FindingEstimate -> do
@@ -2171,7 +2176,7 @@ eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryBut
   _ <- pure $ clearTimerWithId state.props.timerId
   void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH }
-  let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }, data{nearByDrivers = Nothing}}
+  let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime true), currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }, data{nearByDrivers = Nothing}}
   _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
   updateAndExit newState $ RetryFindingQuotes false newState
 
@@ -2229,7 +2234,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     let _ = unsafePerformEffect $ logEvent state.data.logField if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
     _ <- pure $ clearTimerWithId state.props.timerId
     let tipViewData = state.props.tipViewProps{stage = RETRY_SEARCH_WITH_TIP , isVisible = not (state.props.customerTip.tipActiveIndex == 0) , activeIndex = state.props.customerTip.tipActiveIndex-1 }
-    let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData }}
+    let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime true), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData }}
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     updateAndExit newState $ RetryFindingQuotes true newState
   Logout -> continue state{props{isPopUp = NoPopUp}}
@@ -2243,7 +2248,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
         exit $ CheckCurrentStatus
       else do
       _ <- pure $ clearTimerWithId state.props.timerId
-      let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
+      let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime true), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
       updateAndExit newState $ RetryFindingQuotes true newState
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
@@ -2316,7 +2321,7 @@ eval (EstimateChangedPopUpController (PopUpModal.OnButton1Click)) state = exit $
 eval (EstimateChangedPopUpController (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ updateLocalStage FindingQuotes
   let
-    updatedState = state { props { currentStage = FindingQuotes, isEstimateChanged = false, searchExpire = (getSearchExpiryTime "LazyCheck") } }
+    updatedState = state { props { currentStage = FindingQuotes, isEstimateChanged = false, searchExpire = (getSearchExpiryTime true) } }
   updateAndExit updatedState $ GetQuotes updatedState
 
 eval CloseLocationTracking state = continue state { props { isLocationTracking = false } }
@@ -2377,7 +2382,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
           else do
             _ <- pure $ updateLocalStage FindingQuotes
             let
-              updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
+              updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime true) } }
             updateAndExit updatedState $ GetQuotes updatedState
 
 
@@ -2668,7 +2673,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
     exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
   else do
     _ <- pure $ updateLocalStage FindingQuotes
-    let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
+    let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime true)}}
     updateAndExit (updatedState) (GetQuotes updatedState)
 
 eval (ChooseYourRideAction ChooseYourRideController.NoAction) state =
@@ -2710,7 +2715,7 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
   else
     let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
         selectedUTC = unsafePerformEffect $ convertDateTimeConfigToUTC year (month + 1) day hour minute 0
-        isAfterThirtyMinutes = (fromMaybe 0 $ fromString (unsafePerformEffect $ compareUTCDate selectedUTC (getCurrentUTC ""))) > (30 * 60 * 1000)
+        isAfterThirtyMinutes = (compareUTCDate selectedUTC (getCurrentUTC "")) > (30 * 60)
         validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
                         && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
@@ -2726,9 +2731,10 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
 
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
   case tag of 
-    "RENTALS" -> exit $ GoToRentalsFlow state
-    "INTER_CITY" -> continue state{data{ source=(getString CURRENT_LOCATION)}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}}
-    -- exit $ Go_To_Search_Location_Flow state false
+    "RENTALS" -> exit $ GoToRentalsFlow state { data {rentalsInfo = Nothing } }
+    "INTER_CITY" -> do
+      void $ pure $ updateLocalStage SearchLocationModel 
+      continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}}
     _ -> continue state
   
 eval (RentalBannerAction Banner.OnClick) state = exit $ GoToScheduledRides
@@ -2997,10 +3003,10 @@ dummySelectedQuotes = SelectedQuotes {
   selectedQuotes : []
 }
 
-getSearchExpiryTime :: String -> Int
-getSearchExpiryTime dummy =
-  let count = fromMaybe 0 (fromString (getValueToLocalStore TEST_POLLING_COUNT))
-      interval = (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL)) / 1000.0)
+getSearchExpiryTime :: Boolean -> Int
+getSearchExpiryTime isNormalRide =
+  let count = fromMaybe 0 (fromString (getValueToLocalStore $ if isNormalRide then TEST_POLLING_COUNT else CONFIRM_QUOTES_POLLING_COUNT))
+      interval = (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore $ if isNormalRide then TEST_POLLING_INTERVAL else CONFIRM_QUOTES_POLLING_COUNT)) / 1000.0)
       searchExpiryTime = round $ (toNumber count) * interval
   in searchExpiryTime
 
@@ -3107,7 +3113,7 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
             continue state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, isEstimateChanged = true } }
       else do
         _ <- pure $ updateLocalStage FindingQuotes
-        let updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
+        let updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = defaultQuote.id, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime true) } }
         updateAndExit updatedState $ GetQuotes updatedState
 
 
@@ -3159,10 +3165,10 @@ getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { titl
                       , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toStringJSON (extraFare) <> " / km"} ]
                       <> if (getMerchant FunctionCall) == NAMMAYATRI && additionalFare > 0 then [ {title : (getString DRIVER_ADDITIONS) , description : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
-findingQuotesSearchExpired :: Boolean -> Int
-findingQuotesSearchExpired gotQuotes =
-  let secondsPassed = getExpiryTime (getValueToLocalStore FINDING_QUOTES_START_TIME) true
-      searchExpiryTime = getSearchExpiryTime "LazyCheck"
+findingQuotesSearchExpired :: Boolean -> Boolean -> Int
+findingQuotesSearchExpired gotQuotes isNormalRide =
+  let secondsPassed = getExpiryTime (getValueToLocalStore $ if isNormalRide then FINDING_QUOTES_START_TIME else CONFIRM_QUOTES_START_TIME) isNormalRide
+      searchExpiryTime = getSearchExpiryTime isNormalRide
       secondsLeft = case gotQuotes of
                       true  -> if (searchExpiryTime - secondsPassed) < 30 then (searchExpiryTime - secondsPassed) else 30
                       false -> (searchExpiryTime - secondsPassed)

@@ -17,13 +17,13 @@ module SuggestionUtils where
 
 import Data.Map (Map, insert, update, lookup, member, delete, keys, isEmpty, empty)
 import Data.Tuple.Nested ((/\))
-import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
+import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, compareUTCDate)
 import Data.Maybe
 import Prelude
 import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null)
 import Data.Ord (comparing)
 import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..))
-import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
+import Helpers.Utils(getDistanceBwCordinates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
 import Data.Int(toNumber)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..), getValueToLocalNativeStore)
 import MerchantConfig.Types (SuggestedDestinationAndTripsConfig)
@@ -191,7 +191,7 @@ calculateScore frequency recencyDate frequencyConfig =
     frequencyWeight = frequencyConfig
     recencyWeight = 1.0 - frequencyWeight
     currentDate = (getCurrentUTC "")
-    recencyInSeconds = runFn2 getDifferenceBetweenDates currentDate recencyDate
+    recencyInSeconds = compareUTCDate currentDate recencyDate
     normalizedFrequency = frequency / (frequency + 1.0)
 
     normalizedRecency = 1.0 - (toNumber $ (recencyInSeconds / recencyInSeconds + 1))
