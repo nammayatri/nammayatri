@@ -71,12 +71,13 @@ checkForDeviation routeDeviationThreshold estimatedRoute (pt : batchWaypoints) d
       then checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
       else checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints (deviationCount + 1)
 
-updateDeviation :: TransporterConfig -> Bool -> Maybe (Id Ride) -> [LatLong] -> Flow Bool
+updateDeviation :: TransporterConfig -> Bool -> Maybe Ride -> [LatLong] -> Flow Bool
 updateDeviation _ _ Nothing _ = do
   logInfo "No ride found to check deviation"
   return False
-updateDeviation transportConfig safetyCheckEnabled (Just rideId) batchWaypoints = do
-  (alreadyDeviated, safetyAlertAlreadyTriggered) <- getDeviationAndSafetyDetails rideId
+updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = do
+  let rideId = ride.id
+  (alreadyDeviated, safetyAlertAlreadyTriggered) <- getDeviationAndSafetyDetails ride
   if safetyAlertAlreadyTriggered && alreadyDeviated
     then do
       logInfo $ "Safety alert and deviation already triggered for rideId: " <> getId rideId
@@ -98,24 +99,19 @@ updateDeviation transportConfig safetyCheckEnabled (Just rideId) batchWaypoints 
     updateRouteDeviationDetails :: Bool -> Bool -> Flow Bool
     updateRouteDeviationDetails isRouteDeviated alreadyDeviated = do
       when (isRouteDeviated && not alreadyDeviated) $ do
-        logInfo $ "Deviation detected for rideId: " <> getId rideId
-        QRide.updateDriverDeviatedFromRoute rideId True
+        logInfo $ "Deviation detected for rideId: " <> getId ride.id
+        QRide.updateDriverDeviatedFromRoute ride.id True
       return isRouteDeviated
 
-    getDeviationAndSafetyDetails id = do
-      mbRideDetails <- QRide.findById id
-      case mbRideDetails of
-        Nothing -> do
-          logWarning $ "Ride not found for rideId: " <> getId id
-          return (False, False)
-        Just rideDetails -> do
-          let alreadyDeviated = fromMaybe False rideDetails.driverDeviatedFromRoute
-          return (alreadyDeviated, rideDetails.safetyAlertTriggered)
+    getDeviationAndSafetyDetails rideDetails = do
+      let alreadyDeviated = fromMaybe False rideDetails.driverDeviatedFromRoute
+      return (alreadyDeviated, rideDetails.safetyAlertTriggered)
 
 checkMultipleRoutesForDeviation :: [RI.RouteAndDeviationInfo] -> [LatLong] -> Meters -> Meters -> Id Ride -> Bool -> Flow Bool
 checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold rideId safetyCheckEnabled = do
   logInfo $ "Checking for deviation in multiple routes for rideId: " <> getId rideId
   let updatedRoutesInfo = map checkRouteForDeviation routes
+  logInfo $ "Updated routes info for rideId: " <> getId rideId <> " is: " <> show updatedRoutesInfo
   setExp (multipleRouteKey $ getId rideId) updatedRoutesInfo 14400
   fork "Performing safety check" $
     when (safetyCheckEnabled && all (\route -> RI.safetyDeviation $ RI.deviationInfo route) updatedRoutesInfo) $ performSafetyCheck rideId
@@ -126,7 +122,7 @@ checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold ni
       case routeInfo.points of
         Nothing -> route
         Just points ->
-          if safetyCheckEnabled
+          if not safetyCheckEnabled
             then
               route
                 { RI.deviationInfo =
@@ -176,6 +172,21 @@ checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafet
       logWarning $ "Ride route info not found for rideId: " <> getId rideId
       return False
 
+getTravelledDistance :: (CacheFlow m r) => Maybe (Id Ride) -> Meters -> m Meters
+getTravelledDistance Nothing _ = do
+  logInfo "No ride found to get travelled distance"
+  return 0
+getTravelledDistance (Just rideId) estimatedDistance = do
+  let key = multipleRouteKey $ getId rideId
+  multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get key
+  case multipleRoutes of
+    Just routes -> do
+      let distance = minimum $ map (RI.distance . RI.routeInfo) (filter (not . RI.deviation . RI.deviationInfo) routes)
+      return $ fromMaybe estimatedDistance distance
+    Nothing -> do
+      logInfo $ "MultipleRoutes not found for ride" <> show rideId
+      return estimatedDistance
+
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   transportConfig <- MTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -190,8 +201,12 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls))
       ( \driverId batchWaypoints -> do
+          ride <- QRide.getActiveByDriverId driverId
+          updateDeviation transportConfig enableNightSafety ride batchWaypoints
+      )
+      ( \driverId estimatedDistance -> do
           mRide <- QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
-          updateDeviation transportConfig enableNightSafety (mRide <&> fst) batchWaypoints
+          getTravelledDistance (mRide <&> fst) estimatedDistance
       )
       snapToRoad'
   where

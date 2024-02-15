@@ -42,7 +42,6 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import Domain.Types.RideRoute as RI
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
 import Environment (Flow)
@@ -51,7 +50,6 @@ import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude (roundToIntegral)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
@@ -67,7 +65,6 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
-import qualified SharedLogic.Ride as SR
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as MerchantS
@@ -329,9 +326,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             else do
               -- here we update the current ride, so below we fetch the updated version
               pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
-              travelledDistance <- getTravelledDistance rideId estimatedDistance
               whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
-                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' travelledDistance pickupDropOutsideOfThreshold
+                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' estimatedDistance pickupDropOutsideOfThreshold
 
               ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
@@ -500,22 +496,3 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
                 else do
                   logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
                   recalculateFareForDistance handle booking ride (estimatedDistance + highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer) thresholdConfig
-
-getTravelledDistance :: (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id DRide.Ride -> Meters -> m Meters
-getTravelledDistance rideId estimatedDistance = do
-  let key = SR.multipleRouteKey $ getId rideId
-  multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get key
-  case multipleRoutes of
-    Just routes -> do
-      let unDeviatedRoute = find (not . RI.deviation . RI.deviationInfo) routes
-      case unDeviatedRoute of
-        Just route -> do
-          let distance = RI.distance route.routeInfo
-          logTagInfo "endRide" $ "Distance from multipleRoutes: " <> show distance
-          return $ fromMaybe estimatedDistance distance
-        Nothing -> do
-          logInfo "No route found without deviation"
-          return estimatedDistance
-    Nothing -> do
-      logInfo "MultipleRoutes not found"
-      return estimatedDistance
