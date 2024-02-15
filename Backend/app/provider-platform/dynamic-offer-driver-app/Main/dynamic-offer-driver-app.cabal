@@ -95,7 +95,6 @@ library
       API.UI.RideRoute
       API.UI.RideSummary
       API.UI.Route
-      API.UI.SDKEvents
       API.UI.Transporter
       API.UI.Vehicle
       API.UI.Whatsapp
@@ -603,8 +602,10 @@ library
       Tools.Verification
       Tools.Whatsapp
       API.Action.UI.LmsModule
+      API.Action.UI.SDKEvents
       API.Action.UI.SpecialLocation
       API.Types.UI.LmsModule
+      API.Types.UI.SDKEvents
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
       Domain.Types.Estimate

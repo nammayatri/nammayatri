@@ -1,0 +1,18 @@
+imports:
+  Text: Data.Text
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  APISuccess: Kernel.Types.APISuccess
+
+module: SDKEvents
+types:
+  SDKEventsReq:
+    event: Text
+apis:
+  # POST /sdk/events
+  - POST:
+      endpoint: /sdk/events
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SDKEventsReq
+      response:
+        type: APISuccess
