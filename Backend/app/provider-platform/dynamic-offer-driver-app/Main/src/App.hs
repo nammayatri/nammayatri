@@ -57,12 +57,12 @@ import Network.Wai.Handler.Warp
   )
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
-import System.Environment (lookupEnv)
+import System.Environment (lookupEnv, setEnv)
 import "utils" Utils.Common.Events as UE
 
 createCAC :: AppCfg -> IO ()
 createCAC appCfg = do
-  x <- (CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants)
+  x <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
   case x of
     0 -> CM.startCACPolling appCfg.cacConfig.tenants
     _ -> error "CAC client failed to start"
@@ -74,6 +74,8 @@ createCAC appCfg = do
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
+  setEnv "CAC_HOST" appCfg.cacConfig.host
+  setEnv "CAC_INTERVAL" (show appCfg.cacConfig.interval)
   _ <- CC.forkOS $ createCAC appCfg
 
   Metrics.serve (appCfg.metricsPort)
