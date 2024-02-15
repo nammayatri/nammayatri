@@ -9,7 +9,7 @@
 package in.juspay.mobility.app;
 
 public class SheetModel {
-    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant,rideProductType, rentalRideDuration, rentalRideDistance, rideStartTime, rideStartDate;
+    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant,rideProductType, rentalRideDuration, rentalRideDistance, rentalStartTime, rentalStartDate;
     private String requestId;
     private int startTime;
     private double updatedAmount;
@@ -53,8 +53,8 @@ public class SheetModel {
                       String rideProductType,
                       String rentalRideDuration,
                       String rentalRideDistance,
-                      String rideStartTime,
-                      String rideStartDate){
+                      String rentalStartTime,
+                      String rentalStartDate){
 
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
@@ -89,8 +89,8 @@ public class SheetModel {
         this.rideProductType = rideProductType;
         this.rentalRideDuration = rentalRideDuration;
         this.rentalRideDistance = rentalRideDistance;
-        this.rideStartTime = rideStartTime;
-        this.rideStartDate = rideStartDate;
+        this.rentalStartTime = rentalStartTime;
+        this.rentalStartDate = rentalStartDate;
     }
 
     public String getRideProductType() {
@@ -105,12 +105,12 @@ public class SheetModel {
         return rentalRideDistance;
     }
 
-    public String getRideStartDate() {
-        return rideStartDate;
+    public String getRentalRideStartDate() {
+        return rentalStartDate;
     }
 
-    public String getRideStartTime() {
-        return rideStartTime;
+    public String getRentalRideStartTime() {
+        return rentalStartTime;
     }
 
     public boolean isGotoTag() {

@@ -64,7 +64,7 @@
                                 android:layout_height="wrap_content"
                                 android:background="@drawable/rental_banner_rectangle"
                                 android:gravity="center"
-                                android:text="@string/rental"
+                                android:text="Rental"
                                 android:textColor="@color/white"
                                 android:textStyle="bold"
                                 android:visibility="invisible" />
@@ -75,7 +75,7 @@
                                 android:layout_height="wrap_content"
                                 android:background="@drawable/intercity_banner_rectangle"
                                 android:gravity="center"
-                                android:text="@string/intercity"
+                                android:text="Intercity"
                                 android:textColor="@color/white"
                                 android:textStyle="bold"
                                 android:visibility="invisible" />
@@ -168,7 +168,7 @@
                                 android:layout_height="wrap_content"
                                 android:background="@drawable/rental_banner_rectangle"
                                 android:gravity="center"
-                                android:text="@string/rental"
+                                android:text="Rental"
                                 android:textColor="@color/white"
                                 android:textStyle="bold"
                                 android:visibility="invisible" />
@@ -179,7 +179,7 @@
                                 android:layout_height="wrap_content"
                                 android:background="@drawable/intercity_banner_rectangle"
                                 android:gravity="center"
-                                android:text="@string/intercity"
+                                android:text="Intercity"
                                 android:textColor="@color/white"
                                 android:textStyle="bold"
                                 android:visibility="invisible" />
@@ -272,7 +272,7 @@
                                 android:layout_height="wrap_content"
                                 android:background="@drawable/rental_banner_rectangle"
                                 android:gravity="center"
-                                android:text="@string/rental"
+                                android:text="Rental"
                                 android:textColor="@color/white"
                                 android:textStyle="bold"
                                 android:visibility="invisible" />
@@ -283,7 +283,7 @@
                                 android:layout_height="wrap_content"
                                 android:background="@drawable/intercity_banner_rectangle"
                                 android:gravity="center"
-                                android:text="@string/intercity"
+                                android:text="Intercity"
                                 android:textColor="@color/white"
                                 android:textStyle="bold"
                                 android:visibility="invisible" />

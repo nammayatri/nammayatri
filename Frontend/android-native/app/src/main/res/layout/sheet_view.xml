@@ -135,7 +135,7 @@
                                     android:lineHeight="20dp"
                                     android:layout_gravity="center"
                                     android:paddingHorizontal="8dp"
-                                    android:text="@string/rental"
+                                    android:text="Rental"
                                     android:textColor="@color/white" />
                             </LinearLayout>
 
@@ -166,7 +166,7 @@
                                     android:lineHeight="20dp"
                                     android:layout_gravity="center"
                                     android:paddingHorizontal="8dp"
-                                    android:text="@string/intercity"
+                                    android:text="Intercity"
                                     android:textColor="@color/white" />
                             </LinearLayout>
 
@@ -309,7 +309,7 @@
                                     android:layout_height="wrap_content"
                                     android:gravity="right">
                                     <LinearLayout
-                                        android:id="@+id/rideStartDateTimeTag"
+                                        android:id="@+id/rentalDateTimeTag"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:orientation="vertical"
@@ -318,7 +318,7 @@
                                         >
 
                                         <TextView
-                                            android:id="@+id/rideStartDate"
+                                            android:id="@+id/rentalStartDate"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:layout_gravity="center_vertical"
@@ -330,7 +330,7 @@
                                             android:textFontWeight="600"
                                             android:textSize="14dp" />
                                         <TextView
-                                            android:id="@+id/rideStartTime"
+                                            android:id="@+id/rentalStartTime"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:fontFamily="@font/plus_jakartasans_semibold"

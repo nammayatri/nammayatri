@@ -159,12 +159,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     holder.rideTypeText.setText(variant);
                 }
                 holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
-                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
-                holder.rideStartTime.setText(model.getRideStartTime());
-                holder.rideStartDate.setVisibility(View.VISIBLE);
-                if(model.getRideStartDate() != "")
+                holder.rentalDateTimeTag.setVisibility(View.VISIBLE);
+                holder.rentalStartTime.setText(model.getRentalRideStartTime());
+                holder.rentalStartDate.setVisibility(View.VISIBLE);
+                if(model.getRentalRideStartDate() != "")
                 {
-                    holder.rideStartDate.setText(model.getRideStartDate());
+                    holder.rentalStartDate.setText(model.getRentalRideStartDate());
                 }
                 holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
                 holder.rentalRideDuration.setText(model.getRentalRideDuration());
@@ -188,13 +188,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.customerTipTag.setVisibility(View.GONE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(View.GONE);
-                holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
-                holder.rideStartTime.setText(model.getRideStartTime());
-                holder.rideStartDate.setVisibility(View.VISIBLE);
-                if(model.getRideStartDate() != "")
-                {
-                    holder.rideStartDate.setText(model.getRideStartDate());
-                }
             }
             else if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
                 String pickupChargesText = model.getCustomerTip() > 0 ?
@@ -613,8 +606,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String rideProductType = rideRequestBundle.getString("rideProductType");
                     String rentalRideDuration = String.format("%02d:%02d hr", rideRequestBundle.getInt("rentalRideDuration") / 3600 ,( rideRequestBundle.getInt("rentalRideDuration") % 3600 ) / 60);
                     String rentalRideDistance = String.format("%d km", rideRequestBundle.getInt("rentalRideDistance") / 1000);
-                    String rideStartTime = rideRequestBundle.getString("rideStartTime");
-                    String rideStartDate= rideRequestBundle.getString("rideStartDate");
+                    String rentalStartTime = rideRequestBundle.getString("rideStartTime");
+                    String rentalStartDate= rideRequestBundle.getString("rideStartDate");
                    
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
@@ -647,8 +640,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             rideProductType,
                             rentalRideDuration,
                             rentalRideDistance,
-                            rideStartTime,
-                            rideStartDate);
+                            rentalStartTime,
+                            rentalStartDate);
 
                     if (floatyView == null) {
                         startTimer();

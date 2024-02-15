@@ -126,7 +126,7 @@
                                         android:id="@+id/intercityRideTypeText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="@string/intercity"
+                                        android:text="Intercity"
                                         android:paddingHorizontal="8dp"
                                         android:elevation="1dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
@@ -153,7 +153,7 @@
                                         android:id="@+id/rentalRideTypeText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="@string/rental"
+                                        android:text="Rental"
                                         android:paddingHorizontal="8dp"
                                         android:elevation="1dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
@@ -296,7 +296,7 @@
                                     android:gravity="right">
 
                                     <LinearLayout
-                                        android:id="@+id/rideStartDateTimeTag"
+                                        android:id="@+id/rentalDateTimeTag"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:orientation="vertical"
@@ -305,7 +305,7 @@
                                         >
 
                                         <TextView
-                                            android:id="@+id/rideStartDate"
+                                            android:id="@+id/rentalStartDate"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:layout_gravity="center_vertical"
@@ -317,7 +317,7 @@
                                             android:textFontWeight="600"
                                             android:textSize="14dp" />
                                         <TextView
-                                            android:id="@+id/rideStartTime"
+                                            android:id="@+id/rentalStartTime"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:fontFamily="@font/plus_jakartasans_semibold"
