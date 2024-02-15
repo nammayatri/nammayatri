@@ -96,6 +96,7 @@ import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
+import in.juspay.mobility.app.GRPCNotificationService;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MobilityAppBridge;
@@ -167,13 +168,16 @@ public class MainActivity extends AppCompatActivity {
                         Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
                         context.stopService(locationUpdateIntent);
                         mWorkManager.cancelAllWorkByTag(context.getString(in.juspay.mobility.app.R.string.location_update));
+                        Intent grpcNotificationServiceIntent = new Intent(context, GRPCNotificationService.class);
+                        context.stopService(grpcNotificationServiceIntent);
                     } else {
                         Context context = getApplicationContext();
                         Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
                         context.stopService(locationUpdateIntent);
                         mWorkManager.cancelAllWorkByTag(context.getString(in.juspay.mobility.app.R.string.location_update));
+                        Intent grpcNotificationServiceIntent = new Intent(context, GRPCNotificationService.class);
+                        context.stopService(grpcNotificationServiceIntent);
                     }
-
                 }
             }
             if (key != null && sharedPreferences.getString("DRIVER_STATUS", "null").equals("true") && (key.equals("RIDE_G_FREQUENCY") || key.equals("MAX_LIMIT_TO_STORE_LOCATION_PT") || key.equals("NO_OF_LOCATION_PT_TO_REMOVE") || key.equals("DRIVER_MIN_DISPLACEMENT") || key.equals("RIDE_T_FREQUENCY") || key.equals("TRIP_STATUS"))) {
@@ -184,6 +188,9 @@ public class MainActivity extends AppCompatActivity {
                     locationUpdateIntent.putExtra("TRIP_STATUS", sharedPreferences.getString(key,"null"));
                 }
                 context.startService(locationUpdateIntent);
+
+                Intent grpcNotificationServiceIntent = new Intent(context, GRPCNotificationService.class);
+                context.startService(grpcNotificationServiceIntent);
             }
         }
     };
