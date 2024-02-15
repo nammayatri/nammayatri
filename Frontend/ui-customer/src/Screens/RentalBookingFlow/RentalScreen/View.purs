@@ -39,7 +39,7 @@ import Language.Types (STR(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom)
 import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, rentalRateCardConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote)
 import Screens.Types (RentalScreenState, RentalScreenStage(..), RentalQuoteList)
@@ -87,6 +87,7 @@ view push state =
   Anim.screenAnimation
     $ relativeLayout
     [ height MATCH_PARENT
+    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom 
     , width MATCH_PARENT
     , onBackPressed push $ const BackpressAction
     , orientation VERTICAL
@@ -143,7 +144,7 @@ rentalPackageSelectionView push state =
           , imageView
             [ height $ V 16
             , width $ V 16
-            , margin $ Margin 4 12 0 0
+            , margin $ Margin 4 (if EHC.os == "IOS" then 7 else 12) 0 0
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_black"
             , onClick push $ const RentalPolicyInfo
             ]  
@@ -191,6 +192,7 @@ sliderView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
+    , gravity CENTER
     , margin $ MarginTop 24
     ][  textView $ 
           [ text "2 hr"
@@ -198,8 +200,9 @@ sliderView push state =
           ] <> FontStyle.body1 TypoGraphy
       , Anim.screenAnimationFadeInOut $
           linearLayout
-            [ height WRAP_CONTENT
-            , weight 1.0 
+            [ height $ V 35
+            , weight 1.0
+            , gravity CENTER
             , id $ EHC.getNewIDWithTag "DurationSliderView"
             , background Color.squidInkBlue
             , onAnimationEnd 
@@ -226,6 +229,10 @@ sliderView push state =
 
 rentalVariantSelectionView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 rentalVariantSelectionView push state =
+  relativeLayout[
+    height MATCH_PARENT
+  , width MATCH_PARENT
+  ][
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -246,11 +253,15 @@ rentalVariantSelectionView push state =
         , separatorView push state
         ]
     , linearLayout
-        [ height WRAP_CONTENT
+        [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , padding $ PaddingBottom 82
         ]
-        [ linearLayout
+        [ scrollView[height MATCH_PARENT
+        , width MATCH_PARENT
+        ][
+          linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , margin $ MarginBottom 32
@@ -259,19 +270,24 @@ rentalVariantSelectionView push state =
           [ if (null state.data.rentalsQuoteList) && state.props.showShimmer then shimmerChooseVehicleView push state
             else if null state.data.rentalsQuoteList then noQuotesErrorModel state 
             else chooseVehicleView push state
-          ]
+          ]]
+        
         ]
-    , linearLayout
-      [ height MATCH_PARENT
+    ]
+  , linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity BOTTOM
+    , alignParentBottom "true,-1"
+    ]
+    [ linearLayout
+      [ height WRAP_CONTENT
+      , stroke $ "1," <> Color.grey900
+      , background Color.white900
       , width MATCH_PARENT
-      , gravity BOTTOM
-      ]
-      [ linearLayout
-        [ height WRAP_CONTENT
-        , stroke $ "1," <> Color.grey900
-        , padding $ Padding 16 16 16 16
-        ] [PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
-      ]
+      , padding $ Padding 16 16 16 16
+      ] [PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
+    ]
     ]
 
 chooseVehicleView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
@@ -367,7 +383,7 @@ noteAndPrimaryButtonView push state = let
     , onClick push $ const NoAction
     ][ linearLayout 
       [ height WRAP_CONTENT
-      , width WRAP_CONTENT
+      , width MATCH_PARENT
       , orientation HORIZONTAL
       , margin $ MarginBottom 32
       ]
@@ -377,6 +393,8 @@ noteAndPrimaryButtonView push state = let
         ] <> FontStyle.body3 TypoGraphy
         , textView $ [
             text $ getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge)
+          , width MATCH_PARENT
+          , height WRAP_CONTENT
         ] <> FontStyle.body3 TypoGraphy
       ]
     , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)

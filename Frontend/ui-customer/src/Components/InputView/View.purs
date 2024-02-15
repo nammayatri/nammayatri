@@ -33,7 +33,7 @@ view push state =
         , padding $ PaddingVertical 16 16
         , gravity CENTER_VERTICAL
         ][  if not state.headerVisibility then backPressView state push else emptyTextView
-          , inputImageView push state
+          , if state.imageLayoutVisibility == VISIBLE then inputImageView push state else emptyTextView
           , inputLayoutViews push state]
         ]
 

@@ -442,7 +442,10 @@ export const timePicker = function (cb) {
       const callback = callbackMapper.map(function (hour, min, resp) {
         cb(action(hour)(min)(resp))();
       });
-      return window.JBridge.timePicker(callback);
+      if (window.__OS == "IOS" )
+        return window.JBridge.timePicker(callback, "" ,"TimePicker");
+      else 
+        return window.JBridge.timePicker(callback);
     };
   };
 };
@@ -454,7 +457,10 @@ export const datePicker = function (label) {
         const callback = callbackMapper.map(function (resp, year, month, date) {
           cb(action(resp)(year)(month)(date))();
         });
-        return window.JBridge.datePicker(callback, label);
+        if (window.__OS == "IOS") 
+          return window.JBridge.datePicker(callback, label, "DatePicker");
+        else
+          return window.JBridge.datePicker(callback, label);
       };
     };
   };
@@ -2407,14 +2413,20 @@ export const datePickerImpl = function (cb , action, delay){
   const callback = callbackMapper.map(function (str, year, month, date) {
     cb(action(str)(year)(month)(date))();
   })
-  window.JBridge.datePicker(callback, "");
+  if (window.__OS == "IOS")
+    window.JBridge.datePicker(callback, "", "DatePicker");
+  else 
+    window.JBridge.datePicker(callback, "");
 }
 
 export const timePickerImpl = function (cb , action, delay){
   const callback = callbackMapper.map(function (hour, min, str) {
     cb(action(hour)(min)(str))();
   })
-  window.JBridge.timePicker(callback);
+  if (window.__OS == "IOS")
+    window.JBridge.datePicker(callback, "", "TimePicker");
+  else 
+    window.JBridge.timePicker(callback, "");
 }
 
 export const renderSliderImpl = (cb, action, config) => {
