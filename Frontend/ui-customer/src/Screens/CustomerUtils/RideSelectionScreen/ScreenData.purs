@@ -20,6 +20,7 @@ import Screens.Types (AnimationState(..), RideSelectionScreenState, IndividualRi
 import Services.API (BookingLocationAPIEntity(..))
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
+import Common.Types.App as CTP
 
 initData :: RideSelectionScreenState
 initData =
@@ -113,4 +114,6 @@ dummyIndividualCard = {
   , optionsVisibility : false
   , vehicleVariant : Nothing
   , merchantExoPhone : ""
+  , providerName : ""
+  , providerType : CTP.ONUS
 }

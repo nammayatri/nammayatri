@@ -580,12 +580,15 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   estimatedFare :: Int,
   tripTerms :: Array String,
   id :: String,
-  agencyCompletedRidesCount :: Int,
+  agencyCompletedRidesCount :: Maybe Int,
   estimateFareBreakup :: Maybe (Array EstimateFares),
   totalFareRange :: Maybe FareRange,
   nightShiftRate :: Maybe NightShiftRate,
   specialLocationTag :: Maybe String,
-  driversLatLong :: Array LatLong
+  driversLatLong :: Array LatLong,
+  providerName :: Maybe String,
+  providerId :: Maybe String,
+  isValueAddNP :: Maybe Boolean --true if entity is from ny
 }
 
 newtype NightShiftRate = NightShiftRate {
@@ -625,7 +628,7 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   estimatedFare :: Int,
   tripTerms :: Array String,
   id :: String,
-  agencyCompletedRidesCount :: Int
+  agencyCompletedRidesCount :: Maybe Int
 }
 
 newtype QuoteAPIDetails = QuoteAPIDetails {
@@ -652,8 +655,8 @@ newtype DriverOfferAPIEntity = DriverOfferAPIEntity
     rating :: Maybe Number
   , validTill :: String
   , driverName :: String
-  , distanceToPickup :: Number
-  , durationToPickup :: Int
+  , distanceToPickup :: Maybe Number
+  , durationToPickup :: Maybe Int
   }
 
 newtype MetroOffer = MetroOffer {
@@ -912,7 +915,9 @@ newtype RideBookingRes = RideBookingRes {
   specialLocationTag :: Maybe String,
   hasDisability :: Maybe Boolean,
   hasNightIssue :: Maybe Boolean,
-  sosStatus :: Maybe CTA.SosStatus
+  sosStatus :: Maybe CTA.SosStatus,
+  isValueAddNP :: Maybe Boolean,
+  providerName :: Maybe String
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -927,7 +932,7 @@ newtype RideAPIEntity = RideAPIEntity {
   createdAt :: String,
   driverNumber :: Maybe String,
   shortRideId :: String,
-  driverRegisteredAt :: String,
+  driverRegisteredAt :: Maybe String,
   vehicleNumber :: String,
   rideOtp :: String,
   driverName :: String,
@@ -1701,13 +1706,14 @@ data FlowStatusReq = FlowStatusReq
 newtype FlowStatusRes = FlowStatusRes
   { currentStatus :: FlowStatus
   , oldStatus :: Maybe FlowStatus
+  , isValueAddNP :: Maybe Boolean
   }
 
 data FlowStatus = IDLE {}
                 | SEARCHING { requestId :: String , validTill :: String }
                 | GOT_ESTIMATE { requestId :: String , validTill :: String }
-                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String }
-                | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String }
+                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String}
+                | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String}
                 | WAITING_FOR_DRIVER_ASSIGNMENT { bookingId :: String , validTill :: String }
                 | RIDE_ASSIGNED { rideId :: String }
                 | PENDING_RATING { rideId :: String }

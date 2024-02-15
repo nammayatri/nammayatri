@@ -537,16 +537,7 @@ public class MainActivity extends AppCompatActivity {
                         initApp(null,null);
                         break;
                     case "in_app_notification":
-                        String title = jsonObject.optString("title");
-                        String message = jsonObject.optString("message");
-                        String channelId = jsonObject.optString("channelId");
-                        String action1Text = jsonObject.optString("action1Text");
-                        String action2Text = jsonObject.optString("action2Text");
-                        String action1Image = jsonObject.optString("action1Image");
-                        String action2Image = jsonObject.optString("action2Image");
-                        String onTapAction = jsonObject.optString("onTapAction");
-                        int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
-                        showInAppNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds, context);
+                        showInAppNotification(jsonObject, context);
                         break;
                     case "process_result":
                         try {
@@ -850,13 +841,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void showInAppNotification(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds, Context context) {
+    public void showInAppNotification(JSONObject payload, Context context) {
         try {
             Handler handler = new Handler(context.getMainLooper());
             handler.postDelayed(() -> {
                 try {
                     if (inAppNotification != null){
-                        inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
+                        inAppNotification.generateNotification(payload);
                     }
                 } catch (JSONException e) {
                     Log.e(LOG_TAG, "Error in In App Notification Handler " + e);

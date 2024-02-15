@@ -30,6 +30,8 @@ import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map 
+import Common.Types.App as CT
+import MerchantConfig.DefaultConfig as MRC
 
 initData :: HomeScreenState
 initData = {
@@ -106,13 +108,17 @@ initData = {
       , activeIndex: 0
       , index: 0
       , id: ""
-      , maxPrice : 0
+      , maxPrice : Nothing
+      , minPrice : Nothing
       , basePrice : 0
       , showInfo : true
       , searchResultType : CV.ESTIMATES
       , isBookingOption : false
       , pickUpCharges : 0
       , layoutMargin : Margin 0 0 0 0
+      , providerName : ""
+      , providerId : ""
+      , providerType : CT.ONUS
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -131,6 +137,7 @@ initData = {
         wasOfferedAssistance : Nothing
     }
     , config : getAppConfig appConfig
+    , currentCityConfig : MRC.defaultCityConfig
     , logField : empty
     , nearByDrivers : Nothing
     , disability : Nothing
@@ -151,6 +158,15 @@ initData = {
     } 
     , contactList : []
     , followers : Nothing
+    , iopState : {
+        timerId : "",
+        timerVal : "",
+        showMultiProvider : false,
+        providerPrefVisible : false,
+        providerSelectionStage : false,
+        showPrefButton : false,
+        providerPrefInfo : false
+    }
     },
     props: {
       rideRequestFlow : false
@@ -400,6 +416,8 @@ dummyDriverInfo =
   , vehicleVariant : ""
   , sourceAddress : dummyAddress
   , destinationAddress : dummyAddress
+  , providerName : ""
+  , providerType : CT.ONUS
   }
 
 dummySettingBar :: SettingSideBarState
@@ -439,7 +457,7 @@ dummyQuoteAPIEntity = QuoteAPIEntity {
   estimatedFare : 0,
   tripTerms : [],
   id : "",
-  agencyCompletedRidesCount : 0,
+  agencyCompletedRidesCount : Nothing,
   quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity}
 }
 
@@ -450,8 +468,8 @@ dummyDriverOfferAPIEntity =
         { rating: Nothing
         , validTill: ""
         , driverName: ""
-        , distanceToPickup: 0.0
-        , durationToPickup: 0
+        , distanceToPickup: Nothing
+        , durationToPickup: Nothing
         }
 
 dummyLocationName :: PlaceName
@@ -507,7 +525,9 @@ dummyRideBooking = RideBookingRes
   merchantExoPhone : "",
   specialLocationTag : Nothing,
   hasDisability : Nothing,
-  sosStatus: Nothing
+  sosStatus: Nothing,
+  isValueAddNP : Nothing,
+  providerName : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

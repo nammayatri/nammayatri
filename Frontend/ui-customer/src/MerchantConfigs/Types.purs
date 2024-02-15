@@ -364,7 +364,8 @@ type HotSpotConfig = {
 type CityConfig = {
   cityName :: String,
   cityCode :: String,
-  geoCodeConfig :: GeoCodeConfig
+  geoCodeConfig :: GeoCodeConfig,
+  iopConfig :: InteroperabilityConfig
 }
 
 type GeoCodeConfig = {
@@ -374,4 +375,9 @@ type GeoCodeConfig = {
 
 type DriverLocationPollingConfig = {
   retryExpFactor :: Int
+}
+
+type InteroperabilityConfig = {
+  enable :: Boolean,
+  autoSelectTime :: Int
 }

@@ -653,7 +653,7 @@ public class MobilityCommonBridge extends HyperBridge {
             PolylineOptions polylineOptions = new PolylineOptions();
             polylineOptions.add(new LatLng(srcLat, srcLon));
             polylineOptions.add(new LatLng(destLat, destLon));
-            polyline = setRouteCustomTheme(polylineOptions, Color.parseColor(color), "DOT", 8);
+            polyline = setRouteCustomTheme(polylineOptions, Color.parseColor(color), "DOT", 8, null);
         }
     }
 
@@ -1374,7 +1374,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (polylineAnimatorSet != null) {
                     polylineAnimatorSet.cancel();
                 }
-                polyline = setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth);
+                polyline = setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth, mapRouteConfigObject);
                 return ;
             }
             JSONObject polylineAnimationConfigObject = mapRouteConfigObject.optJSONObject("polylineAnimationConfig");
@@ -1382,9 +1382,9 @@ public class MobilityCommonBridge extends HyperBridge {
                 polylineAnimationConfigObject = new JSONObject();
             }
             int animateColor = Color.parseColor(polylineAnimationConfigObject.optString("color", "#D1D5DB"));
-            polyline = setRouteCustomTheme(polylineOptions, animateColor, style, polylineWidth);
+            polyline = setRouteCustomTheme(polylineOptions, animateColor, style, polylineWidth, mapRouteConfigObject);
             PolylineOptions overlayPolylineOptions = new PolylineOptions();
-            overlayPolylines = setRouteCustomTheme(overlayPolylineOptions, animateColor, style, polylineWidth);
+            overlayPolylines = setRouteCustomTheme(overlayPolylineOptions, animateColor, style, polylineWidth, null);
             int drawDuration = polylineAnimationConfigObject.optInt("draw", 700);
             int fadeDuration = polylineAnimationConfigObject.optInt("fade", 1000);
             int delayDuration = polylineAnimationConfigObject.optInt("delay", 200);
@@ -1767,17 +1767,21 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    public Polyline setRouteCustomTheme(PolylineOptions options, int color, String style, final int width) {
-        PatternItem DOT = new Dot();
-        PatternItem GAP = new Gap(10);
-        PatternItem DASH = new Dash(20);
+    public Polyline setRouteCustomTheme(PolylineOptions options, int color, String style, final int width, JSONObject mapRouteConfigObject) {
         options.width(width);
-        List<PatternItem> PATTERN_POLYLINE_DOTTED = Arrays.asList(GAP, DOT);
-        List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Collections.singletonList(DASH);
+        List<PatternItem> PATTERN_POLYLINE_DOTTED = Arrays.asList(new Gap(10), new Dot());
+        List<PatternItem> PATTERN_POLYLINE_DASHED_WITH_GAP = Collections.singletonList(new Dash(20));
+        if (mapRouteConfigObject != null){
+            if (mapRouteConfigObject.has("dashUnit") && mapRouteConfigObject.has("gapUnit")){
+                int gap = mapRouteConfigObject.optInt("gapUnit", 0);
+                int dash = mapRouteConfigObject.optInt("dashUnit", 1);
+                PATTERN_POLYLINE_DASHED_WITH_GAP = Arrays.asList(new Dash(dash), new Gap(gap));
+            }
+        }
         options.color(color);
         switch (style) {
             case "DASH":
-                options.pattern(PATTERN_POLYLINE_DOTTED_DASHED);
+                options.pattern(PATTERN_POLYLINE_DASHED_WITH_GAP);
                 break;
             case "DOT":
                 options.pattern(PATTERN_POLYLINE_DOTTED);

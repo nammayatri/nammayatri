@@ -244,7 +244,30 @@ window.getMerchantConfig = function () {
       , "supportMail" :"support@nammayatri.in"
       , "name" : "Namma Yatri"
       , "website" : "https://nammayatri.in/"
-    }
-    , 
+    },
+    "cityConfig" : [
+        {   "cityCode" : "std:080",
+            "cityName" : "Bangalore",
+            "iopConfig" : {
+                "enable" : true, // need to make it false
+                "autoSelectTime" : 8
+            },
+            "geoCodeConfig" : {
+                "radius" : 50000,
+                "strictBounds" : true
+            }
+        },
+        {   "cityCode" : "std:080",
+            "cityName" : "Hyderabad",
+            "iopConfig" : {
+                "enable" : true,
+                "autoSelectTime" : 8
+            },
+            "geoCodeConfig" : {
+                "radius" : 50000,
+                "strictBounds" : true
+            }
+        }
+    ]
   })
 }

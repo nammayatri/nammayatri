@@ -57,6 +57,7 @@ import Presto.Core.Types.Language.Flow (Flow(..), getLogFields)
 import ConfigProvider
 import Locale.Utils
 import Data.Either (Either(..))
+import Common.Types.App as CT
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -106,10 +107,11 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
     (DRIVER_OFFER contents) -> 
       let (DriverOfferAPIEntity quoteDetails) = contents
           expiryTime = (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
+          timeLeft = fromMaybe 0 quoteDetails.durationToPickup
       in {  seconds : expiryTime
           , id : quoteEntity.id
           , timer : show expiryTime
-          , timeLeft : quoteDetails.durationToPickup/60
+          , timeLeft : timeLeft/60
           , driverRating : fromMaybe 0.0 quoteDetails.rating
           , profile : ""
           , price :  show quoteEntity.estimatedTotalFare
@@ -158,6 +160,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
       , config : getAppConfig appConfig
+      , providerName : resp.agencyName
+      , providerType : maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) resp.isValueAddNP -- get from API
       , vehicleVariant : if rideList.vehicleVariant /= "" 
                             then rideList.vehicleVariant 
                          else
@@ -197,7 +201,7 @@ dummyRideAPIEntity = RideAPIEntity{
   createdAt : "",
   driverNumber : Nothing,
   shortRideId : "",
-  driverRegisteredAt : "",
+  driverRegisteredAt : Nothing,
   vehicleNumber : "",
   rideOtp : "",
   driverName : "",
@@ -408,6 +412,9 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       estimateFareBreakup = fromMaybe [] estimate.estimateFareBreakup
       pickUpCharges = fetchPickupCharges estimateFareBreakup
+      extractFare f = case estimate.totalFareRange of
+                        Just (FareRange fareRange) -> Just (f fareRange)
+                        _ -> Nothing
   in ChooseVehicle.config {
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
@@ -423,6 +430,11 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , basePrice = estimate.estimatedTotalFare
       , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       , pickUpCharges = pickUpCharges
+      , providerName = fromMaybe "" estimate.providerName
+      , providerId = fromMaybe "" estimate.providerId
+      , providerType = maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) estimate.isValueAddNP
+      , maxPrice = extractFare _.maxFare
+      , minPrice = extractFare _.minFare
       }
 
 dummyFareRange :: FareRange
@@ -565,12 +577,15 @@ dummyEstimateEntity =
     , estimatedFare: 0
     , tripTerms: []
     , id: ""
-    , agencyCompletedRidesCount: 0
+    , agencyCompletedRidesCount: Nothing
     , estimateFareBreakup: Nothing
     , totalFareRange: Nothing
     , nightShiftRate: Nothing
     , specialLocationTag: Nothing
     , driversLatLong : []
+    , providerName : Nothing
+    , providerId : Nothing
+    , isValueAddNP : Nothing
     }
 
 getSpecialTag :: Maybe String -> SpecialTags

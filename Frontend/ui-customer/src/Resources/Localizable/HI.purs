@@ -1010,5 +1010,13 @@ getHI stringKey =
         ONE_WAY_STR -> "एक तरफा"
         SHARE_TICKET -> "टिकट साझा करें"
         ORIGIN -> "मूल"
-
-
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "एकाधिक प्रदाताओं से किराए दिखाए जा रहे हैं"
+        LIVE_CHAT -> "लाइव चैट"
+        DRIVER_TIP_ADDITION -> "ड्राइवर टिप जोड़"
+        LIVE_RIDE_SHARING -> "लाइव राइड शेयरिंग"
+        ENHANCED_SAFETY -> "उन्नत सुरक्षा"
+        CONFIRM_PROVIDER -> "प्रदाता की पुष्टि करें"
+        SELECT_A_PROVIDER -> "एक प्रदाता चुनें"
+        CONFIRMING_SELECTED_PROVIDER -> "चयनित प्रदाता की पुष्टि की जा रही है:"
+        BOOK_TOP_PROVIDER -> "बुक टॉप प्रदाता"
+        CHOOSE_FROM_PROVIDERS -> "सभी उपलब्ध प्रदाताओं में से चुनें"

@@ -44,6 +44,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.ButtCap;
 import com.google.android.gms.maps.model.Dash;
+import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -69,6 +70,7 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -229,6 +231,8 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     Marker destMarker = (Marker) markers.get(dest);
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
+                    int dashUnit = specialLocationObject.optInt("dashUnit", 1);
+                    int gapUnit = specialLocationObject.optInt("gapUnit", 0);
 
                     destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, false,null, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER))));
                     destMarker.setTitle("Driver is " + eta);
@@ -253,8 +257,9 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             double sourceLong = path.get(path.size() - 1).longitude;
                             LatLng destination = path.get(path.size() - 1);
                             animateMarkerNew(src, destination, currMarker);
-                            PatternItem DASH = new Dash(1);
-                            List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Collections.singletonList(DASH);
+                            PatternItem dash = new Dash(dashUnit);
+                            PatternItem gap = new Gap(gapUnit);
+                            List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(dash, gap);
                             polyline.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
                             polyline.setPoints(path);
                             if (debounceAnimateCameraCounter != 0) {

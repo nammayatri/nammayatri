@@ -8,7 +8,7 @@ import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (mapWithIndex, length, (!!))
+import Data.Array (mapWithIndex, length, (!!), filter, nubBy)
 import Data.Function.Uncurried (runFn1)
 import Data.Maybe (fromMaybe, isJust)
 import Effect (Effect)
@@ -20,7 +20,7 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import JBridge (getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-))
+import Prelude (Unit, ($), (<>), const, pure, unit, bind, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), map)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -30,6 +30,13 @@ import PrestoDOM.Properties (sheetState)
 import Data.Int (toNumber,ceil)
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
+import Data.Array (groupBy, head, sortBy, fromFoldable)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Ord (comparing)
+import Data.Traversable (traverse)
+import Data.Foldable (minimumBy, maximumBy)
+import Data.Ord (compare)
+import Data.Function (on)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -86,8 +93,9 @@ view push config =
       , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
       , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
       ]
-      [ bookingPreferencesView push config
-      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
+      [ 
+        -- bookingPreferencesView push config,
+        PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
       ]
     ]
   where
@@ -352,6 +360,18 @@ chooseYourRideView push config =
               , background Color.grey900
               ][]
           ]
+      , textView $
+        [ text $ getString SHOWING_FARE_FROM_MULTI_PROVIDER
+        , color Color.black700
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , width MATCH_PARENT
+        , margin $ Margin 16 16 16 0
+        , padding $ Padding 12 12 12 12
+        , background Color.blue600
+        , cornerRadius 8.0
+        , visibility $ boolToVisibility config.showMultiProvider
+        ] <> FontStyle.paragraphText TypoGraphy
       , quoteListView push config
       ]
   ]
@@ -390,6 +410,10 @@ estimatedTimeAndDistanceView push config =
 
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 quoteListView push config =
+  let variantBasedList = filterVariantAndEstimate config.quoteList
+      topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
+      viewHeight = getQuoteListViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList
+  in 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -398,22 +422,29 @@ quoteListView push config =
     , afterRender push (const NoAction)
     ]
     [ scrollView
-      [ height $ getQuoteListViewHeight config
+      [ height $ viewHeight
       , width MATCH_PARENT
       ][  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation VERTICAL
-          ]( mapWithIndex
-              ( \index item ->
-                  ChooseVehicle.view (push <<< ChooseVehicleAC) (item)
-              ) config.quoteList
-          )]]
+          ][  if config.showMultiProvider  then 
+                linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ]( map( \item ->  ChooseVehicle.view (push <<< ChooseVehicleAC) item) variantBasedList)
+              else 
+                linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ]( map (\item -> ChooseVehicle.view (push <<< ChooseVehicleAC) item) topProviderList )
+          ]]]
 
-getQuoteListViewHeight :: Config -> Length
-getQuoteListViewHeight config =
-    let len = length config.quoteList
-        quoteHeight = getHeightOfEstimateItem config
+getQuoteListViewHeight :: Config -> Int -> Length
+getQuoteListViewHeight config len =
+    let quoteHeight = getHeightOfEstimateItem config
         height = if quoteHeight == 0 then 87 else quoteHeight + 7
     in V $ (if len >= 4 then 3 * height else len * height) + 5
 
@@ -434,3 +465,18 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
   , rippleColor = Color.rippleShade
   }
 
+filterVariantAndEstimate :: Array ChooseVehicle.Config -> Array ChooseVehicle.Config -- showing unique quotes based on variant and arrange price range (In case of multiple provider)
+filterVariantAndEstimate configArray = fromMaybe [] $ do
+  let grouped = map fromFoldable $ groupBy ((==) `on` _.vehicleVariant) (sortBy (comparing _.vehicleVariant) configArray)
+  traverse mergeGroup grouped
+  where 
+    mergeGroup :: Array ChooseVehicle.Config -> Maybe ChooseVehicle.Config
+    mergeGroup group = do
+      first <- head group
+      minPriceItem <- minimumBy (compare `on` _.minPrice) group
+      maxPriceItem <- maximumBy (compare `on` _.maxPrice) group
+      minBPItem <- minimumBy (compare `on` _.basePrice) group
+      maxBPItem <- maximumBy (compare `on` _.basePrice) group
+      case minPriceItem.minPrice, maxPriceItem.maxPrice of 
+        Just minP, Just maxP -> pure $ first { showInfo = false, price = "₹" <> show minP <> " - ₹" <> show maxP }
+        _ , _ -> pure $ first { showInfo = false, price =  "₹" <> show minBPItem.basePrice <> " - ₹" <>  show maxBPItem.basePrice }

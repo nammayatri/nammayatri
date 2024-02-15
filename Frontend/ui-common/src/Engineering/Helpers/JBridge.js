@@ -1772,35 +1772,8 @@ export const shareImageMessage = function (message) {
   }
 }
 
-export const showInAppNotification = function (title) {
-  return function (message) {
-    return function (onTapAction) {
-      return function (action1Text) {
-        return function (action2Text) {
-          return function (action1Image) {
-            return function (action2Image) {
-              return function (channelId) {
-                return function (duration) {
-                  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({
-                    event: "in_app_notification",
-                    title: title,
-                    message: message,
-                    onTapAction: onTapAction,
-                    action1Text: action1Text,
-                    action2Text: action2Text,
-                    action1Image: action1Image,
-                    action2Image: action2Image,
-                    channelId: channelId,
-                    durationInMilliSeconds: duration
-                  }))()
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+export const showInAppNotification = function (payload) {
+  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify(payload))()
 }
 
 export const openWhatsAppSupport = function (contactNumber) {

@@ -271,8 +271,8 @@ currentFlowStatus = do
   verifyProfile "LazyCheck"
   flowStatus <- Remote.flowStatusBT "LazyCheck"
   case flowStatus ^. _currentStatus of
-    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
-    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
+    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus (flowStatus ^. _isValueAddNP) false
+    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus (flowStatus ^. _isValueAddNP)true
     RIDE_ASSIGNED _                         -> checkRideStatus true
     _                                       -> checkRideStatus false
   hideLoaderFlow
@@ -356,8 +356,10 @@ currentFlowStatus = do
         else void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
       else pure unit
 
-    goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
-    goToFindingQuotesStage estimateId driverOfferedQuote = do
+    goToFindingQuotesStage :: { validTill :: String , estimateId :: String} -> Maybe Boolean -> Boolean -> FlowBT String Unit
+    goToFindingQuotesStage currentStatus mbIsValueAddNP driverOfferedQuote = do
+      let estimateId = currentStatus.estimateId
+          providerType = maybe Common.ONUS (\valueAdd -> if valueAdd then Common.ONUS else Common.OFFUS) mbIsValueAddNP -- This defines whether quote selected was ours or not after kill and relaunch
       removeChatService ""
       if any (_ == (getValueToLocalStore FINDING_QUOTES_START_TIME)) ["__failed", ""] then do
         updateFlowStatus SEARCH_CANCELLED
@@ -395,7 +397,9 @@ currentFlowStatus = do
                 , data { source = flowStatusData.source.place
                        , destination = flowStatusData.destination.place
                        , sourceAddress = flowStatusData.sourceAddress
-                       , destinationAddress = flowStatusData.destinationAddress }
+                       , destinationAddress = flowStatusData.destinationAddress 
+                       , selectedEstimatesObject { providerType = providerType}
+                       }
                 })
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
@@ -545,7 +549,8 @@ homeScreenFlow = do
   void $ pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
   let _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
+  let currentCityConfig = getCityConfig currentState.homeScreen.data.config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE")},data {currentCityConfig = currentCityConfig}})
   liftFlowBT $ handleUpdatedTerms $ getString STR.TERMS_AND_CONDITIONS_UPDATED
   flow <- UI.homeScreen
   case flow of
