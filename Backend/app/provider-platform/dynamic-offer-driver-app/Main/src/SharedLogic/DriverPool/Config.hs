@@ -21,12 +21,14 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Language as L (getOption)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
 import Kernel.Utils.Logging
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import qualified System.Environment as SE
 import System.Random

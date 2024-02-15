@@ -25,9 +25,7 @@ module API.UI.Ride
   )
 where
 
--- import qualified Client.Main as CM
-
-import Client.Main as CM
+-- import Client.Main as CM
 import Data.Aeson as DA
 -- import Domain.Types.Merchant.DriverPoolConfig as DPC
 
@@ -36,7 +34,7 @@ import Data.Aeson as DA
 -- import qualified Data.ByteString.Lazy.Char8 as BL
 -- import qualified Data.Text.Encoding as DTE
 -- import Data.Aeson.Types as DAT
-import Data.HashMap.Strict as HashMap
+-- import Data.HashMap.Strict as HashMap
 import Data.Text as Text
 import Data.Time (Day)
 import qualified Domain.Action.UI.Ride as DRide
@@ -169,10 +167,10 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) DRide.OTPRideR
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   let rideOtp = specialZoneOtpCode
   transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId))])
-  logDebug $ "transporterConfig Cond: " <> show confCond
-  transporterConfig' <- liftIO $ CM.evalCtx "test" confCond
-  logDebug $ "transporterConfig: " <> show transporterConfig'
+  -- confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId))]
+  -- logDebug $ "transporterConfig Cond: " <> show confCond
+  -- transporterConfig' <- liftIO $ CM.evalCtx "test" confCond
+  -- logDebug $ "transporterConfig: " <> show transporterConfig'
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   -- booking <- QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   ride <- DRide.otpRideCreate requestor rideOtp booking
