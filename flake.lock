@@ -1364,11 +1364,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1707982093,
-        "narHash": "sha256-jGjoj378XMSZdsCsW1anEswY3rpGggJcjpEfpuCXwRg=",
+        "lastModified": 1708003257,
+        "narHash": "sha256-QaZnyB7xIeWTQLLkqBQEX9bmjDVnw38qiqTAE0iXv3k=",
         "owner": "piyushKumar-1",
         "repo": "haskell_cac_client",
-        "rev": "3632995b02b68cab06b81f65cdd46bd2767a717e",
+        "rev": "92d1674923f7e7a3303be14f93de4227965ed41f",
         "type": "github"
       },
       "original": {
