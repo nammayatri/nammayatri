@@ -77,17 +77,27 @@ findFarePolicyFromCAC id toss = do
         Success a -> return a
         DAT.Error err -> error $ pack "error in parsing the context value for farepolicy " <> pack err
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
-findById id = do
+findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Maybe Text -> m (Maybe FarePolicy)
+findById id txnId = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCAC) systemConfigs
   ( if useCACConfig
       then
         ( do
-            gen <- newStdGen
-            let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-            logDebug $ "the toss value is for transporter config " <> show toss
-            findFarePolicyFromCAC id toss
+            tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
+            isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+            if isExp && isJust txnId
+              then do
+                Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACFarePolicy (fromJust txnId)) >>= \case
+                  Just (a :: Int) -> do
+                    findFarePolicyFromCAC id a
+                  Nothing -> do
+                    gen <- newStdGen
+                    let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+                    logDebug $ "the toss value is for farePolicy " <> show toss
+                    _ <- cacheToss (fromJust txnId) toss
+                    findFarePolicyFromCAC id toss
+              else findFarePolicyFromCAC id 1
         )
       else
         ( do
@@ -104,6 +114,14 @@ cacheFarePolicy fp = do
   let idKey = makeIdKey fp.id
   Hedis.withCrossAppRedis $ do
     Hedis.setExp idKey (coerce @FarePolicy @(FarePolicyD 'Unsafe) fp) expTime
+
+cacheToss :: (CacheFlow m r) => Text -> Int -> m ()
+cacheToss txnId toss = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeCACFarePolicy txnId) toss expTime
+
+makeCACFarePolicy :: Text -> Text
+makeCACFarePolicy id = "driver-offer:CAC:CachedQueries:TransporterConfig:PersonId-" <> id
 
 makeIdKey :: Id FarePolicy -> Text
 makeIdKey id = "driver-offer:CachedQueries:FarePolicy:Id-" <> id.getId
