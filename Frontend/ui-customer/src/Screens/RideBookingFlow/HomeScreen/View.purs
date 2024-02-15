@@ -478,10 +478,10 @@ getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((
                             else (((screenHeight unit)/ 15)*10))
 
 
-getCarouselConfig ∷ ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
-getCarouselConfig view state = {
+getCarouselConfig ∷ ListItem → HomeScreenState → Array (BannerCarousel.Config (BannerCarousel.Action → Action)) → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
+getCarouselConfig view state banners = {
     view
-  , items : BannerCarousel.bannerTransformer $ getBannerConfigs state BannerCarousel
+  , items : BannerCarousel.bannerTransformer banners
   , orientation : HORIZONTAL
   , currentPage : state.data.bannerData.currentPage
   , autoScroll : state.data.config.bannerCarousel.enableAutoScroll
@@ -1079,11 +1079,17 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
 
 bannersCarousal :: forall w. ListItem -> HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bannersCarousal view state push =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , margin $ MarginTop 12
-  ][CarouselHolder.carouselView push $ getCarouselConfig view state]
+  let banners = getBannerConfigs state BannerCarousel
+      len = length banners
+  in if len > 0
+      then
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ MarginTop 12
+        ][CarouselHolder.carouselView push $ getCarouselConfig view state banners]
+      else dummyView state
+      
 
 emptySuggestionsBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptySuggestionsBanner state push = 
