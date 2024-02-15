@@ -577,7 +577,6 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
         Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
-    getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (dObj.driverId) now
 
     makeDriverPoolRes nearestGoHomeDrivers =
       DriverPoolResult
