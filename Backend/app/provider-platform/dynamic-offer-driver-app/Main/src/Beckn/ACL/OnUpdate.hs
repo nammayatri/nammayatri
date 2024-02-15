@@ -36,6 +36,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent a
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent as SafetyAlertDU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent as StopArrivedOU
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.OnUpdate as Reexport
 import Kernel.Prelude
@@ -44,11 +45,14 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
+-- import SharedLogic.Beckn.Common
+
 buildOnUpdateMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage (RideAssignedBuildReq DRideAssignedReq {..}) = do
+  let BookingDetails {..} = bookingDetails
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image Nothing Nothing isDriverBirthDay isFreeRide
   return $
     OnUpdate.OnUpdateMessage
@@ -62,6 +66,7 @@ buildOnUpdateMessage (RideAssignedBuildReq DRideAssignedReq {..}) = do
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
 buildOnUpdateMessage (RideStartedBuildReq DRideStartedReq {..}) = do
+  let BookingDetails {..} = bookingDetails
   let personTag = Common.mkLocationTagGroup tripStartLocation
       odometerTag = Common.mkOdometerTagGroup ((.value) <$> ride.startOdometerReading)
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG odometerTag) (Just $ Tags.TG personTag) False False
@@ -76,6 +81,7 @@ buildOnUpdateMessage (RideStartedBuildReq DRideStartedReq {..}) = do
         update_target = "order.fufillment.state.code"
       }
 buildOnUpdateMessage (RideCompletedBuildReq DRideCompletedReq {..}) = do
+  let BookingDetails {..} = bookingDetails
   let personTag = Common.mkLocationTagGroup tripEndLocation
   distanceTagGroup <- Common.buildDistanceTagGroup ride
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG distanceTagGroup) (Just $ Tags.TG personTag) False False
@@ -105,6 +111,7 @@ buildOnUpdateMessage (BookingCancelledBuildReq DBookingCancelledReq {..}) = do
         update_target = "state,fufillment.state.code"
       }
 buildOnUpdateMessage (DriverArrivedBuildReq DDriverArrivedReq {..}) = do
+  let BookingDetails {..} = bookingDetails
   let tagGroups = Common.mkArrivalTimeTagGroup arrivalTime
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups) Nothing False False
   return $
@@ -118,6 +125,7 @@ buildOnUpdateMessage (DriverArrivedBuildReq DDriverArrivedReq {..}) = do
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
 buildOnUpdateMessage (EstimateRepetitionBuildReq DEstimateRepetitionReq {..}) = do
+  let BookingDetails {..} = bookingDetails
   let tagGroups =
         [ Tags.TagGroup
             { display = False,
@@ -140,6 +148,7 @@ buildOnUpdateMessage (EstimateRepetitionBuildReq DEstimateRepetitionReq {..}) = 
         update_target = "order.fufillment.state.code, order.tags"
       }
 buildOnUpdateMessage (NewMessageBuildReq DNewMessageReq {..}) = do
+  let BookingDetails {..} = bookingDetails
   let tagGroups =
         [ Tags.TagGroup
             { display = False,
@@ -160,6 +169,7 @@ buildOnUpdateMessage (NewMessageBuildReq DNewMessageReq {..}) = do
               }
       }
 buildOnUpdateMessage (SafetyAlertBuildReq DSafetyAlertReq {..}) = do
+  let BookingDetails {..} = bookingDetails
   let tagGroups =
         [ Tags.TagGroup
             { display = False,
@@ -180,6 +190,7 @@ buildOnUpdateMessage (SafetyAlertBuildReq DSafetyAlertReq {..}) = do
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
 buildOnUpdateMessage (StopArrivedBuildReq DStopArrivedBuildReq {..}) = do
+  let BookingDetails {..} = bookingDetails
   fulfillment <- Common.mkFulfillment Nothing ride booking Nothing Nothing Nothing Nothing False False
   return $
     OnUpdate.OnUpdateMessage
@@ -199,14 +210,13 @@ buildOnUpdateMessageV2 ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DM.Merchant ->
-  Maybe Context.City ->
-  Maybe Context.Country ->
+  DRB.Booking ->
   OnUpdateBuildReq ->
   m Spec.OnUpdateReq
-buildOnUpdateMessageV2 merchant mbBapCity mbBapCountry req = do
+buildOnUpdateMessageV2 merchant booking req = do
   msgId <- generateGUID
   let bppId = getShortId $ merchant.subscriberId
-      city = fromMaybe merchant.city mbBapCity
-      country = fromMaybe merchant.country mbBapCountry
+      city = fromMaybe merchant.city booking.bapCity
+      country = fromMaybe merchant.country booking.bapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  TFOU.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country req
+  TFOU.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country booking req

@@ -24,22 +24,30 @@ module Domain.Action.Beckn.OnStatus
   )
 where
 
+-- import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+
+import qualified Data.HashMap.Strict as HM
+-- import qualified Storage.Queries.FareBreakup as QFareBreakup
+
+import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
+import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
+import Tools.Metrics (HasBAPMetrics)
 
 data DOnStatusReq = DOnStatusReq
   { bppBookingId :: Id DB.BPPBooking,
@@ -77,26 +85,27 @@ data RideCompletedInfo = RideCompletedInfo
 
 data RideDetails
   = NewBookingDetails
-  | RideAssignedDetails
-      { newRideInfo :: NewRideInfo
-      }
-  | RideStartedDetails
-      { newRideInfo :: NewRideInfo,
-        rideStartedInfo :: RideStartedInfo
-      }
-  | RideCompletedDetails
-      { newRideInfo :: NewRideInfo,
-        rideStartedInfo :: RideStartedInfo,
-        rideCompletedInfo :: RideCompletedInfo
-      }
-  | BookingCancelledDetails
-      { mbNewRideInfo :: Maybe NewRideInfo,
-        cancellationSource :: DBCR.CancellationSource
-      }
-  | BookingReallocationDetails
-      { newRideInfo :: NewRideInfo,
+  | RideAssignedDetails DCommon.RideAssignedReq
+  | -- { newRideInfo :: NewRideInfo
+    -- }
+    RideStartedDetails DCommon.RideStartedReq
+  | -- { newRideInfo :: NewRideInfo,
+    --   rideStartedInfo :: RideStartedInfo
+    -- }
+    RideCompletedDetails DCommon.RideCompletedReq
+  | -- { newRideInfo :: NewRideInfo,
+    --   rideStartedInfo :: RideStartedInfo,
+    --   rideCompletedInfo :: RideCompletedInfo
+    -- }
+    BookingCancelledDetails DCommon.BookingCancelledReq
+  | -- { mbNewRideInfo :: Maybe NewRideInfo,
+    --   cancellationSource :: DBCR.CancellationSource
+    -- }
+    BookingReallocationDetails
+      { bookingDetails :: DCommon.BookingDetails,
         reallocationSource :: DBCR.CancellationSource
       }
+  | DriverArrivedDetails DCommon.DriverArrivedReq
 
 -- the same as OnUpdateFareBreakup
 data OnStatusFareBreakup = OnStatusFareBreakup
@@ -113,7 +122,7 @@ data RideEntity
       { ride :: DRide.Ride
       }
 
-buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> NewRideInfo -> m RideEntity
+buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
 buildRideEntity booking updRide newRideInfo = do
   mbExistingRide <- B.runInReplica $ QRide.findByBPPRideId newRideInfo.bppRideId
   case mbExistingRide of
@@ -144,7 +153,23 @@ isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
         RenewedRide {} -> True
   bookingStatusChanged || rideStatusChanged
 
-onStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DOnStatusReq -> m ()
+onStatus ::
+  ( MonadFlow m,
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasBAPMetrics m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    EventStreamFlow m r,
+    EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasField "hotSpotExpiry" r Seconds
+  ) =>
+  DOnStatusReq ->
+  m ()
 onStatus req = do
   booking <- QB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> req.bppBookingId.getId)
   case req.rideDetails of
@@ -158,63 +183,66 @@ onStatus req = do
       where
         bookingNewStatus = DB.NEW
         rideNewStatus = DRide.CANCELLED
-    RideAssignedDetails {newRideInfo} -> do
-      rideEntity <- buildRideEntity booking updateNewRide newRideInfo
-      rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
-      where
-        bookingNewStatus = DB.TRIP_ASSIGNED
-        rideNewStatus = DRide.NEW
-        updateNewRide newRide = newRide{status = rideNewStatus}
-    RideStartedDetails {newRideInfo, rideStartedInfo} -> do
-      rideEntity <- buildRideEntity booking updateRideStarted newRideInfo
-      rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
-      where
-        bookingNewStatus = DB.TRIP_ASSIGNED
-        rideNewStatus = DRide.INPROGRESS
-        updateRideStarted newRide =
-          newRide{status = rideNewStatus,
-                  rideStartTime = Just rideStartedInfo.rideStartTime,
-                  driverArrivalTime = rideStartedInfo.driverArrivalTime
-                 }
-    RideCompletedDetails {newRideInfo, rideStartedInfo, rideCompletedInfo} -> do
-      rideEntity <- buildRideEntity booking updateRideCompleted newRideInfo
-      rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
-      when (isStatusChanged booking.status bookingNewStatus rideEntity) $ do
-        breakups <- traverse (buildFareBreakup booking.id) rideCompletedInfo.fareBreakups
-        QFareBreakup.deleteAllByBookingId booking.id
-        QFareBreakup.createMany breakups
-        whenJust rideCompletedInfo.paymentUrl $ QB.updatePaymentUrl booking.id
-      where
-        bookingNewStatus = DB.COMPLETED
-        rideNewStatus = DRide.COMPLETED
-        updateRideCompleted newRide =
-          newRide{status = rideNewStatus,
-                  rideStartTime = Just rideStartedInfo.rideStartTime,
-                  driverArrivalTime = rideStartedInfo.driverArrivalTime,
-                  fare = Just rideCompletedInfo.fare,
-                  totalFare = Just rideCompletedInfo.totalFare,
-                  chargeableDistance = Just rideCompletedInfo.chargeableDistance,
-                  -- traveledDistance = Just rideCompletedInfo.traveledDistance, -- did not changed in on_update
-                  rideEndTime = Just rideCompletedInfo.rideEndTime
-                 }
-    BookingCancelledDetails {mbNewRideInfo, cancellationSource} -> do
-      mbRideEntity <- forM mbNewRideInfo (buildRideEntity booking updateRideCancelled)
-      let mbRideId = case mbRideEntity of
-            Just (UpdatedRide {ride}) -> Just ride.id
-            Just (RenewedRide {ride}) -> Just ride.id
-            Nothing -> Nothing
-      let bookingCancellationReason = mkBookingCancellationReason booking.id mbRideId cancellationSource booking.merchantId
-      whenJust mbRideEntity \rideEntity -> do
-        rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
-      when (maybe (booking.status == bookingNewStatus) (isStatusChanged booking.status bookingNewStatus) mbRideEntity) $ do
-        unless (cancellationSource == DBCR.ByUser) $
-          QBCR.upsert bookingCancellationReason
-      where
-        bookingNewStatus = DB.CANCELLED
-        rideNewStatus = DRide.CANCELLED
-        updateRideCancelled newRide = newRide{status = rideNewStatus}
-    BookingReallocationDetails {newRideInfo, reallocationSource} -> do
-      rideEntity <- buildRideEntity booking updateReallocatedRide newRideInfo
+    RideAssignedDetails request -> DCommon.rideAssignedReqHandler request
+    DriverArrivedDetails request -> DCommon.driverArrivedReqHandler request
+    -- rideEntity <- buildRideEntity booking updateNewRide newRideInfo
+    -- rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
+    -- where
+    --   bookingNewStatus = DB.TRIP_ASSIGNED
+    --   rideNewStatus = DRide.NEW
+    --   updateNewRide newRide = newRide{status = rideNewStatus}
+    RideStartedDetails request -> DCommon.rideStartedReqHandler request
+    -- rideEntity <- buildRideEntity booking updateRideStarted newRideInfo
+    -- rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
+    -- where
+    --   bookingNewStatus = DB.TRIP_ASSIGNED
+    --   rideNewStatus = DRide.INPROGRESS
+    --   updateRideStarted newRide =
+    --     newRide{status = rideNewStatus,
+    --             rideStartTime = Just rideStartedInfo.rideStartTime,
+    --             driverArrivalTime = rideStartedInfo.driverArrivalTime
+    --            }
+    -- RideCompletedDetails {newRideInfo, rideStartedInfo, rideCompletedInfo} -> do
+    RideCompletedDetails request -> DCommon.rideCompletedReqHandler request
+    -- rideEntity <- buildRideEntity booking updateRideCompleted newRideInfo
+    -- rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
+    -- when (isStatusChanged booking.status bookingNewStatus rideEntity) $ do
+    --   breakups <- traverse (buildFareBreakup booking.id) rideCompletedInfo.fareBreakups
+    --   QFareBreakup.deleteAllByBookingId booking.id
+    --   QFareBreakup.createMany breakups
+    --   whenJust rideCompletedInfo.paymentUrl $ QB.updatePaymentUrl booking.id
+    -- where
+    --   bookingNewStatus = DB.COMPLETED
+    --   rideNewStatus = DRide.COMPLETED
+    --   updateRideCompleted newRide =
+    --     newRide{status = rideNewStatus,
+    --             rideStartTime = Just rideStartedInfo.rideStartTime,
+    --             driverArrivalTime = rideStartedInfo.driverArrivalTime,
+    --             fare = Just rideCompletedInfo.fare,
+    --             totalFare = Just rideCompletedInfo.totalFare,
+    --             chargeableDistance = Just rideCompletedInfo.chargeableDistance,
+    --             -- traveledDistance = Just rideCompletedInfo.traveledDistance, -- did not changed in on_update
+    --             rideEndTime = Just rideCompletedInfo.rideEndTime
+    --            }
+    -- BookingCancelledDetails {mbNewRideInfo, cancellationSource} -> do
+    BookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request
+    -- mbRideEntity <- forM mbNewRideInfo (buildRideEntity booking updateRideCancelled)
+    -- let mbRideId = case mbRideEntity of
+    --       Just (UpdatedRide {ride}) -> Just ride.id
+    --       Just (RenewedRide {ride}) -> Just ride.id
+    --       Nothing -> Nothing
+    -- let bookingCancellationReason = mkBookingCancellationReason booking.id mbRideId cancellationSource booking.merchantId
+    -- whenJust mbRideEntity \rideEntity -> do
+    --   rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
+    -- when (maybe (booking.status == bookingNewStatus) (isStatusChanged booking.status bookingNewStatus) mbRideEntity) $ do
+    --   unless (cancellationSource == DBCR.ByUser) $
+    --     QBCR.upsert bookingCancellationReason
+    -- where
+    --   bookingNewStatus = DB.CANCELLED
+    --   rideNewStatus = DRide.CANCELLED
+    --   updateRideCancelled newRide = newRide{status = rideNewStatus}
+    BookingReallocationDetails {bookingDetails, reallocationSource} -> do
+      rideEntity <- buildRideEntity booking updateReallocatedRide bookingDetails
       let rideId = case rideEntity of
             UpdatedRide {ride} -> ride.id
             RenewedRide {ride} -> ride.id
@@ -227,8 +255,8 @@ onStatus req = do
         rideNewStatus = DRide.CANCELLED
         updateReallocatedRide newRide = newRide{status = rideNewStatus}
 
-buildNewRide :: MonadFlow m => Maybe DM.Merchant -> DB.Booking -> NewRideInfo -> m DRide.Ride
-buildNewRide mbMerchant booking NewRideInfo {..} = do
+buildNewRide :: MonadFlow m => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
+buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   id <- generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
@@ -282,11 +310,11 @@ mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = d
       driverDistToPickup = Nothing
     }
 
-buildFareBreakup :: MonadGuid m => Id DB.Booking -> OnStatusFareBreakup -> m DFareBreakup.FareBreakup
-buildFareBreakup bookingId OnStatusFareBreakup {..} = do
-  guid <- generateGUID
-  pure
-    DFareBreakup.FareBreakup
-      { id = guid,
-        ..
-      }
+-- buildFareBreakup :: MonadGuid m => Id DB.Booking -> OnStatusFareBreakup -> m DFareBreakup.FareBreakup
+-- buildFareBreakup bookingId OnStatusFareBreakup {..} = do
+--   guid <- generateGUID
+--   pure
+--     DFareBreakup.FareBreakup
+--       { id = guid,
+--         ..
+--       }

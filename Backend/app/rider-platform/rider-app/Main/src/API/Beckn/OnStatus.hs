@@ -48,8 +48,9 @@ onStatus _ reqBS = withFlowHandlerBecknAPI do
       transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
       Utils.withTransactionIdLogTag transactionId $ ACL.buildOnStatusReqV2 reqV2
     Left reqV1 ->
-      withTransactionIdLogTag reqV1 $
-        ACL.buildOnStatusReq reqV1
+      throwError $ InvalidRequest $ "On Status v1 req shouldn't come" <> show reqV1
+  -- withTransactionIdLogTag reqV1 $
+  --   ACL.buildOnStatusReq reqV1
   whenJust mbDOnStatusReq DOnStatus.onStatus
   pure Ack
 

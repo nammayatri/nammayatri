@@ -199,6 +199,7 @@ library
       Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp
       Domain.Types.BapMetadata
+      Domain.Types.Beckn.Status
       Domain.Types.BlackListOrg
       Domain.Types.Booking
       Domain.Types.Booking.BookingLocation
@@ -317,6 +318,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+      SharedLogic.Beckn.Common
       SharedLogic.Booking
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal

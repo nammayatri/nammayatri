@@ -47,6 +47,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
@@ -61,9 +62,10 @@ cancelRideImpl rideId bookingCReason = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   cancelRideTransaction booking ride bookingCReason merchantId
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
 
   fork "cancelRide - Notify driver" $ do
-    driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
     when (bookingCReason.source == SBCR.ByDriver) $
@@ -91,7 +93,7 @@ cancelRideImpl rideId bookingCReason = do
             void $ addDriverToSearchCancelledList searchReq.id ride
             result <- try @_ @SomeException (initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq driverQuote.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId)
             case result of
-              Right _ -> BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source
+              Right _ -> BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source driver vehicle
               Left _ -> cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
           else -- repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
             cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source

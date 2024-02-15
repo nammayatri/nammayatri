@@ -13,19 +13,25 @@
 -}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
-module Domain.Types.OnUpdate where
+module Domain.Types.OnUpdate
+  ( module Domain.Types.OnUpdate,
+    module Reexport,
+  )
+where
 
-import qualified Domain.Types.Booking as DRB
+-- import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEst
-import qualified Domain.Types.FareParameters as Fare
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Person as SP
-import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.Vehicle as SVeh
-import Kernel.External.Maps.Types as Maps
+-- import qualified Domain.Types.FareParameters as Fare
+-- import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+-- import qualified Domain.Types.Person as SP
+-- import qualified Domain.Types.Ride as DRide
+-- import qualified Domain.Types.Vehicle as SVeh
+
+-- import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
+import SharedLogic.Beckn.Common as Reexport
 
 data OnUpdateBuildReq
   = RideAssignedBuildReq DRideAssignedReq
@@ -38,71 +44,53 @@ data OnUpdateBuildReq
   | SafetyAlertBuildReq DSafetyAlertReq
   | StopArrivedBuildReq DStopArrivedBuildReq
 
-data DRideAssignedReq = DRideAssignedReq
-  { driver :: SP.Person,
-    vehicle :: SVeh.Vehicle,
-    ride :: DRide.Ride,
-    booking :: DRB.Booking,
-    image :: Maybe Text,
-    isDriverBirthDay :: Bool,
-    isFreeRide :: Bool
+-- data DRideAssignedReq = DRideAssignedReq
+--   { bookingDetails :: DCommon.BookingDetails,
+--     image :: Maybe Text,
+--     isDriverBirthDay :: Bool,
+--     isFreeRide :: Bool
+--   }
+
+newtype DStopArrivedBuildReq = DStopArrivedBuildReq
+  { bookingDetails :: BookingDetails
   }
 
-data DStopArrivedBuildReq = DStopArrivedBuildReq
-  { ride :: DRide.Ride,
-    booking :: DRB.Booking
-  }
+-- data DRideStartedReq = DRideStartedReq
+--   { bookingDetails :: DCommon.BookingDetails,
+--     tripStartLocation :: Maybe Maps.LatLong
+--   }
 
-data DRideStartedReq = DRideStartedReq
-  { driver :: SP.Person,
-    vehicle :: SVeh.Vehicle,
-    ride :: DRide.Ride,
-    booking :: DRB.Booking,
-    tripStartLocation :: Maybe Maps.LatLong
-  }
+-- data DRideCompletedReq = DRideCompletedReq
+--   { bookingDetails :: DCommon.BookingDetails,
+--     fareParams :: Fare.FareParameters,
+--     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+--     paymentUrl :: Maybe Text,
+--     tripEndLocation :: Maybe Maps.LatLong
+--   }
 
-data DRideCompletedReq = DRideCompletedReq
-  { ride :: DRide.Ride,
-    driver :: SP.Person,
-    vehicle :: SVeh.Vehicle,
-    booking :: DRB.Booking,
-    fareParams :: Fare.FareParameters,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    paymentUrl :: Maybe Text,
-    tripEndLocation :: Maybe Maps.LatLong
-  }
+-- data DBookingCancelledReq = DBookingCancelledReq
+--   { booking :: DRB.Booking,
+--     cancellationSource :: SBCR.CancellationSource
+--   }
 
-data DBookingCancelledReq = DBookingCancelledReq
-  { booking :: DRB.Booking,
-    cancellationSource :: SBCR.CancellationSource
-  }
-
-data DDriverArrivedReq = DDriverArrivedReq
-  { ride :: DRide.Ride,
-    driver :: SP.Person,
-    vehicle :: SVeh.Vehicle,
-    booking :: DRB.Booking,
-    arrivalTime :: Maybe UTCTime
-  }
+-- data DDriverArrivedReq = DDriverArrivedReq
+--   { bookingDetails :: DCommon.BookingDetails,
+--     arrivalTime :: Maybe UTCTime
+--   }
 
 data DEstimateRepetitionReq = DEstimateRepetitionReq
-  { ride :: DRide.Ride,
-    booking :: DRB.Booking,
+  { bookingDetails :: BookingDetails,
     estimateId :: Id DEst.Estimate,
     cancellationSource :: SBCR.CancellationSource
   }
 
 data DNewMessageReq = DNewMessageReq
-  { ride :: DRide.Ride,
-    driver :: SP.Person,
-    vehicle :: SVeh.Vehicle,
-    booking :: DRB.Booking,
+  { bookingDetails :: BookingDetails,
     message :: Text
   }
 
 data DSafetyAlertReq = DSafetyAlertReq
-  { ride :: DRide.Ride,
-    booking :: DRB.Booking,
+  { bookingDetails :: BookingDetails,
     code :: Text,
     reason :: Text
   }
