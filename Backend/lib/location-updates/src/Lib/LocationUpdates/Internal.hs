@@ -63,7 +63,8 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> m (),
-    updateRouteDeviation :: Id person -> [LatLong] -> m Bool
+    updateRouteDeviation :: Id person -> [LatLong] -> m Bool,
+    getTravelledDistance :: Id person -> Meters -> m Meters
   }
 
 --------------------------------------------------------------------------------
@@ -146,7 +147,9 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
         then do
           currSnapToRoadState <- processSnapToRoadCall
           updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
-        else updateDistance driverId (metersToHighPrecMeters estDist) 0 0
+        else do
+          distanceToBeUpdated <- getTravelledDistance driverId estDist
+          updateDistance driverId (metersToHighPrecMeters distanceToBeUpdated) 0 0
     else do
       isAtLeastBatchPlusOne <- atLeastBatchPlusOne
       when (snapToRoadCallCondition && isAtLeastBatchPlusOne) $ do
@@ -212,9 +215,10 @@ mkRideInterpolationHandler ::
   Bool ->
   (Id person -> HighPrecMeters -> Int -> Int -> m ()) ->
   (Id person -> [LatLong] -> m Bool) ->
+  (Id person -> Meters -> m Meters) ->
   (Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation snapToRoadCall =
+mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation getTravelledDistance snapToRoadCall =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -231,7 +235,8 @@ mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation snapToR
       updateDistance,
       updateRouteDeviation,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
-      wrapDistanceCalculation = wrapDistanceCalculationImplementation
+      wrapDistanceCalculation = wrapDistanceCalculationImplementation,
+      getTravelledDistance
     }
 
 makeWaypointsRedisKey :: Id person -> Text
