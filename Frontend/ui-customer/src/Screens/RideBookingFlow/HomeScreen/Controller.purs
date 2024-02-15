@@ -1799,13 +1799,13 @@ eval OpenEmergencyHelp state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
-eval ShareRide state = do
-  continueWithCmd state
-        [ do
-            _ <- pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/journey/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
-            void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
-            pure NoAction
-         ]
+eval ShareRide state = exit $ GoToMetroTicketBookingFlow state
+  -- continueWithCmd state
+  --       [ do
+  --           _ <- pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/journey/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+  --           void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
+  --           pure NoAction
+  --        ]
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.GenericHeaderAC  GenericHeaderController.PrefixImgOnClick)) state = continue state{props{emergencyHelpModal = false}}
 

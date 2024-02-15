@@ -3126,7 +3126,9 @@ metroTicketBookingFlow = do
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{props { currentStage = ConfirmMetroQuote }})
       modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusScreen{data{quoteId = state.data.quoteId}})
       metroTicketBookingFlow
-    GO_TO_HOME_FROM_METRO_TICKET -> homeScreenFlow
+    GO_TO_HOME_FROM_METRO_TICKET -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isInApp = false}})
+      homeScreenFlow
     where
       getMetroStationsList :: Array GetMetroStationResp -> ST.MetroStationsList
       getMetroStationsList metroStationArr = {

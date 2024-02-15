@@ -63,6 +63,7 @@ import Components.DriverInfoCard.Common.Types
 import CarouselHolder as CarouselHolder
 import Components.BannerCarousel as BannerCarousel
 import PrestoDOM.List as PrestoList
+import Unsafe.Coerce (unsafeCoerce)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -294,18 +295,17 @@ driverInfoView push state =
                   ][]
                   , contactView push state
                   , if state.props.currentStage == RideStarted then distanceView push state else dummyView push
-                ] <> (if state.props.showBanner then (maybe [] (\item -> if (Array.length state.data.bannerArray) > 0 then [CarouselHolder.carouselView push $ getCarouselConfig item state]  else []) state.data.bannerData.bannerItem) else [])
-                  <> ( [ linearLayout
-                          [ height WRAP_CONTENT
-                          , width MATCH_PARENT
-                          , orientation VERTICAL
-                          , margin $ MarginTop 12
-                          ]
-                          [ driverDetailsView (getDriverDetails state) "DriverDetailsView"
-                          , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
-                          ]
+                  -- , if state.props.showBanner then CarouselHolder.carouselView push $ getCarouselConfig (fromMaybe dummyListItem state.data.bannerData.bannerItem) state else dummyView push
+                  , linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      , margin $ MarginTop 12
                       ]
-                    )
+                      [ driverDetailsView (getDriverDetails state) "DriverDetailsView"
+                      , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
+                      ]
+                  ]
               ]
               , linearLayout
                 [ width MATCH_PARENT
@@ -335,6 +335,9 @@ getCarouselConfig view state = {
   , onPageScrolled : Nothing
   , currentIndex : state.data.bannerData.currentBanner
 }
+
+dummyListItem :: PrestoList.ListItem
+dummyListItem = unsafeCoerce {}
 
 distanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 distanceView push state = 

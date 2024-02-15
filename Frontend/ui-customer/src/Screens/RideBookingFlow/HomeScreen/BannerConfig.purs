@@ -50,10 +50,10 @@ getBannerConfigs state action =
 
 
 getDriverInfoCardBanners :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
-getDriverInfoCardBanners state action = 
-  if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
-    then [sosSetupBannerConfig state action] 
-    else []
+getDriverInfoCardBanners state action = [metroBannerConfig state action]
+  -- if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
+  --   then [sosSetupBannerConfig state action] 
+  --   else []
 
 
 disabilityBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a

@@ -1090,7 +1090,7 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , merchantCity : state.props.city
-                                  , showBanner : state.props.currentStage == RideStarted
+                                  , showBanner : state.props.isInApp
                                   }
                               , data: driverInfoTransformer state
                             }
