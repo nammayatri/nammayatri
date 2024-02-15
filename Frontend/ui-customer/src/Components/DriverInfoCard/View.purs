@@ -294,7 +294,7 @@ driverInfoView push state =
                   ][]
                   , contactView push state
                   , if state.props.currentStage == RideStarted then distanceView push state else dummyView push
-                ] <> (if state.props.showBanner then (maybe [] (\item -> [ CarouselHolder.carouselView push $ getCarouselConfig item state ]) state.data.bannerData.bannerItem) else [])
+                ] <> (if state.props.showBanner then (maybe [] (\item -> if (Array.length state.data.bannerArray) > 0 then [CarouselHolder.carouselView push $ getCarouselConfig item state]  else []) state.data.bannerData.bannerItem) else [])
                   <> ( [ linearLayout
                           [ height WRAP_CONTENT
                           , width MATCH_PARENT
