@@ -151,6 +151,7 @@ initData = {
     } 
     , contactList : []
     , followers : Nothing
+    , hotSpotInfo : []
     },
     props: {
       rideRequestFlow : false
@@ -298,6 +299,7 @@ initData = {
         referralStatus : NO_REFERRAL,
         referralCode : Nothing
       }
+    , hotSpot : { manuallyMoved : false, selectedSpot : Nothing }
     }
 }
 

@@ -251,9 +251,9 @@ config =
             apiTriggerRadius : 10.0,
             pickUpToSourceThreshold : 1.0,
             hotSpotConfig :
-              { goToNearestPointWithinRadius : 30.0
+              { goToNearestPointWithinRadius : 8.0
               , showHotSpotsWithinRadius : 150.0
-              , enableHotSpot : false
+              , enableHotSpot : true
               }
           }
       , labelTextSize : 30
