@@ -1602,13 +1602,13 @@ issueReportChatScreenFlow = do
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT postIssueRes.issueReportId
       _ <- pure $ hideKeyboardOnNavigation true
       let showDescription = STR.length (trim issueInfoRes.description) > 0
-      let descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description "Driver" (if null issueInfoRes.mediaFiles then (getCurrentUTC "") else "") "Text" 500) else state.data.chatConfig.messages
+      let descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description "Driver" (getCurrentUTC "") "Text" 500) else state.data.chatConfig.messages
       let mediaMessages' = mapWithIndex (\index media -> do
                         if index == length issueInfoRes.mediaFiles - 1
                         then
                           makeChatComponent' media.url "Driver" (getCurrentUTC "") media._type ((index + if showDescription then 2 else 1) * 500)
                         else
-                          makeChatComponent' media.url "Driver" "" media._type ((index + if showDescription then 2 else 1) * 500)
+                          makeChatComponent' media.url "Driver" (getCurrentUTC "") media._type ((index + if showDescription then 2 else 1) * 500)
                     ) (issueInfoRes.mediaFiles)
       if state.props.isReversedFlow
       then do
