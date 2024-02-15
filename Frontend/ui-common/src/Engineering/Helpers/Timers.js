@@ -127,7 +127,8 @@ export const startTimerWithTimeV2Impl = function (time, cdTimerId, interval, cb,
 export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, action) => {
   if (window.__OS == "IOS") {
     if (JBridge.startCountUpTimerV2) {
-      const callbackIOS = callbackMapper.map(function (timerID, mins) {
+      const callbackIOS = callbackMapper.map(function (timerID, sec) {
+        const mins = getTwoDigitsNumber(Math.floor(sec / 60));
         const hours = getTwoDigitsNumber(Math.floor(mins / 60));
         const minutes = getTwoDigitsNumber(Math.floor((mins - (hours * 60))));
         const timeInHHMMFormat = hours + " : " + minutes;
@@ -136,7 +137,8 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
       JBridge.startCountUpTimerV2(startingTime.toString(), interval, timerId, callbackIOS);
     }
     else if (JBridge.startCountUpTimer) {
-      const callbackIOS = callbackMapper.map(function (timerID, mins) {
+      const callbackIOS = callbackMapper.map(function (timerID, sec) {
+        const mins = getTwoDigitsNumber(Math.floor(sec / 60));
         const hours = getTwoDigitsNumber(Math.floor(mins / 60));
         const minutes = getTwoDigitsNumber(Math.floor((mins - (hours * 60))));
         const timeInHHMMFormat = hours + " : " + minutes;

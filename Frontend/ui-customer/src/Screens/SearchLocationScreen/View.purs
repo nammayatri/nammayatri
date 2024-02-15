@@ -35,7 +35,7 @@ import Control.Monad.Free (runFree)
 import Helpers.Utils (fetchAndUpdateCurrentLocation)
 import Data.Maybe (isNothing, maybe, Maybe(..), isJust ) as MB
 import Resources.Constants (getDelayForAutoComplete)
-import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom) as EHC
+import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom, safeMarginTop) as EHC
 import Data.String (length, null, take) as DS
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -71,6 +71,7 @@ view globalProps push state =
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
+    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     , background Color.white900
     ][  PrestoAnim.animationSet
           [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  $ 
@@ -404,6 +405,7 @@ locateOnMapFooterView push state = let
     , width MATCH_PARENT
     , alignParentBottom "true,-1"
     , orientation VERTICAL
+    , gravity CENTER_VERTICAL
     , visibility viewVisibility
     , background Color.white900
     ][  verticalSeparatorView 2
@@ -430,13 +432,13 @@ locateOnMapFooterView push state = let
                       , layoutGravity "center"
                       , imageWithFallback item.imageName
                       ]  
-                    , textView
+                    , textView $
                       [ text $ item.text
                       , layoutGravity "center"
                       , height WRAP_CONTENT
                       , gravity CENTER
                       , onClick push $ const $ item.action
-                      ]
+                      ] <> FontStyle.body1 TypoGraphy
                     ]
                 ] <> if isNotLastIndex then [horizontalSeparatorView 2] else []
         ) (footerArray state ))
