@@ -49,6 +49,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Language.Strings
 import Language.Types
+import Data.String as DS
 
 screen :: ST.MetroTicketDetailsScreenState -> Screen Action ST.MetroTicketDetailsScreenState ScreenOutput
 screen initialState =
@@ -104,6 +105,7 @@ headerView push state =
     , height WRAP_CONTENT
     , padding $ Padding 16 16 16 16 
     , background Color.white900
+    , gravity CENTER_VERTICAL
     ][
       imageView [
         width $ V 24
@@ -303,6 +305,9 @@ qrCodeView push state =
                 Just ticket -> ticket.qrString
                 Nothing -> ""
     ticketStr = " " <> (getString $ if state.data.noOfTickets > 0 then TICKETS else TICKET)
+    headerText = (show $ state.props.currentTicketIndex + 1) 
+                  <> if state.data.noOfTickets > 1 then  "/" <> (show $ length state.data.ticketsInfo) else "" 
+                  <> ticketStr
   in 
     linearLayout [
       width MATCH_PARENT
@@ -315,7 +320,7 @@ qrCodeView push state =
       textView $ [
         width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ (show $ state.props.currentTicketIndex + 1) <> "/" <> (show $ length state.data.ticketsInfo) <> ticketStr
+      , text $ headerText
       , color Color.black800
       , gravity CENTER
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -323,14 +328,14 @@ qrCodeView push state =
         width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-      , gravity CENTER_VERTICAL
+      , gravity CENTER
       ][
         imageView [
           width $ V 32
         , height $ V 32
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_grey"
         , onClick push $ const PrevTicketClick
-        , visibility $ boolToVisibility $ state.data.noOfTickets > 0
+        , visibility $  boolToInvisibility $ state.data.noOfTickets > 1 
         ]
       , linearLayout [
           height WRAP_CONTENT
@@ -349,7 +354,7 @@ qrCodeView push state =
       , imageView [
           width $ V 32
         , height $ V 32
-        , visibility $ boolToVisibility $ state.data.noOfTickets > 0
+        , visibility $  boolToInvisibility $ state.data.noOfTickets > 1 
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
         , onClick push $ const NextTicketClick
         ]
@@ -379,8 +384,7 @@ ticketNumberAndValidView push state =
       , height WRAP_CONTENT
       , padding $ Padding 12 8 12 8
       , background Color.blue600 
-      , cornerRadius if os == "IOS" then 40.0 else 51.0
-
+      , cornerRadius $ if os == "IOS" then 18.0 else 51.0
       , gravity CENTER
       ][
         textView $ [
@@ -642,7 +646,7 @@ routeDetailsItemView push index routeDetails =
       , textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text routeDetails.name
+        , text $ DS.take 40 routeDetails.name <> "..."
         , margin $ MarginLeft 8
         ] <> FontStyle.body1 TypoGraphy
       ]

@@ -70,15 +70,18 @@ data Action = BackPressed
             | ViewTicketBtnOnClick PrimaryButton.Action
             | CountDown Int String String
 
-data ScreenOutput = NoOutput 
-                  | GoBack
+data ScreenOutput = GoToHomeScreen
                   | GoToMetroTicketDetails MetroTicketStatusScreenState MetroTicketBookingStatus
                   | RefreshPaymentStatus MetroTicketStatusScreenState
                   | GoToTryAgainPayment MetroTicketStatusScreenState
+                  | GoToMyMetroTicketsScreen
 
 eval :: Action -> MetroTicketStatusScreenState -> Eval Action ScreenOutput MetroTicketStatusScreenState
 
-eval (BackPressed) state = exit GoBack
+eval (BackPressed) state = 
+  case state.props.entryPoint of 
+    HomescreenToMetroTicketStatus -> exit GoToHomeScreen 
+    MyMetroTicketsToMetroTicketStatus -> exit GoToMyMetroTicketsScreen
 
 eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatus)) state = do
   case metroTicketBookingStatus.status of 
@@ -97,7 +100,7 @@ eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatu
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
       continue state{ props{paymentStatus = PP.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
     "PAYMENT_PENDING" -> 
-      continue $ metroTicketStatusTransformer ( MetroTicketBookingStatus metroTicketBookingStatus) "" state
+      continue $ metroTicketStatusTransformer ( MetroTicketBookingStatus metroTicketBookingStatus) state
     _ -> continue state
 
 eval (RefreshStatusAC PrimaryButton.OnClick) state = exit $ RefreshPaymentStatus state

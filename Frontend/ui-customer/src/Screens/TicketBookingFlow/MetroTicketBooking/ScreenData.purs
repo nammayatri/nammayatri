@@ -30,6 +30,7 @@ initData = {
   , ticketPrice : 0
   , bookingId : ""
   , quoteId : ""
+  , quoteResp : []
   },
   props: {
     isLimitExceeded : false

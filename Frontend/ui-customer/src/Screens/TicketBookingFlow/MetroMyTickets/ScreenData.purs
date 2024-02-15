@@ -29,5 +29,6 @@ initData = {
   , props :  {
       dummyProps : ""
     , showShimmer : true
+    , entryPoint : HomeScreenToMetroMyTickets
     }
   }

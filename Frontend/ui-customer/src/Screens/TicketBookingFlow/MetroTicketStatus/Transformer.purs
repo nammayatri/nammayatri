@@ -28,8 +28,8 @@ import Language.Types
 import Domain.Payments as PP
 
 
-metroTicketStatusTransformer :: MetroTicketBookingStatus -> String -> MetroTicketStatusScreenState -> MetroTicketStatusScreenState
-metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus) shortOrderId' state = 
+metroTicketStatusTransformer :: MetroTicketBookingStatus -> MetroTicketStatusScreenState -> MetroTicketStatusScreenState
+metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus) state = 
   let 
     keyValArray' = metroTicketDetailsKeyVals (MetroTicketBookingStatus metroTicketBookingStatus)
     paymentStatus' = case metroTicketBookingStatus.status of 
