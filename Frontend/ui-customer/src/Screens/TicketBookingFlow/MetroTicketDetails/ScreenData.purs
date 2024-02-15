@@ -27,12 +27,12 @@ initData = {
   , metroRoute : []
   , ticketsInfo : []
   , ticketType : ""
-  , noOfTickets : 1
+  , noOfTickets : 0
   }
 , props :  {
     dummyProps : ""
   , stage : MetroTicketDetailsStage
   , currentTicketIndex : 0
-  , previousScreenStage : MetroMyTicketsStage
+  , previousScreenStage : MetroMyTicketsStage 
   }
 }

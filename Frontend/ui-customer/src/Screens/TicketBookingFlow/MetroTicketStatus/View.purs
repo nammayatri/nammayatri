@@ -25,7 +25,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
 import Data.Foldable (or)
-import Data.String (Pattern(..), Replacement(..), replace)
+import Data.String (Pattern(..), Replacement(..), replace, take)
 import Data.String as DS
 import Data.String.Common (joinWith)
 import Effect (Effect)
@@ -135,7 +135,7 @@ view push state =
   , width MATCH_PARENT
   , background Color.darkGradientBlue
   , onBackPressed push $ const BackPressed
-  , padding $ PaddingVertical EHC.safeMarginTop 16
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
   ][ 
     shimmerView state
   , linearLayout[
@@ -218,35 +218,36 @@ bookingStatusView state push paymentStatus =
 
 copyTransactionIdView :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 copyTransactionIdView state push  = 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width $ V $ screenWidth unit
-  , gravity CENTER
-  , margin $ Margin 6 10 6 0
-  , onClick push $ const $ Copy state.data.shortOrderId
-  ][ 
-    textView $
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , text $ getString BOOKING_ID
-      , color Color.black700
-      , margin $ MarginRight 8
-      , gravity CENTER
-      ] <> (FontStyle.body3 TypoGraphy)
-    , textView $ 
-      [ text state.data.bookingId
-      , ellipsize true
-      , color Color.black700
-      , padding $ PaddingBottom 1
-      , width $ V $ (screenWidth unit) - 200
-      ] <> FontStyle.body7 TypoGraphy
-  , imageView
-     [ width $ V 16
-     , height $ V 16
-     , margin $ MarginLeft 3
-     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_copy"
-     ] 
-  ]
+  let visibleText = take 10 state.data.bookingId
+  in 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width $ V $ screenWidth unit
+    , gravity CENTER
+    , margin $ Margin 6 10 6 0
+    , onClick push $ const $ Copy state.data.bookingId
+    ][ 
+      textView $
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ getString BOOKING_ID <> ": "
+        , color Color.black700
+        , margin $ MarginRight 8
+        , gravity CENTER
+        ] <> (FontStyle.body3 TypoGraphy)
+      , textView $ 
+        [ text $ visibleText <> "..."
+        , ellipsize true
+        , color Color.black700
+        , padding $ PaddingBottom 1
+        ] <> FontStyle.body7 TypoGraphy
+    , imageView
+      [ width $ V 16
+      , height $ V 16
+      , margin $ MarginLeft 3
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_copy"
+      ] 
+    ]
 
 bookingStatusBody :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus ->  PrestoDOM (Effect Unit) w
 bookingStatusBody state push paymentStatus = 
