@@ -16,6 +16,7 @@
 module Beckn.OnDemand.Utils.Common where
 
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
@@ -95,7 +96,7 @@ mkPaymentTags =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "BUYER_FINDER_FEES",
+                { descriptorCode = Just $ show Tags.BUYER_FINDER_FEE,
                   descriptorName = Nothing,
                   descriptorShortDesc = Nothing
                 },
@@ -106,7 +107,7 @@ mkPaymentTags =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "SETTLEMENT_TERMS",
+                { descriptorCode = Just $ show Tags.SETTLEMENT_TERMS,
                   descriptorName = Nothing,
                   descriptorShortDesc = Nothing
                 },
@@ -125,7 +126,7 @@ mkPaymentTags =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "BUYER_FINDER_FEES_PERCENTAGE",
+                  { descriptorCode = Just $ show Tags.BUYER_FINDER_FEES_PERCENTAGE,
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   },
@@ -138,7 +139,7 @@ mkPaymentTags =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "DELAY_INTEREST",
+                  { descriptorCode = Just $ show Tags.DELAY_INTEREST,
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   },
@@ -151,7 +152,7 @@ mkPaymentTags =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "SETTLEMENT_TYPE",
+                  { descriptorCode = Just $ show Tags.SETTLEMENT_TYPE,
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   },
@@ -164,7 +165,7 @@ mkPaymentTags =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "STATIC_TERMS",
+                  { descriptorCode = Just $ show Tags.STATIC_TERMS,
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   },
