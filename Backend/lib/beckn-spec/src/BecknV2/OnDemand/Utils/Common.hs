@@ -36,6 +36,9 @@ getDropLocation = find (\stop -> stop.stopType == Just "END")
 getTransactionId :: (MonadFlow m) => Spec.Context -> m Text
 getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
 
+getMessageId :: (MonadFlow m) => Spec.Context -> m Text
+getMessageId context = context.contextMessageId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
+
 decodeReq :: (MonadFlow m, A.FromJSON v1, A.FromJSON v2) => ByteString -> m (Either v1 v2)
 decodeReq reqBS =
   case A.eitherDecodeStrict reqBS of

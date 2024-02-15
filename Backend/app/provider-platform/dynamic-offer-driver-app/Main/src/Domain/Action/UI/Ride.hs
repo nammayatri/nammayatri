@@ -81,6 +81,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -347,6 +348,8 @@ otpRideCreate driver otpCode booking = do
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtStop rideId pt = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress")
   unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be reached for ride " <> ride.id.getId)
@@ -359,7 +362,7 @@ arrivedAtStop rideId pt = do
       driverReachedDistance <- asks (.driverReachedDistance)
       unless (distance < driverReachedDistance) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
       QBooking.updateStopArrival booking.id
-      BP.sendStopArrivalUpdateToBAP booking ride
+      BP.sendStopArrivalUpdateToBAP booking ride driver vehicle
       pure Success
   where
     isValidRideStatus status = status == DRide.INPROGRESS

@@ -25,7 +25,9 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
+import qualified Beckn.ACL.Common as Common
 import Beckn.ACL.Status
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
@@ -49,6 +51,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -450,12 +453,8 @@ rideSync merchant reqRideId = do
     Nothing -> pure merchant.defaultCity
     Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let dStatusReq = DStatusReq {booking, merchant, city}
-  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  if isBecknSpecVersion2
-    then do
-      becknStatusReq <- buildStatusReqV2 dStatusReq
-      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
-    else do
-      becknStatusReq <- buildStatusReq dStatusReq
-      void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
+  becknStatusReq <- buildStatusReqV2 dStatusReq
+  messageId <- Utils.getMessageId becknStatusReq.statusReqContext
+  Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
+  void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
   pure Success
