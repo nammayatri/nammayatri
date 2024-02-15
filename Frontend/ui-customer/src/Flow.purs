@@ -184,6 +184,8 @@ import Screens.TicketBookingFlow.MetroTicketDetails.Transformer
 import Screens.TicketBookingFlow.MetroMyTickets.Transformer
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
+import Services.Config(getNumbersToWhiteList)
+import SessionCache(getValueFromWindow, setValueInWindow)
 
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
@@ -453,7 +455,7 @@ enterMobileNumberScreenFlow = do
             when((getValueToLocalStore MOBILE_NUMBER) /= state.data.mobileNumber) $ do
               deleteValueFromLocalStore SUGGESTIONS_MAP
               deleteValueFromLocalStore RECENT_SEARCHES
-            setValueToLocalStore MOBILE_NUMBER (state.data.mobileNumber)
+            void $ pure $ setValueInWindow (show MOBILE_NUMBER) state.data.mobileNumber
             setValueToLocalStore COUNTRY_CODE (state.data.countryObj.countryCode)
             void $ liftFlowBT $ setCleverTapUserData "Phone" (state.data.countryObj.countryCode <> (getValueToLocalStore MOBILE_NUMBER))
             (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber state.data.countryObj.countryCode (show state.data.otpChannel))
@@ -1113,8 +1115,9 @@ homeScreenFlow = do
                 addLocToCurrLoc state.homeScreen.props.sourceLat state.homeScreen.props.sourceLong state.homeScreen.data.source
               else pure unit
             else do
+              let isWhitelisted = any (_ == getValueFromWindow (show MOBILE_NUMBER)) (getNumbersToWhiteList "")
               _ <- pure $ firebaseLogEvent "ny_loc_unserviceable"
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ isSrcServiceable = false, showlocUnserviceablePopUp = true}})
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ isSrcServiceable = isWhitelisted , showlocUnserviceablePopUp = (not isWhitelisted) }})
           else do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ isSrcServiceable = true, showlocUnserviceablePopUp = false}})
 
@@ -1125,10 +1128,12 @@ homeScreenFlow = do
         currentFlowStatus
       else homeScreenFlow
     CHECK_SERVICEABILITY updatedState lat long-> do
+      let isWhitelisted = any (_ == getValueFromWindow (show MOBILE_NUMBER)) (getNumbersToWhiteList "")
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat long)
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
           cityName = if sourceServiceabilityResp.serviceable then getCityNameFromCode sourceServiceabilityResp.city else updatedState.props.city
+          srcServiceability = isWhitelisted || sourceServiceabilityResp.serviceable
       setValueToLocalStore CUSTOMER_LOCATION (show cityName)
       _ <- pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
       modifyScreenState $ HomeScreenStateType 
@@ -1145,8 +1150,8 @@ homeScreenFlow = do
               }
             , sourceLat = sourceLat
             , sourceLong = sourceLong
-            , isSrcServiceable = sourceServiceabilityResp.serviceable
-            , showlocUnserviceablePopUp = not sourceServiceabilityResp.serviceable
+            , isSrcServiceable = srcServiceability
+            , showlocUnserviceablePopUp = not srcServiceability
             , city = cityName
             }
           }
