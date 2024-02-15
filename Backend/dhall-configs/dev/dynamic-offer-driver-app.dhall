@@ -218,14 +218,14 @@ let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 let cacConfig =
         { host = "http://localhost:8080"
         , interval = 10
-        , tenants = [ "dev", "test", "atlas_driver_ui" ]
+        , tenants = [ "dev", "test" ]
         }
       : { host : Text, interval : Natural, tenants : List Text }
 
 let superPositionConfig =
         { host = "http://localhost:8080"
         , interval = 10
-        , tenants = [ "dev", "test", "atlas_driver_ui" ]
+        , tenants = [ "dev", "test" ]
         }
       : { host : Text, interval : Natural, tenants : List Text }
 

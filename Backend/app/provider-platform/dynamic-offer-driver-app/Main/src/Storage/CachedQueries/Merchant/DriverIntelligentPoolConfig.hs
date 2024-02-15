@@ -30,10 +30,14 @@ import Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
 import qualified System.Environment as SE
 import System.Random
@@ -49,9 +53,9 @@ getDriverIntelligentPoolConfigFromDB id =
 
 findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId id = do
-  enableCAC' <- liftIO $ SE.lookupEnv "ENABLE_CAC"
-  let enableCAC = fromMaybe True (enableCAC' >>= readMaybe)
-  case enableCAC of
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe False (.useCAC) systemConfigs
+  case useCACConfig of
     False -> getDriverIntelligentPoolConfigFromDB id
     True -> do
       dipcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id))])
@@ -62,7 +66,24 @@ findByMerchantOpCityId id = do
       tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
       contextValue <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant) dipcCond toss
       case contextValue of
-        Left err -> error $ (pack "dipc: error in fetching the context value ") <> (pack err)
+        Left err -> do
+          host <- liftIO $ SE.lookupEnv "CAC_HOST"
+          interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
+          let interval = case interval' of
+                Just a -> fromMaybe 10 (readMaybe a)
+                Nothing -> 10
+          logError $ Text.pack "error in fetching the context value for driver intelligent pool config " <> Text.pack err
+          config <- KSQS.findById' $ Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)
+          case config of
+            Just c -> do
+              logDebug $ "config value from db for tenant" <> show c
+              status <- liftIO $ CM.createClientFromConfig (fromMaybe "driver_offer_bpp_v2" tenant) interval (Text.unpack c.configValue) (fromMaybe "http://localhost:8080" host)
+              case status of
+                0 -> do
+                  logDebug $ "client created for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
+                  findByMerchantOpCityId id
+                _ -> error $ "error in creating the client for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant <> " retrying again"
+            Nothing -> error $ "error in fetching the config value from db for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
         Right contextValue' -> do
           logDebug $ "dipc: the fetched context value is " <> show contextValue'
           --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))

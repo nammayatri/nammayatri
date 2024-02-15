@@ -76,7 +76,7 @@ runDynamicOfferDriverApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
   setEnv "CAC_HOST" appCfg.cacConfig.host
   setEnv "CAC_INTERVAL" (show appCfg.cacConfig.interval)
-  _ <- CC.forkOS $ createCAC appCfg
+  _ <- CC.forkIO $ createCAC appCfg
 
   Metrics.serve (appCfg.metricsPort)
   runDynamicOfferDriverApp' appCfg
