@@ -1,15 +1,25 @@
 package in.juspay.mobility.app;
 import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
 
+import com.google.android.gms.location.LocationServices;
+
+import java.util.Timer;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.CallOptions;
@@ -27,34 +37,77 @@ public class GRPCNotificationService extends Service {
     private static NotificationGrpc.NotificationStub asyncStub;
     private ManagedChannel channel;
 
+    private Context context;
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
 
-    // Construct Managed Notification Channel
-    GRPCNotificationService() {
-        Context context = getApplicationContext();
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        this.context = getApplicationContext();
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
-        
+
         channel = ManagedChannelBuilder.forAddress("beta.beckn.uat.juspay.net", 50051)
                 .intercept(new GRPCNotificationHeaderInterceptor(token))
                 .keepAliveTime(15, TimeUnit.SECONDS)
                 .build();
         asyncStub = NotificationGrpc.newStub(channel);
+        try {
+            startGRPCNotificationService();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+//        this.startForeground(50051, createNotification());
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        stopForeground(true);
+        closeChannel();
+        stopSelf();
+    }
+
+    /*Creating channel for sticky notification*/
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel("SEARCH_REQUEST_NOTIFICATION", LOCATION_SERVICE, NotificationManager.IMPORTANCE_MIN);
+            channel.setDescription("LISTENING_FOR_NOTIFICATIONS");
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
+    /* returns notification for foreground services */
+    private Notification createNotification() {
+        createNotificationChannel();
+        Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 10, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        NotificationCompat.Builder notification =
+                new NotificationCompat.Builder(this, "SEARCH_REQUEST_NOTIFICATION")
+                        .setContentTitle("Listening")
+                        .setContentText(getString(R.string.your_location_is_being_updated))
+                        .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
+                        .setPriority(NotificationCompat.PRIORITY_MIN)
+                        .setOngoing(true)
+                        .setContentIntent(pendingIntent);
+        return notification.build();
     }
 
     // This method starts the GRPC Notification Service
-    public static void startGRPCNotificationService() throws Exception {
+    private static void startGRPCNotificationService() throws Exception {
         GRPCNotificationResponseObserver notificationResponseObserver = new GRPCNotificationResponseObserver();
         StreamObserver<NotificationAck> notificationRequestObserver = asyncStub.streamPayload(notificationResponseObserver);
         notificationResponseObserver.startGRPCNotification(notificationRequestObserver);
     }
 
     // Method to close the gRPC channel
-    public void closeChannel() {
+    private void closeChannel() {
         if (channel != null && !channel.isShutdown()) {
             try {
                 channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
@@ -116,9 +169,9 @@ class GRPCNotificationResponseObserver implements StreamObserver<NotificationPay
  * This class is responsible for modifying the message ( here adding header in the message ) before sending the message to the server in duplex communication
  * ***/
 class GRPCNotificationHeaderInterceptor implements ClientInterceptor {
-    private String token;
+    final private String token;
     GRPCNotificationHeaderInterceptor(String token) {
-        token = token;
+        this.token = token;
     }
 
     @Override
