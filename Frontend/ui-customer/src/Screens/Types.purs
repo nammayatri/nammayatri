@@ -766,6 +766,7 @@ type HomeScreenStateData =
   , bannerData :: BannerCarousalData
   , contactList :: Array NewContacts
   , followers :: Maybe (Array Followers)
+  , hotSpotInfo :: Array HotSpotData
   }
 
 type RentalsInfo = 
@@ -939,6 +940,7 @@ type HomeScreenStateProps =
   , showShareRide :: Boolean
   , followsRide :: Boolean 
   , referral :: ReferralStatusProp
+  , hotSpot :: HotSpotProps
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -2301,8 +2303,17 @@ type MetroTicketStatusScreenData = {
   quoteId :: String
 }
 
-
 type MetroTicketStatusScreenProps = {
   showShimmer :: Boolean
 , paymentStatus :: PP.PaymentStatus
+}
+
+type HotSpotProps = {
+    manuallyMoved :: Boolean
+  , selectedSpot :: Maybe Location
+}
+
+type HotSpotData = {
+    lat :: Number
+  , lon :: Number
 }
