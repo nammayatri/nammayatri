@@ -17,6 +17,7 @@ module Beckn.OnDemand.Utils.Common where
 
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import Data.Aeson
@@ -430,7 +431,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorCode = Just "driver_details",
+                { descriptorCode = Just $ show Tags.DRIVER_DETAILS,
                   descriptorName = Just "Driver Details",
                   descriptorShortDesc = Nothing
                 },
@@ -450,7 +451,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "registered_at",
+                  { descriptorCode = Just $ show Tags.REGISTERED_AT,
                     descriptorName = Just "Registered At",
                     descriptorShortDesc = Nothing
                   },
@@ -466,7 +467,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "rating",
+                    { descriptorCode = Just $ show Tags.RATING,
                       descriptorName = Just "rating",
                       descriptorShortDesc = Nothing
                     },
@@ -482,7 +483,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "is_driver_birthday",
+                    { descriptorCode = Just $ show Tags.IS_DRIVER_BIRTHDAY,
                       descriptorName = Just "Is Driver BirthDay",
                       descriptorShortDesc = Nothing
                     },
@@ -498,7 +499,7 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "is_free_ride",
+                    { descriptorCode = Just $ show Tags.IS_FREE_RIDE,
                       descriptorName = Just "Is Free Ride",
                       descriptorShortDesc = Nothing
                     },
@@ -513,7 +514,7 @@ mkLocationTagGroupV2 location =
         tagGroupDescriptor =
           Just $
             Spec.Descriptor
-              { descriptorCode = Just "current_location",
+              { descriptorCode = Just $ show Tags.CURRENT_LOCATION,
                 descriptorName = Just "Current Location",
                 descriptorShortDesc = Nothing
               },
@@ -524,7 +525,7 @@ mkLocationTagGroupV2 location =
                   tagDescriptor =
                     Just $
                       Spec.Descriptor
-                        { descriptorCode = Just "current_location_lat",
+                        { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LAT,
                           descriptorName = Just "Current Location Lat",
                           descriptorShortDesc = Nothing
                         },
@@ -535,7 +536,7 @@ mkLocationTagGroupV2 location =
                   tagDescriptor =
                     Just $
                       Spec.Descriptor
-                        { descriptorCode = Just "current_location_lon",
+                        { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LON,
                           descriptorName = Just "Current Location Lon",
                           descriptorShortDesc = Nothing
                         },
@@ -552,7 +553,7 @@ mkArrivalTimeTagGroupV2 arrivalTime =
         tagGroupDescriptor =
           Just $
             Spec.Descriptor
-              { descriptorCode = Just "driver_arrived_info",
+              { descriptorCode = Just $ show Tags.DRIVER_ARRIVED_INFO,
                 descriptorName = Just "Driver Arrived Info",
                 descriptorShortDesc = Nothing
               },
@@ -563,7 +564,7 @@ mkArrivalTimeTagGroupV2 arrivalTime =
                   tagDescriptor =
                     Just $
                       Spec.Descriptor
-                        { descriptorCode = Just "arrival_time",
+                        { descriptorCode = Just $ show Tags.ARRIVAL_TIME,
                           descriptorName = Just "Chargeable Distance",
                           descriptorShortDesc = Nothing
                         },
@@ -580,7 +581,7 @@ mkOdometerTagGroupV2 startOdometerReading =
         tagGroupDescriptor =
           Just $
             Spec.Descriptor
-              { descriptorCode = Just "ride_odometer_details",
+              { descriptorCode = Just $ show Tags.RIDE_ODOMETER_DETAILS,
                 descriptorName = Just "Ride Odometer Details",
                 descriptorShortDesc = Nothing
               },
@@ -591,7 +592,7 @@ mkOdometerTagGroupV2 startOdometerReading =
                   tagDescriptor =
                     Just $
                       Spec.Descriptor
-                        { descriptorCode = Just "start_odometer_reading",
+                        { descriptorCode = Just $ show Tags.START_ODOMETER_READING,
                           descriptorName = Just "Start Odometer Reading",
                           descriptorShortDesc = Nothing
                         },
