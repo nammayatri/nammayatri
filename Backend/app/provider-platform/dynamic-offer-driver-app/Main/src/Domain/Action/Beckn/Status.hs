@@ -65,12 +65,12 @@ handler transporterId req = do
           pure $ RideAssignedReq DRideAssignedReq {..}
         DRide.INPROGRESS -> do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
-          let tripStartLocation = Nothing -----TODO FIX ------#RITIKA
+          let tripStartLocation = bookingDetails.ride.tripStartPos
           pure $ RideStartedReq DRideStartedReq {..}
         DRide.COMPLETED -> do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
           SyncRide.RideCompletedInfo {..} <- SyncRide.fetchRideCompletedInfo ride booking
-          let tripEndLocation = Nothing -----TODO FIX ------#RITIKA
+          let tripEndLocation = bookingDetails.ride.tripEndPos
           pure $ RideCompletedReq DRideCompletedReq {..}
         DRide.CANCELLED -> do
           case booking.status of

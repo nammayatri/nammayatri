@@ -192,172 +192,20 @@ onUpdate ::
   ) =>
   ValidatedOnUpdateReq ->
   m ()
-onUpdate ValidatedRideAssignedReq {..} = do
-  mbMerchant <- CQM.findById booking.merchantId
-  ride <- buildRide mbMerchant
-  triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
-  let category = case booking.specialLocationTag of
-        Just _ -> "specialLocation"
-        Nothing -> "normal"
-  incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-  _ <- QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
-  _ <- QRide.createRide ride
-
-  _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
-  QPFS.clearCache booking.riderId
-  Notify.notifyOnRideAssigned booking ride
-  when isDriverBirthDay $ do
-    Notify.notifyDriverBirthDay booking.riderId driverName
-  withLongRetry $ CallBPP.callTrack booking ride
-  where
-    buildRide :: MonadFlow m => Maybe DMerchant.Merchant -> m SRide.Ride
-    buildRide mbMerchant = do
-      guid <- generateGUID
-      shortId <- generateShortId
-      now <- getCurrentTime
-      let fromLocation = booking.fromLocation
-          toLocation = case booking.bookingDetails of
-            SRB.OneWayDetails details -> Just details.toLocation
-            SRB.RentalDetails _ -> Nothing
-            SRB.DriverOfferDetails details -> Just details.toLocation
-            SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
-            SRB.InterCityDetails details -> Just details.toLocation
-      let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
-      return
-        SRide.Ride
-          { id = guid,
-            bookingId = booking.id,
-            merchantId = Just booking.merchantId,
-            merchantOperatingCityId = Just booking.merchantOperatingCityId,
-            status = SRide.NEW,
-            trackingUrl = Nothing,
-            fare = Nothing,
-            totalFare = Nothing,
-            chargeableDistance = Nothing,
-            traveledDistance = Nothing,
-            driverArrivalTime = Nothing,
-            vehicleVariant = booking.vehicleVariant,
-            createdAt = now,
-            updatedAt = now,
-            rideStartTime = Nothing,
-            rideEndTime = Nothing,
-            rideRating = Nothing,
-            safetyCheckStatus = Nothing,
-            isFreeRide = Just isFreeRide,
-            endOtp = Nothing,
-            startOdometerReading = Nothing,
-            endOdometerReading = Nothing,
-            ..
-          }
-onUpdate ValidatedRideStartedReq {..} = do
-  fork "ride start geohash frequencyUpdater" $ do
-    case tripStartLocation of
-      Just location -> frequencyUpdator booking.merchantId location Nothing TripStart
-      Nothing -> return ()
-  rideStartTime <- getCurrentTime
-  let updRideForStartReq =
-        ride{status = SRide.INPROGRESS,
-             rideStartTime = Just rideStartTime,
-             rideEndTime = Nothing,
-             endOtp = endOtp_,
-             startOdometerReading = startOdometerReading
-            }
-  triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
-  _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
-  _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
-  QPFS.clearCache booking.riderId
-  fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
-  Notify.notifyOnRideStarted booking ride
-onUpdate ValidatedRideCompletedReq {..} = do
-  fork "ride end geohash frequencyUpdater" $ do
-    case tripEndLocation of
-      Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd
-      Nothing -> return ()
-  SMC.updateTotalRidesCounters booking.riderId
-  merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
-  SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
-
-  rideEndTime <- getCurrentTime
-  let updRide =
-        ride{status = SRide.COMPLETED,
-             fare = Just fare,
-             totalFare = Just totalFare,
-             chargeableDistance = Just chargeableDistance,
-             rideEndTime = Just rideEndTime,
-             endOdometerReading = endOdometerReading
-            }
-  breakups <- traverse (buildFareBreakup booking.id) fareBreakups
-  minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
-  let shouldUpdateRideComplete =
-        case minTripDistanceForReferralCfg of
-          Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
-          Nothing -> True
-  triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
-  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}}
-  when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
-  unless (booking.status == SRB.COMPLETED) $ void $ QRB.updateStatus booking.id SRB.COMPLETED
-  whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
-  _ <- QRide.updateMultiple updRide.id updRide
-  _ <- QFareBreakup.createMany breakups
-  void $ QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
-  QPFS.clearCache booking.riderId
-  -- uncomment for update api test; booking.paymentMethodId should be present
-  -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
-  --   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  --   paymentMethod <-
-  --     CQMPM.findByIdAndMerchantId paymentMethodId booking.merchantId
-  --       >>= fromMaybeM (MerchantPaymentMethodDoesNotExist paymentMethodId.getId)
-  --   let dUpdateReq = ACL.PaymentCompletedBuildReq
-  --         { bppBookingId,
-  --           bppRideId = ride.bppRideId,
-  --           paymentMethodInfo = DMPM.mkPaymentMethodInfo paymentMethod,
-  --           bppId = booking.providerId,
-  --           bppUrl = booking.providerUrl,
-  --           transactionId = booking.transactionId,
-  --           merchant
-  --         }
-  --   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-  --   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
-
-  Notify.notifyOnRideCompleted booking updRide
-  where
-    buildFareBreakup :: MonadFlow m => Id SRB.Booking -> OnUpdateFareBreakup -> m DFareBreakup.FareBreakup
-    buildFareBreakup bookingId OnUpdateFareBreakup {..} = do
-      guid <- generateGUID
-      pure
-        DFareBreakup.FareBreakup
-          { id = guid,
-            ..
-          }
-onUpdate ValidatedBookingCancelledReq {..} = do
-  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
-  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
-  merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
-  fork "incrementing fraud counters" $ do
-    let merchantOperatingCityId = booking.merchantOperatingCityId
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
-  case mbRide of
-    Just ride -> do
-      case cancellationSource of
-        SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
-        SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
-        _ -> pure ()
-      triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
-    Nothing -> do
-      logDebug "No ride found for the booking."
-  triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
-  _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
-  unless (booking.status == SRB.CANCELLED) $ void $ QRB.updateStatus booking.id SRB.CANCELLED
-  whenJust mbRide $ \ride -> void $ do
-    unless (ride.status == SRide.CANCELLED) $ void $ QRide.updateStatus ride.id SRide.CANCELLED
-  unless (cancellationSource == SBCR.ByUser) $
+onUpdate = \case
+  ValidatedRideAssignedReq req -> Common.rideAssignedReqHandler req
+  ValidatedRideStartedReq req -> Common.rideStartedReqHandler req
+  ValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
+  ValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
+  ValidatedBookingReallocationReq {..} -> do
+    mbRide <- QRide.findActiveByRBId booking.id
+    let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
+    _ <- QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
+    _ <- QRide.updateStatus ride.id SRide.CANCELLED
     QBCR.upsert bookingCancellationReason
     Notify.notifyOnBookingReallocated booking
-  ValidatedDriverArrivedReq req -> do
-    Common.driverArrivedReqHandler req
-  ValidatedNewMessageReq {..} -> do
-    Notify.notifyOnNewMessage booking message
+  ValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
+  ValidatedNewMessageReq {..} -> Notify.notifyOnNewMessage booking message
   ValidatedEstimateRepetitionReq {..} -> do
     let bookingCancellationReason = mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
@@ -370,8 +218,7 @@ onUpdate ValidatedBookingCancelledReq {..} = do
     QPFS.clearCache searchReq.riderId
     -- notify customer
     Notify.notifyOnEstimatedReallocated booking estimate.id
-  ValidatedSafetyAlertReq {..} -> do
-    Notify.notifySafetyAlert booking code
+  ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code
   ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing
     Notify.notifyOnStopReached booking ride

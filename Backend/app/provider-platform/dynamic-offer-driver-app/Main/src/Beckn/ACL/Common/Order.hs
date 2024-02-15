@@ -251,7 +251,7 @@ tfStartReqToOrder Common.DRideStartedReq {..} = do
   let personTag = Utils.mkLocationTagGroupV2 tripStartLocation -- why are we sending trip start and end location in personTags?
       odometerTag = Utils.mkOdometerTagGroupV2 ((.value) <$> ride.startOdometerReading)
   let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> Just odometerTag) (Just personTag) False False (Just $ show Event.RIDE_STARTED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> Just odometerTag) (Just personTag) False False (Just $ show Event.RIDE_STARTED)
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -272,7 +272,7 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} = do
   let personTag = Utils.mkLocationTagGroupV2 tripEndLocation
   let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
   distanceTagGroup <- UtilsOU.mkDistanceTagGroup ride
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> distanceTagGroup) (Just personTag) False False (Just $ show Event.RIDE_ENDED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> distanceTagGroup) (Just personTag) False False (Just $ show Event.RIDE_ENDED)
   quote <- UtilsOU.mkRideCompletedQuote ride fareParams
   pure
     Spec.Order
@@ -317,7 +317,7 @@ tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DDriverArrivedReq ->
 tfArrivedReqToOrder Common.DDriverArrivedReq {..} = do
   let BookingDetails {..} = bookingDetails
   let driverArrivedInfoTags = Utils.mkArrivalTimeTagGroupV2 arrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just driverArrivedInfoTags) Nothing False False (Just $ show Event.RIDE_ARRIVED_PICKUP) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just driverArrivedInfoTags) Nothing False False (Just $ show Event.RIDE_ARRIVED_PICKUP)
   pure $
     Spec.Order
       { orderId = Just $ booking.id.getId,
