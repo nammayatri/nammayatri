@@ -18,14 +18,11 @@ import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import qualified Data.Aeson as A
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.Merchant (Merchant)
@@ -48,8 +45,8 @@ import Tools.Error
 
 type API =
   Capture "merchantId" (Id Merchant)
-    :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> API.CancelAPI
+    :> SignatureAuth "Authorization"
+    :> Cancel.CancelAPIV2
 
 handler :: FlowServer API
 handler = cancel
@@ -57,29 +54,22 @@ handler = cancel
 cancel ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  ByteString ->
+  Cancel.CancelReqV2 ->
   FlowHandler AckResponse
-cancel transporterId subscriber reqBS = withFlowHandlerBecknAPI do
-  req <- decodeReq reqBS
-  (dCancelReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- case req of
-    Right reqV2 -> do
-      transactionId <- Utils.getTransactionId reqV2.cancelReqContext
-      Utils.withTransactionIdLogTag transactionId $ do
-        logTagInfo "Cancel APIV2 Flow" "Reached"
-        dCancelReq <- ACL.buildCancelReqV2 reqV2
-        let context = reqV2.cancelReqContext
-        callbackUrl <- Utils.getContextBapUri context
-        bppUri <- Utils.getContextBppUri context
-        messageId <- Utils.getMessageId context
-        bapId <- Utils.getContextBapId context
-        city <- Utils.getContextCity context
-        country <- Utils.getContextCountry context
-        pure (dCancelReq, callbackUrl, bapId, messageId, city, country, Just transactionId, context.contextBppId, bppUri)
-    Left reqV1 ->
-      withTransactionIdLogTag reqV1 $ do
-        logTagInfo "Cancel API Flow" "Reached"
-        dCancelReq <- ACL.buildCancelReq reqV1
-        pure (dCancelReq, reqV1.context.bap_uri, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id, reqV1.context.bpp_id, reqV1.context.bpp_uri)
+cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
+  (dCancelReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- do
+    transactionId <- Utils.getTransactionId reqV2.cancelReqContext
+    Utils.withTransactionIdLogTag transactionId $ do
+      logTagInfo "Cancel APIV2 Flow" "Reached"
+      dCancelReq <- ACL.buildCancelReqV2 reqV2
+      let context = reqV2.cancelReqContext
+      callbackUrl <- Utils.getContextBapUri context
+      bppUri <- Utils.getContextBppUri context
+      messageId <- Utils.getMessageId context
+      bapId <- Utils.getContextBapId context
+      city <- Utils.getContextCity context
+      country <- Utils.getContextCountry context
+      pure (dCancelReq, callbackUrl, bapId, messageId, city, country, Just transactionId, context.contextBppId, bppUri)
 
   logDebug $ "Cancel Request: " <> T.pack (show dCancelReq)
   _ <- case dCancelReq of
@@ -116,15 +106,6 @@ cancel transporterId subscriber reqBS = withFlowHandlerBecknAPI do
 
 cancelLockKey :: Text -> Text
 cancelLockKey id = "Driver:Cancel:BookingId-" <> id
-
-decodeReq :: MonadFlow m => ByteString -> m (Either Cancel.CancelReq Cancel.CancelReqV2)
-decodeReq reqBS =
-  case A.eitherDecodeStrict reqBS of
-    Right reqV1 -> pure $ Left reqV1
-    Left _ ->
-      case A.eitherDecodeStrict reqBS of
-        Right reqV2 -> pure $ Right reqV2
-        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
 
 errHandler :: Spec.Context -> BecknAPIError -> Spec.OnCancelReq
 errHandler context (BecknAPIError err) =
