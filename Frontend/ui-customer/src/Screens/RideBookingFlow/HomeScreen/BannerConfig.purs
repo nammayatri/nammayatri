@@ -33,8 +33,6 @@ getBannerConfigs state action =
   (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
     then [disabilityBannerConfig state action] 
     else [])
-  <> (if (state.data.config.feature.enableZooTicketBookingFlow)
-    then [ticketBannerConfig state action] else [])
   <> (getRemoteBannerConfigs state.props.city)
   where
     getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))

@@ -470,8 +470,8 @@ bottomNavBarView push state = let
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
+          , padding $ PaddingVertical 10 (10+safeMarginBottom)
           , background Color.white900
-          , padding $ PaddingVertical 10 10
           ](map (\item -> 
               linearLayout
               [ height WRAP_CONTENT

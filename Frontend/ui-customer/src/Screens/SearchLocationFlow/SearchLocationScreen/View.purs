@@ -23,7 +23,7 @@ import Effect (Effect)
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps)
 import Styles.Colors as Color
 import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd)
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard)
 import JBridge (showMap, debounceFunction, startLottieProcess, lottieAnimationConfig, storeCallBackLocateOnMap)
 import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, os)
 import Components.SeparatorView.View as SeparatorView
@@ -50,7 +50,7 @@ import Control.Monad.Free (runFree)
 import Helpers.Utils (fetchAndUpdateCurrentLocation)
 import Data.Maybe (isNothing, maybe, Maybe(..), isJust ) as MB
 import Resources.Constants (getDelayForAutoComplete)
-import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom) as EHC
+import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom, safeMarginTop) as EHC
 import Data.String (length, null, take) as DS
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -86,6 +86,7 @@ view globalProps push state =
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
+    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     , background Color.white900
     ][  PrestoAnim.animationSet
           [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  $ 
@@ -419,6 +420,8 @@ locateOnMapFooterView push state = let
     , width MATCH_PARENT
     , alignParentBottom "true,-1"
     , orientation VERTICAL
+    , gravity CENTER_VERTICAL
+    , adjustViewWithKeyboard "true"
     , visibility viewVisibility
     , background Color.white900
     ][  verticalSeparatorView 2
@@ -430,6 +433,7 @@ locateOnMapFooterView push state = let
               in
               linearLayout
                 [ height WRAP_CONTENT
+                , gravity CENTER_HORIZONTAL
                 , weight 1.0] $ 
                 [ linearLayout
                   [ height WRAP_CONTENT
@@ -445,13 +449,13 @@ locateOnMapFooterView push state = let
                       , layoutGravity "center"
                       , imageWithFallback item.imageName
                       ]  
-                    , textView
+                    , textView $
                       [ text $ item.text
                       , layoutGravity "center"
                       , height WRAP_CONTENT
                       , gravity CENTER
                       , onClick push $ const $ item.action
-                      ]
+                      ] <> FontStyle.body1 TypoGraphy
                     ]
                 ] <> if isNotLastIndex then [horizontalSeparatorView 2] else []
         ) (footerArray state ))
@@ -500,6 +504,7 @@ searchLocationView push state globalProps = let
     , width MATCH_PARENT
     , orientation VERTICAL
     , visibility viewVisibility
+    , adjustViewWithKeyboard "true"
     , background Color.white900
     ] $ [ inputView push state true globalProps
         , searchLottieLoader push state ] 
