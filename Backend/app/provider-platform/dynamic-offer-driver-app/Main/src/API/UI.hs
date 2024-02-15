@@ -19,6 +19,7 @@ module API.UI
 where
 
 import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.SDKEvents as SDKEvents
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -45,7 +46,6 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
-import qualified API.UI.SDKEvents as SDKEvents
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
 import qualified API.UI.Whatsapp as Whatsapp

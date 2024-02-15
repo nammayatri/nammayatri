@@ -114,7 +114,7 @@ data ExophoneEventData = ExophoneEventData
   }
 
 data SDKEventData = SDKEventData
-  { personId :: Id Person,
+  { personId :: Maybe (Id Person),
     merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     payload :: Text
@@ -237,5 +237,5 @@ triggerSDKEvent ::
   SDKEventData ->
   m ()
 triggerSDKEvent SDKEventData {..} = do
-  sdkEvent <- createEvent (Just $ getId personId) (getId merchantId) SDKData DYNAMIC_OFFER_DRIVER_APP User (Just $ SDK payload) Nothing (Just $ getId merchantOperatingCityId)
+  sdkEvent <- createEvent (getId <$> personId) (getId merchantId) SDKData DYNAMIC_OFFER_DRIVER_APP User (Just $ SDK payload) Nothing (Just $ getId merchantOperatingCityId)
   triggerEvent sdkEvent
