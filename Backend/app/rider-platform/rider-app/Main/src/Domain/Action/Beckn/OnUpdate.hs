@@ -193,14 +193,10 @@ onUpdate ::
   ValidatedOnUpdateReq ->
   m ()
 onUpdate = \case
-  ValidatedRideAssignedReq req -> do
-    Common.rideAssignedReqHandler req
-  ValidatedRideStartedReq req -> do
-    Common.rideStartedReqHandler req
-  ValidatedRideCompletedReq req -> do
-    Common.rideCompletedReqHandler req
-  ValidatedBookingCancelledReq req -> do
-    Common.bookingCancelledReqHandler req
+  ValidatedRideAssignedReq req -> Common.rideAssignedReqHandler req
+  ValidatedRideStartedReq req -> Common.rideStartedReqHandler req
+  ValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
+  ValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
   ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
     let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
@@ -208,10 +204,8 @@ onUpdate = \case
     _ <- QRide.updateStatus ride.id SRide.CANCELLED
     QBCR.upsert bookingCancellationReason
     Notify.notifyOnBookingReallocated booking
-  ValidatedDriverArrivedReq req -> do
-    Common.driverArrivedReqHandler req
-  ValidatedNewMessageReq {..} -> do
-    Notify.notifyOnNewMessage booking message
+  ValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
+  ValidatedNewMessageReq {..} -> Notify.notifyOnNewMessage booking message
   ValidatedEstimateRepetitionReq {..} -> do
     let bookingCancellationReason = mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
     logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
@@ -224,8 +218,7 @@ onUpdate = \case
     QPFS.clearCache searchReq.riderId
     -- notify customer
     Notify.notifyOnEstimatedReallocated booking estimate.id
-  ValidatedSafetyAlertReq {..} -> do
-    Notify.notifySafetyAlert booking code
+  ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code
   ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing
     Notify.notifyOnStopReached booking ride

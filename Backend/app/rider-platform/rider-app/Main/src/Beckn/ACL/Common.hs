@@ -141,7 +141,7 @@ getTagV2 tagGroupCode tagCode tagGroups = do
 parseBookingDetails :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.BookingDetails
 parseBookingDetails order msgId = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
-  isInitiatedByCronJob <- fmap (\(val :: Maybe Bool) -> isJust val) $ Hedis.safeGet (makeContextMessageIdStatusSyncKey msgId)
+  isInitiatedByCronJob <- (\(val :: Maybe Bool) -> isJust val) <$> Hedis.safeGet (makeContextMessageIdStatusSyncKey msgId)
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideAssigned Event.")
   stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideAssigned Event.")
   start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideAssigned Event.")
