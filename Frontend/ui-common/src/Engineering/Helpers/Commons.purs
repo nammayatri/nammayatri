@@ -106,7 +106,7 @@ foreign import isTrue :: forall a. a -> Boolean
 foreign import convertDateTimeConfigToUTCImpl :: EffectFn6 Int Int Int Int Int Int String
 foreign import getUTCAfterNSecondsImpl :: Fn2 String Int String
 foreign import getUTCAfterNHoursImpl :: EffectFn2 String Int String
-foreign import compareUTCDateImpl :: EffectFn2 String String String
+foreign import compareUTCDateImpl :: Fn2 String String Int
 
 os :: String
 os = getOs unit
@@ -326,5 +326,5 @@ getUTCAfterNSeconds = runFn2 getUTCAfterNSecondsImpl
 getUTCAfterNHours :: String -> Int -> Effect String
 getUTCAfterNHours = runEffectFn2 getUTCAfterNHoursImpl
 
-compareUTCDate :: String -> String -> Effect String
-compareUTCDate = runEffectFn2 compareUTCDateImpl
+compareUTCDate :: String -> String -> Int
+compareUTCDate = runFn2 compareUTCDateImpl

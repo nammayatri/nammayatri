@@ -201,12 +201,11 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
   else
     let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
         selectedUTC = unsafePerformEffect $ EHC.convertDateTimeConfigToUTC year (month + 1) day hour minute 0
-        isAfterThirtyMinutes = (fromMaybe 0 $ INT.fromString (unsafePerformEffect $ EHC.compareUTCDate selectedUTC (EHC.getCurrentUTC ""))) > (30 * 60 * 1000)
+        isAfterThirtyMinutes = (EHC.compareUTCDate selectedUTC (EHC.getCurrentUTC "")) > (30 * 60)
         validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
                         && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
-        _ = spy "sdfasdfgksadghf" isAfterThirtyMinutes
     in if validDate && isAfterThirtyMinutes then continue newState {props{showPrimaryButton = true}}
        else 
         if validDate then do 

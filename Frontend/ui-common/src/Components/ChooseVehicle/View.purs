@@ -30,7 +30,7 @@ view push config =
     , margin $ config.layoutMargin
     , padding $ Padding 8 16 12 16
     , clickable config.isEnabled
-    , onClick push $ const $ OnSelect $ spy " INside choose vehic; " config
+    , onClick push $ const $ OnSelect config
     , afterRender push (const NoAction)
     ][ linearLayout
         [ height WRAP_CONTENT

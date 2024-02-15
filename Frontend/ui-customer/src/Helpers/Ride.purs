@@ -150,6 +150,7 @@ checkRideStatus rideAssigned = do
               setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"
               setValueToLocalStore TEST_POLLING_INTERVAL "8000.0"
               setValueToLocalStore TEST_POLLING_COUNT "22"
+              setValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT "100"
               pure unit
               else pure unit
             when (isNothing currRideListItem.rideRating) $ do

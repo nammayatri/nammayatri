@@ -118,7 +118,6 @@ foreign import secondsToHms :: Int -> String
 foreign import getTime :: Unit -> Int
 
 foreign import drawPolygon :: String -> String -> Effect Unit
-foreign import getDifferenceBetweenDates :: Fn2 String String Int
 
 foreign import removeLabelFromMarker :: EffectFn1 Number Unit
 -- foreign import generateSessionToken :: String -> String
