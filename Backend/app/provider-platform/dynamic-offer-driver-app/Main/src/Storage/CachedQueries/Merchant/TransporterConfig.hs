@@ -42,30 +42,49 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Id
-import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.TransporterConfig as Queries
 -- import qualified Data.ByteString.Lazy.Char8 as BSL
 
+import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Merchant.TransporterConfig as Queries
 import qualified System.Environment as Se
 import System.Random
 
 getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m (Maybe TransporterConfig)
 getConfig id toss = do
-  confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(Text.pack "merchantOperatingCityId", DA.String (getId id))])
+  confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id))]
   logDebug $ "transporterConfig Cond: " <> show confCond
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
   context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
   logDebug $ "transporterConfig: " <> show context'
-  let ans = case context' of
-        Left err -> error $ (Text.pack "error in fetching the context value ") <> (Text.pack err)
-        Right contextValue' ->
-          case (DAT.parse jsonToTransporterConfig contextValue') of
-            Success dpc -> dpc
-            DAT.Error err -> error $ (Text.pack "error in parsing the context value for transporter config ") <> (Text.pack err)
+  ans <- case context' of
+    Left err -> do
+      host <- liftIO $ Se.lookupEnv "CAC_HOST"
+      interval' <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
+      let interval = case interval' of
+            Just a -> fromMaybe 10 (readMaybe a)
+            Nothing -> 10
+      logError $ Text.pack "error in fetching the context value " <> Text.pack err
+      config <- KSQS.findById' $ Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)
+      case config of
+        Just c -> do
+          logDebug $ "config value from db for tenant" <> show c
+          status <- liftIO $ CM.createClientFromConfig (fromMaybe "driver_offer_bpp_v2" tenant) interval (Text.unpack c.configValue) (fromMaybe "http://localhost:8080" host)
+          case status of
+            0 -> do
+              logDebug $ "client created for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
+              getConfig id toss
+            _ -> error $ "error in creating the client for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant <> " retrying again"
+        Nothing -> error $ "error in fetching the config value from db for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
+    Right contextValue' ->
+      case DAT.parse jsonToTransporterConfig contextValue' of
+        Success dpc -> pure $ Just dpc
+        DAT.Error err -> error $ Text.pack "error in parsing the context value for transporter config " <> Text.pack err
   -- pure $ Just ans
   logDebug $ "transporterConfig: " <> show ans
-  pure $ Just ans
+  pure ans
 
 getTransporterConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 getTransporterConfigFromDB id = do
@@ -76,7 +95,7 @@ getTransporterConfigFromDB id = do
 findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person) -> m (Maybe TransporterConfig)
 findByMerchantOpCityId id mPersonId = do
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
+  let useCACConfig = maybe False (.useCAC) systemConfigs
   if useCACConfig
     then findByMerchantOpCityIdCAC id mPersonId
     else getTransporterConfigFromDB id
@@ -88,19 +107,24 @@ findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id M
 findByMerchantOpCityIdCAC id (Just personId) = do
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
-  case isExp of
-    True -> do
-      Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACTransporterConfigKey personId) >>= \case
-        Just (a :: Int) -> do
-          getConfig id a
-        Nothing -> do
-          gen <- newStdGen
-          let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-          logDebug $ "the toss value is for transporter config " <> show toss
-          _ <- cacheToss personId toss
-          getConfig id toss
-    False -> do
-      getConfig id 1
+  ( if isExp
+      then
+        ( do
+            Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACTransporterConfigKey personId) >>= \case
+              Just (a :: Int) -> do
+                getConfig id a
+              Nothing -> do
+                gen <- newStdGen
+                let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+                logDebug $ "the toss value is for transporter config " <> show toss
+                _ <- cacheToss personId toss
+                getConfig id toss
+        )
+      else
+        ( do
+            getConfig id 1
+        )
+    )
 findByMerchantOpCityIdCAC id Nothing = do
   gen <- newStdGen
   let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)

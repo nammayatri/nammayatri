@@ -20,7 +20,7 @@ import Control.Monad
 import Data.Aeson as DA
 import Data.Aeson.Types as DAT
 import Data.HashMap.Strict as HashMap
-import Data.Text
+import Data.Text as Text
 import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person as DP
@@ -28,11 +28,13 @@ import EulerHS.Language as L (getOption)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.GoHomeConfig as Queries
 import qualified System.Environment as Se
 import System.Random
@@ -40,17 +42,34 @@ import Tools.Error (GenericError (..))
 
 getGoHomeConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
 getGoHomeConfig id toss = do
-  confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id))])
+  confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id))]
   logDebug $ "goHomeConfig Cond: " <> show confCond
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
   context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
   logDebug $ "goHomeConfig: " <> show context'
-  let ans = case context' of
-        Left err -> error $ (pack "error in fetching the context value ") <> (pack err)
-        Right contextValue' ->
-          case (DAT.parse jsonToGoHomeConfig contextValue') of
-            Success dpc -> dpc
-            DAT.Error err -> error $ (pack "error in parsing the context value for go home config ") <> (pack err)
+  ans <- case context' of
+    Left err -> do
+      host <- liftIO $ Se.lookupEnv "CAC_HOST"
+      interval' <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
+      let interval = case interval' of
+            Just a -> fromMaybe 10 (readMaybe a)
+            Nothing -> 10
+      logError $ Text.pack "error in fetching the context value " <> Text.pack err
+      config <- KSQS.findById' $ Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)
+      case config of
+        Just c -> do
+          logDebug $ "config value from db for tenant" <> show c
+          status <- liftIO $ CM.createClientFromConfig (fromMaybe "driver_offer_bpp_v2" tenant) interval (Text.unpack c.configValue) (fromMaybe "http://localhost:8080" host)
+          case status of
+            0 -> do
+              logDebug $ "client created for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
+              getGoHomeConfig id toss
+            _ -> error $ "error in creating the client for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant <> " retrying again"
+        Nothing -> error $ "error in fetching the config value from db for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
+    Right contextValue' ->
+      case DAT.parse jsonToGoHomeConfig contextValue' of
+        Success dpc -> pure dpc
+        DAT.Error err -> error $ pack "error in parsing the context value for go home config " <> pack err
   -- pure $ Just ans
   logDebug $ "goHomeConfig: " <> show ans
   pure ans

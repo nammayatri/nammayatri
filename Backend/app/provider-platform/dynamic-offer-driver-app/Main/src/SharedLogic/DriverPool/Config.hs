@@ -31,12 +31,14 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Language as L (getOption)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
 import Kernel.Utils.Logging
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import qualified System.Environment as SE
 import System.Random
@@ -82,7 +84,24 @@ getDriverPoolConfig merchantOpCityId mbvt dist = do
       logDebug $ "the toss value is for driver pool config " <> show toss
       contextValue <- liftIO $ CM.evalExperiment (fromMaybe "atlas_driver_offer_bpp_v2" tenant) dpcCond toss
       case contextValue of
-        Left err -> error $ (pack "error in fetching the context value ") <> (pack err)
+        Left err -> do
+          host <- liftIO $ SE.lookupEnv "CAC_HOST"
+          interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
+          let interval = case interval' of
+                Just a -> fromMaybe 10 (readMaybe a)
+                Nothing -> 10
+          logError $ Text.pack "error in fetching the context value " <> Text.pack err
+          config <- KSQS.findById' $ Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)
+          case config of
+            Just c -> do
+              logDebug $ "config value from db for tenant" <> show c
+              status <- liftIO $ CM.createClientFromConfig (fromMaybe "driver_offer_bpp_v2" tenant) interval (Text.unpack c.configValue) (fromMaybe "http://localhost:8080" host)
+              case status of
+                0 -> do
+                  logDebug $ "client created for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
+                  getDriverPoolConfig merchantOpCityId mbvt dist
+                _ -> error $ "error in creating the client for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant <> " retrying again"
+            Nothing -> error $ "error in fetching the config value from db for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
         Right contextValue' -> do
           logDebug $ "the fetched context value is " <> show contextValue'
           --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
@@ -92,10 +111,10 @@ getDriverPoolConfig merchantOpCityId mbvt dist = do
       where
         buildDpcType cv =
           -- pure $ fromJSONShy (ShyValue (Object cv))
-          case (DAT.parse jsonToDriverPoolConfig cv) of
-            Success dpc -> pure $ dpc
+          case DAT.parse jsonToDriverPoolConfig cv of
+            Success dpc -> pure dpc
             Error err -> do
-              logError $ (pack "error in parsing the context value for driverpoolConfig ") <> (pack err)
+              logError $ pack "error in parsing the context value for driverpoolConfig " <> pack err
               getDriverPoolConfigFromDB merchantOpCityId mbvt dist
 
 filterByDistAndDveh :: Maybe Variant.Variant -> Meters -> DriverPoolConfig -> Bool
