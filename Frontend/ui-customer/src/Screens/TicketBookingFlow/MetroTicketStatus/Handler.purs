@@ -32,11 +32,10 @@ metroTicketStatusScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ MetroTicketStatusView.screen state.metroTicketStatusScreen
   case action of
-    GoBack ->  do
+    GoToHomeScreen ->  do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
       modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
-      App.BackT $ pure App.GoBack 
-    NoOutput -> pure NO_OUTPUT_METRO_TICKET_STATUS_SCREEN
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN)
     GoToMetroTicketDetails updatedState resp -> do
       modifyScreenState $ MetroTicketStatusScreenStateType (\_ ->updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_TICKET_DETAILS updatedState resp)
@@ -46,3 +45,5 @@ metroTicketStatusScreen = do
     GoToTryAgainPayment updatedState -> do
       modifyScreenState $ MetroTicketStatusScreenStateType (\_ ->updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRY_AGAIN_PAYMENT updatedState)
+    GoToMyMetroTicketsScreen -> App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_TICKETS_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN)
+    

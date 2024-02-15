@@ -40,7 +40,7 @@ import Data.Maybe (maybe)
 import Effect.Aff (launchAff)
 import Services.API
 import Presto.Core.Types.Language.Flow (doAff, Flow, delay)
-import Types.App (GlobalState, defaultGlobalState)
+import Types.App (GlobalState, defaultGlobalState, FlowBT)
 import Screens.Types
 import Services.Backend as Remote
 import Data.Either (Either(..))
@@ -51,6 +51,12 @@ import Language.Strings
 import Language.Types
 import Data.String as DS
 import Data.Function.Uncurried (runFn1)
+import Data.Maybe(Maybe(..))
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Monad.Trans.Class (lift)
+import Storage 
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -60,7 +66,10 @@ screen initialState =
   , globalEvents : [getQuotes]
   , eval : \action state -> do
         let _ = spy "MetroTicketBookingScreenState action " action
-        let _ = spy "MetroTicketBookingScreenState state " state
+        let _ = spy "MetroTicketBookingScreenState state " state 
+        case action of
+          ShowMetroBookingTimeError _ -> pure unit
+          _ -> void $ pure $ setValueToLocalStore METRO_PAYMENT_SDK_POLLING "false"
         eval action state
   }
   where
@@ -68,6 +77,7 @@ screen initialState =
       let withinTimeRange = JB.withinTimeRange "04:30:00" "22:30:00" $ EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
       push $ ShowMetroBookingTimeError withinTimeRange
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 initialState push GetMetroQuotesAction
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getSDKPolling initialState.data.bookingId 3000.0 initialState push GetSDKPoolingAC
       pure $ pure unit
 
 getQuotesPolling :: forall action. String-> Int -> Number -> ST.MetroTicketBookingScreenState -> (action -> Effect Unit) -> (Array MetroQuote -> action) -> Flow GlobalState Unit
@@ -88,6 +98,20 @@ getQuotesPolling searchId count delayDuration state push action = do
           Left _ -> pure unit
       else 
         pure unit
+  else pure unit
+
+getSDKPolling :: forall action. String -> Number -> ST.MetroTicketBookingScreenState -> (action -> Effect Unit) -> (CreateOrderRes -> action) -> FlowBT String Unit
+getSDKPolling bookingId delayDuration state push action = do
+  let localPoolingStatus = getValueToLocalStore METRO_PAYMENT_SDK_POLLING
+  if state.props.currentStage == PaymentSDKPooling && localPoolingStatus == "true" then do
+      (GetMetroBookingStatusResp (MetroTicketBookingStatus metroTicketStatusResp)) <- Remote.getMetroStatusBT bookingId 
+      let orderResp = metroTicketStatusResp.payment >>= \(FRFSBookingPaymentAPI paymentInfo) -> paymentInfo.paymentOrder 
+      case orderResp of
+        Just (CreateOrderRes createOrderResp) -> do
+          liftFlowBT $ push $ action (CreateOrderRes createOrderResp)
+        Nothing -> do
+          void $ lift $ lift $ delay $ Milliseconds delayDuration
+          getSDKPolling bookingId delayDuration state push action
   else pure unit
 
 view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w

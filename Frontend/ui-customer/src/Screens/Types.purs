@@ -1956,6 +1956,7 @@ type MetroMyTicketsScreenData = {
 type MetroMyTicketsScreenProps = {
   dummyProps :: String
 , showShimmer :: Boolean
+, entryPoint :: MetroMyTicketsEntry
 }
 
 type MetroTicketCardData = {
@@ -1967,6 +1968,8 @@ type MetroTicketCardData = {
   , status :: String
   , validUntill :: String
 }
+
+data MetroMyTicketsEntry = HomeScreenToMetroMyTickets | MetroTicketBookingToMetroMyTickets
 
 
 -- ######################################### TicketBookingStatus #################################################### 
@@ -2266,7 +2269,7 @@ type MetroTicketBookingScreenProps = {
 , showMetroBookingTimeError :: Boolean
 }
 
-data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote
+data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling
 
 derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
 instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
@@ -2305,4 +2308,7 @@ type MetroTicketStatusScreenData = {
 type MetroTicketStatusScreenProps = {
   showShimmer :: Boolean
 , paymentStatus :: PP.PaymentStatus
+, entryPoint :: MetroTicketStatusScreenEntry
 }
+
+data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStaus | MyMetroTicketsToMetroTicketStatus

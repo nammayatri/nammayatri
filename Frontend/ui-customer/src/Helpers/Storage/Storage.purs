@@ -97,6 +97,7 @@ data KeyStore
   | T_AND_C_VERSION
   | METRO_PAYMENT_STATUS_POOLING
   | METRO_STATIONS
+  | METRO_PAYMENT_SDK_POLLING
 
 derive instance genericKeyStore :: Generic KeyStore _
 

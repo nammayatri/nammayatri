@@ -53,7 +53,8 @@ data Action = BackPressed
             | GetMetroQuotesAction (Array MetroQuote)
             | SelectLocation ST.LocationActionId
             | ShowMetroBookingTimeError Boolean
-            | InfoCardAC InfoCard.Action
+            | InfoCardAC InfoCard.Action 
+            | GetSDKPoolingAC CreateOrderRes
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
@@ -62,6 +63,7 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | GoToHome
                   | SelectSrcDest ST.LocationActionId ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
+                  | GotoPaymentPage CreateOrderRes String
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
@@ -115,6 +117,8 @@ eval (InfoCardAC (InfoCard.Close)) state =
       showMetroBookingTimeError = false
     }
   }
+
+eval (GetSDKPoolingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId
 
 eval _ state = continue state
 

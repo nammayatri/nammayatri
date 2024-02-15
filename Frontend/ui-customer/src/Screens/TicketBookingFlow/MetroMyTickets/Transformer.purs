@@ -22,13 +22,14 @@ import Services.API
 import Data.Array
 import Data.Maybe
 import Engineering.Helpers.Commons
-
+import Data.Function.Uncurried as DFU
+import JBridge as JB
 
 metroTicketListApiToMyTicketsTransformer ::  (Array MetroTicketBookingStatus) -> MetroMyTicketsScreenState -> MetroMyTicketsScreenState 
 metroTicketListApiToMyTicketsTransformer ticketList state = 
   let 
-    activeTickets' = metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus ticket) -> (any (_ == ticket.status) ["CONFIRMED"])) ticketList
-    pastTickets' = metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus ticket) -> (any (_ == ticket.status) ["PAYMENT_PENDING", "FAILED"])) ticketList
+    activeTickets' = metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus bookingStatus) -> activeTicketEvaluator bookingStatus.status bookingStatus.tickets) ticketList
+    pastTickets' = metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus bookingStatus) -> pastTicketEvaluator bookingStatus.status bookingStatus.tickets) ticketList
   in
     state {
       data {
@@ -36,6 +37,21 @@ metroTicketListApiToMyTicketsTransformer ticketList state =
       , pastTickets = pastTickets'
       }
     }
+  where 
+    activeTicketEvaluator :: String -> Array FRFSTicketAPI  -> Boolean
+    activeTicketEvaluator status tickets = 
+      let validTill = case tickets !! 0 of
+                    Just (FRFSTicketAPI ticket) -> ticket.validTill
+                    Nothing -> ""
+      in (any (_ == status) ["CONFIRMED", "PAYMENT_PENDING"]) && (not $ isTicketExpired validTill)
+
+    pastTicketEvaluator :: String -> Array FRFSTicketAPI -> Boolean
+    pastTicketEvaluator status tickets = 
+      let validTill = case tickets !! 0 of
+                    Just (FRFSTicketAPI ticket) -> ticket.validTill
+                    Nothing -> ""
+      in (any (_ == status) ["FAILED"]) || (isTicketExpired validTill)
+
 
 metroTicketCardTransformer :: Array MetroTicketBookingStatus -> Array MetroTicketCardData
 metroTicketCardTransformer  ticketList = map ticketItemTransformer ticketList
@@ -45,16 +61,20 @@ ticketItemTransformer (MetroTicketBookingStatus bookingItem) =
   let 
     sourceStationEnum = bookingItem.stations !! 0
     destinationStationEnum = bookingItem.stations !! ((length bookingItem.stations)- 1)
-    ticketsValidTill =  case bookingItem.tickets !! 0 of
-                              Just (FRFSTicketAPI ticket) -> (convertUTCtoISC ticket.validTill "hh:mm A") <> ", " <> (convertUTCtoISC ticket.validTill "Do MMM YYYY") 
-                              Nothing -> ""
+    utcValidTill =  case bookingItem.tickets !! 0 of
+                        Just (FRFSTicketAPI ticket) -> ticket.validTill
+                        Nothing -> ""                
+    ticketsValidTill = (convertUTCtoISC utcValidTill "hh:mm A") <> ", " <> (convertUTCtoISC utcValidTill "Do MMM YYYY")
     
     sourceName' = getStationName sourceStationEnum
     destinationName' = getStationName destinationStationEnum
     noOfTickets' = bookingItem.quantity
     createdAt' = (convertUTCtoISC bookingItem.createdAt "Do MMM YYYY")
     metroTicketStatusApiResp' = (MetroTicketBookingStatus bookingItem)
-    status' = bookingItem.status
+    status' = if isTicketExpired utcValidTill then 
+                "EXPIRED"
+              else 
+                bookingItem.status
     validUntill' = (convertUTCtoISC bookingItem.validTill "hh:mm A") <> ", " <> (convertUTCtoISC bookingItem.validTill "Do MMM YYYY") 
   in 
   {
@@ -70,3 +90,6 @@ ticketItemTransformer (MetroTicketBookingStatus bookingItem) =
 getStationName :: Maybe FRFSStationAPI -> String
 getStationName Nothing = ""
 getStationName (Just (FRFSStationAPI station)) = station.name 
+
+isTicketExpired :: String -> Boolean
+isTicketExpired validTill =  (DFU.runFn2 JB.differenceBetweenTwoUTC  validTill (getCurrentUTC "")) < 0
