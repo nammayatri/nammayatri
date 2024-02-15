@@ -33,6 +33,7 @@ import Data.Function.Uncurried (runFn3)
 import JBridge (emitJOSEvent)
 import Accessor (_authData, _maskedMobileNumber, _id)
 import Data.Lens ((^.))
+import SessionCache (setValueInWindow)
 
 validateSignaturePayload :: SignatureAuthData -> (Either ErrorResponse TriggerSignatureOTPResp) -> FlowBT String Boolean
 validateSignaturePayload signatureAuth resp = 
@@ -55,7 +56,8 @@ validateSignaturePayload signatureAuth resp =
     updateCustomerDetails person mobileNumber = do
       lift $ lift $ setLogField "customer_id" $ encode $ person^._id
       setValueToLocalStore CUSTOMER_ID $ person^._id
-      setValueToLocalStore MOBILE_NUMBER mobileNumber
+      void $ pure $ setValueInWindow (show MOBILE_NUMBER) mobileNumber
+
 
 
 

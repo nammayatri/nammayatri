@@ -14,6 +14,8 @@ export const setInWindow = function (key,value) {
   return value;
 }
 
+export const setAnyInWindow = setInWindow;
+
 // JSON UTILS
 export function parseJSON(param) {
   try {

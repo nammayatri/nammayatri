@@ -14,6 +14,7 @@ foreign import setInWindow :: Fn2 String String String
 -- JSON Utils
 foreign import parseJSON :: String -> Foreign
 foreign import stringifyJSON :: forall a. Fn1 a String
+foreign import setAnyInWindow ::forall a. Fn2 String a a
 
 decodeForeignObject :: forall a. Decode a => Foreign -> a -> a
 decodeForeignObject object defaultObject = maybe (defaultObject) identity $ decodeForeignObjImpl object
