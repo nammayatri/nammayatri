@@ -67,7 +67,7 @@ handler merchant sReq estimate = do
   now <- getCurrentTime
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
   QDQ.setInactiveAllDQByEstId sReq.estimateId now
-  farePolicy <- getFarePolicy searchReq.merchantOperatingCityId estimate.vehicleVariant searchReq.area
+  farePolicy <- getFarePolicy searchReq.merchantOperatingCityId estimate.vehicleVariant searchReq.area (Just searchReq.transactionId)
   -- farePolicyCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (Text.pack ("NAMMA_YATRI"))), (pack "tripDistance", DA.String (Text.pack ("500")))]
   -- contextValue <- liftIO $ CM.evalCtx "test" farePolicyCond
   -- value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))

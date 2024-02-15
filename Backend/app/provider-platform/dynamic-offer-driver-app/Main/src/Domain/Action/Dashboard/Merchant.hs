@@ -713,7 +713,7 @@ updateFPPerExtraKmRate _ _ farePolicyId startDistance req = do
 
 updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 updateFarePolicy _ _ farePolicyId req = do
-  farePolicy <- CQFP.findById farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  farePolicy <- CQFP.findById farePolicyId Nothing >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
   CQFP.update' updatedFarePolicy
   CQFP.clearCacheById farePolicyId

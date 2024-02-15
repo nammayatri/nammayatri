@@ -873,7 +873,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
           quoteLimit <- getQuoteLimit merchantOpCityId searchReq.estimatedDistance searchTry.vehicleVariant
           quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          farePolicy <- getFarePolicy merchantOpCityId sReqFD.vehicleVariant searchReq.area
+          farePolicy <- getFarePolicy merchantOpCityId sReqFD.vehicleVariant searchReq.area (Just searchReq.transactionId)
           let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
           whenJust mbOfferedFare $ \off ->
             whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->

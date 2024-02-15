@@ -112,7 +112,7 @@ cancelRideImpl rideId bookingCReason = do
     transpConf <- QTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just driverQuote.driverId) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
     let searchRepeatLimit = transpConf.searchRepeatLimit
     now <- getCurrentTime
-    farePolicy <- getFarePolicy searchReq.merchantOperatingCityId searchTry.vehicleVariant searchReq.area
+    farePolicy <- getFarePolicy searchReq.merchantOperatingCityId searchTry.vehicleVariant searchReq.area (Just searchReq.transactionId)
     let isSearchTryValid = searchTry.validTill > now
     let isRepeatSearch =
           searchTry.searchRepeatCounter < searchRepeatLimit
