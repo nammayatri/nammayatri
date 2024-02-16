@@ -191,7 +191,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
-      createOrderCall = Payment.createOrder merchantId
+      createOrderCall = Payment.createOrder merchantId (Just placeId)
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return createOrderRes
@@ -505,10 +505,10 @@ postTicketBookingsVerify _ = processBookingService
 getTicketBookingsStatus :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
 getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.ShortId shortId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId -- api call
-  order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
   ticketBooking' <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId)
+  let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
+      orderStatusCall = Payment.orderStatus merchantId (Just ticketBooking'.ticketPlaceId) -- api call
+  order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
   let ticketBookingServiceCategories = concat tBookingServiceCats

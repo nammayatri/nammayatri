@@ -317,8 +317,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               }
       DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrder.id.getId)
 
-    createOrderCall = Payment.createOrder merchantId_
-    orderStatusCall = Payment.orderStatus merchantId_
+    createOrderCall = Payment.createOrder merchantId_ Nothing
+    orderStatusCall = Payment.orderStatus merchantId_ Nothing
     commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
 
     makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus mTTL =
