@@ -53,6 +53,7 @@ type AppConfigCustomer a =
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
+  , showCheckoutRentalBanner :: Boolean
   , mapConfig :: MapConfig
   , metroTicketingConfig :: MetroConfig
   , enableWhatsappOTP :: Array String
