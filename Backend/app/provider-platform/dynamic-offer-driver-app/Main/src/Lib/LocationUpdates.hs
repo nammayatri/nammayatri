@@ -128,7 +128,7 @@ checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold ni
                 { RI.deviationInfo =
                     RI.DeviationInfo
                       { deviation =
-                          checkForDeviation routeDeviationThreshold points batchWaypoints 0,
+                          deviationInfo.deviation || checkForDeviation routeDeviationThreshold points batchWaypoints 0,
                         safetyDeviation = False
                       }
                 }
