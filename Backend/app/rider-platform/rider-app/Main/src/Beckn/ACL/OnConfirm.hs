@@ -12,89 +12,73 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnConfirm (buildOnConfirmReq, buildOnConfirmReqV2) where
+module Beckn.ACL.OnConfirm (buildOnConfirmReqV2) where
 
-import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
-import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import Data.Fixed (Fixed (MkFixed))
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
-import Domain.Types.Booking (BPPBooking)
 import Kernel.Prelude
-import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-
-buildOnConfirmReq ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text]
-  ) =>
-  OnConfirm.OnConfirmReq ->
-  m (Maybe DOnConfirm.OnConfirmReq)
-buildOnConfirmReq req = do
-  validateContext Context.ON_CONFIRM req.context
-  handleError req.contents $ \message -> do
-    return $
-      DOnConfirm.OnConfirmReq
-        { bppBookingId = Id message.order.id,
-          specialZoneOtp = case message.order.fulfillment.start.authorization of
-            Nothing -> Nothing
-            Just auth -> Just $ auth.token
-        }
-
-handleError ::
-  (MonadFlow m) =>
-  Either Error OnConfirm.OnConfirmMessage ->
-  (OnConfirm.OnConfirmMessage -> m DOnConfirm.OnConfirmReq) ->
-  m (Maybe DOnConfirm.OnConfirmReq)
-handleError etr action =
-  case etr of
-    Right msg -> do
-      Just <$> action msg
-    Left err -> do
-      logTagError "on_confirm req" $ "on_confirm error: " <> show err
-      pure Nothing
+import Tools.Error
 
 buildOnConfirmReqV2 ::
-  ( HasFlowEnv m r '["_version" ::: Text]
+  ( HasFlowEnv m r '["_version" ::: Text],
+    MonadTime m
   ) =>
   Spec.OnConfirmReq ->
+  Bool ->
   m (Maybe DOnConfirm.OnConfirmReq)
-buildOnConfirmReqV2 req = do
+buildOnConfirmReqV2 req isValueAddNP' = do
   ContextV2.validateContext Context.ON_CONFIRM req.onConfirmReqContext
+  currTime <- getCurrentTime
   handleErrorV2 req $ \message -> do
-    case parseData message of
-      Left err -> do
-        logTagError "on_init req" $ "on_init error: " <> show err
-        return Nothing
-      Right (bppBookingId, mAuthorization) -> do
-        return $
-          Just $
-            DOnConfirm.OnConfirmReq
-              { bppBookingId,
-                specialZoneOtp = mAuthorization
-              }
+    case parseData message isValueAddNP' currTime of
+      Right dReq -> return $ Just dReq
+      Left err -> throwError . InvalidBecknSchema $ "on_confirm error:-" <> show err
   where
-    parseData :: Spec.ConfirmReqMessage -> Either Text (Id BPPBooking, Maybe Text)
-    parseData message = do
+    parseData :: Spec.ConfirmReqMessage -> Bool -> UTCTime -> Either Text DOnConfirm.OnConfirmReq
+    parseData message isValueAddNP now = do
       let order = message.confirmReqMessageOrder
-
-      bppBookingIdText <-
-        order.orderId
-          & maybe (Left "Invalid OrderId") Right
+      bppBookingIdText <- order.orderId & maybe (Left "Missing OrderId") Right
       let bppBookingId = Id bppBookingIdText
-
-      let startOtp =
-            order.orderFulfillments
-              >>= listToMaybe
-              >>= (.fulfillmentStops)
-              >>= Utils.getStartLocation
-              >>= (.stopAuthorization)
+          fulf = order.orderFulfillments >>= listToMaybe
+          mbRideOtp =
+            fulf >>= (.fulfillmentStops) >>= Utils.getStartLocation >>= (.stopAuthorization)
               >>= \auth -> if auth.authorizationType == Just (show Enums.OTP) then auth.authorizationToken else Nothing
 
-      return (bppBookingId, startOtp)
+      let fulfState = fulf >>= (.fulfillmentState) >>= (.fulfillmentStateDescriptor) >>= (.descriptorCode)
+      let isRideAssigned = fulfState == Just (show Enums.RIDE_ASSIGNED)
+
+      if isRideAssigned
+        then do
+          let driverImage = fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
+              driverMobileCountryCode = Just "+91" -- TODO: check how to get countrycode via ONDC
+              driverRating = Just $ toCentesimal 5 -- Default value for driver_rating for not-value-add-np.
+              oneYearAgo = - (365 * 24 * 60 * 60)
+              driverRegisteredAt = Just $ addUTCTime oneYearAgo now
+              isDriverBirthDay = False
+              isFreeRide = False
+
+          rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
+          bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
+          driverName <- fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & maybe (Left "Missing fulfillment.agent.person.name in on_confirm") Right
+          driverMobileNumber <- fulf >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & maybe (Left "Missing fulfillment.agent.contact.phone in on_confirm") Right
+
+          vehicleNumber <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & maybe (Left "Missing fulfillment.vehicle.registration in on_confirm") Right
+          vehicleColor <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleColor) & maybe (Left "Missing fulfillment.vehicle.color in on_confirm") Right
+          vehicleModel <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleModel) & maybe (Left "Missing fulfillment.vehicle.model in on_confirm") Right
+
+          Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {..}
+        else do
+          -- when its not a value-add-np ride flow, we need on_confirm to have RIDE_ASSIGNED state.
+          if not isValueAddNP
+            then Left $ "Invalid fulfillment state descriptor code in on_confirm:-" <> show fulfState <> ",expected:-" <> show Enums.RIDE_ASSIGNED
+            else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {bppBookingId, specialZoneOtp = mbRideOtp}
 
 handleErrorV2 ::
   (MonadFlow m) =>
@@ -105,5 +89,8 @@ handleErrorV2 req action =
   case req.onConfirmReqError of
     Nothing -> req.onConfirmReqMessage & maybe (pure Nothing) action
     Just err -> do
-      logTagError "on_confirm req" $ "on_confirm error: " <> show err
+      logTagError "on_confirm req" $ "on_confirm error:-" <> show err
       pure Nothing
+
+toCentesimal :: Int -> Centesimal
+toCentesimal = Centesimal . MkFixed . toInteger

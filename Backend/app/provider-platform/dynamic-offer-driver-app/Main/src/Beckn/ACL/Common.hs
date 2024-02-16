@@ -161,4 +161,4 @@ mkFulfillmentType = \case
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
   DCT.Rental _ -> "RENTAL"
   DCT.InterCity _ -> "INTER_CITY"
-  _ -> "RIDE"
+  _ -> "DELIVERY"

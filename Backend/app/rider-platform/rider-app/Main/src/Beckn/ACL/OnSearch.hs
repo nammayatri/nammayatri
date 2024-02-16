@@ -55,7 +55,7 @@ logOnSearchEventV2 req = do
   let context = req.onSearchReqContext
   createdAt <- getCurrentTime
   id <- generateGUID
-  bppId <- Utils.getContextBapId context
+  bppId <- Utils.getContextBppId context
   messageId <- Utils.getMessageIdText context
   (errorCode, errorMessage, errorType) <- case req.onSearchReqError of
     Just err -> do

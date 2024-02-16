@@ -123,20 +123,16 @@ rideAssignedReqHandler ::
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
-    HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
-    EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds
+    EventStreamFlow m r
   ) =>
   RideAssignedReq ->
   m ()
 rideAssignedReqHandler RideAssignedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   mbMerchant <- CQM.findById booking.merchantId
   ride <- buildRide mbMerchant booking bookingDetails
@@ -207,8 +203,6 @@ rideStartedReqHandler ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
@@ -218,7 +212,7 @@ rideStartedReqHandler ::
   m ()
 rideStartedReqHandler RideStartedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- runInReplica $ QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingDetails.bppBookingId.getId)
+  booking <- runInReplica $ QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
@@ -263,7 +257,7 @@ rideCompletedReqHandler ::
   m ()
 rideCompletedReqHandler RideCompletedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- runInReplica $ QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingDetails.bppBookingId.getId)
+  booking <- runInReplica $ QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   let bookingCanBeCompleted = booking.status == DRB.TRIP_ASSIGNED
       rideCanBeCompleted = ride.status == DRide.INPROGRESS
@@ -345,19 +339,16 @@ driverArrivedReqHandler ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
-    EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds
+    EventStreamFlow m r
   ) =>
   DriverArrivedReq ->
   m ()
 driverArrivedReqHandler DriverArrivedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- runInReplica $ QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingDetails.bppBookingId.getId)
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  booking <- runInReplica $ QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:-" <> bppRideId.getId)
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
 
   now <- getCurrentTime
@@ -376,24 +367,21 @@ bookingCancelledReqHandler ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
-    EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds
+    EventStreamFlow m r
   ) =>
   BookingCancelledReq ->
   m ()
 bookingCancelledReqHandler BookingCancelledReq {..} = do
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
   mbRide <- QRide.findActiveByRBId booking.id
   let isRideCancellable = maybe False (\ride -> ride.status `notElem` [DRide.INPROGRESS, DRide.CANCELLED]) mbRide
       bookingAlreadyCancelled = booking.status == DRB.CANCELLED
   unless (isBookingCancellable booking || (isRideCancellable && bookingAlreadyCancelled)) $
     throwError (BookingInvalidStatus (show booking.status))
 
-  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
+  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
   let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   case cancellationSource of
@@ -418,7 +406,7 @@ bookingCancelledReqHandler BookingCancelledReq {..} = do
     QBCR.upsert bookingCancellationReason
   QPFS.clearCache booking.riderId
   -- notify customer
-  bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
+  bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
 
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails
   where

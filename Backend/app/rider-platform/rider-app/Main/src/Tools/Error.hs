@@ -298,3 +298,18 @@ instance IsHTTPError LocationMappingError where
   toHttpCode _ = E500
 
 instance IsAPIError LocationMappingError
+
+newtype BecknSchemaError
+  = InvalidBecknSchema Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''BecknSchemaError
+
+instance IsBaseError BecknSchemaError where
+  toMessage (InvalidBecknSchema msg) = Just $ "Invalid Beckn Schema:-" <> msg
+
+instance IsHTTPError BecknSchemaError where
+  toErrorCode (InvalidBecknSchema _) = "INVALID_BECKN_SCHEMA"
+  toHttpCode (InvalidBecknSchema _) = E400
+
+instance IsAPIError BecknSchemaError

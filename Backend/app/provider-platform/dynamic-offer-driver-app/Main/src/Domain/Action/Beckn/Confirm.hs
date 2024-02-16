@@ -41,6 +41,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -53,7 +54,6 @@ import qualified Storage.Queries.SearchRequest as QSR
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
     vehicleVariant :: DVeh.Variant,
-    driverId :: Maybe Text,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: DL.LocationAddress,
@@ -170,6 +170,9 @@ validateRequest subscriber transporterId req now = do
   unless (transporterId' == transporterId) $ throwError AccessDenied
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  when (not isValueAddNP && booking.tripCategory /= DTC.OneWay DTC.OneWayOnDemandDynamicOffer) $
+    throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of
     DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     DTC.OneWay DTC.OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
