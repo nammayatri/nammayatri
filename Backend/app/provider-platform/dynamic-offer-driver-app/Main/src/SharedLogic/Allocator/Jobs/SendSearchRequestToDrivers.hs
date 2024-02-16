@@ -128,7 +128,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
                 putTaskDuration = Metrics.putTaskDuration merchant.name
               },
           isSearchTryValid = I.isSearchTryValid searchTry.id,
-          initiateDriverSearchBatch = SST.initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq searchTry.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId,
+          initiateDriverSearchBatch = SST.initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq searchTry.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId False,
           isScheduledBooking = searchTry.isScheduled,
           cancelSearchTry = I.cancelSearchTry searchTry.id,
           isBookingValid = do
