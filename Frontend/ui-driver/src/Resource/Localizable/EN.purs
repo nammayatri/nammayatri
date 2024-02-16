@@ -997,7 +997,7 @@ getEN stringKey =
         SIGNUP_EARLY_FOR_SPECIAL_OFFERS -> "Signup early for special offers"
         GUARANTEED_FIXED_PRICE _ -> "Guaranteed fixed price until \nJan 1, 2025"
         INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON -> "Introductory offer will be announced soon!"
-        NO_CHARGES_TILL -> "No charges till March 31, 2024"
+        NO_CHARGES_TILL -> "No charges till {}"
         AND -> " and "
         DIRECT_PAYMENT_NO_COMMISSIONS -> "Direct payment.\nNo commissions"
         CUSTOMER_PAYS_DIRECTLY -> "Customer pays to you directly via \ncash or UPI"
@@ -1231,3 +1231,8 @@ getEN stringKey =
         LETS_ENSURE_SAFE_RIDE -> "Let’s ensure a safe and secure ride"
         CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "Customer safety is our<br>responsibility. Let’s ensure a safe<br>and happy ride"
         OUR_SAFETY_PARTNER -> "Our Safety Partner"
+        WE_GUARANTEE_YOU -> "We guarantee you:"
+        LOWEST_FEES_FROM -> "Lowest Fees from {}"
+        ZERO_FEE_TILL -> "ZERO Fee till Oct 1st 2024"
+        ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
+        

@@ -87,7 +87,9 @@ type SubscriptionConfig =  {
   gradientConfig :: Array GradientConfig,
   enableSubscriptionSupportPopup :: Boolean,
   earnAmountInADay :: Int,
-  showFeeBreakup :: Boolean
+  showFeeBreakup :: Boolean,
+  noChargesTillDate :: String,
+  lowestFeesFromDate :: String
  }
 
 type SubscriptionOfferBannerConfig = {

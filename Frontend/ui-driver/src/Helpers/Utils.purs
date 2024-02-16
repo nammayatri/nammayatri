@@ -641,6 +641,7 @@ splitBasedOnLanguage str =
                 "BN_IN" | len > 3 -> 3
                 "ML_IN" | len > 4 -> 4
                 "TA_IN" | len > 5 -> 5
+                "TE_IN" | len > 6 -> 6
                 _ -> 0
 
 generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String -> String

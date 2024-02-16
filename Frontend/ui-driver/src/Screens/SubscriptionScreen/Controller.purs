@@ -268,10 +268,10 @@ eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans
   _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
   continue state {
-      data{ joinPlanData {allPlans = planListTransformer plans state.data.config.subscriptionConfig.enableIntroductoryView state.data.config.subscriptionConfig.gradientConfig,
+      data{ joinPlanData {allPlans = planListTransformer plans state.data.config.subscriptionConfig.enableIntroductoryView state.data.config.subscriptionConfig,
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
       props{showShimmer = false, subView = JoinPlan,  
-            joinPlanProps { selectedPlanItem = if (Mb.isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.subscriptionConfig.gradientConfig else state.props.joinPlanProps.selectedPlanItem}} }
+            joinPlanProps { selectedPlanItem = if (Mb.isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.subscriptionConfig else state.props.joinPlanProps.selectedPlanItem}} }
 
 eval (LoadHelpCentre lat lon kioskLocationList) state = do
   let transformedKioskList = transformKioskLocations kioskLocationList lat lon
@@ -297,7 +297,7 @@ eval (LoadMyPlans plans) state = do
                             data{ orderId = currentPlanResp.orderId, 
                                   planId = planEntity.id, 
                                   myPlanData {
-                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig.gradientConfig,
+                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig,
                                       maxDueAmount = planEntity.totalPlanCreditLimit,
                                       totalDueAmount = planEntity.currentDues,
                                       manualDueAmount = planEntity.currentDues - planEntity.autopayDues,
@@ -313,7 +313,7 @@ eval (LoadMyPlans plans) state = do
                             data{ orderId = currentPlanResp.orderId, 
                                   planId = planEntity.id, 
                                   myPlanData {
-                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig.gradientConfig,
+                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig,
                                       maxDueAmount = planEntity.totalPlanCreditLimit,
                                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus
                                   }}
@@ -384,7 +384,7 @@ eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state =
 
 -- eval (TogglePlanDescription _) state = continue state{data{myPlanData{planEntity{isSelected = not state.data.myPlanData.planEntity.isSelected}}}} --Always expended
 
-eval EnableIntroductoryView state = continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = [introductoryPlanConfig Language]}}}
+eval EnableIntroductoryView state = continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = [introductoryPlanConfig state.data.config.subscriptionConfig]}}}
 
 eval _ state = continue state
 

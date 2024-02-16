@@ -59,7 +59,7 @@ eval (LoadPlans plans) state = do
     let (UiPlansResp planResp) = plans
         config = state.data.subscriptionConfig
     _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
-    let planList = planListTransformer plans false config.gradientConfig 
+    let planList = planListTransformer plans false config 
     continue state { data{ plansList = planList , selectedPlanItem = (planList !! 0)}}
 eval (SelectPlan config ) state = continue state {data { selectedPlanItem = Just config }}
 eval (JoinPlanAC PrimaryButton.OnClick) state = updateAndExit state $ StartFreeTrialExit state

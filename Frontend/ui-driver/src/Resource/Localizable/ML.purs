@@ -927,7 +927,7 @@ getML stringKey =
         SIGNUP_EARLY_FOR_SPECIAL_OFFERS ->  "പ്രത്യേക ഓഫറുകൾക്കായി നേരത്തെ സൈൻ അപ്പ് ചെയ്യുക"
         GUARANTEED_FIXED_PRICE _ ->  "ജനുവരി 1, 2025 വരെ ഉറപ്പുള്ള സ്ഥിര വില"
         INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON ->  "ആമുഖ ഓഫർ ഉടൻ പ്രഖ്യാപിക്കും!"
-        NO_CHARGES_TILL ->  "ഡിസംബർ 31 വരെ നിരക്കുകളൊന്നുമില്ല"
+        NO_CHARGES_TILL ->  "{} വരെ സൗജന്യം"
         DO_YOU_WANT_TO_CANCEL ->  "നിങ്ങൾക്ക് റദ്ദാക്കണോ?"
         DO_YOU_WANT_TO_CANCEL_DESC ->  "നിങ്ങൾ ഓട്ടോപേ റദ്ദാക്കാൻ പോവുകയാണ്.\nയാന്ത്രിക പേയ്‌മെന്റുകൾ പുനരാരംഭിക്കുന്നതിന് നിങ്ങൾ വീണ്ടും ഓട്ടോപേ സജ്ജീകരിക്കേണ്ടതുണ്ട്."
         NO ->  "ഇല്ല"
@@ -1231,4 +1231,7 @@ getML stringKey =
         LETS_ENSURE_SAFE_RIDE -> "സുരക്ഷിതവും സുരക്ഷിതവുമായ യാത്ര ഉറപ്പാക്കാം"
         CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ഉപഭോക്തൃ സുരക്ഷ ഞങ്ങളുടെ<br>ഉത്തരവാദിത്തമാണ്. നമുക്ക് സുരക്ഷിതവും<br>സന്തോഷകരവുമായ യാത്ര ഉറപ്പാക്കാം"
         OUR_SAFETY_PARTNER -> "ഞങ്ങളുടെ സുരക്ഷാ പങ്കാളി"
-        
+        WE_GUARANTEE_YOU -> "We guarantee you:"
+        LOWEST_FEES_FROM -> "Lowest Fees from {}"
+        ZERO_FEE_TILL -> "ZERO Fee till Oct 1st 2024"
+        ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
