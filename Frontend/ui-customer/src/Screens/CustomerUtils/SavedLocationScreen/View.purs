@@ -52,7 +52,9 @@ import Screens.Types as ST
 import Services.API (SavedLocationReq(..), SavedLocationsListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
-import Types.App (GlobalState(..), defaultGlobalState)
+import Types.App (GlobalState(..), defaultGlobalState, FlowBT)
+import Services.FlowCache as FlowCache
+import Engineering.Helpers.BackTrack
 
 screen :: ST.SavedLocationScreenState -> GlobalState -> Screen Action ST.SavedLocationScreenState ScreenOutput
 screen initialState st =
@@ -61,7 +63,7 @@ screen initialState st =
   , name : "SavedLocationScreen"
   , globalEvents : [
       (\push -> do
-        _ <- launchAff $ EHC.flowRunner st $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
+        _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
         pure $ pure unit
           )
   ]
@@ -190,15 +192,10 @@ savedLocationsView push state =
         ]]
     ]
 
-getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> Flow GlobalState Unit
+getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> FlowBT String Unit
 getSavedLocationsList action push state = do
-  _ <-  EHU.toggleLoader true
-  (savedLocationResp ) <- Remote.getSavedLocationList ""
-  case savedLocationResp of
-      Right (SavedLocationsListRes listResp) -> do
-        _ <-  EHU.toggleLoader false
-        doAff do liftEffect $ push $ action ( SavedLocationsListRes (listResp))
-        pure unit
-      Left (err) -> do
-        _ <-  EHU.toggleLoader false
-        pure unit
+  void $ lift $ lift $ EHU.toggleLoader true
+  (SavedLocationsListRes savedLocationResp ) <- FlowCache.updateAndFetchSavedLocations false
+  void $ lift $ lift $ EHU.toggleLoader false
+  liftFlowBT $ push $ action ( SavedLocationsListRes savedLocationResp)
+  pure unit
