@@ -205,6 +205,7 @@
       "ny_ic_banner" : true,
       "ny_ic_banner_gender_feat" : true,
       "ny_ic_benefits_active" : true,
+      "ny_ic_benefits_filled_blue" : true,
       "ny_ic_benefits_inactive" : true,
       "ny_ic_bhim" : true,
       "ny_ic_bin" : true,

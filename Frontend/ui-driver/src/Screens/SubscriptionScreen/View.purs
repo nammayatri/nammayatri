@@ -304,15 +304,24 @@ enjoyBenefitsView push state =
                           ] <> FontStyle.body1 TypoGraphy
                       ]
                 )
-              ([(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW)] 
-                  <> if state.props.joinPlanProps.isIntroductory then [getString GET_FULL_PAYMENT, getString (GUARANTEED_FIXED_PRICE "GUARANTEED_FIXED_PRICE")]
-                     else if not state.data.config.subscriptionConfig.enableSubscriptionPopups
-                      then [(getString SIGNUP_EARLY_FOR_SPECIAL_OFFERS), getString (GUARANTEED_FIXED_PRICE "GUARANTEED_FIXED_PRICE")]
-                      else [(getString PAY_ONLY_IF_YOU_TAKE_RIDES), getString (GET_SPECIAL_OFFERS "GET_SPECIAL_OFFERS")])
-            ) 
-        ]
+              benefitsData )]
+        
         
     ]
+    where
+      benefitsData = if state.props.joinPlanProps.isIntroductory 
+                        then [ getVarString ZERO_FEE_TILL [HU.splitBasedOnLanguage state.data.config.subscriptionConfig.noChargesTillDate],
+                               getString ZERO_COMMISION_UNLIMITED_RIDES,
+                               getString EARN_TODAY_PAY_TOMORROW,
+                               getVarString LOWEST_FEES_FROM [HU.splitBasedOnLanguage state.data.config.subscriptionConfig.lowestFeesFromDate]
+                             ]
+                        else 
+                             [ getString ZERO_COMMISION, 
+                               getString EARN_TODAY_PAY_TOMORROW] 
+                             <>
+                            if not state.data.config.subscriptionConfig.enableSubscriptionPopups
+                                then [getString SIGNUP_EARLY_FOR_SPECIAL_OFFERS, getString $ GUARANTEED_FIXED_PRICE "GUARANTEED_FIXED_PRICE"]
+                                else [getString PAY_ONLY_IF_YOU_TAKE_RIDES, getString $ GET_SPECIAL_OFFERS "GET_SPECIAL_OFFERS"]
 
 paymentPendingView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
 paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE
@@ -842,19 +851,19 @@ duesView push state =
     ]
   
 
-promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w 
-promoCodeView push state =
+promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> Boolean -> PrestoDOM (Effect Unit) w 
+promoCodeView push state isIntroductory =
   linearLayout 
   ([ height WRAP_CONTENT
   , width MATCH_PARENT
   , cornerRadius 100.0
   , padding $ Padding 10 4 10 4
-  , stroke $ "1," <> Color.grey900
   , background Color.white900
   , margin $ MarginRight 4
   , gravity CENTER_VERTICAL
   , visibility if state.title == Nothing then GONE else VISIBLE
-  ]<> if state.isGradient then [gradient (Linear 90.0 state.gradient)] else [])
+  ] <> if not isIntroductory then [stroke $ "1," <> Color.grey900] else []
+    <> if state.isGradient then [gradient (Linear 90.0 state.gradient)] else [])
    [ imageView
      [ width $ V 12
      , height $ V 12
@@ -1065,13 +1074,11 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
           , margin $ MarginBottom 5
-          ][ textView
+          ][ textView $
               [ text state.title
-              , textSize if isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
               , weight 1.0
-              , fontStyle $ (if isSelected && not isMyPlan then FontStyle.bold else FontStyle.semiBold) LanguageStyle
               , color if isSelected && not isMyPlan || isIntroductory then Color.blue900 else Color.black700
-              ]
+              ] <> if isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body15 TypoGraphy
             , planPriceView state.priceBreakup state.frequency isSelectedLangTamil isIntroductory
             ]
           , linearLayout
@@ -1095,7 +1102,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
             ][ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
-              ](map  (\item -> promoCodeView push item) state.offers)
+              ](map  (\item -> promoCodeView push item isIntroductory) state.offers)
             ]
           , linearLayout
             [ height WRAP_CONTENT
@@ -1432,20 +1439,6 @@ planPriceView fares frequency isSelectedLangTamil isIntroductory =
       , margin $ MarginLeft 3
       , color if isIntroductory then Color.black600 else Color.black800
       ] <> if isSelectedLangTamil then FontStyle.body4 TypoGraphy else FontStyle.body7 TypoGraphy
-   , linearLayout
-     [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , padding $ Padding 5 5 5 5
-      , visibility if isIntroductory then VISIBLE else GONE
-      , background Color.blue600
-      , margin $ MarginLeft 4
-      , cornerRadius 24.0
-     ][ imageView 
-         [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_lock" 
-         , height $ V 10  
-         , width $ V 10
-         ]
-     ]
    ]
 
 findHelpCentreView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
@@ -1800,7 +1793,7 @@ lottieView state viewId margin' padding'=
     lottieAnimationView
     [ id (getNewIDWithTag viewId)
     , afterRender (\action-> do
-                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall) state.props.joinPlanProps.isIntroductory, lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = false}
+                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall) state.props.joinPlanProps.isIntroductory, lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = true}
                   )(const NoAction)
     , height $ V 35
     , width MATCH_PARENT
@@ -1830,18 +1823,21 @@ lottieJsonAccordingToLang isOnFreeTrial isIntroductory =
     "HI_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_hindi_03.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_hindi_01.json" 
                else "lottie/ny_ic_subscription_info_hindi_02.json"
-    "KN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_kannada_02.json"
+    "KN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_kannada_03.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_kannada_01.json" 
                else "lottie/ny_ic_subscription_info_kannada_02.json"
     "TA_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_tamil_03.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_tamil_01.json" 
                else "lottie/ny_ic_subscription_info_tamil_03.json"
-    "BN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_bengali_02.json"
+    "BN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_bengali_03.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_bengali_01.json" 
                else "lottie/ny_ic_subscription_info_bengali_02.json"
     "TE_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_telugu_03.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" 
                else "lottie/ny_ic_subscription_info_02.json"
+    "ML_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_malayalam_03.json"
+               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_malayalam_01.json" 
+               else "lottie/ny_ic_subscription_info_malayalam_02.json"
     _       -> if isIntroductory then "lottie/ny_ic_subscription_info_03.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" 
                else "lottie/ny_ic_subscription_info_02.json"

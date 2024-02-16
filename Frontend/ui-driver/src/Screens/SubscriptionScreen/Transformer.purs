@@ -31,8 +31,8 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number.Format (fixed, toStringWith)
 import Data.String (Pattern(..), split, toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
-import Language.Strings (getString)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals, splitBasedOnLanguage)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (SubscriptionConfig, GradientConfig)
 import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
@@ -70,21 +70,21 @@ getPromoConfig offerEntityArr gradientConfig =
         }
     ) offerEntityArr)
 
-myPlanListTransformer :: PlanEntity -> Maybe Boolean -> Array GradientConfig -> PlanCardConfig
-myPlanListTransformer planEntity isLocalized' config = do 
+myPlanListTransformer :: PlanEntity -> Maybe Boolean -> SubscriptionConfig -> PlanCardConfig
+myPlanListTransformer planEntity isLocalized' subsConfig = do 
     let isLocalized = fromMaybe false isLocalized'
-    getPlanCardConfig planEntity isLocalized false config
+    getPlanCardConfig planEntity isLocalized false subsConfig
 
-planListTransformer :: UiPlansResp -> Boolean -> Array GradientConfig -> Array PlanCardConfig
-planListTransformer (UiPlansResp planResp) isIntroductory gradientConfig =
+planListTransformer :: UiPlansResp -> Boolean -> SubscriptionConfig -> Array PlanCardConfig
+planListTransformer (UiPlansResp planResp) isIntroductory config =
     let planEntityArray = planResp.list
         plansplit = DA.partition (\(PlanEntity item) -> item.name == getString DAILY_UNLIMITED) planEntityArray
         sortedPlanEntityList = (plansplit.yes) <> (plansplit.no)
         isLocalized = fromMaybe false planResp.isLocalized 
     in 
     if isIntroductory 
-        then [introductoryPlanConfig Language]
-    else map (\ planEntity -> getPlanCardConfig planEntity isLocalized isIntroductory gradientConfig) sortedPlanEntityList 
+        then [introductoryPlanConfig config]
+    else map (\ planEntity -> getPlanCardConfig planEntity isLocalized isIntroductory config) sortedPlanEntityList 
 
 decodeOfferDescription :: String -> String
 decodeOfferDescription str = do
@@ -118,15 +118,15 @@ freeRideOfferConfig lazy =
     isPaidByYatriCoins : false
     }
 
-introductoryOfferConfig :: LazyCheck -> PromoConfig
-introductoryOfferConfig lazy = 
+introductoryOfferConfig :: SubscriptionConfig -> PromoConfig
+introductoryOfferConfig config = 
     {  
-    title : Just $ getString INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON,
+    title : Just $ getVarString NO_CHARGES_TILL [splitBasedOnLanguage config.noChargesTillDate],
     isGradient : true,
     gradient : [Color.blue600, Color.blue600],
     hasImage : true,
-    imageURL : fetchImage FF_ASSET "ny_ic_lock",
-    offerDescription : Just $ getString NO_CHARGES_TILL,
+    imageURL : fetchImage FF_ASSET "ny_ic_benefits_filled_blue",
+    offerDescription : Nothing,
     addedFromUI : false,
     isPaidByYatriCoins : false
     }
@@ -149,7 +149,7 @@ alternatePlansTransformer (UiPlansResp planResp) state =
     let planEntityArray = planResp.list
         alternatePlansArray = (DA.filter(\(PlanEntity item) -> item.id /= state.data.myPlanData.planEntity.id) planEntityArray)
         isLocalized = fromMaybe false planResp.isLocalized
-    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.subscriptionConfig.gradientConfig) alternatePlansArray
+    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.subscriptionConfig) alternatePlansArray
 
 
 getAutoPayDetailsList :: MandateData -> Array KeyValType
@@ -184,19 +184,19 @@ getSelectedId (UiPlansResp planResp) = do
         Just (PlanEntity plan) -> Just plan.id
         Nothing -> Nothing
 
-getSelectedPlan :: UiPlansResp -> Array GradientConfig -> Maybe PlanCardConfig
-getSelectedPlan (UiPlansResp planResp) gradientConfig = do
+getSelectedPlan :: UiPlansResp -> SubscriptionConfig -> Maybe PlanCardConfig
+getSelectedPlan (UiPlansResp planResp) config = do
     let planEntityArray = planResp.list
         planEntity' = planEntityArray DA.!! 0
     case planEntity' of 
         Just entity  -> let (PlanEntity planEntity) = entity
                             isLocalized = fromMaybe false planResp.isLocalized
-                        in Just $ getPlanCardConfig entity isLocalized false gradientConfig
+                        in Just $ getPlanCardConfig entity isLocalized false config
         Nothing -> Nothing
 
 
-getPlanCardConfig :: PlanEntity -> Boolean -> Boolean -> Array GradientConfig -> PlanCardConfig
-getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientConfig = 
+getPlanCardConfig :: PlanEntity -> Boolean -> Boolean -> SubscriptionConfig -> PlanCardConfig
+getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory  config = 
     let planData = getMultiLanguagePlanData isLocalized {title : planEntity.name, description : planEntity.description}
     in  {
             id : planEntity.id ,
@@ -205,7 +205,7 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientCon
             isSelected : false ,
             offers : (if planEntity.freeRideCount > 0 
                         then [freeRideOfferConfig Language] 
-                        else if isIntroductory then [introductoryOfferConfig Language] else []) <> getPromoConfig planEntity.offers gradientConfig,
+                        else if isIntroductory then [introductoryOfferConfig config] else []) <> getPromoConfig planEntity.offers config.gradientConfig,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
             freeRideCount : planEntity.freeRideCount,
@@ -255,15 +255,15 @@ getPlanAmountConfig plan = case plan of
                             "DAILY PER RIDE" -> {value : 35.0, isFixed : false, perRide : 3.5}
                             _ ->  {value : 25.0, isFixed : true, perRide : 0.0}
 
-introductoryPlanConfig :: LazyCheck -> PlanCardConfig
-introductoryPlanConfig lazy =  {
+introductoryPlanConfig :: SubscriptionConfig -> PlanCardConfig
+introductoryPlanConfig config =  {
     id : "dummy",
     title : getString DAILY_UNLIMITED,
     description : "",
     isSelected : true,
     frequency : "PER_DAY",
     freeRideCount : 0,
-    offers : [introductoryOfferConfig Language],
+    offers : [introductoryOfferConfig config],
     priceBreakup : [PaymentBreakUp{amount: 25.0, component: "FINAL_FEE"}],
     showOffer : true
 } 
