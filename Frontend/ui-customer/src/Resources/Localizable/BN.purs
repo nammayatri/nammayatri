@@ -634,7 +634,7 @@ getBN stringKey =
         MY_TICKETS -> "আমার টিকেট"
         YOU_CAN_BOOK_TICKETS_TO_THE_ZOO_BY_CLICKING_THE_BUTTON -> "আপনি বোট চালানোর জন্য বুটান ক্লিক করে চালান করতে পারেন।"
         LOCATION_PERMISSION_SUBTITLE -> "আপনার যাত্রার জন্য, আমাদের আপনার ডিভাইস লোকেশন প্রয়োজন।"
-        LOCATION_PERMISSION_SUBTITLE_NEW_USER _ -> "নম্মা যাত্রীতে স্বাগতম! \nরাইড বুক করতে আমাদের আপনার ডিভাইস লোকেশন প্রয়োজন।"
+        LOCATION_PERMISSION_SUBTITLE_NEW_USER -> "{} te স্বাগতম! \nরাইড বুক করতে আমাদের আপনার ডিভাইস লোকেশন প্রয়োজন।"
         YOUR_FEEDBACK_HELPS_US _ -> "আপনার মতামতগুলি আমাদেরকে যাত্রা সাথি অভিজ্ঞান উন্নত করতে সাহায্য করে"
         FINDING_QUOTES_TEXT -> "ক্যাব খুজছি আসছে"
         PAY_DRIVER_USING_WALLET -> ""

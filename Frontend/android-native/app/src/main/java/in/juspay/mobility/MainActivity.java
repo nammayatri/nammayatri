@@ -490,7 +490,6 @@ public class MainActivity extends AppCompatActivity {
         JSONObject payload = new JSONObject();
 
         try {
-
             json.put("requestId", UUID.randomUUID());
             json.put("service", getService());
             json.put("betaAssets", false);
@@ -945,8 +944,15 @@ public class MainActivity extends AppCompatActivity {
 
     private JSONObject getInnerPayload(String action) throws JSONException{
         JSONObject payload = new JSONObject();
+        String appName = "";
+        try{
+            appName = context.getApplicationInfo().loadLabel(context.getPackageManager()).toString();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         payload.put("clientId", getResources().getString(R.string.client_id));
         payload.put("merchantId", getResources().getString(R.string.merchant_id));
+        payload.put("appName", appName);
         payload.put("action", action);
         payload.put("logLevel",1);
         payload.put("isBootable",true);
