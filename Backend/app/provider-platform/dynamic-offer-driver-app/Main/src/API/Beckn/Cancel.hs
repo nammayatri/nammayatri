@@ -20,6 +20,7 @@ import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
@@ -27,13 +28,13 @@ import qualified Domain.Action.Beckn.Cancel as DCancel
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.OnCancel as OU
+import qualified Domain.Types.OnCancel as OC
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
-import qualified Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -45,7 +46,7 @@ import Tools.Error
 
 type API =
   Capture "merchantId" (Id Merchant)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> Cancel.CancelAPIV2
 
 handler :: FlowServer API
@@ -78,26 +79,28 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
       booking <- QRB.findById cancelReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelReq.bookingId.getId)
       let onCancelBuildReq =
-            OU.DBookingCancelledReqV2
+            OC.DBookingCancelledReqV2
               { booking = booking,
                 cancellationSource = DBCR.ByUser
               }
       context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
-      if cancelReq.cancelStatus == Just "confirmCancel"
-        then do
+      let cancelStatus = readMaybe . T.unpack =<< cancelReq.cancelStatus
+      case cancelStatus of
+        Just Enums.CONFIRM_CANCEL -> do
           Redis.whenWithLockRedis (cancelLockKey cancelReq.bookingId.getId) 60 $ do
             (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelReq
             fork ("cancelBooking:" <> cancelReq.bookingId.getId) $ do
               DCancel.cancel cancelReq merchant booking
-              buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) "CANCELLED" (OU.BookingCancelledBuildReqV2 onCancelBuildReq)
+              buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq)
               void $
                 Callback.withCallback merchant "CANCEL" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                   pure buildOnCancelMessageV2
-        else do
-          buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) "SOFT_CANCEL" (OU.BookingCancelledBuildReqV2 onCancelBuildReq)
+        Just Enums.SOFT_CANCEL -> do
+          buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq)
           void $
             Callback.withCallback merchant "CANCEL" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
               pure buildOnCancelMessageV2
+        _ -> throwError $ InvalidRequest "Invalid cancel status"
     Right cancelSearchReq -> do
       searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
       fork ("cancelSearch:" <> cancelSearchReq.transactionId) $

@@ -17,6 +17,7 @@ module API.Beckn.OnCancel (API, handler) where
 import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import Environment
@@ -41,11 +42,11 @@ onCancel _ req = withFlowHandlerBecknAPI do
   cancelStatus <- cancelMsg.confirmReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "Missing onCancel orderStatus")
   logDebug $ "cancelStatus in bpp " <> cancelStatus
 
-  when (cancelStatus == "CANCELLED") do
+  when (cancelStatus == show Enums.CANCELLED) do
     (mbDOnCancelReq, messageId) <- do
       transactionId <- Utils.getTransactionId req.onCancelReqContext
       Utils.withTransactionIdLogTag transactionId $ do
-        mbDOnCancelReq <- ACL.buildOnCancelReqV2 req
+        mbDOnCancelReq <- ACL.buildOnCancelReq req
         messageId <- Utils.getMessageIdText req.onCancelReqContext
         pure (mbDOnCancelReq, messageId)
     whenJust mbDOnCancelReq $ \onCancelReq ->

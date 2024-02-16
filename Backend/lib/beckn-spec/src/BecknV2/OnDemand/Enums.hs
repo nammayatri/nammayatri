@@ -86,7 +86,7 @@ data OrderStatus
   | ACTIVE
   | COMPLETE
   | CANCELLED
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
 
 data QuoteBreakupTitle
   = -- ..quote.breakup.title
