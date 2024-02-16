@@ -15,24 +15,39 @@
 module API.Beckn.Cancel (API, handler) where
 
 import qualified Beckn.ACL.Cancel as ACL
-import qualified Beckn.Types.Core.Taxi.API.Cancel as API
+import qualified Beckn.ACL.OnCancel as ACL
+import qualified Beckn.OnDemand.Utils.Callback as Callback
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
+import Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
+import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Cancel as DCancel
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.OnCancel as OC
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Servant
+import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.Queries.Booking as QRB
+import Tools.Error
 
 type API =
   Capture "merchantId" (Id Merchant)
-    :> SignatureAuth "Authorization"
-    :> API.CancelAPI
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    :> Cancel.CancelAPIV2
 
 handler :: FlowServer API
 handler = cancel
@@ -40,23 +55,72 @@ handler = cancel
 cancel ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  Cancel.CancelReq ->
+  Cancel.CancelReqV2 ->
   FlowHandler AckResponse
-cancel transporterId subscriber req =
-  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Cancel API Flow" "Reached"
-    dCancelReq <- ACL.buildCancelReq req
-    case dCancelReq of
-      Left cancelReq -> do
-        Redis.whenWithLockRedis (cancelLockKey cancelReq.bookingId.getId) 60 $ do
-          (merchant, booking) <- DCancel.validateCancelRequest transporterId subscriber cancelReq
-          fork ("cancelBooking:" <> cancelReq.bookingId.getId) $
-            DCancel.cancel cancelReq merchant booking
-      Right cancelSearchReq -> do
-        searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
-        fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
-          DCancel.cancelSearch transporterId cancelSearchReq searchTry
-    return Ack
+cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
+  (dCancelReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- do
+    transactionId <- Utils.getTransactionId reqV2.cancelReqContext
+    Utils.withTransactionIdLogTag transactionId $ do
+      logTagInfo "Cancel APIV2 Flow" "Reached"
+      dCancelReq <- ACL.buildCancelReqV2 reqV2
+      let context = reqV2.cancelReqContext
+      callbackUrl <- Utils.getContextBapUri context
+      bppUri <- Utils.getContextBppUri context
+      messageId <- Utils.getMessageId context
+      bapId <- Utils.getContextBapId context
+      city <- Utils.getContextCity context
+      country <- Utils.getContextCountry context
+      pure (dCancelReq, callbackUrl, bapId, messageId, city, country, Just transactionId, context.contextBppId, bppUri)
+
+  logDebug $ "Cancel Request: " <> T.pack (show dCancelReq)
+  _ <- case dCancelReq of
+    Left cancelReq -> do
+      internalEndPointHashMap <- asks (.internalEndPointHashMap)
+      merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
+      booking <- QRB.findById cancelReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelReq.bookingId.getId)
+      let onCancelBuildReq =
+            OC.DBookingCancelledReqV2
+              { booking = booking,
+                cancellationSource = DBCR.ByUser
+              }
+      context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
+      let cancelStatus = readMaybe . T.unpack =<< cancelReq.cancelStatus
+      case cancelStatus of
+        Just Enums.CONFIRM_CANCEL -> do
+          Redis.whenWithLockRedis (cancelLockKey cancelReq.bookingId.getId) 60 $ do
+            (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelReq
+            fork ("cancelBooking:" <> cancelReq.bookingId.getId) $ do
+              DCancel.cancel cancelReq merchant booking
+              buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq)
+              void $
+                Callback.withCallback merchant "CANCEL" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+                  pure buildOnCancelMessageV2
+        Just Enums.SOFT_CANCEL -> do
+          buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq)
+          void $
+            Callback.withCallback merchant "CANCEL" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+              pure buildOnCancelMessageV2
+        _ -> throwError $ InvalidRequest "Invalid cancel status"
+    Right cancelSearchReq -> do
+      searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
+      fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
+        DCancel.cancelSearch transporterId searchTry
+  return Ack
 
 cancelLockKey :: Text -> Text
 cancelLockKey id = "Driver:Cancel:BookingId-" <> id
+
+errHandler :: Spec.Context -> BecknAPIError -> Spec.OnCancelReq
+errHandler context (BecknAPIError err) =
+  Spec.OnCancelReq
+    { onCancelReqContext = context,
+      onCancelReqError = Just err',
+      onCancelReqMessage = Nothing
+    }
+  where
+    err' =
+      Spec.Error
+        { errorCode = Just err.code,
+          errorMessage = err.message >>= \m -> Just $ encodeToText err._type <> " " <> m,
+          errorPaths = err.path
+        }

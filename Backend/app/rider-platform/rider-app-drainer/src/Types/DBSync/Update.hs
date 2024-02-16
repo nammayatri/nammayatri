@@ -41,6 +41,7 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantPaymentMethod as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
+import qualified "rider-app" Storage.Beam.NextBillionData as NextBillionData
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment ()
 import qualified "rider-app" Storage.Beam.Person as Person
@@ -48,20 +49,13 @@ import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
 import qualified "rider-app" Storage.Beam.Quote as Quote
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
-import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
+import qualified "rider-app" Storage.Beam.RentalDetails as RentalDetails
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
-import qualified "rider-app" Storage.Beam.Tickets.TicketBooking as TicketBooking
-import qualified "rider-app" Storage.Beam.Tickets.TicketBookingService as TicketBookingService
-import qualified "rider-app" Storage.Beam.Tickets.TicketBookingServicePriceBreakup as TicketBookingServicePriceBreakup
-import qualified "rider-app" Storage.Beam.Tickets.TicketPlace as TicketPlace
-import qualified "rider-app" Storage.Beam.Tickets.TicketService as TicketService
-import qualified "rider-app" Storage.Beam.Tickets.TicketServicePrice as TicketServicePrice
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
-import qualified "rider-app" Storage.Beam.Webengage as Webengage
 import Utils.Parse
 
 -- Each update option contains a list of (key, value) pairs to set during
@@ -103,25 +97,19 @@ data UpdateModel
   | PersonFlowStatusUpdate
   | QuoteUpdate
   | RegistrationTokenUpdate
-  | RentalSlabUpdate
+  | RentalDetailsUpdate
   | RideUpdate
   | SavedReqLocationUpdate
   | SearchRequestUpdate
   | SosUpdate
   | SpecialZoneQuoteUpdate
   | TripTermsUpdate
-  | WebengageUpdate
   | FeedbackFormUpdate
   | HotSpotConfigUpdate
   | BecknRequestUpdate
   | LocationUpdate
   | LocationMappingUpdate
-  | TicketBookingUpdate
-  | TicketBookingServiceUpdate
-  | TicketServiceUpdate
-  | TicketServicePriceUpdate
-  | TicketBookingServicePriceBreakupUpdate
-  | TicketPlaceUpdate
+  | NextBillionDataUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -160,25 +148,19 @@ getTagUpdate PersonDefaultEmergencyNumberUpdate = "PersonDefaultEmergencyNumberO
 getTagUpdate PersonFlowStatusUpdate = "PersonFlowStatusOptions"
 getTagUpdate QuoteUpdate = "QuoteOptions"
 getTagUpdate RegistrationTokenUpdate = "RegistrationTokenOptions"
-getTagUpdate RentalSlabUpdate = "RentalSlabOptions"
+getTagUpdate RentalDetailsUpdate = "RentalDetailsOptions"
 getTagUpdate RideUpdate = "RideOptions"
 getTagUpdate SavedReqLocationUpdate = "SavedReqLocationOptions"
 getTagUpdate SearchRequestUpdate = "SearchRequestOptions"
 getTagUpdate SosUpdate = "SosOptions"
 getTagUpdate SpecialZoneQuoteUpdate = "SpecialZoneQuoteOptions"
 getTagUpdate TripTermsUpdate = "TripTermsOptions"
-getTagUpdate WebengageUpdate = "WebengageOptions"
 getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
 getTagUpdate HotSpotConfigUpdate = "HotSpotConfigOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
 getTagUpdate LocationUpdate = "LocationOptions"
 getTagUpdate LocationMappingUpdate = "LocationMappingOptions"
-getTagUpdate TicketBookingUpdate = "TicketBookingOptions"
-getTagUpdate TicketBookingServiceUpdate = "TicketBookingServiceOptions"
-getTagUpdate TicketServiceUpdate = "TicketServiceOptions"
-getTagUpdate TicketServicePriceUpdate = "TicketServicePriceOptions"
-getTagUpdate TicketBookingServicePriceBreakupUpdate = "TicketBookingServicePriceBreakupOptions"
-getTagUpdate TicketPlaceUpdate = "TicketPlaceOptions"
+getTagUpdate NextBillionDataUpdate = "NextBillionDataOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
@@ -216,25 +198,19 @@ parseTagUpdate "PersonDefaultEmergencyNumberOptions" = return PersonDefaultEmerg
 parseTagUpdate "PersonFlowStatusOptions" = return PersonFlowStatusUpdate
 parseTagUpdate "QuoteOptions" = return QuoteUpdate
 parseTagUpdate "RegistrationTokenOptions" = return RegistrationTokenUpdate
-parseTagUpdate "RentalSlabOptions" = return RentalSlabUpdate
+parseTagUpdate "RentalDetailsOptions" = return RentalDetailsUpdate
 parseTagUpdate "RideOptions" = return RideUpdate
 parseTagUpdate "SavedReqLocationOptions" = return SavedReqLocationUpdate
 parseTagUpdate "SearchRequestOptions" = return SearchRequestUpdate
 parseTagUpdate "SosOptions" = return SosUpdate
 parseTagUpdate "SpecialZoneQuoteOptions" = return SpecialZoneQuoteUpdate
 parseTagUpdate "TripTermsOptions" = return TripTermsUpdate
-parseTagUpdate "WebengageOptions" = return WebengageUpdate
 parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
 parseTagUpdate "HotSpotConfigOptions" = return HotSpotConfigUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
 parseTagUpdate "LocationOptions" = return LocationUpdate
 parseTagUpdate "LocationMappingOptions" = return LocationMappingUpdate
-parseTagUpdate "TicketBookingOptions" = return TicketBookingUpdate
-parseTagUpdate "TicketBookingServiceOptions" = return TicketBookingServiceUpdate
-parseTagUpdate "TicketServiceOptions" = return TicketServiceUpdate
-parseTagUpdate "TicketServicePriceOptions" = return TicketServicePriceUpdate
-parseTagUpdate "TicketBookingServicePriceBreakupOptions" = return TicketBookingServicePriceBreakupUpdate
-parseTagUpdate "TicketPlaceOptions" = return TicketPlaceUpdate
+parseTagUpdate "NextBillionDataOptions" = return NextBillionDataUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -273,25 +249,19 @@ data DBUpdateObject
   | PersonFlowStatusOptions UpdateModel [Set Postgres PersonFlowStatus.PersonFlowStatusT] (Where Postgres PersonFlowStatus.PersonFlowStatusT)
   | QuoteOptions UpdateModel [Set Postgres Quote.QuoteT] (Where Postgres Quote.QuoteT)
   | RegistrationTokenOptions UpdateModel [Set Postgres RegistrationToken.RegistrationTokenT] (Where Postgres RegistrationToken.RegistrationTokenT)
-  | RentalSlabOptions UpdateModel [Set Postgres RentalSlab.RentalSlabT] (Where Postgres RentalSlab.RentalSlabT)
+  | RentalDetailsOptions UpdateModel [Set Postgres RentalDetails.RentalDetailsT] (Where Postgres RentalDetails.RentalDetailsT)
   | RideOptions UpdateModel [Set Postgres Ride.RideT] (Where Postgres Ride.RideT)
   | SavedReqLocationOptions UpdateModel [Set Postgres SavedReqLocation.SavedReqLocationT] (Where Postgres SavedReqLocation.SavedReqLocationT)
   | SearchRequestOptions UpdateModel [Set Postgres SearchRequest.SearchRequestT] (Where Postgres SearchRequest.SearchRequestT)
   | SosOptions UpdateModel [Set Postgres Sos.SosT] (Where Postgres Sos.SosT)
   | SpecialZoneQuoteOptions UpdateModel [Set Postgres SpecialZoneQuote.SpecialZoneQuoteT] (Where Postgres SpecialZoneQuote.SpecialZoneQuoteT)
   | TripTermsOptions UpdateModel [Set Postgres TripTerms.TripTermsT] (Where Postgres TripTerms.TripTermsT)
-  | WebengageOptions UpdateModel [Set Postgres Webengage.WebengageT] (Where Postgres Webengage.WebengageT)
   | FeedbackFormOptions UpdateModel [Set Postgres FeedbackForm.FeedbackFormT] (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigOptions UpdateModel [Set Postgres HotSpotConfig.HotSpotConfigT] (Where Postgres HotSpotConfig.HotSpotConfigT)
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
   | LocationOptions UpdateModel [Set Postgres Location.LocationT] (Where Postgres Location.LocationT)
   | LocationMappingOptions UpdateModel [Set Postgres LocationMapping.LocationMappingT] (Where Postgres LocationMapping.LocationMappingT)
-  | TicketBookingOptions UpdateModel [Set Postgres TicketBooking.TicketBookingT] (Where Postgres TicketBooking.TicketBookingT)
-  | TicketBookingServiceOptions UpdateModel [Set Postgres TicketBookingService.TicketBookingServiceT] (Where Postgres TicketBookingService.TicketBookingServiceT)
-  | TicketServiceOptions UpdateModel [Set Postgres TicketService.TicketServiceT] (Where Postgres TicketService.TicketServiceT)
-  | TicketServicePriceOptions UpdateModel [Set Postgres TicketServicePrice.TicketServicePriceT] (Where Postgres TicketServicePrice.TicketServicePriceT)
-  | TicketBookingServicePriceBreakupOptions UpdateModel [Set Postgres TicketBookingServicePriceBreakup.TicketBookingServicePriceBreakupT] (Where Postgres TicketBookingServicePriceBreakup.TicketBookingServicePriceBreakupT)
-  | TicketPlaceOptions UpdateModel [Set Postgres TicketPlace.TicketPlaceT] (Where Postgres TicketPlace.TicketPlaceT)
+  | NextBillionDataOptions UpdateModel [Set Postgres NextBillionData.NextBillionDataT] (Where Postgres NextBillionData.NextBillionDataT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -408,9 +378,9 @@ instance FromJSON DBUpdateObject where
       RegistrationTokenUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ RegistrationTokenOptions updateModel updVals whereClause
-      RentalSlabUpdate -> do
+      RentalDetailsUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ RentalSlabOptions updateModel updVals whereClause
+        return $ RentalDetailsOptions updateModel updVals whereClause
       RideUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ RideOptions updateModel updVals whereClause
@@ -429,9 +399,6 @@ instance FromJSON DBUpdateObject where
       TripTermsUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ TripTermsOptions updateModel updVals whereClause
-      WebengageUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ WebengageOptions updateModel updVals whereClause
       FeedbackFormUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ FeedbackFormOptions updateModel updVals whereClause
@@ -447,21 +414,6 @@ instance FromJSON DBUpdateObject where
       LocationMappingUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ LocationMappingOptions updateModel updVals whereClause
-      TicketBookingUpdate -> do
+      NextBillionDataUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ TicketBookingOptions updateModel updVals whereClause
-      TicketBookingServiceUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ TicketBookingServiceOptions updateModel updVals whereClause
-      TicketServiceUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ TicketServiceOptions updateModel updVals whereClause
-      TicketServicePriceUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ TicketServicePriceOptions updateModel updVals whereClause
-      TicketBookingServicePriceBreakupUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ TicketBookingServicePriceBreakupOptions updateModel updVals whereClause
-      TicketPlaceUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ TicketPlaceOptions updateModel updVals whereClause
+        return $ NextBillionDataOptions updateModel updVals whereClause

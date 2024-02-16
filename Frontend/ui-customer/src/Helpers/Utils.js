@@ -17,6 +17,7 @@
 import { callbackMapper } from "presto-ui";
 
 const JBridge = window.JBridge;
+const notificationCallBacks = {};
 let tracking_id = 0;
 export const getNewTrackingId = function (unit) {
   tracking_id += 1;
@@ -57,13 +58,22 @@ export const getCurrentDate = function (string) {
   const dd = String(today.getDate()).padStart(2, "0");
   const mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = today.getFullYear();
-
   today = dd + "/" + mm + "/" + yyyy;
+  return today;
+}
+
+export const getCurrentDatev2 = function (string) {
+  let today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = today.getFullYear();
+  today = yyyy + "-" + mm + "-" + dd;
   return today;
 }
 
 
 export const compareDate = function (date1, date2) {
+  console.log("comparing : ", date1, date2);
   return date1 >= date2;
 }
 
@@ -106,7 +116,7 @@ export const secondsToHms = function (d) {
   const m = Math.floor(d % 3600 / 60);
 
   const hDisplay = h > 0 ? h + (h == 1 ? " hr, " : " hrs, ") : "";
-  const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "";
+  const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "--";
   return hDisplay + mDisplay;
 }
 
@@ -130,24 +140,41 @@ export const requestKeyboardShow = function (id) {
 export const storeCallBackCustomer = function (cb) {
 
   return function (action) {
-    return function () {
-      try {
-        const callback = callbackMapper.map(function (notificationType) {
-          cb(action(notificationType))();
-        });
-        const notificationCallBack = function (notificationType) {
-          cb(action(notificationType))();
-        };
-        window.callNotificationCallBack = notificationCallBack;
-        console.log("In storeCallBackCustomer ---------- + " + action);
-        JBridge.storeCallBackCustomer(callback);
-      }
-      catch (error) {
-        console.log("Error occurred in storeCallBackCustomer ------", error);
+    return function(screenName){
+      return function () {
+        try {
+          notificationCallBacks[screenName] = function(notificationType){
+            cb(action(notificationType))();
+          }
+          const callback = callbackMapper.map(function (notificationType, notificationBody) {
+            console.log("notificationType ->", notificationType);
+            if (window.whitelistedNotification.includes(notificationType)) {
+              Object.keys(notificationCallBacks).forEach((key) => {
+                notificationCallBacks[key](notificationType);
+              })
+              if (notificationBody) {
+                window.notificationBody = JSON.parse(notificationBody);
+              }
+            }
+          });
+          const notificationCallBack = function (notificationType) {
+            console.log("notificationType ->", notificationType);
+            if (window.whitelistedNotification.includes(notificationType)) {
+              Object.keys(notificationCallBacks).forEach((key) => {
+                notificationCallBacks[key](notificationType);
+              })
+            }
+          };
+          window.callNotificationCallBack = notificationCallBack;
+          console.log("In storeCallBackCustomer ---------- + " + action);
+          JBridge.storeCallBackCustomer(callback);
+        }
+        catch (error) {
+          console.log("Error occurred in storeCallBackCustomer ------", error);
+        }
       }
     }
   }
-
 }
 
 export const storeCallBackContacts = function (cb) {
@@ -155,13 +182,13 @@ export const storeCallBackContacts = function (cb) {
     return function () {
       try {
         const callback = callbackMapper.map(function (contact) {
-          const json = JSON.parse(contact);
+          const json = JSON.parse(contact.toString().replace(/\s/g, " "));
           console.log("storeCallBackContacts js " + json);
           cb(action(json))();
         });
 
         console.log("In storeCallBackContacts ---------- + " + action);
-        window.JBridge.storeCallBackContacts(callback);
+        return window.JBridge.storeCallBackContacts(callback);
       } catch (err) {
         console.log("storeCallBackContacts error " + err);
       }
@@ -204,27 +231,15 @@ export const toStringJSON = function (attr) {
   return JSON.stringify(attr);
 };
 
-export const clearWaitingTimer = function (id) {
-  console.log("clearWaitingTimer" + id);
-  if (window.__OS == "IOS" && id == "countUpTimerId") {
-    if (window.JBridge.clearCountUpTimer) {
-      window.JBridge.clearCountUpTimer();
-    }
-  } else {
-    clearInterval(parseInt(id));
+export const didDriverMessage = function() {
+  try {
+    return window.didDriverMessage || false;
+  } catch (error) {
+    console.log("Error in didDriverMessage " + error);
+    return false;
   }
 }
 
-export const clearCountDownTimer = function (id) {
-  if (window.__OS == "IOS") {
-    if (window.JBridge.clearCountDownTimer) {
-      window.JBridge.clearCountDownTimer();
-    }
-  }
-  else {
-    clearInterval(parseInt(id));
-  }
-}
 
 export const setRefreshing = function (id) {
   return function (bool) {
@@ -324,6 +339,12 @@ export const withinTimeRange = function (startTime) {
       }
     }
   }
+}
+
+export const isWeekend = function (dateString) {
+  const date = new Date(dateString);
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6; // 0 is Sunday, 6 is Saturday
 }
 
 export const adjustViewWithKeyboard = function (flag) {
@@ -429,4 +450,71 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
   else {
     sc("FAILURE")();
   }
+}
+
+export const getDifferenceBetweenDates = function (date1, date2) {
+  const diffInSeconds = Math.floor((new Date(date1) - new Date(date2)) / 1000);
+  return diffInSeconds;
+}
+
+export const parseSourceHashArray = function (str) {
+  return JSON.parse(str);
+}
+export const getDeviceDefaultDensity = function (){
+  if (window.JBridge.getSessionInfo) {
+    const sessionInfo = JSON.parse(window.JBridge.getSessionInfo())
+    return sessionInfo.screen_ppi;
+  } else {
+    return window.JBridge.getDensity() * 160;
+  }
+}
+export const getDefaultPixels = function (){
+  if(window.JBridge.getDefaultPixels)return parseFloat(window.JBridge.getDefaultPixels());
+  else return getDeviceDefaultDensity();
+}
+
+export const getPixels = function (){
+  if(window.__OS == "IOS"){
+    return parseFloat(window.JBridge.getPixel());
+  } 
+  if (window.parent.devicePixelRatio) {
+    return window.parent.devicePixelRatio;
+  } else {
+    return window.JBridge.getPixels();
+  }
+}
+
+export const getDateAfterNDaysv2 = function (n) {
+  const today = new Date();
+  const dateAfterNDays = new Date(today);
+  dateAfterNDays.setDate(today.getDate() + n);
+  const year = dateAfterNDays.getFullYear();
+  const month = String(dateAfterNDays.getMonth() + 1).padStart(2, "0");
+  const day = String(dateAfterNDays.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export const incrOrDecrTimeFrom = function (inputTime, minutesToAddOrSubtract, isIncrement) {
+  const [hours, minutes, seconds] = inputTime.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours);
+  date.setMinutes(minutes);
+  date.setSeconds(seconds);
+    
+  if (isIncrement) date.setMinutes(date.getMinutes() + minutesToAddOrSubtract);
+  else date.setMinutes(date.getMinutes() - minutesToAddOrSubtract);
+  const newTime = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+  return newTime;
+}
+
+export const getMockFollowerName = function() {
+  let currentMockName = "User";
+  if (window.notificationBody) {
+    const msg = window.notificationBody.msg;
+    currentMockName = msg.split(" ")[0];
+  } else if (window.__payload && window.__payload.payload && window.__payload.payload.fullNotificationBody && window.__payload.payload.fullNotificationBody.msg) {
+    const msg = window.__payload.payload.fullNotificationBody.msg;
+    currentMockName = msg.split(" ")[0];
+  }
+  return currentMockName;
 }

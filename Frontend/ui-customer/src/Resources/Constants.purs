@@ -25,13 +25,16 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex)
 import Engineering.Helpers.Commons (os)
-import Language.Strings (getString, getEN)
+import Language.Strings (getString)
+import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Screens.Types as ST
+import JBridge as JB
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
+import ConfigProvider
+import Data.String as DS
 
 type Language
   = { name :: String
@@ -43,9 +46,6 @@ getDelayForAutoComplete = 800
 
 getDelayForLocateOnMap :: Int
 getDelayForLocateOnMap = 1000
-
-getSearchRadius :: Int
-getSearchRadius = 100000
 
 getLanguages :: Array Language
 getLanguages =
@@ -77,16 +77,18 @@ decodeAddress addressWithCons =
     else
       ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
 
-encodeAddress :: String -> Array AddressComponents -> Maybe String -> ST.Address
-encodeAddress fullAddress addressComponents placeId =
+encodeAddress :: String -> Array AddressComponents -> Maybe String -> Number -> Number -> ST.Address
+encodeAddress fullAddress addressComponents placeId lat lon =
   let
     totalAddressComponents = length $ split (Pattern ", ") fullAddress
     areaCodeFromFullAdd = runFn2 extractKeyByRegex areaCodeRegex fullAddress
     areaCodeFromAddComp = getValueByComponent addressComponents "postal_code"
-
+    areaCodeComp = if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
+    areaCodeVal = Just if (trim areaCodeComp) == "" then (runFn2 extractKeyByRegex areaCodeRegex $ runFn2 JB.getLocationNameV2 lat lon) else areaCodeComp
     splitedAddress = split (Pattern ", ") fullAddress
+    gateName = getValueByComponent addressComponents "sublocality"
   in
-    { area: splitedAddress !! (totalAddressComponents - 4)
+    { area: if DS.null gateName then splitedAddress !! (totalAddressComponents - 4) else (Just gateName)
     , areaCode: Just if (trim areaCodeFromAddComp) /= "" then areaCodeFromAddComp else areaCodeFromFullAdd
     , building: splitedAddress !! (totalAddressComponents - 6)
     , city: splitedAddress !! (totalAddressComponents - 3)
@@ -197,10 +199,12 @@ getGender gender placeHolderText =
 
 getFaresList :: Array FareBreakupAPIEntity -> String -> Array ST.FareComponent
 getFaresList fares baseDistance =
+  let currency = (getAppConfig appConfig).currency
+  in
   map
     ( \(FareBreakupAPIEntity item) ->
           { fareType : item.description
-          , price : (getValueFromConfig "currency") <> " " <> 
+          , price : currency <> " " <> 
             (show $ case item.description of 
               "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
               "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
@@ -216,11 +220,12 @@ getFaresList fares baseDistance =
                       "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
                       "WAITING_CHARGES" -> getEN WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> getEN MISC_WAITING_CHARGE 
+                      "WAITING_OR_PICKUP_CHARGES" -> getEN WAITING_CHARGE 
                       "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
                       "SGST" -> getEN PLATFORM_GST
+                      "CUSTOMER_CANCELLATION_DUES" -> getEN CUSTOMER_CANCELLATION_DUES
                       _ -> getEN BASE_FARES
           }
     )
@@ -261,26 +266,22 @@ getKmMeter distance = if (distance < 1000) then toStringJSON distance <> " m" el
 -- Info ::
 -- Vehicle Variants for yatri sathi are SEDAN_TAXI (SEDAN , SUV, HATCHBACK) and NON_AC_TAXI (TAXI)
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
-fetchVehicleVariant variant = case variant of 
-                                "SUV" -> Just ST.SUV
-                                "SEDAN" -> Just ST.SEDAN
-                                "HATCHBACK" -> Just ST.HATCHBACK
-                                "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
-                                "TAXI" -> Just ST.TAXI 
-                                "TAXI_PLUS" -> Just ST.TAXI_PLUS
-                                _ -> Nothing
+fetchVehicleVariant variant = 
+  case variant of 
+    "SUV"           -> Just ST.SUV
+    "SEDAN"         -> Just ST.SEDAN
+    "HATCHBACK"     -> Just ST.HATCHBACK
+    "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
+    "TAXI"          -> Just ST.TAXI 
+    "TAXI_PLUS"     -> Just ST.TAXI_PLUS
+    _               -> Nothing
 
 getVehicleCapacity :: String -> String 
-getVehicleCapacity variant = case getMerchant FunctionCall of
-  YATRISATHI -> case fetchVehicleVariant variant of
-          Just ST.TAXI -> getString ECONOMICAL <> " · " <>  "4 " <> getString PEOPLE
-          Just ST.SUV  -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
-          _            -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
-  YATRI -> case fetchVehicleVariant variant of
-          Just ST.SUV -> "6 " <> (getString SEATS)
-          Just ST.AUTO_RICKSHAW -> "3 " <> (getString SEATS)
-          _ -> "4 " <> (getString SEATS)
-  _ ->    ""
+getVehicleCapacity variant = 
+  case fetchVehicleVariant variant of
+    Just ST.SUV -> "6" 
+    Just ST.AUTO_RICKSHAW -> "3"
+    _ -> "4" 
 
 getDisabilityType :: String -> Array ST.DisabilityT -> ST.DisabilityT 
 getDisabilityType disType disList = (fromMaybe dummyDisabilityList (head (filter(\item -> item.tag == disType) disList)))
@@ -306,3 +307,6 @@ ticketAquariumId = "a7eba6ed-99f7-442f-a9d8-00c8b380657b"
 
 ticketCamId :: String
 ticketCamId = "d8f47b42-50a5-4a97-8dda-e80a3633d7ab"
+
+maxImageUploadInIssueReporting :: Int  
+maxImageUploadInIssueReporting = 3 

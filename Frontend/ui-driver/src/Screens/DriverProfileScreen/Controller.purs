@@ -33,15 +33,13 @@ import Data.String as DS
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag,setText)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag,setText, getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings, generateQR, downloadQR)
-import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
+import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR)
+import JBridge (firebaseLogEvent, goBackPrevWebPage,differenceBetweenTwoUTC, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
 import Language.Strings (getString)
 import Language.Types as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||), (&&))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
@@ -60,6 +58,8 @@ import Screens.SubscriptionScreen.Controller
 import Effect.Aff (launchAff_)
 import Effect.Uncurried(runEffectFn4)
 import Storage (isLocalStageOn)
+import Helpers.Utils(fetchImage, FetchImageFrom(..))
+import Data.Function.Uncurried (runFn2)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -82,11 +82,12 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "no_action"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "primary_edit_text_changed"
-      PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "countdown_updated"
+      PopUpModal.CountDown seconds status timerID -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "countdown_updated"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
     ActivateOrDeactivateRcPopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "on_goback"
@@ -95,10 +96,11 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen VEHICLE_DETAILS_SCREEN)
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "no_action"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "primary_edit_text_changed"
-      PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "countdown_updated"
+      PopUpModal.CountDown seconds status timerID -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "countdown_updated"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
     DeleteRcPopUpModalAction act -> case act of
@@ -108,10 +110,11 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen VEHICLE_DETAILS_SCREEN)
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "no_action"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "primary_edit_text_changed"
-      PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "countdown_updated"
+      PopUpModal.CountDown seconds status timerID -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "countdown_updated"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_logout" "image_onclick"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen VEHICLE_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
     CallDriverPopUpModalAction act -> case act of
@@ -121,9 +124,10 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen DRIVER_PROFILE_SCREEN)
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "no_action"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "primary_edit_text_changed"
-      PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "countdown_updated"
+      PopUpModal.CountDown seconds status timerID -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "countdown_updated"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
@@ -155,9 +159,10 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
     InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_selection"
@@ -184,7 +189,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToHomeScreen DriverProfileScreenState
                     | GoToReferralScreen
                     | GoToLogout
-                    | GoBack
+                    | GoBack DriverProfileScreenState
                     | ActivatingOrDeactivatingRC DriverProfileScreenState
                     | DeletingRc DriverProfileScreenState
                     | CallingDriver DriverProfileScreenState
@@ -260,7 +265,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
                                 else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
                                 else if state.props.showGenderView then continue $ state { props{ showGenderView = false}}
-                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit GoBack else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}
+                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit $ GoBack state else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}
                                 else if state.props.alreadyActive then continue $ state {props { alreadyActive = false}}
                                 else if state.props.deleteRcView then continue $ state { props{ deleteRcView = false}}
                                 else if state.props.activateOrDeactivateRcView then continue $ state { props{ activateOrDeactivateRcView = false}}
@@ -274,7 +279,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else if state.props.updateLanguages then continue state{props{updateLanguages = false}}
                                 else if isJust state.props.detailsUpdationType then continue state{props{detailsUpdationType = Nothing}}
                                 else if state.props.openSettings then continue state{props{openSettings = false}}
-                                else exit GoBack
+                                else exit $ GoBack state
 
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
@@ -303,7 +308,7 @@ eval (OptionClick optionIndex) state = do
     DRIVER_PRESONAL_DETAILS -> exit $ GoToDriverDetailsScreen state
     DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
     DRIVER_BANK_DETAILS -> continue state
-    GO_TO_LOCATIONS -> exit $ GoToDriverSavedLocationScreen state  
+    GO_TO_LOCATIONS -> handleGotoClick state
     DRIVER_BOOKING_OPTIONS -> exit $ GoToBookingOptions state
     MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen state
     HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen state
@@ -356,9 +361,10 @@ eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
                                       driverAlternateNumber = driverProfileResp.alternateNumber ,
                                       driverGender = driverProfileResp.gender,
                                       payerVpa = fromMaybe "" driverProfileResp.payerVpa,
-                                      autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus
+                                      autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus,
+                                      goHomeActive = driverGoHomeInfo.status == Just "ACTIVE"
                                       },
-                    props { enableGoto = driverProfileResp.isGoHomeEnabled && driverGoHomeInfo.status /= Just "ACTIVE" && state.data.config.gotoConfig.enableGoto }}
+                    props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto}}
 
 eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
   let rctransformedData = makeRcsTransformData rcDataArray
@@ -397,7 +403,7 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
   else if (isJust state.props.detailsUpdationType ) then continue state {props{detailsUpdationType = Nothing}}
   else continue state{ props { openSettings = false }}
 
-eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit GoBack else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
+eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit $ GoBack state else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
 
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
@@ -412,7 +418,7 @@ eval SelectGender state = do
 eval UpdateAlternateNumber state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
+  let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
     pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
     continue state
@@ -437,7 +443,7 @@ eval (PrimaryEditTextActionController (PrimaryEditTextController.FocusChanged bo
 eval EditNumberText state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
+  let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
    pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
    continue state
@@ -625,17 +631,15 @@ makeRcsTransformData (listRes) = map (\ (SA.GetAllRcDataRecords rc)-> {
 
 optionList :: DriverProfileScreenState -> Array Listtype
 optionList state =
-    (if state.props.enableGoto && (all ( _ == false )[isLocalStageOn ST.RideAccepted, isLocalStageOn ST.RideStarted, isLocalStageOn ST.ChatWithCustomer]) then [{menuOptions: GO_TO_LOCATIONS , icon:"ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_loc_grey.png"}] else []) <>
-    (if (getMerchant FunctionCall /= NAMMAYATRI)  then [{menuOptions: DRIVER_BOOKING_OPTIONS , icon:"ic_booking_options,https://assets.juspay.in/nammayatri/images/driver/ic_booking_options.png"}] else []) <>
     [
-      {menuOptions: APP_INFO_SETTINGS , icon:"ny_ic_app_info,https://assets.juspay.in/nammayatri/images/driver/ny_ic_app_info.png"},
-      {menuOptions: MULTI_LANGUAGE , icon:"ny_ic_language,https://assets.juspay.in/nammayatri/images/driver/ny_ic_language.png"},
-      {menuOptions: HELP_AND_FAQS , icon:"ny_ic_head_phones,https://assets.juspay.in/nammayatri/images/driver/ny_ic_head_phones.png"}
-    ] 
-    <> (if (getMerchant FunctionCall == NAMMAYATRI) then [{menuOptions: LIVE_STATS_DASHBOARD , icon:"ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png"}] else []) <>
-    [
-      {menuOptions: ABOUT_APP , icon:"ny_ic_about,https://assets.juspay.in/nammayatri/images/driver/ny_ic_about.png"},
-      {menuOptions: DRIVER_LOGOUT , icon:"ny_ic_logout_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_logout_grey.png"}
+      {menuOptions: GO_TO_LOCATIONS , icon: fetchImage FF_ASSET "ny_ic_loc_grey"},
+      {menuOptions: DRIVER_BOOKING_OPTIONS , icon: fetchImage FF_ASSET "ic_booking_options"},
+      {menuOptions: APP_INFO_SETTINGS , icon: fetchImage FF_ASSET "ny_ic_app_info"},
+      {menuOptions: MULTI_LANGUAGE , icon: fetchImage FF_ASSET "ny_ic_language"},
+      {menuOptions: HELP_AND_FAQS , icon: fetchImage FF_ASSET "ny_ic_head_phones"},
+      {menuOptions: LIVE_STATS_DASHBOARD , icon: fetchImage FF_ASSET "ic_graph_black"},
+      {menuOptions: ABOUT_APP , icon: fetchImage FF_ASSET "ny_ic_about"},
+      {menuOptions: DRIVER_LOGOUT , icon: fetchImage FF_ASSET "ny_ic_logout_grey"}
     ]
 
 updateLanguageList :: DriverProfileScreenState -> Array String -> Array CheckBoxOptions
@@ -652,3 +656,11 @@ shareImageMessageConfig _ = {
   logoId : "",
   isReferral : false
   }
+
+handleGotoClick :: DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
+handleGotoClick state =
+  if (state.data.goHomeActive || state.props.isRideActive) then do
+    void $ pure $ toast $ getString if state.data.goHomeActive then STR.LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE else STR.LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE
+    continue state
+  else
+    exit $ GoToDriverSavedLocationScreen state

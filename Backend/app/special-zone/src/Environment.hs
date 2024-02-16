@@ -25,7 +25,7 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
 
 data AppCfg = AppCfg
-  { migrationPath :: Maybe FilePath,
+  { migrationPath :: [FilePath],
     autoMigrate :: Bool,
     esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,

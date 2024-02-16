@@ -17,6 +17,7 @@ module Storage.CachedQueries.FarePolicy
   ( findById,
     clearCache,
     update,
+    update',
     clearCacheById,
   )
 where
@@ -58,3 +59,6 @@ clearCacheById fid = Hedis.withCrossAppRedis $ do
 
 update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
 update = Queries.update
+
+update' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+update' = Queries.update'

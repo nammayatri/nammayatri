@@ -18,7 +18,7 @@ module Domain.Types.DriverOffer where
 
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -40,9 +40,8 @@ data DriverOffer = DriverOffer
     merchantId :: Maybe (Id DMerchant.Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     driverName :: Text,
-    driverId :: Maybe Text,
-    durationToPickup :: Int, -- Seconds?
-    distanceToPickup :: HighPrecMeters,
+    durationToPickup :: Maybe Int, -- Seconds?
+    distanceToPickup :: Maybe HighPrecMeters,
     validTill :: UTCTime,
     bppQuoteId :: Text,
     rating :: Maybe Centesimal,
@@ -53,8 +52,8 @@ data DriverOffer = DriverOffer
 
 data DriverOfferAPIEntity = DriverOfferAPIEntity
   { driverName :: Text,
-    durationToPickup :: Int, -- Seconds?
-    distanceToPickup :: HighPrecMeters,
+    durationToPickup :: Maybe Int, -- Seconds?
+    distanceToPickup :: Maybe HighPrecMeters,
     validTill :: UTCTime,
     rating :: Maybe Centesimal
   }

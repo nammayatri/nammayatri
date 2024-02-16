@@ -77,7 +77,6 @@ dependencies:
   - servant-server
   - singletons
   - uuid
-  - hashmap
   - cereal
   - beam-core
   - beam-mysql

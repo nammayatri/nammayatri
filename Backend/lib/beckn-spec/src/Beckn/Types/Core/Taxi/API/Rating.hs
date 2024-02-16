@@ -15,19 +15,39 @@
 module Beckn.Types.Core.Taxi.API.Rating where
 
 import Beckn.Types.Core.Taxi.Rating (RatingMessage)
+import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type RatingReq = BecknReq RatingMessage
+
+type RatingReqV2 = Spec.RatingReq
 
 type RatingRes = AckResponse
 
 type RatingAPI =
   "rating"
-    :> ReqBody '[JSON] RatingReq
+    :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] RatingRes
 
 ratingAPI :: Proxy RatingAPI
 ratingAPI = Proxy
+
+type RatingAPIV1 =
+  "rating"
+    :> ReqBody '[JSON] RatingReq
+    :> Post '[JSON] RatingRes
+
+ratingAPIV1 :: Proxy RatingAPIV1
+ratingAPIV1 = Proxy
+
+type RatingAPIV2 =
+  "rating"
+    :> ReqBody '[JSON] RatingReqV2
+    :> Post '[JSON] RatingRes
+
+ratingAPIV2 :: Proxy RatingAPIV2
+ratingAPIV2 = Proxy

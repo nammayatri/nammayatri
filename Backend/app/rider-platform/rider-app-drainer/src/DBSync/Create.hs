@@ -62,7 +62,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("PersonFlowStatus" :: Text) [(obj, val, entryId, PersonFlowStatusObject obj) | (CreateDBCommand entryId _ _ _ _ (PersonFlowStatusObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Quote" :: Text) [(obj, val, entryId, QuoteObject obj) | (CreateDBCommand entryId _ _ _ _ (QuoteObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("RegistrationToken" :: Text) [(obj, val, entryId, RegistrationTokenObject obj) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("RentalSlab" :: Text) [(obj, val, entryId, RentalSlabObject obj) | (CreateDBCommand entryId _ _ _ _ (RentalSlabObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("RentalDetails" :: Text) [(obj, val, entryId, RentalDetailsObject obj) | (CreateDBCommand entryId _ _ _ _ (RentalDetailsObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Rating" :: Text) [(obj, val, entryId, RatingObject obj) | (CreateDBCommand entryId _ _ _ _ (RatingObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Ride" :: Text) [(obj, val, entryId, RideObject obj) | (CreateDBCommand entryId _ _ _ _ (RideObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("SavedReqLocation" :: Text) [(obj, val, entryId, SavedReqLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (SavedReqLocationObject obj), val) <- cmds]
@@ -70,18 +70,12 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("Sos" :: Text) [(obj, val, entryId, SosObject obj) | (CreateDBCommand entryId _ _ _ _ (SosObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("SpecialZoneQuote" :: Text) [(obj, val, entryId, SpecialZoneQuoteObject obj) | (CreateDBCommand entryId _ _ _ _ (SpecialZoneQuoteObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("TripTerms" :: Text) [(obj, val, entryId, TripTermsObject obj) | (CreateDBCommand entryId _ _ _ _ (TripTermsObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("Webengage" :: Text) [(obj, val, entryId, WebengageObject obj) | (CreateDBCommand entryId _ _ _ _ (WebengageObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackForm" :: Text) [(obj, val, entryId, FeedbackFormObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("HotSpotConfig" :: Text) [(obj, val, entryId, HotSpotConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Location" :: Text) [(obj, val, entryId, LocationObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("LocationMapping" :: Text) [(obj, val, entryId, LocationMappingObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationMappingObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketBooking" :: Text) [(obj, val, entryId, TicketBookingObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketBookingObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketBookingService" :: Text) [(obj, val, entryId, TicketBookingServiceObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketBookingServiceObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketService" :: Text) [(obj, val, entryId, TicketServiceObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketServiceObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketServicePrice" :: Text) [(obj, val, entryId, TicketServicePriceObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketServicePriceObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketBookingServicePriceBreakup" :: Text) [(obj, val, entryId, TicketBookingServicePriceBreakupObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketBookingServicePriceBreakupObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketPlace" :: Text) [(obj, val, entryId, TicketPlaceObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketPlaceObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("NextBillionData" :: Text) [(obj, val, entryId, NextBillionDataObject obj) | (CreateDBCommand entryId _ _ _ _ (NextBillionDataObject obj), val) <- cmds]
   where
     runCreate dbConf _ model object = do
       let dbObjects = map (\(dbObject, _, _, _) -> dbObject) object
@@ -107,9 +101,9 @@ runCreateCommands cmds streamKey = do
               Env {..} <- ask
               res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection newObjects streamKey' model
               either
-                ( \_ -> do
-                    void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                ( \error' -> do
+                    void $ publishDBSyncMetric $ Event.KafkaPushFailure "Create" model
+                    EL.logError ("ERROR:" :: Text) (("Kafka Rider Create Error " <> error' <> " for model :" <> model) :: Text)
                     pure [Left entryIds]
                 )
                 (\_ -> pure [Right entryIds])

@@ -14,12 +14,13 @@
 
 module Tools.Ticket
   ( createTicket,
+    updateTicket,
   )
 where
 
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import EulerHS.Prelude
 import qualified Kernel.External.Ticket.Interface as TI
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
@@ -32,6 +33,9 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 
 createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.CreateTicketReq -> m Ticket.CreateTicketResp
 createTicket = runWithServiceConfig TI.createTicket
+
+updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
+updateTicket = runWithServiceConfig TI.updateTicket
 
 runWithServiceConfig ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>

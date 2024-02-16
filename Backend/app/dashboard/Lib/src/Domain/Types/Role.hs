@@ -17,6 +17,7 @@
 module Domain.Types.Role where
 
 import Data.Singletons.TH
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -24,8 +25,10 @@ import Kernel.Types.Id
 
 -- DASHBOARD_ADMIN is superuser, who can can create and assign other roles
 
-data DashboardAccessType = DASHBOARD_USER | DASHBOARD_ADMIN | FLEET_OWNER | DASHBOARD_RELEASE_ADMIN
-  deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema)
+data DashboardAccessType = DASHBOARD_USER | DASHBOARD_ADMIN | FLEET_OWNER | DASHBOARD_RELEASE_ADMIN | MERCHANT_ADMIN | RENTAL_FLEET_OWNER
+  deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
+
+$(mkBeamInstancesForEnum ''DashboardAccessType)
 
 genSingletons [''DashboardAccessType]
 

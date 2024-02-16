@@ -18,6 +18,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
@@ -187,12 +188,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     stopChatService(notificationType, sharedPref);
                     String key = getString(R.string.service);
                     String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
+                    JSONObject notificationData = new JSONObject();
+                    notificationData.put("title", title)
+                                    .put("msg",body);
+                    NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());
                     switch (notificationType) {
                         case NotificationTypes.DRIVER_NOTIFY:
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
                                 String driverNotification = remoteMessage.getData().get("driver_notification_payload");
                                 if (driverNotification != null){
-                                    showOverlayMessage(new JSONObject(driverNotification));
+                                    JSONObject driverNotificationJsonObject = new JSONObject(driverNotification);
+                                    showOverlayMessage(driverNotificationJsonObject);
+                                    if (driverNotificationJsonObject.has("showPushNotification") && !driverNotificationJsonObject.isNull("showPushNotification") ? driverNotificationJsonObject.getBoolean("showPushNotification") : false) {
+                                       NotificationUtils.showNotification(this, title, body, payload, null);
+                                    }
                                 }
                             }
                             break;
@@ -205,8 +214,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             break;
 
                         case NotificationTypes.NEW_RIDE_AVAILABLE:
+                            RideRequestUtils.addRideReceivedEvent(entity_payload,null,null,"ride_request_fcm_received", this);
                             if(sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
                                 if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))  showRR(entity_payload, payload);
+                                else {
+                                    RideRequestUtils.addRideReceivedEvent(entity_payload, null,null, "ride_request_ignored", this);
+                                    firebaseLogEventWithParams("ride_ignored", "payload", entity_payload.toString());
+                                }
                             }else showRR(entity_payload, payload);
                             break;
 
@@ -373,7 +387,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 }
                             }
                             break;
-
+                        case NotificationTypes.SAFETY_ALERT:
+                            showSafetyAlert(title, body, payload, imageUrl);
+                            break;
                         default:
                             if (payload.get("show_notification").equals("true")) {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -422,9 +438,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showOverlayMessage(JSONObject payload) {
         try {
-            Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
-            showMessage.putExtra("payload", payload.toString());
-            startService(showMessage);
+            int delay = payload.optInt("delay", 0);
+            HandlerThread handlerThread = new HandlerThread("OverlayHandlerThread");
+            handlerThread.start();
+
+            Handler handler = new Handler(handlerThread.getLooper());
+
+            handler.postDelayed(() -> {
+                Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
+                showMessage.putExtra("payload", payload.toString());
+                startService(showMessage);
+            }, delay * 1000);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -524,7 +549,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             try {
                 getApplicationContext().startActivity(intent);
             } catch (Exception e) {
-                firebaseLogEventWithParams("exception", "startMainActivity", e.toString());
+                firebaseLogEventWithParams("exception_in_startMainActivity", "startMainActivity", String.valueOf(e));
             }
         }
     }
@@ -571,29 +596,54 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return ob;
     }
 
-    private static class NotificationTypes {
-        private static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
-        private static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
-        private static final String CLEARED_FARE = "CLEARED_FARE";
-        private static final String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
-        private static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";
-        private static final String TRIP_FINISHED = "TRIP_FINISHED";
-        private static final String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
-        private static final String TRIP_STARTED = "TRIP_STARTED";
-        private static final String BUNDLE_UPDATE = "BUNDLE_UPDATE";
-        private static final String CANCELLED_SEARCH_REQUEST = "CANCELLED_SEARCH_REQUEST";
-        private static final String NEW_MESSAGE = "NEW_MESSAGE";
-        private static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
-        private static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
-        private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
-        private static final String CALL_API = "CALL_API";
-        private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
-        private static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
-        private static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
-        private static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
-        private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
-        private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
-        private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
-        private static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
+    private void showSafetyAlert(String title, String body, JSONObject payload, String imageUrl){
+        try {
+            String notificationBody = null;
+            String notificationTitle = getString(R.string.everything_okay);
+            SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            sharedPref.edit().putString("SAFETY_ALERT_TYPE", body).apply();
+            CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(this);
+            HashMap<String, Object> cleverTapParams = new HashMap<>();
+            cleverTapParams.put("searchRequestId", body);
+            cleverTapAPI.pushEvent("ny_user_night_safety_alert", cleverTapParams);
+            notificationBody = body == "Deviation" ? getString(R.string.safety_deviation_alert) : getString(R.string.we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip);
+            NotificationUtils.showNotification(this, notificationTitle, notificationBody, payload, imageUrl);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public static class NotificationTypes {
+        public static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
+        public static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
+        public static final String CLEARED_FARE = "CLEARED_FARE";
+        public static final String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
+        public static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";
+        public static final String TRIP_FINISHED = "TRIP_FINISHED";
+        public static final String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
+        public static final String TRIP_STARTED = "TRIP_STARTED";
+        public static final String BUNDLE_UPDATE = "BUNDLE_UPDATE";
+        public static final String CANCELLED_SEARCH_REQUEST = "CANCELLED_SEARCH_REQUEST";
+        public static final String NEW_MESSAGE = "NEW_MESSAGE";
+        public static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
+        public static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
+        public static final String UPDATE_STORAGE = "UPDATE_STORAGE";
+        public static final String CALL_API = "CALL_API";
+        public static final String CHAT_MESSAGE = "CHAT_MESSAGE";
+        public static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
+        public static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
+        public static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
+        public static final String PAYMENT_PENDING = "PAYMENT_PENDING";
+        public static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
+        public static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
+        public static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
+        public static final String COINS_SUCCESS = "COINS_SUCCESS";
+        public static final String SHARE_RIDE = "SHARE_RIDE";
+        public static final String SOS_RESOLVED = "SOS_RESOLVED";
+        public static final String SOS_TRIGGERED = "SOS_TRIGGERED";
+        public static final String SOS_MOCK_DRILL = "SOS_MOCK_DRILL";
+        public static final String FOLLOW_RIDE = "FOLLOW_RIDE";
+        public static final String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
+        public static final String SAFETY_ALERT = "SAFETY_ALERT";
     }
 }

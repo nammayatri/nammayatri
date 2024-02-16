@@ -46,8 +46,8 @@ import Prelude
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
 import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Font.Style (Style(..))
+import ConfigProvider
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -55,8 +55,8 @@ logoutPopUp  state = let
   popUpConfig' = config' {
     primaryText {text = (getString LOGOUT)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
-    option1 {text = (getString GO_BACK)},
-    option2 {text = (getString LOGOUT)}
+    option1 {text = (getString GO_BACK), enableRipple = true},
+    option2 {text = (getString LOGOUT), enableRipple = true}
   }
   in popUpConfig'
 
@@ -71,7 +71,9 @@ genericHeaderConfig state = let
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , height = (V 25)
       , width = (V 25)
-      , margin = (Margin 16 16 16 16)
+      , margin = (Margin 8 8 8 8)
+      , layoutMargin = Margin 8 8 8 8
+      , enableRipple = true
       }
     , padding = (PaddingVertical 5 5)
     , textConfig {
@@ -143,6 +145,8 @@ primaryButtonConfig state = let
       , background = Color.black900
       , height = (V 48)
       , id = "DriverProfilePrimaryButton"
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       , isClickable = (state.props.updateLanguages && DA.length (getSelectedLanguages state) > 0)|| ( state.props.showGenderView && isJust state.data.genderTypeSelect && state.data.driverGender /= state.data.genderTypeSelect) || (state.props.alternateNumberView && (DS.length (fromMaybe "" state.data.driverEditAlternateMobile))==10 && state.props.checkAlternateNumber && state.data.driverAlternateNumber /= state.data.driverEditAlternateMobile)
       , alpha = if (state.props.updateLanguages && DA.length (getSelectedLanguages state) > 0) || (state.props.showGenderView && isJust state.data.genderTypeSelect && state.data.driverGender /= state.data.genderTypeSelect) || (state.props.alternateNumberView && DS.length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber && state.data.driverAlternateNumber /= state.data.driverEditAlternateMobile) then 1.0 else 0.7
       }
@@ -467,6 +471,7 @@ getChipRailArray :: Int -> String -> Array String -> String -> Array ST.ChipRail
 getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
   let
     alive = getPeriod lastRegistered
+    appData = (getAppConfig appConfig).appData
   in
     ( if lateNightTrips > 0 then
         [ { mainTxt: show lateNightTrips
@@ -477,7 +482,7 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
         []
     ) <>
     ( [ { mainTxt: if alive.periodType == "new" then "" else (show alive.period) <> " " <> alive.periodType
-          , subTxt: "on " <> getValueFromConfig "clientName"
+          , subTxt: "on " <> appData.name
           }
         ]
     )<>
@@ -491,7 +496,7 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
     )<>
     (
       [ { mainTxt: totalDistanceTravelled
-        , subTxt: getString TRAVELLED_ON_APP
+        , subTxt: getString $ TRAVELLED_ON_APP "TRAVELLED_ON_APP"
         }
       ]
     )

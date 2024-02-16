@@ -30,6 +30,7 @@ import Data.Array as DA
 import Data.Maybe (Maybe (..))
 import Helpers.Utils (isParentView, emitTerminateApp)
 import Common.Types.App (LazyCheck(..))
+import Locale.Utils
 
 instance showAction :: Show Action where
   show _ = ""
@@ -63,12 +64,12 @@ data ScreenOutput = UpdateLanguage SelectLanguageScreenState
 eval :: Action -> SelectLanguageScreenState -> Eval Action ScreenOutput SelectLanguageScreenState
 
 eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = do
-  let language = (getValueToLocalStore LANGUAGE_KEY)
+  let language = (getLanguageLocale languageKey)
   _ <- pure $ printLog "SelectLanguage Screen" language
   let isBtnActive = if config.id /= language then true else false
   continue state{props{selectedLanguage = config.id,btnActive = isBtnActive}}
 
-eval AfterRender state = continue state {props {selectedLanguage = if DA.any (_ == getValueToLocalStore LANGUAGE_KEY) ["__failed" , "(null)"] then "EN_US" else getValueToLocalStore LANGUAGE_KEY}}
+eval AfterRender state = continue state {props {selectedLanguage = if DA.any (_ == getLanguageLocale languageKey) ["__failed" , "(null)"] then "EN_US" else getLanguageLocale languageKey}}
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = updateAndExit state $ UpdateLanguage state
 

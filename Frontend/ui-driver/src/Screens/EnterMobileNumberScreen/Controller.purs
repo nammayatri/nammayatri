@@ -18,6 +18,7 @@ import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bi
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import Screens.Types (EnterMobileNumberScreenState)
 import Components.PrimaryEditText.Controllers as PrimaryEditText
+import Components.MobileNumberEditor as MobileNumberEditor
 import Components.PrimaryButton.Controller as PrimaryButton
 import PrestoDOM.Types.Core (class Loggable)
 import Data.String (length)
@@ -28,9 +29,9 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
-import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+import ConfigProvider
 
 instance showAction :: Show Action where
   show _ = ""
@@ -42,9 +43,11 @@ instance loggableAction :: Loggable Action where
       trackAppBackPress appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
       trackAppEndScreen appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
     PrimaryEditTextAction act -> case act of
-      PrimaryEditText.OnClick -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_edit_text" "on_click"
-      PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobile_number_text_changed" "primary_edit_text"
-      PrimaryEditText.TextClicked -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_edit_text" "text_field_click"
+      MobileNumberEditor.TextChanged id value -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobilenumber_edit_text_changed" "primary_edit_text"
+      MobileNumberEditor.FocusChanged _ -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobilenumber_edit_text_focus_changed" "primary_edit_text"
+      MobileNumberEditor.CountryCodeSelected _ -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "countrycode_edit_text_changed" "on_click_country_code"
+      MobileNumberEditor.ShowOptions -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "country_code_list_showed" "on_click_show"
+      MobileNumberEditor.CloseOptions -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "country_code_list_closed" "on_click_close"
     PrimaryButtonActionController act -> case act of
       PrimaryButton.OnClick -> do
         trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "next_on_click"
@@ -54,10 +57,11 @@ instance loggableAction :: Loggable Action where
     CheckBoxClicked -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "checkbox_clicked"
     CheckClickability -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "check_clickability"
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
+    _ -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
 
 data ScreenOutput = GoBack | GoToNextScreen EnterMobileNumberScreenState
 data Action = BackPressed 
-            | PrimaryEditTextAction PrimaryEditText.Action
+            | PrimaryEditTextAction MobileNumberEditor.Action
             | PrimaryButtonActionController PrimaryButton.Action
             | NoAction
             | CheckBoxClicked
@@ -67,14 +71,16 @@ data Action = BackPressed
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 eval AfterRender state = continue state
-eval BackPressed state = exit GoBack
-eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
+eval BackPressed state = do
+        pure $ hideKeyboardOnNavigation true
+        exit GoBack
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
-eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = do
+eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state = do
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true 
             else pure unit    
-  let isValidMobileNumber = if getValueFromConfig "allowAllMobileNumber" then true
+  let config = getAppConfig appConfig
+      isValidMobileNumber = if config.allowAllMobileNumber then true
                               else case (charAt 0 newVal) of 
                                 Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false 
                                             else if a=='3' || a=='4' then

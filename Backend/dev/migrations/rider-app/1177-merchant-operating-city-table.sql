@@ -1,11 +1,3 @@
-CREATE TABLE atlas_app.merchant_operating_city (
-    id character(36) NOT NULL PRIMARY KEY,
-    merchant_id character(36) NOT NULL REFERENCES atlas_app.merchant (id),
-    merchant_short_id character varying(255) NOT NULL REFERENCES atlas_app.merchant (short_id),
-    city character varying(255) NOT NULL
-);
-
--- Inserting values in merchant_operating_city table
 INSERT INTO atlas_app.merchant_operating_city (id, merchant_id, merchant_short_id, city)
 SELECT
     atlas_app.uuid_generate_v4() AS id,

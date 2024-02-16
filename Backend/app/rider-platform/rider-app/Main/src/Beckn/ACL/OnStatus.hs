@@ -12,62 +12,96 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnStatus (buildOnStatusReq) where
+module Beckn.ACL.OnStatus (buildOnStatusReqV2) where
 
-import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
-import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
+import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
-import qualified Domain.Types.Booking as DBooking
-import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
-import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (Id (Id))
 import Kernel.Utils.Common
+import Tools.Error (GenericError (InvalidRequest))
 
-buildOnStatusReq ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text]
+buildOnStatusReqV2 ::
+  ( HasFlowEnv m r '["_version" ::: Text],
+    MonadFlow m,
+    CacheFlow m r
   ) =>
-  OnStatus.OnStatusReq ->
-  m (Maybe DOnStatus.OnStatusReq)
-buildOnStatusReq req = do
-  validateContext Context.ON_STATUS req.context
-  handleError req.contents $ \message ->
-    return $
-      DOnStatus.OnStatusReq
-        { bppBookingId = Id message.order.id,
-          bookingStatus = mapToDomainBookingStatus message.order.status,
-          mbRideInfo = mkRideInfo <$> message.order.fulfillment
+  Spec.OnStatusReq ->
+  m (Maybe DOnStatus.DOnStatusReq)
+buildOnStatusReqV2 req = do
+  ContextV2.validateContext Context.ON_STATUS req.onStatusReqContext
+  handleErrorV2 req \message -> do
+    let order = message.confirmReqMessageOrder
+    messageId <- Utils.getMessageId req.onStatusReqContext
+    bppBookingIdText <- order.orderId & fromMaybeM (InvalidRequest "order.id is not present in on_status request.")
+    let bppBookingId = Id bppBookingIdText
+    orderStatus <- order.orderStatus & fromMaybeM (InvalidRequest "order.status is not present in on_status request.")
+    eventType <-
+      order.orderFulfillments
+        >>= listToMaybe
+        >>= (.fulfillmentState)
+        >>= (.fulfillmentStateDescriptor)
+        >>= (.descriptorCode)
+        & fromMaybeM (InvalidRequest "Event type is not present in OnUpdateReq.")
+
+    rideDetails <-
+      -- TODO::Beckn, need to refactor this codes, according to spec.
+      case orderStatus of
+        "NEW_BOOKING" -> pure DOnStatus.NewBookingDetails
+        "RIDE_BOOKING_REALLOCATION" -> parseRideBookingReallocationOrder order messageId
+        "ACTIVE" -> do
+          case eventType of
+            "RIDE_ASSIGNED" -> do
+              assignedReq <- Common.parseRideAssignedEvent order messageId
+              return $ DOnStatus.RideAssignedDetails assignedReq
+            "RIDE_ARRIVED_PICKUP" -> do
+              arrivedReq <- Common.parseDriverArrivedEvent order messageId
+              return $ DOnStatus.DriverArrivedDetails arrivedReq
+            "RIDE_STARTED" -> do
+              startedReq <- Common.parseRideStartedEvent order messageId
+              return $ DOnStatus.RideStartedDetails startedReq
+            _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+        "COMPLETED" -> do
+          case eventType of
+            "RIDE_ENDED" -> do
+              completedReq <- Common.parseRideCompletedEvent order messageId
+              return $ DOnStatus.RideCompletedDetails completedReq
+            _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+        "CANCELLED" -> do
+          case eventType of
+            "RIDE_CANCELLED" -> do
+              cancelledReq <- Common.parseBookingCancelledEvent order messageId
+              return $ DOnStatus.BookingCancelledDetails cancelledReq
+            _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+        _ -> throwError . InvalidRequest $ "Invalid order.status: " <> show orderStatus
+    pure $
+      DOnStatus.DOnStatusReq
+        { bppBookingId,
+          rideDetails
         }
 
-mkRideInfo :: OnStatus.FulfillmentInfo -> DOnStatus.RideInfo
-mkRideInfo fulfillment =
-  DOnStatus.RideInfo
-    { bppRideId = Id fulfillment.id,
-      rideStatus = mapToDomainRideStatus fulfillment.status
-    }
+parseRideBookingReallocationOrder :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m DOnStatus.RideDetails
+parseRideBookingReallocationOrder order messageId = do
+  bookingDetails <- Common.parseBookingDetails order messageId
+  reallocationSourceText <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "order.cancellation.,cancelled_by is not present in on_status BookingReallocationEvent request.")
+  let reallocationSource = Utils.castCancellationSourceV2 reallocationSourceText
+  pure $ DOnStatus.BookingReallocationDetails {..}
 
-handleError ::
+handleErrorV2 ::
   (MonadFlow m) =>
-  Either Error OnStatus.OnStatusMessage ->
-  (OnStatus.OnStatusMessage -> m DOnStatus.OnStatusReq) ->
-  m (Maybe DOnStatus.OnStatusReq)
-handleError etr action =
-  case etr of
-    Right msg -> do
-      Just <$> action msg
-    Left err -> do
+  Spec.OnStatusReq ->
+  (Spec.ConfirmReqMessage -> m DOnStatus.DOnStatusReq) ->
+  m (Maybe DOnStatus.DOnStatusReq)
+handleErrorV2 req action =
+  case req.onStatusReqError of
+    Nothing -> do
+      onStatusMessage <- req.onStatusReqMessage & fromMaybeM (InvalidRequest "on_status request message is not present.")
+      Just <$> action onStatusMessage
+    Just err -> do
       logTagError "on_status req" $ "on_status error: " <> show err
       pure Nothing
-
-mapToDomainBookingStatus :: OnStatus.BookingStatus -> DBooking.BookingStatus
-mapToDomainBookingStatus OnStatus.NEW_BOOKING = DBooking.NEW
-mapToDomainBookingStatus OnStatus.TRIP_ASSIGNED = DBooking.TRIP_ASSIGNED
-mapToDomainBookingStatus OnStatus.BOOKING_COMPLETED = DBooking.COMPLETED
-mapToDomainBookingStatus OnStatus.BOOKING_CANCELLED = DBooking.CANCELLED
-
-mapToDomainRideStatus :: OnStatus.RideStatus -> DRide.RideStatus
-mapToDomainRideStatus OnStatus.NEW = DRide.NEW
-mapToDomainRideStatus OnStatus.INPROGRESS = DRide.INPROGRESS
-mapToDomainRideStatus OnStatus.COMPLETED = DRide.COMPLETED
-mapToDomainRideStatus OnStatus.CANCELLED = DRide.CANCELLED

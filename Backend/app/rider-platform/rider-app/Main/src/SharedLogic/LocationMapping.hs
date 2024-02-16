@@ -17,7 +17,7 @@ module SharedLogic.LocationMapping where
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -29,7 +29,7 @@ buildPickUpLocationMapping locationId entityId tag merchantId merchantOperatingC
   id <- generateGUID
   let order = 0
   now <- getCurrentTime
-  let version = "LATEST"
+  let version = QLM.latestTag
       createdAt = now
       updatedAt = now
   QLM.updatePastMappingVersions entityId order
@@ -41,7 +41,7 @@ buildDropLocationMapping locationId entityId tag merchantId merchantOperatingCit
   noOfEntries <- QLM.countOrders entityId
   let order = if noOfEntries == 0 then 1 else noOfEntries
   now <- getCurrentTime
-  let version = "LATEST"
+  let version = QLM.latestTag
       createdAt = now
       updatedAt = now
   QLM.updatePastMappingVersions entityId order

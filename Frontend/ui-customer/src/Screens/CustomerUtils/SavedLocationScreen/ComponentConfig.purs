@@ -77,6 +77,7 @@ primaryButtonConfig state = let
       , id = "AddNewAddressSavedLocationScreen"
       , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen")
       , background = state.data.config.primaryBackground
+      , enableRipple = true
       }
   in primaryButtonConfig'
 
@@ -95,6 +96,9 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , visibility = btnVisibility
+      , margin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , textConfig {
         text = (getString FAVOURITES)
@@ -133,6 +137,7 @@ errorModalConfig state = let
       , height = V 52
       , color = state.data.config.primaryTextColor
       , background = state.data.config.primaryBackground
+      , enableRipple = true
       }
     }
   in errorModalConfig' 

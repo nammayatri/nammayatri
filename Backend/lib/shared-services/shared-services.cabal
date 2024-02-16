@@ -125,7 +125,6 @@ library
     , exceptions
     , extra
     , generic-lens
-    , hashmap
     , hspec
     , http-client
     , lens

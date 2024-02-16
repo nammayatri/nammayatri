@@ -89,7 +89,6 @@ library
     , containers
     , euler-hs
     , exceptions
-    , hashmap
     , mobility-core
     , postgresql-simple
     , prometheus-client

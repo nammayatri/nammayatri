@@ -29,6 +29,7 @@ data Action = Close
               | GoToDefaultStart 
               | GoToDriverAddition 
               | GoToFareUpdate 
+              | GoToWaitingCharges
               | PrimaryButtonAC PrimaryButton.Action
 
 

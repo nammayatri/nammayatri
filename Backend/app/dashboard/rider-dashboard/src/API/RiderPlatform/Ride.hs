@@ -37,12 +37,14 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth hiding (DRIVER_OFFER_BPP)
 import Tools.Auth.Merchant
 
 type API =
   "ride"
     :> ( ShareRideInfoAPI
+           :<|> Common.ShareRideInfoByShortIdAPI
            :<|> RideListAPI
            :<|> TripRouteAPI
            :<|> RideInfoAPI
@@ -76,6 +78,7 @@ type TicketRideListAPI =
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   shareRideInfo merchantId city
+    :<|> shareRideInfoByShortId merchantId city
     :<|> rideList merchantId city
     :<|> tripRoute merchantId city
     :<|> rideInfo merchantId city
@@ -83,8 +86,8 @@ handler merchantId city =
     :<|> multipleRideSync merchantId city
     :<|> ticketRideList merchantId city
 
-rideInfoHitsCountKey :: Id Common.Ride -> Text
-rideInfoHitsCountKey rideId = "RideInfoHits:" <> getId rideId <> ":hitsCount"
+rideInfoHitsCountKey :: Text -> Text
+rideInfoHitsCountKey rideId = "RideInfoHits:" <> rideId <> ":hitsCount"
 
 -- merchantCityAccessChecks can be removed from this file?
 buildTransaction ::
@@ -103,11 +106,22 @@ shareRideInfo ::
   City.City ->
   Id Common.Ride ->
   FlowHandler Common.ShareRideInfoRes
-shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI $ do
+shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI' $ do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey rideId) shareRideApiRateLimitOptions
+  checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getId rideId) shareRideApiRateLimitOptions
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfo) rideId
+
+shareRideInfoByShortId ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ShortId Common.Ride ->
+  FlowHandler Common.ShareRideInfoRes
+shareRideInfoByShortId merchantShortId opCity rideShortId = withFlowHandlerAPI' $ do
+  shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getShortId rideShortId) shareRideApiRateLimitOptions
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+  Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfoByShortId) rideShortId
 
 rideList ::
   ShortId DM.Merchant ->
@@ -122,7 +136,7 @@ rideList ::
   Maybe UTCTime ->
   FlowHandler Common.RideListRes
 rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
     Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
 
@@ -133,7 +147,7 @@ tripRoute ::
   Double ->
   Double ->
   FlowHandler Maps.GetRoutesResp
-tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ do
+tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
 
@@ -143,19 +157,19 @@ rideInfo ::
   ApiTokenInfo ->
   Id Common.Ride ->
   FlowHandler Common.RideInfoRes
-rideInfo merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI $ do
+rideInfo merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideInfo) rideId
 
 multipleRideCancel :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Domain.MultipleRideCancelReq -> FlowHandler APISuccess
-multipleRideCancel merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+multipleRideCancel merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   transaction <- buildTransaction Common.MultipleRideCancelEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideCancel) req
 
 multipleRideSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncResp
-multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateMultipleRideSyncReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   transaction <- buildTransaction Common.MultipleRideSyncEndpoint apiTokenInfo (Just req)
@@ -163,7 +177,7 @@ multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ 
     Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideSync) req
 
 ticketRideList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
-ticketRideList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ do
+ticketRideList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   transaction <- buildTransaction Common.TicketRideListEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $

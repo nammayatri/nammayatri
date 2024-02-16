@@ -26,17 +26,18 @@ import qualified IssueManagement.Common as DIssue
 import qualified IssueManagement.Common.Dashboard.Issue as Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueReport
+import Kernel.Beam.Functions as B
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error (PersonError (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI')
 import Kernel.Utils.Error (fromMaybeM)
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
@@ -46,6 +47,7 @@ type API =
     :> ( IssueCategoryListAPI
            :<|> IssueListAPI
            :<|> IssueInfoAPI
+           :<|> IssueInfoAPIV2
            :<|> IssueUpdateAPI
            :<|> IssueAddCommentAPI
            :<|> IssueFetchMediaAPI
@@ -63,6 +65,10 @@ type IssueListAPI =
 type IssueInfoAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'ISSUE_INFO
     :> Common.IssueInfoAPI
+
+type IssueInfoAPIV2 =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'ISSUE_INFO
+    :> Common.IssueInfoAPIV2
 
 type IssueUpdateAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'ISSUE_UPDATE
@@ -85,6 +91,7 @@ handler merchantId city =
   issueCategoryList merchantId city
     :<|> issueList merchantId city
     :<|> issueInfo merchantId city
+    :<|> issueInfoV2 merchantId city
     :<|> issueUpdate merchantId city
     :<|> issueAddComment merchantId city
     :<|> issueFetchMedia merchantId city
@@ -101,45 +108,27 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo = T.buildTransaction (DT.IssueAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 issueCategoryList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> FlowHandler Common.IssueCategoryListRes
-issueCategoryList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
+issueCategoryList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueCategoryList)
 
 issueList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe DIssue.IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> FlowHandler Common.IssueReportListResponse
-issueList merchantShortId opCity apiTokenInfo mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI $ do
+issueList merchantShortId opCity apiTokenInfo mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueList) mbLimit mbOffset mbStatus mbCategoryId mbAssignee
 
 issueInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueReport -> FlowHandler Common.IssueInfoRes
-issueInfo merchantShortId opCity apiTokenInfo issueReportId_ = withFlowHandlerAPI $ do
+issueInfo merchantShortId opCity apiTokenInfo issueReportId_ = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   addAuthorDetails =<< Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueInfo) issueReportId_
-  where
-    mkAuthorDetail :: Common.IssueReportCommentItem -> Flow Common.IssueReportCommentItem
-    mkAuthorDetail Common.IssueReportCommentItem {..} = do
-      author <- Esq.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
-      let authorDetail_ =
-            Common.AuthorDetail
-              { authorId = cast author.id,
-                firstName = Just author.firstName,
-                lastName = Just author.lastName
-              }
-      pure $
-        Common.IssueReportCommentItem
-          { authorDetail = authorDetail_,
-            ..
-          }
-    addAuthorDetails :: Common.IssueInfoRes -> Flow Common.IssueInfoRes
-    addAuthorDetails Common.IssueInfoRes {..} = do
-      comments_ <- mapM mkAuthorDetail comments
-      pure $
-        Common.IssueInfoRes
-          { comments = comments_,
-            ..
-          }
+
+issueInfoV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id IssueReport) -> Maybe (ShortId IssueReport) -> FlowHandler Common.IssueInfoRes
+issueInfoV2 merchantShortId opCity apiTokenInfo mbIssueReportId mbIssueReportShortId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  addAuthorDetails =<< Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueInfoV2) mbIssueReportId mbIssueReportShortId
 
 issueUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueReport -> Common.IssueUpdateReq -> FlowHandler APISuccess
-issueUpdate merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI $ do
+issueUpdate merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.IssueUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
@@ -152,7 +141,7 @@ issueUpdate merchantShortId opCity apiTokenInfo issueReportId req = withFlowHand
         }
 
 issueAddComment :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueReport -> Common.IssueAddCommentReq -> FlowHandler APISuccess
-issueAddComment merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI $ do
+issueAddComment merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.IssueAddCommentEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
@@ -165,12 +154,36 @@ issueAddComment merchantShortId opCity apiTokenInfo issueReportId req = withFlow
         }
 
 issueFetchMedia :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> FlowHandler Text
-issueFetchMedia merchantShortId opCity apiTokenInfo filePath = withFlowHandlerAPI $ do
+issueFetchMedia merchantShortId opCity apiTokenInfo filePath = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueFetchMedia) filePath
 
 ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
-ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.ticketStatusCallBack_) req
+
+addAuthorDetails :: Common.IssueInfoRes -> Flow Common.IssueInfoRes
+addAuthorDetails Common.IssueInfoRes {..} = do
+  comments_ <- mapM mkAuthorDetail comments
+  pure $
+    Common.IssueInfoRes
+      { comments = comments_,
+        ..
+      }
+  where
+    mkAuthorDetail :: Common.IssueReportCommentItem -> Flow Common.IssueReportCommentItem
+    mkAuthorDetail Common.IssueReportCommentItem {..} = do
+      author <- B.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
+      let authorDetail_ =
+            Common.AuthorDetail
+              { authorId = cast author.id,
+                firstName = Just author.firstName,
+                lastName = Just author.lastName
+              }
+      pure $
+        Common.IssueReportCommentItem
+          { authorDetail = authorDetail_,
+            ..
+          }

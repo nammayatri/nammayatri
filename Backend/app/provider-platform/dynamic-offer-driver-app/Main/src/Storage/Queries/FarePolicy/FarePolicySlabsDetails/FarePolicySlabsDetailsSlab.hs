@@ -15,6 +15,7 @@
 
 module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import qualified Domain.Types.FarePolicy as DFP
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -50,7 +51,7 @@ instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicyS
               baseFare = baseFare,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-                  DFP.WaitingChargeInfo
+                  DPM.WaitingChargeInfo
                     { waitingCharge = waitingCharge',
                       freeWaitingTime = freeWaitingTime'
                     },
@@ -75,7 +76,7 @@ instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySla
         platformFeeCharge = DFP.platformFeeCharge <$> platformFeeInfo,
         platformFeeCgst = DFP.cgst <$> platformFeeInfo,
         platformFeeSgst = DFP.sgst <$> platformFeeInfo,
-        waitingCharge = DFP.waitingCharge <$> waitingChargeInfo,
+        waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
-        freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo
+        freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo
       }

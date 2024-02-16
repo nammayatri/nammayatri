@@ -1,47 +1,17 @@
-import * as hindiStrings from "./../../src/Strings/HI.js";
-import * as kannadaStrings from "./../../src/Strings/KN.js";
-import * as englishStrings from "./../../src/Strings/EN.js";
-import * as bengaliStrings from "./../../src/Strings/BN.js";
-import * as malayalamStrings from "./../../src/Strings/ML.js";
-import * as tamilStrings from "./../../src/Strings/TA.js";
-import * as frenchStrings from "./../../src/Strings/FR.js";
 
 const JBridge = window.JBridge;
 
-export const getValueFromConfig = function (constructorKey){
-  if (constructorKey in window.appConfig){
-    return window.appConfig[constructorKey];
-  }
-  console.error("no value found for key "+ constructorKey);
-  return "";
-}
-
-function getStringFromCommon(key) {
-  const selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
-  switch (selectedLanguage) {
-    case "HI_IN":
-      return hindiStrings.getStringValue(key);
-    case "KN_IN":
-      return kannadaStrings.getStringValue(key);
-    case "BN_IN":
-      return bengaliStrings.getStringValue(key);
-    case "ML_IN":
-      return malayalamStrings.getStringValue(key);
-    case "TA_IN":
-      return tamilStrings.getStringValue(key);
-    case "FR_FR":
-      return frenchStrings.getStringValue(key);
-    default:
-      return englishStrings.getStringValue(key);
-  }
-}
-
-export const getENStrings = function (constructorKey){
-  return englishStrings.getStringValue(constructorKey);
+function getLanguageLocale (){
+  if (!window.languageKey) {
+    const locale = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+    window.languageKey = locale;
+    return locale;
+  } 
+  return window.languageKey;
 }
 
 export const getMerchantString = function(key) {
-  const selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+  const selectedLanguage = getLanguageLocale();
   switch (selectedLanguage) {
     case "HI_IN":
       return window.appConfig.hindiStrings[key];
@@ -53,6 +23,8 @@ export const getMerchantString = function(key) {
       return window.appConfig.malayalamStrings[key];
     case "TA_IN":
       return window.appConfig.tamilStrings[key];
+    case "TE_IN": 
+      return window.appConfig.teluguStrings[key];
     case "FR_FR":
       return window.appConfig.frenchStrings[key];
     default:
@@ -60,12 +32,16 @@ export const getMerchantString = function(key) {
   }
 }
 
-export const getStringFromConfig = function (key) {
-
-  if (window.appConfig.StringKeys.includes(key)){
-    return getMerchantString(key);
+export const getStringFromConfig = function (constructors) {
+  return function (just) {
+    return function (nothing) {
+      const key = constructors.value0 || "";
+      if (window.appConfig.StringKeys.includes(key)){
+        return just(getMerchantString(key));
+      }
+      return nothing;
+    }
   }
-  return getStringFromCommon(key);
 }
 
 

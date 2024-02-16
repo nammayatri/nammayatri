@@ -35,11 +35,10 @@ import Components.GenericHeader.View as GenericHeader
 import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPreviousVersion)
-import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 import JBridge as JB
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
@@ -188,6 +187,7 @@ callPoliceConfig state  =
     , strokeColor = state.config.primaryBackground
     , background = state.config.popupBackground
     , color = state.config.primaryBackground
+    , enableRipple = true
     }
     , option2 {
       text = getString DIAL_112
@@ -195,6 +195,7 @@ callPoliceConfig state  =
     , strokeColor = state.config.primaryBackground
     , background = state.config.primaryBackground
     , color = state.config.primaryTextColor
+    , enableRipple = true
     }
     , backgroundClickable = true
     , secondaryText {
@@ -212,7 +213,7 @@ contactSupportConfig state  =
   config' = PopUpModalConfig.config
   popUpConfig' = config' {
     primaryText {
-      text = (<>) (getString CALL_NAMMA_YATRI_SUPPORT) "?"
+      text = (<>) (getString $ CALL_NAMMA_YATRI_SUPPORT "CALL_NAMMA_YATRI_SUPPORT") "?"
     , margin = (Margin 40 23 40 12)
     }
     , option1 {
@@ -229,7 +230,7 @@ contactSupportConfig state  =
     }
     , backgroundClickable = true
     , secondaryText {
-      text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
+      text = getString $ YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT"
     , margin = (Margin 40 0 40 32) }
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)
@@ -288,6 +289,7 @@ callSuccessfulConfig state  =
     , strokeColor = state.config.primaryBackground
     , background = state.config.popupBackground
     , color = state.config.primaryBackground
+    , enableRipple = true
     }
     , option2 {
       text = (getString YES)
@@ -295,6 +297,7 @@ callSuccessfulConfig state  =
     , strokeColor = state.config.primaryBackground
     , background = state.config.primaryBackground
     , color = state.config.primaryTextColor
+    , enableRipple = true
     }
     , backgroundClickable = true
     , secondaryText {
@@ -344,12 +347,14 @@ popUpViewCallSuccessful state push =
 
 showEmergencyContact :: forall w . EmergencyHelpModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 showEmergencyContact state push =
+  let feature = (getAppConfig appConfig).feature
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
-    , visibility if(getValueFromConfig "isEmergencyContacts" == "false") then GONE else VISIBLE
+    , visibility if feature.enableEmergencyContacts then VISIBLE else GONE
     , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
     ][  linearLayout
         [ width MATCH_PARENT
@@ -465,6 +470,9 @@ genericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , margin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , suffixImageConfig {
         visibility = GONE }
@@ -487,9 +495,9 @@ type CardData =  { action :: Action
 
 supportList :: EmergencyHelpModelState -> Array (CardData)
 supportList state = 
-  (if state.config.enableContactSupport then 
+  (if state.config.feature.enableSupport then 
     [{ action :  ContactSupportPopup
-    , title : getString CALL_NAMMA_YATRI_SUPPORT
+    , title : getString $ CALL_NAMMA_YATRI_SUPPORT "CALL_NAMMA_YATRI_SUPPORT"
     , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }]
   else [])
   <> ([{ action : CallPolicePopup

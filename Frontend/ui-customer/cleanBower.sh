@@ -5,5 +5,5 @@ echo " ---------- cleaning done --------------"
 echo " ---------- started installing --------------"
 npm install
 bower install
-npm run start:android:master
+npm run start
 echo " ---------- cleaning done --------------"

@@ -1,6 +1,16 @@
+/*
+ *  Copyright 2022-23, Juspay India Pvt Ltd
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ *  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ *  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.startMediaPlayer;
+import static android.graphics.Color.rgb;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -13,8 +23,10 @@ import android.os.Build;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
+
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -22,7 +34,9 @@ import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
+
 import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -36,7 +50,10 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.TimeZone;
+
 import javax.net.ssl.HttpsURLConnection;
+
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 
@@ -323,9 +340,15 @@ public class ChatService extends Service {
     private void startOverlayService(String message, String timestamp) {
         if ((merchantType.equals("DRIVER")) && Settings.canDrawOverlays(getApplicationContext()) && !sharedPrefs.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             try {
+                SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ENGLISH);
+                inputFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+                SimpleDateFormat finalOutputFormat = new SimpleDateFormat("h:mm a", Locale.ENGLISH);
+                finalOutputFormat.setTimeZone(TimeZone.getTimeZone("Asia/Kolkata"));
+                Date date = inputFormat.parse(timestamp);
+                String finalOutputDate = date !=null ? finalOutputFormat.format(date) : timestamp;
                 Intent intent = new Intent(context, MessageOverlayService.class);
                 intent.putExtra("message", message);
-                intent.putExtra("timestamp", timestamp);
+                intent.putExtra("timestamp", finalOutputDate);
                 context.startService(intent);
                 startMediaPlayer(context, R.raw.new_message, false);
             } catch (Exception e) {
@@ -349,7 +372,7 @@ public class ChatService extends Service {
                 new NotificationCompat.Builder(this, "Message")
                         .setContentTitle(getString(R.string.chatting_is_enabled))
                         .setContentText(contentText)
-                        .setSmallIcon(Utils.getResIdentifier(context,"ic_launcher", "mipmap"))
+                        .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap"))
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
@@ -375,7 +398,8 @@ public class ChatService extends Service {
             date = new Date(System.currentTimeMillis());
         }
         /*   add this to date format if date is needed ---> dd MMM yyyy   */
-        DateFormat dateFormat = new SimpleDateFormat("h:mm a", Locale.ENGLISH);
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss'Z'", Locale.ENGLISH);
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         return dateFormat.format(date);
     }
 

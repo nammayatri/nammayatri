@@ -24,6 +24,7 @@ import android.graphics.PixelFormat;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -47,6 +48,7 @@ import androidx.annotation.Nullable;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -63,9 +65,12 @@ import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -74,10 +79,13 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.hyper.bridge.HBridge;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 import in.juspay.mobility.app.TranslatorMLKit;
@@ -109,7 +117,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<TextView> tipsList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private String key = "";
-
+    private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+    private SheetModel modelForLogs;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -193,6 +202,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         @Override
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
             SheetModel model = sheetArrayList.get(position);
+            modelForLogs = model;
             String x = payloads.size() > 0 ? (String) payloads.get(0) : "";
             switch (x) {
                 case "inc":
@@ -246,7 +256,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", "false");
-            if (useMLKit.equals("false") && !model.isTranslated()) updateViewFromMlTranslation(holder, model);
+            if (useMLKit.equals("false") && !model.isTranslated()) RideRequestUtils.updateViewFromMlTranslation(holder, model, sharedPref, OverlaySheetService.this);
 
             if (key.equals("yatrisathiprovider") || key.equals("yatriprovider")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
@@ -254,11 +264,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
+            String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
                 if (key != null && key.equals("nammayatriprovider"))
                     startApiLoader();
-                String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
                 if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
                     LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                     lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
@@ -272,10 +282,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             holder.reqButton.setClickable(false);
                             updateSharedPreferences();
                             for (int i = 0; i < callBack.size(); i++) {
-                                callBack.get(i).driverCallBack("RIDE_REQUESTED");
+                                callBack.get(i).driverCallBack("RIDE_REQUESTED","");
                             }
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
                             firebaseLogEvent(logEvent);
+                            RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, logEvent, OverlaySheetService.this);
                             isRideAcceptedOrRejected = true;
                             handler.post(() -> {
                                 startLoader(model.getSearchRequestId());
@@ -297,7 +308,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             });
                         }
                     } catch (Exception e) {
-                        firebaseLogEventWithParams("exception", "request_button_click", e.toString());
+                        firebaseLogEventWithParams("exception_request_button_click", "request_button_click", String.valueOf(e));
                         cleanUp();
                     }
                 });
@@ -313,13 +324,15 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         holder.rejectButton.setClickable(false);
                         handler.post(() -> {
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
+                            String event = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_rejected" : "ride_rejected";
                             Utils.logEvent (logEvent, getApplicationContext());
+                            RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, event, OverlaySheetService.this);
                             removeCard(position);
                             executor.shutdown();
                             Toast.makeText(getApplicationContext(), getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
                         });
                     } catch (Exception e) {
-                        firebaseLogEventWithParams("exception", "reject_button_click", e.toString());
+                        firebaseLogEventWithParams("exception_reject_button_click", "reject_button_click", String.valueOf(e));
                         System.out.println("reject exception: " + e);
                     }
                 });
@@ -390,27 +403,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }
     });
 
-    private void updateViewFromMlTranslation(SheetAdapter.SheetViewHolder holder,  SheetModel model) {
-
-        String lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
-        TranslatorMLKit translate = new TranslatorMLKit("en", lang, this);
-        translate.translateStringInTextView(removeCommas(model.getSourceArea()), holder.sourceArea);
-        translate.translateStringInTextView(model.getSourceAddress(),  holder.sourceAddress);
-        translate.translateStringInTextView(removeCommas(model.getDestinationArea()), holder.destinationArea);
-        translate.translateStringInTextView(model.getDestinationAddress(),  holder.destinationAddress);
-
-    }
-
-    public static String removeCommas(String input) {
-        String str = input;
-        input = input.trim();
-        input = input.replaceAll(",+\\s*$", "");
-        if (str.trim().endsWith(",")) {
-            input += " ,";
-        }
-        return input;
-    }
-
     private void removeCard(int position) {
         try {
             Handler handler = new Handler(Looper.getMainLooper());
@@ -432,7 +424,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             });
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "remove_card", e.toString());
+            firebaseLogEventWithParams("exception_in_remove_card", "remove_card", String.valueOf(e));
             e.printStackTrace();
         }
     }
@@ -440,6 +432,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void cleanUp() {
         if (!isRideAcceptedOrRejected) {
             firebaseLogEvent("ride_ignored");
+            RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, "ride_ignored", this);
         }
         try {
             callBack.clear();
@@ -479,7 +472,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             NotificationUtils.listData = new ArrayList<>();
             this.stopSelf();
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "clean_up", e.toString());
+            firebaseLogEventWithParams("exception_in_clean_up", "clean_up", String.valueOf(e));
             Log.e("EXCEPTION", e.toString());
         }
     }
@@ -494,7 +487,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 mediaPlayer.setOnPreparedListener(mp -> mediaPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK));
             }
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "on_bind", e.toString());
+            firebaseLogEventWithParams("exception_in_on_bind", "on_bind", String.valueOf(e));
             e.printStackTrace();
         }
         return new OverlayBinder();
@@ -514,6 +507,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 boolean requestAlreadyPresent = findCardById(searchRequestId);
                 if (sheetArrayList.size() >= 3 || requestAlreadyPresent || isClearedReq ){
                     if (isClearedReq) MyFirebaseMessagingService.clearedRideRequest.remove(searchRequestId);
+                    String event = "ride_ignored_while_adding_to_list";
+                    RideRequestUtils.addRideReceivedEvent(null, rideRequestBundle,null, event, this);
+                    if (sheetArrayList.size() >= 3) event = "ride_ignored_list_full"; else if (requestAlreadyPresent) event = "ride_ignored_already_present"; else if (isClearedReq) event = "ride_ignored_already_cleared";
+                    firebaseLogEvent(event);
                     return;
                 }
                 if (progressDialog == null || apiLoader == null) {
@@ -585,17 +582,18 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
                     if (floatyView == null) {
                         startTimer();
-                        showOverLayPopup();
+                        showOverLayPopup(rideRequestBundle);
                     }
                     sheetArrayList.add(sheetModel);
                     sheetAdapter.updateSheetList(sheetArrayList);
                     sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
                     updateIndicators();
                     updateProgressBars(false);
+                    RideRequestUtils.addRideReceivedEvent(null,rideRequestBundle,null,"ride_request_popped", this);
                 });
             }), (rideRequestBundle.getInt("keepHiddenForSeconds", 0) * 1000L));
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "add_to_list", e.toString());
+            firebaseLogEventWithParams("exception_in_add_to_list", "add_to_list", String.valueOf(e));
             e.printStackTrace();
         }
     }
@@ -613,9 +611,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     @SuppressLint("InflateParams")
-    private void showOverLayPopup() {
-        firebaseLogEvent("Overlay_is_popped_up");
-        if (!Settings.canDrawOverlays(this)) return;
+    private void showOverLayPopup(Bundle rideRequestBundle) {
+        if (!Settings.canDrawOverlays(getApplicationContext())) return;
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         int layoutParamsType;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -633,7 +630,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.dimAmount = 0.6f;
         params.gravity = Gravity.CENTER;
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
-        LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
+        LayoutInflater inflater = ((LayoutInflater) getApplicationContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view, null);
         TextView merchantLogo = floatyView.findViewById(R.id.merchantLogo);
         if (key != null && key.equals("yatrisathiprovider")){
@@ -660,6 +657,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         viewPager.setAdapter(sheetAdapter);
         windowManager.addView(floatyView, params);
         setIndicatorClickListener();
+        firebaseLogEvent("Overlay_is_popped_up");
+        RideRequestUtils.addRideReceivedEvent(null, rideRequestBundle,null,"overlay_is_popped_up", this);
     }
 
     private void startTimer() {
@@ -763,7 +762,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             handler.post(() -> Toast.makeText(getApplicationContext(), "Request Timeout", Toast.LENGTH_SHORT).show());
             return false;
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "driver_respond_api", e.toString());
+            firebaseLogEventWithParams("exception_in_driver_respond_api", "driver_respond_api", String.valueOf(e));
             return false;
         }
     }
@@ -836,7 +835,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             }.start();
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "start_loader", e.toString());
+            firebaseLogEventWithParams("exception_in_start_loader", "start_loader", String.valueOf(e));
             cleanUp();
             e.printStackTrace();
         }
@@ -894,7 +893,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 windowManager.addView(apiLoader, params);
             }
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "start_api_loader", e.toString());
+            firebaseLogEventWithParams("exception_in_start_api_loader", "start_api_loader", String.valueOf(e));
             e.printStackTrace();
         }
     }
@@ -907,7 +906,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             try{
                 audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
             }catch (Exception e){
-                RideRequestUtils.firebaseLogEventWithParams("exception", "increase_volume", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_increase_volume", "increase_volume", String.valueOf(e), this);
             }
         }
     }

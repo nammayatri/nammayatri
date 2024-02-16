@@ -21,9 +21,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Co
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
-import qualified Data.Map as M
 import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601Show)
 import Data.Tuple.Extra (secondM)
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant as DM
@@ -37,39 +35,24 @@ import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
-import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
-import qualified Storage.Queries.Message.MessageTranslation as MTQuery
-import qualified Storage.Queries.Person as QP
+import System.Environment (lookupEnv)
 import Tools.Error
 
-createFilePath ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
-  Text ->
-  Common.FileType ->
-  Text ->
-  m Text
-createFilePath merchantId fileType validatedFileExtention = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> "/message-media/" <> "org-" <> merchantId <> "/"
-        <> show fileType
-        <> "/"
-        <> fileName
-        <> validatedFileExtention
-    )
+lookupBroadcastPush :: IO Bool
+lookupBroadcastPush = fromMaybe False . (>>= readMaybe) <$> lookupEnv "BROADCAST_KAFKA_PUSH"
 
 addLinkAsMedia :: ShortId DM.Merchant -> Context.City -> Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
 addLinkAsMedia merchantShortId _ req = do
@@ -82,22 +65,13 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
   _ <- MFQuery.create fileEntity
   return $ Common.UploadFileResponse {fileId = cast $ fileEntity.id}
   where
-    mapToDomain = \case
-      Common.Audio -> Domain.Audio
-      Common.Video -> Domain.Video
-      Common.Image -> Domain.Image
-      Common.AudioLink -> Domain.AudioLink
-      Common.VideoLink -> Domain.VideoLink
-      Common.ImageLink -> Domain.ImageLink
-      Common.PortraitVideoLink -> Domain.PortraitVideoLink
-
     mkFile fileUrl = do
       id <- generateGUID
       now <- getCurrentTime
       return $
         Domain.MediaFile
           { id,
-            _type = mapToDomain fileType,
+            _type = fileType,
             url = fileUrl,
             createdAt = now
           }
@@ -107,7 +81,7 @@ uploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
   -- _ <- validateContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
+  filePath <- S3.createFilePath "/message-media/" ("org-" <> merchant.id.getId) fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let fileUrl =
@@ -149,38 +123,31 @@ toCommonType = \case
   Domain.Read -> Common.Read
   Domain.Action str -> Common.Action str
 
-toCommonMediaFileType :: Domain.MediaType -> Common.FileType
-toCommonMediaFileType = \case
-  Domain.Audio -> Common.Audio
-  Domain.Video -> Common.Video
-  Domain.Image -> Common.Image
-  Domain.ImageLink -> Common.ImageLink
-  Domain.VideoLink -> Common.VideoLink
-  Domain.AudioLink -> Common.AudioLink
-  Domain.PortraitVideoLink -> Common.PortraitVideoLink
-
 translationToDomainType :: UTCTime -> Common.MessageTranslation -> Domain.MessageTranslation
 translationToDomainType createdAt Common.MessageTranslation {..} = Domain.MessageTranslation {..}
 
 addMessage :: ShortId DM.Merchant -> Context.City -> Common.AddMessageRequest -> Flow Common.AddMessageResponse
-addMessage merchantShortId _ Common.AddMessageRequest {..} = do
+addMessage merchantShortId opCity Common.AddMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
-  message <- mkMessage merchant
-  _ <- MQuery.create message
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  message <- mkMessage merchant merchantOpCityId
+  _ <- MQuery.createMessage message
   return $ Common.AddMessageResponse {messageId = cast $ message.id}
   where
-    mkMessage merchant = do
+    mkMessage merchant merchantOpCityId = do
       id <- generateGUID
       now <- getCurrentTime
       return $
         Domain.Message
           { id,
             merchantId = merchant.id,
+            merchantOperatingCityId = merchantOpCityId,
             _type = toDomainType _type,
             title,
             label,
             likeCount = 0,
             viewCount = 0,
+            alwaysTriggerOnOnboarding = fromMaybe False alwaysTriggerOnOnboarding,
             description,
             shortDescription,
             mediaFiles = cast <$> mediaFiles,
@@ -194,26 +161,21 @@ instance FromNamedRecord CSVRow where
   parseNamedRecord r = CSVRow <$> r .: "driverId"
 
 sendMessage :: ShortId DM.Merchant -> Context.City -> Common.SendMessageRequest -> Flow APISuccess
-sendMessage merchantShortId _ Common.SendMessageRequest {..} = do
+sendMessage merchantShortId opCity Common.SendMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   message <- B.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  kafkaPush <- L.runIO lookupBroadcastPush
   allDriverIds <- case _type of
-    AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
+    AllEnabled -> B.runInReplica $ QDI.findAllDriverIdExceptProvided merchant merchantOpCity []
     Include -> readCsv
     Exclude -> do
       driverIds <- readCsv
-      B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
+      B.runInReplica $ QDI.findAllDriverIdExceptProvided merchant merchantOpCity driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
-  fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
+  fork "Adding messages to kafka queue" $ mapM_ (addBroadcastMessageToKafka kafkaPush message) allDriverIds
   return Success
   where
-    addToKafka message driverId = do
-      topicName <- asks (.broadcastMessageTopic)
-      msg <- createMessageLanguageDict message
-      produceMessage
-        (topicName, Just (encodeUtf8 $ getId driverId))
-        msg
-
     readCsv = case csvFile of
       Just csvFile_ -> do
         csvData <- L.runIO $ BS.readFile csvFile_
@@ -222,18 +184,11 @@ sendMessage merchantShortId _ Common.SendMessageRequest {..} = do
           Right (_, v) -> pure $ V.toList $ V.map (Id . T.pack . (.driverId)) v
       Nothing -> throwError (InvalidRequest "CSV FilePath Not Found")
 
-    createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
-    createMessageLanguageDict message = do
-      translations <- B.runInReplica $ MTQuery.findByMessageId message.id
-      pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
-
-    addTranslation Domain.RawMessage {..} trans =
-      (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
-
 messageList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
-messageList merchantShortId _ mbLimit mbOffset = do
+messageList merchantShortId opCity mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
-  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant.id
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant merchantOpCity
   let count = length messages
   let summary = Common.Summary {totalCount = count, count}
   return $ Common.MessageListResponse {messages = buildMessage <$> messages, summary}
@@ -260,7 +215,7 @@ messageInfo merchantShortId _ messageId = do
           description,
           shortDescription,
           title,
-          mediaFiles = (\mediaFile -> Common.MediaFile (toCommonMediaFileType mediaFile._type) mediaFile.url) <$> mf
+          mediaFiles = (\mediaFile -> Common.MediaFile mediaFile._type mediaFile.url) <$> mf
         }
 
 messageDeliveryInfo :: ShortId DM.Merchant -> Context.City -> Id Domain.Message -> Flow Common.MessageDeliveryInfoResponse

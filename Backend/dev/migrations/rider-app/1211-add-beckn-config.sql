@@ -1,0 +1,2 @@
+INSERT INTO atlas_app.beckn_config (id, domain, gateway_url, registry_url, subscriber_id, subscriber_url, merchant_id, merchant_operating_city_id, unique_key_id, created_at, updated_at)
+VALUES ('dd22a05d-29a3-42c8-9c8d-2de340f9b607', 'FRFS', 'http://localhost:8015/v1', 'http://localhost:8020', 'localhost:8013/beckn/frfs/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'http://localhost:8013/beckn/frfs/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', null, 'localhost/beckn/frfs/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', now(), now());

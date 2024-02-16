@@ -108,6 +108,13 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - raw-strings-qq
+  - directory
+  - filepath
+  - scheduler
+  - singletons
+  - singletons-th
+  - regex-posix
 
 ghc-options:
   - -fwrite-ide-info
@@ -115,7 +122,9 @@ ghc-options:
   - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
+    - src-read-only
   ghc-options:
     - -Wall
     - -Wcompat

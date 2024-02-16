@@ -21,7 +21,6 @@ import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import qualified Kernel.Streaming.Kafka.Producer.Types as KT
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Types.Common (Tables)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -95,7 +94,7 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    tables :: Tables
+    kvConfigUpdateFrequency :: Int
   }
   deriving (Generic, FromDhall)
 

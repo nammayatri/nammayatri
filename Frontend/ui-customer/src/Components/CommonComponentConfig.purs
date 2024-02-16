@@ -60,14 +60,14 @@ accessibilityPopUpConfig selectedDisability purpleRideConfig =
          cornerRadius = (PTD.Corners 15.0 true true true true),
          coverImageConfig {
            imageUrl = popupData.imageUrl
-         , visibility = if popupData.videoUrl == "" || (not (JB.supportsInbuildYoutubePlayer unit)) then VISIBLE else GONE
+         , visibility = if popupData.videoUrl == "" || (not (JB.supportsInbuildYoutubePlayer unit)) || EHC.os == "IOS" then VISIBLE else GONE
          , height = V 160
          , width = MATCH_PARENT
          , margin = Margin 16 20 16 0
          }
          , listViewArray = popupData.listViewArray
-          , coverVideoConfig {
-            visibility = if popupData.videoUrl /= "" && (JB.supportsInbuildYoutubePlayer unit) then VISIBLE else GONE 
+          , coverMediaConfig {
+            visibility = if popupData.videoUrl /= "" && (JB.supportsInbuildYoutubePlayer unit) && EHC.os /= "IOS" then VISIBLE else GONE 
           , height = V 200
           , width = MATCH_PARENT
           , padding = Padding 16 16 16 0
@@ -110,7 +110,7 @@ getAccessibilityPopupData pwdtype purpleRideConfig =
         Mb.Nothing -> accessibilityConfig' 
 
 accessibilityConfig :: Common.LazyCheck -> ContentConfig
-accessibilityConfig _ = { primaryText : (getString ACCESSIBILITY_TEXT), secondaryText : (getString TO_CATER_YOUR_SPECIFIC_NEEDS), imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", videoUrl : "", mediaType : "" ,listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)], videoId : "GeneralDisabilityCoverVideo"}
+accessibilityConfig _ = { primaryText : (getString $ ACCESSIBILITY_TEXT "ACCESSIBILITY_TEXT"), secondaryText : (getString $ TO_CATER_YOUR_SPECIFIC_NEEDS "TO_CATER_YOUR_SPECIFIC_NEEDS"), imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", videoUrl : "", mediaType : "" ,listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)], videoId : "GeneralDisabilityCoverVideo"}
 
 accessibilityListConfig :: ST.DisabilityData -> String -> AppConfig -> SelectListModal.Config
 accessibilityListConfig disabilityData otherDisability config = 

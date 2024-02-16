@@ -70,7 +70,6 @@ dependencies:
   - time
   - errors
   - servant-server
-  - hashmap
   - bytestring
   - streamly
   - openapi3

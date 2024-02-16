@@ -19,14 +19,12 @@ import qualified AWS.S3 as S3
 import Codec.Picture
 import Codec.Picture.Extra
 import Codec.Picture.Types
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Base64.Lazy as B64L
 import qualified Data.ByteString.Lazy as LBS
 import Data.Text (pack, unpack)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverOnboarding.AadhaarOtp as Domain
@@ -188,7 +186,7 @@ backfillAadhaarImage person merchantOpCityId aadhaarVerification =
 
 uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadOriginalAadhaarImage person image imageType = do
-  orgImageFilePath <- createFilePath (getId person.id) Common.Image "/driver-aadhaar-photo/" (parseImageExtension imageType)
+  orgImageFilePath <- S3.createFilePath "/driver-aadhaar-photo/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
   resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
   pure (orgImageFilePath, resultOrg)
 
@@ -196,7 +194,7 @@ uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, M
 uploadCompressedAadhaarImage person merchantOpCityId image imageType = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound (merchantOpCityId.getId))
   let mbconfig = transporterConfig.aadhaarImageResizeConfig
-  compImageFilePath <- createFilePath (getId person.id) Common.Image "/driver-aadhaar-photo-resized/" (parseImageExtension imageType)
+  compImageFilePath <- S3.createFilePath "/driver-aadhaar-photo-resized/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
   compImage <- maybe (return image) (\cfg -> fromMaybe image <$> resizeImage cfg.height cfg.width image imageType) mbconfig
   resultComp <- try @_ @SomeException $ S3.put (unpack compImageFilePath) compImage
   case resultComp of
@@ -238,25 +236,6 @@ parseImageExtension ext = case ext of
   JPG -> ".jpg"
   PNG -> ".png"
   _ -> ""
-
-createFilePath ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
-  Text ->
-  Common.FileType ->
-  Text ->
-  Text ->
-  m Text
-createFilePath driverId fileType identifier imageExtension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> identifier <> "driver-" <> driverId <> "/"
-        <> show fileType
-        <> "/"
-        <> fileName
-        <> imageExtension
-    )
 
 unVerifiedAadhaarData ::
   Id Person.Person ->

@@ -18,7 +18,6 @@ module Beckn.Types.Core.Taxi.OnStatus
   )
 where
 
-import Beckn.Types.Core.Taxi.OnStatus.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.OnStatus.Order as Reexport
 import Kernel.Prelude
 

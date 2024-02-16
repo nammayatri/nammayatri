@@ -29,9 +29,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import Storage.Beam.SystemConfigs ()
 
 data RideBookingEndPoint = RideStatusEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "RideBookingEndPoint"
 

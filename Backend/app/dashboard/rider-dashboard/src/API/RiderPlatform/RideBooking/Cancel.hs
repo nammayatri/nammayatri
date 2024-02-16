@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp.RideBooking as Client
 import Servant
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 
@@ -53,7 +54,7 @@ buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.CancelAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
 callBookingCancel :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> FlowHandler APISuccess
-callBookingCancel merchantShortId opCity apiTokenInfo bookingId personId req = withFlowHandlerAPI $ do
+callBookingCancel merchantShortId opCity apiTokenInfo bookingId personId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.RideBookingCancelEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $

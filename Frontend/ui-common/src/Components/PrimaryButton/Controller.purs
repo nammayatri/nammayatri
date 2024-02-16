@@ -19,11 +19,11 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Prelude ((<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Gradient(..), height, width)
-import MerchantConfig.Utils(getValueFromConfig)
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe (Maybe(..))
 import PrestoDOM.Animation (Animation(..))
+import ConfigProvider 
 
 data Action = OnClick | NoAction
 
@@ -53,6 +53,9 @@ type Config =
     , lottieConfig :: LottieConfig
     , weight :: Maybe Number
     , enableButtonLayoutId :: Boolean
+    , underlineConfig :: UnderLineConfig 
+    , enableRipple :: Boolean
+    , rippleColor :: String
   }
 
 type TextConfig =
@@ -66,6 +69,7 @@ type TextConfig =
   , accessibilityHint :: String
   , weight :: Maybe Number
   , textFromHtml :: Maybe String
+  , id :: String
   }
 
 
@@ -86,8 +90,19 @@ type LottieConfig =
   , autoDisableLoader :: Boolean
   }
 
+type UnderLineConfig = 
+  { color :: String
+  , margin :: Margin
+  , padding :: Padding
+  , visibility :: Visibility
+  , height :: Length
+  }
+
 config :: Config
-config =   {
+config = 
+  let 
+    btnConfig = (getAppConfig appConfig).primaryButtonConfig
+  in {
     textConfig  :
     { text : ""
     , textStyle : SubHeading1
@@ -99,7 +114,10 @@ config =   {
     , accessibilityHint : ""
     , weight : Nothing
     , textFromHtml : Nothing
+    , id : ""
     }
+  , enableRipple : false
+  , rippleColor : Color.rippleShade
   , width: MATCH_PARENT
   , height: V 50
   , cornerRadius: 8.0
@@ -135,13 +153,20 @@ config =   {
     }
   , id : ""
   , enableLoader : false
-  , isGradient : if (getValueFromConfig "isGradient") == "true" then true else false
-  , gradient : (Linear 90.0 (getValueFromConfig "gradient"))
+  , isGradient : btnConfig.isGradient
+  , gradient : (Linear 90.0 btnConfig.gradient)
   , padding : Padding 0 0 0 0
   , lottieConfig : {
     height : V 30
   , width : V 150
-  , lottieURL : getValueFromConfig "apiLoaderLottie"
+  , lottieURL : btnConfig.loaderUrl
   , autoDisableLoader : true
   }
+  , underlineConfig : {
+    color : Color.grey900
+  , margin : Margin 0 0 0 0
+  , padding : Padding 0 0 0 0
+  , visibility : GONE
+  , height : V 0
   }
+}

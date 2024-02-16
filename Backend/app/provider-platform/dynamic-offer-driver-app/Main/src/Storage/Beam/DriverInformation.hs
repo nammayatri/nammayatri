@@ -25,6 +25,7 @@ data DriverInformationT f = DriverInformationT
   { driverId :: B.C f Text,
     adminId :: B.C f (Maybe Text),
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     active :: B.C f Bool,
     onRide :: B.C f Bool,
     enabled :: B.C f Bool,
@@ -36,9 +37,12 @@ data DriverInformationT f = DriverInformationT
     aadhaarVerified :: B.C f Bool,
     lastEnabledOn :: B.C f (Maybe UTCTime),
     referralCode :: B.C f (Maybe Text),
+    referredByDriverId :: B.C f (Maybe Text),
+    totalReferred :: B.C f (Maybe Int),
     canDowngradeToSedan :: B.C f Bool,
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
+    canSwitchToRental :: B.C f (Maybe Bool),
     blockedReason :: B.C f (Maybe Text),
     blockExpiryTime :: B.C f (Maybe UTCTime),
     mode :: B.C f (Maybe Domain.DriverMode),
@@ -48,6 +52,7 @@ data DriverInformationT f = DriverInformationT
     enabledAt :: B.C f (Maybe UTCTime),
     compAadhaarImagePath :: B.C f (Maybe Text),
     availableUpiApps :: B.C f (Maybe Text),
+    driverDob :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

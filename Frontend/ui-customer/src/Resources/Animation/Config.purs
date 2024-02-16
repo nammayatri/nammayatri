@@ -88,6 +88,22 @@ removeYAnimFromTopConfig = animConfig {
 , toAlpha = 0.0
 }
 
+messageInAnimConfig :: Boolean -> Common.AnimConfig
+messageInAnimConfig ifAnim = animConfig {
+  duration = 1000
+, fromY = 0
+, toY = (-196)
+, ifAnim = ifAnim
+}
+
+messageOutAnimConfig :: Boolean -> Common.AnimConfig
+messageOutAnimConfig ifAnim = animConfig {
+  duration = 1000
+, fromY = (-196)
+, toY = 0
+, ifAnim = ifAnim
+}
+
 translateFullYAnimWithDurationConfig :: Int -> Common.AnimConfig
 translateFullYAnimWithDurationConfig duration = animConfig {
   duration = duration

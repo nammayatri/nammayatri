@@ -16,8 +16,8 @@
 module Environment where
 
 import AWS.S3
-import qualified Data.HashMap as HM
-import qualified Data.Map as M
+import qualified Data.HashMap.Strict as HMS
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
@@ -31,10 +31,10 @@ import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
-import Kernel.Types.Common (HighPrecMeters, Seconds, Tables)
+import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
-import Kernel.Types.Id (Id (..))
+import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (lookupDeploymentVersion)
@@ -51,16 +51,13 @@ import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
+import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
+import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
--- data Tables = Tables {
---   kVTables :: [Text],
---   kVHardKilledTables :: [Text]
---   }
---   deriving (Generic, Show, ToJSON, FromJSON, FromDhall)
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
@@ -70,7 +67,8 @@ data AppCfg = AppCfg
     hedisClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
-    clickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    driverClickhouseCfg :: ClickhouseCfg,
     port :: Int,
     metricsPort :: Int,
     hostName :: Text,
@@ -80,7 +78,7 @@ data AppCfg = AppCfg
     signatureExpiry :: Seconds,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
-    migrationPath :: Maybe FilePath,
+    migrationPath :: [FilePath],
     autoMigrate :: Bool,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
@@ -110,23 +108,28 @@ data AppCfg = AppCfg
     driverLocationUpdateTopic :: Text,
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
+    droppedPointsThreshold :: HighPrecMeters,
+    osrmMatchThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int,
+    maxNotificationShards :: Int,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    tables :: Tables,
+    kvConfigUpdateFrequency :: Int,
     locationTrackingServiceKey :: Text,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     jobInfoMapx :: M.Map AllocatorJobType Bool,
     ltsCfg :: LocationTrackingeServiceConfig,
-    dontEnableForDb :: [Text],
     modelNamesMap :: M.Map Text Text,
     maxMessages :: Text,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -145,7 +148,8 @@ data AppEnv = AppEnv
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
-    clickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseEnv :: ClickhouseEnv,
+    driverClickhouseEnv :: ClickhouseEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
@@ -184,8 +188,11 @@ data AppEnv = AppEnv
     driverLocationUpdateTopic :: Text,
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
+    droppedPointsThreshold :: HighPrecMeters,
+    osrmMatchThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int,
+    maxNotificationShards :: Int,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -197,10 +204,12 @@ data AppEnv = AppEnv
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     ltsCfg :: LocationTrackingeServiceConfig,
-    dontEnableForDb :: [Text],
     maxMessages :: Text,
-    modelNamesHashMap :: HM.Map Text Text,
-    incomingAPIResponseTimeout :: Int
+    modelNamesHashMap :: HMS.HashMap Text Text,
+    incomingAPIResponseTimeout :: Int,
+    internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text
   }
   deriving (Generic)
 
@@ -232,13 +241,15 @@ buildAppEnv cfg@AppCfg {..} = do
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
-  clickhouseEnv <- createConn clickhouseCfg
+  kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
+  driverClickhouseEnv <- createConn driverClickhouseCfg
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
-  return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, ..}
+  let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
+  return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
@@ -259,7 +270,14 @@ instance Registry Flow where
   registryLookup =
     Registry.withSubscriberCache $ \sub ->
       fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id
-        >>>= \registryUrl -> Registry.registryLookup registryUrl sub
+        >>>= \registryUrl -> do
+          subId <- Registry.registryLookup registryUrl sub
+          totalSubIds <- QWhiteList.countTotalSubscribers
+          if totalSubIds == 0
+            then do
+              Registry.checkBlacklisted isBlackListed subId
+            else do
+              Registry.checkWhitelisted isNotWhiteListed subId
     where
       fetchFromDB subscriberId uniqueId merchantId = do
         mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId subscriberId uniqueId
@@ -269,6 +287,8 @@ instance Registry Flow where
             do
               mbMerchant <- CM.findById (Id merchantId)
               pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
+      isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
+      isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

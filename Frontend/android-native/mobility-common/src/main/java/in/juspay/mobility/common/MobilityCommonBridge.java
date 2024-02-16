@@ -10,10 +10,17 @@
 package in.juspay.mobility.common;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
+import static in.juspay.mobility.common.Utils.drawableToBitmap;
+import static in.juspay.mobility.common.Utils.getCircleOptionsFromJSON;
+
+import static in.juspay.mobility.app.Utils.captureImage;
+import static in.juspay.mobility.app.Utils.encodeImageToBase64;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -54,8 +61,11 @@ import android.graphics.drawable.Drawable;
 import android.icu.util.Calendar;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.Location;
 import android.location.LocationManager;
 import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.Image;
 import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -64,6 +74,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -97,6 +108,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
@@ -127,6 +139,8 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.Gap;
+import com.google.android.gms.maps.model.GroundOverlay;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
@@ -139,15 +153,19 @@ import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
+import com.theartofdev.edmodo.cropper.CropImage;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -155,19 +173,23 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.Objects;
 import java.util.TimeZone;
-
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.constants.LogCategory;
@@ -176,6 +198,9 @@ import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
+import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.services.MobilityAPIResponse;
+import in.juspay.mobility.app.services.MobilityCallAPI;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -184,6 +209,8 @@ public class MobilityCommonBridge extends HyperBridge {
     public static final int REQUEST_CALL = 8;
     protected static final int STORAGE_PERMISSION = 67;
     //Constants
+    private static final int IMAGE_CAPTURE_REQ_CODE = 101;
+    private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final String LOCATE_ON_MAP = "LocateOnMap";
     protected static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
     private static final String CURRENT_LOCATION_LATLON = "Current Location";
@@ -193,7 +220,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //Maps
     protected JSONObject markers = new JSONObject();
     protected GoogleMap googleMap;
-    protected HashMap <String, Marker> zoneMarkers = new HashMap <String, Marker>();
+    protected HashMap <String, Marker> zoneMarkers = new HashMap <>();
     protected GeoJsonLayer layer;
     protected String regToken, baseUrl;
     protected String zoneName = "";
@@ -208,6 +235,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //Location
     protected double lastLatitudeValue;
     protected double lastLongitudeValue;
+    protected Location lastKnownLocation;
     //LOG_TAGS
     protected String MAPS = "MAPS";
     protected String LOCATION = "LOCATION";
@@ -240,7 +268,13 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String downloadLayout;
     protected int labelTextSize = 30;
 
+    protected HashMap<String,CircleRippleEffect> circleRipples = new HashMap<>();
+    protected HashMap<String, GroundOverlay> groundOverlays = new HashMap<>();
 
+
+    private static final int CREDENTIAL_PICKER_REQUEST = 74;
+    private  MediaPlayer mediaPlayer = null;
+    private android.media.MediaPlayer audioPlayer;
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -278,6 +312,8 @@ public class MobilityCommonBridge extends HyperBridge {
         markers = new JSONObject();
         zoneMarkers = new HashMap<>();
         layer = null;
+        if(mediaPlayer != null) mediaPlayer.audioRecorder = null;
+        clearAudioPlayer();
         if(onGlobalLayoutListener != null && bridgeComponents.getActivity() != null) {
             View parentView = bridgeComponents.getActivity().findViewById(android.R.id.content);
             if(parentView != null) {
@@ -294,6 +330,7 @@ public class MobilityCommonBridge extends HyperBridge {
         storeLocateOnMapCallBack = null;
         storeDashboardCallBack = null;
         userPositionMarker = null;
+        if(mediaPlayer != null) mediaPlayer.audioPlayers = new ArrayList<>();
     }
 
     // region Store and Trigger CallBack
@@ -371,6 +408,11 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public boolean isNotificationPermissionEnabled() {
+        return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED);
+    }
+
+    @JavascriptInterface
     public void checkAndAskNotificationPermission(){
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !(ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)){
             try {
@@ -386,7 +428,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private void showLocationOnMap(final String zoomType) {
         ExecutorManager.runOnMainThread(() -> {
             if (!isLocationPermissionEnabled()) return;
-            updateLastKnownLocation(null, true, zoomType);
+            updateLastKnownLocation(null, true, zoomType,true);
         });
     }
 
@@ -395,11 +437,12 @@ public class MobilityCommonBridge extends HyperBridge {
         JSONObject location = new JSONObject();
         location.put("lat", lastLatitudeValue);
         location.put("lng", lastLongitudeValue);
+        if (lastKnownLocation != null)  location.put("ts",Utils.getUTCTimeStampFromMills(lastKnownLocation.getTime()));
         return location.toString();
     }
 
     @SuppressLint("MissingPermission")
-    protected void updateLastKnownLocation(String callback, boolean animate, final String zoomType) {
+    protected void updateLastKnownLocation(String callback, boolean animate, final String zoomType, boolean shouldFallBack) {
         if (!isLocationPermissionEnabled()) return;
         if (bridgeComponents.getActivity() != null) {
             client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
@@ -407,13 +450,16 @@ public class MobilityCommonBridge extends HyperBridge {
                         if (location != null) {
                             Double lat = location.getLatitude();
                             Double lng = location.getLongitude();
+                            String ts = Utils.getUTCTimeStampFromMills(location.getTime());
                             lastLatitudeValue = lat;
                             lastLongitudeValue = lng;
+                            lastKnownLocation = location;
                             setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                             setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                            setKeysInSharedPrefs("LAST_KNOWN_LOCATION_TS", ts);
                             if (callback != null) {
-                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                                        callback, lat, lng);
+                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
+                                        callback, lat, lng, ts);
                                 bridgeComponents.getJsCallback().addJsToWebView(javascript);
                             }
                             if (animate && googleMap != null) {
@@ -431,14 +477,29 @@ public class MobilityCommonBridge extends HyperBridge {
                                     e.printStackTrace();
                                 }
                             }
-                        } else getLastKnownLocationFromClientFallback(callback, animate);
+                        } else if (shouldFallBack) {
+                            getLastKnownLocationFromClientFallback(callback, animate);
+                        } else {
+                            sendDefaultLocationCallback(callback);
+                        }
                     })
                     .addOnFailureListener(bridgeComponents.getActivity(), e -> {
                         Log.e(LOCATION, "Current position not known");
-                        getLastKnownLocationFromClientFallback(callback, animate);
+                        if (shouldFallBack) {
+                            getLastKnownLocationFromClientFallback(callback, animate);
+                        } else {
+                            sendDefaultLocationCallback(callback);
+                        }
                     });
         }
+    }
 
+    private void sendDefaultLocationCallback(@Nullable String callback) {
+        if (callback != null) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
+                    callback, "0.0", "0.0", Utils.getUTCTimeStampFromMills(System.currentTimeMillis()));
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -451,13 +512,16 @@ public class MobilityCommonBridge extends HyperBridge {
                             if (location != null) {
                                 Double lat = location.getLatitude();
                                 Double lng = location.getLongitude();
+                                String ts = Utils.getUTCTimeStampFromMills(location.getTime());
                                 lastLatitudeValue = lat;
                                 lastLongitudeValue = lng;
+                                lastKnownLocation = location;
                                 setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                 setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                                setKeysInSharedPrefs("LAST_KNOWN_LOCATION_TS", ts);
                                 if (callback != null) {
-                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                                            callback, lat, lng);
+                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
+                                            callback, lat, lng,ts);
                                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                                 }
                                 if (animate && googleMap != null) {
@@ -569,14 +633,14 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void initiateLocationServiceClient() {
+        setKeyboardVisibilityListener();
         if (!isLocationPermissionEnabled()) return;
         resolvableLocationSettingsReq();
-        setKeyboardVisibilityListener();
     }
     
     // Alternate way to get the keyboard status since there is no Keyboard Listener or Events in android
     private void setKeyboardVisibilityListener() {
-        if (bridgeComponents.getActivity() != null){
+        if (bridgeComponents.getActivity() != null && onGlobalLayoutListener == null){
             try {
                 final View parentView = ((ViewGroup) bridgeComponents.getActivity().findViewById(android.R.id.content)).getRootView();
                 onGlobalLayoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -658,8 +722,13 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void getCurrentPosition(String callback) {
+        getCurrentPosition(callback,true);
+    }
+
+    @JavascriptInterface
+    public void getCurrentPosition(String callback, boolean shouldFallBack) {
         if (!isLocationPermissionEnabled()) return;
-        updateLastKnownLocation(callback, false, ZoomType.ZOOM);
+        updateLastKnownLocation(callback, false, ZoomType.ZOOM,shouldFallBack);
     }
 
     @SuppressLint("MissingPermission")
@@ -667,24 +736,32 @@ public class MobilityCommonBridge extends HyperBridge {
     public void isMockLocation(String callback) {
         Activity activity = bridgeComponents.getActivity();
         if (!isLocationPermissionEnabled()) return;
-        if (client != null && activity != null)
+        if (client != null && activity != null) {
             client.getLastLocation()
                     .addOnSuccessListener(activity, location -> {
-                        boolean isMock;
+                        boolean isMock = false;
                         if (location != null) {
                             if (Build.VERSION.SDK_INT <= 30) {
                                 isMock = location.isFromMockProvider();
                             } else {
                                 isMock = location.isMock();
                             }
-                            if (callback != null) {
-                                String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                        callback, isMock);
+                        }
+                        if (callback != null) {
+                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                  callback, isMock);
                                 bridgeComponents.getJsCallback().addJsToWebView(js);
-                            }
                         }
                     })
-                    .addOnFailureListener(activity, e -> Log.e(LOCATION, "Last and current position not known"));
+                    .addOnFailureListener(activity, e -> {
+                        Log.e(LOCATION, "Last and current position not known");
+                        if (callback != null) {
+                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                    callback, false);
+                            bridgeComponents.getJsCallback().addJsToWebView(js);
+                        }
+                    });
+        }
     }
     //endregion
 
@@ -727,6 +804,55 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @SuppressLint("PotentialBehaviorOverride")
+    @JavascriptInterface
+    public void upsertMarkerLabel(String configString) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject config = new JSONObject(configString);
+                String title = config.optString("title");
+                String id = config.optString("id");
+                String markerImage = config.optString("markerImage");
+                String actionImage = config.optString("actionImage");
+                String actionCallBack = config.optString("actionCallBack");
+                JSONObject point = config.optJSONObject("position");
+                LatLng position = null;
+                if (point != null) {
+                    double lat = point.optDouble("lat", lastLatitudeValue);
+                    double lon = point.optDouble("lng", lastLongitudeValue);
+                    position = new LatLng(lat, lon);
+                }
+                if (markers.has(id)) {
+                    Marker existingMarker = (Marker)markers.get(id);
+                    if (position != null) existingMarker.setPosition(position);
+                    existingMarker.setVisible(true);
+                    existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(title, null, markerImage.equals(""), actionImage, null, MarkerType.NORMAL_MARKER)));
+                } else {
+                    MarkerOptions markerObj = new MarkerOptions();
+                    if (position != null) markerObj.position(position);
+                    markerObj.title("")
+                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(title, null, markerImage.equals(""), actionImage, null, MarkerType.NORMAL_MARKER)));
+                    Marker marker = googleMap.addMarker(markerObj);
+                    if (!actionCallBack.equals("")) {
+                        if (marker != null) {
+                            marker.setTag(actionCallBack);
+                        }
+                    }
+                    googleMap.setOnMarkerClickListener(currMarker -> {
+                        if (currMarker.getTag() != null) {
+                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s');", currMarker.getTag());
+                            bridgeComponents.getJsCallback().addJsToWebView(js);
+                        }
+                        return false;
+                    });
+                    markers.put(id, marker);
+                }
+            } catch (Exception e) {
+                Log.e(MAPS, "Marker config parse error for " + configString, e);
+            }
+        });
+    }
+
     @JavascriptInterface
     public void upsertMarker(final String title, final String lat, final String lng, final int markerSize, final float anchorV, final float anchorV1) {
         ExecutorManager.runOnMainThread(() -> {
@@ -743,6 +869,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         markerObject.setFlat(true);
                         markerObject.setVisible(true);
                         markerObject.hideInfoWindow();
+                        markerObject.getPosition();
                         Log.i(MAPS, "Marker position updated for " + title);
                     } else {
                         MarkerOptions markerOptionsObj = makeMarkerObject(title, latitude, longitude, markerSize, anchorV, anchorV1);
@@ -863,7 +990,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void getLocationName(String latitude, String longitude, String defaultText, String callback) {
         if (!isLocationPermissionEnabled()) return;
 
-        updateLastKnownLocation(null, false, ZoomType.ZOOM);
+        updateLastKnownLocation(null, false, ZoomType.ZOOM,true);
 
         if (defaultText.equals(CURRENT_LOCATION_LATLON)) {
             latitude = String.valueOf(lastLatitudeValue);
@@ -898,6 +1025,16 @@ public class MobilityCommonBridge extends HyperBridge {
             e.printStackTrace();
         }
     }
+
+    @JavascriptInterface
+    public void setMapPadding(final int left, final int top, final int right, final int bottom) {
+        ExecutorManager.runOnMainThread(() -> {
+            if (googleMap != null) {
+                googleMap.setPadding(left, top, right, bottom);
+            }
+        });
+    }
+
 
     @SuppressLint({"MissingPermission", "PotentialBehaviorOverride"})
     private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom) {
@@ -1002,9 +1139,206 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
                 }
             } catch (Exception e) {
-                Log.e("FAILED WHILE REALLOCATING", e.toString());
+                Log.e("reallocateMapFragment", "FAILED WHILE REALLOCATING " + e);
             }
         });
+    }
+
+    @JavascriptInterface
+    public void addRippleCircle(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            int count = 1;
+            String prefix = "ripples";
+            CircleRippleEffectOptions options = new CircleRippleEffectOptions();
+            LatLng point = new LatLng(lastLatitudeValue,lastLongitudeValue);
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                count = jsonConfig.optInt("count", 1);
+                prefix = jsonConfig.optString("prefix", "ripples");
+                JSONObject center = jsonConfig.optJSONObject("center");
+                if (center != null) {
+                    double lat = center.optDouble("lat",lastLatitudeValue);
+                    double lon = center.optDouble("lng",lastLongitudeValue);
+                    point = new LatLng(lat,lon);
+                }
+                getCircleOptionsFromJSON(jsonConfig, options);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+            for (int i = 1; i <= count; i++) {
+                CircleRippleEffect circleRippleEffect = new CircleRippleEffect(i,
+                        options.clone()
+                                .factor(i)
+                                .radius((i) * options.getRadius()));
+                circleRippleEffect.draw(googleMap, point);
+                circleRipples.put(prefix + "_" + i, circleRippleEffect);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void animateRippleCircle(String config) {
+//        HandlerThread handler = new HandlerThread("CircleAnimation");
+//        handler.start();
+//        new Handler(handler.getLooper()).post(() -> TODO: Need to verify why animation is lagging if we run in Handler Thread.
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                int count = jsonConfig.optInt("count", 1);
+                String prefix = jsonConfig.optString("prefix", "ripples");
+                for (int i = 1; i <= count; i++) {
+                    CircleRippleEffect circle = circleRipples.get(prefix + "_" + i);
+                    if (circle != null) {
+                        circle.startAnimation();
+                    }
+                }
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void removeRippleCircle(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                int count = jsonConfig.optInt("count", 1);
+                String prefix = jsonConfig.optString("prefix", "ripples");
+                for (int i = 1; i <= count; i++) {
+                    String id = prefix + "_" + i;
+                    CircleRippleEffect circle = circleRipples.get(id);
+                    if (circle != null) {
+                        circle.remove();
+                    }
+                    circleRipples.remove(id);
+                }
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void updateRippleCirclePosition(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                int count = jsonConfig.optInt("count", 1);
+                String prefix = jsonConfig.optString("prefix", "ripples");
+                JSONObject center = jsonConfig.optJSONObject("center");
+                LatLng point = new LatLng(lastLatitudeValue,lastLongitudeValue);
+                if (center != null) {
+                    double lat = center.optDouble("lat",lastLatitudeValue);
+                    double lon = center.optDouble("lng",lastLongitudeValue);
+                    point = new LatLng(lat,lon);
+                }
+                for (int i = 1; i <= count; i++) {
+                    CircleRippleEffect circle = circleRipples.get(prefix + "_" + i);
+                    if (circle != null) {
+                        circle.updatePosition(point);
+                    }
+                }
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void addGroundOverlay(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                Context context = bridgeComponents.getContext();
+                String id = jsonConfig.optString("id", "ground_overlay");
+                int height = jsonConfig.optInt("height", 50);
+                int width = jsonConfig.optInt("width", 50);
+                String imageName = jsonConfig.optString("imageUrl", "");
+                boolean fetchFromView = jsonConfig.optBoolean("fetchFromView", false);
+                String viewID = jsonConfig.optString("viewID", "");
+                JSONObject center = jsonConfig.optJSONObject("center");
+                LatLng point = new LatLng(lastLatitudeValue,lastLongitudeValue);
+                if (center != null) {
+                    double lat = center.optDouble("lat",lastLatitudeValue);
+                    double lon = center.optDouble("lng",lastLongitudeValue);
+                    point = new LatLng(lat,lon);
+                }
+                Drawable drawable = null;
+                if (bridgeComponents.getActivity() != null && fetchFromView) {
+                    ImageView view = bridgeComponents.getActivity().findViewById(Integer.parseInt(viewID));
+                    drawable = view.getDrawable();
+                }
+                GroundOverlayOptions options = new GroundOverlayOptions().position(point,width,height);
+                if (drawable != null) {
+                    options.image(BitmapDescriptorFactory.fromBitmap(drawableToBitmap(drawable)));
+                } else {
+                    options.image(BitmapDescriptorFactory.fromResource(context.getResources().getIdentifier(imageName, "drawable", context.getPackageName())));
+                }
+                ExecutorManager.runOnMainThread(() -> groundOverlays.put(id, googleMap.addGroundOverlay(options)));
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public boolean isOverlayPresent (String id) {
+        return groundOverlays.containsKey(id);
+    }
+
+    @JavascriptInterface
+    public boolean isCirclePresent (String id) {
+        return circleRipples.containsKey(id);
+    }
+
+    @JavascriptInterface
+    public void removeGroundOverlay(String config) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                String id = jsonConfig.optString("id", "ground_overlay");
+                GroundOverlay overlay = groundOverlays.get(id);
+                if (overlay != null) {
+                    overlay.remove();
+                }
+                groundOverlays.remove(id);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ground Overlay config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void updateGroundOverlay(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                String id = jsonConfig.optString("id", "ground_overlay");
+                GroundOverlay overlay = groundOverlays.get(id);
+                JSONObject center = jsonConfig.optJSONObject("center");
+                LatLng point = new LatLng(lastLatitudeValue,lastLongitudeValue);
+                if (center != null) {
+                    double lat = center.optDouble("lat",lastLatitudeValue);
+                    double lon = center.optDouble("lng",lastLongitudeValue);
+                    point = new LatLng(lat,lon);
+                }
+
+                if (overlay != null) {
+                    LatLng finalPoint = point;
+                    ExecutorManager.runOnMainThread(() -> overlay.setPosition(finalPoint));
+                }
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void clearMap () {
+        ExecutorManager.runOnMainThread(() -> googleMap.clear());
+        circleRipples.clear();
+        groundOverlays.clear();
     }
 
     private void checkAndAnimatePolyline(final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject){
@@ -1114,7 +1448,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     double sourceLong = sourceCoordinates.getDouble("lng");
                     double destLat = destCoordinates.getDouble("lat");
                     double destLong = destCoordinates.getDouble("lng");
-                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
+                    boolean moveCamera = mapRouteConfigObject.optBoolean("autoZoom",true);
+                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0 && moveCamera) {
                         moveCamera(sourceLat, sourceLong, destLat, destLong, coordinates);
                     }
                     if (isActual) {
@@ -1141,7 +1476,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         MarkerOptions markerObj = new MarkerOptions()
                                 .title("")
                                 .position(dest)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER)));
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker, false,null, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER)));
 
                         Marker tempmarker = googleMap.addMarker(markerObj);
                         markers.put(destMarker, tempmarker);
@@ -1163,7 +1498,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(source)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceSpecialTagIcon.equals("") ? null : sourceSpecialTagIcon, MarkerType.NORMAL_MARKER)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, false,null, sourceSpecialTagIcon.equals("") ? null : sourceSpecialTagIcon, MarkerType.NORMAL_MARKER)));
                             Marker tempmarker = googleMap.addMarker(markerObj);
                             markers.put(sourceMarker, tempmarker);
                         }
@@ -1199,7 +1534,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(sourceLatLng)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceTag.equals("") ? null : sourceTag, MarkerType.NORMAL_MARKER)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, false,null, sourceTag.equals("") ? null : sourceTag, MarkerType.NORMAL_MARKER)));
                             Marker marker = googleMap.addMarker(markerObj);
                             markers.put(sourceMarker, marker);
                         }
@@ -1209,7 +1544,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(destinationLatLng)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destinationMarker, destinationTag.equals("") ? null : destinationTag, MarkerType.NORMAL_MARKER)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destinationMarker, false,null, destinationTag.equals("") ? null : destinationTag, MarkerType.NORMAL_MARKER)));
                             Marker marker = googleMap.addMarker(markerObj);
                             markers.put(destinationMarker, marker);
                         }
@@ -1221,8 +1556,8 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n"})
-    protected Bitmap getMarkerBitmapFromView(String locationName, String imageName, String specialLocationTagIcon, MarkerType markerType) {
+    @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
+    protected Bitmap getMarkerBitmapFromView(String locationName, String imageName, boolean isInvisiblePointer, String actionImage, String specialLocationTagIcon, MarkerType markerType) {
         Context context = bridgeComponents.getContext();
         @SuppressLint("InflateParams")
         String layoutName = markerType.equals(MarkerType.SPECIAL_ZONE_MARKER) ? "zone_label_layout" : "marker_label_layout";
@@ -1246,18 +1581,21 @@ public class MobilityCommonBridge extends HyperBridge {
                 specialTagImage.setImageDrawable(bitmapdraw);
             }
         } catch (Exception e) {
-            Log.e("Exception in rendering Image for special zone", e.toString());
+            Log.e("getMarkerBitmapFromView", "Exception in rendering Image for special zone" + e);
         }
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         try {
-            pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(imageName, "drawable", context.getPackageName())));
+            if (imageName != null)
+                pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(imageName, "drawable", context.getPackageName())));
+            if (isInvisiblePointer)
+                pointer.setVisibility(View.INVISIBLE);
             if (markerType.equals(MarkerType.SPECIAL_ZONE_MARKER)) {
                 ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
                 layoutParams.height = 45;
                 layoutParams.width = 45;
                 pointer.setLayoutParams(layoutParams);
             } else {
-                if (imageName.equals("ny_ic_customer_current_location")) {
+                if (imageName != null && imageName.equals("ny_ic_customer_current_location")) {
                     ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
                     layoutParams.height = 160;
                     layoutParams.width = 160;
@@ -1267,8 +1605,17 @@ public class MobilityCommonBridge extends HyperBridge {
                     pointer.setLayoutParams(layoutParams);
                 }
             }
+            if (actionImage != null) {
+                ImageView markerActionImage = customMarkerView.findViewById(R.id.marker_action_image);
+                markerActionImage.setVisibility(View.VISIBLE);
+                markerActionImage.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(actionImage, "drawable", context.getPackageName())));
+            }
+            if (actionImage == null && locationName.equals("")){
+                View mainLableLayout = customMarkerView.findViewById(R.id.main_label_layout);
+                mainLableLayout.setVisibility(View.GONE);
+            }
         } catch (Exception e) {
-            Log.e("Exception in rendering Image", e.toString());
+            Log.e("getMarkerBitmapFromView", "Exception in rendering Image" + e);
         }
         customMarkerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight());
@@ -1284,12 +1631,26 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void removeAllPolylines(String str) {
+    public void removeAllPolylines(String stringifyArray) {
         ExecutorManager.runOnMainThread(() -> {
-            removeMarker("ic_auto_nav_on_map");
-            removeMarker("ny_ic_vehicle_nav_on_map");
-            removeMarker("ny_ic_src_marker");
-            removeMarker("ny_ic_dest_marker");
+            if (stringifyArray.equals("")) {
+                // TODO:: TO BE DEPRECATED AS THIS BLOCK OF CODE IS NOT IN USE
+                removeMarker("ic_auto_nav_on_map");
+                removeMarker("ny_ic_vehicle_nav_on_map");
+                removeMarker("ny_ic_black_yellow_auto");
+                removeMarker("ny_ic_src_marker");
+                removeMarker("ny_ic_dest_marker");
+            } else{
+                try {
+                    JSONArray jsonArray = null;
+                    jsonArray = new JSONArray(stringifyArray);
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        removeMarker(jsonArray.getString(i));
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } 
+            }
             isAnimationNeeded = false;
             if (polylineAnimatorSet != null) {
                 polylineAnimatorSet.cancel();
@@ -1468,12 +1829,30 @@ public class MobilityCommonBridge extends HyperBridge {
             Log.e(DTUTILS, "Time picker called");
             TimePickerDialog timePickerDialog = new TimePickerDialog(bridgeComponents.getActivity(), (timePicker, hourOfDay, minute1) -> {
                 if (callback != null) {
-                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%d,%d);",
-                            callback, hourOfDay, minute1);
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
+                            callback, "SELECTED", hourOfDay, minute1);
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
             }, hour, minute, false);
+
+
+            timePickerDialog.setOnCancelListener(var1 -> {
+                if (callback != null) {
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
+                      callback, "CANCELLED", 0, 0);
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            });
+            timePickerDialog.setOnDismissListener(var1 -> {
+                if (callback != null) {
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
+                      callback,"DISMISSED", 0, 0);
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            });
+
             timePickerDialog.show();
+
         });
     }
 
@@ -1715,6 +2094,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return info.versionCode;
     }
 
+    @Deprecated
     @JavascriptInterface
     public void toggleLoader(final boolean visible) {
         ExecutorManager.runOnMainThread(() -> {
@@ -1799,6 +2179,7 @@ public class MobilityCommonBridge extends HyperBridge {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.setData(Uri.parse("tel:" + phoneNum));
         if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            phoneNumber = phoneNum;
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
         } else {
             bridgeComponents.getContext().startActivity(intent);
@@ -1939,7 +2320,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         public void onAnimationRepeat(@NonNull Animator animator) {
                         }
                     });
-                    if ( rawJson.contains("https") || rawJson.contains("http")) {
+                    if (rawJson.contains("http")) {
                             animationView.setAnimationFromUrl(rawJson);
                     }else {
                             animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
@@ -2168,9 +2549,8 @@ public class MobilityCommonBridge extends HyperBridge {
                 notificationManager.createNotificationChannel(channel);
             }
             NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
-            int launcher = bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getContext().getPackageName());
             mBuilder.setContentTitle(toastMessage)
-                    .setSmallIcon(launcher)
+                    .setSmallIcon(bridgeComponents.getContext().getResources().getIdentifier((Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap", bridgeComponents.getContext().getPackageName()))
                     .setContentText(notificationContent)
                     .setAutoCancel(true)
                     .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
@@ -2558,4 +2938,246 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         }
     }
+
+    //region Image Rendering
+    // Deprecated on 5-Jan-2024
+    // Remove once it is not used
+    // Use displayBase64Image instead
+    @JavascriptInterface
+    public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
+        renderBase64ImageFile(url.contains("http") ? MobilityCallAPI.callAPI(url, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : url, id, fitCenter, imgScaleType);
+    }
+
+    // Deprecated on 5-Jan-2024
+    // Remove once it is not used
+    // Use displayBase64Image instead
+    @JavascriptInterface
+    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter, String imgScaleType) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
+                    LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                    if (layout != null){
+                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                        ImageView imageView = new ImageView(bridgeComponents.getContext());
+                        ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
+                        imageView.setLayoutParams(layoutParams);
+                        imageView.setImageBitmap(decodedByte);
+                        imageView.setScaleType(getScaleTypes(imgScaleType));
+                        imageView.setAdjustViewBounds(true);
+                        imageView.setClipToOutline(true);
+                        layout.removeAllViews();
+                        layout.addView(imageView);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void displayBase64Image(String configJSONString){
+        try {
+            JSONObject configObj = new JSONObject(configJSONString);
+
+            // parse params
+            String source = configObj.optString("source", "");
+            String id = configObj.optString("id", "");
+            String scaleType = configObj.optString("scaleType", "CENTER_CROP");
+            int inSampleSize = configObj.optInt("inSampleSize", 1);
+
+            // call api to get base64image
+            String base64Image = source.startsWith("http") ? MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
+
+            // convert base64Image to imageView
+            ExecutorManager.runOnMainThread(() -> {
+                try {
+                    if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
+                        LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                        if (layout != null){
+                            byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                            BitmapFactory.Options options = new BitmapFactory.Options();
+                            options.inSampleSize = inSampleSize;
+                            Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length, options);
+
+                            ImageView imageView = new ImageView(bridgeComponents.getContext());
+                            ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
+                            imageView.setLayoutParams(layoutParams);
+                            imageView.setImageBitmap(decodedByte);
+                            imageView.setScaleType(getScaleTypes(scaleType));
+                            imageView.setAdjustViewBounds(true);
+                            imageView.setClipToOutline(true);
+
+                            layout.removeAllViews();
+                            layout.addView(imageView);
+                        }
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            });
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
+
+    //region Audio Recorder
+    @JavascriptInterface
+    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID) {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.addMediaFile(viewID, source, actionPlayerID, playIcon, pauseIcon, timerID);
+    }
+
+    @JavascriptInterface
+    public void addMediaPlayer(String viewID, String source) {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.addMediaPlayer(viewID, source);
+    }
+
+    @JavascriptInterface
+    public void pauseMediaPlayer() {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.pauseMediaPlayer();
+    }
+
+    @JavascriptInterface
+    public void removeMediaPlayer() {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.removeMediaPlayer();
+    }
+
+    @JavascriptInterface
+    public boolean startAudioRecording() {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        return mediaPlayer.startAudioRecording();
+    }
+
+    @JavascriptInterface
+    public String stopAudioRecording() {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        return mediaPlayer.stopAudioRecording();
+    }
+
+    @JavascriptInterface
+    public String saveAudioFile(String source) throws IOException {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        return mediaPlayer.saveAudioFile(source);
+    }
+
+    @JavascriptInterface
+    public void uploadFile() { 
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.uploadFile();
+    }
+
+    @JavascriptInterface
+    public void startAudioPlayer(String file, String callback) {
+        int id = bridgeComponents.getContext().getResources().getIdentifier(file,"raw",bridgeComponents.getContext().getPackageName());
+        if(audioPlayer != null) {
+            audioPlayer.stop();
+            audioPlayer = null;
+        }
+        try {
+        if (id != 0) {
+            Uri audioUri = Uri.parse("android.resource://" + bridgeComponents.getContext().getPackageName() + "/" + id);
+            audioPlayer = android.media.MediaPlayer.create(bridgeComponents.getContext(), audioUri);
+        } else {
+            audioPlayer = new android.media.MediaPlayer();
+            audioPlayer.setDataSource(file);
+            audioPlayer.prepare();
+        }
+        audioPlayer.setOnPreparedListener((mediaPlayer) -> {
+            System.out.println("setOnPreparedListener");
+            mediaPlayer.start();
+        });
+        audioPlayer.setOnCompletionListener((mediaPlayer) -> {
+            System.out.println("setOnCompletionListener");
+            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                    callback, "COMPLETED");
+            bridgeComponents.getJsCallback().addJsToWebView(js);
+        });
+        } catch (Exception e) {
+            Log.e(OTHERS, "Error in  startAudioPlayer : " + e);
+            e.printStackTrace();
+        }
+    }
+
+    @JavascriptInterface
+    public void pauseAudioPlayer() {
+        if (audioPlayer != null) {
+            audioPlayer.pause();
+        };
+    }
+
+    @JavascriptInterface
+    public void clearAudioPlayer() {
+        if (audioPlayer != null) {
+            audioPlayer.stop();
+            audioPlayer = null;
+        };
+    }
+    
+
+    @Override
+    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case IMAGE_CAPTURE_REQ_CODE:
+                if (resultCode == RESULT_OK) {
+                    if (bridgeComponents.getActivity() != null) {
+                        if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
+                        captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
+                    }
+                } else {
+                    if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
+                }
+                break;
+            case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
+                if (resultCode == RESULT_OK) {
+                    new Thread(() -> encodeImageToBase64(data, bridgeComponents.getContext(), null)).start();
+                } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
+                    CropImage.ActivityResult result = CropImage.getActivityResult(data);
+                    Log.e(OVERRIDE, result.getError().toString());
+                }
+                break;
+        }
+        return super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case IMAGE_PERMISSION_REQ_CODE:
+                Context context = bridgeComponents.getContext();
+                if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
+                    if (bridgeComponents.getActivity() != null) {
+                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                        KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
+                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
+                        chooseFromFile.setType("image/*");
+                        Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
+                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
+                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                    }
+                } else {
+                    Toast.makeText(context, context.getString(R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case MediaPlayerView.AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
+                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            default:
+                break;
+        }
+        return super.onRequestPermissionResult(requestCode, permissions, grantResults);
+    }
+
+
 }

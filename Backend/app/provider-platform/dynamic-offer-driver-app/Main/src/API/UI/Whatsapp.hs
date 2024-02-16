@@ -25,6 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Kernel.Utils.Logging
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =

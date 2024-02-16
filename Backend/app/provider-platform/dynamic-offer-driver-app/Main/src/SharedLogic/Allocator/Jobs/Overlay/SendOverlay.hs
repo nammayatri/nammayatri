@@ -8,6 +8,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverInformation as DTDI
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.Overlay as DOverlay
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
@@ -20,8 +21,10 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
-import SharedLogic.Allocator
+import qualified SharedLogic.Allocator as SAllocator
 import qualified SharedLogic.DriverFee as SLDriverFee
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -38,23 +41,26 @@ sendOverlayToDriver ::
     EncFlow m r,
     HasShortDurationRetryCfg r c
   ) =>
-  Job 'SendOverlay ->
+  Job 'SAllocator.SendOverlay ->
   m ExecutionResult
 sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       merchantId = jobData.merchantId
+      serviceName = fromMaybe DPlan.YATRI_SUBSCRIPTION jobData.serviceName
+      mbMerchantOperatingCityId = jobData.merchantOperatingCityId
       jobId = id
-
-  driverIds <- nub <$> getBatchedDriverIds merchantId jobId jobData.condition jobData.freeTrialDays jobData.timeDiffFromUtc jobData.driverPaymentCycleDuration jobData.driverPaymentCycleStartTime jobData.overlayBatchSize
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOperatingCityId merchant Nothing
+  driverIds <- nub <$> getBatchedDriverIds merchantId merchantOpCityId jobId jobData.condition jobData.freeTrialDays jobData.timeDiffFromUtc jobData.driverPaymentCycleDuration jobData.driverPaymentCycleStartTime jobData.overlayBatchSize serviceName
   logInfo $ "The Job " <> jobId.getId <> " is scheduled for following driverIds " <> show driverIds
   driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantId jobId
 
   if driverIdsLength > 0 || (invoiceOverlayCondition jobData.condition && not (null driverIds))
     then do
-      mapM_ (sendOverlayAccordingToCondition jobData) driverIds
+      mapM_ (sendOverlayAccordingToCondition jobData serviceName) driverIds
       ReSchedule . addUTCTime 1 <$> getCurrentTime
     else do
-      unless (null driverIds) $ mapM_ (sendOverlayAccordingToCondition jobData) driverIds
+      unless (null driverIds) $ mapM_ (sendOverlayAccordingToCondition jobData serviceName) driverIds
       case jobData.rescheduleInterval of
         Just interval -> do
           lastScheduledTime <- getLastScheduledJobTime merchantId jobId jobData.scheduledTime jobData.timeDiffFromUtc
@@ -64,22 +70,25 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
         Nothing -> return Complete
   where
     invoiceOverlayCondition condition = condition == DOverlay.InvoiceGenerated DPlan.MANUAL || condition == DOverlay.InvoiceGenerated DPlan.AUTOPAY
-    sendOverlayAccordingToCondition jobDataInfo driverId = do
+    sendOverlayAccordingToCondition jobDataInfo serviceName driverId = do
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       case jobDataInfo.condition of
         DOverlay.PaymentOverdueGreaterThan limit -> do
-          manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays
+          manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays serviceName
           when (manualDues > fromIntegral limit) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
         DOverlay.PaymentOverdueBetween rLimit lLimit -> do
-          manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays
+          manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays serviceName
           when ((fromIntegral rLimit <= manualDues) && (manualDues <= fromIntegral lLimit)) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
         DOverlay.InvoiceGenerated _ -> do
-          manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays
+          manualDues <- getAllManualDuesWithoutFilter driverId serviceName
           sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
         DOverlay.FreeTrialDaysLeft _ -> do
           driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
           currUdf1 <- getCurrentAutoPayStatusUDF driverInfo
           when (currUdf1 == jobDataInfo.udf1) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 0
+        DOverlay.BlockedDrivers -> do
+          manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays serviceName
+          when (manualDues > 0) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
         _ -> pure ()
 
     getCurrentAutoPayStatusUDF driverInfo = do
@@ -89,10 +98,14 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
         Just DTDI.PENDING -> return $ Just ""
         _ -> return $ Just "AUTOPAY_NOT_SET"
 
-    getManualDues driverId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays = do
+    getAllManualDuesWithoutFilter driverId serviceName = do
+      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName driverId serviceName
+      return $ sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+
+    getManualDues driverId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays serviceName = do
       windowEndTime <- getLocalCurrentTime timeDiffFromUtc
       let windowStartTime = addUTCTime (-1 * fromIntegral driverFeeOverlaySendingTimeLimitInDays * 86400) (UTCTime (utctDay windowEndTime) (secondsToDiffTime 0))
-      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverId driverId
+      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName driverId serviceName
       let filteredDriverFees = filter (\driverFee -> driverFee.startTime >= windowStartTime) pendingDriverFees
       return $
         if null filteredDriverFees
@@ -108,7 +121,8 @@ sendOverlay driver overlayKey udf1 amount = do
   whenJust mOverlay $ \overlay -> do
     let okButtonText = T.replace (templateText "dueAmount") (show amount) <$> overlay.okButtonText
     let description = T.replace (templateText "dueAmount") (show amount) <$> overlay.description
-    TN.sendOverlay driver.merchantOperatingCityId driver.id driver.deviceToken overlay.title description overlay.imageUrl okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
+    fork ("sending overlay to driver with driverId " <> (show driver.id)) $ do
+      TN.sendOverlay driver.merchantOperatingCityId driver.id driver.deviceToken $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
 
 getSendOverlaySchedulerDriverIdsLength :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id AnyJob -> m Integer
 getSendOverlaySchedulerDriverIdsLength merchantId jobId = Hedis.lLen $ makeSendOverlaySchedulerDriverIdsKey merchantId jobId
@@ -141,17 +155,29 @@ setLastScheduledJobTime merchantId jobId = Hedis.set (makeLastScheduledTimeJobKe
 makeLastScheduledTimeJobKey :: Id DM.Merchant -> Id AnyJob -> Text
 makeLastScheduledTimeJobKey merchantId jobId = "SendOverlayScheduler:lastScheduledTime:merchantId-" <> merchantId.getId <> ":jobId" <> jobId.getId
 
-getBatchedDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id AnyJob -> DOverlay.OverlayCondition -> Int -> Seconds -> NominalDiffTime -> NominalDiffTime -> Int -> m [Id DP.Person]
-getBatchedDriverIds merchantId jobId condition freeTrialDays timeDiffFromUtc driverPaymentCycleDuration driverPaymentCycleStartTime overlayBatchSize = do
+getBatchedDriverIds ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id AnyJob ->
+  DOverlay.OverlayCondition ->
+  Int ->
+  Seconds ->
+  NominalDiffTime ->
+  NominalDiffTime ->
+  Int ->
+  DPlan.ServiceNames ->
+  m [Id DP.Person]
+getBatchedDriverIds merchantId merchantOperatingCityId jobId condition freeTrialDays timeDiffFromUtc driverPaymentCycleDuration driverPaymentCycleStartTime overlayBatchSize serviceName = do
   case condition of
     DOverlay.InvoiceGenerated paymentMode -> do
       now <- getLocalCurrentTime timeDiffFromUtc
       let potentialStartToday = addUTCTime driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
           startTime = addUTCTime (-1 * driverPaymentCycleDuration) potentialStartToday
           endTime = addUTCTime 120 potentialStartToday
-      driverFees <- QDF.findWindowsWithFeeTypeAndLimit merchantId startTime endTime (getFeeType paymentMode) overlayBatchSize
+      driverFees <- QDF.findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName merchantId merchantOperatingCityId startTime endTime (getFeeType paymentMode) overlayBatchSize serviceName
       let driverIds = driverFees <&> (.driverId)
-      void $ QDF.updateDriverFeeOverlayScheduled driverIds True startTime endTime
+      void $ QDF.updateDriverFeeOverlayScheduledByServiceName driverIds True startTime endTime serviceName
       return driverIds
     _ -> do
       -- except for the invoice generated condition, for rest of the conditions the all the required driverIds will be fetched one time and will be cached
@@ -160,6 +186,7 @@ getBatchedDriverIds merchantId jobId condition freeTrialDays timeDiffFromUtc dri
         driverIds <- case condition of
           DOverlay.PaymentOverdueGreaterThan _ -> QDI.fetchAllDriversWithPaymentPending merchantId <&> (<&> (.driverId))
           DOverlay.PaymentOverdueBetween _ _ -> QDI.fetchAllDriversWithPaymentPending merchantId <&> (<&> (.driverId))
+          DOverlay.BlockedDrivers -> QDI.fetchAllBlockedDriversWithSubscribedFalse merchantId <&> (<&> (.driverId))
           DOverlay.FreeTrialDaysLeft numOfDays -> do
             now <- getCurrentTime
             let startTime = addUTCTime (-1 * fromIntegral timeDiffFromUtc) $ addUTCTime (-1 * 86400 * fromIntegral (freeTrialDays - (numOfDays - 1))) (UTCTime (utctDay now) (secondsToDiffTime 0))

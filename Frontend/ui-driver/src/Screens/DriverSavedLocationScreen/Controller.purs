@@ -77,7 +77,7 @@ data Action
   | OnAnimationEnd
 
 data ScreenOutput
-  = GoBack
+  = GoBack DriverSavedLocationScreenState
   | CallAutoComplete String DriverSavedLocationScreenState
   | UpdateConfirmLocation DriverSavedLocationScreenState
   | SaveLocation DriverSavedLocationScreenState
@@ -87,18 +87,19 @@ data ScreenOutput
   | EditLocation DriverSavedLocationScreenState
 
 eval :: Action -> DriverSavedLocationScreenState -> Eval Action ScreenOutput DriverSavedLocationScreenState
-eval BackPressed state =
+eval BackPressed state = do
+  void $ pure $ JB.hideKeyboardOnNavigation true
   if state.props.confirmDelete then
     continue state { props { confirmDelete = false } }
   else if state.props.viewType == SearchLocation then do
-    if state.props.gotBackToHomeScreen then exit GoBack else continue state { props { viewType = GoToList } }
+    if state.props.gotBackToHomeScreen then exit $ GoBack state else continue state { props { viewType = GoToList } }
   else if state.props.viewType == LOCATE_ON_MAP then
     continue state { props { viewType = SearchLocation } }
   else if state.props.viewType == ConfirmLocation then
     continue state { props { viewType = if state.props.fromEditButton == (Just FromEdit) then GoToList else LOCATE_ON_MAP } }
   else do
     _ <- pure $ exitLocateOnMap ""
-    exit GoBack
+    exit $ GoBack state
 
 eval OnAnimationEnd state = do
   void case state.props.viewType of
@@ -114,7 +115,6 @@ eval (UpdateLocation _ lat lon) state = case NUM.fromString lat, NUM.fromString 
   _, _ -> continue state
 
 eval LocateOnMap state = do
-  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}
   exit $ ChangeView state { props { viewType = LOCATE_ON_MAP } }
 
 eval (ConfirmLocEDT val) state =
@@ -190,5 +190,9 @@ eval (SuggestionClick pred) state = case pred.placeId of
   Nothing -> continue state
 
 eval (Respones resp) state = continue state { data { savedLocationsArray = getLocationArray resp } }
+
+eval (MAPREADY _ _ _) state = 
+  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}
+  in continue state
 
 eval _ state = continue state

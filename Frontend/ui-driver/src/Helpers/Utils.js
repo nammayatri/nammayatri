@@ -1,20 +1,13 @@
 import { callbackMapper } from "presto-ui";
 
 const { JOS, JBridge } = window;
-import * as hindiStrings from "./../../src/Strings/HI.js";
-import * as kannadaStrings from "./../../src/Strings/KN.js";
-import * as englishStrings from "./../../src/Strings/EN.js";
-import * as bengaliStrings from "./../../src/Strings/BN.js";
-import * as malayalamStrings from "./../../src/Strings/ML.js";
-import * as tamilStrings from "./../../src/Strings/TA.js";
-import * as frenchStrings from "./../../src/Strings/FR.js";
 
 const Android = window.Android;
 let timerIdForTimeout;
 const allTimerIID = [];
 let uniqueId = 0;
-let countDownInMinutesId = null;
 const microapps = ["in.juspay.hyperpay", "in.juspay.ec", "in.juspay.upiintent"];
+let popupType = null;
 
 export const generateUniqueId = function (unit) {
   uniqueId += 1;
@@ -27,134 +20,6 @@ export const getOs = function () {
   }
   return "ANDROID";
 };
-
-
-function instantGetTimer (fn , delay) {
-  fn();
-  window.timerId = setInterval( fn, delay );
-  allTimerIID.push(window.timerId);
-  return window.timerId;
-}
-
-export const getTimer = function (valType) {
-  return function (startTime) {
-    return function (inputVal) {
-      return function (cb){
-        return function (action) {
-          return function(){
-            const callback = callbackMapper.map(function () {
-
-              console.log(valType+"<===>"+startTime+"<===>"+inputVal)
-
-              const t = new Date().getTime()
-
-              console.log("ttt-->>"+t)
-              let countDownDate = (new Date(inputVal).getTime())-5000;
-
-              console.log("countDownDate-->>"+countDownDate)
-
-              if((Math.floor(((countDownDate - t) % (1000 * 60)) / 1000)) > 25000)
-              {
-                countDownDate = (new Date().getTime())+ 20000;
-              }
-
-              instantGetTimer (function() {
-
-                // Get today's date and time
-                const now = new Date().getTime();
-
-                // Find the distance between now and the count down date
-                const distance = countDownDate - now;
-
-                // Time calculations for days, hours, minutes and seconds
-                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-                // Display the result in the element with id="demo"
-                // document.getElementById("demo").innerHTML = days + "d " + hours + "h "
-                // + minutes + "m " + seconds + "s ";
-                // If the count down is finished, write some text
-                // console.log("Distance -->>")
-                // console.log(distance)
-                // console.log("-------------")
-                if (valType == "STOP"){
-                  clearInterval(window.timerId);
-                }
-
-                if (distance <= 0) {
-                  clearInterval(window.timerId);
-
-                  console.log("EXPIRED");
-                  cb(action("EXPIRED"))();
-                  // return "EXPIRED";
-                }else{
-                  let timer;
-                  if(days==0){
-                    if(hours == 0){
-                      if(minutes==0){
-                        timer = (seconds+1) + "s "
-                      }else{
-                        timer = minutes + "m " + seconds + "s "
-                      }
-                    }else{
-                      timer = hours + "h "+ minutes + "m " + seconds + "s "
-                    }
-                  }else{
-                    timer = days + "d " + hours + "h "+ minutes + "m " + seconds + "s "
-                  }
-
-                  console.log(timer);
-                  // return timer;
-                  cb(action(timer))();
-                }
-              }, 1000);
-              console.log("timerId",window.timerId);
-            });
-            // return JBridge.timerCallback(callback);
-            window.callUICallback(callback);
-          }
-
-        }
-      }
-    }
-  }
-}
-
-export const countDown = function (countDownTime) {
-  return function (id) {
-    return function (cb) {
-      return function (action) {
-        return function () {
-          const callback = callbackMapper.map(function () {
-            let countDownCounter = countDownTime;
-            const timerIID = instantGetTimer(function () {
-              countDownCounter -= 1;
-              if (countDownCounter <= 0) {
-                //clearInterval(window.timerId);
-                cb(action(0)(id)("EXPIRED")(timerIID))();
-              } else {
-                cb(action(countDownCounter)(id)("INPROGRESS")(timerIID))();
-              }
-            }, 1000);
-            // let timerId = setInterval(function () {
-            //     countDown -= 1;
-            //     if (countDown < 0) {
-            //       cb(action(0)(id)("EXPIRED"))();
-            //     } else {
-            //       cb(action(countDown)(id)("INPROGRESS"))();
-            //     }
-            //   }, 1000);
-            // setTimeout(() => { clearInterval(timerId); }, countDownTime*1000 + 1000);
-          });
-          window.callUICallback(callback);
-        }
-      }
-    }
-  }
-}
-
 
 export const clampNumber = function (number) {
   return function(originalMax) {
@@ -171,62 +36,6 @@ export const clampNumber = function (number) {
   }
 }
 
-export const get15sTimer = function (cb){
-  return function (action) {
-    return function(){
-      const callback = callbackMapper.map(function () {
-        let seconds = 15;
-        instantGetTimer (function() {
-          seconds = seconds - 1;
-          if (seconds <= 0) {
-            clearInterval(window.timerId);
-            console.log("EXPIRED");
-            cb(action("EXPIRED"))();
-          }else{
-            const timer = seconds + "s "
-            console.log(timer);
-            cb(action(timer))();
-          }
-        }, 1000);
-        console.log("timerId",window.timerId);
-      });
-      window.callUICallback(callback);
-    }
-
-  }
-}
-
-export const get5sTimer = function (cb){
-  return function (action) {
-    return function(){
-      function sayLetter(seconds){
-        if (seconds >= 0)
-        {
-          console.log(seconds+ "seconds")
-          setTimeout(() => {
-            if (seconds <= 0) {
-              clearInterval(window.timerId);
-              console.log("EXPIRED");
-              cb(action("EXPIRED"))();
-            }else{
-              const timer = seconds + "s "
-              console.log(timer);
-              cb(action(timer))();
-              sayLetter(seconds-1);
-            }
-          }, 1000);
-        }
-      }
-      const callback = callbackMapper.map(function () {
-        const time = 5;
-        sayLetter(time);
-        console.log("timerId",window.timerId);
-      });
-      window.callUICallback(callback);
-    }
-  }
-}
-
 export const parseNumber = function (num) {
   num = num.toString();
   let lastThree = num.substring(num.length-3);
@@ -235,38 +44,6 @@ export const parseNumber = function (num) {
     lastThree = "," + lastThree;
   const res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree;
   return res;
-}
-
-
-export const get10sTimer = function (cb){
-  return function (action) {
-    return function(){
-      const callback = callbackMapper.map(function () {
-        function sayLetter(seconds){
-          if (seconds >= 0)
-          {
-            console.log(seconds+ "seconds")
-            setTimeout(() => {
-              if (seconds <= 0) {
-                clearInterval(window.timerId);
-                console.log("EXPIRED");
-                cb(action("EXPIRED"))();
-              }else{
-                const timer = seconds + "s "
-                console.log(timer);
-                cb(action(timer))();
-                sayLetter(seconds-1);
-              }
-            }, 1000);
-          }
-        }
-        const time = 10;
-        sayLetter(time);
-        console.log("timerId",window.timerId);
-      });
-      window.callUICallback(callback);
-    }
-  }
 }
 
 export const startTimer = function(input) {
@@ -315,9 +92,6 @@ if(window.timerId){
 }
 };
 
-export const clearPopUpTimer = function (a) {
-  clearInterval(parseInt(a));
-};
 
 export const clearAllTimer = function(a) {
   console.log("allTimerIID");
@@ -403,7 +177,9 @@ export const storeCallBackForNotification = function (cb) {
     return function () {
       try {
         const callback = callbackMapper.map(function (notificationType) {
-          cb(action(notificationType))();
+          if (window.whitelistedNotification.includes(notificationType)) {
+            cb(action(notificationType))();
+          }
         });
         window.onResumeListeners = [];
         JBridge.storeCallBackForNotification(callback);
@@ -516,139 +292,6 @@ export const getTimeStampString = function (utcTime){
   else            return s + (s == 1 ? " second" : " seconds")
 }
 
-export const clearFocus = function (id) {
-  return JBridge.clearFocus(id)
-}
-
-export const addMediaPlayer = function (id) {
-  return function(source) {
-    return function () {
-      JBridge.addMediaPlayer(id,source);
-    }
-  };
-};
-
-export const saveAudioFile = function (source) {
-  return function() {
-    return JBridge.saveAudioFile(source);
-  }
-}
-
-export const uploadMultiPartData = function (path) {
-  return function (url) {
-    return function(fileType) {
-      return function() {
-        return JBridge.uploadMultiPartData(path, url, fileType);
-      }
-    }
-  }
-}
-
-export const startAudioRecording = function (id) {
-  return function() {
-    return JBridge.startAudioRecording();
-  }
-};
-
-export const stopAudioRecording = function (id) {
-  return function() {
-    return JBridge.stopAudioRecording();
-  }
-}
-
-export const renderBase64ImageFile = function (base64Image) {
-  return function(id) {
-    return function (fitCenter) {
-      return function (imgScaleType){
-        return function () {
-          try{
-            return JBridge.renderBase64ImageFile(base64Image, id, fitCenter, imgScaleType);
-          }catch (err){
-            return JBridge.renderBase64ImageFile(base64Image, id, fitCenter);
-          }
-        }
-      }  
-    }
-  }
-}
-
-export const removeMediaPlayer = function (id) {
-  return function () {
-    JBridge.removeMediaPlayer();
-  };
-};
-
-
-function getStringFromCommon(key) {
-  const selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
-  switch (selectedLanguage) {
-    case "HI_IN":
-      return hindiStrings.getStringValue(key);
-    case "KN_IN":
-      return kannadaStrings.getStringValue(key);
-    case "BN_IN":
-      return bengaliStrings.getStringValue(key);
-    case "ML_IN":
-      return malayalamStrings.getStringValue(key);
-    case "TA_IN":
-      return tamilStrings.getStringValue(key);
-    case "FR_FR":
-      return frenchStrings.getStringValue(key);
-    default:
-      return englishStrings.getStringValue(key);
-  }
-}
-
-function rideLabelConfig(){
-  return  {
-    SureMetro_Pickup : {
-      "backgroundColor" : "#2194FF",
-      "text" : "Metro Pickup",
-      "secondaryText" : "",
-      "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
-      "cancelText" : "ZONE_CANCEL_TEXT_PICKUP",
-      "cancelConfirmImage" : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
-    },
-    SureMetro_Drop : {
-      "backgroundColor" : "#2194FF",
-      "text" : "Metro Drop",
-      "secondaryText" : "",
-      "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
-      "cancelText" : "ZONE_CANCEL_TEXT_DROP",
-      "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
-    },
-    Accessibility : {
-      "backgroundColor" : "#9747FF",
-      "text" : getStringFromCommon("ASSISTANCE_REQUIRED"),
-      "secondaryText" : getStringFromCommon("LEARN_MORE"),
-      "imageUrl" : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
-      "cancelText" : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      "cancelConfirmImage" : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
-    },
-    GOTO : {
-      "backgroundColor" : "#2C2F3A",
-      "text" : getStringFromCommon("GO_TO"),
-      "secondaryText" : "",
-      "imageUrl" : "ny_pin_check_white,",
-      "cancelText" : "GO_TO_CANCELLATION_TITLE",
-      "cancelConfirmImage" : "ny_ic_gotodriver_zero,"
-    }
-  }
-}
-
-export const getRideLabelConfig = function (just, nothing, key, zoneType){
-  const rideLabel = rideLabelConfig() 
-  if (zoneType in rideLabel ){
-    const zoneOb = rideLabel[zoneType];
-    if(key in zoneOb){
-      const prop = zoneOb[key]
-      return just(prop);
-    }
-    console.error("No value found for key "+ key);
-  }
-  console.error("No value found for key "+ zoneType);
-  return nothing;
-}
 
 export const getPeriod = function(date) {
   const currentDate = new Date();
@@ -827,26 +470,6 @@ export const getDeviceDefaultDensity = function (){
   }
 }
 
-export const countDownInMinutes = function (seconds, cb, action) {
-  let sec;
-  function convertInMinutesFormat() {
-    sec = sec - 60;
-    const minutes = Math.floor(sec / 60);
-    cb(action(countDownInMinutesId)(minutes + 1)(sec))();
-  }
-  try {
-    sec = seconds - 5; //5 seconds buffer
-    if (sec <= 0) {
-      cb(action(countDownInMinutesId)("")(0))();
-    } else {
-      if (countDownInMinutesId) clearInterval(countDownInMinutesId);
-      countDownInMinutesId = setInterval(convertInMinutesFormat, 60000); //setting interval of 1 min
-      cb(action(countDownInMinutesId)(Math.floor(sec / 60) + 1)(sec))();
-    }
-  } catch (error) {
-    console.error("Error occured ", error);
-  }
-}
 
 export const istToUtcDate = function (dateStr) {
   try {
@@ -861,4 +484,30 @@ export const istToUtcDate = function (dateStr) {
 
 export const setValueToLocalStore = function (key,value){
   JBridge.setInSharedPrefs(key, value);
+}
+
+export const setPopupType = function (pType) {
+  popupType = pType;
+};
+
+export const getPopupType = function (just, nothing) {
+  if (popupType === null) {
+    return nothing;
+  } else {
+    const localPopup = popupType;
+    popupType = null;
+    return just(localPopup);
+  }
+};
+
+export const renderSlider = function (cb) {
+  return function (action) {
+    return function (config) {
+      const { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId } = config;
+      const callback = callbackMapper.map(function (val) {
+        cb(action(parseInt(val)))();
+      });
+      window.JBridge.renderSlider(id, callback, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
+    }
+  }
 }

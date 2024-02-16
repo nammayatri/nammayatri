@@ -66,6 +66,15 @@ findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getI
 getAlternateNumberAttempts :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Int
 getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 5 DRT.attempts
 
+updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Text -> m ()
+updateMerchantOperatingCityId entityId opCityId merchantId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamRT.merchantOperatingCityId (Just opCityId),
+      Se.Set BeamRT.updatedAt now
+    ]
+    [Se.And [Se.Is BeamRT.entityId (Se.Eq entityId), Se.Is BeamRT.merchantId (Se.Eq merchantId)]]
+
 instance FromTType' BeamRT.RegistrationToken RegistrationToken where
   fromTType' BeamRT.RegistrationTokenT {..} = do
     merchantOpCityId <-

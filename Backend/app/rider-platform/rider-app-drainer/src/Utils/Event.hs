@@ -44,6 +44,12 @@ query_drain_latency =
     .& lbl @"action" @Text
     .& build
 
+rider_process_latency :: PromRep 'Histogram "rider_process_latency" '[ '("process_name", Text)]
+rider_process_latency =
+  histogram #rider_process_latency
+    .& lbl @"process_name" @Text
+    .& build
+
 drainer_query_executes :: PromRep 'Counter "drainer_query_executes" '[ '("action", Text)]
 drainer_query_executes =
   counter #drainer_query_executes
@@ -55,9 +61,11 @@ drainer_stop_status =
   gauge #drainer_stop_status
     .& build
 
-rider_kafka_push_failure :: PromRep 'Counter "rider_kafka_push_failure" '[]
+rider_kafka_push_failure :: PromRep 'Counter "rider_kafka_push_failure" '[ '("action", Text), '("model", Text)]
 rider_kafka_push_failure =
   counter #rider_kafka_push_failure
+    .& lbl @"action" @Text
+    .& lbl @"model" @Text
     .& build
 
 rider_kafka_update_missing :: PromRep 'Counter "rider_kafka_update_missing" '[]

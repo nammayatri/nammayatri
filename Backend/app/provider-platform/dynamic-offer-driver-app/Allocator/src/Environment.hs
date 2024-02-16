@@ -22,13 +22,17 @@ module Environment
   )
 where
 
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Data.Map.Strict as MS
 import Data.String.Conversions (cs)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -61,6 +65,7 @@ data HandlerEnv = HandlerEnv
     esqDBReplicaEnv :: EsqDBEnv,
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
+    kafkaProducerTools :: KafkaProducerTools,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -73,13 +78,18 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
+    maxNotificationShards :: Int,
+    smsCfg :: SmsConfig,
     version :: DeploymentVersion,
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     ltsCfg :: LT.LocationTrackingeServiceConfig,
     schedulerSetName :: Text,
-    tables :: Tables,
+    kvConfigUpdateFrequency :: Int,
+    nwAddress :: BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     schedulerType :: SchedulerType
   }
   deriving (Generic)
@@ -92,8 +102,10 @@ buildHandlerEnv HandlerCfg {..} = do
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
+  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
+  let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

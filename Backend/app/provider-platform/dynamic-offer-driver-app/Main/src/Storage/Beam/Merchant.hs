@@ -39,6 +39,7 @@ data MerchantT f = MerchantT
     headCount :: B.C f (Maybe Int),
     status :: B.C f Domain.Status,
     city :: B.C f Context.City,
+    state :: B.C f Context.IndianState,
     country :: B.C f Context.Country,
     verified :: B.C f Bool,
     enabled :: B.C f Bool,

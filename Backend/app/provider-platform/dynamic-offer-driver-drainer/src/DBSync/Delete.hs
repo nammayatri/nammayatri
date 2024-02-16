@@ -2,14 +2,12 @@ module DBSync.Delete where
 
 import Config.Env
 import Data.Aeson
-import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
-import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
@@ -17,8 +15,6 @@ import Kafka.Producer
 import qualified Kafka.Producer as KafkaProd
 import qualified Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
-import Sequelize
-import Text.Casing
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -93,7 +89,6 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (RiderDetailsDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("RiderDetails" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchRequestDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchRequest" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchRequestForDriverDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchRequestForDriver" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (SearchRequestSpecialZoneDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchRequestSpecialZone" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchTryDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchTry" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (VehicleDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Vehicle" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (VolunteerDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Volunteer" :: Text) =<< dbConf
@@ -170,14 +165,3 @@ streamDriverDrainerDeletes producer dbObject dbStreamKey = do
           prKey = Just $ TE.encodeUtf8 dbStreamKey,
           prValue = Just . LBS.toStrict $ encode event
         }
-
-getDbDeleteDataJson :: forall be table. (Model be table, MeshMeta be table) => Text -> Where be table -> A.Value
-getDbDeleteDataJson model whereClause =
-  A.object
-    [ "contents"
-        .= A.object
-          [ "where" .= modelEncodeWhere whereClause
-          ],
-      "tag" .= T.pack (pascal (T.unpack model)),
-      "type" .= ("DELETE" :: Text)
-    ]

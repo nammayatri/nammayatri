@@ -38,7 +38,8 @@ import Tools.Error (RatingError (..))
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.BPPRide,
     ratingValue :: Int,
-    feedbackDetails :: Maybe Text
+    feedbackDetails :: Maybe Text,
+    wasOfferedAssistance :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -67,12 +68,12 @@ rating apiKey FeedbackReq {..} = do
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id booking.riderId ratingValue feedbackDetails
+      newRating <- buildRating ride.id booking.riderId ratingValue feedbackDetails wasOfferedAssistance
       QRating.create newRating
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating rideRating.id booking.riderId ratingValue feedbackDetails
+      QRating.updateRating rideRating.id booking.riderId ratingValue feedbackDetails wasOfferedAssistance
   calculateAverageRating booking.riderId merchant.minimumDriverRatesCount ratingValue person.totalRatings person.totalRatingScore
   pure Success
 
@@ -99,8 +100,8 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue totalRatings
       let isValidRating = False
       void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore isValidRating
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> m DRating.Rating
-buildRating rideId riderId ratingValue feedbackDetails = do
+buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Bool -> m DRating.Rating
+buildRating rideId riderId ratingValue feedbackDetails wasOfferedAssistance = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

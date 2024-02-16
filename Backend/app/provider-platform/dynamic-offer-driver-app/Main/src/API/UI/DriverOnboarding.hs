@@ -30,6 +30,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Auth (TokenAuth)
 
@@ -71,6 +72,9 @@ type API =
       :> TokenAuth
       :> ReqBody '[JSON] DriverOnboarding.ReferralReq
       :> Post '[JSON] DriverOnboarding.ReferralRes
+    :<|> "driver" :> "referral" :> "getReferredDrivers"
+      :> TokenAuth
+      :> Get '[JSON] DriverOnboarding.GetReferredDriverRes
     :<|> "rc"
       :> ( "setStatus"
              :> TokenAuth
@@ -97,6 +101,7 @@ handler =
       :<|> unVerifiedAadhaarData
   )
     :<|> addReferral
+    :<|> getReferredDrivers
     :<|> setRCStatus
     :<|> deleteRC
     :<|> getAllLinkedRCs
@@ -127,6 +132,9 @@ unVerifiedAadhaarData (personId, _, _) = withFlowHandlerAPI . AV.unVerifiedAadha
 
 addReferral :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
 addReferral (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.addReferral (personId, merchantId, merchantOpCityId)
+
+getReferredDrivers :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> FlowHandler DriverOnboarding.GetReferredDriverRes
+getReferredDrivers (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DriverOnboarding.getReferredDrivers (personId, merchantId, merchantOpCityId)
 
 setRCStatus :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.RCStatusReq -> FlowHandler APISuccess
 setRCStatus (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.linkRCStatus (personId, merchantId, merchantOpCityId)

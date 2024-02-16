@@ -156,8 +156,10 @@ eval _ state =
   continue state
 
 rideHistoryListTransformer :: Array RidesInfo -> String -> Array ItemState
-rideHistoryListTransformer list categoryAction = 
+rideHistoryListTransformer list categoryAction =
   ( map (\ (RidesInfo ride) ->
+    let specialLocationConfig = HU.getRideLabelData ride.specialLocationTag
+    in
     { id     : toPropValue ride.id
     , date   : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM")
     , time   : toPropValue (convertUTCtoISC (ride.createdAt) "h:mm A")
@@ -186,10 +188,10 @@ rideHistoryListTransformer list categoryAction =
     , shimmer_visibility : toPropValue "gone"
     , driverSelectedFare : toPropValue ride.driverSelectedFare
     , riderName : toPropValue $ fromMaybe "" ride.riderName
-    , spLocTagVisibility : toPropValue if (isJust ride.specialLocationTag && (HU.getRequiredTag "text" ride.specialLocationTag) /= Nothing) then "visible" else "gone"
-    , specialZoneText : toPropValue $ HU.getRideLabelData "text" ride.specialLocationTag
-    , specialZoneImage : toPropValue $ HU.getRideLabelData "imageUrl" ride.specialLocationTag
-    , specialZoneLayoutBackground : toPropValue $ HU.getRideLabelData "backgroundColor" ride.specialLocationTag
+    , spLocTagVisibility : toPropValue if isJust ride.specialLocationTag && isJust (HU.getRequiredTag ride.specialLocationTag) then "visible" else "gone"
+    , specialZoneText : toPropValue $ specialLocationConfig.text
+    , specialZoneImage : toPropValue $ specialLocationConfig.imageUrl
+    , specialZoneLayoutBackground : toPropValue $ specialLocationConfig.backgroundColor
     , gotoTagVisibility : toPropValue if isJust ride.driverGoHomeRequestId then "visible" else "gone"
     , purpleTagVisibility : toPropValue if isJust ride.disabilityTag then "visible" else "gone"
     , tipTagVisibility : toPropValue if isJust ride.customerExtraFee then "visible" else "gone"

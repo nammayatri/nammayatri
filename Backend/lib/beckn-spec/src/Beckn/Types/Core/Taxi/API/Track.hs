@@ -15,19 +15,39 @@
 module Beckn.Types.Core.Taxi.API.Track where
 
 import Beckn.Types.Core.Taxi.Track
+import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type TrackReq = BecknReq TrackMessage
+
+type TrackReqV2 = Spec.TrackReq
 
 type TrackRes = AckResponse
 
 type TrackAPI =
   "track"
-    :> ReqBody '[JSON] TrackReq
+    :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] TrackRes
 
 trackAPI :: Proxy TrackAPI
 trackAPI = Proxy
+
+type TrackAPIV1 =
+  "track"
+    :> ReqBody '[JSON] TrackReq
+    :> Post '[JSON] TrackRes
+
+trackAPIV1 :: Proxy TrackAPIV1
+trackAPIV1 = Proxy
+
+type TrackAPIV2 =
+  "track"
+    :> ReqBody '[JSON] TrackReqV2
+    :> Post '[JSON] TrackRes
+
+trackAPIV2 :: Proxy TrackAPIV2
+trackAPIV2 = Proxy

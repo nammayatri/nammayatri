@@ -21,7 +21,7 @@ where
 
 import Data.Aeson (decode)
 import Kernel.Prelude
-import Kernel.Types.Error as Error
+import Kernel.Types.Error as Error hiding (MerchantError)
 import Kernel.Types.Error.BaseError.HTTPError.FromResponse
 import Kernel.Types.Error.BaseError.HTTPError.HttpCode
 import Kernel.Utils.Common hiding (Error)
@@ -80,3 +80,25 @@ instance IsHTTPError RoleError where
     RoleNameExists _ -> E400
 
 instance IsAPIError RoleError
+
+data MerchantError
+  = MerchantAlreadyExist Text
+  | MerchantAccountLimitExceeded Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''MerchantError
+
+instance IsBaseError MerchantError where
+  toMessage = \case
+    MerchantAlreadyExist shortId -> Just $ "Merchant with shortId \"" <> show shortId <> "\" already exist."
+    MerchantAccountLimitExceeded shortId -> Just $ "Merchant with shortId \"" <> show shortId <> "\" already exist."
+
+instance IsHTTPError MerchantError where
+  toErrorCode = \case
+    MerchantAlreadyExist _ -> "MERCHANT_ALREADY_EXIST"
+    MerchantAccountLimitExceeded _ -> "MERCHANT_ACCOUNT_LIMIT_EXCEEDED"
+  toHttpCode = \case
+    MerchantAlreadyExist _ -> E400
+    MerchantAccountLimitExceeded _ -> E400
+
+instance IsAPIError MerchantError

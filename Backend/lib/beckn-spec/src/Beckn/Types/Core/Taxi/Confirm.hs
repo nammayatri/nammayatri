@@ -21,7 +21,6 @@ where
 import Beckn.Types.Core.Taxi.Common.Agent as Reexport
 import Beckn.Types.Core.Taxi.Common.Customer as Reexport
 import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport
-import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
 import Beckn.Types.Core.Taxi.Common.Location as Reexport
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.Common.Price as Reexport
@@ -29,6 +28,7 @@ import Beckn.Types.Core.Taxi.Common.Provider as Reexport
 import Beckn.Types.Core.Taxi.Common.Quote as Reexport
 import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.Common.StopInfo as Reexport
+import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.Confirm.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.Confirm.Order as Reexport

@@ -16,10 +16,11 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings
-
+import Common.Types.Config
 import Common.Types.App (LazyCheck(..), PolylineAnimationConfig)
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
+import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
 import Components.ErrorModal (primaryButtonConfig)
 import Components.GoToLocationModal as GoToLocationModal
@@ -37,12 +38,13 @@ import Components.SelectListModal as SelectListModal
 import Components.StatsModel as StatsModel
 import Data.Array as DA
 import Data.Int (fromString)
+import Data.Int as Int
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
-import Debug (spy)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
+import Font.Style (Style(..))
 import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck)
@@ -50,16 +52,24 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise)
+import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
 import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
 import Screens.Types as ST
+import Services.API as SA
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Styles.Colors as Color
-import Font.Style (Style (..))
+import Components.ErrorModal as ErrorModal
+import MerchantConfig.Utils as MU
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import ConfigProvider as CP
+import Locale.Utils
+import RemoteConfig (RCCarousel(..))
+import Mobility.Prelude (boolToVisibility)
+import Constants 
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -86,12 +96,12 @@ rideActionModalConfig state =
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
     specialLocationTag = state.data.activeRide.specialLocationTag,
-    waitTime = state.data.activeRide.waitingTime,
-    isChatOpened = state.props.isChatOpened,
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
     accessibilityTag = state.data.activeRide.disabilityTag,
     appConfig = state.data.config,
-    waitTimeStatus = state.props.waitTimeStatus
+    waitTimeStatus = state.props.waitTimeStatus,
+    waitTimeSeconds = state.data.activeRide.waitTimeSeconds,
+    thresholdTime = state.data.config.waitTimeConfig.thresholdTime
     }
     in rideActionModalConfig'
 
@@ -102,8 +112,8 @@ endRidePopUp state = let
   popUpConfig' = config'{
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
-    option1 {text =(getString GO_BACK)},
-    option2 {text = (getString END_RIDE)}
+    option1 {text = (getString GO_BACK), enableRipple = true},
+    option2 {text = (getString END_RIDE), enableRipple = true}
   }
 in popUpConfig'
 
@@ -156,10 +166,10 @@ statsModelConfig state =
   in config'
 
 -------------------------------------genderBannerConfig------------------------------------
-genderBannerConfig :: ST.HomeScreenState -> Banner.Config
-genderBannerConfig state =
+genderBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)
+genderBannerConfig _ action =
   let
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config
       {
         backgroundColor = Color.green600,
@@ -168,15 +178,39 @@ genderBannerConfig state =
         actionText = (getString UPDATE_NOW),
         actionTextColor = Color.white900,
         imageUrl = fetchImage FF_ASSET "ny_ic_driver_gender_banner",
-        isBanner = true
+        "type" = BannerCarousel.Gender
       }
   in config'
 
+autpPayBannerCarousel :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config (BannerCarousel.Action -> a)
+autpPayBannerCarousel state action =
+  let config = BannerCarousel.config action
+      bannerConfig = autopayBannerConfig state false
+  in config {
+     backgroundColor = bannerConfig.backgroundColor,
+        title = bannerConfig.title,
+        titleColor = bannerConfig.titleColor,
+        actionText = bannerConfig.actionText,
+        actionTextColor = Color.white900,
+        actionTextBackgroundColour = Color.black900,
+        actionIconUrl = (HU.getAssetLink FunctionCall) <> "ny_ic_money_filled.png",
+        actionIconVisibility = true,
+        imageUrl = bannerConfig.imageUrl,
+        isBanner = bannerConfig.isBanner,
+        imageHeight = bannerConfig.imageHeight,
+        imageWidth = bannerConfig.imageWidth,
+        actionTextStyle = bannerConfig.actionTextStyle,
+        actionArrowIconVisibility = false,
+        titleStyle = bannerConfig.titleStyle,
+        "type" = BannerCarousel.AutoPay,
+        imagePadding = bannerConfig.imagePadding
+  }
 
-accessbilityBannerConfig :: ST.HomeScreenState -> Banner.Config
-accessbilityBannerConfig state = 
+
+accessbilityBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)
+accessbilityBannerConfig _ action = 
   let 
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config  
       {
         backgroundColor = Color.lightPurple,
@@ -186,7 +220,8 @@ accessbilityBannerConfig state =
         actionTextColor = Color.purple,
         imageUrl = fetchImage FF_ASSET "ny_ic_purple_badge",
         isBanner = true,
-        stroke = "1,"<>Color.fadedPurple
+        margin = Margin 0 0 0 0,
+        "type" = BannerCarousel.Disability
       }
   in config'
 
@@ -202,7 +237,7 @@ linkAadhaarPopupConfig state = let
       text = (getString AADHAAR_LINKING_REQUIRED)
     , margin = Margin 16 24 16 4 },
     secondaryText {
-      text = (getString AADHAAR_LINKING_REQUIRED_DESCRIPTION)
+      text = (getString $ AADHAAR_LINKING_REQUIRED_DESCRIPTION "AADHAAR_LINKING_REQUIRED_DESCRIPTION")
     , margin = MarginBottom 24},
     option1 {
       text = (getString LINK_AADHAAR_ID)
@@ -295,6 +330,7 @@ freeTrialEndingPopupConfig state =
       text = if autoPayStatus == NO_AUTOPAY then getString JOIN_NOW else getString SETUP_AUTOPAY
     , background = Color.black900
     , color = Color.yellow900
+    , enableRipple = true
     },
     option2 {
       visibility = false
@@ -331,7 +367,7 @@ paymentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 paymentPendingPopupConfig state =
   let popupType = state.props.subscriptionPopupType
       dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
-      isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.highDueWarningLimit
+      isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.high_due_warning_limit
   in
   PopUpModal.config {
     gravity = CENTER,
@@ -349,7 +385,7 @@ paymentPendingPopupConfig state =
       text = getString case popupType of 
                          LOW_DUES_CLEAR_POPUP -> LOW_DUES_CLEAR_POPUP_DESC 
                          SOFT_NUDGE_POPUP     -> PAYMENT_PENDING_SOFT_NUDGE
-                         GO_ONLINE_BLOCKER    -> PAYMENT_PENDING_ALERT_DESC
+                         GO_ONLINE_BLOCKER    -> PAYMENT_PENDING_ALERT_DESC "PAYMENT_PENDING_ALERT_DESC"
                          _                    -> LOW_DUES_CLEAR_POPUP_DESC
     , margin = Margin 16 16 16 4
     , textStyle = SubHeading2
@@ -373,6 +409,7 @@ paymentPendingPopupConfig state =
     , background = Color.black900
     , color = Color.yellow900
     , showShimmer = state.data.paymentState.showShimmer
+    , enableRipple = true
     },
     option2 {
       visibility = false
@@ -381,9 +418,9 @@ paymentPendingPopupConfig state =
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
       imageUrl = fetchImage FF_ASSET $ case popupType of
-                          GO_ONLINE_BLOCKER  -> "ny_ic_payment_pending"
+                          GO_ONLINE_BLOCKER  -> "ny_ic_dues_pending"
                           _ ->  if isHighDues 
-                                then "ny_ic_payment_pending" 
+                                then "ny_ic_dues_pending" 
                                 else "ny_ic_clear_dues_early"
     , visibility = VISIBLE
     , height = V 220
@@ -413,7 +450,7 @@ offerConfigParams state = PromotionPopupConfig $ {
   description : getString JOIN_THE_UNLIMITED_PLAN,
   imageUrl : fetchImage FF_ASSET "ny_ic_limited_time_offer",
   buttonText : getString JOIN_NOW,
-  heading : getString MY_PLAN_TITLE
+  heading : getString $ MY_PLAN_TITLE "MY_PLAN_TITLE"
 }
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
@@ -427,7 +464,7 @@ cancelConfirmationConfig state = let
     primaryText {
       text = case state.data.activeRide.specialLocationTag of
               Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
-              Just specialLocationTag -> getString $ getCancelAlertText $ HU.getRideLabelData  "cancelText" $ Just specialLocationTag
+              Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag)).cancelText
     , margin = Margin 16 24 16 0 },
     secondaryText {
       visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") then VISIBLE else GONE,
@@ -443,6 +480,7 @@ cancelConfirmationConfig state = let
     , background = Color.white900
     , strokeColor = Color.black500
     , color = Color.black700
+    , enableRipple = state.data.cancelRideConfirmationPopUp.continueEnabled
     },
     option2 {
       text = (getString GO_BACK)
@@ -451,17 +489,19 @@ cancelConfirmationConfig state = let
     , color = Color.yellow900
     , strokeColor = Color.black900
     , background = Color.black900
+    , enableRipple = true
     },
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag "text" state.data.activeRide.specialLocationTag) == Nothing) 
+      imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag) == Nothing) 
                     then "ic_cancel_prevention"
-                  else HU.getRideLabelData "cancelConfirmImage" state.data.activeRide.specialLocationTag
+                  else (HU.getRideLabelData state.data.activeRide.specialLocationTag).cancelConfirmImage
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178
-    }
+    },
+    timerId = "PopUp"
   }
   in popUpConfig'
 
@@ -491,6 +531,7 @@ driverRCPopUpConfig state = let
       color = Color.yellow900, 
       margin = MarginTop 24,
       width = MATCH_PARENT, 
+      padding = Padding 16 6 16 6,
       height = WRAP_CONTENT 
     } , 
     option2 {
@@ -525,12 +566,12 @@ chatViewConfig state = let
     , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , vehicleNo = ""
-    , suggestionsList = if showSuggestions state then if (state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverInitialAP" else getSuggestionsfromKey "driverInitialBP" else state.data.suggestionsList
+    , chatSuggestionsList = if showSuggestions state then if (state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverInitialAP" else getSuggestionsfromKey "driverInitialBP" else state.data.chatSuggestionsList
     , hint = (getString MESSAGE)
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
     , mapsText = (getString MAPS)
-    , languageKey = (getValueToLocalStore LANGUAGE_KEY)
+    , languageKey = (getLanguageLocale languageKey)
     , grey700 = Color.grey700
     , blue600 = Color.blue600
     , blue900 = Color.blue900
@@ -544,6 +585,7 @@ chatViewConfig state = let
     , black700 = Color.black700
     , canSendSuggestion = state.props.canSendSuggestion
     , enableCall = (not (state.data.activeRide.disabilityTag == Just ST.HEAR_IMPAIRMENT))
+    , enableSuggestions = state.data.config.feature.enableSuggestions
   }
   in chatViewConfig'
 
@@ -552,7 +594,7 @@ showSuggestions state = do
   let canShowSuggestions = case (DA.last state.data.messages) of 
                             Just value -> not $ value.sentBy == "Driver"
                             Nothing -> true
-  DA.null state.data.suggestionsList && canShowSuggestions && ((show $ DA.length $ JB.getChatMessages "") == state.data.messagesSize || state.data.messagesSize == "-1")
+  DA.null state.data.chatSuggestionsList && canShowSuggestions && ((show $ DA.length $ JB.getChatMessages FunctionCall) == state.data.messagesSize || state.data.messagesSize == "-1")
 
 silentModeConfig :: ST.HomeScreenState -> PopUpModal.Config
 silentModeConfig state = let
@@ -571,24 +613,26 @@ silentModeConfig state = let
     , option1 {
       text =   getString GO_OFFLINE
       , width = (V 140)
+      , enableRipple = true
     }
   , option2 {
       width = (V 170)
       , text =  getString GO_SILENT
+      , enableRipple = true
     }
   }
   in popUpConfig'
 
 
 enterOtpStateConfig :: ST.HomeScreenState -> InAppKeyboardModal.InAppKeyboardModalState
-enterOtpStateConfig state = let
+enterOtpStateConfig state = 
+  let appConfig = CP.getAppConfig CP.appConfig
       config' = InAppKeyboardModal.config
       inAppModalConfig' = config'{
       otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
       otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
       inputTextConfig {
         text = state.props.rideOtp,
-        -- pattern = "[0-9]*,4",
         focusIndex = state.props.enterOtpFocusIndex
         , textStyle = FontStyle.Heading1
       },
@@ -607,7 +651,8 @@ enterOtpStateConfig state = let
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
-      modalType = ST.OTP
+      modalType = ST.OTP,
+      enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard
       }
       in inAppModalConfig'
 
@@ -645,6 +690,7 @@ mapRouteConfig srcIcon destIcon isAnim animConfig= {
   , destSpecialTagIcon : destIcon
   , vehicleSizeTagIcon : (getMerchantVehicleSize unit)
   , isAnimation : isAnim 
+  , autoZoom : true
   , polylineAnimationConfig : animConfig
 }
 
@@ -653,7 +699,7 @@ requestInfoCardConfig _ = let
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
     title {
-      text = getString WHAT_IS_NAMMA_YATRI_BONUS
+      text = getString $ WHAT_IS_NAMMA_YATRI_BONUS "WHAT_IS_NAMMA_YATRI_BONUS"
     }
   , primaryText {
       text = getString BONUS_PRIMARY_TEXT
@@ -673,20 +719,19 @@ requestInfoCardConfig _ = let
   }
   in requestInfoCardConfig'
 
-waitTimeInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
-waitTimeInfoCardConfig _ = let
-  config = RequestInfoCard.config
-  requestInfoCardConfig' = config{
+waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
+waitTimeInfoCardConfig state = RequestInfoCard.config {
     title {
       text = getString WAIT_TIMER
     }
   , primaryText {
-      text = getString HOW_LONG_WAITED_FOR_PICKUP,
+      text = if rideInProgress then 
+              getVarString THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY [show maxWaitTimeInMinutes] else getString HOW_LONG_WAITED_FOR_PICKUP,
       padding = Padding 16 16 0 0
     }
   , secondaryText {
-      text = getString CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE,
-      visibility = VISIBLE,
+      text = getVarString CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE [show maxWaitTimeInMinutes],
+      visibility = if rideInProgress then GONE else VISIBLE,
       padding = PaddingLeft 16
     }
   , imageConfig {
@@ -700,7 +745,8 @@ waitTimeInfoCardConfig _ = let
       padding = PaddingVertical 16 20
     }
   }
-  in requestInfoCardConfig'
+  where rideInProgress = state.data.activeRide.status == SA.INPROGRESS
+        maxWaitTimeInMinutes = Int.floor $ Int.toNumber state.data.config.waitTimeConfig.thresholdTime / 60.0
 
 
 makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
@@ -711,13 +757,14 @@ makePaymentState state =
   {
     title : getString GREAT_JOB,
     description : getDescription state,
-    description2 : getString COMPLETE_PAYMENT_TO_CONTINUE,
-    okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
+    description2 : getString $ COMPLETE_PAYMENT_TO_CONTINUE "COMPLETE_PAYMENT_TO_CONTINUE",
+    okButtontext : ( case getLanguageLocale languageKey of
                           "EN_US" -> "Pay ₹" <> payableAndGST <> " now"
                           "HI_IN" -> "अभी ₹" <> payableAndGST <>" का भुगतान करें"
                           "KN_IN" -> "ಈಗ ₹"<> payableAndGST <>" ಪಾವತಿಸಿ"
                           "TA_IN" -> "இப்போது ₹" <> payableAndGST <> " செலுத்துங்கள்"
                           "BN_IN" -> "এখন " <> payableAndGST <> " পে করুন"
+                          "TE_IN" -> "చెల్లించండి ₹" <> payableAndGST <> " ఇప్పుడు"
                           _       -> "Pay ₹" <> payableAndGST <> " now"
                       ),
     cancelButtonText : if useTimeRange || state.data.paymentState.laterButtonVisibility then Just $ getString LATER else Nothing,
@@ -736,12 +783,13 @@ makePaymentState state =
   }
 
 getDescription :: ST.HomeScreenState -> String
-getDescription state =  case getValueToLocalStore LANGUAGE_KEY of
+getDescription state =  case getLanguageLocale languageKey of
                         "EN_US" -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b>" else " Rides</b>"))
                         "HI_IN" -> "आपने " <>  show state.data.paymentState.rideCount <> "सवारी पूरी कर ली हैं"
                         "BN_IN" -> "আপনি" <> show state.data.paymentState.rideCount <> "টি রাইড সম্পূর্ণ করেছেন"
                         "TA_IN" -> "நீங்கள்  "<> (show state.data.paymentState.rideCount) <>" சவாரிகளை முடித்துவிட்டீர்கள்!"
                         "KN_IN" -> "ನೀವು ನಿನ್ನೆ "<> (show state.data.paymentState.rideCount) <>" ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!"
+                        -- "TE_IN" -> ""
                         _       -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b>" else " Rides"))
 
 rateCardState :: ST.HomeScreenState -> RateCard.Config
@@ -751,7 +799,7 @@ rateCardState state =
     rateCardConfig' =
       config'
         { title = getString FEE_BREAKUP
-        , description = getString YATRI_SATHI_FEE_PAYABLE_FOR_DATE <> " " <> state.data.paymentState.date
+        , description = getString (YATRI_SATHI_FEE_PAYABLE_FOR_DATE "YATRI_SATHI_FEE_PAYABLE_FOR_DATE") <> " " <> state.data.paymentState.date
         , buttonText = Nothing
         , currentRateCardType = CommonTypes.PaymentFareBreakup
         , primaryButtonText = getString GOT_IT
@@ -767,23 +815,6 @@ rateCardState state =
   in
     rateCardConfig'
 
-paymentStatusConfig :: ST.HomeScreenState -> Banner.Config
-paymentStatusConfig state = 
-  let 
-    config = Banner.config
-    config' = config
-      { 
-        backgroundColor = state.data.paymentState.bannerBG,
-        title = state.data.paymentState.bannerTitle,
-        titleColor = state.data.paymentState.bannerTitleColor,
-        actionText = state.data.paymentState.banneActionText,
-        actionTextColor = state.data.paymentState.actionTextColor,
-        imageUrl = state.data.paymentState.bannerImage,
-        isBanner = true
-      }
-  in config'
-
-
 getChargesBreakup :: Array PaymentBreakUp -> Array CommonTypes.FareList
 getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹" <>  (show item.amount),
   key : case item.component of
@@ -792,7 +823,7 @@ getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹
         _ -> item.component
     } ) paymentBreakUpArr
 
-autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config
+autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config -- Make sure to update the mapping in carousel config also.
 autopayBannerConfig state configureImage =
   let
     config = Banner.config
@@ -807,9 +838,9 @@ autopayBannerConfig state configureImage =
                         _ -> Color.green600,
         title = case bannerType of
                   FREE_TRIAL_BANNER -> getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES 
-                  SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS
+                  SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_FOR_EASY_PAYMENTS
                   _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getVarString CLEAR_DUES_BANNER_TITLE [dues]
-                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [HU.getFixedTwoDecimals state.data.config.subscriptionConfig.maxDuesLimit]
+                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [HU.getFixedTwoDecimals state.data.subsRemoteConfig.max_dues_limit]
                   _ -> "",
         titleColor = case bannerType of
                         DUE_LIMIT_WARNING_BANNER -> Color.red
@@ -824,11 +855,10 @@ autopayBannerConfig state configureImage =
                             _ -> Color.white900,
         imageUrl = fetchImage FF_ASSET $ case bannerType of
                       FREE_TRIAL_BANNER -> "ic_free_trial_period" 
-                      SETUP_AUTOPAY_BANNER -> "ny_ic_autopay_setup_banner"
-                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues_banner"
+                      SETUP_AUTOPAY_BANNER -> "ny_ic_driver_offer"
+                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues"
                       DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning"
                       _ -> "",
-        isBanner = bannerType /= NO_SUBSCRIPTION_BANNER && not state.props.rideActionModal,
         imageHeight = if configureImage then (V 75) else (V 105),
         imageWidth = if configureImage then (V 98) else (V 118),
         actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText,
@@ -849,11 +879,19 @@ accessibilityPopUpConfig state =
         gravity = CENTER,
         margin = MarginHorizontal 24 24 ,
         buttonLayoutMargin = Margin 16 0 16 20 ,
+        onlyTopTitle = GONE,
+        topTitle {
+          text = popupData.title
+        , gravity = CENTER
+        , visibility = boolToVisibility $ popupData.title /= ""
+        },
         primaryText {
           text = popupData.primaryText
+        , visibility = boolToVisibility $ popupData.primaryText /= ""
         , margin = Margin 16 24 16 4 },
         secondaryText {
           text = popupData.secondaryText
+        , visibility = boolToVisibility $ popupData.secondaryText /= ""
         , textStyle = SubHeading2
         , margin = MarginBottom 24},
         option1 {
@@ -868,31 +906,42 @@ accessibilityPopUpConfig state =
         cornerRadius = (PTD.Corners 15.0 true true true true),
         coverImageConfig {
           imageUrl = popupData.imageUrl
-        , visibility = if popupData.videoUrl /= "" && state.data.config.purpleRideConfig.showPurpleVideos then GONE else VISIBLE
+        , visibility = if popupData.videoUrl /= "" && (state.data.config.purpleRideConfig.showPurpleVideos || (popupData.mediaType /= "Audio")) then GONE else VISIBLE
         , height = V 160
         , width = MATCH_PARENT
         , margin = Margin 16 16 16 0
         },
-        coverVideoConfig {
-          visibility = if popupData.videoUrl /= "" && state.data.config.purpleRideConfig.showPurpleVideos then VISIBLE else GONE 
-        , height = V 175
-        , width = MATCH_PARENT
-        , padding = Padding 16 16 16 0
+        coverMediaConfig {
+          visibility = if popupData.videoUrl /= "" && (state.data.config.purpleRideConfig.showPurpleVideos || (popupData.mediaType == "Audio")) then VISIBLE else GONE 
+        , width = WRAP_CONTENT
+        , padding = if popupData.mediaType == "Audio" then Padding 6 6 6 6 else Padding 16 16 16 0
         , mediaType = popupData.mediaType
         , mediaUrl = popupData.videoUrl
         , id = popupData.videoId
+        , background = if popupData.mediaType == "Audio" then Color.blue600 else Color.white900
+        , stroke = if popupData.mediaType == "Audio" then "1," <> Color.grey900 else Color.white900
+        , margin = if popupData.mediaType == "Audio" then Margin 16 0 16 12 else Margin 0 0 0 0
+        , height =  if popupData.mediaType == "Audio" then V 60 else WRAP_CONTENT
+        , cornerRadius = 4.0
+        , coverMediaText {
+            visibility = boolToVisibility $ popupData.coverMediaText /= ""
+          , text = popupData.coverMediaText
+          }
         }
       }
   in config'
 
 type ContentConfig = 
-  { primaryText :: String,
+  { title :: String,
+    coverMediaText :: String,
+    primaryText :: String,
     secondaryText :: String,
     imageUrl :: String,
     videoUrl :: String, 
     mediaType :: String,
-    videoId :: String
-    
+    videoId :: String,
+    background :: String,
+    textColor :: String
   }
 
 
@@ -923,7 +972,7 @@ genericAccessibilityPopUpConfig state = let
         coverImageConfig {
           visibility = GONE
         },
-        coverVideoConfig {
+        coverMediaConfig {
           visibility = VISIBLE
         , height = V 202
         , width = MATCH_PARENT
@@ -963,15 +1012,19 @@ chatBlockerPopUpConfig state = let
   in popUpConfig'
 
 accessibilityConfig :: LazyCheck -> ContentConfig
-accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", mediaType : "", videoId : ""}
+accessibilityConfig dummy = { title : "", coverMediaText : "", primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", mediaType : "", videoId : "", background : Color.lightPurple, textColor : Color.purple}
 
 getAccessibilityPopupData :: ST.HomeScreenState -> Maybe ST.DisabilityType -> Boolean -> ContentConfig
 getAccessibilityPopupData state pwdtype isDriverArrived = 
   let accessibilityConfig' = accessibilityConfig Config
+      city = (HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION))
+      driverLocation = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+      language = getLanguage $ getLanguageLocale languageKey
+      videoUrl' = "https://assets.juspay.in/beckn/audios/ny_audio_safety" <> language <> ".mp3"
   in case pwdtype, isDriverArrived of 
       Just ST.BLIND_AND_LOW_VISION, true ->  accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_POOR_VISION_SOUND_HORN_AT_PICKUP ,
-                                                imageUrl = fetchImage FF_ASSET "ny_ic_blind_arrival",
+                                                imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
                                                 videoUrl = "",
                                                 mediaType = "",
                                                 videoId = ""
@@ -979,13 +1032,13 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       Just ST.BLIND_AND_LOW_VISION, false -> accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING,
                                                 imageUrl = fetchImage FF_ASSET "ny_ic_blind_pickup",
-                                                videoUrl = state.data.config.purpleRideConfig.visualImpairmentVideo, -- "https://www.youtube.com/watch?v=2qYXl03N6Jg",
+                                                videoUrl = state.data.config.purpleRideConfig.visualImpairmentVideo,
                                                 mediaType = "VideoLink",
                                                 videoId = "BlindOrLowVisionCoverVideo"
                                               }
       Just ST.HEAR_IMPAIRMENT, true ->      accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_POOR_HEARING_MESSAGE_THEM_AT_PICKUP,
-                                                imageUrl = fetchImage FF_ASSET "ny_ic_deaf_arrival",
+                                                imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
                                                 videoUrl = "",
                                                 mediaType = "",
                                                 videoId = ""
@@ -993,52 +1046,85 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       Just ST.HEAR_IMPAIRMENT, false ->     accessibilityConfig'
                                               { secondaryText= getString CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING ,
                                                 imageUrl = fetchImage FF_ASSET "ny_ic_deaf_pickup",
-                                                videoUrl = state.data.config.purpleRideConfig.hearingImpairmentVideo, --"https://youtu.be/udkWOt0serg?feature=shared",
+                                                videoUrl = state.data.config.purpleRideConfig.hearingImpairmentVideo,
                                                 mediaType = "VideoLink",
                                                 videoId = "HearingImpairmentCoverVideo"
                                               }
       Just ST.LOCOMOTOR_DISABILITY, true -> accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_STORE_THEIR_SUPPORT_AT_PICKUP ,
-                                                imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_arrival",
+                                                imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
                                                 videoUrl = "",
                                                 mediaType = "",
                                                 videoId = ""
                                               }    
       Just ST.LOCOMOTOR_DISABILITY, false -> accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_GO_TO_EXACT_LOC, 
-                                                imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_pickup",
-                                                videoUrl = state.data.config.purpleRideConfig.physicalImpairmentVideo, --"https://youtu.be/B0C6SZTQO6k",
+                                                imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
+                                                videoUrl = state.data.config.purpleRideConfig.physicalImpairmentVideo, 
                                                 mediaType = "VideoLink",
                                                 videoId = "LocomotorDisabilityCoverVideo"
                                               }
-      Just ST.OTHER_DISABILITY, true ->      accessibilityConfig'   
-      Just ST.OTHER_DISABILITY, false ->     accessibilityConfig' 
+      Just ST.SAFETY, _ ->        accessibilityConfig' 
+                                  { title = if driverLocation == "bangalore" then getString OUR_SAFETY_PARTNER else "",
+                                    primaryText = "",
+                                    secondaryText = "",
+                                    coverMediaText = getString CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE, 
+                                    imageUrl = if  driverLocation == "bangalore" then fetchImage FF_COMMON_ASSET "ny_ic_bangalure_city_police" else fetchImage FF_COMMON_ASSET "ny_ic_general_safety" ,
+                                    videoUrl = videoUrl',
+                                    mediaType = "Audio",
+                                    videoId = ""
+                                  }
+      Just ST.OTHER_DISABILITY, _ ->     accessibilityConfig' 
       _ , _-> accessibilityConfig' 
 
-
+  where 
+    getUpdatedAssets :: CityConfig -> String 
+    getUpdatedAssets cityConfig = 
+      if cityConfig.cityCode == "std:040" then 
+        case pwdtype, isDriverArrived of 
+          Just ST.BLIND_AND_LOW_VISION, true ->  "ny_ic_blind_arrival_generic" 
+          Just ST.HEAR_IMPAIRMENT, true -> "ny_ic_deaf_arrival_generic"
+          Just ST.LOCOMOTOR_DISABILITY, true -> "ny_ic_locomotor_arrival_black_yellow"
+          Just ST.LOCOMOTOR_DISABILITY, false -> "ny_ic_locomotor_pickup_generic"
+          _ , _-> "ny_ic_disability_purple"
+        else 
+          case pwdtype , isDriverArrived of 
+            Just ST.BLIND_AND_LOW_VISION, true ->  "ny_ic_blind_arrival"
+            Just ST.HEAR_IMPAIRMENT, true -> "ny_ic_deaf_arrival"
+            Just ST.LOCOMOTOR_DISABILITY, true -> "ny_ic_locomotor_arrival"
+            Just ST.LOCOMOTOR_DISABILITY, false -> "ny_ic_locomotor_pickup"
+            _ , _-> "ny_ic_disability_purple"
+    getLanguage :: String -> String
+    getLanguage lang = 
+      let language = DS.toLower $ DS.take 2 lang
+      in if not (DS.null language) then "_" <> language else "_en"
 
 getAccessibilityHeaderText :: ST.HomeScreenState -> ContentConfig
-getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then 
+getAccessibilityHeaderText state = 
+  let config = accessibilityConfig Config
+    in if state.data.activeRide.status == NEW then 
                         case state.data.activeRide.disabilityTag, state.data.activeRide.notifiedCustomer of   
-                          Just ST.HEAR_IMPAIRMENT, false -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "" , mediaType : "", videoId : ""}
-                          Just ST.BLIND_AND_LOW_VISION, false -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.LOCOMOTOR_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.OTHER_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Nothing, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.HEAR_IMPAIRMENT, false -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
+                          Just ST.BLIND_AND_LOW_VISION, false -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
+                          Just ST.LOCOMOTOR_DISABILITY, false -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.OTHER_DISABILITY, false -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Nothing, false -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
                       -- else if state.data.activeRide.isDriverArrived then
                           -- case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT, true -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString MESSAGE_THEM_AT_PICKUP, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.BLIND_AND_LOW_VISION, true -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.LOCOMOTOR_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.OTHER_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Nothing, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.HEAR_IMPAIRMENT, true -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString MESSAGE_THEM_AT_PICKUP, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
+                          Just ST.BLIND_AND_LOW_VISION, true -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
+                          Just ST.LOCOMOTOR_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.OTHER_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.SAFETY, _ -> config {primaryText = getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
+                          Nothing, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
                       else 
                         case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "" , mediaType : "", videoId : ""}
-                          Just ST.BLIND_AND_LOW_VISION -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.LOCOMOTOR_DISABILITY -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.OTHER_DISABILITY -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Nothing -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.HEAR_IMPAIRMENT -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
+                          Just ST.BLIND_AND_LOW_VISION -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
+                          Just ST.LOCOMOTOR_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.OTHER_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.SAFETY -> config {primaryText =  getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
+                          Nothing -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 getRideCompletedConfig state = let 
@@ -1046,28 +1132,33 @@ getRideCompletedConfig state = let
   autoPayBanner = state.props.autoPayBanner
   autoPayStatus = state.data.paymentState.autoPayStatus
   payerVpa = state.data.endRideData.payerVpa
+  bannerConfig = autopayBannerConfig state false
   disability = state.data.endRideData.disability /= Nothing
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
   viewOrderConfig = [ {condition : autoPayBanner == DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
                       {condition : autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= "", elementView :  RideCompletedCard.QR_VIEW },
-                      {condition : not (autoPayStatus == ACTIVE_AUTOPAY) && state.data.config.subscriptionConfig.enableSubscriptionPopups, elementView :  RideCompletedCard.NO_VPA_VIEW },
+                      {condition : not (autoPayStatus == ACTIVE_AUTOPAY) && state.data.config.subscriptionConfig.enableSubscriptionPopups && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"), elementView :  RideCompletedCard.NO_VPA_VIEW },
                       {condition : autoPayBanner /= DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
                       {condition : disability, elementView :  RideCompletedCard.BADGE_CARD },
                       {condition : showDriverBottomCard, elementView :  RideCompletedCard.DRIVER_BOTTOM_VIEW}
                     ]
   pspIcon = (Const.getPspIcon payerVpa)
   config' = config{
+    isFreeRide = state.props.isFreeRide,
     primaryButtonConfig {
       width = MATCH_PARENT,
       margin = MarginTop 0,
       textConfig {
         text = getString FARE_COLLECTED
-      }
+      },
+      enableRipple = true,
+      rippleColor = Color.rippleShade
     },
     topCard {
       title = getString COLLECT_VIA_UPI_QR_OR_CASH,
       finalAmount = state.data.endRideData.finalAmount,
       initalAmount = state.data.endRideData.finalAmount,
+      fareUpdatedVisiblity = state.props.isFreeRide,
       gradient =  ["#F5F8FF","#E2EAFF"],
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
@@ -1079,7 +1170,7 @@ getRideCompletedConfig state = let
         stroke = "1," <> Color.peacoat,
         alpha = 0.8,
         fontStyle = Body1,
-        visible = GONE
+        visible = if state.props.isFreeRide then VISIBLE else GONE
       },
       topPill{
         visible = disability,
@@ -1106,7 +1197,7 @@ getRideCompletedConfig state = let
         margin = MarginBottom 12
       },
       secondaryText {
-        text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT,
+        text = getString $ YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
         margin = MarginBottom 16
       },
       option1 {
@@ -1140,8 +1231,12 @@ getRideCompletedConfig state = let
     accessibility = DISABLE,
     theme = LIGHT,
     isPrimaryButtonSticky = true,
-    bannerConfig = autopayBannerConfig state false,
-    viewsByOrder = map (_.elementView) (DA.filter (_.condition) viewOrderConfig)
+    bannerConfig = bannerConfig{isBanner = autoPayBanner /= NO_SUBSCRIPTION_BANNER},
+    viewsByOrder = map (_.elementView) (DA.filter (_.condition) viewOrderConfig),
+    lottieQRAnim {
+      visible = state.data.config.rideCompletedCardConfig.lottieQRAnim,
+      url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
+    }
   }
   in config'
 
@@ -1300,27 +1395,27 @@ gotoCounterStrings :: GoToPopUpType -> PopupReturn
 gotoCounterStrings popupType = case popupType of 
   MORE_GOTO_RIDES -> PopupReturn { primaryText : getString MORE_GOTO_RIDE_COMING
                             , secondaryText : getString MORE_GOTO_RIDE_COMING_DESC
-                            , imageURL : "ny_ic_goto_more_rides,"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_goto_more_rides"
                             , buttonText : getString OKAY
                             }
   REDUCED 0 -> PopupReturn { primaryText : getString GOTO_REDUCED_TO_ZERO
                             , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " 0."
-                            , imageURL : "ny_ic_gotodriver_zero,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_gotodriver_zero"
                             , buttonText : getString OK_GOT_IT
                             }
   REDUCED n -> PopupReturn { primaryText : getString GOTO_REDUCED_TO <> " " <> show n
                             , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " " <> show  n <> "."
-                            , imageURL : "ny_ic_gotodriver_one"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_gotodriver_one"
                             , buttonText : getString OK_GOT_IT
                             }
   VALIDITY_EXPIRED -> PopupReturn { primaryText : getString VALIDITY_EXPIRED_STR
                             , secondaryText : getString VALIDITY_EXPIRED_DESC
-                            , imageURL : "ny_ic_validity_expired,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_validity_expired"
                             , buttonText : getString OK_GOT_IT
                             }
   REACHED_HOME -> PopupReturn { primaryText : getString GOTO_LOC_REACHED
                             , secondaryText : getString YOU_ARE_ALMOST_AT_LOCATION
-                            , imageURL : "ny_ic_goto_arrived,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_goto_arrived"
                             , buttonText : getString OK_GOT_IT
                             }
   NO_POPUP_VIEW -> PopupReturn { primaryText : "" , secondaryText : "" , imageURL : "" , buttonText : "" }
@@ -1475,6 +1570,8 @@ gotoButtonConfig state = PrimaryButton.config
   , id = "GotoClick"
   , alpha = if state.data.driverGotoState.gotoCount == 0 then 0.3 else 1.0
   , enableLoader = JB.getBtnLoader "GotoClick"
+  , enableRipple = true
+  , rippleColor = Color.rippleShade
   , lottieConfig 
     { lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader.json"
     , width = V 100
@@ -1488,3 +1585,138 @@ gotoTimerConfig :: Boolean -> {bgColor :: String , imageString :: String, textCo
 gotoTimerConfig enabled 
   | enabled = {bgColor : Color.green900, imageString : fetchImage FF_ASSET "ny_pin_check_white", textColor : Color.white900}
   | otherwise = {bgColor : Color.white900, imageString : fetchImage FF_ASSET "ny_ic_goto_icon_map_pin_check", textColor : Color.black800}
+
+sourceUnserviceableConfig :: ST.HomeScreenState -> ErrorModal.Config
+sourceUnserviceableConfig state =
+  let
+    config = ErrorModal.config
+    errorModalConfig' =
+      config
+        { height = if state.data.config.enableMockLocation && state.props.isMockLocation then MATCH_PARENT else WRAP_CONTENT
+        , background = Color.white900
+        , corners = (Corners 24.0 true true false false)
+        , stroke = ("1," <> Color.borderGreyColor)
+        , imageConfig
+          { imageUrl = fetchImage FF_ASSET "ny_ic_location_unserviceable"
+          , height = V 99
+          , width = V 133
+          , margin = (Margin 0 50 0 20)
+          }
+        , errorConfig
+          { text = getString UNABLE_TO_GET_YOUR_LOCATION
+          , color = Color.black800
+          , margin = (MarginBottom 5)
+          }
+        , errorDescriptionConfig
+          { text = getString TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART
+          , color = Color.black700
+          , margin = (Margin 20 0 20 (40 + EHC.safeMarginBottom))
+          }
+        , buttonConfig
+          { text = (getString CHANGE_LOCATION)
+          , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
+          , background = state.data.config.primaryBackground
+          , color = state.data.config.primaryTextColor
+          , visibility = GONE
+          }
+        }
+  in
+    errorModalConfig'
+
+accountBlockedPopup :: ST.HomeScreenState -> PopUpModal.Config
+accountBlockedPopup state = PopUpModal.config {
+    gravity = CENTER,
+    backgroundClickable = false,
+    optionButtonOrientation = "VERTICAL",
+    buttonLayoutMargin = Margin 16 0 16 20,
+    margin = MarginHorizontal 25 25, 
+    primaryText {
+      text = getString ACCOUNT_BLOCKED
+    , textStyle = Heading2
+    , margin = Margin 16 0 16 10},
+    secondaryText{
+      text = getString YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES
+    , textStyle = Body5
+    , margin = Margin 16 0 16 15 },
+    option1 {
+      text = getString CALL_SUPPORT
+    , color = Color.yellow900
+    , background = Color.black900
+    , strokeColor = Color.transparent
+    , textStyle = FontStyle.SubHeading1
+    , width = MATCH_PARENT
+    },
+    option2 {
+    text = getString DISMISS,
+    margin = MarginHorizontal 16 16,
+    color = Color.black650,
+    background = Color.white900,
+    strokeColor = Color.white900,
+    width = MATCH_PARENT
+  },
+    cornerRadius = PTD.Corners 15.0 true true true true,
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_failed"
+    , visibility = VISIBLE
+    , margin = Margin 16 20 16 24
+    , width = V 160
+    , height = V 118
+    }
+  }
+  
+    
+introducingCoinsPopup :: ST.HomeScreenState -> PopUpModal.Config
+introducingCoinsPopup state = PopUpModal.config {
+    cornerRadius = PTD.Corners 15.0 true true true true
+    , buttonLayoutMargin = MarginTop 0
+    , margin = MarginHorizontal 16 16
+    , padding = Padding 16 16 16 16
+    , gravity = CENTER
+    , backgroundColor =  Color.black9000
+    , backgroundClickable = false
+    , optionButtonOrientation = "HORIZONTAL"
+  ,primaryText {
+      text = getString INTRODUCING_YATRI_COINS <> " 🎉"
+    , margin = MarginHorizontal 16 16
+    , color = Color.black800
+    , textStyle = Heading2
+    },
+    option1 {
+      text = getString CHECK_NOW
+    , color = Color.yellow900
+    , background = Color.black900
+    , visibility = true
+    , margin = MarginTop 16
+    , width = MATCH_PARENT
+
+    },
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_coin_balance"
+    , visibility = VISIBLE
+    , width = V 280
+    , height = V 250
+    },
+  secondaryText {
+    text = getString NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS
+    , margin = Margin 16 4 16 0
+    , color = Color.black700
+    , textStyle = SubHeading2
+  },
+  option2 { 
+    visibility = false
+  },
+  optionWithHtml {
+    textOpt1 {
+      color = Color.black650
+      , text = getString MAYBE_LATER
+      , textStyle = SubHeading2
+      , visibility = VISIBLE
+    }
+    , strokeColor = Color.white900
+    , margin = MarginHorizontal 16 16
+    , background = Color.white900
+    , visibility = true
+    , isClickable = true
+    },
+  dismissPopup = false
+    }

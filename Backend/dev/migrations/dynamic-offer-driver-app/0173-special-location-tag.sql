@@ -1,5 +1,4 @@
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD column special_location_tag text;
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD column special_location_tag text;
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD column special_location_tag text;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD column special_location_tag text;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD column "area" text;

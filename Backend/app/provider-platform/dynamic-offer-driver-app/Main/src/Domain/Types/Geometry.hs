@@ -21,6 +21,7 @@ import Kernel.Types.Id (Id)
 data Geometry = Geometry
   { id :: Id Geometry,
     city :: Context.City,
+    state :: Context.IndianState,
     region :: Text
   }
   deriving (Generic, Show)

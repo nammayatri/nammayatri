@@ -31,7 +31,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (not, (<>), (==), (&&), (/=), show)
+import Prelude (not, (<>), (==), (&&), (/=), show, (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), visibility, Accessiblity(..))
 import Screens.Types as ST
 import Storage (KeyStore(..))
@@ -54,23 +54,25 @@ mobileNumberButtonConfig state = let
       , margin = (Margin 0 0 0 0 )
       , background = state.data.config.primaryBackground
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in primaryButtonConfig'
 
-whatsAppOTPButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
-whatsAppOTPButtonConfig state = let 
+whatsAppOTPButtonConfig :: ST.EnterMobileNumberScreenState -> String -> Boolean -> PrimaryButton.Config
+whatsAppOTPButtonConfig state id' showLoader = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig { 
         text = (getString GET_OTP_VIA_WHATSAPP) 
       , color = state.data.config.driverInfoConfig.ratingTextColor 
         }
-      , id = "PrimaryButtonWhatsAppOTP"
-      , isClickable = state.props.btnActiveMobileNumber 
-      , alpha = if state.props.btnActiveMobileNumber  then 1.0 else 0.4
+      , id = id'
+      , isClickable = state.props.btnActiveMobileNumber || state.props.resendEnable
+      , alpha = if state.props.btnActiveMobileNumber || state.props.resendEnable  then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
       , background = Color.aliceBlue
-      , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      , enableLoader = showLoader && (JB.getBtnLoader "PrimaryButtonMobileNumber")
       , stroke = ("1," <> Color.borderColorLight)
       , isSuffixImage = true
       , suffixImageConfig {

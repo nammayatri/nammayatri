@@ -16,6 +16,7 @@
 
 module Tools.Client (CallServerAPI (..), clientWithMerchantAndCity) where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.ServerName as DSN
 import qualified EulerHS.Types as Euler
@@ -52,6 +53,7 @@ class
 instance
   ( CoreMetrics m,
     HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     ToJSON d,
     FromJSON d
   ) =>
@@ -59,8 +61,9 @@ instance
   where
   callServerAPI serverName mkAPIs descr f = do
     dataServer <- getDataServer serverName
+    internalEndPointHashMap <- asks (.internalEndPointHashMap)
     let driverOfferAPIs = mkAPIs dataServer.token
-    callApiUnwrappingApiError (identity @Error) Nothing Nothing dataServer.url (f driverOfferAPIs) descr (Proxy :: Proxy Raw)
+    callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (f driverOfferAPIs) descr (Proxy :: Proxy Raw)
 
 instance
   ( CoreMetrics m,

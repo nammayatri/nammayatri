@@ -18,8 +18,8 @@ module Domain.Types.Person where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant as DMerchant
-import Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantConfig as DMC
+import Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
@@ -97,7 +97,15 @@ data PersonE e = Person
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    shareEmergencyContacts :: Bool,
+    nightSafetyChecks :: Bool,
+    shareTripWithEmergencyContacts :: Maybe Bool,
+    hasCompletedMockSafetyDrill :: Maybe Bool,
+    hasCompletedSafetySetup :: Bool,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double,
+    followsRide :: Bool
   }
   deriving (Generic)
 
@@ -137,8 +145,11 @@ data PersonAPIEntity = PersonAPIEntity
     hasDisability :: Maybe Bool,
     disability :: Maybe Text,
     gender :: Gender,
+    hasCompletedSafetySetup :: Bool,
+    hasCompletedMockSafetyDrill :: Maybe Bool,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    followsRide :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

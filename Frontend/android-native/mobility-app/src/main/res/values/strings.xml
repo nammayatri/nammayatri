@@ -18,7 +18,6 @@
     <string name="on_another_ride">On Another Ride</string>
     <string name="accept_offer">Accept Offer</string>
     <string name="extra">Extra</string>
-    <string name="upload_image">Upload Image</string>
     <string name="open_settings">1. Open Settings</string>
     <string name="tap_on_permission">2. Tap on Permissions</string>
     <string name="required_permission">3. Tap on the required permission</string>
@@ -56,4 +55,9 @@
     <string name="invoice_for_your_ride_is_downloaded">Invoice for your ride is downloaded!!!</string>
     <string name="qr_downloaded">QR Downloaded!!!</string>
     <string name="accept_goto">Accept “Go To”</string>
+    <string name="take_a_clear_selfie">Take a clear photo with your driving licence \ninside the marked area</string>
+    <string name="need_help">Need Help?</string>
+    <string name="safety_deviation_alert">We noticed your ride is on a different route. Are you feeling safe on your trip?</string>
+    <string name="everything_okay">Everything Okay?</string>
+    <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">We noticed your driver hasn\'t moved for a while. Are you feeling safe on your trip?</string>
 </resources>

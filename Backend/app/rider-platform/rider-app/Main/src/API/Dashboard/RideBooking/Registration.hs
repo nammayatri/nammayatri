@@ -29,6 +29,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 
 -- Customer Registration Flow ------
 data RegistrationEndPoint
@@ -36,7 +37,7 @@ data RegistrationEndPoint
   | RegistrationVerifyEndPoint
   | RegistrationResendEndPoint
   | RegistrationLogoutEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "RegistrationEndPoint"
 
@@ -106,7 +107,9 @@ buildAuthReq merchantShortId req =
       email = Nothing,
       language = Nothing,
       gender = Nothing,
-      otpChannel = req.otpChannel
+      otpChannel = req.otpChannel,
+      registrationLat = Nothing,
+      registrationLon = Nothing
     }
 
 data CustomerAuthReq = CutomerAuthReq

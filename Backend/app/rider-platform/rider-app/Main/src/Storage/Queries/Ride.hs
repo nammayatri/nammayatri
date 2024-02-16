@@ -16,14 +16,17 @@
 module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import Data.List (sortBy)
 import Data.Ord
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
 import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
@@ -31,7 +34,6 @@ import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -44,6 +46,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.Person ()
+import Tools.Error
 
 createRide' :: MonadFlow m => Ride -> m ()
 createRide' = createWithKV
@@ -114,6 +117,9 @@ updateMultiple rideId ride = do
       Se.Set BeamR.chargeableDistance ride.chargeableDistance,
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,
+      Se.Set BeamR.endOtp ride.endOtp,
+      Se.Set BeamR.startOdometerReading ride.startOdometerReading,
+      Se.Set BeamR.endOdometerReading ride.endOdometerReading,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -138,20 +144,32 @@ updateDriverArrival rideId = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateSafetyCheckStatus :: MonadFlow m => Id Ride -> Maybe Bool -> m ()
+updateSafetyCheckStatus rideId status = do
+  updateOneWithKV
+    [ Se.Set BeamR.safetyCheckStatus status
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 data StuckRideItem = StuckRideItem
   { rideId :: Id Ride,
     bookingId :: Id Booking,
     riderId :: Id Person
   }
 
-findStuckRideItems :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItems (Id merchantId) bookingIds now = do
+findStuckRideItems :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems merchant moCity bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   bookings <-
     findAllWithDb
       [ Se.And
-          [ Se.Is BeamB.providerId $ Se.Eq merchantId,
-            Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
+          [ Se.Is BeamB.providerId $ Se.Eq merchant.id.getId,
+            Se.Is BeamB.id $ Se.In $ getId <$> bookingIds,
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.In [DQuote.RENTAL, DQuote.INTER_CITY],
+            Se.Or
+              ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just $ getId moCity.id)]
+                  <> [Se.Is BeamB.merchantOperatingCityId $ Se.Eq Nothing | merchant.defaultCity == moCity.city]
+              )
           ]
       ]
   rides <-
@@ -183,7 +201,9 @@ cancelRides rideIds now =
 data RideItem = RideItem
   { person :: Person,
     ride :: Ride,
-    bookingStatus :: Common.BookingStatus
+    bookingStatus :: Common.BookingStatus,
+    bookingDetails :: BookingDetails,
+    rideScheduledAt :: UTCTime
   }
 
 instance BeamBackend.BeamSqlBackend be => B.HasSqlEqualityCheck be Common.BookingStatus
@@ -220,10 +240,6 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ defaultFrom) mbFrom
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ defaultTo) mbTo
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverMobileNumber -> ride.driverMobileNumber B.==?. B.val_ driverMobileNumber) mbDriverPhone
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ defaultFrom) mbFrom
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ defaultTo) mbTo
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
               )
               do
                 booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
@@ -232,11 +248,13 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                 pure (booking', ride', person')
   res' <- case res of
     Right x -> do
-      let rides = snd' <$> x
+      let bookings = fst' <$> x
+          rides = snd' <$> x
           persons = thd' <$> x
+      b <- catMaybes <$> mapM fromTType' bookings
       r <- catMaybes <$> mapM fromTType' rides
       p <- catMaybes <$> mapM fromTType' persons
-      pure $ zip3 p r (mkBookingStatus now <$> r)
+      pure $ zip3 p r b
     Left _ -> pure []
   pure $ mkRideItem <$> res'
   where
@@ -253,10 +271,16 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
       | ride.status == Ride.INPROGRESS && ((ride.rideStartTime) > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.RCANCELLED
       | otherwise = Common.ONGOING_6HRS
+    fst' (x, _, _) = x
     snd' (_, y, _) = y
     thd' (_, _, z) = z
-    mkRideItem (person, ride, bookingStatus) =
-      RideItem {..}
+    mkRideItem (person, ride, booking) =
+      RideItem
+        { bookingStatus = mkBookingStatus now ride,
+          rideScheduledAt = booking.startTime,
+          bookingDetails = booking.bookingDetails,
+          ..
+        }
 
 findRiderIdByRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe (Id Person))
 findRiderIdByRideId rideId = do
@@ -273,7 +297,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
     findAllWithOptionsKV
       [ Se.And
           ( [Se.Is BeamB.riderId $ Se.Eq personId]
-              <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | isOnlyActive])
+              <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED] | isOnlyActive])
               <> ([Se.Is BeamB.status $ Se.Eq (fromJust mbBookingStatus) | isJust mbBookingStatus])
           )
       ]
@@ -303,7 +327,11 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                 case bookingDetails of
                   DRB.OneWaySpecialZoneDetails details -> details.otpCode
                   _ -> Nothing
-           in isJust maybeRide || isJust otpCode && isNothing maybeRide
+              isconfirmedRentalRideOrIntercityBooking = case bookingDetails of
+                DRB.RentalDetails _ -> booking.status == DRB.CONFIRMED
+                DRB.InterCityDetails _ -> True
+                _ -> False
+           in isJust maybeRide || isJust otpCode || isconfirmedRentalRideOrIntercityBooking
 
 countRidesByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m Int
 countRidesByRiderId riderId = do
@@ -318,51 +346,45 @@ countRidesFromDateToNowByRiderId riderId date = do
 findRideByRideShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
-createMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m [DLM.LocationMapping]
+updateEditLocationAttempts :: MonadFlow m => Id Ride -> Maybe Int -> m ()
+updateEditLocationAttempts rideId attempts = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.allowedEditLocationAttempts attempts,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m (DLM.LocationMapping, Maybe DLM.LocationMapping)
 createMapping bookingId rideId merchantId merchantOperatingCityId = do
-  mappings <- QLM.findByEntityId bookingId
-  when (null mappings) $ throwError (InternalError "Entity Mappings for Booking Not Found") -- this case should never occur
-  let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-      toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+  fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
+  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
 
-  fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+  mbToLocationRideMapping <- do
+    mappings <- QLM.findByEntityId bookingId
+    let mbToLocMap = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    (\toLocMap -> SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)) `mapM` mbToLocMap
 
-  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
   QLM.create fromLocationRideMapping
-
-  toLocationRideMappings <-
-    if not (null toLocationMappings)
-      then do
-        let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-        toLocationRideMapping <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
-        QLM.create toLocationRideMapping
-        return [toLocationRideMapping]
-      else return []
-
-  return $ fromLocationRideMapping : toLocationRideMappings
+  whenJust mbToLocationRideMapping QLM.create
+  return (fromLocationRideMapping, mbToLocationRideMapping)
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
-    rideMappings <-
+    (fromLocationMapping, mbToLocationMapping) <-
       if null mappings
         then do
           void $ QBooking.findById (Id bookingId)
           createMapping bookingId id merchantId merchantOperatingCityId
-        else return mappings
-
-    let fromLocationMapping = filter (\loc -> loc.order == 0) rideMappings
-        toLocationMappings = filter (\loc -> loc.order /= 0) rideMappings
-
-    fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-
-    fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
-    toLocation <-
-      if null toLocationMappings
-        then return Nothing
         else do
-          let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-          QL.findById toLocMap.locationId
+          fromLocationMapping' <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+          let mbToLocationMapping' = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+          return (fromLocationMapping', mbToLocationMapping')
+
+    fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
+    toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
+
     tUrl <- parseBaseUrl `mapM` trackingUrl
     pure $
       Just
@@ -373,29 +395,9 @@ instance FromTType' BeamR.Ride Ride where
             shortId = ShortId shortId,
             merchantId = Id <$> merchantId,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
-            status = status,
-            driverName = driverName,
-            driverRating = driverRating,
-            driverMobileNumber = driverMobileNumber,
-            driverRegisteredAt = driverRegisteredAt,
-            driverImage = driverImage,
-            vehicleNumber = vehicleNumber,
-            vehicleModel = vehicleModel,
-            vehicleColor = vehicleColor,
-            vehicleVariant = vehicleVariant,
-            otp = otp,
             trackingUrl = tUrl,
             fare = roundToIntegral <$> fare,
             totalFare = roundToIntegral <$> totalFare,
-            chargeableDistance = chargeableDistance,
-            traveledDistance = traveledDistance,
-            driverArrivalTime = driverArrivalTime,
-            rideStartTime = rideStartTime,
-            rideEndTime = rideEndTime,
-            rideRating = rideRating,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            driverMobileCountryCode = driverMobileCountryCode,
             ..
           }
 
@@ -418,6 +420,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.vehicleColor = vehicleColor,
         BeamR.vehicleVariant = vehicleVariant,
         BeamR.otp = otp,
+        BeamR.endOtp = endOtp,
         BeamR.trackingUrl = showBaseUrl <$> trackingUrl,
         BeamR.fare = realToFrac <$> fare,
         BeamR.totalFare = realToFrac <$> totalFare,
@@ -430,5 +433,10 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
         BeamR.driverMobileCountryCode = driverMobileCountryCode,
-        BeamR.driverImage = driverImage
+        BeamR.startOdometerReading = startOdometerReading,
+        BeamR.endOdometerReading = endOdometerReading,
+        BeamR.driverImage = driverImage,
+        BeamR.safetyCheckStatus = safetyCheckStatus,
+        BeamR.allowedEditLocationAttempts = allowedEditLocationAttempts,
+        BeamR.isFreeRide = isFreeRide
       }

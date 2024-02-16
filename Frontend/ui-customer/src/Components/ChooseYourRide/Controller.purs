@@ -3,13 +3,17 @@ module Components.ChooseYourRide.Controller where
 import Data.Maybe (Maybe(..))
 import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import MerchantConfig.Types
 
 data Action
   = NoAction
   | ChooseVehicleAC ChooseVehicleController.Action
   | PrimaryButtonActionController PrimaryButtonController.Action
+  | PreferencesDropDown
+  | RadioButtonClick Boolean
+  | OnIconClick Boolean
+
 
 type Config
   = { rideDistance :: String
@@ -18,6 +22,9 @@ type Config
     , quoteList :: Array ChooseVehicleController.Config
     , showTollExtraCharges :: Boolean
     , nearByDrivers :: Maybe Int
+    , showPreferences :: Boolean
+    , bookingPreferenceEnabled :: Boolean
+    , flowWithoutOffers :: Boolean
     }
 
 config :: Config
@@ -26,6 +33,9 @@ config =
   , rideDuration: ""
   , activeIndex: 0
   , quoteList: []
-  , showTollExtraCharges : DC.config.searchLocationConfig.showAdditionalChargesText
+  , showTollExtraCharges : (getAppConfig appConfig).searchLocationConfig.showAdditionalChargesText
   , nearByDrivers : Nothing
+  , showPreferences : false
+  , bookingPreferenceEnabled : false
+  , flowWithoutOffers : false
   }

@@ -36,7 +36,8 @@ data VehicleClassVariantMap = VehicleClassVariantMap
   { vehicleClass :: Text,
     vehicleCapacity :: Maybe Int,
     vehicleVariant :: Variant,
-    manufacturer :: Maybe Text
+    manufacturer :: Maybe Text,
+    bodyType :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, Show)
 
@@ -50,6 +51,7 @@ data OnboardingDocumentConfig = OnboardingDocumentConfig
     vehicleClassCheckType :: VehicleClassCheckType,
     rcNumberPrefix :: Text,
     rcNumberPrefixList :: [Text],
+    maxRetryCount :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

@@ -21,9 +21,9 @@ import Data.Aeson
 import Data.OpenApi (ToParamSchema, ToSchema)
 import Data.Time (UTCTime)
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
-import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
@@ -61,7 +61,7 @@ $(mkBeamInstancesForEnum ''DriverAutoPayStatus)
 
 $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 
-data DriverInformationE e = DriverInformation
+data DriverInformation = DriverInformation
   { driverId :: Id Person,
     adminId :: Maybe (Id Person),
     merchantId :: Maybe (Id DMerchant.Merchant),
@@ -73,11 +73,14 @@ data DriverInformationE e = DriverInformation
     verified :: Bool,
     subscribed :: Bool,
     paymentPending :: Bool,
-    referralCode :: Maybe (EncryptedHashedField e Text),
+    referralCode :: Maybe Text,
+    referredByDriverId :: Maybe (Id Person),
+    totalReferred :: Maybe Int,
     lastEnabledOn :: Maybe UTCTime,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
+    canSwitchToRental :: Bool,
     mode :: Maybe DriverMode,
     aadhaarVerified :: Bool,
     autoPayStatus :: Maybe DriverAutoPayStatus,
@@ -89,7 +92,9 @@ data DriverInformationE e = DriverInformation
     updatedAt :: UTCTime,
     compAadhaarImagePath :: Maybe Text,
     availableUpiApps :: Maybe Text,
-    blockStateModifier :: Maybe Text
+    blockStateModifier :: Maybe Text,
+    driverDob :: Maybe UTCTime,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic)
 
@@ -120,12 +125,6 @@ data Badges = Badges
     badgeCount :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
-
-type DriverInformation = DriverInformationE 'AsEncrypted
-
-instance FromJSON (EncryptedHashed Text)
-
-instance ToJSON (EncryptedHashed Text)
 
 instance FromJSON DriverInformation
 

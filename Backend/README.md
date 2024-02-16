@@ -9,30 +9,19 @@ To build or develop the project, you need to install the following.
 
 #### Nix
 
-Nix is central to building and developing the Namamayatri project. To prepare your system for a pleasant Nix-based development, follow these four steps:
+[Nix](https://nixos.asia/en/nix) is central to building and developing the [Namamayatri][nammayatri] project. To prepare your system for a pleasant [Nix-based development](https://nixos.asia/en/dev), follow these four steps:
 
-1. [Install **Nix**](https://github.com/DeterminateSystems/nix-installer#the-determinate-nix-installer)
-    - If you already have Nix installed, you must [enable Flakes](https://nixos.wiki/wiki/Flakes#Enable_flakes) manually.
+1. [Install **Nix**](https://nixos.asia/en/install)
 1. Setup the Nix **binary cache** (to avoid compiling locally for hours):
     ```sh
     nix run nixpkgs#cachix use nammayatri
     ```
-    - For this command to succeed, you must have added yourself to the `trusted-users` list of `nix.conf`
-1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://zero-to-flakes.com/direnv).
-2. Run `nix --accept-flake-config run github:juspay/nix-browser#nix-health github:nammayatri/nammayatri` and make sure that everything is green (✅)
+    - For this command to succeed, you should add yourself to the `trusted-users` list of `nix.conf` and then restart the Nix daemon using `sudo pkill nix-daemon`.
+1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
+1. Run `nix run nixpkgs#nix-health github:nammayatri/nammayatri` and make sure that everything is green (✅) or Amber (🟧)
 
 [^hm]: Unless you are using NixOS in which case home-manager is not strictly needed.
 [^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time.
-
-#### Other tools
-
-Aside from Nix, you also need to:
-
-1. Install [Docker](https://www.docker.com/products/docker-desktop/) (we use [arion]--a `docker-compose` invoker in Nix--for running external service dependencies).
-    - If you are on macOS, open *Docker -> Preferences... -> Resources -> File Sharing* in Docker Desktop and add `/nix/store` to the list of shared folders. ![image](https://user-images.githubusercontent.com/3998/235455381-f88466b7-ee29-4baf-b0a9-4ddcf54ba402.png)
-
-1. Install [Xcode](https://developer.apple.com/xcode/), if you are on macOS.
-
 
 ### Building
 
@@ -51,6 +40,8 @@ This should produce a `./result` symlink in the current directory, containing al
 **🚧 Warning 🚧**: The `nix build` command should _only_ build the nammayatri project and it should finish in a matter of minutes. If not, you must not have setup the Nix cache properly. Consult [the steps further above](#nix).
 
 #### Building the docker image
+
+**🚨 Attention 🚨**: You can skip this step if you intend to run locally only.
 
 ```sh
 docker load -i $(nix build .#dockerImage --no-link --print-out-paths)
@@ -83,6 +74,7 @@ To compile the project, use [cabal]:
 cd ./Backend
 # Build all packages
 cabal build all
+# Once the build is complete, you will be able to run backend services directly
 # Run a cabal package (by path to the directory containing .cabal file)
 cabal run lib/location-updates
 # Run ghcid (for fast compile feedback)
@@ -98,40 +90,6 @@ This is now easily & quickly achieved by simply un-commenting the flags under ["
 
 #### Parallel Jobs
 To speed up the compilation times, we use 6 parallel jobs by default. If you have a powerful computer with lots of cores and memory, you can increment the `jobs` setting in [cabal.project](cabal.project) file to run more parallel jobs for faster results. Inversely, if its a low-powered machine, you may consider lowering that number.
-
-#### Running external services
-
-To run the project, we'd first need to run some services. These are provided via docker images, that are built in Nix and run via [arion].
-
-For running the database, redis, passetto and kafka run this command:
-
-```sh
-# NOTE: You must run this from inside nix develop shell.
-# The `-d` option will run the containers in background. Remove `-d` if you want to run them in foreground.
-, run-svc -d
-```
-
-That should run most of the services required.
-
-More services, if needed, can be run with the following commands.
-
-For running pgadmin run this command:
-
-```sh
-, run-pgadmin
-```
-
-For running monitoring services like prometheus and grafana use this command:
-
-```sh
-, run-monitoring
-```
-
-To run osrm-server (which is not using Docker), run:
-
-```sh
-nix run .#osrm-server
-```
 
 #### Running backend services
 
@@ -150,6 +108,24 @@ You can also use Nix to run the mobility stack, but this is slower compared to t
 , run-mobility-stack-nix
 # Or (if you are not in the git repo):
 nix run github:nammayatri/nammyatri#run-mobility-stack-nix
+```
+
+##### External services
+
+The above command will also run some services (databae, redis, passetto, osrm-server, kafka). These are provided via [services-flake].
+
+More services, if needed, can be run with the following commands.
+
+For running pgadmin run this command:
+
+```sh
+, run-pgadmin
+```
+
+For running monitoring services like prometheus and grafana use this command:
+
+```sh
+, run-monitoring
 ```
 
 #### Updating flake inputs
@@ -280,5 +256,14 @@ Run `nix run github:nix-community/nix-melt` to navigate and find that transitive
 [nammayatri]: https://www.nammayatri.in/
 [haskell]: https://www.haskell.org/
 [arion]: https://github.com/hercules-ci/arion
+[services-flake]: https://github.com/juspay/services-flake
 [cabal]: https://cabal.readthedocs.io/
 [nix-shell]: https://nixos.wiki/wiki/Development_environment_with_nix-shell
+
+### `, run-mobility-stack-*` not responding to `Ctrl-C` or [external-services](running-external-services) running in the background even after exiting `, run-mobility-stack-*`
+
+Run `, kill-svc-ports`
+
+## Running Load Test
+
+See Documentation [README.md](load-test/README.md)

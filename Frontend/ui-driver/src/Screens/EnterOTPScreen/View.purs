@@ -16,7 +16,7 @@
 module Screens.EnterOTPScreen.View where
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), discard)
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback, textFromHtml)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
@@ -38,6 +38,7 @@ import Common.Types.App
 import Screens.EnterOTPScreen.ComponentConfig
 import Data.Ring ((-))
 import Storage (getValueToLocalStore, KeyStore(..))
+import Locale.Utils
 
 screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -69,17 +70,14 @@ view push state =
         pure unit
         ) (const AfterRender)
   , onBackPressed push (const BackPressed)
-  ][  linearLayout
+  ][    PrestoAnim.animationSet
+          [ Anim.fadeIn true
+          ] $ headerView state push 
+      , linearLayout
       [ width MATCH_PARENT
       , weight 1.0
       , orientation VERTICAL
-      ][  PrestoAnim.animationSet
-          [ Anim.fadeIn true
-          ] $ backArrow state push
-        , PrestoAnim.animationSet
-          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-          ] $ enterOTPTextView state
-        , primaryEditTextView state push
+      ][  primaryEditTextView state push
       ]
     , PrestoAnim.animationSet
       [ Anim.fadeIn true
@@ -88,6 +86,30 @@ view push state =
           , width MATCH_PARENT
           ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)]
   ]
+
+  where 
+    headerView :: ST.EnterOTPScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+    headerView state push = 
+      linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , background state.data.config.primaryBackground
+      , padding $ Padding 16 16 16 16
+      ][  imageView
+          [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_left_white"
+          , height $ V 25 
+          , width $ V 25
+          , onClick push $ const BackPressed
+          ]
+        , textView $ 
+          [ text $ getString GOT_AN_OTP
+          , color Color.white900
+          , margin $ MarginVertical 5 22
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          ] <> FontStyle.h1 TypoGraphy
+      ]
 
 
 
@@ -136,7 +158,7 @@ primaryEditTextView state push =
   ][  PrestoAnim.animationSet
         [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
         ] $ PrimaryEditText.view(push <<< PrimaryEditTextAction) ({
-        title: case (getValueToLocalStore LANGUAGE_KEY) of 
+        title: case (getLanguageLocale languageKey) of 
                   "EN_US" -> (getString ENTER_OTP_SENT_TO) <> state.data.mobileNo
                   _ -> state.data.mobileNo <> (getString ENTER_OTP_SENT_TO) ,
         type: "number",
@@ -159,37 +181,34 @@ primaryEditTextView state push =
 underlinedTextView :: ST.EnterOTPScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 underlinedTextView state push =
  linearLayout
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , margin (MarginTop 18)
-  , orientation VERTICAL
-  , onClick push (const ResendOTP)
-  ][  textView $
-      [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , text (getString RESEND_OTP)
-      , color Color.mainPrimary
-      , visibility if state.props.resendEnabled then VISIBLE else GONE
-      ] <> FontStyle.body6 LanguageStyle
-    , textView $
-      [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , text $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
-      , visibility if state.props.resendEnabled then GONE else VISIBLE
-      , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
-      ] <> FontStyle.body6 LanguageStyle
-    , textView
-      [ height $ V 1
-      , width MATCH_PARENT
-      , background  Color.black700
-      , margin (Margin 1 0 2 0)
-      , visibility if state.props.resendEnabled then GONE else VISIBLE
+ [ width WRAP_CONTENT
+ , height WRAP_CONTENT
+ , margin (MarginTop 18)
+ ][ textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ getString DIDNT_RECIEVE_OTP
+        , orientation HORIZONTAL
+        , visibility if state.props.resendEnabled then VISIBLE else GONE
+        ]<> FontStyle.body6 LanguageStyle
+  ,linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , onClick push (const ResendOTP)
+      ][  textView $
+          [ height WRAP_CONTENT
+          , weight 1.0
+          , textFromHtml (getString RESEND_OTP)
+          , color Color.mainPrimary
+          , visibility if state.props.resendEnabled then VISIBLE else GONE
+          ] <> FontStyle.body6 LanguageStyle
+        , textView $
+          [ height WRAP_CONTENT
+          , weight 1.0
+          , textFromHtml $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
+          , visibility if state.props.resendEnabled then GONE else VISIBLE
+          , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
+          ] <> FontStyle.body6 LanguageStyle
       ]
-    , textView
-      [ height $ V 1
-      , width MATCH_PARENT
-      , background Color.mainPrimary
-      , margin (Margin 1 0 2 0)
-      , visibility if state.props.resendEnabled then VISIBLE else GONE
-      ]
-  ]
+ ]

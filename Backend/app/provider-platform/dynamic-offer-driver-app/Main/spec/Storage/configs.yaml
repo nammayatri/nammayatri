@@ -1,0 +1,119 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  BatchSplitByPickupDistance: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  Seconds: Kernel.Types.Common
+  IndianState: Kernel.Types.Beckn.Context
+  Variant: Domain.Types.Vehicle.Variant
+
+DriverPoolConfig:
+  tableName: driver_pool_config
+
+  fields:
+    id: Id DriverPoolConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    minRadiusOfSearch: Meters
+    maxRadiusOfSearch: Meters
+    radiusStepSize: Meters
+    driverPositionInfoExpiry: Maybe Seconds
+    actualDistanceThreshold: Maybe Meters
+    maxDriverQuotesRequired: Int
+    driverQuoteLimit: Int
+    driverRequestCountLimit: Int
+    driverBatchSize: Int
+    distanceBasedBatchSplit: "[BatchSplitByPickupDistance]"
+    maxNumberOfBatches: Int
+    maxParallelSearchRequests: Int
+    poolSortingType: PoolSortingType
+    singleBatchProcessTime: Seconds
+    tripDistance: Meters
+    radiusShrinkValueForDriversOnRide: Meters
+    driverToDestinationDistanceThreshold: Meters
+    driverToDestinationDuration: Seconds
+    scheduleTryTimes: "[Int]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    vehicleVariant: Maybe Variant
+    tripCategory: Text
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    distanceBasedBatchSplit: text[]
+    scheduleTryTimes: integer[]
+
+  default:
+    tripCategory: "'All'"
+    distanceBasedBatchSplit: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
+    scheduleTryTimes: "'{1800, 900, 300}'"
+
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+      orderBy: tripDistance
+
+MerchantState:
+  tableName: merchant_state
+
+  fields:
+    merchantId: Id Merchant
+    state: IndianState
+    allowedDestinationStates: "[IndianState]"
+
+  excludedFields: [merchantOperatingCityId]
+
+  constraints:
+    merchantId: PrimaryKey
+    state: PrimaryKey
+
+  sqlType:
+    allowedDestinationStates: text[]
+
+  queries:
+    findByMerchantIdAndState:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, state]
+
+InterCityTravelCities:
+  tableName: inter_city_travel_cities
+
+  fields:
+    merchantId: Id Merchant
+    cityName: Text
+    state: IndianState
+    lat: Double
+    lng: Double
+
+  excludedFields: [merchantOperatingCityId]
+
+  constraints:
+    merchantId: PrimaryKey
+    cityName: PrimaryKey
+
+  queries:
+    findByMerchantAndState:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, state]
+
+ValueAddNP:
+  tableName: value_add_np
+
+  fields:
+    subscriberId: Text
+    enabled: Bool
+
+  constraints:
+    subscriberId: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  queries:
+    findAll:
+      kvFunction: findAllWithKV
+      where: enabled

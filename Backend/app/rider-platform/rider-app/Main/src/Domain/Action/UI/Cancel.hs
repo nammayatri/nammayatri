@@ -11,16 +11,23 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+
 module Domain.Action.UI.Cancel
   ( cancel,
+    softCancel,
+    disputeCancellationDues,
     CancelReq (..),
     CancelRes (..),
     CancelSearch (..),
+    CancellationDuesDetailsRes (..),
     mkDomainCancelSearch,
     cancelSearch,
+    getCancellationDuesDetails,
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as Enums
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
@@ -28,19 +35,23 @@ import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
+import Environment
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -67,6 +78,7 @@ data CancelRes = CancelRes
     cancellationSource :: SBCR.CancellationSource,
     transactionId :: Text,
     merchant :: DM.Merchant,
+    cancelStatus :: Text,
     city :: Context.City
   }
 
@@ -81,7 +93,34 @@ data CancelSearch = CancelSearch
     city :: Context.City
   }
 
-cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
+data CancellationDuesDetailsRes = CancellationDuesDetailsRes
+  { cancellationDues :: HighPrecMoney,
+    disputeChancesUsed :: Int,
+    canBlockCustomer :: Maybe Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+softCancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m CancelRes
+softCancel bookingId _ = do
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
+  city <-
+    CQMOC.findById booking.merchantOperatingCityId
+      >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+  return $
+    CancelRes
+      { bppBookingId = bppBookingId,
+        bppId = booking.providerId,
+        bppUrl = booking.providerUrl,
+        cancellationSource = SBCR.ByUser,
+        transactionId = booking.transactionId,
+        merchant = merchant,
+        cancelStatus = show Enums.SOFT_CANCEL,
+        ..
+      }
+
+cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -117,6 +156,7 @@ cancel bookingId _ req = do
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
         merchant = merchant,
+        cancelStatus = show Enums.CONFIRM_CANCEL,
         ..
       }
   where
@@ -216,3 +256,22 @@ driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPo
           travelMode = Just Maps.CAR
         }
   return $ distRes.distance
+
+disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
+disputeCancellationDues (personId, merchantId) = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  case (person.mobileNumber, person.mobileCountryCode) of
+    (Just mobileNumber, Just countryCode) -> do
+      CallBPPInternal.disputeCancellationDues merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
+    _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+
+getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> Flow CancellationDuesDetailsRes
+getCancellationDuesDetails (personId, merchantId) = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  case (person.mobileNumber, person.mobileCountryCode) of
+    (Just mobileNumber, Just countryCode) -> do
+      res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
+      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDues, disputeChancesUsed = res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
+    _ -> throwError (PersonMobileNumberIsNULL person.id.getId)

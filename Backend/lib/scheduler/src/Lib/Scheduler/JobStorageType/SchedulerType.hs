@@ -196,6 +196,7 @@ markAsFailed jobType id = do
 
 updateErrorCountAndFail :: forall m r. (JobExecutor r m, HasField "jobInfoMap" r (M.Map Text Bool), Forkable m, CoreMetrics m) => Text -> Id AnyJob -> Int -> m ()
 updateErrorCountAndFail jobType id errorCount = do
+  fork "" $ incrementSchedulerFailureCounter ("Scheduler_" <> show jobType)
   schedulerType <- asks (.schedulerType)
   case schedulerType of
     RedisBased -> do

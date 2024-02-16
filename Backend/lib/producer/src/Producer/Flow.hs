@@ -37,28 +37,43 @@ producerLockKey = "Producer:Lock:key"
 reviverLockKey :: Text
 reviverLockKey = "Reviver:Lock:Key"
 
+myShardKey :: Text
+myShardKey = "MyShard:Key"
+
+getMyShardKey :: Flow Text
+getMyShardKey = do
+  maxShards <- asks (.maxShards)
+  myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr myShardKey
+  return $ show myShardId
+
+getShardedKey :: Text -> Text -> Text
+getShardedKey key shardId = key <> "{" <> shardId <> "}"
+
 runProducer :: Flow ()
 runProducer = do
-  Hedis.whenWithLockRedis producerLockKey 10 $ do
+  myShardId <- getMyShardKey
+  Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
     someErr <-
       try @_ @SomeException $ do
         begTime <- getCurrentTimestamp
-        producerTimestampKey <- asks (.producerTimestampKey)
+        producerTimestampKeyPrefix <- asks (.producerTimestampKey)
+        let producerTimestampKey = getShardedKey producerTimestampKeyPrefix myShardId
         startTime <- getTime begTime producerTimestampKey
         endTime <- getCurrentTimestamp
         setName <- asks (.schedulerSetName)
-        currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore setName startTime endTime
+        let myShardSetKey = getShardedKey setName myShardId
+        currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore myShardSetKey startTime endTime
         logDebug $ "Jobs taken out of sortedset : " <> show currentJobs
         logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
         Hedis.set producerTimestampKey endTime
         result <- insertIntoStream currentJobs
         logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
-        _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore setName startTime endTime
+        _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardSetKey startTime endTime
         endTime <- getCurrentTimestamp
         let diff = endTime - begTime
         waitTimeMilliSec <- asks (.waitTimeMilliSec)
-        threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - diff) :: Int)
         fork "" $ addGenericLatency "producer" $ fromIntegral $ fromEnum diff
+        threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - diff) :: Int)
     case someErr of
       Left err -> logError $ show err
       Right _ -> pure ()
@@ -117,14 +132,15 @@ runReviver' = do
 
 insertIntoStream :: [B.ByteString] -> Flow ()
 insertIntoStream jobs = do
-  forM_ jobs $ \job -> do
+  forM_ jobs $ \job -> fork "putting into stream" $ do
     streamName <- asks (.streamName)
     entryId <- asks (.entryId)
     eqId <- generateGUID
     let eqIdByteString = TE.encodeUtf8 eqId
     let job_ = job
     let fieldValue = [(eqIdByteString, job_)]
-    Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId fieldValue
+    _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId fieldValue
+    return ()
 
 splitIntoBatches :: Int -> [a] -> [[a]]
 splitIntoBatches _ [] = []

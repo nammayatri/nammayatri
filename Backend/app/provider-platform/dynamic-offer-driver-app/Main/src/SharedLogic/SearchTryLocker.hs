@@ -16,9 +16,15 @@ module SharedLogic.SearchTryLocker
   ( whenSearchTryCancellable,
     isSearchTryCancelled,
     markSearchTryAsAssigned,
+    isBookingCancelled,
+    whenBookingCancellable,
+    markBookingAssignmentInprogress,
+    isBookingAssignmentInprogress,
+    markBookingAssignmentCompleted,
   )
 where
 
+import Domain.Types.Booking (Booking)
 import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -63,3 +69,49 @@ mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.g
 
 mkAssignedKey :: Id SearchTry -> Text
 mkAssignedKey searchTryId = "SearchTry:Assigned:SearchTryId-" <> searchTryId.getId
+
+isBookingCancelled ::
+  CacheFlow m r =>
+  Id Booking ->
+  m Bool
+isBookingCancelled bookingId = do
+  fromMaybe False <$> Hedis.get (mkBookingCancelledKey bookingId)
+
+isBookingAssignmentInprogress ::
+  CacheFlow m r =>
+  Id Booking ->
+  m Bool
+isBookingAssignmentInprogress bookingId = do
+  fromMaybe False <$> Hedis.get (mkBookingAssignedKey bookingId)
+
+whenBookingCancellable ::
+  CacheFlow m r =>
+  Id Booking ->
+  m () ->
+  m ()
+whenBookingCancellable bookingId actions = do
+  isBookingCancelled' <- isBookingCancelled bookingId
+  isBookingAssignmentInprogress' <- isBookingAssignmentInprogress bookingId
+  unless (isBookingCancelled' || isBookingAssignmentInprogress') $ do
+    Hedis.setExp (mkBookingCancelledKey bookingId) True 120
+    actions
+
+markBookingAssignmentInprogress ::
+  CacheFlow m r =>
+  Id Booking ->
+  m ()
+markBookingAssignmentInprogress bookingId = do
+  Hedis.setExp (mkBookingAssignedKey bookingId) True 120
+
+markBookingAssignmentCompleted ::
+  CacheFlow m r =>
+  Id Booking ->
+  m ()
+markBookingAssignmentCompleted bookingId = do
+  Hedis.del (mkBookingAssignedKey bookingId)
+
+mkBookingCancelledKey :: Id Booking -> Text
+mkBookingCancelledKey bookingId = "Booking:Cancelled:BookingId-" <> bookingId.getId
+
+mkBookingAssignedKey :: Id Booking -> Text
+mkBookingAssignedKey bookingId = "Booking:Assigned:BookingId-" <> bookingId.getId

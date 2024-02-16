@@ -71,6 +71,13 @@
                     <LinearLayout
                         android:layout_marginTop="10dp"
                         android:layout_width="match_parent"
+                        android:id="@+id/dynamic_views"
+                        android:gravity="center"
+                        android:layout_height="wrap_content"/>
+                
+                    <LinearLayout
+                        android:layout_marginTop="10dp"
+                        android:layout_width="match_parent"
                         android:id="@+id/button_view"
                         android:orientation="vertical"
                         android:layout_height="wrap_content">
@@ -91,14 +98,39 @@
                             android:theme="@style/Theme.MaterialComponents.Light"
                             app:cornerRadius="8dp" />
 
-                        <TextView
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Cancel"
-                            android:gravity="center"
-                            android:textSize="16dp"
-                            android:padding="10dp"
-                            android:id="@+id/button_cancel" />
+                            android:id="@+id/secondary_button"
+                            android:gravity="center">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Cancel"
+                                android:gravity="center"
+                                android:textSize="16dp"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:textColor="@color/black650"
+                                android:padding="10dp"
+                                android:id="@+id/button_cancel" />
+                            <ImageView
+                                android:id="@+id/cancel_button_image"
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:visibility="gone"
+                                android:src="@drawable/ny_ic_phone_filled_blue" />
+                            <TextView
+                                android:id="@+id/button_cancel_right"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:padding="10dp"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:text="@string/call_support"
+                                android:visibility="gone"
+                                android:textColor="@color/blue800"
+                                android:textSize="16dp" />
+                        </LinearLayout>
 
                     </LinearLayout>
 

@@ -25,6 +25,7 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.SessionizerMetrics.EventStream
 import Lib.SessionizerMetrics.Types.Event
 
@@ -56,7 +57,18 @@ data Payload
         vehVar :: VehicleVariant, --vehicle variant
         cAt :: UTCTime
       }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+  | Exophone
+      { vendor :: Maybe Text,
+        callType :: Maybe Text,
+        callSid :: Maybe Text,
+        status :: Maybe Text,
+        exophoneNumber :: Maybe Text,
+        rideId :: Maybe (Id DRide.Ride)
+      }
+  deriving (Show, Eq, Generic, FromJSON, ToSchema)
+
+instance ToJSON Payload where
+  toJSON = genericToJSON constructorsWithSnakeCase
 
 data RideEventData = RideEventData
   { ride :: DRide.Ride,
@@ -80,6 +92,18 @@ data QuoteEventData = QuoteEventData
     merchantId :: Id Merchant
   }
 
+data ExophoneEventData = ExophoneEventData
+  { vendor :: Maybe Text,
+    callType :: Maybe Text,
+    rideId :: Maybe (Id DRide.Ride),
+    callSid :: Maybe Text,
+    status :: Maybe Text,
+    merchantId :: Maybe (Id Merchant),
+    triggeredBy :: EventTriggeredBy,
+    personId :: Maybe (Id Person),
+    exophoneNumber :: Maybe Text
+  }
+
 newtype SearchEventData = SearchEventData
   { searchRequest :: DSearchRequest.SearchRequest
   }
@@ -91,7 +115,7 @@ triggerEstimateEvent ::
   m ()
 triggerEstimateEvent estimateData = do
   let estimatePayload = Estimates {eId = estimateData.estimate.id, srId = estimateData.estimate.requestId, vehVar = estimateData.estimate.vehicleVariant, cAt = estimateData.estimate.createdAt}
-  estEnvt <- createEvent (Just $ getId estimateData.personId) (getId estimateData.merchantId) Estimate RIDER_APP System (Just estimatePayload) (Just $ getId estimateData.estimate.id)
+  estEnvt <- createEvent (Just $ getId estimateData.personId) (getId estimateData.merchantId) Estimate RIDER_APP System (Just estimatePayload) (Just $ getId estimateData.estimate.id) (getId <$> estimateData.estimate.merchantOperatingCityId)
   triggerEvent estEnvt
 
 triggerRideCreatedEvent ::
@@ -150,7 +174,7 @@ triggerQuoteEvent ::
   m ()
 triggerQuoteEvent quoteData = do
   let quotePayload = Quote {qId = quoteData.quote.id, searchReqId = quoteData.quote.requestId, cAt = quoteData.quote.createdAt}
-  envt <- createEvent (Just $ getId quoteData.person.id) (getId quoteData.merchantId) Quotes RIDER_APP System (Just quotePayload) (Just $ getId quoteData.quote.id)
+  envt <- createEvent (Just $ getId quoteData.person.id) (getId quoteData.merchantId) Quotes RIDER_APP System (Just quotePayload) (Just $ getId quoteData.quote.id) (Just $ getId quoteData.person.merchantOperatingCityId)
   triggerEvent envt
 
 triggerSearchEvent ::
@@ -160,7 +184,7 @@ triggerSearchEvent ::
   m ()
 triggerSearchEvent searchData = do
   let searchPayload = Search {sId = searchData.searchRequest.id, cAt = searchData.searchRequest.createdAt}
-  envt <- createEvent (Just $ getId searchData.searchRequest.riderId) (getId searchData.searchRequest.merchantId) SearchRequest RIDER_APP System (Just searchPayload) (Just $ getId searchData.searchRequest.id)
+  envt <- createEvent (Just $ getId searchData.searchRequest.riderId) (getId searchData.searchRequest.merchantId) SearchRequest RIDER_APP System (Just searchPayload) (Just $ getId searchData.searchRequest.id) (Just $ getId searchData.searchRequest.merchantOperatingCityId)
   triggerEvent envt
 
 triggerRideEvent ::
@@ -171,7 +195,7 @@ triggerRideEvent ::
   m ()
 triggerRideEvent eventType rideData = do
   let ridePayload = Ride {rId = rideData.ride.id, rs = rideData.ride.status, cAt = rideData.ride.createdAt, uAt = rideData.ride.updatedAt}
-  envt <- createEvent (Just $ getId rideData.personId) (getId rideData.merchantId) eventType RIDER_APP System (Just ridePayload) (Just $ getId rideData.ride.id)
+  envt <- createEvent (Just $ getId rideData.personId) (getId rideData.merchantId) eventType RIDER_APP System (Just ridePayload) (Just $ getId rideData.ride.id) $ getId <$> rideData.ride.merchantOperatingCityId
   triggerEvent envt
 
 triggerBookingEvent ::
@@ -182,5 +206,15 @@ triggerBookingEvent ::
   m ()
 triggerBookingEvent eventType bookingData = do
   let bookingPayload = Booking {bId = bookingData.booking.id, bs = bookingData.booking.status, cAt = bookingData.booking.createdAt, uAt = bookingData.booking.updatedAt}
-  event <- createEvent (Just $ getId bookingData.booking.riderId) (getId bookingData.booking.merchantId) eventType RIDER_APP System (Just bookingPayload) (Just $ getId bookingData.booking.id)
+  event <- createEvent (Just $ getId bookingData.booking.riderId) (getId bookingData.booking.merchantId) eventType RIDER_APP System (Just bookingPayload) (Just $ getId bookingData.booking.id) (Just $ getId bookingData.booking.merchantOperatingCityId)
   triggerEvent event
+
+triggerExophoneEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  ExophoneEventData ->
+  m ()
+triggerExophoneEvent ExophoneEventData {..} = do
+  let exophonePayload = Exophone {..}
+  exoevent <- createEvent (getId <$> personId) (maybe "" getId merchantId) ExophoneData RIDER_APP triggeredBy (Just exophonePayload) Nothing Nothing
+  triggerEvent exoevent

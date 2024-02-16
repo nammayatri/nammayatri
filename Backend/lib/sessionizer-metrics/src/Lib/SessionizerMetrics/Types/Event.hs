@@ -21,6 +21,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.SessionizerMetrics.Kafka.Config
 import Prometheus
 
@@ -31,15 +32,19 @@ data Event p = Event
     personId :: Maybe Text, -- id for customer or driver (whoever triggered the event)
     merchantId :: Text, -- id for merchant
     deploymentVersion :: Text, -- version of the current deployment
-    at :: UTCTime, -- time of the event
+    at :: Double, -- time of the event
     eventType :: EventType, -- type of the event. Type should be defined at the application layer
     subType :: Maybe Text, -- sub type of the event based on type, for easy processig of event in the pipeline. Defined at the application layer
     primaryId :: Maybe Text, -- id of the primary entity involved in the event
     service :: Service, -- name of the service which generated this event
     triggeredBy :: EventTriggeredBy, -- who triggered the event
-    payload :: Maybe p -- payload of the event. Type of this payload should be defined at the application layer
+    payload :: Maybe p, -- payload of the event. Type of this payload should be defined at the application layer
+    merchantOperatingCityId :: Maybe Text -- id for merchant operating city
   }
-  deriving (Show, Read, Eq, Ord, Generic, ToJSON, ToSchema)
+  deriving (Show, Read, Eq, Ord, Generic, ToSchema)
+
+instance ToJSON p => ToJSON (Event p) where
+  toJSON = genericToJSON constructorsWithSnakeCase
 
 instance FromJSON p => FromJSON (Event p)
 
@@ -62,7 +67,10 @@ data EventStreamMap = EventStreamMap
   }
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
-data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | BookingCreated | BookingCancelled | BookingCompleted | SearchRequest | Quotes | Estimate
-  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
+data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | BookingCreated | BookingCancelled | BookingCompleted | SearchRequest | Quotes | Estimate | ExophoneData | SDKData
+  deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToSchema, FromDhall)
+
+instance ToJSON EventType => ToJSON EventType where
+  toJSON = genericToJSON constructorsWithSnakeCase
 
 type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap], HasField "eventRequestCounter" r (Vector (Text, Text, Text) Counter))

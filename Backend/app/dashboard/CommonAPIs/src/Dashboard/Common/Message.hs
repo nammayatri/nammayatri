@@ -20,6 +20,7 @@ module Dashboard.Common.Message
   )
 where
 
+import AWS.S3 (FileType (..))
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Data.OpenApi hiding (description, name, password, summary, title, url)
@@ -43,7 +44,7 @@ data MessageEndpoint
   | MessageInfoEndpoint
   | MessageDeliveryInfoEndpoint
   | MessageReceiverListEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "MessageEndpoint"
 
@@ -88,10 +89,6 @@ instance ToMultipart Tmp UploadFileRequest where
       [Input "fileType" (show uploadFileRequest.fileType)]
       [FileData "file" (T.pack uploadFileRequest.file) "" (uploadFileRequest.file)]
 
-data FileType = Audio | Video | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
-  deriving stock (Eq, Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 newtype UploadFileResponse = UploadFileResponse
   { fileId :: Id File
   }
@@ -115,6 +112,7 @@ data AddMessageRequest = AddMessageRequest
     description :: Text, -- no max character limit
     shortDescription :: Text,
     label :: Maybe Text,
+    alwaysTriggerOnOnboarding :: Maybe Bool,
     translations :: [MessageTranslation],
     mediaFiles :: [Id File]
   }

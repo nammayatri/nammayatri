@@ -44,6 +44,8 @@ createInitialDriverStats driverId = do
             totalDistance = 0,
             ridesCancelled = Just 0,
             totalRidesAssigned = Just 0,
+            coinCovertedToCashLeft = 0,
+            totalCoinsConvertedCash = 0,
             updatedAt = now
           }
   createWithKV dStats
@@ -145,6 +147,8 @@ instance FromTType' BeamDS.DriverStats DriverStats where
             bonusEarned = bonusEarned,
             lateNightTrips = lateNightTrips,
             earningsMissed = earningsMissed,
+            coinCovertedToCashLeft = fromMaybe 0 coinCovertedToCashLeft,
+            totalCoinsConvertedCash = fromMaybe 0 totalCoinsConvertedCash,
             updatedAt = updatedAt
           }
 
@@ -161,6 +165,8 @@ instance ToTType' BeamDS.DriverStats DriverStats where
         BeamDS.bonusEarned = bonusEarned,
         BeamDS.lateNightTrips = lateNightTrips,
         BeamDS.earningsMissed = earningsMissed,
+        BeamDS.coinCovertedToCashLeft = Just coinCovertedToCashLeft,
+        BeamDS.totalCoinsConvertedCash = Just totalCoinsConvertedCash,
         BeamDS.updatedAt = updatedAt
       }
 
@@ -178,6 +184,33 @@ incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEar
           Se.Set BeamDS.lateNightTrips (ds.lateNightTrips + tripCount)
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
+
+updateCoinToCashByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
+updateCoinToCashByDriverId driverId amountToAdd = do
+  now <- getCurrentTime
+  mbDriverStat <- findById driverId
+  case mbDriverStat of
+    Just driverStat -> do
+      updateWithKV
+        [ Se.Set BeamDS.coinCovertedToCashLeft $ Just (driverStat.coinCovertedToCashLeft + amountToAdd),
+          Se.Set BeamDS.updatedAt now
+        ]
+        [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
+    Nothing -> pure ()
+
+updateCoinFieldsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> HighPrecMoney -> m ()
+updateCoinFieldsByDriverId driverId amount = do
+  now <- getCurrentTime
+  mbDriverStat <- findById driverId
+  case mbDriverStat of
+    Just driverStat -> do
+      updateWithKV
+        [ Se.Set BeamDS.coinCovertedToCashLeft $ Just (driverStat.coinCovertedToCashLeft + amount),
+          Se.Set BeamDS.totalCoinsConvertedCash $ Just (driverStat.totalCoinsConvertedCash + amount),
+          Se.Set BeamDS.updatedAt now
+        ]
+        [Se.Is BeamDS.driverId (Se.Eq (getId driverId))]
+    Nothing -> pure ()
 
 setMissedEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Money -> m ()
 setMissedEarnings (Id driverId') missedEarnings = do

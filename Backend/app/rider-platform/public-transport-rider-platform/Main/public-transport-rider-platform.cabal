@@ -188,6 +188,7 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , esqueleto
     , euler-hs
     , hedis
@@ -206,6 +207,7 @@ library
     , template-haskell
     , text
     , time
+    , unordered-containers
     , wai
   default-language: Haskell2010
   if flag(Local)
@@ -262,6 +264,7 @@ executable public-transport-rider-platform-exe
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , esqueleto
     , euler-hs
     , hedis
@@ -281,6 +284,7 @@ executable public-transport-rider-platform-exe
     , template-haskell
     , text
     , time
+    , unordered-containers
     , wai
   default-language: Haskell2010
   if flag(Local)

@@ -71,7 +71,9 @@ instance FromTType' BeamM.Merchant Merchant where
             shortId = ShortId shortId,
             name = name,
             defaultCity = city,
+            defaultState = state,
             country = country,
+            fallbackShortId = ShortId fallbackShortId,
             bapId = bapId,
             bapUniqueKeyId = bapUniqueKeyId,
             geofencingConfig = geofencingConfig,
@@ -87,13 +89,19 @@ instance FromTType' BeamM.Merchant Merchant where
             distanceWeightage = distanceWeightage,
             signatureExpiry = signatureExpiry,
             createdAt = createdAt,
-            timeDiffFromUtc = timeDiffFromUtc,
             updatedAt = updatedAt,
             isAvoidToll = isAvoidToll,
             aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
             aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
             mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
-            mediaFileUrlPattern = mediaFileUrlPattern
+            mediaFileUrlPattern = mediaFileUrlPattern,
+            editPickupDistanceThreshold = editPickupDistanceThreshold,
+            driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
+            numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
+            publicMediaFileUrlPattern = publicMediaFileUrlPattern,
+            kaptureDisposition = kaptureDisposition,
+            scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
+            ..
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -103,8 +111,10 @@ instance ToTType' BeamM.Merchant Merchant where
       { BeamM.id = getId id,
         BeamM.subscriberId = getShortId subscriberId,
         BeamM.shortId = getShortId shortId,
+        BeamM.fallbackShortId = getShortId fallbackShortId,
         BeamM.name = name,
         BeamM.city = defaultCity,
+        BeamM.state = defaultState,
         BeamM.country = country,
         BeamM.bapId = bapId,
         BeamM.bapUniqueKeyId = bapUniqueKeyId,
@@ -123,10 +133,15 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.signatureExpiry = signatureExpiry,
         BeamM.createdAt = createdAt,
         BeamM.updatedAt = updatedAt,
-        BeamM.timeDiffFromUtc = timeDiffFromUtc,
         BeamM.isAvoidToll = isAvoidToll,
         BeamM.aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
         BeamM.aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
         BeamM.mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
-        BeamM.mediaFileUrlPattern = mediaFileUrlPattern
+        BeamM.mediaFileUrlPattern = mediaFileUrlPattern,
+        BeamM.editPickupDistanceThreshold = editPickupDistanceThreshold,
+        BeamM.driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
+        BeamM.numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
+        BeamM.publicMediaFileUrlPattern = publicMediaFileUrlPattern,
+        BeamM.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
+        BeamM.kaptureDisposition = kaptureDisposition
       }

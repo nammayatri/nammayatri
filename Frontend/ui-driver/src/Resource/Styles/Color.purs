@@ -350,9 +350,6 @@ darkGrey = "#B9B8B8"
 lightGreyShade :: Color
 lightGreyShade = "#DDDDDD"
 
-blueBtn :: Color
-blueBtn = "#0066FF"
-
 lightWhite :: Color
 lightWhite = "#f7f5f5"
 
@@ -409,11 +406,8 @@ golden = "#E9BE4D"
 greenGrey :: Color
 greenGrey = "#268C6E"
 
-transparentGrey :: Color
-transparentGrey = "#66888888"
-
-green200 :: Color
-green200 = "#2053BB6F"
+greenGrey100 :: Color
+greenGrey100 = "#29268C6E"
 
 greenDull :: Color
 greenDull = "#5FAF9E"
@@ -426,9 +420,6 @@ transparentWhite = "#30FFFFFF"
 
 lightGradientBlue :: Color
 lightGradientBlue = "#F5F8FF"
-
-darkGradientBlue :: Color
-darkGradientBlue = "#E2EAFF"
 
 lightPurple :: Color
 lightPurple = "#F4ECFF"

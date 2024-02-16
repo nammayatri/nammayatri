@@ -92,7 +92,6 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("RiderDetails" :: Text) [(obj, val, entryId, RiderDetailsObject obj) | (CreateDBCommand entryId _ _ _ _ (RiderDetailsObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("SearchRequest" :: Text) [(obj, val, entryId, SearchRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("SearchRequestForDriver" :: Text) [(obj, val, entryId, SearchRequestForDriverObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestForDriverObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("SearchRequestSpecialZone" :: Text) [(obj, val, entryId, SearchRequestSpecialZoneObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchRequestSpecialZoneObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("SearchTry" :: Text) [(obj, val, entryId, SearchTryObject obj) | (CreateDBCommand entryId _ _ _ _ (SearchTryObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Vehicle" :: Text) [(obj, val, entryId, VehicleObject obj) | (CreateDBCommand entryId _ _ _ _ (VehicleObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Volunteer" :: Text) [(obj, val, entryId, VolunteerObject obj) | (CreateDBCommand entryId _ _ _ _ (VolunteerObject obj), val) <- cmds]
@@ -134,9 +133,9 @@ runCreateCommands cmds streamKey = do
               Env {..} <- ask
               res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection newObjects streamKey' model
               either
-                ( \_ -> do
-                    void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                ( \error' -> do
+                    void $ publishDBSyncMetric $ Event.KafkaPushFailure "Create" model
+                    EL.logError ("ERROR:" :: Text) (("Kafka Driver Create Error :" <> error' <> " for model :" <> model) :: Text)
                     pure [Left entryIds]
                 )
                 (\_ -> pure [Right entryIds])

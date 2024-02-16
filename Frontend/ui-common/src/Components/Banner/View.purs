@@ -31,7 +31,7 @@ view push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , cornerRadius 12.0
+    , cornerRadius config.cornerRadius
     , margin config.margin
     , padding config.padding
     , background config.backgroundColor
@@ -64,13 +64,16 @@ view push config =
           , gravity LEFT
           , text config.title
           , color config.titleColor
-          , padding $ PaddingBottom 2
+          , padding $ PaddingBottom 8
           , visibility if config.titleTextVisibility then VISIBLE else GONE
           ] <> (FontStyle.getFontStyle config.titleStyle LanguageStyle)
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
+          , background config.actionTextBackgroundColor
+          , cornerRadius config.actionTextCornerRadius
+          , padding $ PaddingHorizontal 12 12
           , visibility if config.actionTextVisibility then VISIBLE else GONE
           ]
           [
@@ -104,7 +107,7 @@ view push config =
             [
               height config.imageHeight
             , width config.imageWidth
-            , margin $ MarginRight 5
+            , margin $ config.imageMargin
             , imageWithFallback config.imageUrl
             ]]
     ]

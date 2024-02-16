@@ -17,6 +17,15 @@ module Constants where
 appConfig :: String
 appConfig = "appConfig"
 
+decodeAppConfig :: String
+decodeAppConfig = "decodeAppConfig"
+
+languageKey :: String
+languageKey = "languageKey"
+
+sosAlarmStatus :: String
+sosAlarmStatus = "sosAlarmStatus"
+
 configuration_file :: String
 configuration_file = "v1-configuration"
 
@@ -31,3 +40,12 @@ dotJSON = ".json"
 
 defaultDensity :: Number
 defaultDensity = 160.0
+
+getSeparatorFactor :: Int
+getSeparatorFactor = 8
+
+defaultSeparatorCount :: Int
+defaultSeparatorCount = 4
+
+globalPayload :: String
+globalPayload = "__payload"

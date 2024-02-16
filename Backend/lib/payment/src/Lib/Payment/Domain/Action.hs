@@ -21,6 +21,7 @@ module Lib.Payment.Domain.Action
     juspayWebhookService,
     createNotificationService,
     createExecutionService,
+    buildSDKPayload,
   )
 where
 
@@ -197,7 +198,7 @@ buildPaymentOrder merchantId personId req resp = do
         amount = req.amount,
         currency = resp.sdk_payload.payload.currency,
         status = resp.status,
-        paymentLinks = fromMaybe (Payment.PaymentLinks Nothing Nothing Nothing) resp.payment_links,
+        paymentLinks = fromMaybe (Payment.PaymentLinks Nothing Nothing Nothing Nothing) resp.payment_links,
         clientAuthToken = Just clientAuthToken,
         clientAuthTokenExpiry = Just resp.sdk_payload.payload.clientAuthTokenExpiry,
         getUpiDeepLinksOption = resp.sdk_payload.payload.options_getUpiDeepLinks,
@@ -479,7 +480,7 @@ createExecutionService (request, orderId) merchantId executionCall = do
             amount = req.amount,
             currency = Juspay.INR,
             status = Payment.NEW,
-            paymentLinks = Payment.PaymentLinks Nothing Nothing Nothing,
+            paymentLinks = Payment.PaymentLinks Nothing Nothing Nothing Nothing,
             clientAuthToken = Nothing,
             clientAuthTokenExpiry = Nothing,
             getUpiDeepLinksOption = Nothing,

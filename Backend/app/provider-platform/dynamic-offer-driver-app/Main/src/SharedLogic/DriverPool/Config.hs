@@ -14,7 +14,8 @@
 
 module SharedLogic.DriverPool.Config where
 
-import Domain.Types.Merchant.DriverPoolConfig
+import qualified Domain.Types.Common as DTC
+import Domain.Types.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -32,30 +33,45 @@ data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   }
   deriving (Generic)
 
+getSearchDriverPoolConfig ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id MerchantOperatingCity ->
+  Maybe Meters ->
+  m DriverPoolConfig
+getSearchDriverPoolConfig merchantOpCityId mbDist = do
+  let distance = fromMaybe 0 mbDist
+      vehicle = Nothing
+      tripCategory = "All"
+  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+  findDriverPoolConfig configs vehicle tripCategory distance
+
 getDriverPoolConfig ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
-  Maybe Variant.Variant ->
-  Meters ->
+  Variant.Variant ->
+  DTC.TripCategory ->
+  Maybe Meters ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId Nothing dist = do
+getDriverPoolConfig merchantOpCityId vehicle tripCategory mbDist = do
+  let distance = fromMaybe 0 mbDist
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  getDefaultDriverPoolConfig configs dist
-getDriverPoolConfig merchantOpCityId (Just vehicle) dist = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
+  let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) (show tripCategory) distance) configs
   case configs of
-    [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
+    [] -> throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
     _ ->
       case mbApplicableConfig of
         Just applicableConfig -> return applicableConfig
-        Nothing -> getDefaultDriverPoolConfig configs dist
+        Nothing -> do
+          let alternativeConfigs = find (filterByDistAndDveh (Just vehicle) "All" distance) configs
+          case alternativeConfigs of
+            Just cfg -> return cfg
+            Nothing -> findDriverPoolConfig configs Nothing "All" distance
 
-filterByDistAndDveh :: Maybe Variant.Variant -> Meters -> DriverPoolConfig -> Bool
-filterByDistAndDveh mbVehicle_ dist cfg =
-  dist >= cfg.tripDistance && cfg.vehicleVariant == mbVehicle_
+filterByDistAndDveh :: Maybe Variant.Variant -> Text -> Meters -> DriverPoolConfig -> Bool
+filterByDistAndDveh vehicle tripCategory dist cfg =
+  dist >= cfg.tripDistance && cfg.vehicleVariant == vehicle && cfg.tripCategory == tripCategory
 
-getDefaultDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Meters -> m DriverPoolConfig
-getDefaultDriverPoolConfig configs dist = do
-  find (filterByDistAndDveh Nothing dist) configs
-    & fromMaybeM (InvalidRequest "DriverPool default config not found")
+findDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Maybe Variant.Variant -> Text -> Meters -> m DriverPoolConfig
+findDriverPoolConfig configs vehicle tripCategory dist = do
+  find (filterByDistAndDveh vehicle tripCategory dist) configs
+    & fromMaybeM (InvalidRequest $ "DriverPool Config not found: " <> show vehicle <> show tripCategory <> show dist)

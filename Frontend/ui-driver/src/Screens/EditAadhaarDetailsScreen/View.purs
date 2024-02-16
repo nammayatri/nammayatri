@@ -108,7 +108,7 @@ headerLayout state push heading =
         , height WRAP_CONTENT
         , text (getString EDIT)
         , margin (MarginRight 10)
-        , color Color.blueBtn
+        , color Color.brightBlue
         , gravity RIGHT
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , visibility if state.props.isInEditAadharDetailsScreen then GONE else VISIBLE
@@ -170,7 +170,7 @@ aadhaarDetailsView state push =
                        , height WRAP_CONTENT
                        , margin (MarginLeft 10)
                        , text (getString PREVIEW)
-                       , color Color.blueBtn
+                       , color Color.brightBlue
                        , visibility if (optionItem.title == AADHAAR_NUMBER) then GONE else VISIBLE
                        ] <> FontStyle.subHeading1 LanguageStyle
                     ]

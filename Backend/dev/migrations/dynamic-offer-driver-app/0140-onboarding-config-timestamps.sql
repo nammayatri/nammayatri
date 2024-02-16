@@ -7,6 +7,3 @@ ALTER TABLE atlas_driver_offer_bpp.onboarding_document_configs ADD COLUMN update
 ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_radius;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN min_radius;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN radius_step_size;
-
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN intelligent_pool_percentage;
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN min_driver_batch_size;

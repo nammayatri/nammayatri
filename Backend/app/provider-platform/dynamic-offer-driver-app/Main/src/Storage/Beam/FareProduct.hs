@@ -17,6 +17,7 @@
 module Storage.Beam.FareProduct where
 
 import qualified Database.Beam as B
+import Domain.Types.Common
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -29,7 +30,7 @@ data FareProductT f = FareProductT
     farePolicyId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
     area :: B.C f Domain.Area,
-    flow :: B.C f Domain.FlowType
+    tripCategory :: B.C f TripCategory
   }
   deriving (Generic, B.Beamable)
 

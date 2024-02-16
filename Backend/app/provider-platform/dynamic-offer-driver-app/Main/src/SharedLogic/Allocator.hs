@@ -21,9 +21,11 @@ module SharedLogic.Allocator where
 import Data.Singletons.TH
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Merchant.MerchantMessage
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.Overlay
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
@@ -33,14 +35,15 @@ import Lib.Scheduler
 
 data AllocatorJobType
   = SendSearchRequestToDriver
-  | SendPaymentReminderToDriver
-  | UnsubscribeDriverForPaymentOverdue
   | UnblockDriver
   | SendPDNNotificationToDriver
   | MandateExecution
   | CalculateDriverFees
   | OrderAndNotificationStatusUpdate
   | SendOverlay
+  | BadDebtCalculation
+  | SendManualPaymentLink
+  | RetryDocumentVerification
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -49,18 +52,19 @@ showSingInstance ''AllocatorJobType
 instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
-  restoreAnyJobInfo SSendPaymentReminderToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPaymentReminderToDriver jobData
-  restoreAnyJobInfo SUnsubscribeDriverForPaymentOverdue jobData = AnyJobInfo <$> restoreJobInfo SUnsubscribeDriverForPaymentOverdue jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
   restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
   restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
   restoreAnyJobInfo SSendOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendOverlay jobData
+  restoreAnyJobInfo SBadDebtCalculation jobData = AnyJobInfo <$> restoreJobInfo SBadDebtCalculation jobData
+  restoreAnyJobInfo SSendManualPaymentLink jobData = AnyJobInfo <$> restoreJobInfo SSendManualPaymentLink jobData
+  restoreAnyJobInfo SRetryDocumentVerification jobData = AnyJobInfo <$> restoreJobInfo SRetryDocumentVerification jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
-    estimatedRideDistance :: Meters,
+    estimatedRideDistance :: Maybe Meters,
     driverExtraFeeBounds :: Maybe DFP.DriverExtraFeeBounds
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
@@ -68,29 +72,6 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
 instance JobInfoProcessor 'SendSearchRequestToDriver
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
-
-data SendPaymentReminderToDriverJobData = SendPaymentReminderToDriverJobData
-  { startTime :: UTCTime,
-    endTime :: UTCTime,
-    timeDiff :: Seconds,
-    merchantId :: Maybe (Id DM.Merchant)
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
-
-instance JobInfoProcessor 'SendPaymentReminderToDriver
-
-type instance JobContent 'SendPaymentReminderToDriver = SendPaymentReminderToDriverJobData
-
-data UnsubscribeDriverForPaymentOverdueJobData = UnsubscribeDriverForPaymentOverdueJobData
-  { startTime :: UTCTime,
-    timeDiff :: Seconds,
-    merchantId :: Maybe (Id DM.Merchant)
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
-
-instance JobInfoProcessor 'UnsubscribeDriverForPaymentOverdue
-
-type instance JobContent 'UnsubscribeDriverForPaymentOverdue = UnsubscribeDriverForPaymentOverdueJobData
 
 newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
   { driverId :: Id DP.Driver
@@ -107,7 +88,9 @@ data SendPDNNotificationToDriverJobData = SendPDNNotificationToDriverJobData
   { startTime :: UTCTime,
     endTime :: UTCTime,
     merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    retryCount :: Maybe Int,
+    serviceName :: Maybe Plan.ServiceNames
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -119,7 +102,8 @@ data MandateExecutionInfo = MandateExecutionInfo
   { startTime :: UTCTime,
     endTime :: UTCTime,
     merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    serviceName :: Maybe Plan.ServiceNames
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -131,13 +115,28 @@ data CalculateDriverFeesJobData = CalculateDriverFeesJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     startTime :: UTCTime,
-    endTime :: UTCTime
+    endTime :: UTCTime,
+    serviceName :: Maybe Plan.ServiceNames,
+    scheduleNotification :: Maybe Bool,
+    scheduleOverlay :: Maybe Bool,
+    scheduleManualPaymentLink :: Maybe Bool,
+    scheduleDriverFeeCalc :: Maybe Bool,
+    createChildJobs :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 instance JobInfoProcessor 'CalculateDriverFees
 
 type instance JobContent 'CalculateDriverFees = CalculateDriverFeesJobData
+
+data RetryDocumentVerificationJobData = RetryDocumentVerificationJobData
+  { requestId :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'RetryDocumentVerification
+
+type instance JobContent 'RetryDocumentVerification = RetryDocumentVerificationJobData
 
 data OrderAndNotificationStatusUpdateJobData = OrderAndNotificationStatusUpdateJobData
   { merchantId :: Id DM.Merchant,
@@ -161,10 +160,36 @@ data SendOverlayJobData = SendOverlayJobData
     driverPaymentCycleDuration :: NominalDiffTime,
     driverPaymentCycleStartTime :: NominalDiffTime,
     driverFeeOverlaySendingTimeLimitInDays :: Int,
-    overlayBatchSize :: Int
+    overlayBatchSize :: Int,
+    serviceName :: Maybe Plan.ServiceNames,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 instance JobInfoProcessor 'SendOverlay
 
 type instance JobContent 'SendOverlay = SendOverlayJobData
+
+data BadDebtCalculationJobData = BadDebtCalculationJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'BadDebtCalculation
+
+type instance JobContent 'BadDebtCalculation = BadDebtCalculationJobData
+
+data SendManualPaymentLinkJobData = SendManualPaymentLinkJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    serviceName :: Plan.ServiceNames,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    channel :: MediaChannel
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendManualPaymentLink
+
+type instance JobContent 'SendManualPaymentLink = SendManualPaymentLinkJobData

@@ -17,7 +17,7 @@
 module Domain.Types.SearchTry where
 
 import Data.Aeson
-import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.Common as DTC
 import Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSR
@@ -32,7 +32,7 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 data SearchTry = SearchTry
   { id :: Id SearchTry,
     requestId :: Id DSR.SearchRequest,
-    estimateId :: Id DEst.Estimate,
+    estimateId :: Text,
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     messageId :: Text,
@@ -44,6 +44,8 @@ data SearchTry = SearchTry
     status :: SearchTryStatus,
     searchRepeatCounter :: Int,
     searchRepeatType :: SearchRepeatType,
+    tripCategory :: DTC.TripCategory,
+    isScheduled :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

@@ -39,8 +39,10 @@ genericHeaderConfig state = let
        { height = V 25
        , width = V 25
        , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-       , margin = (Margin 12 12 12 12)
+       , margin = (Margin 8 8 8 8)
        , visibility = VISIBLE
+       , enableRipple = true
+       , layoutMargin = Margin 4 4 4 4
        }
     , textConfig
       { text = if (MU.getMerchant FunctionCall == MU.NAMMAYATRI) then (getString DRIVER_RECEIPT) else (getString INVOICE)
@@ -62,5 +64,6 @@ primaryButtonConfig state = let
       , color = state.data.config.primaryTextColor }
       , background = state.data.config.primaryBackground
       , id = "DownloadPDFButton"
+      , enableRipple = true
      }
    in primaryButtonConfig'

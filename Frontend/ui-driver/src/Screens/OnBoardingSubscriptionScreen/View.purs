@@ -1,19 +1,26 @@
 module Screens.OnBoardingSubscriptionScreen.View where
 
 import Prelude
-import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width, cornerRadius, weight, afterRender, imageWithFallback, background, textFromHtml, gradient, alpha, fontSize, singleLine, horizontalScrollView, scrollBarX, scrollBarY, clickable, lineHeight)
-import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Styles.Colors as Color
-import Screens.OnBoardingSubscriptionScreen.Controller (Action(..), eval,ScreenOutput)
-import Screens.Types as ST
-import Halogen.VDom.DOM.Prop (Prop)
+
 import Common.Types.App (Version(..), LazyCheck(..), Event)
-import Engineering.Helpers.Commons (screenWidth, liftFlow)
-import JBridge (getWidthFromPercent)
+import Components.PrimaryButton as PrimaryButton
+import Data.Array (mapWithIndex)
+import Data.Array as DA
+import Data.Either (Either(..))
 import Data.Int (round, toNumber, fromString)
-import Language.Strings (getString)
+import Data.Maybe (Maybe(..), isJust, fromMaybe)
+import Debug (spy)
+import Effect (Effect)
+import Effect.Aff (launchAff)
+import Engineering.Helpers.Commons (screenWidth, liftFlow)
+import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Halogen.VDom.DOM.Prop (Prop)
+import Helpers.Utils (getDateAfterNDays)
+import JBridge (getWidthFromPercent)
+import JBridge as JB
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -32,10 +39,26 @@ import Screens.SubscriptionScreen.Controller (getAllFareFromArray, getPlanPrice)
 import Components.PrimaryButton as PrimaryButton
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import JBridge as JB
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getDateAfterNDays)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
-import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig)
-
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout)
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig, popupModalConfig)
+import Screens.OnBoardingSubscriptionScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.SubscriptionScreen.Controller (getAllFareFromArray, getPlanPrice)
+import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
+import Screens.Types (PlanCardConfig, PromoConfig)
+import Screens.Types as ST
+import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), OrderStatusRes(..), UiPlansResp(..), PaymentBreakUp(..), KioskLocationResp(..), KioskLocationRes(..))
+import Services.Backend as Remote
+import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
+import Styles.Colors as Color
+import Types.App (defaultGlobalState)
+import Components.PopUpModal as PopUpModal
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
+import Locale.Utils
 
 screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
 screen initialState =
@@ -63,11 +86,12 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
 view push state = 
-    linearLayout
+    relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
+    , onBackPressed push $ const BackPressed
     ][
       scrollView
       [ height MATCH_PARENT
@@ -95,9 +119,9 @@ view push state =
             , weight 1.0
             , orientation VERTICAL
             ][
-              commonTV push (getString CHOOSE_YOUR_PLAN) Color.black800 FontStyle.subHeading1 LEFT 0 NoAction false
+              commonTV push (getString $ CHOOSE_YOUR_PLAN "CHOOSE_YOUR_PLAN") Color.black800 FontStyle.subHeading1 LEFT 0 NoAction false
             , let date = getDateAfterNDays (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) -1) in 
-              commonTV push ( case getValueToLocalStore LANGUAGE_KEY of 
+              commonTV push ( case getLanguageLocale languageKey of 
                                 "EN_US" -> (getString FREE_UNTIL <> date)
                                 _ -> (date <> getString FREE_UNTIL)
                             ) Color.black700 FontStyle.body3 LEFT 0 NoAction false
@@ -125,6 +149,8 @@ view push state =
         , bottomView push state
         ]
       ]
+    , if state.props.supportPopup then PrestoAnim.animationSet [ Anim.fadeIn state.props.supportPopup ] $ PopUpModal.view (push <<< PopUpModalAC) (popupModalConfig state)
+      else linearLayout[visibility GONE][]
     ]
 
 headerLayout :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
@@ -184,7 +210,7 @@ headerLayout push state =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , margin $ MarginLeft 8
-        , onClick push $ const GoToHomeScreen
+        , onClick push $ const GoToRegisteration
         ][
           imageView
           [ width $ V 16
@@ -193,11 +219,11 @@ headerLayout push state =
           , padding $ Padding 2 2 2 2
           , margin $ MarginRight 5
           ]
-        , commonTV push (getString SKIP) Color.white900 FontStyle.body3 CENTER 0 GoToHomeScreen false
+        , commonTV push (getString SKIP) Color.white900 FontStyle.body3 CENTER 0 GoToRegisteration false
         ]
       ]
     ]
-  , commonTV push (getString MY_PLAN_TITLE) Color.white900 FontStyle.h1 LEFT 20 NoAction false
+  , commonTV push (getString $ MY_PLAN_TITLE "MY_PLAN_TITLE") Color.white900 FontStyle.h1 LEFT 20 NoAction false
   ]
 
 infoView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
@@ -253,7 +279,7 @@ infoView push state =
         , height $ V 32
         , imageWithFallback $ fetchImage FF_ASSET "ic_mingcute_currency_rupee"
         ]
-      , commonTV push (getString EARN_UPTO_PER_DAY) Color.black900 FontStyle.h3 CENTER 0 NoAction false
+      , commonTV push (getVarString EARN_UPTO_PER_DAY [show state.data.subscriptionConfig.earnAmountInADay]) Color.black900 FontStyle.h3 CENTER 0 NoAction false
       ]
     ]
   ]
@@ -280,7 +306,7 @@ workFlowView push state =
       , height $ V 146
       , imageWithFallback $ fetchImage FF_ASSET "ic_subscription_flow"
       ]
-    , let lang = getValueToLocalStore LANGUAGE_KEY
+    , let lang = getLanguageLocale languageKey
           check = lang == "KN_IN" || lang == "TA_IN"
           font2 = if check then FontStyle.body16 else FontStyle.body3 in
       linearLayout
@@ -665,7 +691,7 @@ underlinedTextView value push =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , gravity CENTER
-    , onClick push $ const GoToHomeScreen
+    , onClick push $ const GoToRegisteration
     ]
     [ textView
         $ [ width WRAP_CONTENT

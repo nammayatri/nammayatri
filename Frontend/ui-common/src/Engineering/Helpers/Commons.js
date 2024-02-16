@@ -2,7 +2,16 @@ import { callbackMapper as PrestoCallbackMapper } from "presto-ui";
 
 const { JBridge, Android } = window;
 
-const countDownTimers = {};
+function getLanguageLocale (){
+  if (!window.languageKey) {
+    const locale = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+    window.languageKey = locale;
+    return locale;
+  } 
+  return window.languageKey;
+}
+
+const idMap = {};
 
 export const getOs = function () {
   if (window.__OS) {
@@ -37,14 +46,14 @@ export const getNewIDWithTag = function(tag){
 }
 
 export const callAPI = function () {
-  return window.JBridge.callAPI(arguments[0], arguments[1], getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6] )
+  return window.JBridge.callAPI(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6] )
 }
 
 export const callAPIWithOptions = function () {
   if (typeof window.JBridge.callAPIWithOptions == "function") {
-    return window.JBridge.callAPIWithOptions(arguments[0], arguments[1], getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6], arguments[7]);
+    return window.JBridge.callAPIWithOptions(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6], arguments[7]);
   } else {
-    return window.JBridge.callAPI(arguments[0], arguments[1], getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[7]);
+    return window.JBridge.callAPI(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[7]);
   }
 }
 
@@ -112,6 +121,28 @@ export const screenHeight = function(){
   return screen.height;
 }
 
+export const getDeviceHeight = function(){
+  try{
+    if(window.__OS == "IOS" && JBridge.getDeviceHeight) return parseInt(JBridge.getDeviceHeight());
+    return JSON.parse(JBridge.getSessionInfo()).screen_height
+  }
+  catch(e){
+    console.log("error in getDeviceHeight", e);
+    return -1;
+  }
+}
+
+export const getScreenPpi = function(){
+  try{
+    return Math.round(JSON.parse(JBridge.getSessionInfo()).screen_ppi);
+  }
+  catch(e){
+    console.log("error in getScreenPpi", e);
+    return -1;
+  }
+}
+
+
 export const safeMarginTopImpl = function () {
   try {
     if (parent.__DEVICE_DETAILS && parent.__DEVICE_DETAILS.safe_area_frame) {
@@ -158,47 +189,6 @@ export const setText = function (id) {
   }
 }
 
-function instantGetTimer (fn , delay) {
-  fn();
-  window.timerId = setInterval( fn, delay );
-  return window.timerId;
-}
-
-export const countDown = function (countDownTime) {
-  return function (id) {
-    return function (cb) {
-      return function (action) {
-        return function () {
-          if (countDownTimers[id] != undefined) {
-            clearInterval(parseInt(countDownTimers[id]));
-          }
-          const callback = PrestoCallbackMapper.map(function () {
-            let countDownCounter = countDownTime;
-            countDownTimers[id] = instantGetTimer(function () {
-              const timerIID = countDownTimers[id];
-              if (timerIID != undefined) {
-                countDownCounter -= 1;
-                if (countDownCounter <= 0) {
-                  delete countDownTimers[id];
-                  cb(action(0)(id)("EXPIRED")(timerIID))();
-                } else {
-                  cb(action(countDownCounter)(id)("INPROGRESS")(timerIID))();
-                }
-              }
-            }, 1000);
-          });
-          window.callUICallback(callback);
-        }
-      }
-    }
-  }
-}
-
-export const clearTimer = function (a)
-{
-  clearInterval(parseInt(a));
-};
-
 export const getExpiryTime = function (str1) {
   return function (reverse) {
     try {
@@ -225,9 +215,7 @@ export const getCurrentTimeStamp = function () {
 };
 
 export const getCurrentUTC = function (str) {
-  const result = new Date().toISOString();
-  console.log(result);
-  return result;
+  return new Date().toISOString();
 };
 
 export const getDateFromObj = function (obj){
@@ -251,7 +239,7 @@ function getFormattedLanguage(language){
 export const getPastDays = function (count) {
   try {
     const result = [];
-    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    const language = getLanguageLocale();
     for (let i = 0; i < count; i++) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -273,7 +261,7 @@ export const getPastWeeks = function (count) {
     while (currentDate.getDay() != 0) {
       currentDate.setDate(currentDate.getDate() - 1);
     }
-    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    const language = getLanguageLocale();
     currentDate.setDate(currentDate.getDate() + 7);
     for (let i = 0; i < count; i++) {
       const dStart = new Date(currentDate);
@@ -289,6 +277,25 @@ export const getPastWeeks = function (count) {
   } catch (e) {
     console.log("error in getPastWeeks", e);
   }
+};
+
+export const getDayName = function (dateString) {
+  const date = new Date(dateString);
+  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayOfWeek = date.getDay();
+  return daysOfWeek[dayOfWeek];
+}
+
+export const getFutureDate = function (startDate) {
+  return function (noOfDays) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + noOfDays);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
 };
 
 // ---------------------------------- moment ---------------------------------------------
@@ -339,6 +346,10 @@ function formatDates(date, format, language) {
       const year = date.getFullYear();
       return `${year}`;
     },
+    "YY": () => {
+      const year = ("" + date.getFullYear()).slice(-2);
+      return `${year}`;
+    },
     "D": () => {
       const day = date.getDate();
       return `${day}`;
@@ -367,6 +378,11 @@ function formatDates(date, format, language) {
     },
     "ddd": () => {
       const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const weekday = weekdays[date.getDay()];
+      return `${weekday}`;
+    },
+    "dddFull": () => {
+      const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       const weekday = weekdays[date.getDay()];
       return `${weekday}`;
     },
@@ -415,15 +431,21 @@ export const camelCaseToSentenceCase = function(string) {
 export const convertUTCtoISC = function (str) {
   return function (format) {
     let localTime = new Date(str);
-    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    const language = getLanguageLocale();
     localTime = formatDates(localTime, format, getFormattedLanguage(language));
     return localTime;
   };
 };
 
+export const convertUTCTimeToISTTimeinHHMMSS = function (utcTime) {
+
+  const utcDate = new Date(`1970-01-01T${utcTime}Z`);
+  return (String(utcDate.getHours()).padStart(2, "0") + ":" + String(utcDate.getMinutes()).padStart(2, "0") + ":" + String(utcDate.getSeconds()).padStart(2, "0"));
+};
+
 export const getFormattedDate = function (str) {
   const date = new Date(str);
-  const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+  const language = getLanguageLocale();
   return formatDates(new Date(date),"MMMM Do, YYYY", getFormattedLanguage(language));
 }
 
@@ -459,3 +481,53 @@ export const getImageUrl = function (url) {
     console.log("error in getImageUrl " + e);
   }
 };
+
+export const setEventTimestamp = function(string){
+  return function(){
+    if (!window.flowTimeStampObject[string]){
+      window.flowTimeStampObject[string] = Date.now() - window.prevTimeStamp;
+      window.prevTimeStamp = Date.now();
+    }
+  }
+}
+
+export const getTimeStampObject = function(){
+  return function(){
+    const keyValuePairArray = Object.keys(window.flowTimeStampObject).map(function(key) {
+      return {
+        key: key,
+        value: window.flowTimeStampObject[key]
+      };
+    });
+    return keyValuePairArray;
+  }
+}
+
+function getRandom(max) {
+  return Math.floor(Math.random() * max) + 1; 
+}
+
+export const updateIdMap = function (key) {
+  idMap[key] = {id : getRandom(10000), shouldPush: true};
+  return idMap[key];
+};
+
+export const updatePushInIdMap = function (key, flag) {
+  if (idMap[key]) {
+    idMap[key]["shouldPush"] = flag;
+  }
+}
+
+export const getValueFromIdMap = function (key) {
+  let val = idMap[key]; 
+  if (!val) {
+    idMap[key] = {id : getRandom(10000), shouldPush: true};
+    val = idMap[key];
+  }
+  return val;
+};
+
+export const isTrue = function (a) {
+  const bool = true;
+  return a.toString() === bool.toString();
+}

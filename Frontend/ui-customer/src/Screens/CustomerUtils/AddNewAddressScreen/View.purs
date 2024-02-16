@@ -39,7 +39,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetLink)
 import Helpers.Utils as HU
 import JBridge as JB
-import Language.Strings (LANGUAGE_KEY(..), getString, getKey)
+import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||), (>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility)
@@ -50,6 +50,7 @@ import Debug (spy)
 import Data.String as DS
 import Styles.Colors as Color
 import Common.Resources.Constants (pickupZoomLevel)
+import Locale.Utils
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -447,6 +448,9 @@ bottomBtnsData state =
     , distance : Nothing
     , showDistance : Just false
     , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_current_location"
     , title :  (getString USE_CURRENT_LOCATION)
@@ -472,6 +476,10 @@ bottomBtnsData state =
     , distance : Nothing
     , showDistance : Just false
     , actualDistance : Nothing
+    , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
+
     }
 
   ]
@@ -651,7 +659,7 @@ locationUnserviceableView state push =
       , height WRAP_CONTENT
       , gravity CENTER
       ][  textView $
-          [ text (getString  CURRENTLY_WE_ARE_LIVE_IN_)
+          [ text $ getString $ CURRENTLY_WE_ARE_LIVE_IN_ "CURRENTLY_WE_ARE_LIVE_IN_"
           , gravity CENTER
           , color Color.black700
           ] <> FontStyle.paragraphText LanguageStyle
@@ -659,6 +667,6 @@ locationUnserviceableView state push =
   ]
 
 getText ::  ST.AddNewAddressScreenState -> String
-getText state = case (getValueToLocalStore LANGUAGE_KEY) of
+getText state = case (getLanguageLocale languageKey) of
                   "EN_US" -> ((getString LOCATION_ALREADY_EXISTS_AS) <> " ' " <> state.data.existsAs <> " '")
                   _     -> ((getString LOCATION_ALREADY) <> " ' " <> state.data.existsAs <> " ' " <>(getString EXISTS_AS) )

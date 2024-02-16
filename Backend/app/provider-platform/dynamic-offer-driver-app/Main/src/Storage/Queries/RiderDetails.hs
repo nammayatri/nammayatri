@@ -72,6 +72,41 @@ updateReferralInfo customerNumberHash merchantId referralId driverId = do
     ]
     [Se.And [Se.Is BeamRD.mobileNumberHash (Se.Eq customerNumberHash), Se.Is BeamRD.merchantId (Se.Eq $ getId merchantId)]]
 
+updateNightSafetyChecks :: MonadFlow m => Id RiderDetails -> Bool -> m ()
+updateNightSafetyChecks (Id riderId) nightSafetyChecks = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamRD.nightSafetyChecks nightSafetyChecks, Se.Set BeamRD.updatedAt now]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
+updateCancellationDues :: MonadFlow m => Id RiderDetails -> HighPrecMoney -> m ()
+updateCancellationDues riderId dues = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRD.cancellationDues dues,
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId.getId)]
+
+updateDisputeChancesUsed :: MonadFlow m => Id RiderDetails -> Int -> m ()
+updateDisputeChancesUsed riderId disputeChancesUsed = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRD.disputeChancesUsed disputeChancesUsed,
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId.getId)]
+
+updateDisputeChancesUsedAndCancellationDues :: MonadFlow m => Id RiderDetails -> Int -> HighPrecMoney -> m ()
+updateDisputeChancesUsedAndCancellationDues riderId disputeChancesUsed dues = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRD.disputeChancesUsed disputeChancesUsed,
+      Se.Set BeamRD.cancellationDues dues,
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId.getId)]
+
 instance FromTType' BeamRD.RiderDetails RiderDetails where
   fromTType' BeamRD.RiderDetailsT {..} = do
     pure $
@@ -88,7 +123,10 @@ instance FromTType' BeamRD.RiderDetails RiderDetails where
             hasTakenValidRide = hasTakenValidRide,
             hasTakenValidRideAt = hasTakenValidRideAt,
             merchantId = Id merchantId,
-            otpCode = otpCode
+            otpCode = otpCode,
+            nightSafetyChecks = nightSafetyChecks,
+            cancellationDues = cancellationDues,
+            disputeChancesUsed = disputeChancesUsed
           }
 
 instance ToTType' BeamRD.RiderDetails RiderDetails where
@@ -106,5 +144,8 @@ instance ToTType' BeamRD.RiderDetails RiderDetails where
         BeamRD.hasTakenValidRide = hasTakenValidRide,
         BeamRD.hasTakenValidRideAt = hasTakenValidRideAt,
         BeamRD.merchantId = getId merchantId,
-        BeamRD.otpCode = otpCode
+        BeamRD.nightSafetyChecks = nightSafetyChecks,
+        BeamRD.otpCode = otpCode,
+        BeamRD.cancellationDues = cancellationDues,
+        BeamRD.disputeChancesUsed = disputeChancesUsed
       }

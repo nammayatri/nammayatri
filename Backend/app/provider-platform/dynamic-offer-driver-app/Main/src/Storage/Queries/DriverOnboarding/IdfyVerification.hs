@@ -51,6 +51,13 @@ updateResponse requestId status resp = do
     [Se.Set BeamIV.status status, Se.Set BeamIV.idfyResponse $ Just resp, Se.Set BeamIV.updatedAt now]
     [Se.Is BeamIV.requestId (Se.Eq requestId)]
 
+updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> m ()
+updateStatus requestId status = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamIV.status status, Se.Set BeamIV.updatedAt now]
+    [Se.Is BeamIV.requestId (Se.Eq requestId)]
+
 updateExtractValidationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> ImageExtractionValidation -> m ()
 updateExtractValidationStatus requestId status = do
   now <- getCurrentTime
@@ -70,6 +77,7 @@ instance FromTType' BeamIV.IdfyVerification IdfyVerification where
             documentImageId1 = Id documentImageId1,
             documentImageId2 = Id <$> documentImageId2,
             dashboardPassedVehicleVariant = dashboardPassedVehicleVariant,
+            retryCount = fromMaybe 0 retryCount,
             driverId = Id driverId,
             requestId = requestId,
             docType = docType,
@@ -91,6 +99,7 @@ instance ToTType' BeamIV.IdfyVerification IdfyVerification where
         BeamIV.documentImageId1 = getId documentImageId1,
         BeamIV.documentImageId2 = getId <$> documentImageId2,
         BeamIV.dashboardPassedVehicleVariant = dashboardPassedVehicleVariant,
+        BeamIV.retryCount = Just retryCount,
         BeamIV.driverId = getId driverId,
         BeamIV.requestId = requestId,
         BeamIV.docType = docType,

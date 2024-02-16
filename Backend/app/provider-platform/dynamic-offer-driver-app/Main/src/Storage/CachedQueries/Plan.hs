@@ -2,7 +2,7 @@
 
 module Storage.CachedQueries.Plan where
 
-import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -10,51 +10,64 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Plan as Queries
 
-findByIdAndPaymentMode :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Plan -> PaymentMode -> m (Maybe Plan)
-findByIdAndPaymentMode (Id planId) paymentMode =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makePlanIdAndPaymentModeKey (Id planId) paymentMode) >>= \case
+findByIdAndPaymentModeWithServiceName :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Plan -> PaymentMode -> ServiceNames -> m (Maybe Plan)
+findByIdAndPaymentModeWithServiceName (Id planId) paymentMode serviceName =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makePlanIdAndPaymentModeKey (Id planId) paymentMode serviceName) >>= \case
     Just a -> pure a
-    Nothing -> cacheByIdAndPaymentMode (Id planId) paymentMode /=<< Queries.findByIdAndPaymentMode (Id planId) paymentMode
+    Nothing -> cacheByIdAndPaymentMode (Id planId) paymentMode serviceName /=<< Queries.findByIdAndPaymentModeWithServiceName (Id planId) paymentMode serviceName
 
-cacheByIdAndPaymentMode :: (CacheFlow m r) => Id Plan -> PaymentMode -> Maybe Plan -> m ()
-cacheByIdAndPaymentMode (Id planId) paymentMode plan = do
+cacheByIdAndPaymentMode :: (CacheFlow m r) => Id Plan -> PaymentMode -> ServiceNames -> Maybe Plan -> m ()
+cacheByIdAndPaymentMode (Id planId) paymentMode serviceName plan = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makePlanIdAndPaymentModeKey (Id planId) paymentMode) plan expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makePlanIdAndPaymentModeKey (Id planId) paymentMode serviceName) plan expTime
 
 ------------------- -----------------------
-findByMerchantId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Merchant -> m [Plan]
-findByMerchantId (Id merchantId) =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey (Id merchantId)) >>= \case
+findByMerchantOpCityIdWithServiceName :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceNames -> m [Plan]
+findByMerchantOpCityIdWithServiceName (Id merchantOperatingCityId) serviceName =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey (Id merchantOperatingCityId) serviceName) >>= \case
     Just a -> pure a
-    Nothing -> cacheByMerchantId (Id merchantId) /=<< Queries.findByMerchantId (Id merchantId)
+    Nothing -> cacheByMerchantId (Id merchantOperatingCityId) serviceName /=<< Queries.findByMerchantOpCityIdWithServiceName (Id merchantOperatingCityId) serviceName
 
-cacheByMerchantId :: CacheFlow m r => Id Merchant -> [Plan] -> m ()
-cacheByMerchantId (Id merchantId) plans = do
+cacheByMerchantId :: CacheFlow m r => Id DMOC.MerchantOperatingCity -> ServiceNames -> [Plan] -> m ()
+cacheByMerchantId (Id merchantOperatingCityId) serviceName plans = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdKey (Id merchantId)) plans expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdKey (Id merchantOperatingCityId) serviceName) plans expTime
 
 ------------------- -----------------------
-findByMerchantIdAndPaymentMode :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Merchant -> PaymentMode -> m [Plan]
-findByMerchantIdAndPaymentMode (Id merchantId) paymentMode =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndPaymentModeKey (Id merchantId) paymentMode) >>= \case
+findByMerchantOpCityIdAndPaymentModeWithServiceName ::
+  (CacheFlow m r, MonadFlow m, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  PaymentMode ->
+  ServiceNames ->
+  Maybe Bool ->
+  m [Plan]
+findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndPaymentModeKey (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated) >>= \case
     Just a -> pure a
-    Nothing -> cacheByMerchantIdAndPaymentMode (Id merchantId) paymentMode /=<< Queries.findByMerchantIdAndPaymentMode (Id merchantId) paymentMode
+    Nothing -> cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated
 
-cacheByMerchantIdAndPaymentMode :: (CacheFlow m r) => Id Merchant -> PaymentMode -> [Plan] -> m ()
-cacheByMerchantIdAndPaymentMode (Id merchantId) paymentMode plans = do
+cacheByMerchantIdAndPaymentMode ::
+  (CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  PaymentMode ->
+  ServiceNames ->
+  Maybe Bool ->
+  [Plan] ->
+  m ()
+cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated plans = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndPaymentModeKey (Id merchantId) paymentMode) plans expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndPaymentModeKey (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated) plans expTime
 
-findByMerchantIdAndType :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Merchant -> PlanType -> m [Plan]
-findByMerchantIdAndType (Id merchantId) planType =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndTypeKey (Id merchantId) planType) >>= \case
+findByMerchantOpCityIdAndTypeWithServiceName :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> PlanType -> ServiceNames -> m [Plan]
+findByMerchantOpCityIdAndTypeWithServiceName (Id merchantOperatingCityId) planType serviceName =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndTypeKey (Id merchantOperatingCityId) planType serviceName) >>= \case
     Just a -> pure a
-    Nothing -> cacheByMerchantIdAndType (Id merchantId) planType /=<< Queries.findByMerchantIdAndType (Id merchantId) planType
+    Nothing -> cacheByMerchantIdAndType (Id merchantOperatingCityId) planType serviceName /=<< Queries.findByMerchantOpCityIdAndTypeWithServiceName (Id merchantOperatingCityId) planType serviceName
 
-cacheByMerchantIdAndType :: (CacheFlow m r) => Id Merchant -> PlanType -> [Plan] -> m ()
-cacheByMerchantIdAndType (Id merchantId) planType plans = do
+cacheByMerchantIdAndType :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> PlanType -> ServiceNames -> [Plan] -> m ()
+cacheByMerchantIdAndType (Id merchantOperatingCityId) planType serviceName plans = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndTypeKey (Id merchantId) planType) plans expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndTypeKey (Id merchantOperatingCityId) planType serviceName) plans expTime
 
 ------------------- -----------------------
 fetchAllPlan :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => m [Plan]
@@ -71,14 +84,22 @@ cacheAllPlan plans = do
 makeAllPlanKey :: Text
 makeAllPlanKey = "driver-offer:CachedQueries:Plan:PlanId-ALL"
 
-makePlanIdAndPaymentModeKey :: Id Plan -> PaymentMode -> Text
-makePlanIdAndPaymentModeKey id paymentMode = "driver-offer:CachedQueries:Plan:PlanId-" <> id.getId <> ":PaymentMode-" <> show paymentMode
+makePlanIdAndPaymentModeKey :: Id Plan -> PaymentMode -> ServiceNames -> Text
+makePlanIdAndPaymentModeKey id paymentMode serviceName = "driver-offer:CachedQueries:Plan:PlanId-" <> id.getId <> ":PaymentMode-" <> show paymentMode <> ":ServiceName-" <> show serviceName
 
-makeMerchantIdAndPaymentModeKey :: Id Merchant -> PaymentMode -> Text
-makeMerchantIdAndPaymentModeKey merchantId paymentMode = "driver-offer:CachedQueries:Plan:MerchantId-" <> merchantId.getId <> ":PaymentMode-" <> show paymentMode
+makeMerchantIdAndPaymentModeKey :: Id DMOC.MerchantOperatingCity -> PaymentMode -> ServiceNames -> Maybe Bool -> Text
+makeMerchantIdAndPaymentModeKey merchantOpCityId paymentMode serviceName mbIsDeprecated =
+  "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-"
+    <> merchantOpCityId.getId
+    <> ":PaymentMode-"
+    <> show paymentMode
+    <> ":ServiceName-"
+    <> show serviceName
+    <> ":IsDeprecated-"
+    <> show mbIsDeprecated
 
-makeMerchantIdAndTypeKey :: Id Merchant -> PlanType -> Text
-makeMerchantIdAndTypeKey merchantId planType = "driver-offer:CachedQueries:Plan:MerchantId-" <> merchantId.getId <> ":PlanType-" <> show planType
+makeMerchantIdAndTypeKey :: Id DMOC.MerchantOperatingCity -> PlanType -> ServiceNames -> Text
+makeMerchantIdAndTypeKey merchantOpCityId planType serviceName = "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-" <> merchantOpCityId.getId <> ":PlanType-" <> show planType <> ":ServiceName-" <> show serviceName
 
-makeMerchantIdKey :: Id Merchant -> Text
-makeMerchantIdKey merchantId = "driver-offer:CachedQueries:Plan:MerchantId-" <> merchantId.getId
+makeMerchantIdKey :: Id DMOC.MerchantOperatingCity -> ServiceNames -> Text
+makeMerchantIdKey merchantOpCityId serviceName = "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-" <> merchantOpCityId.getId <> ":ServiceName-" <> show serviceName

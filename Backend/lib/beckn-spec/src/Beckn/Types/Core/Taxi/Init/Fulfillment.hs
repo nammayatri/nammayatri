@@ -17,7 +17,6 @@ module Beckn.Types.Core.Taxi.Init.Fulfillment
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.FulfillmentType
 import Beckn.Types.Core.Taxi.Common.StartInfo
 import Beckn.Types.Core.Taxi.Common.StopInfo
 import Beckn.Types.Core.Taxi.Common.Tags
@@ -32,7 +31,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
 data FulfillmentInfo = FulfillmentInfo
   { id :: Maybe Text,
-    _type :: FulfillmentType,
+    _type :: Text,
     start :: StartInfo,
     end :: Maybe StopInfo,
     tags :: Maybe TagGroups,

@@ -28,3 +28,8 @@ newtype SpecialZoneQuoteAPIEntity = SpecialZoneQuoteAPIEntity
   { quoteId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+newtype InterCityQuoteAPIEntity = InterCityQuoteAPIEntity
+  { quoteId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

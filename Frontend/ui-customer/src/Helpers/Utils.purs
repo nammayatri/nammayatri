@@ -19,25 +19,27 @@ module Helpers.Utils
     )
     where
 
-import Accessor (_distance_meters, _payload, _deeplinkOptions)
+import ConfigProvider
+import DecodeUtil
+import Accessor (_deeplinkOptions, _distance_meters, _payload, _search_type, _paymentMethod)
 import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..))
-import Components.LocationListItem.Controller (dummyLocationListState)
+import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
-import Control.Monad.Free (resume)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse)
+import Control.Monad.Free (resume, runFree)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
-import Data.Function.Uncurried (Fn2, runFn3)
+import Data.Function.Uncurried (Fn2, runFn3, Fn1, Fn3)
 import Data.Generic.Rep (class Generic)
-import Data.Int (round, toNumber, fromString)
+import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number (pi, sin, cos, sqrt, asin, abs)
-import Data.Ord (comparing)
+import Data.Ord (comparing, Ordering)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
 import Data.String (replace, split, Pattern(..), Replacement(..))
@@ -67,42 +69,56 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<))
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<), (#))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
+import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
-import Services.API (Prediction)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location, MetroStationsList)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
+import Services.API (Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
+import Data.Function.Uncurried
+import Styles.Colors as Color
+import Common.Styles.Colors as CommonColor
+import Data.Tuple(Tuple(..) ,snd, fst)
+import Data.Ord
+import MerchantConfig.Types (CityConfig)
+import MerchantConfig.DefaultConfig (defaultCityConfig)
+import Constants (defaultDensity)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 
+foreign import isWeekend :: String -> Boolean
+
 foreign import getNewTrackingId :: Unit -> String
 
-foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> String -> Effect Unit
 
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
 foreign import getCurrentDate :: String -> String
+foreign import getCurrentDatev2 :: String -> String
 foreign import getNextDate :: String -> String
 foreign import getNextDateV2 :: String -> String
 foreign import compareDate :: EffectFn2 String String Boolean
 foreign import storeCallBackContacts :: forall action. (action -> Effect Unit) -> ((Array Contacts) -> action) -> Effect Unit
 foreign import parseNewContacts :: String -> (Array NewContacts)
+foreign import parseSourceHashArray :: String -> Array SourceGeoHash
 
 foreign import secondsToHms :: Int -> String
 
 foreign import getTime :: Unit -> Int
 
 foreign import drawPolygon :: String -> String -> Effect Unit
+foreign import getDifferenceBetweenDates :: Fn2 String String Int
 
 foreign import removeLabelFromMarker :: EffectFn1 Number Unit
 -- foreign import generateSessionToken :: String -> String
@@ -153,15 +169,23 @@ foreign import fetchAndUpdateCurrentLocation :: forall action. (action -> Effect
 foreign import seperateByWhiteSpaces :: String -> String
 
 foreign import getKeyInSharedPrefKeysConfigEff :: String -> Effect String
-foreign import clearWaitingTimer :: String -> Unit
-foreign import clearCountDownTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 
+foreign import getDefaultPixels :: Fn1 String Number
+
 foreign import getMobileNumber :: EffectFn2 String String String
+foreign import getDateAfterNDaysv2 :: Int -> String
 
 foreign import extractKeyByRegex :: Fn2 String String String
+foreign import getPixels :: Fn1 LazyCheck Number
+foreign import getDeviceDefaultDensity ::Fn1 LazyCheck Number
+foreign import didDriverMessage :: Fn1 LazyCheck Boolean
+
+foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
+
+foreign import getMockFollowerName :: String -> String
 
 data TimeUnit
   = HOUR
@@ -194,13 +218,33 @@ convertUTCToISTAnd12HourFormat inputTime = do
   
       pure adjustedTime
     _ -> Nothing
+
+getMinutesBetweenTwoUTChhmmss :: String -> String -> Maybe Int
+getMinutesBetweenTwoUTChhmmss time1 time2 = do
+  if DS.null time1 || DS.null time2 then Nothing
+  else
+    case split (Pattern ":") time1 of
+      [h1, m1, _] -> do
+        hours1 <- fromString h1
+        minutes1 <- fromString m1
+        case split (Pattern ":") time2 of
+          [h2, m2, _] -> do
+            hours2 <- fromString h2
+            minutes2 <- fromString m2
+            let cal1 = hours1 * 60 + minutes1
+                cal2 = if (hours2 < hours1) then (hours2 + 24) * 60 + minutes2 else hours2 * 60 + minutes2
+            Just $ if cal1 > cal2 then cal1 - cal2 else cal2 - cal1
+          _ -> Nothing
+      _ -> Nothing
   
 otpRule :: Reader.OtpRule
 otpRule =
+  let config = getAppConfig appConfig
+  in
   Reader.OtpRule
     { matches:
         { sender: []
-        , message : (getValueFromConfig "OTP_MESSAGE_REGEX")
+        , message : config.otpRegex
         }
     , otp: "\\d{4}"
     , group: Nothing
@@ -301,12 +345,37 @@ addToPrevCurrLoc currLoc currLocArr =
     else currLocArr
 
  --------------------------------------------------------------------------------------------------
+fetchMetroStations :: Decode MetroStationsList => String -> Flow GlobalState (Maybe MetroStationsList)
+fetchMetroStations objName = do
+  (maybeEncodedState :: Maybe String) <- liftFlow $ fetchFromLocalStore' objName Just Nothing
+  void $ pure $ spy "fetchMetroStations: maybeEncodedState" maybeEncodedState
+  case maybeEncodedState of
+    
+    Just encodedState -> do
+      case runExcept (decodeJSON encodedState) of
+        Right obj -> pure $ Just obj
+        Left err -> do
+          _ <- liftFlow (logShow $ "fetchMetroStations: Error while decoding " <> (show err))
+          pure Nothing
+    Nothing -> pure Nothing
+
+getMetroStationsObjFromLocal :: String -> Flow GlobalState MetroStationsList
+getMetroStationsObjFromLocal _ = do
+  (metroStationsList :: Maybe MetroStationsList) <- (fetchMetroStations "METRO_STATIONS")
+  case metroStationsList of
+    Just stations -> pure stations
+    Nothing -> pure emptyMetroStationsList
+
+
+emptyMetroStationsList :: MetroStationsList
+emptyMetroStationsList = {stations : [],lastUpdatedAt : "" }
+ --------------------------------------------------------------------------------------------------
 
 checkPrediction :: LocationListItemState -> Array LocationListItemState -> Boolean
 checkPrediction prediction predictionArr = if (length (filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) > 0) then false else true
 
 getPrediction :: LocationListItemState -> Array LocationListItemState -> LocationListItemState
-getPrediction prediction predictionArr = (fromMaybe dummyLocationListState ((filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) !! 0))
+getPrediction prediction predictionArr = (fromMaybe locationListStateObj ((filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) !! 0))
 
 addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
@@ -341,18 +410,7 @@ toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
 
 getCurrentLocationMarker :: String -> String
-getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (getPreviousVersion "") then "ic_customer_current_location" else "ny_ic_customer_current_location"
-
-getPreviousVersion :: String -> String
-getPreviousVersion _ =
-  if os == "IOS" then
-    case getMerchant FunctionCall of
-      NAMMAYATRI -> "1.2.5"
-      YATRISATHI -> "0.0.0"
-      _ -> "1.0.0"
-    else case getMerchant FunctionCall of
-        YATRISATHI -> "0.0.0"
-        _ -> "0.0.0"
+getCurrentLocationMarker currentVersion = "ny_ic_customer_current_location"
 
 rotateArray :: forall a. Array a -> Int -> Array a
 rotateArray arr times =
@@ -375,8 +433,8 @@ type AffSuccess s = (s -> Effect Unit)
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
-sortPredctionByDistance :: Array Prediction -> Array Prediction
-sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
+sortPredictionByDistance :: Array Prediction -> Array Prediction
+sortPredictionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
 
 
 getDistanceString :: Int -> Int -> String
@@ -384,8 +442,21 @@ getDistanceString distanceInMeters decimalPoint
   | distanceInMeters >= 1000 = ReExport.parseFloat (toNumber distanceInMeters / 1000.0) decimalPoint <> " km"
   | otherwise = show distanceInMeters <> " m"
 
-recentDistance :: Array LocationListItemState -> Number -> Number -> Array LocationListItemState
-recentDistance arr currLat currLon = map (\item -> item{actualDistance = Just ( round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0)), distance = Just $ getDistanceString (round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0) )1}) arr
+updateLocListWithDistance :: Array LocationListItemState -> Number -> Number -> Boolean -> Number -> Array LocationListItemState 
+updateLocListWithDistance arr currLat currLon useThreshold threshold =   
+  arr
+  # map updateItemDistance
+  # filter withinThreshold
+
+  where
+    updateItemDistance item = 
+      let 
+        distance = round $ getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) * 1000.0
+      in 
+        item { actualDistance = Just distance, distance = Just $ getDistanceString distance 1 }
+
+    withinThreshold item = 
+      maybe true (\actualDist -> (actualDist <= round (threshold * 1000.0) && useThreshold) || not useThreshold) item.actualDistance
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
@@ -455,7 +526,9 @@ reverse' :: String -> String
 reverse' = fromCharArray <<< reverse <<< toCharArray
 
 getVehicleSize :: Unit -> Int
-getVehicleSize unit = (getValueFromConfig "vehicleMarkerSize")
+getVehicleSize unit = 
+  let mapConfig = (getAppConfig appConfig).mapConfig
+  in mapConfig.vehicleMarkerSize
 
 getScreenFromStage :: Stage -> String
 getScreenFromStage stage = case stage of
@@ -464,6 +537,7 @@ getScreenFromStage stage = case stage of
   FindingEstimate -> "finding_driver_loader"
   ConfirmingRide -> "confirm_ride_loader"
   RideAccepted -> "trip_accepted_screen"
+  ReAllocated -> "trip_accepted_screen"
   RideStarted -> "trip_started_screen"
   RideCompleted -> "trip_completed_screen"
   PricingTutorial -> "estimate_screen"
@@ -481,27 +555,22 @@ getScreenFromStage stage = case stage of
   ShortDistance -> "finding_driver_loader"
   TryAgain -> "finding_rides_screen"
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
+  LoadMap -> "map_loader"
 
-getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
-getGlobalPayload _ = do
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (getWindowVariable "__payload" Just Nothing)
-  pure $ hush payload
+getGlobalPayload :: String -> Maybe GlobalPayload
+getGlobalPayload key = do
+  let mBPayload = runFn3 getFromWindow key Nothing Just
+  maybe (Nothing) (\payload -> decodeForeignObjImpl payload) mBPayload
 
 getSearchType :: Unit -> String
-getSearchType _ = do 
-  let payload = unsafePerformEffect $ getGlobalPayload unit
-  case payload of
-    Just (GlobalPayload payload') -> do
-      let (Payload innerPayload) = payload'.payload
-      case innerPayload.search_type of
-        Just a -> a 
-        Nothing -> "normal_search"
-    Nothing -> "normal_search"
+getSearchType _ = 
+  let mBPayload = getGlobalPayload globalPayload
+  in maybe ("normal_search") (\payload -> fromMaybe "normal_search" $ payload ^. _payload ^. _search_type) mBPayload
 
 getDeepLinkOptions :: LazyCheck -> Maybe DeeplinkOptions
-getDeepLinkOptions _ = do 
-  let mBPayload = unsafePerformEffect $ getGlobalPayload unit
-  maybe Nothing (\payload -> payload ^. _payload ^. _deeplinkOptions) mBPayload
+getDeepLinkOptions _ = 
+  let mBPayload = getGlobalPayload globalPayload
+  in maybe Nothing (\payload -> payload ^. _payload ^. _deeplinkOptions) mBPayload
 
 isParentView :: LazyCheck -> Boolean
 isParentView lazy = maybe false (\(DeeplinkOptions options) -> fromMaybe false options.parent_view) $ getDeepLinkOptions lazy
@@ -510,15 +579,9 @@ showTitle :: LazyCheck -> Boolean
 showTitle lazy = maybe true (\(DeeplinkOptions options) -> fromMaybe false options.show_title) $ getDeepLinkOptions lazy 
 
 getPaymentMethod :: Unit -> String
-getPaymentMethod _ = do 
-  let payload = unsafePerformEffect $ getGlobalPayload unit
-  case payload of
-    Just (GlobalPayload payload') -> do
-      let (Payload innerPayload) = payload'.payload
-      case innerPayload.payment_method of
-        Just a -> a 
-        Nothing -> "cash"
-    Nothing -> "cash"
+getPaymentMethod _ = 
+  let mBPayload = getGlobalPayload globalPayload
+  in maybe ("cash") (\payload -> fromMaybe "cash" $ payload ^. _payload ^. _paymentMethod) mBPayload
 
 
 triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit 
@@ -543,22 +606,22 @@ fetchDefaultPickupPoint locations lati longi =
 
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
-  let url = getAssetLink FunctionCall
-      commonUrl = getCommonAssetLink FunctionCall
-  in case getMerchant FunctionCall of
-        YATRISATHI -> case variant of
-                        "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
-                        "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
-                        _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
-        _          -> case variant of
-                        "TAXI"          -> "ic_sedan,"<> url <>"ic_sedan.png"
-                        "TAXI_PLUS"     -> "ic_sedan_ac,"<> url <>"ic_sedan_ac.png"
-                        "SEDAN"         -> "ic_sedan,"<> url <>"ic_sedan.png"
-                        "SUV"           -> "ic_suv,"<> url <>"ic_suv.png"
-                        "HATCHBACK"     -> "ic_hatchback,"<> url <>"ic_hatchback.png"
-                        "AUTO_RICKSHAW" -> "ny_ic_auto_quote_list,"<> url <>"ic_auto_side_view.png"
-                        _               -> "ic_sedan_non_ac,"<> url <>"ic_sedan_non_ac.png"
-
+  let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
+      city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in 
+    case variant of
+      "TAXI"          ->  variantConfig.taxi.image 
+      "TAXI_PLUS"     -> variantConfig.taxiPlus.image
+      "SEDAN"         -> variantConfig.sedan.image
+      "SUV"           -> variantConfig.suv.image
+      "HATCHBACK"     -> variantConfig.hatchback.image
+      "AUTO_RICKSHAW" -> case city of 
+                          Kochi -> fetchImage FF_ASSET "ny_ic_black_auto_quote_list" 
+                          Chennai -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list" 
+                          Hyderabad -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list"
+                          _ -> variantConfig.autoRickshaw.image
+      _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
+        
 getVariantRideType :: String -> String
 getVariantRideType variant =
   case getMerchant FunctionCall of
@@ -567,3 +630,130 @@ getVariantRideType variant =
                     "SUV"  -> getString AC_SUV
                     _      -> getString AC_CAB
     _          -> getString AC_CAB
+
+getTitleConfig :: forall w. String -> {text :: String , color :: String}
+getTitleConfig vehicleVariant =
+  case vehicleVariant of
+        "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString TAXI)) CommonColor.orange900
+        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
+        "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
+        _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
+  where mkReturnObj text' color' = 
+          {
+            text : text',
+            color : color'
+          }
+
+cityCodeMap :: Array (Tuple (Maybe String) City)
+cityCodeMap = 
+  [ Tuple (Just "std:080") Bangalore
+  , Tuple (Just "std:033") Kolkata
+  , Tuple (Just "std:001") Paris
+  , Tuple (Just "std:484") Kochi
+  , Tuple (Just "std:011") Delhi
+  , Tuple (Just "std:040") Hyderabad
+  , Tuple (Just "std:022") Mumbai
+  , Tuple (Just "std:044") Chennai
+  , Tuple (Just "std:0422") Coimbatore
+  , Tuple (Just "std:0413") Pondicherry
+  , Tuple (Just "std:08342") Goa
+  , Tuple (Just "std:020") Pune
+  , Tuple (Just "std:0821") Mysore
+  , Tuple (Just "std:0816") Tumakuru
+  , Tuple Nothing AnyCity
+  ]
+
+getCityFromString :: String -> City
+getCityFromString cityString =
+  case cityString of 
+    "Bangalore" -> Bangalore
+    "Kolkata" -> Kolkata
+    "Paris" -> Paris
+    "Kochi" -> Kochi
+    "Delhi" -> Delhi
+    "Hyderabad" -> Hyderabad
+    "Mumbai" -> Mumbai
+    "Chennai" -> Chennai
+    "Coimbatore" -> Coimbatore
+    "Pondicherry" -> Pondicherry
+    "Goa" -> Goa
+    "Pune" -> Pune
+    "Mysore" -> Mysore
+    "Tumakuru" -> Tumakuru
+    _ -> AnyCity
+
+getCityNameFromCode :: Maybe String -> City
+getCityNameFromCode mbCityCode =
+  let 
+    cityCodeTuple = find (\ tuple -> (fst tuple) == mbCityCode) cityCodeMap
+  in maybe AnyCity (\tuple -> snd tuple) cityCodeTuple
+
+getCityCodeFromCity :: City -> Maybe String
+getCityCodeFromCity city =
+    let 
+      cityCodeTuple = find (\tuple -> (snd tuple) == city) cityCodeMap
+    in maybe Nothing (\tuple -> fst tuple) cityCodeTuple
+
+getCard :: CardType -> String 
+getCard cardType = case cardType of 
+  HOME_TAG -> "Home"
+  WORK_TAG -> "Work"
+  _ -> ""
+
+getSavedLocationByTag :: Array LocationListItemState -> CardType -> Maybe LocationListItemState
+getSavedLocationByTag list tag = 
+  find (\item -> item.tag == getCard tag) list
+
+calculateSavedLocDist :: Array LocationListItemState -> String -> Number -> Number -> Array DistInfo
+calculateSavedLocDist savedLocs excludeTag lat lon =
+  sortBy compareByDistance $ map (\item -> getDistInfo item) $ listAfterExcludedTag excludeTag savedLocs 
+  where 
+    compareByDistance :: DistInfo -> DistInfo -> Ordering
+    compareByDistance a b = compare (a.distanceDiff) (b.distanceDiff)
+
+    getDistInfo :: LocationListItemState -> DistInfo
+    getDistInfo item = do 
+      let x = getDistanceBwCordinates (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) lat lon
+      {locationName : item.tag, distanceDiff : x} 
+
+
+isValidLocation :: Array LocationListItemState -> String -> String -> Array DistInfo
+isValidLocation savedLocations excludeTag placeId = 
+  map (\item -> {locationName : item.tag, distanceDiff : 100.0}) validList
+  where
+    validList :: Array LocationListItemState
+    validList = filter (\x -> placeIdExists x.placeId) (listAfterExcludedTag excludeTag savedLocations)
+
+    placeIdExists :: Maybe String -> Boolean
+    placeIdExists = maybe false (\item -> not (DS.null placeId) && item == placeId)
+
+
+listAfterExcludedTag :: String -> Array LocationListItemState -> Array LocationListItemState
+listAfterExcludedTag excludeTag = filter (\item -> (DS.toLower item.tag) /= (DS.toLower excludeTag))
+
+getDistInfo savedLoc excludeLocation lat lon placeId = do 
+  let distArr = calculateSavedLocDist savedLoc excludeLocation lat lon
+      rslt = isValidLocation savedLoc excludeLocation placeId
+      placeIdExists = maybe { locationName: "", distanceDiff : 1.0 } identity $ head rslt
+      minDist = maybe { locationName: "", distanceDiff : 1.0 } identity $ head distArr
+      locExistsAs = case (DS.null placeIdExists.locationName) , minDist.distanceDiff <= 0.020 of
+                      false , _ -> placeIdExists.locationName
+                      true  , true -> minDist.locationName
+                      _ , _ -> ""
+      tagExists = not (null rslt) || minDist.distanceDiff <= 0.020 
+  {tagExists, locExistsAs}
+
+getExistingTags :: Array LocationListItemState -> Array String 
+getExistingTags savedLoc = map (\item -> DS.toLower $ item.tag) savedLoc
+
+getCityConfig :: Array CityConfig -> String -> CityConfig
+getCityConfig cityConfigs cityName = do
+  fromMaybe defaultCityConfig $ find (\item -> item.cityName == cityName) cityConfigs
+  
+getDefaultPixelSize :: Int -> Int
+getDefaultPixelSize size =
+  let pixels = runFn1 getPixels FunctionCall
+      androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
+  in if os == "IOS" 
+    then size
+    else ceil $ (toNumber size / pixels) * androidDensity

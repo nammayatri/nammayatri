@@ -2,6 +2,42 @@ import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
 
+if (!window.__OS) {
+  const getOS = function () { //taken from getOS() in presto-ui
+    const userAgent = navigator.userAgent;
+    if (!userAgent) return console.error(new Error("UserAgent is null"));
+    if (userAgent.indexOf("Android") != -1 && userAgent.indexOf("Version") != -1) return "ANDROID";
+    if (userAgent.indexOf("iPhone") != -1 && userAgent.indexOf("Version") == -1) return "IOS";
+    return "WEB";
+  }
+  window.__OS = getOS();
+}
+
+const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
+
+if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
+  Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
+    return blackListFunctions.indexOf(fnName) == -1
+  }).forEach(fnName => {
+    window.JBridgeProxy = window.JBridgeProxy || {};
+    window.JBridgeProxy[fnName] = window.JBridge[fnName];
+    window.JBridge[fnName] = function () {
+      let params = Object.values(arguments).join(", ");
+      if (fnName === "callAPI") {
+        params = arguments[1].split("/").splice(6).join("/");
+      }
+      let shouldLog = true;
+      if (window.appConfig) {
+        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+      }
+      if (shouldLog) {
+        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+      }
+      const result = window.JBridgeProxy[fnName](...arguments);
+      return result;
+    };
+  });
+}
 
 function guid() {
   function s4() {
@@ -27,20 +63,22 @@ let previousDateObject = new Date();
 const refreshThreshold = 30;
 const JBridge = window.JBridge;
 const JOS = window.JOS;
-loadConfig();
+const Android = window.Android;
 
 const eventObject = {
   type : ""
   , data : ""
 }
 
+function makeEvent(_type, _data) {
+  return { type : _type, data : _data };
+}
 
 window.isObject = function (object) {
   return (typeof object == "object");
 }
-window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange"];
-window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED"];
-
+window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "onKeyboardClose", "onKeyboardOpen", "RestartAutoScroll"];
+window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED", "REALLOCATE_PRODUCT", "FOLLOW_RIDE", "SOS_TRIGGERED", "SOS_RESOLVED", "SOS_MOCK_DRILL", "SHARE_RIDE"];
 // setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
 const isUndefined = function (val) {
@@ -86,17 +124,6 @@ window.setManualEvents = setManualEvents;
 window.__FN_INDEX = 0;
 window.__PROXY_FN = top.__PROXY_FN || {};
 
-if (!window.__OS) {
-  const getOS = function () { //taken from getOS() in presto-ui
-    const userAgent = navigator.userAgent;
-    if (!userAgent) return console.error(new Error("UserAgent is null"));
-    if (userAgent.indexOf("Android") != -1 && userAgent.indexOf("Version") != -1) return "ANDROID";
-    if (userAgent.indexOf("iPhone") != -1 && userAgent.indexOf("Version") == -1) return "IOS";
-    return "WEB";
-  }
-  window.__OS = getOS();
-}
-
 const purescript = require("./output/Main");
 // if (window.__OS == "WEB") {
 //   purescript.main();
@@ -119,9 +146,10 @@ function callInitiateResult () {
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
-window.onMerchantEvent = function (_event, merchantPayload) {
-  console.log(merchantPayload);
-  const clientPaylod = JSON.parse(merchantPayload).payload;
+window.onMerchantEvent = function (_event, globalPayload) {
+  console.log(globalPayload);
+  window.__payload = JSON.parse(globalPayload);
+  const clientPaylod = window.__payload.payload;
   if (_event == "initiate") {
     let clientId = clientPaylod.clientId;
     if (clientId.includes("_ios"))
@@ -145,9 +173,7 @@ window.onMerchantEvent = function (_event, merchantPayload) {
     window.__payload.sdkVersion = "2.0.1"
     if (clientPaylod.action == "notification") {
       if (clientPaylod.notification_content && clientPaylod.notification_content.type) {
-        if (window.whitelistedNotification.includes(clientPaylod.notification_content.type)){
-          window.callNotificationCallBack(clientPaylod.notification_content.type);
-        }
+        window.callNotificationCallBack(clientPaylod.notification_content.type);
       }
     } else if (clientPaylod.action == "OpenChatScreen") { 
       if (window.openChatScreen) {
@@ -155,14 +181,18 @@ window.onMerchantEvent = function (_event, merchantPayload) {
       }
     }
     else {
-      eventObject["type"] = "";
-      eventObject["data"] = "";
-      if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
-        eventObject["type"] = "CHAT_MESSAGE";
+      console.log("client Payload: ", clientPaylod);
+      if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
+        purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
+      }else if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
+        purescript.main(makeEvent("CHAT_MESSAGE", ""))(true)();
+      }else if (clientPaylod.viewParamNewIntent && clientPaylod.viewParamNewIntent.slice(0, 8) == "referrer") {
+        purescript.onNewIntent(makeEvent("REFERRAL", clientPaylod.viewParamNewIntent.slice(9)))();
+      }else if (clientPaylod.viewParam && clientPaylod.viewParam.slice(0, 8) == "referrer") {
+        purescript.onNewIntent(makeEvent("REFERRAL_NEW_INTENT", clientPaylod.viewParam.slice(9)))();
+      }else {
+        purescript.main(makeEvent("", ""))(true)();
       }
-      window.__payload = JSON.parse(merchantPayload);
-      console.log("window Payload: ", window.__payload);
-      purescript.main(eventObject)();
     }
   }
 }
@@ -300,4 +330,5 @@ if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.inclu
   logger.enableLogger();
 }else{
   logger.disableLogger();
+  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;","null");
 }

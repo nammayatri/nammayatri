@@ -27,6 +27,7 @@ where
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Maps.Types
+import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
 import qualified Lib.LocationUpdates.Internal as I
@@ -45,7 +46,7 @@ initializeDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ 
   ih.expireInterpolatedPoints driverId
   ih.addPoints driverId $ pt :| []
 
-finalDistanceCalculation :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> Meters -> Bool -> m ()
+finalDistanceCalculation :: (CacheFlow m r, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> Meters -> Bool -> m ()
 finalDistanceCalculation ih rideId driverId pts estDist pickupDropOutsideThreshold = withRideIdLogTag rideId $ I.processWaypoints ih driverId True estDist pickupDropOutsideThreshold pts
 
 getInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m [LatLong]
@@ -54,7 +55,7 @@ getInterpolatedPoints ih = ih.getInterpolatedPoints
 clearInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m ()
 clearInterpolatedPoints ih = ih.clearInterpolatedPoints
 
-addIntermediateRoutePoints :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> m ()
+addIntermediateRoutePoints :: (CacheFlow m r, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> m ()
 addIntermediateRoutePoints ih rideId driverId = withRideIdLogTag rideId . I.processWaypoints ih driverId False 0 False -- estimateDistace not required in case of add intermediatory points
 
 isDistanceCalculationFailed :: I.RideInterpolationHandler person m -> Id person -> m Bool

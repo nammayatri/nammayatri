@@ -15,50 +15,59 @@
 
 module Types.App where
 
-import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
+import Control.Transformers.Back.Trans (BackT)
+import Data.Maybe (Maybe(..))
+import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps, DriverSavedLocationScreenState, GoToPopUpType(..))
+import Screens (ScreenName(..)) as ScreenNames
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
-import Screens.EnterOTPScreen.ScreenData as  EnterOTPScreenData
-import Screens.AddVehicleDetailsScreen.ScreenData as AddVehicleDetailsScreenData
-import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
-import Screens.RegistrationScreen.ScreenData as RegistrationScreenData
-import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
-import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
-import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
-import Screens.RideHistoryScreen.ScreenData as RideHistoryScreenData
-import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
-import Screens.BankDetailScreen.ScreenData as BankDetailScreenData
-import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
-import Screens.DriverDetailsScreen.ScreenData as DriverDetailsScreenData
-import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
 import Screens.AboutUsScreen.ScreenData as AboutUsScreenData
-import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
-import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
-import Screens.PermissionsScreen.ScreenData as PermissionsScreenData
-import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
-import Screens.EditBankDetailsScreen.ScreenData as EditBankDetailsScreenData
-import Screens.EditAadhaarDetailsScreen.ScreenData as EditAadhaarDetailsScreenData
-import Screens.PopUpScreen.ScreenData as PopUpScreenData
-import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
-import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
-import Screens.ReferralScreen.ScreenData as ReferralScreenData
-import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
-import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
-import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
-import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
-import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscriptionScreenData
+import Screens.AddVehicleDetailsScreen.ScreenData as AddVehicleDetailsScreenData
 import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
-import Screens (ScreenName(..)) as ScreenNames
+import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
+import Screens.BankDetailScreen.ScreenData as BankDetailScreenData
+import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
+import Screens.ChooseCityScreen.ScreenData as ChooseCityScreenData
+import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
+import Screens.DriverDetailsScreen.ScreenData as DriverDetailsScreenData
+import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
+import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
 import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
+import Screens.EditAadhaarDetailsScreen.ScreenData as EditAadhaarDetailsScreenData
+import Screens.EditBankDetailsScreen.ScreenData as EditBankDetailsScreenData
+import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
+import Screens.EnterOTPScreen.ScreenData as EnterOTPScreenData
+import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
+import Screens.HomeScreen.ScreenData as HomeScreenData
+import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
+import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscriptionScreenData
+import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
+import Screens.PermissionsScreen.ScreenData as PermissionsScreenData
+import Screens.PopUpScreen.ScreenData as PopUpScreenData
+import Screens.ReferralScreen.ScreenData as ReferralScreenData
+import Screens.RegistrationScreen.ScreenData as RegistrationScreenData
+import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
+import Screens.RideHistoryScreen.ScreenData as RideHistoryScreenData
+import Screens.DriverEarningsScreen.ScreenData as DriverEarningsScreenData
+import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
+import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
+import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
+import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
+import Screens.Types 
+import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
+import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
+import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
+import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
+import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
 import Data.Maybe (Maybe(..))
+import MerchantConfig.Types (AppConfig(..))
+import Screens.DriverReferralScreen.ScreenData as DriverReferralScreenData
+import Common.Types.App (CategoryListType)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -103,6 +112,10 @@ newtype GlobalState = GlobalState {
   , onBoardingSubscriptionScreen :: OnBoardingSubscriptionScreenState
   , paymentHistoryScreen :: PaymentHistoryScreenState
   , driverSavedLocationScreen :: DriverSavedLocationScreenState
+  , chooseCityScreen :: ChooseCityScreenState
+  , welcomeScreen :: WelcomeScreenState
+  , driverEarningsScreen :: DriverEarningsScreenState
+  , driverReferralScreen :: DriverReferralScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -147,6 +160,10 @@ defaultGlobalState = GlobalState {
 , onBoardingSubscriptionScreen : OnBoardingSubscriptionScreenData.initData
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
 , driverSavedLocationScreen : DriverSavedLocationScreenData.initData
+, chooseCityScreen : ChooseCityScreenData.initData
+, welcomeScreen : WelcomeScreenData.initData
+, driverEarningsScreen : DriverEarningsScreenData.initData
+, driverReferralScreen : DriverReferralScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -155,7 +172,8 @@ defaultGlobalProps = {
   driverInformation : Nothing,
   driverRideStats : Nothing,
   callScreen : ScreenNames.HOME_SCREEN,
-  gotoPopupType : NO_POPUP_VIEW
+  gotoPopupType : NO_POPUP_VIEW,
+  addTimestamp : true
 }
 
 data ScreenType =
@@ -197,6 +215,12 @@ data ScreenType =
   | OnBoardingSubscriptionScreenStateType (OnBoardingSubscriptionScreenState -> OnBoardingSubscriptionScreenState)
   | PaymentHistoryScreenStateType (PaymentHistoryScreenState -> PaymentHistoryScreenState)
   | DriverSavedLocationScreenStateType (DriverSavedLocationScreenState -> DriverSavedLocationScreenState)
+  | ChooseCityScreenStateType (ChooseCityScreenState -> ChooseCityScreenState)
+  | WelcomeScreenStateType (WelcomeScreenState -> WelcomeScreenState)
+  | DriverEarningsScreenStateType (DriverEarningsScreenState -> DriverEarningsScreenState)
+  | DriverReferralScreenStateType (DriverReferralScreenState -> DriverReferralScreenState)
+  | RegistrationScreenStateType (RegistrationScreenState -> RegistrationScreenState)
+  
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -211,6 +235,15 @@ data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN
                             | SELECTED_TAB RideHistoryScreenState
                             | OPEN_PAYMENT_HISTORY RideHistoryScreenState
                             | RIDE_HISTORY_NAV NAVIGATION_ACTIONS
+
+data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS DriverEarningsScreenState
+                                   | CHANGE_SUB_VIEW DriverEarningsSubView DriverEarningsScreenState
+                                   | CONVERT_COIN_TO_CASH DriverEarningsScreenState
+                                   | REFRESH_EARNINGS_SCREEN DriverEarningsScreenState
+                                   | EARNINGS_HISTORY DriverEarningsScreenState
+                                   | GOTO_PAYMENT_HISTORY_FROM_COINS
+                                   | GOTO_TRIP_DETAILS IndividualRideCardState
+                                   | LOAD_MORE_HISTORY DriverEarningsScreenState
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
@@ -249,7 +282,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | UPDATE_LANGUAGES (Array String)
                                     | SUBCRIPTION 
                                     | SAVED_LOCATIONS_SCREEN
-                                    | GO_HOME
+                                    | GO_HOME DriverProfileScreenState
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
@@ -273,30 +306,37 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
 
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
-data REGISTRATION_SCREENOUTPUT = UPLOAD_DRIVER_LICENSE
+data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
+                                | UPLOAD_VEHICLE_DETAILS RegistrationScreenState
+                                | PERMISSION_SCREEN RegistrationScreenState
+                                | LOGOUT_FROM_REGISTERATION_SCREEN
+                                | GO_TO_ONBOARD_SUBSCRIPTION
+                                | GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN
+                                | REFRESH_REGISTERATION_SCREEN
+                                | REFERRAL_CODE_SUBMIT RegistrationScreenState
 
-data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = ADD_VEHICLE_DETAILS_SCREEN UploadDrivingLicenseState | VALIDATE_IMAGE_API UploadDrivingLicenseState | GOTO_VEHICLE_DETAILS_SCREEN | LOGOUT_ACCOUNT | GOTO_ONBOARDING_FLOW
+data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState | VALIDATE_DATA_API UploadDrivingLicenseState | GOTO_VEHICLE_DETAILS_SCREEN | LOGOUT_ACCOUNT | GOTO_ONBOARDING_FLOW
 
 data UPLOAD_ADHAAR_CARD_SCREENOUTPUT = GO_TO_ADD_BANK_DETAILS
 
 data BANK_DETAILS_SCREENOUTPUT = GO_TO_ADD_VEHICLE_DETAILS
 
-data ADD_VEHICLE_DETAILS_SCREENOUTPUT = GO_TO_APPLICATION_SCREEN AddVehicleDetailsScreenState | VALIDATE_IMAGE_API_CALL AddVehicleDetailsScreenState | REFER_API_CALL AddVehicleDetailsScreenState | APPLICATION_STATUS_SCREEN | LOGOUT_USER | ONBOARDING_FLOW | DRIVER_PROFILE_SCREEN
+data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenState | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenState | REFER_API_CALL AddVehicleDetailsScreenState | APPLICATION_STATUS_SCREEN | LOGOUT_USER | ONBOARDING_FLOW | DRIVER_PROFILE_SCREEN | RC_ACTIVATION AddVehicleDetailsScreenState
 
-data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_HOME_SCREEN | OPEN_HELP_AND_SUPPORT
+data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN
 
-data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN
+data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN | LOGOUT_FROM_PERMISSIONS_SCREEN | GO_TO_REGISTERATION_SCREEN PermissionsScreenState
 
-data ONBOARDING_SUBSCRIPTION_SCREENOUTPUT = GOTO_HOME_SCREEN_FROM_ONBOARDING_SUBSCRIPTION_SCREEN | MAKE_PAYMENT_FROM_ONBOARDING OnBoardingSubscriptionScreenState
+data ONBOARDING_SUBSCRIPTION_SCREENOUTPUT =  MAKE_PAYMENT_FROM_ONBOARDING OnBoardingSubscriptionScreenState | REGISTERATION_ONBOARDING OnBoardingSubscriptionScreenState
 
 data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_RIDES_SCREEN
                           | GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
                           | GO_TO_HELP_AND_SUPPORT_SCREEN
                           | GO_TO_EDIT_GENDER_SCREEN
-                          | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String} HomeScreenState
+                          | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String, ts :: String} HomeScreenState
                           | GO_TO_CANCEL_RIDE {id :: String, info :: String , reason :: String} HomeScreenState
-                          | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String } HomeScreenState
+                          | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String, ts :: String } HomeScreenState
                           | DRIVER_AVAILABILITY_STATUS HomeScreenState DriverStatus
                           | REFRESH_HOME_SCREEN_FLOW
                           | RELOAD HomeScreenState
@@ -307,8 +347,8 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_NOTIFICATIONS
                           | ADD_ALTERNATE_HOME
                           | GO_TO_AADHAAR_VERIFICATION
-                          | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String}
-                          | ON_CALL HomeScreenState
+                          | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String, ts :: String}
+                          | ON_CALL HomeScreenState String
                           | OPEN_PAYMENT_PAGE HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
                           | GO_TO_VEHICLE_DETAILS_SCREEN
@@ -318,8 +358,9 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | ENABLE_GOTO_API HomeScreenState String String
                           | LOAD_GOTO_LOCATIONS HomeScreenState
                           | DISABLE_GOTO HomeScreenState
-                          | GOTO_LOCATION_FLOW HomeScreenState
+                          | GOTO_LOCATION_FLOW HomeScreenState Boolean
                           | REFRESH_GOTO HomeScreenState
+                          | GO_TO_EARNINGS_SCREEN
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -344,6 +385,7 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | GO_REFERRAL_SCREEN
                                     | GO_RIDE_HISTORY_SCREEN
                                     | GO_PROFILE_SCREEN
+                                    | GO_EARNINGS_SCREEN
                                     | CHECK_RIDE_FLOW_STATUS
                                     | NOTIFICATION_SCREEN_NAV NAVIGATION_ACTIONS
 
@@ -381,6 +423,7 @@ data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToSubscription
                           | GoToContest
                           | GoToAlerts
+                          | GoToEarningsScreen Boolean
 
 data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
                                     | EntityDetailsAPI PaymentHistoryScreenState String
@@ -397,3 +440,13 @@ data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN
                                   | DELETE_PLACE DriverSavedLocationScreenState String
                                   | CHANGE_VIEW 
                                   | UPDATE_HOME_LOCATION DriverSavedLocationScreenState
+                      
+data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
+
+data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen 
+                                  | REFRESH_SCREEN_CHOOSE_CITY ChooseCityScreenState
+                                  | DETECT_CITY Number Number ChooseCityScreenState
+
+data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
+data DRIVER_REFERRAL_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
+                                   | DRIVER_CONTEST_SCREEN

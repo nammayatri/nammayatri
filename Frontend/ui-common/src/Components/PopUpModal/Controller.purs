@@ -30,12 +30,13 @@ data Action = OnButton1Click
             | OnButton2Click
             | NoAction
             | ETextController PrimaryEditTextController.Action
-            | CountDown Int String String String
+            | CountDown Int String String
             | OnImageClick
             | Tipbtnclick Int Int
             | DismissPopup
             | OptionWithHtmlClick
             | OnSecondaryTextClick
+            | YoutubeVideoStatus String
 
 type Config = {
     primaryText :: TextConfig,
@@ -73,10 +74,12 @@ type Config = {
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
     listViewArray :: Array String,
-    coverVideoConfig :: CoverVideoConfig
+    coverMediaConfig :: CoverMediaConfig,
+    timerId :: String,
+    onlyTopTitle :: Visibility
 }
 
-type CoverVideoConfig = {
+type CoverMediaConfig = {
   visibility :: Visibility,
   height :: Length ,
   width :: Length ,
@@ -84,7 +87,11 @@ type CoverVideoConfig = {
   padding :: Padding ,
   mediaUrl :: String ,
   mediaType :: String ,
-  id :: String
+  id :: String,
+  background :: String,
+  stroke :: String,
+  cornerRadius :: Number,
+  coverMediaText :: TextConfig
 }
 
 type ContactViewConfig = {
@@ -121,7 +128,10 @@ type ButtonConfig = {
   textStyle :: Style,
   height :: Length,
   image :: ImageConfig,
-  showShimmer :: Boolean
+  showShimmer :: Boolean,
+  gravity :: Gravity,
+  enableRipple :: Boolean,
+  rippleColor :: String
 }
 
 type DismissPopupConfig =
@@ -241,6 +251,7 @@ config = {
     , isClickable : true
     , width : (V 100)
     , padding : (Padding 15 7 15 7)
+    , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
     , timerID : ""
@@ -255,6 +266,8 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
   } 
   , option1 : {
       background : Color.white900
@@ -266,6 +279,7 @@ config = {
     , isClickable : true
     , width : (V 156)
     , padding : (Padding 0 0 0 0)
+    , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
     , timerID : ""
@@ -280,6 +294,8 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , option2 : {
       background : Color.black900
@@ -288,6 +304,7 @@ config = {
     , color : Color.yellow900
     , visibility : true
     , margin : (Margin 12 0 0 16)
+    , gravity : CENTER
     , isClickable : true
     , width : (V 156)
     , padding : (Padding 0 0 0 0)
@@ -305,6 +322,8 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , optionWithHtml : {
       background : Color.black900,
@@ -398,7 +417,7 @@ config = {
     , fareEstimateText : ""
     , tipSelectedText : ""
     , listViewArray : []
-    , coverVideoConfig : {
+    , coverMediaConfig : {
         visibility : GONE ,
         height : V 400 ,
         width : WRAP_CONTENT ,
@@ -406,8 +425,31 @@ config = {
         padding : (Padding 0 0 0 0) ,
         mediaType : "",
         mediaUrl : "",
-        id : ""
-    }
+        id : "",
+        background : Color.transparent,
+        stroke : "1," <> Color.transparent,
+        cornerRadius : 16.0
+      , coverMediaText : {
+          text : "",
+          color : Color.textSecondary,
+          gravity : CENTER,
+          padding : PaddingHorizontal 16 16,
+          margin : MarginVertical 20 20,
+          visibility : GONE,
+          textStyle : SubHeading2,
+          accessibilityHint : "", 
+          suffixImage : {
+            visibility : GONE
+            , imageUrl : ""
+            , height : V 0
+            , width : V 0
+            , margin : Margin 0 0 0 0
+            , padding : Padding 0 0 0 0
+          }
+      }
+    },
+    onlyTopTitle : VISIBLE,
+    timerId : ""
 }
 
 

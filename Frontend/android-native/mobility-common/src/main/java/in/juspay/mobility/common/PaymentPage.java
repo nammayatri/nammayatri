@@ -31,7 +31,6 @@ import in.juspay.hypersdk.core.MerchantViewType;
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.ui.HyperPaymentsCallback;
-import in.juspay.mobility.app.Utils;
 import in.juspay.services.HyperServices;
 
 public class PaymentPage {

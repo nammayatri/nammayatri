@@ -65,11 +65,13 @@ let InfoBIPConfig =
       , sender = "JUSPAY"
       }
 
-let WebengageConfig = { url = "https://st.in.webengage.com" }
-
 let sampleKafkaConfig
     : globalCommon.kafkaConfig
     = { topicName = "rider-app-events-updates", kafkaKey = "rider-app" }
+
+let exophoneKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "ExophoneData", kafkaKey = "rider-app-exophone-events" }
 
 let sampleLogConfig
     : Text
@@ -94,6 +96,11 @@ let eventStreamMappings =
           , globalCommon.eventType.Quotes
           , globalCommon.eventType.Estimate
           ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream exophoneKafkaConfig
+        , eventTypes = [ globalCommon.eventType.ExophoneData ]
         }
       , { streamName = globalCommon.eventStreamNameType.LOG_STREAM
         , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
@@ -147,18 +154,18 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
-let tables =
-      { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
-      , kafkaNonKVTables = [] : List Text
-      }
-
-let dontEnableForDb = [] : List Text
+let kvConfigUpdateFrequency = +10
 
 let maxMessages
     : Text
     = "5000"
+
+let RiderJobType = < CheckPNAndSendSMS | OtherJobTypes >
+
+let jobInfoMapx =
+      [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
+      , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
+      ]
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -171,7 +178,6 @@ in  { esqDBCfg
     , cutOffNonCriticalHedisCluster = False
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
-    , webengageCfg = WebengageConfig
     , port = +8013
     , metricsPort = +9999
     , hostName = "localhost"
@@ -182,8 +188,10 @@ in  { esqDBCfg
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
     , searchRequestExpiry = Some +600
-    , migrationPath = Some
-        (env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app")
+    , migrationPath =
+      [ "dev/migrations-read-only/rider-app"
+      , env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app"
+      ]
     , autoMigrate = True
     , coreVersion = "0.9.4"
     , loggerConfig =
@@ -216,8 +224,16 @@ in  { esqDBCfg
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
-    , tables
-    , dontEnableForDb
+    , kvConfigUpdateFrequency
     , maxMessages
     , incomingAPIResponseTimeout = +15
+    , maxShards = +5
+    , jobInfoMapx
+    , internalEndPointMap = common.internalEndPointMap
+    , schedulerSetName = "rider-scheduler-set"
+    , schedulerType = common.schedulerType.RedisBased
+    , isBecknSpecVersion2 = True
+    , _version = "2.0.0"
+    , hotSpotExpiry = +604800
+    , collectRouteData = True
     }

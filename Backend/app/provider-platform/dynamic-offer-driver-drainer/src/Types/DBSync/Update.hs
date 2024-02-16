@@ -35,6 +35,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVe
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPlan as DriverPlan
+import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPoolConfig as DriverPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverStats as DriverStats
@@ -63,7 +64,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Mandate as Mandate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverPoolConfig as DriverPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.LeaderBoardConfig as MerchantLeaderBoardConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
@@ -77,7 +77,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslat
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
 import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
-import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
+import qualified "dynamic-offer-driver-app" Storage.Beam.Quote as Quote
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistryMapFallback as RegistryMapFallback
@@ -86,7 +86,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDeta
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
-import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
 import qualified "dynamic-offer-driver-app" Storage.Beam.Volunteer as Volunteer
@@ -161,7 +160,6 @@ data UpdateModel
   | RiderDetailsUpdate
   | SearchRequestUpdate
   | SearchRequestForDriverUpdate
-  | SearchRequestSpecialZoneUpdate
   | SearchTryUpdate
   | VehicleUpdate
   | VolunteerUpdate
@@ -246,7 +244,6 @@ getTagUpdate RideDetailsUpdate = "RideDetailsOptions"
 getTagUpdate RiderDetailsUpdate = "RiderDetailsOptions"
 getTagUpdate SearchRequestUpdate = "SearchRequestOptions"
 getTagUpdate SearchRequestForDriverUpdate = "SearchRequestForDriverOptions"
-getTagUpdate SearchRequestSpecialZoneUpdate = "SearchRequestSpecialZoneOptions"
 getTagUpdate SearchTryUpdate = "SearchTryOptions"
 getTagUpdate VehicleUpdate = "VehicleOptions"
 getTagUpdate VolunteerUpdate = "VolunteerOptions"
@@ -330,7 +327,6 @@ parseTagUpdate "RideDetailsOptions" = return RideDetailsUpdate
 parseTagUpdate "RiderDetailsOptions" = return RiderDetailsUpdate
 parseTagUpdate "SearchRequestOptions" = return SearchRequestUpdate
 parseTagUpdate "SearchRequestForDriverOptions" = return SearchRequestForDriverUpdate
-parseTagUpdate "SearchRequestSpecialZoneOptions" = return SearchRequestSpecialZoneUpdate
 parseTagUpdate "SearchTryOptions" = return SearchTryUpdate
 parseTagUpdate "VehicleOptions" = return VehicleUpdate
 parseTagUpdate "VolunteerOptions" = return VolunteerUpdate
@@ -407,7 +403,7 @@ data DBUpdateObject
   | MessageTranslationOptions UpdateModel [Set Postgres MessageTranslation.MessageTranslationT] (Where Postgres MessageTranslation.MessageTranslationT)
   | MetaDataOptions UpdateModel [Set Postgres MetaData.MetaDataT] (Where Postgres MetaData.MetaDataT)
   | PersonOptions UpdateModel [Set Postgres Person.PersonT] (Where Postgres Person.PersonT)
-  | QuoteSpecialZoneOptions UpdateModel [Set Postgres QuoteSpecialZone.QuoteSpecialZoneT] (Where Postgres QuoteSpecialZone.QuoteSpecialZoneT)
+  | QuoteSpecialZoneOptions UpdateModel [Set Postgres Quote.QuoteSpecialZoneT] (Where Postgres Quote.QuoteSpecialZoneT)
   | RatingOptions UpdateModel [Set Postgres Rating.RatingT] (Where Postgres Rating.RatingT)
   | RegistrationTokenOptions UpdateModel [Set Postgres RegistrationToken.RegistrationTokenT] (Where Postgres RegistrationToken.RegistrationTokenT)
   | RideOptions UpdateModel [Set Postgres Ride.RideT] (Where Postgres Ride.RideT)
@@ -415,7 +411,6 @@ data DBUpdateObject
   | RiderDetailsOptions UpdateModel [Set Postgres RiderDetails.RiderDetailsT] (Where Postgres RiderDetails.RiderDetailsT)
   | SearchRequestOptions UpdateModel [Set Postgres SearchRequest.SearchRequestT] (Where Postgres SearchRequest.SearchRequestT)
   | SearchRequestForDriverOptions UpdateModel [Set Postgres SearchRequestForDriver.SearchRequestForDriverT] (Where Postgres SearchRequestForDriver.SearchRequestForDriverT)
-  | SearchRequestSpecialZoneOptions UpdateModel [Set Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT] (Where Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT)
   | SearchTryOptions UpdateModel [Set Postgres SearchTry.SearchTryT] (Where Postgres SearchTry.SearchTryT)
   | VehicleOptions UpdateModel [Set Postgres Vehicle.VehicleT] (Where Postgres Vehicle.VehicleT)
   | VolunteerOptions UpdateModel [Set Postgres Volunteer.VolunteerT] (Where Postgres Volunteer.VolunteerT)
@@ -640,9 +635,6 @@ instance FromJSON DBUpdateObject where
       SearchRequestForDriverUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ SearchRequestForDriverOptions updateModel updVals whereClause
-      SearchRequestSpecialZoneUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ SearchRequestSpecialZoneOptions updateModel updVals whereClause
       SearchTryUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ SearchTryOptions updateModel updVals whereClause

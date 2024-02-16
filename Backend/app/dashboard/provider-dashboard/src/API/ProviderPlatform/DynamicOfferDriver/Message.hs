@@ -18,6 +18,7 @@ module API.ProviderPlatform.DynamicOfferDriver.Message
   )
 where
 
+import AWS.S3 (FileType (..))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.Text as DT
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -28,10 +29,11 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI')
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -102,9 +104,9 @@ buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.MessageAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 addLinkAsMedia :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
-addLinkAsMedia merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+addLinkAsMedia merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  unless (((req.fileType == Common.VideoLink || req.fileType == Common.PortraitVideoLink) && checkIfYoutubeLink req.url) || req.fileType == Common.ImageLink) $
+  unless (((req.fileType == VideoLink || req.fileType == PortraitVideoLink) && checkIfYoutubeLink req.url) || req.fileType == ImageLink) $
     throwError $ InvalidRequest "Only support youtube video links and image links. For Audio use uploadFile API."
   transaction <- buildTransaction Common.AddLinkEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
@@ -114,9 +116,9 @@ addLinkAsMedia merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
     checkIfYoutubeLink link = DT.isPrefixOf "https://" link && DT.isInfixOf "youtu" link
 
 uploadFile :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UploadFileRequest -> FlowHandler Common.UploadFileResponse
-uploadFile merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+uploadFile merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  unless (req.fileType `elem` [Common.Audio, Common.Image]) $
+  unless (req.fileType `elem` [Audio, Image]) $
     throwError $ InvalidRequest "Only support Audio/Image media type. For Video/MediaLinks use AddLink API."
   transaction <- buildTransaction Common.UploadFileEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
@@ -125,7 +127,7 @@ uploadFile merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
     addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
 addMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AddMessageRequest -> FlowHandler Common.AddMessageResponse
-addMessage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+addMessage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (length req.mediaFiles <= 1) $
     throwError $ InvalidRequest "Only support one media file per message. More than one media support will be added soon."
@@ -134,7 +136,7 @@ addMessage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.message.addMessage) req
 
 sendMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.SendMessageRequest -> FlowHandler APISuccess
-sendMessage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+sendMessage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.SendMessageEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
@@ -143,21 +145,21 @@ sendMessage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
     addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
 messageList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.MessageListResponse
-messageList merchantShortId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
+messageList merchantShortId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.message.messageList) mbLimit mbOffset
 
 messageInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Message -> FlowHandler Common.MessageInfoResponse
-messageInfo merchantShortId opCity apiTokenInfo messageId = withFlowHandlerAPI $ do
+messageInfo merchantShortId opCity apiTokenInfo messageId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.message.messageInfo) messageId
 
 messageDeliveryInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Message -> FlowHandler Common.MessageDeliveryInfoResponse
-messageDeliveryInfo merchantShortId opCity apiTokenInfo messageId = withFlowHandlerAPI $ do
+messageDeliveryInfo merchantShortId opCity apiTokenInfo messageId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.message.messageDeliveryInfo) messageId
 
 messageReceiverList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> FlowHandler Common.MessageReceiverListResponse
-messageReceiverList merchantShortId opCity apiTokenInfo messageId number status limit offset = withFlowHandlerAPI $ do
+messageReceiverList merchantShortId opCity apiTokenInfo messageId number status limit offset = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.message.messageReceiverList) messageId number status limit offset

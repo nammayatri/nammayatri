@@ -16,14 +16,16 @@
 
 module Screens.SubscriptionScreen.ScreenData where
 
-import Common.Types.App (PaymentStatus(..))
+import Domain.Payments (PaymentStatus(..))
 import Data.Maybe as Mb
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
 import Services.API (AutopayPaymentStage(..), DriverDuesEntity(..), FeeType(..), InvoiceStatus(..), OfferEntity(..), PaymentBreakUp(..))
 
 initData :: SubscriptionScreenState
-initData = {
+initData = 
+  let config = getAppConfig appConfig 
+  in {
     data: {
         driverId : "",
         paymentMode : "",
@@ -46,7 +48,8 @@ initData = {
             autoPayDueAmount : 0.0,
             manualDueAmount : 0.0,
             mandateStatus : "",
-            selectedDue : ""
+            selectedDue : "",
+            dueBoothCharges : Mb.Nothing
         },
         managePlanData : {
             currentPlan : dummyPlanConfig,
@@ -58,8 +61,7 @@ initData = {
             payerUpiId : Mb.Nothing,
             pspLogo : ""
         },
-        config : DC.config.subscriptionConfig,
-        bottomNavConfig : DC.config.bottomNavConfig
+        config
     },
     props : {
         isSelectedLangTamil : false,
@@ -73,7 +75,7 @@ initData = {
         joinPlanProps : {
             paymentMode : "",
             selectedPlanItem : Mb.Nothing,
-            isIntroductory : true
+            isIntroductory : false
         },
         myPlanProps : {
             isDuesExpanded : false,
@@ -96,9 +98,9 @@ initData = {
         redirectToNav : "",
         lastPaymentType : Mb.Nothing,
         offerBannerProps : {
-            showOfferBanner : false,
-            offerBannerValidTill : "",
-            offerBannerDeadline : ""
+          showOfferBanner : config.subscriptionConfig.offerBannerConfig.showDUOfferBanner,
+          offerBannerValidTill : config.subscriptionConfig.offerBannerConfig.offerBannerValidTill,
+          offerBannerDeadline : config.subscriptionConfig.offerBannerConfig.offerBannerDeadline
         },
         isEndRideModal : false
     }
@@ -118,7 +120,8 @@ dummyPlanConfig =
                 hasImage : true,
                 imageURL : "",
                 offerDescription : Mb.Nothing,
-                addedFromUI : false
+                addedFromUI : false,
+                isPaidByYatriCoins : false
                 }
                 ]
     , priceBreakup : []

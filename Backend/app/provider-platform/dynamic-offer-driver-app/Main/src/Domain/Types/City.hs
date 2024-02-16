@@ -15,10 +15,16 @@ module Domain.Types.City where
 
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Maps.Types (LatLong)
+import Kernel.External.Types (Language)
 import Kernel.Types.Beckn.Context as Context
 
 data CityRes = CityRes
   { code :: Context.City,
-    name :: Text
+    name :: Text,
+    location :: LatLong,
+    supportNumber :: Maybe Text,
+    language :: Language,
+    subscription :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

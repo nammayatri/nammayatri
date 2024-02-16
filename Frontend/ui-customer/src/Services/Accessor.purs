@@ -214,3 +214,76 @@ _maintenance = lens (unwrap >>> _.maintenance) (\oldRec newVal -> wrap ((unwrap 
 
 _deeplinkOptions :: forall a b c. Newtype a { deeplinkOptions :: b | c } => Lens' a b
 _deeplinkOptions = lens (unwrap >>> _.deeplinkOptions) (\oldRec newVal -> wrap ((unwrap oldRec) { deeplinkOptions = newVal }))
+
+_maskedDeviceToken :: forall a b c. Newtype a { maskedDeviceToken :: b | c } => Lens' a b
+_maskedDeviceToken = lens (unwrap >>> _.maskedDeviceToken) (\oldRec newVal -> wrap ((unwrap oldRec) { maskedDeviceToken = newVal }))
+
+_email :: forall a b c. Newtype a { email :: b | c } => Lens' a b
+_email = lens (unwrap >>> _.email) (\oldRec newVal -> wrap ((unwrap oldRec) { email = newVal }))
+
+_hasTakenRide :: forall a b c. Newtype a { hasTakenRide :: b | c } => Lens' a b
+_hasTakenRide = lens (unwrap >>> _.hasTakenRide) (\oldRec newVal -> wrap ((unwrap oldRec) { hasTakenRide = newVal }))
+
+_referralCode :: forall a b c. Newtype a { referralCode :: b | c } => Lens' a b
+_referralCode = lens (unwrap >>> _.referralCode) (\oldRec newVal -> wrap ((unwrap oldRec) { referralCode = newVal }))
+
+_language :: forall a b c. Newtype a { language :: b | c } => Lens' a b
+_language = lens (unwrap >>> _.language) (\oldRec newVal -> wrap ((unwrap oldRec) { language = newVal }))
+
+_gender :: forall a b c. Newtype a { gender :: b | c } => Lens' a b
+_gender = lens (unwrap >>> _.gender) (\oldRec newVal -> wrap ((unwrap oldRec) { gender = newVal }))
+
+_bundleVersion :: forall a b c. Newtype a { bundleVersion :: b | c } => Lens' a b
+_bundleVersion = lens (unwrap >>> _.bundleVersion) (\oldRec newVal -> wrap ((unwrap oldRec) { bundleVersion = newVal }))
+
+_clientVersion :: forall a b c. Newtype a { clientVersion :: b | c } => Lens' a b
+_clientVersion = lens (unwrap >>> _.clientVersion) (\oldRec newVal -> wrap ((unwrap oldRec) { clientVersion = newVal }))
+
+_disability :: forall a b c. Newtype a { disability :: b | c } => Lens' a b
+_disability = lens (unwrap >>> _.disability) (\oldRec newVal -> wrap ((unwrap oldRec) { disability = newVal }))
+
+_hasDisability :: forall a b c. Newtype a { hasDisability :: b | c } => Lens' a b
+_hasDisability = lens (unwrap >>> _.hasDisability) (\oldRec newVal -> wrap ((unwrap oldRec) { hasDisability = newVal }))
+
+_currentStatus :: forall a b c. Newtype a { currentStatus :: b | c } => Lens' a b
+_currentStatus = lens (unwrap >>> _.currentStatus) (\oldRec newVal -> wrap ((unwrap oldRec) { currentStatus = newVal }))
+
+_fareBreakup :: forall a b c. Newtype a { fareBreakup :: b | c } => Lens' a b
+_fareBreakup = lens (unwrap >>> _.fareBreakup) (\oldRec newVal -> wrap ((unwrap oldRec) { fareBreakup = newVal }))
+
+_paymentMethod :: forall a b c. Newtype a { payment_method :: b | c } => Lens' a b
+_paymentMethod = lens (unwrap >>> _.payment_method) (\oldRec newVal -> wrap ((unwrap oldRec) { payment_method = newVal }))
+
+
+_name :: forall a b c. Newtype a { name :: b | c } => Lens' a b
+_name = lens (unwrap >>> _.name) (\oldRec newVal -> wrap ((unwrap oldRec) { name = newVal }))
+
+_hasCompletedSafetySetup :: forall a b c. Newtype a { hasCompletedSafetySetup :: b | c } => Lens' a b
+_hasCompletedSafetySetup = lens (unwrap >>> _.hasCompletedSafetySetup) (\oldRec newVal -> wrap ((unwrap oldRec) { hasCompletedSafetySetup = newVal }))
+
+_hasCompletedMockSafetyDrill :: forall a b c. Newtype a { hasCompletedMockSafetyDrill :: b | c } => Lens' a b
+_hasCompletedMockSafetyDrill = lens (unwrap >>> _.hasCompletedMockSafetyDrill) (\oldRec newVal -> wrap ((unwrap oldRec) { hasCompletedMockSafetyDrill = newVal }))
+
+_followsRide :: forall a b c. Newtype a { followsRide :: b | c } => Lens' a b
+_followsRide = lens (unwrap >>> _.followsRide) (\oldRec newVal -> wrap ((unwrap oldRec) { followsRide = newVal }))
+
+_rideList :: forall a b c. Newtype a { _ideList :: b | c } => Lens' a b
+_rideList = lens (unwrap >>> _._ideList) (\oldRec newVal -> wrap ((unwrap oldRec) { _ideList = newVal }))
+
+_categoryId :: forall a b c. Newtype a { categoryId :: b | c } => Lens' a b
+_categoryId = lens (unwrap >>> _.categoryId) (\oldRec newVal -> wrap ((unwrap oldRec) { categoryId = newVal }))
+
+_availableSeats :: forall a b c. Newtype a { availableSeats :: b | c } => Lens' a b
+_availableSeats = lens (unwrap >>> _.availableSeats) (\oldRec newVal -> wrap ((unwrap oldRec) { availableSeats = newVal }))
+
+_allowedSeats :: forall a b c. Newtype a { allowedSeats :: b | c } => Lens' a b
+_allowedSeats = lens (unwrap >>> _.allowedSeats) (\oldRec newVal -> wrap ((unwrap oldRec) { allowedSeats = newVal }))
+
+_bookedSeats :: forall a b c. Newtype a { bookedSeats :: b | c } => Lens' a b
+_bookedSeats = lens (unwrap >>> _.bookedSeats) (\oldRec newVal -> wrap ((unwrap oldRec) { bookedSeats = newVal }))
+
+_peopleCategories :: forall a b c. Newtype a { peopleCategories :: b | c } => Lens' a b
+_peopleCategories = lens (unwrap >>> _.peopleCategories) (\oldRec newVal -> wrap ((unwrap oldRec) { peopleCategories = newVal }))
+
+_createdAt :: forall a b c. Newtype a { createdAt :: b | c } => Lens' a b
+_createdAt = lens (unwrap >>> _.createdAt) (\oldRec newVal -> wrap ((unwrap oldRec) { createdAt = newVal }))

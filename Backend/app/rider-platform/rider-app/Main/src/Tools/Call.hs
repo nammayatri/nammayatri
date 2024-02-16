@@ -18,9 +18,9 @@ module Tools.Call
 where
 
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
+import Domain.Types.MerchantOperatingCity
 import Kernel.External.Call as Reexport hiding
   ( initiateCall,
   )

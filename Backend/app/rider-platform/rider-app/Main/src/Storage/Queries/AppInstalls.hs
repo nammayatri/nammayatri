@@ -2,6 +2,7 @@
 
 module Storage.Queries.AppInstalls where
 
+import Data.Text (strip)
 import Domain.Types.AppInstalls as AppInstalls
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -32,8 +33,8 @@ upsert a@AppInstalls {..} = do
 
 instance FromTType' BeamAI.AppInstalls AppInstalls where
   fromTType' BeamAI.AppInstallsT {..} = do
-    bundleVersion' <- forM bundleVersion readVersion
-    appVersion' <- forM appVersion readVersion
+    bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
+    appVersion' <- mapM readVersion (strip <$> appVersion)
     pure $
       Just
         AppInstalls

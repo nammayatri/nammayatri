@@ -36,6 +36,7 @@ import Screens.CustomerUtils.ContactUsScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..)) 
 import Prelude ((<>))
+import Locale.Utils
 
 screen :: ST.ContactUsScreenState -> Screen Action ST.ContactUsScreenState ScreenOutput
 screen initialState =
@@ -93,7 +94,7 @@ instructionView state =
   ][  textView $
       [ text (getString NOTE)
       , accessibility DISABLE
-      , visibility $ if (getValueToLocalStore LANGUAGE_KEY == "ML_IN") then GONE else VISIBLE
+      , visibility $ if (getLanguageLocale languageKey == "ML_IN") then GONE else VISIBLE
       , color Color.black800
       ] <> FontStyle.tags LanguageStyle
     , textView $

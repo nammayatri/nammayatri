@@ -21,7 +21,7 @@ import qualified Data.List as List
 import Data.OpenApi
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Text.Show
@@ -46,7 +46,7 @@ instance FromJSON (MerchantPaymentMethodD 'Unsafe)
 
 instance ToJSON (MerchantPaymentMethodD 'Unsafe)
 
-data PaymentType = PREPAID | POSTPAID
+data PaymentType = ON_FULFILLMENT
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, Ord, ToSchema)
 
 data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash

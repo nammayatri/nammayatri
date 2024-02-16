@@ -22,7 +22,7 @@ where
 
 import qualified Database.Beam as B
 import Domain.Types.Exophone as DE
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Call.Types (CallService)

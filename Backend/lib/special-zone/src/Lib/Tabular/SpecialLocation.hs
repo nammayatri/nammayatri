@@ -19,7 +19,6 @@
 
 module Lib.Tabular.SpecialLocation where
 
-import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -27,7 +26,6 @@ import qualified Lib.Types.SpecialLocation as Domain
 
 deriving instance Read Domain.GatesInfo
 
-derivePersistField "LatLong"
 derivePersistField "Domain.GatesInfo"
 
 mkPersist
@@ -38,6 +36,7 @@ mkPersist
       locationName Text
       category Text
       gates (PostgresList Domain.GatesInfo)
+      merchantOperatingCityId Text Maybe
       createdAt UTCTime
       Primary id
       deriving Generic

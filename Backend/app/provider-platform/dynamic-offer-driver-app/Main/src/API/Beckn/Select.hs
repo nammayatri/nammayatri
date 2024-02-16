@@ -15,22 +15,25 @@
 module API.Beckn.Select (API, handler) where
 
 import qualified Beckn.ACL.Select as ACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified Domain.Action.Beckn.Select as DSelect
 import qualified Domain.Types.Merchant as DM
 import Environment
-import Kernel.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Servant
+import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth "Authorization"
-    :> Select.SelectAPI
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    :> Select.SelectAPIV2
 
 handler :: FlowServer API
 handler = select
@@ -38,12 +41,14 @@ handler = select
 select ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  Select.SelectReq ->
+  Select.SelectReqV2 ->
   FlowHandler AckResponse
-select transporterId (SignatureAuthResult _ subscriber) req =
-  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Select API Flow" "Reached"
-    dSelectReq <- ACL.buildSelectReq subscriber req
+select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
+  transactionId <- Utils.getTransactionId reqV2.selectReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
+    logTagInfo "SelectV2 API Flow" "Reached"
+    dSelectReq <- ACL.buildSelectReqV2 subscriber reqV2
+
     Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
       (merchant, estimate) <- DSelect.validateRequest transporterId dSelectReq
       fork "select request processing" $ do

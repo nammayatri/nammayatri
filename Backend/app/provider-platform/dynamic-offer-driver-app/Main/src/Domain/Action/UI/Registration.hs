@@ -22,6 +22,7 @@ module Domain.Action.UI.Registration
     verify,
     resend,
     logout,
+    cleanCachedTokens,
   )
 where
 
@@ -33,6 +34,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
@@ -53,10 +55,10 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.Merchant as QMerchant
--- import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as QD
+import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDL
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
@@ -170,6 +172,7 @@ createDriverDetails personId merchantId merchantOpCityId = do
   now <- getCurrentTime
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast personId
+  mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
@@ -185,10 +188,13 @@ createDriverDetails personId merchantId merchantOpCityId = do
             paymentPending = False,
             autoPayStatus = Nothing,
             referralCode = Nothing,
+            referredByDriverId = Nothing,
+            totalReferred = Just 0,
             lastEnabledOn = Nothing,
             canDowngradeToSedan = transporterConfig.canDowngradeToSedan,
             canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
             canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
+            canSwitchToRental = transporterConfig.canSwitchToRental,
             aadhaarVerified = False,
             blockedReason = Nothing,
             blockExpiryTime = Nothing,
@@ -199,7 +205,9 @@ createDriverDetails personId merchantId merchantOpCityId = do
             createdAt = now,
             updatedAt = now,
             compAadhaarImagePath = Nothing,
-            availableUpiApps = Nothing
+            availableUpiApps = Nothing,
+            driverDob = (.driverDob) =<< mbDriverLicense,
+            merchantOperatingCityId = Just merchantOpCityId
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo

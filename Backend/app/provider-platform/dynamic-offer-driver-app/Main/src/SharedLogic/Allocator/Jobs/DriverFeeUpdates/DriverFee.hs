@@ -13,11 +13,9 @@
 -}
 
 module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
-  ( sendPaymentReminderToDriver,
-    unsubscribeDriverForPaymentOverdue,
-    calculateDriverFeeForDrivers,
-    mkCoinAdjustedInSubscriptionByDriverIdKey,
-    getCoinAdjustedInSubscriptionByDriverIdKey,
+  ( calculateDriverFeeForDrivers,
+    sendManualPaymentLink,
+    getsetManualLinkErrorTrackingKey,
   )
 where
 
@@ -26,23 +24,26 @@ import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed (mod')
 import qualified Data.Map as M
 import Data.Ord
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
-import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getPlan, mkDriverFeeBillNumberKey)
+import qualified Domain.Action.UI.Driver as DDriver
+import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getDriverFeeCalcJobCache, getPlan, mkDriverFee, mkDriverFeeBillNumberKey, setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantMessage (MessageKey (..))
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.Overlay (OverlayCondition (..))
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
-import Domain.Types.Plan (PaymentMode (AUTOPAY, MANUAL), Plan (..), PlanBaseAmount (..))
-import qualified Kernel.Beam.Functions as B
-import qualified Kernel.External.Notification.FCM.Types as FCM
+import Domain.Types.Plan (BasedOnEntity (..), PaymentMode (AUTOPAY, MANUAL), Plan (..), PlanBaseAmount (..), ServiceNames (..))
+import Domain.Types.SubscriptionConfig
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (Id), cast, getShortId)
@@ -50,57 +51,20 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (calculatePlatformFeeAttr, getCoinAdjustedInSubscriptionByDriverIdKey, mkCoinAdjustedInSubscriptionByDriverIdKey, roundToHalf, setCoinToCashUsedAmount)
+import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
 import Storage.Queries.DriverPlan
+import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Person as QPerson
-import qualified Tools.Notifications as Notify
 import qualified Tools.Payment as TPayment
-
-sendPaymentReminderToDriver ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
-  Job 'SendPaymentReminderToDriver ->
-  m ExecutionResult
-sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
-  let jobData = jobInfo.jobData
-      startTime = jobData.startTime
-      endTime = jobData.endTime
-      merchantId = jobData.merchantId
-  now <- getLocalCurrentTime jobData.timeDiff
-  feeZipDriver <- calcDriverFeeAttr merchantId ONGOING startTime endTime
-  when (null feeZipDriver) $ logInfo "No ongoing payment found."
-  for_ feeZipDriver $ \(driverFee, mbDriver) -> do
-    case mbDriver of
-      Nothing -> do
-        logInfo "Driver Not found. This should not be possible."
-        throwError (InternalError "Driver Not Found") -- Unreachable
-      Just driver -> do
-        overdueFeeNotif <- B.runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
-        let paymentTitle = "Bill generated"
-            paymentMessage = "You have taken " <> show (driverFee.numRides + maybe 0 (.numRides) overdueFeeNotif) <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
-        (Notify.sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
-  forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
-    whenJust mbPerson $ \person -> do
-      Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
-        updateStatus PAYMENT_PENDING driverFee.id now
-        updatePendingPayment True (cast person.id)
-  case listToMaybe feeZipDriver of
-    Nothing -> return Complete
-    Just (driverFee, _) -> do
-      driver <- B.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-      -- driver <- QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-      transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
-      ReSchedule <$> getRescheduledTime transporterConfig.driverPaymentReminderInterval
 
 calculateDriverFeeForDrivers ::
   ( CacheFlow m r,
@@ -122,12 +86,14 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       mbMerchantOpCityId = jobData.merchantOperatingCityId
       startTime = jobData.startTime
       endTime = jobData.endTime
+      serviceName = fromMaybe YATRI_SUBSCRIPTION jobData.serviceName
       applyOfferCall = TPayment.offerApply merchantId
   now <- getCurrentTime
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  driverFees <- findAllFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
+  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
+  driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig
   let threshold = transporterConfig.driverFeeRetryThresholdConfig
   driverFeesToProccess <-
     mapMaybeM
@@ -136,7 +102,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               driverFeeId = driverFee.id
           if count > threshold
             then do
-              QDF.updateDriverFeeToManual driverFeeId
+              QDF.updateStatus MANUAL_REVIEW_NEEDED driverFeeId now
               return Nothing
             else do
               QDF.updateRetryCount (count + 1) now driverFeeId
@@ -145,8 +111,9 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       driverFees
   flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
     for_ driverFeesToProccess $ \driverFee -> do
-      mbDriverPlan <- findByDriverId (cast driverFee.driverId)
-      mbPlan <- getPlan mbDriverPlan merchantId
+      mbDriverPlan <- findByDriverIdWithServiceName (cast driverFee.driverId) serviceName
+      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId
+      mbDriverStat <- QDS.findById (cast driverFee.driverId)
       case mbPlan of
         Nothing -> pure ()
         Just plan -> do
@@ -155,66 +122,70 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               (mandateSetupDate, mandateId) = case mbDriverPlan of
                 Nothing -> (now, Nothing)
                 Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId)
-              coinCashLeft = maybe 0 (.coinCovertedToCashLeft) mbDriverPlan
+              coinCashLeft = if plan.eligibleForCoinDiscount then max 0 $ maybe 0 (.coinCovertedToCashLeft) mbDriverStat else 0
 
           driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-
-          (feeWithoutDiscount, totalFee, offerId, offerTitle) <- case planBaseFrequcency of
-            "PER_RIDE" -> do
-              let numRides = driverFee.numRides - plan.freeRideCount
-                  feeWithoutDiscount = max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides)))
-              getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate driverFee
-            "DAILY" -> do
-              let numRides = driverFee.numRides - plan.freeRideCount
-                  feeWithoutDiscount = if numRides > 0 then baseAmount else 0
-              getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate driverFee
-            _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
+          let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
+          --------- calculations based of frequency happens here ------------
+          (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
+            calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee
+          ---------------------------------------------------------------------
+          ------------- update driver fee with offer and plan details ---------
           let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
-          updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
+          updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id (Just plan.id) (Just plan.paymentMode) now
+          let driverFeeUpdateWithPlanAndOffer =
+                driverFee
+                  { offerId = offerId,
+                    planOfferTitle = offerAndPlanTitle,
+                    planId = Just plan.id,
+                    planMode = Just plan.paymentMode
+                  }
+          --------------------------------------------------
 
           fork "Applying offer" $ do
             offerTxnId <- getShortId <$> generateShortId
             let offerApplied = catMaybes [offerId]
-                offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate driverFee.numRides
-            maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall offerRequest)) (Just offerApplyRequest')
+                offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate numRidesForPlanCharges
+            maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall merchantOpCityId subscriptionConfigs.paymentServiceName offerRequest)) (Just offerApplyRequest')
 
           let paymentMode = maybe MANUAL (.planType) mbDriverPlan
-
+          ------------- process driver fee based on payment mode ----------------
           unless (totalFee == 0) $ do
-            driverFeeUpdateWithPlanAndOffer <- QDF.findById driverFee.id >>= fromMaybeM (InternalError $ "driverFee not found with driverFee id : " <> driverFee.id.getId)
+            -- driverFeeUpdateWithPlanAndOffer <- QDF.findById driverFee.id >>= fromMaybeM (InternalError $ "driverFee not found with driverFee id : " <> driverFee.id.getId)
             if coinCashLeft >= totalFee
               then do
-                void $ updateCoinToCashByDriverId (cast driverFee.driverId) (-1 * totalFee)
-                setCoinToCashUsedAmount driverFee totalFee
-                QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFee.id] now
-                driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing now
-                invoice <- mkInvoiceAgainstDriverFee driverFee (True, paymentMode == AUTOPAY)
+                void $ QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1 * totalFee)
+                setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer totalFee
+                QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFeeUpdateWithPlanAndOffer.id] now
+                driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing subscriptionConfigs now
+                invoice <- mkInvoiceAgainstDriverFee driverFeeUpdateWithPlanAndOffer (True, paymentMode == AUTOPAY)
+                updateAmountPaidByCoins driverFeeUpdateWithPlanAndOffer.id (Just totalFee)
                 QINV.create invoice
               else do
-                when (coinCashLeft > 0) $ updateCoinToCashByDriverId (cast driverFee.driverId) (-1 * coinCashLeft)
-                setCoinToCashUsedAmount driverFee coinCashLeft
-                driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId (Just coinCashLeft) now
-                updatePendingPayment True (cast driverFee.driverId)
-
+                when (coinCashLeft > 0) $ do
+                  QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1 * coinCashLeft)
+                  setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer coinCashLeft
+                driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId (Just coinCashLeft) subscriptionConfigs now
+                updatePendingPayment True (cast driverFeeUpdateWithPlanAndOffer.driverId)
+          -------------------------------------------------------------------------------
           -- blocking
-          dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverFee.driverId) -- Problem with lazy evaluation?
+          dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverFee.driverId) serviceName -- Problem with lazy evaluation?
           let driverFeeIds = map (.id) dueDriverFees
               due = sum $ map (\fee -> roundToHalf $ fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
-          if roundToHalf (due + totalFee) >= plan.maxCreditLimit
+          if roundToHalf (due + totalFee - min coinCashLeft totalFee) >= plan.maxCreditLimit
             then do
               mapM_ updateDriverFeeToManual driverFeeIds
               updateDriverFeeToManual driverFee.id
-              updateSubscription False (cast driverFee.driverId)
+              when plan.subscribedFlagToggleAllowed $ updateSubscription False (cast driverFee.driverId)
             else do
-              unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFee
-
-          updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
+              unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFee subscriptionConfigs
+          updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName
 
   case listToMaybe driverFees of
     Nothing -> do
-      Hedis.del (mkDriverFeeBillNumberKey merchantId)
+      Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
       maxShards <- asks (.maxShards)
-      scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards
+      scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName subscriptionConfigs jobData
       return Complete
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
   where
@@ -232,12 +203,27 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           numOfRides
         }
 
-processDriverFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> DriverFee -> m ()
-processDriverFee paymentMode driverFee = do
+processDriverFee ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  PaymentMode ->
+  DriverFee ->
+  SubscriptionConfig ->
+  m ()
+processDriverFee paymentMode driverFee subscriptionConfig = do
   now <- getCurrentTime
   case paymentMode of
     MANUAL -> do
-      updateDriverFeeToManual driverFee.id
+      ( if subscriptionConfig.allowManualPaymentLinks
+          then
+            ( do
+                updateStatus PAYMENT_PENDING driverFee.id now
+                updateFeeType RECURRING_INVOICE now driverFee.id
+            )
+          else
+            ( do
+                updateDriverFeeToManual driverFee.id
+            )
+        )
     AUTOPAY -> do
       updateStatus PAYMENT_PENDING driverFee.id now
       updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
@@ -245,22 +231,27 @@ processDriverFee paymentMode driverFee = do
       QINV.create invoice
       QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
 
-processRestFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> DriverFee -> m ()
-processRestFee paymentMode DriverFee {..} = do
+processRestFee ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  PaymentMode ->
+  DriverFee ->
+  SubscriptionConfig ->
+  m ()
+processRestFee paymentMode DriverFee {..} subscriptionConfig = do
   id_ <- generateGUID
   let driverFee =
         DriverFee
           { id = id_,
-            status = if paymentMode == MANUAL then PAYMENT_OVERDUE else PAYMENT_PENDING,
+            status = if paymentMode == MANUAL && not (subscriptionConfig.allowManualPaymentLinks) then PAYMENT_OVERDUE else PAYMENT_PENDING,
             feeType = if paymentMode == MANUAL then RECURRING_INVOICE else RECURRING_EXECUTION_INVOICE,
             ..
           }
   QDF.create driverFee
-  processDriverFee paymentMode driverFee
-  updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
+  processDriverFee paymentMode driverFee subscriptionConfig
+  updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
 
-makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> Payment.OfferListReq
-makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides = do
+makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Payment.OfferListReq
+makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig = do
   let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = Payment.INR} -- add UDFs
       customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
   Payment.OfferListReq
@@ -270,27 +261,44 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides = do
       registrationDate,
       paymentMode = show plan.paymentMode,
       dutyDate,
-      numOfRides
+      numOfRides,
+      offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_APPLICABLE else Nothing
     }
 
-getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> UTCTime -> DriverFee -> m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
-getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate driverFee = do
+getFinalOrderAmount ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  HighPrecMoney ->
+  Id Merchant ->
+  TransporterConfig ->
+  Person ->
+  Plan ->
+  UTCTime ->
+  Int ->
+  DriverFee ->
+  m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
+getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate numOfRidesConsideredForCharges driverFee = do
   now <- getCurrentTime
   let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
-  if feeWithoutDiscount == 0
+      feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
+  if feeWithOutDiscountPlusSpecialZone == 0
     then do
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
-      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides) -- handle UDFs
+      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
         if null offers.offerResp
           then pure (feeWithoutDiscount, Nothing, Nothing)
           else do
             let bestOffer = minimumBy (comparing (.finalOrderAmount)) offers.offerResp
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
-      return (feeWithoutDiscount, finalOrderAmount, offerId, offerTitle)
+      if finalOrderAmount + driverFee.specialZoneAmount == 0
+        then do
+          updateCollectedPaymentStatus CLEARED offerId now driverFee.id
+          updateFeeWithoutDiscount driverFee.id (Just feeWithOutDiscountPlusSpecialZone)
+          return (0, 0, offerId, offerTitle)
+        else return (feeWithOutDiscountPlusSpecialZone, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)
 
 splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> [DriverFee]
 splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDriverfeeThreshold coinClearedAmount = do
@@ -320,68 +328,87 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   WEEKLY_BASE amount -> ("WEEKLY" :: Text, amount)
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
 
-driverFeeSplitter :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => PaymentMode -> Plan -> HighPrecMoney -> HighPrecMoney -> DriverFee -> Maybe (Id Mandate) -> Maybe HighPrecMoney -> UTCTime -> m ()
-driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId mbCoinAmountUsed now = do
+driverFeeSplitter ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  PaymentMode ->
+  Plan ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  DriverFee ->
+  Maybe (Id Mandate) ->
+  Maybe HighPrecMoney ->
+  SubscriptionConfig ->
+  UTCTime ->
+  m ()
+driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId mbCoinAmountUsed subscriptionConfigs now = do
   mandate <- maybe (pure Nothing) QMD.findById mandateId
   let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf totalFee else roundToHalf <$> (mandate <&> (.maxAmount))
-  let coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
-  let splittedFees = splitPlatformFee feeWithoutDiscount (roundToHalf (totalFee - coinAmountUsed)) plan driverFee amountForSpiltting mbCoinAmountUsed
+      coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
+      totalFeeWithCoinDeduction = roundToHalf $ totalFee - coinAmountUsed
+      splittedFees = splitPlatformFee feeWithoutDiscount totalFeeWithCoinDeduction plan driverFee amountForSpiltting mbCoinAmountUsed
   case splittedFees of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     (firstFee : restFees) -> do
-      resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst now
-      mapM_ (processRestFee paymentMode) restFees
-
-unsubscribeDriverForPaymentOverdue ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
-  Job 'UnsubscribeDriverForPaymentOverdue ->
-  m ExecutionResult
-unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
-  let jobData = jobInfo.jobData
-      startTime = jobData.startTime
-      merchantId = jobData.merchantId
-  now <- getLocalCurrentTime jobData.timeDiff
-  feeZipDriver <- calcDriverFeeAttr merchantId PAYMENT_PENDING startTime now
-  when (null feeZipDriver) $ logInfo "No pending payment found."
-  for_ feeZipDriver $ \(driverFee, mbDriver) -> do
-    case mbDriver of
-      Nothing -> do
-        logInfo "Driver Not found. This should not be possible."
-        throwError (InternalError "Driver Not Found") -- Unreachable
-      Just driver -> do
-        let paymentTitle = "Bill generated"
-            paymentMessage = "You have taken " <> show driverFee.numRides <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
-        (Notify.sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
-  forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
-    Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
-      -- Esq.runTransaction $ do
-      updateStatus PAYMENT_OVERDUE driverFee.id now
-      whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
-  return Complete
-
-calcDriverFeeAttr :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Merchant) -> DriverFeeStatus -> UTCTime -> UTCTime -> m [(DriverFee, Maybe Person)]
-calcDriverFeeAttr merchantId driverFeeStatus startTime endTime = do
-  driverFees <- findFeesInRangeWithStatus merchantId startTime endTime driverFeeStatus Nothing
-  let relevantDriverIds = (.driverId) <$> driverFees
-  relevantDrivers <- mapM (B.runInReplica . QPerson.findById) (cast <$> relevantDriverIds)
-  -- relevantDrivers <- mapM QPerson.findById (cast <$> relevantDriverIds)
-  return $ zip driverFees relevantDrivers
+      resetFee firstFee.id firstFee.govtCharges firstFee.platformFee (Just feeWithoutDiscount) firstFee.amountPaidByCoin now
+      mapM_ (\dfee -> processRestFee paymentMode dfee subscriptionConfigs) restFees
 
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
 
-updateSerialOrderForInvoicesInWindow :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DriverFee -> Id Merchant -> UTCTime -> UTCTime -> m ()
-updateSerialOrderForInvoicesInWindow driverFeeId merchantId startTime endTime = do
+updateSerialOrderForInvoicesInWindow ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DriverFee ->
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  ServiceNames ->
+  m ()
+updateSerialOrderForInvoicesInWindow driverFeeId merchantOpCityId startTime endTime serviceName = do
   Hedis.whenWithLockRedis (billNumberGenerationLockKey driverFeeId.getId) 60 $ do
     --- change lock based on mechantId --
-    counter <- getDriverFeeBillNumberKey merchantId
+    counter <- getDriverFeeBillNumberKey merchantOpCityId serviceName
     when (isNothing counter) $ do
-      count <- listToMaybe <$> QDF.findMaxBillNumberInRange merchantId startTime endTime
-      void $ Hedis.incrby (mkDriverFeeBillNumberKey merchantId) (maybe 0 toInteger (count >>= (.billNumber)))
-    billNumber' <- Hedis.incr (mkDriverFeeBillNumberKey merchantId)
+      count <- listToMaybe <$> QDF.findMaxBillNumberInRangeForServiceName merchantOpCityId startTime endTime serviceName
+      void $ Hedis.incrby (mkDriverFeeBillNumberKey merchantOpCityId serviceName) (maybe 0 toInteger (count >>= (.billNumber)))
+    billNumber' <- Hedis.incr (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
     QDF.updateBillNumberById (Just (fromInteger billNumber')) driverFeeId
+
+getOrGenerateDriverFeeDataBasedOnServiceName ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  ServiceNames ->
+  UTCTime ->
+  UTCTime ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  TransporterConfig ->
+  m [DriverFee]
+getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOperatingCityId transporterConfig = do
+  now <- getCurrentTime
+  case serviceName of
+    YATRI_SUBSCRIPTION -> QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize serviceName
+    YATRI_RENTAL -> do
+      when (startTime >= endTime) $ throwError (InternalError "Invalid time range for driver fee calculation")
+      let mbStartTime = Just startTime
+          mbEndTime = Just endTime
+      mbtoCreateDriverFeeForService <- toCreateDriverFeeForService serviceName merchantOperatingCityId
+      if fromMaybe False mbtoCreateDriverFeeForService
+        then do
+          driverEligibleForRentals <- findAllDriversEligibleForService serviceName merchantId merchantOperatingCityId
+          driverFees <-
+            mapMaybeM
+              ( \dPlan -> do
+                  mbExistingDFee <- QDF.findFeeByDriverIdAndServiceNameInRange (cast dPlan.driverId) serviceName startTime endTime
+                  if isNothing mbExistingDFee
+                    then do
+                      driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 transporterConfig Nothing
+                      QDF.create driverFee
+                      return $ Just driverFee
+                    else return Nothing
+              )
+              driverEligibleForRentals
+          setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOperatingCityId False
+          return driverFees
+        else QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize serviceName
 
 mkInvoiceAgainstDriverFee ::
   ( MonadFlow m
@@ -398,7 +425,7 @@ mkInvoiceAgainstDriverFee driverFee (isCoinCleared, isAutoPay) = do
       { id = Id invoiceId,
         invoiceShortId = shortId.getShortId,
         driverFeeId = driverFee.id,
-        invoiceStatus = if isCoinCleared then INV.SUCCESS else INV.ACTIVE_INVOICE,
+        invoiceStatus = if isCoinCleared then INV.CLEARED_BY_YATRI_COINS else INV.ACTIVE_INVOICE,
         paymentMode = if isCoinCleared && not isAutoPay then INV.MANUAL_INVOICE else INV.AUTOPAY_INVOICE,
         bankErrorCode = Nothing,
         bankErrorMessage = Nothing,
@@ -406,55 +433,233 @@ mkInvoiceAgainstDriverFee driverFee (isCoinCleared, isAutoPay) = do
         maxMandateAmount = Nothing,
         driverId = driverFee.driverId,
         lastStatusCheckedAt = Nothing,
+        serviceName = driverFee.serviceName,
+        merchantOperatingCityId = driverFee.merchantOperatingCityId,
         updatedAt = now,
         createdAt = now
       }
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Id MerchantOperatingCity -> Int -> m ()
-scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards = do
+scheduleJobs ::
+  (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) =>
+  TransporterConfig ->
+  UTCTime ->
+  UTCTime ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Int ->
+  ServiceNames ->
+  SubscriptionConfig ->
+  CalculateDriverFeesJobData ->
+  m ()
+scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName subscriptionConfigs jobData = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
-  let dfCalculationJobTs = diffUTCTime (addUTCTime dfNotificationTime endTime) now
-  createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
-    SendPDNNotificationToDriverJobData
-      { merchantId = merchantId,
-        merchantOperatingCityId = Just merchantOpCityId,
-        startTime = startTime,
-        endTime = endTime
-      }
-  createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
-    SendOverlayJobData
-      { merchantId = merchantId,
-        rescheduleInterval = Nothing,
-        overlayKey = manualInvoiceGeneratedNudgeKey,
-        udf1 = Just $ show MANUAL,
-        condition = InvoiceGenerated MANUAL,
-        scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
-        freeTrialDays = transporterConfig.freeTrialDays,
-        timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
-        driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-        driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
-        driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
-        overlayBatchSize = transporterConfig.overlayBatchSize
-      }
-  createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
-    SendOverlayJobData
-      { merchantId = merchantId,
-        rescheduleInterval = Nothing,
-        overlayKey = autopayInvoiceGeneratedNudgeKey,
-        udf1 = Just $ show AUTOPAY,
-        condition = InvoiceGenerated AUTOPAY,
-        scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
-        freeTrialDays = transporterConfig.freeTrialDays,
-        timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
-        driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-        driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
-        driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
-        overlayBatchSize = transporterConfig.overlayBatchSize
-      }
+  let timeDiffNormalFlow = addUTCTime dfNotificationTime endTime
+  let timeDiffNormalFlowLinkSendJob = addUTCTime subscriptionConfigs.paymentLinkJobTime endTime
+  let dfCalculationJobTs = if timeDiffNormalFlow > now then diffUTCTime timeDiffNormalFlow now else 5 * 60 --- 5 min
+  let paymentLinkSendJobTs = if timeDiffNormalFlowLinkSendJob > now then diffUTCTime timeDiffNormalFlowLinkSendJob now else 5 * 60 --- 5 min
+      scheduleChildJobs = fromMaybe True jobData.createChildJobs
+      scheduleNotification = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleNotification
+      scheduleOverlay = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleOverlay
+      scheduleManualPaymentLink = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleManualPaymentLink
+      scheduleDriverFeeCalc = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleDriverFeeCalc
+  when scheduleNotification $ do
+    createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
+      SendPDNNotificationToDriverJobData
+        { merchantId = merchantId,
+          merchantOperatingCityId = Just merchantOpCityId,
+          startTime = startTime,
+          endTime = endTime,
+          retryCount = Just 0,
+          serviceName = Just serviceName
+        }
+  when (subscriptionConfigs.useOverlayService && scheduleOverlay) $ do
+    createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
+      SendOverlayJobData
+        { merchantId = merchantId,
+          rescheduleInterval = Nothing,
+          overlayKey = manualInvoiceGeneratedNudgeKey,
+          udf1 = Just $ show MANUAL,
+          condition = InvoiceGenerated MANUAL,
+          scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
+          freeTrialDays = transporterConfig.freeTrialDays,
+          timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+          driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+          driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+          driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+          merchantOperatingCityId = Just merchantOpCityId,
+          overlayBatchSize = transporterConfig.overlayBatchSize,
+          serviceName = Just serviceName
+        }
+    createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
+      SendOverlayJobData
+        { merchantId = merchantId,
+          rescheduleInterval = Nothing,
+          overlayKey = autopayInvoiceGeneratedNudgeKey,
+          udf1 = Just $ show AUTOPAY,
+          condition = InvoiceGenerated AUTOPAY,
+          scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
+          freeTrialDays = transporterConfig.freeTrialDays,
+          timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+          driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+          driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+          merchantOperatingCityId = Just merchantOpCityId,
+          driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+          overlayBatchSize = transporterConfig.overlayBatchSize,
+          serviceName = Just serviceName
+        }
+  when (subscriptionConfigs.allowManualPaymentLinks && scheduleManualPaymentLink) $ do
+    createJobIn @_ @'SendManualPaymentLink paymentLinkSendJobTs maxShards $
+      SendManualPaymentLinkJobData
+        { merchantId = merchantId,
+          merchantOperatingCityId = merchantOpCityId,
+          serviceName = serviceName,
+          startTime = startTime,
+          endTime = endTime,
+          channel = subscriptionConfigs.paymentLinkChannel
+        }
+  when (subscriptionConfigs.allowDriverFeeCalcSchedule && scheduleDriverFeeCalc) $ do
+    let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay endTime) (secondsToDiffTime 0))
+        startTime' = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
+        endTime' = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
+    case transporterConfig.driverFeeCalculationTime of
+      Nothing -> pure ()
+      Just dfCalcTime -> do
+        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache startTime' endTime' merchantOpCityId
+        let dfCalculationJobTs' = diffUTCTime (addUTCTime dfCalcTime endTime') now
+        case isDfCaclculationJobScheduled of
+          ----- marker ---
+          Nothing -> do
+            createJobIn @_ @'CalculateDriverFees dfCalculationJobTs' maxShards $
+              CalculateDriverFeesJobData
+                { merchantId = merchantId,
+                  merchantOperatingCityId = Just merchantOpCityId,
+                  startTime = startTime',
+                  serviceName = Just serviceName,
+                  endTime = endTime',
+                  scheduleNotification = Just True,
+                  scheduleOverlay = Just True,
+                  scheduleManualPaymentLink = Just True,
+                  scheduleDriverFeeCalc = Just True,
+                  createChildJobs = Just True
+                }
+            setDriverFeeCalcJobCache startTime endTime' merchantOpCityId dfCalculationJobTs
+            setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
+            setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
+          _ -> pure ()
+
+calcFinalOrderAmounts ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  Id Merchant ->
+  TransporterConfig ->
+  Person ->
+  Plan ->
+  UTCTime ->
+  Int ->
+  Text ->
+  HighPrecMoney ->
+  DriverFee ->
+  m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
+calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee =
+  case (planBaseFrequcency, plan.basedOnEntity) of
+    ("PER_RIDE", RIDE) -> do
+      let feeWithoutDiscount = max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRidesForPlanCharges)))
+      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee
+    ("DAILY", RIDE) -> do
+      let feeWithoutDiscount = if numRidesForPlanCharges > 0 then baseAmount else 0
+      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee
+    ("DAILY", NONE) -> do
+      let feeWithoutDiscount = baseAmount
+      getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee
+    _ -> return (0.0, 0.0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
 
 manualInvoiceGeneratedNudgeKey :: Text
 manualInvoiceGeneratedNudgeKey = "INVOICE_GENERATED_MANUAL"
 
 autopayInvoiceGeneratedNudgeKey :: Text
 autopayInvoiceGeneratedNudgeKey = "INVOICE_GENERATED_AUTOPAY"
+
+sendManualPaymentLink ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "smsCfg" r SmsConfig,
+    HasField "jobInfoMap" r (M.Map Text Bool)
+  ) =>
+  Job 'SendManualPaymentLink ->
+  m ExecutionResult
+sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+  let jobData = jobInfo.jobData
+      merchantId = jobData.merchantId
+      opCityId = jobData.merchantOperatingCityId
+      startTime = jobData.startTime
+      endTime = jobData.endTime
+      serviceName = jobData.serviceName
+  now <- getCurrentTime
+  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
+  let deepLinkExpiry = subscriptionConfigs.deepLinkExpiryTimeInMinutes
+  driverFeesToProccess <- QDF.findDriverFeeInRangeEligibleForManualPaymentLinkByServiceName merchantId subscriptionConfigs.genericBatchSizeForJobs startTime endTime jobData.serviceName
+  if null driverFeesToProccess
+    then return Complete
+    else do
+      processAndSendManualPaymentLink driverFeesToProccess subscriptionConfigs merchantId opCityId serviceName deepLinkExpiry now
+      ReSchedule <$> getRescheduledTime subscriptionConfigs.genericJobRescheduleTime
+
+processAndSendManualPaymentLink :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) => [DriverFee] -> SubscriptionConfig -> Id Merchant -> Id MerchantOperatingCity -> ServiceNames -> Maybe Int -> UTCTime -> m ()
+processAndSendManualPaymentLink driverFeesToProccess subscriptionConfigs merchantId opCityId serviceName mbDeepLinkExpiry now = do
+  forM_ driverFeesToProccess $ \driverFeeForManualCharge -> do
+    QDF.updateStatus PAYMENT_OVERDUE (driverFeeForManualCharge.id) now
+    let driverId = driverFeeForManualCharge.driverId
+    let allowDeepLink = subscriptionConfigs.sendDeepLink
+    let mbDeepLinkData = if allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = mbDeepLinkExpiry} else Nothing
+    resp' <- try @_ @SomeException $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName mbDeepLinkData
+    errorCatchAndHandle
+      driverFeeForManualCharge
+      resp'
+      subscriptionConfigs
+      now
+      ( \resp -> do
+          let mbPaymentLink = resp.orderResp.payment_links
+              payload = resp.orderResp.sdk_payload.payload
+              mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
+          whatsAppResp <- try @_ @SomeException $ SPayment.sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount (Just subscriptionConfigs.paymentLinkChannel) allowDeepLink WHATSAPP_SEND_MANUAL_PAYMENT_LINK
+          errorCatchAndHandle driverFeeForManualCharge whatsAppResp subscriptionConfigs now (\_ -> return ())
+      )
+
+errorCatchAndHandle :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) => DriverFee -> Either SomeException a -> SubscriptionConfig -> UTCTime -> (a -> m ()) -> m ()
+errorCatchAndHandle driverFeeForManualCharge resp' subscriptionConfig now function = do
+  case resp' of
+    Left _ -> do
+      eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkManualLinkErrorTrackingKey driverFeeForManualCharge.id) subscriptionConfig.maxRetryCount
+      if eligibleForRetryInNextBatch
+        then QDF.updateStatus PAYMENT_PENDING (driverFeeForManualCharge.id) now
+        else do QDF.updateStatus MANUAL_REVIEW_NEEDED (driverFeeForManualCharge.id) now
+    Right resp -> function resp
+
+isEligibleForRetryInNextBatch :: (MonadFlow m, CacheFlow m r) => Text -> Int -> m Bool
+isEligibleForRetryInNextBatch key maxCount = do
+  count <-
+    Hedis.get key >>= \case
+      Just count -> return count
+      Nothing -> return 0
+  if count < maxCount
+    then do
+      void $ Hedis.incr key
+      return True
+    else return False
+
+mkManualLinkErrorTrackingKey :: Id DriverFee -> Text
+mkManualLinkErrorTrackingKey driverFeeId = "ErrorRetryCountFor:DriverFeeId:" <> show driverFeeId.getId
+
+getsetManualLinkErrorTrackingKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m (Maybe Int)
+getsetManualLinkErrorTrackingKey driverFeeId = Hedis.get (mkManualLinkErrorTrackingKey driverFeeId)

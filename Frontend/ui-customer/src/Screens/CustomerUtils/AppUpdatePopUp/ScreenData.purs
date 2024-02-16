@@ -5,7 +5,7 @@ import Screens.Types (UpdatePopupType(..), AppUpdatePopUpState)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Foreign.Object (empty)
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 
 initData :: AppUpdatePopUpState
 initData =
@@ -19,5 +19,5 @@ initData =
             optionTwoText : getString UPDATE,
             coverImageUrl : ""
         },
-        config : DC.config
+        config : getAppConfig appConfig
     }

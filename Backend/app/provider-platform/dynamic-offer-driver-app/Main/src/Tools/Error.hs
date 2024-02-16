@@ -16,6 +16,7 @@
 module Tools.Error (module Tools.Error) where
 
 import EulerHS.Prelude
+import Kernel.External.Types (Language)
 import Kernel.Types.Error as Tools.Error hiding (PersonError)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
@@ -275,6 +276,7 @@ instance IsAPIError SearchRequestErrorARDU
 data DriverQuoteError
   = FoundActiveQuotes
   | DriverOnRide
+  | DriverQuoteNotFound Text
   | DriverQuoteExpired
   | NoSearchRequestForDriver
   | RideRequestAlreadyAccepted
@@ -289,6 +291,7 @@ instanceExceptionWithParent 'HTTPException ''DriverQuoteError
 instance IsBaseError DriverQuoteError where
   toMessage FoundActiveQuotes = Just "Failed to offer quote, there are other active quotes from this driver"
   toMessage DriverOnRide = Just "Unable to offer a quote while being on ride"
+  toMessage (DriverQuoteNotFound dqId) = Just $ "Driver quote not found with id:-" <> show dqId
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
   toMessage RideRequestAlreadyAccepted = Just "Ride request already accepted by other driver"
@@ -301,6 +304,7 @@ instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
     FoundActiveQuotes -> "FOUND_ACTIVE_QUOTES"
     DriverOnRide -> "DRIVER_ON_RIDE"
+    DriverQuoteNotFound _ -> "DRIVER_QUOTE_NOT_FOUND"
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
     RideRequestAlreadyAccepted -> "RIDE_REQUEST_ALREADY_ACCEPTED"
@@ -312,6 +316,7 @@ instance IsHTTPError DriverQuoteError where
   toHttpCode = \case
     FoundActiveQuotes -> E400
     DriverOnRide -> E400
+    DriverQuoteNotFound _ -> E400
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
     RideRequestAlreadyAccepted -> E400
@@ -712,6 +717,7 @@ data SubscriptionError
   | OngoingManualPayment
   | NoCurrentPlanForDriver Text
   | NoDriverPlanForMandate Text
+  | NoSubscriptionConfigForService Text Text
   | InvalidAutoPayStatus
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -729,6 +735,7 @@ instance IsBaseError SubscriptionError where
     InvalidPaymentMode -> Just "Invalid payment method"
     InvalidAutoPayStatus -> Just "Invalid auto pay status"
     OngoingManualPayment -> Just "There is ongoing manual payment pls wait"
+    NoSubscriptionConfigForService merchantOperatingCityId serviceName -> Just $ "No subscription config exists for merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and serviceName \"" <> show serviceName <> "\""
 
 instance IsHTTPError SubscriptionError where
   toErrorCode = \case
@@ -742,6 +749,7 @@ instance IsHTTPError SubscriptionError where
     InvalidPaymentMode -> "INVALID_PAYMENT_MODE"
     InvalidAutoPayStatus -> "INVALID_AUTO_PAY_STATUS"
     OngoingManualPayment -> "ONGOING_PAYMENT_EXECUTION"
+    NoSubscriptionConfigForService _ _ -> "NO_SUBSCRIPTION_CONFIG_FOR_SERVICE"
   toHttpCode = \case
     PlanNotFound _ -> E500
     MandateNotFound _ -> E500
@@ -753,6 +761,7 @@ instance IsHTTPError SubscriptionError where
     NoCurrentPlanForDriver _ -> E500
     NoDriverPlanForMandate _ -> E500
     OngoingManualPayment -> E400
+    NoSubscriptionConfigForService _ _ -> E500
 
 instance IsAPIError SubscriptionError
 
@@ -780,6 +789,7 @@ instance IsAPIError FleetErrors
 
 data OverlayError
   = OverlayKeyAndUdfNotFound Text
+  | OverlayKeyNotFound Text
   | OverlayKeyAndUdfAlreadyPresent Text
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -788,43 +798,48 @@ instanceExceptionWithParent 'HTTPException ''OverlayError
 instance IsBaseError OverlayError where
   toMessage = \case
     OverlayKeyAndUdfNotFound overlayKeyAndUdf -> Just $ "Overlay Key and Udf \"" <> show overlayKeyAndUdf <> "\" not found. "
+    OverlayKeyNotFound overlayKey -> Just $ "Overlay Key\"" <> overlayKey <> "\" not found. "
     OverlayKeyAndUdfAlreadyPresent overlayKeyAndUdf -> Just $ "Overlay Key and Udf \"" <> show overlayKeyAndUdf <> "\" already present."
 
 instance IsHTTPError OverlayError where
   toErrorCode = \case
     OverlayKeyAndUdfNotFound _ -> "OVERLAY_KEY_AND_UDF_NOT_FOUND"
+    OverlayKeyNotFound _ -> "OVERLAY_KEY_NOT_FOUND"
     OverlayKeyAndUdfAlreadyPresent _ -> "OVERLAY_KEY_AND_UDF_ALREADY_PRESENT"
   toHttpCode = \case
     OverlayKeyAndUdfNotFound _ -> E400
+    OverlayKeyNotFound _ -> E400
     OverlayKeyAndUdfAlreadyPresent _ -> E400
 
 instance IsAPIError OverlayError
 
 data DashboardSMSError
-  = VolunteerSmsSendingLimitExceeded
-  | DriverSmsReceivingLimitExceeded
+  = VolunteerMessageSendingLimitExceeded Text
+  | DriverMessageReceivingLimitExceeded Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DashboardSMSError
 
 instance IsBaseError DashboardSMSError where
   toMessage = \case
-    VolunteerSmsSendingLimitExceeded -> Just "Volunteer Sms Sending limit exceeded"
-    DriverSmsReceivingLimitExceeded -> Just "Drivers' Sms receiving limit exceeded"
+    VolunteerMessageSendingLimitExceeded channel -> Just $ "Volunteer message Sending limit exceeded for channel : " <> channel
+    DriverMessageReceivingLimitExceeded channel -> Just $ "Drivers' message receiving limit exceeded for channel : " <> channel
 
 instance IsHTTPError DashboardSMSError where
   toErrorCode = \case
-    VolunteerSmsSendingLimitExceeded -> "VOLUNTEER_SMS_SENDING_LIMIT_EXCEEDED"
-    DriverSmsReceivingLimitExceeded -> "DRIVER_SMS_RECEIVING_LIMIT_EXCEEDED"
+    VolunteerMessageSendingLimitExceeded _ -> "VOLUNTEER_MESSAGE_SENDING_LIMIT_EXCEEDED"
+    DriverMessageReceivingLimitExceeded _ -> "DRIVER_MESSAGE_RECEIVING_LIMIT_EXCEEDED"
   toHttpCode = \case
-    VolunteerSmsSendingLimitExceeded -> E400
-    DriverSmsReceivingLimitExceeded -> E400
+    VolunteerMessageSendingLimitExceeded _ -> E400
+    DriverMessageReceivingLimitExceeded _ -> E400
 
 instance IsAPIError DashboardSMSError
 
 data DriverCoinError
   = CoinServiceUnavailable Text
-  | InsufficientCoins Text
+  | InsufficientCoins Text Int
+  | CoinConversionToCash Text Int
+  | CoinUsedForConverting Text Int
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverCoinError
@@ -832,14 +847,167 @@ instanceExceptionWithParent 'HTTPException ''DriverCoinError
 instance IsBaseError DriverCoinError where
   toMessage = \case
     CoinServiceUnavailable merchantId -> Just ("Coin Service is not available for merchantId " <> show merchantId <> ".")
-    InsufficientCoins driverId -> Just ("Insufficient coin balance for driverId " <> show driverId <> ".")
+    InsufficientCoins driverId coins -> Just ("Insufficient coin balance for driverId : " <> show driverId <> ". coins value is : " <> show coins <> ".")
+    CoinConversionToCash driverId coins -> Just ("Atleast 250 coins is required for conversion driverId : " <> show driverId <> ". coins value is : " <> show coins <> ".")
+    CoinUsedForConverting driverId coins -> Just ("Coins used for converting to cash should be multiple of 250 for driverId : " <> show driverId <> ". coins value is : " <> show coins <> ".")
 
 instance IsHTTPError DriverCoinError where
   toErrorCode = \case
     CoinServiceUnavailable _ -> "COIN_SERVICE_UNAVAILABLE"
-    InsufficientCoins _ -> "INSUFFICIENT_COINS"
+    InsufficientCoins _ _ -> "INSUFFICIENT_COINS"
+    CoinConversionToCash _ _ -> "ATLEAST_250_COINS_REQUIRED_FOR_CONVERSION"
+    CoinUsedForConverting _ _ -> "COINS_USED_FOR_CONVERTING_TO_CASH_SHOULD_BE_MULTIPLE_OF_250"
   toHttpCode = \case
     CoinServiceUnavailable _ -> E400
-    InsufficientCoins _ -> E400
+    InsufficientCoins _ _ -> E400
+    CoinConversionToCash _ _ -> E400
+    CoinUsedForConverting _ _ -> E400
 
 instance IsAPIError DriverCoinError
+
+newtype DriverReferralError
+  = InvalidReferralCode Text
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverReferralError
+
+instance IsBaseError DriverReferralError where
+  toMessage = \case
+    InvalidReferralCode referralCode -> Just ("Invalid referral code " <> show referralCode <> ".")
+
+instance IsHTTPError DriverReferralError where
+  toErrorCode = \case
+    InvalidReferralCode _ -> "INVALID_REFERRAL_CODE"
+  toHttpCode = \case
+    InvalidReferralCode _ -> E400
+
+instance IsAPIError DriverReferralError
+
+data RiderDetailsError
+  = RiderDetailsNotFound Text
+  | RiderDetailsDoNotExist Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RiderDetailsError
+
+instance IsBaseError RiderDetailsError where
+  toMessage = \case
+    (RiderDetailsNotFound riderDetailId) -> Just $ "RideDetails with rideDetailsId \"" <> show riderDetailId <> "\" not found. "
+    (RiderDetailsDoNotExist entity entityData) -> Just $ "RiderDetails not found for " <> entity <> " " <> entityData
+
+instance IsHTTPError RiderDetailsError where
+  toErrorCode _ = "RIDER_DETAILS_NOT_FOUND"
+  toHttpCode _ = E500
+
+instance IsAPIError RiderDetailsError
+
+data CustomerCancellationDuesError
+  = DisputeChancesLimitNotMet Text Text Text
+  | CityRestrictionOnCustomerCancellationDuesAddition Text
+  | DisputeChancesOrCancellationDuesHasToBeNull
+  | CustomerCancellationDuesLimitNotMet Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CustomerCancellationDuesError
+
+instance IsBaseError CustomerCancellationDuesError where
+  toMessage = \case
+    (DisputeChancesLimitNotMet riderDetailsId disputeChancesUsed disputeChanceThreshold) -> Just $ "Limits not met for dispute chances for riderDetailsId " <> riderDetailsId <> ". Dispute Chances Used are :" <> disputeChancesUsed <> "and DisputeChanceThreshold is: " <> disputeChanceThreshold
+    (CityRestrictionOnCustomerCancellationDuesAddition city) -> Just $ city <> " is restricted from addition of customer cancellation dues on ride cancellation"
+    DisputeChancesOrCancellationDuesHasToBeNull -> Just "Either of the two , Due Amount or Dispute Chances has to be Null"
+    (CustomerCancellationDuesLimitNotMet riderDetailsId) -> Just $ "Limits not met for cancellation dues for riderDetailsId :" <> riderDetailsId
+
+instance IsHTTPError CustomerCancellationDuesError where
+  toErrorCode = \case
+    DisputeChancesLimitNotMet {} -> "DISPUTE_CHANCES_LIMIT_NOT_MET"
+    CityRestrictionOnCustomerCancellationDuesAddition _ -> "CITY_RESTRICTION_ON_CUSTOMER_CANCELLATION_DUES_ADDITION"
+    DisputeChancesOrCancellationDuesHasToBeNull -> "DISPUTE_CHANCES_OR_CANCELLATION_DUES_HAS_TO_BE_NULL"
+    CustomerCancellationDuesLimitNotMet _ -> "CUSTOMER_CANCELLATION_DUES_LIMIT_NOT_MET"
+
+  toHttpCode _ = E400
+
+instance IsAPIError CustomerCancellationDuesError
+
+data RentalError
+  = OdometerReadingRequired Text
+  | EndRideOtpRequired Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RentalError
+
+instance IsBaseError RentalError where
+  toMessage = \case
+    OdometerReadingRequired tripCategory -> Just $ "Odometer Readings are required for " <> tripCategory <> " ride."
+    EndRideOtpRequired tripCategory -> Just $ "End Ride OTP is required to end a " <> tripCategory <> " ride."
+
+instance IsHTTPError RentalError where
+  toErrorCode = \case
+    OdometerReadingRequired _ -> "ODOMETER_READING_REQUIRED"
+    EndRideOtpRequired _ -> "END_RIDE_OTP_REQUIRED"
+
+  toHttpCode _ = E400
+
+instance IsAPIError RentalError
+
+data LocationMappingError
+  = FromLocationMappingNotFound Text
+  | FromLocationNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LocationMappingError
+
+instance IsBaseError LocationMappingError where
+  toMessage = \case
+    FromLocationMappingNotFound id_ -> Just $ "From location mapping not found for entity id: " <> id_ <> "."
+    FromLocationNotFound id_ -> Just $ "From location not found for locationId: " <> id_ <> "."
+
+instance IsHTTPError LocationMappingError where
+  toErrorCode = \case
+    FromLocationMappingNotFound _ -> "FROM_LOCATION_MAPPING_NOT_FOUND"
+    FromLocationNotFound _ -> "FROM_LOCATION_NOT_FOUND"
+
+  toHttpCode _ = E500
+
+instance IsAPIError LocationMappingError
+
+data LmsError
+  = LmsModuleTranslationNotFound Text Language
+  | LmsVideoNotFound Text Text
+  | LmsVideoTranslationNotFound Text Language
+  | LmsQuestionTranslationNotFound Text Language
+  | LmsModuleNotFound Text
+  | LmsDriverModuleCompletionEntryNotFound Text Text
+  | LmsQuestionNotFound Text Language
+  | LmsQuestionNotFoundForModule Text Text
+  | LmsCorrectOptionNotFound Text Language
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LmsError
+
+instance IsBaseError LmsError where
+  toMessage = \case
+    LmsModuleTranslationNotFound moduleId language -> Just $ "Module Translation Not found for moduleId :" <> moduleId <> "- and Language:" <> show language
+    LmsVideoNotFound videoId moduleId -> Just $ "LMS video not found with videoId " <> videoId <> "- and moduleId:" <> moduleId
+    LmsVideoTranslationNotFound videoId language -> Just $ "Video Translation Not found for videoId :" <> videoId <> "- and Language:" <> show language
+    LmsQuestionTranslationNotFound questionId language -> Just $ "Question Translation Not found for questionId :" <> questionId <> "- and Language:" <> show language
+    LmsModuleNotFound moduleId -> Just $ "Module not found with id : " <> moduleId
+    LmsDriverModuleCompletionEntryNotFound moduleId personId -> Just $ "Driver module completion entry not found with module id : " <> moduleId <> " - and driver Id : " <> personId
+    LmsQuestionNotFound questionId language -> Just $ "Lms Question not found with id : " <> questionId <> " with language : " <> show language
+    LmsQuestionNotFoundForModule questionId moduleId -> Just $ "Lms Question not found with id : " <> questionId <> "for module with id : " <> moduleId
+    LmsCorrectOptionNotFound questionId language -> Just $ "Correct Option not found for question : " <> questionId <> " and language :" <> show language
+
+instance IsHTTPError LmsError where
+  toErrorCode = \case
+    LmsModuleTranslationNotFound _moduleId _language -> "LMS_MODULE_TRANSLATION_NOT_FOUND"
+    LmsVideoNotFound _ _ -> "LMS_VIDEO_NOT_FOUND"
+    LmsVideoTranslationNotFound _videoId _language -> "LMS_VIDEO_TRANSLATION_NOT_FOUND"
+    LmsQuestionTranslationNotFound _questionId _language -> "LMS_QUESTION_TRANSLATION_NOT_FOUND"
+    LmsModuleNotFound _moduleId -> "LMS_MODULE_NOT_FOUND"
+    LmsDriverModuleCompletionEntryNotFound _ _ -> "LMS_DRIVER_MODULE_COMPLETION_ENTRY_NOT_FOUND"
+    LmsQuestionNotFound _questionId _ -> "LMS_QUESTION_NOT_FOUND"
+    LmsQuestionNotFoundForModule _ _ -> "LMS_QUESTION_NOT_FOUND_FOR_MODULE"
+    LmsCorrectOptionNotFound _questionid _ -> "LMS_CORRECT_OPTION_NOT_FOUND"
+
+  toHttpCode _ = E400
+
+instance IsAPIError LmsError

@@ -15,7 +15,7 @@
 module Tools.Verification
   ( module Reexport,
     verifyDLAsync,
-    verifyRCAsync,
+    verifyRC,
     validateImage,
     extractRCImage,
     extractDLImage,
@@ -34,13 +34,14 @@ import Kernel.External.Verification as Reexport hiding
     validateFaceImage,
     validateImage,
     verifyDLAsync,
-    verifyRCAsync,
+    verifyRC,
   )
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.InternalScripts
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Beam.GovtDataRC ()
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Tools.Error
@@ -53,13 +54,15 @@ verifyDLAsync ::
   m VerifyDLAsyncResp
 verifyDLAsync = runWithServiceConfig Verification.verifyDLAsync (.verificationService)
 
-verifyRCAsync ::
+verifyRC ::
   ServiceFlow m r =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  VerifyRCAsyncReq ->
-  m VerifyRCAsyncResp
-verifyRCAsync = runWithServiceConfig Verification.verifyRCAsync (.verificationService)
+  VerifyRCReq ->
+  m VerifyRCResp
+verifyRC merchantId merchantOptCityId req = do
+  config <- CQMSUC.findByMerchantOpCityId merchantOptCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
+  runWithServiceConfig (Verification.verifyRC config.verificationProvidersPriorityList) (.verificationService) merchantId merchantOptCityId req
 
 validateImage ::
   ServiceFlow m r =>
@@ -106,7 +109,7 @@ runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
     CQMSUC.findByMerchantOpCityId merchantOpCityId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (DMSC.VerificationService $ getCfg merchantServiceUsageConfig)
+    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.VerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> func vsc req

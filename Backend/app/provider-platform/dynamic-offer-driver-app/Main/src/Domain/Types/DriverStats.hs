@@ -30,6 +30,8 @@ data DriverStats = DriverStats
     totalDistance :: Meters,
     ridesCancelled :: Maybe Int,
     totalRidesAssigned :: Maybe Int,
+    coinCovertedToCashLeft :: HighPrecMoney,
+    totalCoinsConvertedCash :: HighPrecMoney,
     updatedAt :: UTCTime
   }
   deriving (Generic)

@@ -46,6 +46,12 @@ data MessageKey
   | SMS_SETUP_AUTOPAY_MESSAGE
   | SMS_SWITCH_PLAN_MESSAGE
   | SMS_HOW_IT_WORKS_MESSAGE
+  | WHATSAPP_SETUP_MANDATE_MESSAGE
+  | WHATSAPP_VEHICLE_UNLINKED_MESSAGE
+  | WHATSAPP_VEHICLE_LINKED_MESSAGE
+  | YATRI_RENTAL_PAUSE
+  | YATRI_RENTAL_RESUME
+  | WHATSAPP_SEND_MANUAL_PAYMENT_LINK
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord, ToSchema)
 
 $(mkBeamInstancesForEnum ''MessageKey)
@@ -83,3 +89,12 @@ instance Default MerchantMessageDefaultDataJSON where
         var2 = Nothing,
         var3 = Nothing
       }
+
+data MediaChannel
+  = SMS
+  | WHATSAPP
+  | OVERLAY
+  | ALERT
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, Ord)
+
+$(mkBeamInstancesForEnum ''MediaChannel)

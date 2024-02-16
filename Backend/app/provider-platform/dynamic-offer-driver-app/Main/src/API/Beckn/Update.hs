@@ -22,15 +22,17 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 type API =
   Capture "merchantId" (Id Merchant)
-    :> SignatureAuth "Authorization"
-    :> Update.UpdateAPI
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    :> Update.UpdateAPIV1
 
 handler :: FlowServer API
 handler = update

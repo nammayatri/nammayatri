@@ -17,6 +17,7 @@
 module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.SearchRequest as Domain
 import Kernel.External.Maps (Language)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
@@ -40,6 +41,7 @@ data SearchRequestT f = SearchRequestT
     customerExtraFee :: B.C f (Maybe Money),
     availablePaymentMethods :: B.C f [Text],
     selectedPaymentMethodId :: B.C f (Maybe Text),
+    riderPreferredOption :: B.C f (Maybe Domain.RiderPerferredOption),
     autoAssignEnabled :: B.C f (Maybe Bool),
     autoAssignEnabledV2 :: B.C f (Maybe Bool),
     bundleVersion :: B.C f (Maybe Text),

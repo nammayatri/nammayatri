@@ -1,0 +1,61 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  BaseUrl: Servant.Client.Core
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
+
+BecknConfig:
+  tableName: beckn_config
+
+  fields:
+    id: Id BecknConfig
+    domain: Text
+    subscriberId: Text
+    subscriberUrl: BaseUrl
+    gatewayUrl: BaseUrl
+    registryUrl: BaseUrl
+    uniqueKeyId: Text
+    settlementType: Maybe Text
+    paymentParamsJson: Maybe Text
+    vehicleCategory: VehicleCategory
+    collectedBy: PaymentCollectedBy
+    staticTermsUrl: Maybe BaseUrl
+
+  types:
+    VehicleCategory:
+      enum: "CAB, AUTO_RICKSHAW, METRO"
+
+    PaymentCollectedBy:
+      enum: "BAP, BPP"
+
+  default:
+    vehicleCategory: "'CAB'"
+    collectedBy: "'BPP'"
+
+  queries:
+    findByMerchantIdAndDomain:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, domain]
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  beamType:
+    subscriberUrl: Text
+    gatewayUrl: Text
+    registryUrl: Text
+    staticTermsUrl: Maybe Text
+
+  toTType:
+    subscriberUrl: showBaseUrl|I
+    gatewayUrl: showBaseUrl|I
+    registryUrl: showBaseUrl|I
+    staticTermsUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+
+  fromTType:
+    subscriberUrl: parseBaseUrl|MI
+    gatewayUrl: parseBaseUrl|IM
+    registryUrl: parseBaseUrl|MI
+    staticTermsUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI

@@ -104,3 +104,6 @@ getSupportNumber _ = case getEnv of
                         UAT  -> "9999999999"
                         PROD -> "9999999999"
                         _    -> "9999999999"
+
+getNumbersToWhiteList :: String -> Array String
+getNumbersToWhiteList _ = []

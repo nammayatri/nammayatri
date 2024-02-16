@@ -160,7 +160,9 @@ genericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-      , margin = (Margin 12 12 12 12)
+      , margin = Margin 8 8 8 8 
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       }
     , textConfig {
         text = (getString SELECT_FAVOURITE)
@@ -211,4 +213,7 @@ getFavouritesItem item = {
   , distance : item.distance
   , showDistance: Just false
   , actualDistance : Nothing
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
 }

@@ -22,7 +22,8 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
   )
 where
 
-import EulerHS.Prelude hiding (id)
+import Database.Beam.Backend
+import Kernel.Prelude
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForList)
@@ -32,7 +33,7 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
     batchSplitDelay :: Seconds
   }
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 $(mkBeamInstancesForList ''BatchSplitByPickupDistance)
 
@@ -49,6 +50,9 @@ type HasDriverPoolBatchesConfig r =
 
 data PoolSortingType = Intelligent | Random
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, FromDhall)
+  deriving anyclass (FromJSON, ToJSON, FromDhall, ToSchema)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BatchSplitByPickupDistance where
+  sqlValueSyntax = autoSqlValueSyntax
 
 $(mkBeamInstancesForEnum ''PoolSortingType)

@@ -30,7 +30,7 @@ import qualified Tools.Client as Client
 import Tools.Error
 
 handler :: Text -> Bool -> Text -> FlowHandler DPlace.SnapToRoadResponse
-handler key interpolate path = withFlowHandlerAPI $ do
+handler key interpolate path = withFlowHandlerAPI' $ do
   unless (key == Data.mockKey) $ throwError AccessDenied
   unless interpolate $
     throwError $ NotImplemented $ "snapToRoad is not implemented: interpolate: " <> show interpolate

@@ -16,10 +16,8 @@
 module Domain.Action.UI.AadhaarVerification where
 
 import qualified AWS.S3 as S3
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import Data.Text (pack, unpack)
 import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Types.AadhaarVerification.AadhaarOtp as Domain
 import Domain.Types.AadhaarVerification.AadhaarVerification
 import qualified Domain.Types.AadhaarVerification.AadhaarVerification as VDomain
@@ -124,28 +122,9 @@ verifyAadhaarOtp mbMerchant personId req = do
 
 uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadOriginalAadhaarImage person image imageType = do
-  orgImageFilePath <- createFilePath (getId person.id) Common.Image "/person-aadhaar-photo/" (parseImageExtension imageType)
+  orgImageFilePath <- S3.createFilePath "/person-aadhaar-photo/" ("person-" <> person.id.getId) S3.Image (parseImageExtension imageType)
   resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
   pure (orgImageFilePath, resultOrg)
-
-createFilePath ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
-  Text ->
-  Common.FileType ->
-  Text ->
-  Text ->
-  m Text
-createFilePath personId fileType identifier imageExtension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> identifier <> "person-" <> personId <> "/"
-        <> show fileType
-        <> "/"
-        <> fileName
-        <> imageExtension
-    )
 
 getImageExtension :: Text -> ImageType
 getImageExtension base64Image = case T.take 1 base64Image of

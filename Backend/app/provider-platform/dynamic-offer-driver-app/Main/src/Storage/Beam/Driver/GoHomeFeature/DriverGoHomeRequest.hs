@@ -16,9 +16,6 @@
 
 module Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import qualified Database.Beam.Postgres as B
@@ -64,17 +61,6 @@ instance B.Table DriverGoHomeRequestT where
   primaryKey = Id . id
 
 type DriverGoHomeRequest = DriverGoHomeRequestT Identity
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverGoHomeRequestToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverGoHomeRequestToHSModifiers =
-  M.empty
-
-driverGoHomeRequestToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverGoHomeRequestToPSModifiers =
-  M.empty
 
 $(enableKVPG ''DriverGoHomeRequestT ['id] [])
 

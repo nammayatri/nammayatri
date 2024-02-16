@@ -16,7 +16,7 @@
 module Screens.TripDetailsScreen.Controller where
 
 import Prelude (class Show, pure, unit, not, bind, ($), discard)
-import Screens.Types (TripDetailsScreenState)
+import Screens.Types as ST
 import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM (Eval, exit, continue, continueWithCmd)
 import Components.PrimaryButton as PrimaryButton
@@ -25,7 +25,6 @@ import Components.SourceToDestination as SourceToDestination
 import JBridge (copyToClipboard, toast)
 import Language.Types(STR(..))
 import Language.Strings (getString)
-import Services.Config (getSupportNumber)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
@@ -64,7 +63,7 @@ instance loggableAction :: Loggable Action where
         SourceToDestinationActionController action -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "source_to_destination_action"
         NoAction -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "no_action"
 
-data Action = PrimaryButtonActionController TripDetailsScreenState PrimaryButton.Action
+data Action = PrimaryButtonActionController ST.TripDetailsScreenState PrimaryButton.Action
             | GenericHeaderActionController GenericHeader.Action
             | SourceToDestinationActionController SourceToDestination.Action
             | BackPressed
@@ -74,13 +73,16 @@ data Action = PrimaryButtonActionController TripDetailsScreenState PrimaryButton
             | HelpAndSupport
             | NoAction
             | AfterRender
-data ScreenOutput = GoBack | OnSubmit | GoHome | GoToHelpAndSupport
+data ScreenOutput = OnSubmit | GoToEarning | GoToHelpAndSupport | GoToHome
 
-eval :: Action -> TripDetailsScreenState -> Eval Action ScreenOutput TripDetailsScreenState
+eval :: Action -> ST.TripDetailsScreenState -> Eval Action ScreenOutput ST.TripDetailsScreenState
 
 eval AfterRender state = continue state
 
-eval BackPressed state = exit GoBack
+eval BackPressed state = 
+    case state.data.goBackTo of
+        ST.Home -> exit GoToHome
+        ST.Earning -> exit GoToEarning
 
 eval ReportIssue state = continue state { props { reportIssue = not state.props.reportIssue}}
 
@@ -90,7 +92,7 @@ eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = c
 
 eval (PrimaryButtonActionController primaryButtonState PrimaryButton.OnClick) state = do
     _ <- pure $ hideKeyboardOnNavigation true
-    if state.props.issueReported then exit GoHome
+    if state.props.issueReported then exit GoToEarning
     else continue state{props{issueReported = true}}
 
 eval Copy state = continueWithCmd state [ do

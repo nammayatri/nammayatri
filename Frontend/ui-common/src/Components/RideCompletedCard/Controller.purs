@@ -26,7 +26,8 @@ data Action = Support
             | SkipButtonActionController PB.Action
             | ContactSupportPopUpAC PopUpModal.Action
             | UpiQrRendered String
-            | BannerAction Banner.Action
+            | BannerAction Banner.Action 
+            | HelpAndSupportAC
             
 type Config = {
   isDriver :: Boolean,
@@ -45,7 +46,10 @@ type Config = {
   isPrimaryButtonSticky :: Boolean,
   bannerConfig :: Banner.Config,
   viewsByOrder :: Array RideCompletedElements,
-  enableContactSupport :: Boolean
+  enableContactSupport :: Boolean,
+  isFreeRide :: Boolean,
+  needHelpText :: String,
+  lottieQRAnim :: LottieQRAnim
 }
 
 data Theme = DARK | LIGHT
@@ -64,8 +68,10 @@ instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericE
 config :: Config 
 config = {
   isDriver : true,
+  isFreeRide : false,
   topCard : {
     title : "",
+    titleColor : Color.grey900,
     finalAmount : 0,
     initalAmount : 0,
     fareUpdatedVisiblity : false,
@@ -102,7 +108,10 @@ config = {
     option1Text : "",
     option2Text : "",
     yesText : "",
-    noText : ""
+    noText : "",
+    isNightRide : false,
+    showCallSupport : false,
+    wasOfferedAssistanceCardView : false
   },
   customerBottomCard : {
     visible : false,
@@ -146,7 +155,12 @@ config = {
   isPrimaryButtonSticky : false,
   bannerConfig : Banner.config,
   viewsByOrder : [],
-  enableContactSupport : true
+  enableContactSupport : true,
+  lottieQRAnim : {
+    visible : false,
+    url : ""
+  },
+  needHelpText : ""
 }
 
 type CustomerIssueCard = {
@@ -159,11 +173,15 @@ type CustomerIssueCard = {
   option1Text :: String,
   option2Text :: String,
   yesText :: String,
-  noText :: String
+  noText :: String,
+  showCallSupport :: Boolean,
+  isNightRide :: Boolean,
+  wasOfferedAssistanceCardView :: Boolean
 }
 
 type TopCard = {
   title :: String,
+  titleColor :: String,
   finalAmount :: Int,
   initalAmount :: Int,
   fareUpdatedVisiblity :: Boolean,
@@ -237,4 +255,9 @@ type TopPill = {
   background :: String,
   text :: String,
   textColor :: String
+}
+
+type LottieQRAnim = {
+  visible :: Boolean,
+  url :: String
 }

@@ -32,22 +32,27 @@ module Domain.Action.Dashboard.Merchant
     verificationServiceConfigUpdate,
     createFPDriverExtraFee,
     updateFPDriverExtraFee,
+    updateFPPerExtraKmRate,
+    updateFarePolicy,
+    schedulerTrigger,
   )
 where
 
 import Control.Applicative
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
+import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
+import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DDIPC
-import qualified Domain.Types.Merchant.DriverPoolConfig as DDPC
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DODC
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
+import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified Kernel.External.Maps as Maps
@@ -58,7 +63,10 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
+import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy as CQFP
@@ -71,6 +79,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as CQODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -88,7 +98,7 @@ merchantUpdate merchantShortId opCity req = do
 
   mbAllExophones <- forM req.exoPhones $ \exophones -> do
     allExophones <- CQExophone.findAllExophones
-    let alreadyUsedPhones = getAllPhones $ filter (\exophone -> exophone.merchantId /= merchant.id) allExophones
+    let alreadyUsedPhones = getAllPhones $ filter (\exophone -> exophone.merchantOperatingCityId /= merchantOpCityId) allExophones
     let reqPhones = getAllPhones $ toList exophones
     let busyPhones = filter (`elem` alreadyUsedPhones) reqPhones
     unless (null busyPhones) $ do
@@ -106,7 +116,7 @@ merchantUpdate merchantShortId opCity req = do
 
   CQM.clearCache updMerchant
   whenJust mbAllExophones $ \allExophones -> do
-    let oldExophones = filter (\exophone -> exophone.merchantId == merchant.id) allExophones
+    let oldExophones = filter (\exophone -> exophone.merchantOperatingCityId == merchantOpCityId) allExophones
     CQExophone.clearCache merchantOpCityId oldExophones
   whenJust req.fcmConfig $ \_ -> CQTC.clearCache merchantOpCityId
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
@@ -203,6 +213,45 @@ merchantCommonConfigUpdate merchantShortId opCity req = do
   logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
   pure Success
 
+schedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
+schedulerTrigger merchantShortId _ req = do
+  void $ findMerchantByShortId merchantShortId
+  now <- getCurrentTime
+  maxShards <- asks (.maxShards)
+  case req.scheduledAt of
+    Just utcTime -> do
+      let diffTimeS = diffUTCTime utcTime now
+      triggerScheduler req.jobName maxShards req.jobData diffTimeS
+    _ -> throwError $ InternalError "invalid scheduled at time"
+  where
+    triggerScheduler :: Maybe Common.JobName -> Int -> Text -> NominalDiffTime -> Flow APISuccess
+    triggerScheduler jobName maxShards jobDataRaw diffTimeS = do
+      case jobName of
+        Just Common.DriverFeeCalculationTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe CalculateDriverFeesJobData
+          case jobData' of
+            Just jobData -> do
+              let serviceName = fromMaybe Plan.YATRI_SUBSCRIPTION jobData.serviceName
+                  mbMerchantOpCityId = jobData.merchantOperatingCityId
+                  merchantId = jobData.merchantId
+              merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+              merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+              when (serviceName == Plan.YATRI_RENTAL) $ do
+                SDF.setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
+              createJobIn @_ @'CalculateDriverFees diffTimeS maxShards (jobData :: CalculateDriverFeesJobData)
+              setDriverFeeCalcJobCache jobData.startTime jobData.endTime merchantOpCityId diffTimeS
+              setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.BadDebtCalculationTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe BadDebtCalculationJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'BadDebtCalculation diffTimeS maxShards (jobData :: BadDebtCalculationJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        _ -> throwError $ InternalError "invalid job name"
+
 ---------------------------------------------------------------------
 driverPoolConfig :: ShortId DM.Merchant -> Context.City -> Maybe Meters -> Flow Common.DriverPoolConfigRes
 driverPoolConfig merchantShortId opCity mbTripDistance = do
@@ -231,13 +280,16 @@ driverPoolConfigUpdate ::
   Context.City ->
   Meters ->
   Maybe Common.Variant ->
+  Maybe Text ->
   Common.DriverPoolConfigUpdateReq ->
   Flow APISuccess
-driverPoolConfigUpdate merchantShortId opCity tripDistance variant req = do
+driverPoolConfigUpdate merchantShortId opCity tripDistance mbVariant mbTripCategory req = do
   runRequestValidation Common.validateDriverPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance (castVehicleVariant <$> variant) >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
+  let tripCategory = fromMaybe "All" mbTripCategory
+  let variant = castVehicleVariant <$> mbVariant
+  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant tripCategory >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
   let updConfig =
         config{minRadiusOfSearch = maybe config.minRadiusOfSearch (.value) req.minRadiusOfSearch,
                maxRadiusOfSearch = maybe config.maxRadiusOfSearch (.value) req.maxRadiusOfSearch,
@@ -252,8 +304,7 @@ driverPoolConfigUpdate merchantShortId opCity tripDistance variant req = do
                maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
                poolSortingType = maybe config.poolSortingType (castPoolSortingType . (.value)) req.poolSortingType,
                singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
-               distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit,
-               vehicleVariant = castVehicleVariant <$> variant
+               distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit
               }
   _ <- CQDPC.update updConfig
   CQDPC.clearCache merchantOpCityId
@@ -274,15 +325,18 @@ driverPoolConfigCreate ::
   Context.City ->
   Meters ->
   Maybe Common.Variant ->
+  Maybe Text ->
   Common.DriverPoolConfigCreateReq ->
   Flow APISuccess
-driverPoolConfigCreate merchantShortId opCity tripDistance variant req = do
+driverPoolConfigCreate merchantShortId opCity tripDistance mbVariant mbTripCategory req = do
   runRequestValidation Common.validateDriverPoolConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance (castVehicleVariant <$> variant)
+  let tripCategory = fromMaybe "All" mbTripCategory
+  let variant = castVehicleVariant <$> mbVariant
+  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant tripCategory
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchantOpCityId.getId tripDistance)
-  newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance variant req
+  newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance variant tripCategory req
   _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchantOpCityId
@@ -294,22 +348,22 @@ buildDriverPoolConfig ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Meters ->
-  Maybe Common.Variant ->
+  Maybe DVeh.Variant ->
+  Text ->
   Common.DriverPoolConfigCreateReq ->
   m DDPC.DriverPoolConfig
-buildDriverPoolConfig merchantId merchantOpCityId tripDistance vehicleVariant Common.DriverPoolConfigCreateReq {..} = do
+buildDriverPoolConfig merchantId merchantOpCityId tripDistance vehicleVariant tripCategory Common.DriverPoolConfigCreateReq {..} = do
   now <- getCurrentTime
-  uid <- generateGUID
+  id <- generateGUID
   pure
     DDPC.DriverPoolConfig
-      { id = Id uid,
-        merchantId,
+      { merchantId,
         merchantOperatingCityId = merchantOpCityId,
         poolSortingType = castPoolSortingType poolSortingType,
         distanceBasedBatchSplit = map castBatchSplitByPickupDistance distanceBasedBatchSplit,
+        scheduleTryTimes = [],
         updatedAt = now,
         createdAt = now,
-        vehicleVariant = castVehicleVariant <$> vehicleVariant,
         ..
       }
 
@@ -341,7 +395,7 @@ driverIntelligentPoolConfigUpdate merchantShortId opCity req = do
                acceptanceRatioWeightage = maybe config.acceptanceRatioWeightage (.value) req.acceptanceRatioWeightage,
                acceptanceRatioWindowOption = fromMaybe config.acceptanceRatioWindowOption req.acceptanceRatioWindowOption,
                cancellationRatioWeightage = maybe config.cancellationRatioWeightage (.value) req.cancellationRatioWeightage,
-               cancellationRatioWindowOption = fromMaybe config.cancellationRatioWindowOption req.cancellationRatioWindowOption,
+               cancellationAndRideFrequencyRatioWindowOption = fromMaybe config.cancellationAndRideFrequencyRatioWindowOption req.cancellationAndRideFrequencyRatioWindowOption,
                minQuotesToQualifyForIntelligentPool = maybe config.minQuotesToQualifyForIntelligentPool (.value) req.minQuotesToQualifyForIntelligentPool,
                minQuotesToQualifyForIntelligentPoolWindowOption = fromMaybe config.minQuotesToQualifyForIntelligentPoolWindowOption req.minQuotesToQualifyForIntelligentPoolWindowOption,
                intelligentPoolPercentage = maybe config.intelligentPoolPercentage (.value) req.intelligentPoolPercentage,
@@ -428,7 +482,8 @@ onboardingDocumentConfigUpdate merchantShortId opCity reqDocumentType req = do
                supportedVehicleClasses = maybe config.supportedVehicleClasses castSupportedVehicleClasses req.supportedVehicleClasses,
                vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
                rcNumberPrefix = maybe config.rcNumberPrefix (.value) req.rcNumberPrefix,
-               rcNumberPrefixList = maybe config.rcNumberPrefixList (.value) req.rcNumberPrefixList
+               rcNumberPrefixList = maybe config.rcNumberPrefixList (.value) req.rcNumberPrefixList,
+               maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount
               }
   _ <- CQODC.update updConfig
   CQODC.clearCache merchantOpCityId
@@ -516,13 +571,14 @@ mapsServiceConfigUpdate ::
   Context.City ->
   Common.MapsServiceConfigUpdateReq ->
   Flow APISuccess
-mapsServiceConfigUpdate merchantShortId _ req = do
+mapsServiceConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
+  CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
+  CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -532,13 +588,14 @@ smsServiceConfigUpdate ::
   Context.City ->
   Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
-smsServiceConfigUpdate merchantShortId _ req = do
+smsServiceConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
+  CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
+  CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -576,7 +633,7 @@ mapsServiceUsageConfigUpdate merchantShortId opCity req = do
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndService merchant.id (DMSC.MapsService service)
+        CQMSC.findByMerchantIdAndServiceWithCity merchant.id (DMSC.MapsService service) merchantOpCityId
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -609,7 +666,7 @@ smsServiceUsageConfigUpdate merchantShortId opCity req = do
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndService merchant.id (DMSC.SmsService service)
+        CQMSC.findByMerchantIdAndServiceWithCity merchant.id (DMSC.SmsService service) merchantOpCityId
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -629,13 +686,14 @@ verificationServiceConfigUpdate ::
   Context.City ->
   Common.VerificationServiceConfigUpdateReq ->
   Flow APISuccess
-verificationServiceConfigUpdate merchantShortId _ req = do
+verificationServiceConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.VerificationService $ Common.getVerificationServiceFromReq req
   serviceConfig <- DMSC.VerificationServiceConfig <$> Common.buildVerificationServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
+  _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
+  CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
   logTagInfo "dashboard -> verificationServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -666,3 +724,50 @@ updateFPDriverExtraFee _ _ farePolicyId startDistance req = do
   _ <- QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
   CQFP.clearCacheById farePolicyId
   pure Success
+
+updateFPPerExtraKmRate :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
+updateFPPerExtraKmRate _ _ farePolicyId startDistance req = do
+  _ <- QFPPDEKM.findByIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy Parameters Per Extra Km Section with given id and start distance not found")
+  _ <- QFPPDEKM.updatePerExtraKmRate farePolicyId startDistance req.perExtraKmRate
+  CQFP.clearCacheById farePolicyId
+  pure Success
+
+updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
+updateFarePolicy _ _ farePolicyId req = do
+  farePolicy <- CQFP.findById farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
+  CQFP.update' updatedFarePolicy
+  CQFP.clearCacheById farePolicyId
+  pure Success
+  where
+    mkUpdatedFarePolicy FarePolicy.FarePolicy {..} = do
+      fPDetails <- mkFarePolicyDetails farePolicyDetails
+      pure $
+        FarePolicy.FarePolicy
+          { serviceCharge = req.serviceCharge <|> serviceCharge,
+            nightShiftBounds = req.nightShiftBounds <|> nightShiftBounds,
+            allowedTripDistanceBounds = req.allowedTripDistanceBounds <|> allowedTripDistanceBounds,
+            govtCharges = req.govtCharges <|> govtCharges,
+            perMinuteRideExtraTimeCharge = req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
+            farePolicyDetails = fPDetails,
+            description = req.description <|> description,
+            ..
+          }
+
+    mkFarePolicyDetails fPDetails =
+      case fPDetails of
+        FarePolicy.ProgressiveDetails _ -> do
+          (_, fPProgressiveDetails) <- QFPPD.findById' farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy Progressive Details not found")
+          pure $ FarePolicy.ProgressiveDetails $ mkUpdatedFPProgressiveDetails fPProgressiveDetails
+        FarePolicy.SlabsDetails _ -> pure fPDetails
+        FarePolicy.RentalDetails _ -> pure fPDetails
+
+    mkUpdatedFPProgressiveDetails FarePolicy.FPProgressiveDetails {..} =
+      FarePolicy.FPProgressiveDetails
+        { baseFare = fromMaybe baseFare req.baseFare,
+          baseDistance = fromMaybe baseDistance req.baseDistance,
+          deadKmFare = fromMaybe deadKmFare req.deadKmFare,
+          waitingChargeInfo = req.waitingChargeInfo <|> waitingChargeInfo,
+          nightShiftCharge = req.nightShiftCharge <|> nightShiftCharge,
+          ..
+        }

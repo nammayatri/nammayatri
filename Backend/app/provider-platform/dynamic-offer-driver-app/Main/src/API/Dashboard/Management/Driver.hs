@@ -14,6 +14,7 @@
 
 module API.Dashboard.Management.Driver where
 
+import qualified API.Dashboard.Management.Driver.Coin as Coin
 import qualified API.Dashboard.Management.Driver.Common as Common
 import qualified API.Dashboard.Management.Driver.GoHome as GoHome
 import qualified API.Dashboard.Management.Driver.Referral as Referral
@@ -29,6 +30,7 @@ type API =
     :<|> Referral.API
     :<|> Registration.API
     :<|> Common.API
+    :<|> Coin.API
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
@@ -36,3 +38,4 @@ handler merchantId city =
     :<|> Referral.handler merchantId city
     :<|> Registration.handler merchantId city
     :<|> Common.handler merchantId city
+    :<|> Coin.handler merchantId city

@@ -20,18 +20,21 @@ import Prelude(negate)
 import Services.API (DriverProfileStatsResp(..), Status(..))
 import Data.Maybe
 import Foreign.Object (empty)
-import Common.Types.App as Common
-import MerchantConfig.DefaultConfig as DC
+import Domain.Payments as PP
+import ConfigProvider
+import RemoteConfig as RC
 
 initData :: HomeScreenState
 initData = {
     data: {
         snappedOrigin : Nothing,
-        config : DC.config,
+        config : getAppConfig appConfig,
         driverName : "",
         vehicleType : "",
         profileImg : Nothing,
         driverAlternateMobile : Nothing,
+        gender : "UNKNOWN",
+        subsRemoteConfig : RC.subscriptionConfig "subscription_configs",
         activeRide : {
           id : "",
           source : "",
@@ -50,7 +53,7 @@ initData = {
           notifiedCustomer : false,
           exoPhone : "",
           specialLocationTag : Nothing,
-          waitingTime : "__",
+          waitTimeSeconds : -1,
           waitTimeInfo : false,
           rideCreatedAt : "",
           requestedVehicleVariant : Nothing,
@@ -79,7 +82,7 @@ initData = {
         },
         messages : [],
         messagesSize : "-1",
-        suggestionsList : [],
+        chatSuggestionsList : [],
         messageToBeSent : "",
         logField : empty, 
         paymentState : {
@@ -92,7 +95,7 @@ initData = {
           makePaymentModal : false,
           showRateCard : false,
           paymentStatusBanner : false,
-          paymentStatus : Common.Success,
+          paymentStatus : PP.Success,
           invoiceId : "",
           bannerBG : "",
           bannerTitle : "",
@@ -139,10 +142,21 @@ initData = {
           gotoLocInRange : false,
           goToPopUpType : NO_POPUP_VIEW,
           gotoEnabledForMerchant : false,
-          confirmGotoCancel : false
-        }
+          confirmGotoCancel : false,
+          savedLocationCount : 0
+        },
+        coinBalance : 0
+      , bannerData : {
+          bannerItem : Nothing
+        , currentBanner : 0
+        , bannerScrollState: "0"
+        , currentPage : 0
+      },
+      prevLatLon : [],
+      noOfLocations : 0
     },
     props: {
+        isFreeRide : false,
         statusOnline : true,
         driverStatusSet : Online,
         goOfflineModal : false,
@@ -174,7 +188,6 @@ initData = {
         notRemoveBanner : true,
         showBonusInfo : false,
         showlinkAadhaarPopup : false,
-        isChatOpened : false,
         showAadharPopUp : true,
         canSendSuggestion : true,
         showOffer : false,
@@ -188,7 +201,12 @@ initData = {
         showChatBlockerPopUp : false,
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
         showGenericAccessibilityPopUp : false,
-        waitTimeStatus : NoStatus
+        waitTimeStatus : NoStatus,
+        isMockLocation : false,
+        accountBlockedPopup : false,
+        showCoinsPopup : false,
+        isStatsModelExpanded : false,
+        tobeLogged : false
     }
 }
 
@@ -198,4 +216,5 @@ dummyDriverRideStats = DriverProfileStatsResp
       totalRidesOfDay : 0
     , totalEarningsOfDay : 0
     , bonusEarning : 0
+    , coinBalance : 0
     }

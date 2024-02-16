@@ -37,8 +37,10 @@ import android.webkit.JavascriptInterface;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.content.ContextCompat;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -54,10 +56,13 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.perf.FirebasePerformance;
 import com.google.firebase.perf.metrics.Trace;
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener;
@@ -70,60 +75,83 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
 
+
 public class MobilityAppBridge extends HyperBridge {
 
     // Log Tags
+    private static final String LOG_TAG = "MobilityAppBridge";
     private static final String CHATS = "CHATS";
     private static final String META_LOG = "META_LOG";
     private static final String CALLBACK = "CALLBACK";
     private static final String UTILS = "UTILS";
+    private static final String OVERRIDE = "OVERRIDE";
+    private static final int CALL_REQUEST_CODE = 90;
+    private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
 
     private static final String REFERRER = "REFERRER";
-    private ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
-    private static FirebaseAnalytics mFirebaseAnalytics;
+    private final ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
+    private final FirebaseAnalytics mFirebaseAnalytics;
+
+    private MobilityRemoteConfigs remoteConfigs;
     CleverTapAPI clevertapDefaultInstance;
     protected static String storeChatMessageCallBack = null;
     public static String storeCallBackOpenChatScreen = null;
     public static String storeDetectPhoneNumbersCallBack = null;
-
+    private String storeImageUploadCallBack = null;
+    private String storeUploadMultiPartCallBack = null;
 
     // Permission request Code
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
 
+
     public static YouTubePlayerView youTubePlayerView;
     public static YouTubePlayer youtubePlayer;
+    public static String youtubeVideoStatus;
     public static float videoDuration = 0;
+
+    CameraUtils cameraUtils;
 
     protected HashMap<String, Trace> traceElements;
 
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     CallBack callBack = new CallBack() {
         @Override
-        public void customerCallBack(String notificationType) {
+        public void customerCallBack(String notificationType, String notificationData) {
             Log.i(CALLBACK, "Not required");
         }
 
         @Override
-        public void driverCallBack(String notificationType) {
+        public void driverCallBack(String notificationType, String notificationData) {
             Log.i(CALLBACK, "Not required");
         }
 
         @Override
         public void imageUploadCallBack(String encImage, String filename, String filePath) {
-            Log.i(CALLBACK, "Not required");
+            callImageUploadCallBack(encImage, filename, filePath);
         }
 
         @Override
@@ -146,13 +174,26 @@ public class MobilityAppBridge extends HyperBridge {
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
+        remoteConfigs = new MobilityRemoteConfigs(false, false);
         ChatService.registerCallback(callBack);
         InAppNotification.registerCallback(callBack);
         RemoteAssetsDownloader.registerCallback(callBack);
         traceElements = new HashMap<>();
+        Utils.registerCallback(callBack);
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
     }
 
+    @JavascriptInterface
+    public void restartApp() {
+        if (bridgeComponents.getActivity() != null) {
+            final PackageManager pm = bridgeComponents.getActivity().getPackageManager();
+            final Intent intent = pm.getLaunchIntentForPackage(bridgeComponents.getActivity().getPackageName());
+            bridgeComponents.getActivity().finishAffinity(); // Finishes all activities.
+            bridgeComponents.getContext().startActivity(intent);    // Start the launch activity
+        }
+    }
+
+    @Deprecated
     @JavascriptInterface
     public void factoryResetApp() {
         if (bridgeComponents.getActivity() != null) {
@@ -168,6 +209,8 @@ public class MobilityAppBridge extends HyperBridge {
         ChatService.deRegisterCallback(callBack);
         InAppNotification.deRegisterCallBack(callBack);
         RemoteAssetsDownloader.deRegisterCallback(callBack);
+        Utils.deRegisterCallback(callBack);
+        storeImageUploadCallBack = null;
     }
 
     // region Store And Trigger CallBack
@@ -202,18 +245,21 @@ public class MobilityAppBridge extends HyperBridge {
 
                             SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                             sharedPref.edit().putString("REFERRER_URL", referrerUrl).apply();
-                            firebaseLogEvent("REFERRER_URL:" + referrerUrl);
+                            firebaseLogEvent("referrer_url_" + referrerUrl);
 
                         } catch (RemoteException e) {
                             Log.d(REFERRER, "error occurred in fetching referrer info");
+                            firebaseLogEvent("referrer_url_error_occurred_in_fetching_referrer_info");
                             e.printStackTrace();
                         }
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
                         Log.i(REFERRER, "Feature not supported");
+                        firebaseLogEvent("referrer_url_feature_not_supported");
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
                         Log.i(REFERRER, "Service unavailable");
+                        firebaseLogEvent("referrer_url_service_unavailable");
                         break;
                 }
             }
@@ -234,12 +280,65 @@ public class MobilityAppBridge extends HyperBridge {
         String javascript = String.format(Locale.ENGLISH, "window.callUICallback(\"%s\");", onTapAction);
         bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
+
+    @JavascriptInterface
+    public void storeCallBackImageUpload(String callback) {
+        storeImageUploadCallBack = callback;
+    }
+
+    public void callImageUploadCallBack(String stringImage, String imageName, String imagePath) {
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
+                storeImageUploadCallBack, stringImage, imageName, imagePath);
+        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+    }
+
+    @JavascriptInterface
+    public void storeCallBackUploadMultiPartData(String callback){
+        storeUploadMultiPartCallBack = callback;
+    }
+
+    public void callUploadMultiPartCallBack(String fileType, String fileId) {
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                storeUploadMultiPartCallBack, fileType, fileId);
+        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+    }
     // endregion
 
     @JavascriptInterface
-    public static void firebaseLogEvent(String event) {
+    public void firebaseLogEvent(String event) {
         Bundle params = new Bundle();
         mFirebaseAnalytics.logEvent(event, params);
+    }
+
+    @JavascriptInterface
+    public void addCrashlyticsCustomKey(String key, String value) {
+        FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
+        crashlytics.setCustomKey(key,value);
+    }
+
+    @JavascriptInterface
+    public boolean fetchRemoteConfigBool(String key){
+        return remoteConfigs.getBoolean(key);
+    }
+
+    @JavascriptInterface
+    public String fetchRemoteConfigString(String key){
+        return remoteConfigs.getString(key);
+    }
+
+    @JavascriptInterface
+    public double fetchRemoteConfigDouble(String key){
+        return remoteConfigs.getDouble(key);
+    }
+
+    @JavascriptInterface
+    public long fetchRemoteConfigLong(String key){
+        return remoteConfigs.getLong(key);
+    }
+
+    @JavascriptInterface
+    public void fetchAndUpdateRemoteConfig(){
+        remoteConfigs = new MobilityRemoteConfigs(true, false);
     }
 
     @JavascriptInterface
@@ -608,9 +707,10 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus) {
+    public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus, String callback) {
         if (bridgeComponents.getActivity() != null) {
             videoDuration = 0;
+            youtubeVideoStatus = videoStatus;
             ExecutorManager.runOnMainThread(() -> {
                 try {
                     if (videoStatus.equals("PAUSE")) {
@@ -625,34 +725,45 @@ public class MobilityAppBridge extends HyperBridge {
                         boolean showSeekBar = json.getBoolean("showSeekBar");
                         String videoTitle = json.getString("videoTitle");
                         String videoId = json.getString("videoId");
+                        boolean showFullScreen = json.getBoolean("showFullScreen");
+                        boolean hideFullScreenButton = json.getBoolean("hideFullScreenButton");
                         String videoType = "VIDEO";
                         if (json.has("videoType")) {
                             videoType = json.getString("videoType");
                         }
                         youTubePlayerView = new YouTubePlayerView(bridgeComponents.getContext());
+
                         LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(playerId));
                         layout.addView(youTubePlayerView);
                         youTubePlayerView.setEnableAutomaticInitialization(false);
+                        if(showFullScreen)
+                            youTubePlayerView.enterFullScreen();
                         YouTubePlayerListener youTubePlayerListener = new AbstractYouTubePlayerListener() {
                             @Override
                             public void onReady(@NonNull YouTubePlayer youTubePlayer) {
                                 try {
                                     youtubePlayer = youTubePlayer;
-                                    DefaultPlayerUiController playerUiController = new DefaultPlayerUiController(youTubePlayerView, youTubePlayer);
-                                    playerUiController.showMenuButton(showMenuButton);
-                                    playerUiController.showDuration(showDuration);
-                                    playerUiController.showSeekBar(showSeekBar);
-                                    playerUiController.showFullscreenButton(true);
-                                    if (setVideoTitle) {
-                                        playerUiController.setVideoTitle(videoTitle);
+                                    if (youTubePlayerView != null && youtubePlayer != null) {
+                                        DefaultPlayerUiController playerUiController = new DefaultPlayerUiController(youTubePlayerView, youTubePlayer);
+                                        playerUiController.showMenuButton(showMenuButton);
+                                        playerUiController.showDuration(showDuration);
+                                        playerUiController.showSeekBar(showSeekBar);
+                                        playerUiController.showFullscreenButton(!hideFullScreenButton);
+                                        if (setVideoTitle) {
+                                            playerUiController.setVideoTitle(videoTitle);
+                                        }
+                                        playerUiController.showYouTubeButton(false);
+                                        youTubePlayerView.setCustomPlayerUi(playerUiController.getRootView());
+
+                                        youTubePlayer.seekTo(videoDuration);
+                                        youTubePlayer.loadVideo(videoId, 0);
+                                        if (youtubeVideoStatus.equals("PAUSE")){
+                                            youTubePlayer.pause();
+                                        } else{
+                                            youTubePlayer.play();
+                                        }
+                                        System.out.println("Youtube OnReady");
                                     }
-                                    playerUiController.showYouTubeButton(false);
-                                    youTubePlayerView.setCustomPlayerUi(playerUiController.getRootView());
-
-                                    youTubePlayer.seekTo(videoDuration);
-                                    youTubePlayer.loadVideo(videoId, 0);
-                                    youTubePlayer.play();
-
                                 } catch (Exception e) {
                                     Log.e("error inside setYoutubePlayer onReady", String.valueOf(e));
                                 }
@@ -662,8 +773,13 @@ public class MobilityAppBridge extends HyperBridge {
                             public void onCurrentSecond(@NonNull YouTubePlayer youTubePlayer, float second) {
                                 videoDuration = second;
                             }
+                            
+                            @Override
+                            public void onStateChange(@NonNull YouTubePlayer youTubePlayer, PlayerConstants.PlayerState newState){
+                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, newState);
+                                bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                            }
                         };
-
                         String finalVideoType = videoType;
                         youTubePlayerView.addFullScreenListener(new YouTubePlayerFullScreenListener() {
                             @Override
@@ -689,6 +805,12 @@ public class MobilityAppBridge extends HyperBridge {
                 }
             });
         }
+    }
+
+    @JavascriptInterface
+    public void switchYoutubeVideo (String videoId){
+        if(youtubePlayer != null)
+            youtubePlayer.loadVideo(videoId, 0);
     }
     
     private final VPAdapter vpAdapter = new VPAdapter(viewPagerItemArrayList, bridgeComponents.getContext(), new VPAdapter.VPAdapterListener(){
@@ -753,6 +875,14 @@ public class MobilityAppBridge extends HyperBridge {
         if ( youtubePlayer != null) {
             youtubePlayer.pause();
         }
+        youtubeVideoStatus = "PAUSE";
+        youTubePlayerView = null;
+    }
+
+    @JavascriptInterface
+    public void releaseYoutubeView() {
+        youtubeVideoStatus = "PAUSE";
+        ExecutorManager.runOnMainThread(youTubePlayerView::release);
         youTubePlayerView = null;
     }
 
@@ -774,6 +904,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void cleverTapEvent(String event, String params) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         if (clevertapDefaultInstance != null) {
             Map<String, Object> resultMap = new HashMap<>();
             try {
@@ -791,10 +922,12 @@ public class MobilityAppBridge extends HyperBridge {
             }
             clevertapDefaultInstance.pushEvent(event, resultMap);
         }
+        });
     }
 
     @JavascriptInterface
     public void setCleverTapUserData(String key, String value) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         HashMap<String, Object> profileUpdate = new HashMap<>();
         try {
             profileUpdate.put(key, value);
@@ -808,10 +941,12 @@ public class MobilityAppBridge extends HyperBridge {
             String fcmRegId = sharedPrefs.getString("FCM_TOKEN", "null");
             clevertapDefaultInstance.pushFcmRegistrationId(fcmRegId, true);
         }
+        });
     }
 
     @JavascriptInterface
     public void setCleverTapUserProp(String key, String value) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         HashMap<String, Object> propertiesUpdate = new HashMap<>();
         try {
             propertiesUpdate.put(key, value);
@@ -820,49 +955,58 @@ public class MobilityAppBridge extends HyperBridge {
         }
         if (clevertapDefaultInstance != null)
             clevertapDefaultInstance.pushProfile(propertiesUpdate);
+        });
     }
 
     @JavascriptInterface
     public void setCleverTapUserMultipleProp(String arr) {
-        if (clevertapDefaultInstance == null)
-            clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
+        ExecutorManager.runOnBackgroundThread(() -> {
+            if (clevertapDefaultInstance == null)
+                clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
 
-        Map<String, Object> propertiesUpdate = new HashMap<>();
-        try {
-            JSONArray jsonArray = new JSONArray(arr);
+            Map<String, Object> propertiesUpdate = new HashMap<>();
+            try {
+                JSONArray jsonArray = new JSONArray(arr);
 
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                String key = jsonObject.getString("key");
-                Object value = jsonObject.get("value");
-                propertiesUpdate.put(key, value);
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    String key = jsonObject.getString("key");
+                    Object value = jsonObject.get("value");
+                    propertiesUpdate.put(key, value);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return;
             }
-        } catch (JSONException e) {
-            e.printStackTrace();
-            return;
-        }
-        clevertapDefaultInstance.pushProfile(propertiesUpdate);
+            clevertapDefaultInstance.pushProfile(propertiesUpdate);
+        });
     }
 
 
     @JavascriptInterface
     public void cleverTapCustomEvent(String event) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         if (clevertapDefaultInstance != null)
             clevertapDefaultInstance.pushEvent(event);
+        });
     }
 
     @JavascriptInterface
     public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         HashMap<String, Object> mapCustomEvent = new HashMap<>();
         mapCustomEvent.put(paramKey, paramValue);
         if (clevertapDefaultInstance != null)
             clevertapDefaultInstance.pushEvent(event, mapCustomEvent);
+        });
     }
 
     @JavascriptInterface
     public void cleverTapSetLocation() {
+        ExecutorManager.runOnBackgroundThread(() -> {
         Location location = clevertapDefaultInstance.getLocation();
         clevertapDefaultInstance.setLocation(location);
+        });
     }
 
     @JavascriptInterface
@@ -874,25 +1018,147 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(intent);
     }
 
+    @JavascriptInterface
+    public void clearFocus(String id) {
+        if (bridgeComponents.getActivity() != null) {
+            ExecutorManager.runOnMainThread(() -> bridgeComponents.getActivity().findViewById(Integer.parseInt(id)).clearFocus());
+        }
+    }
+
+    @JavascriptInterface
+    public void uploadMultiPartData(String filePath, String uploadUrl, String fileType) {
+        try {
+            String boundary = UUID.randomUUID().toString();
+
+            URL url = new URL(uploadUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            String token = KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(),"REGISTERATION_TOKEN", "__failed" );
+            connection.setRequestProperty("token", token);
+
+            File file = new File(filePath);
+            String fileName = file.getName();
+            DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
+
+            outputStream.writeBytes("--" + boundary + "\r\n");
+            outputStream.writeBytes(("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + "\r\n"));
+            if (fileType.equals("Image"))
+                outputStream.writeBytes("Content-Type: image/jpeg\r\n");
+            else if (fileType.equals("Audio"))
+                outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
+            outputStream.writeBytes("\r\n");
+
+            FileInputStream fileInputStream = new FileInputStream(file);
+            int bytesAvailable = fileInputStream.available();
+            int maxBufferSize = 1024 * 1024;
+            int bufferSize = Math.min(bytesAvailable, maxBufferSize);
+
+            byte[] buffer = new byte[bufferSize];
+            int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            while (bytesRead > 0) {
+                outputStream.write(buffer, 0, bufferSize);
+                bytesAvailable = fileInputStream.available();
+                bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            }
+            outputStream.writeBytes("\r\n");
+            outputStream.writeBytes("--" + boundary + "\r\n");
+
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"fileType\"" + "\r\n");
+            outputStream.writeBytes("Content-Type: application/json" + "\r\n");
+            outputStream.writeBytes("\r\n");
+            outputStream.writeBytes(fileType);
+            outputStream.writeBytes("\r\n");
+            outputStream.writeBytes("--" + boundary + "\r\n" + "--");
+
+            int responseCode = connection.getResponseCode();
+            String res = "";
+            if (responseCode == 200) {
+                StringBuilder s_buffer = new StringBuilder();
+                InputStream is = new BufferedInputStream(connection.getInputStream());
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
+                String inputLine;
+                while ((inputLine = bufferedReader.readLine()) != null) {
+                    s_buffer.append(inputLine);
+                }
+                res = s_buffer.toString();
+                JSONObject jsonObject;
+                try {
+                    jsonObject = new JSONObject(res);
+                    res = jsonObject.getString("fileId");
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                Toast.makeText(bridgeComponents.getContext(), "Unable to upload image", Toast.LENGTH_SHORT).show();
+            }
+            callUploadMultiPartCallBack(fileType, res);
+        }catch(Exception e){
+            Log.e("UPLOAD_MULTI_PART_DATA" , "error in Upload file: "+e);
+        }
+    }
+    
+    public void askRequestedPermissions(String[] requests) {
+        PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, null);
+    }
+
+    @JavascriptInterface
+    public void askRequestedPermissionsWithCallback(String[] requests, final String callback) {
+        PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, new PermissionUtils.PermissionCallback() {
+            @Override
+            public void onPermissionsGranted() {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, true);
+                if (callback != null) {
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            }
+
+            @Override
+            public void onPermissionsDenied() {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, false);
+                if (callback != null) {
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void setupCamera(String previewViewId, boolean isBackCamera) {
+        cameraUtils = new CameraUtils();
+        cameraUtils.setupCamera(bridgeComponents.getActivity(), bridgeComponents.getContext(), previewViewId, isBackCamera);
+    }
+
+    @JavascriptInterface
+    public void recordVideo(final String callback) {
+        if(cameraUtils != null)
+            cameraUtils.recordVideo(bridgeComponents.getActivity(), bridgeComponents.getContext(), callback, bridgeComponents);
+    }
+
+    @JavascriptInterface
+    public void stopRecord() {
+        if(cameraUtils != null)
+            cameraUtils.stopRecord();
+    }
+
     // region Override functions
+
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == CREDENTIAL_PICKER_REQUEST) {
-            if (resultCode == RESULT_OK) {
-                Credential credentials = data.getParcelableExtra(Credential.EXTRA_KEY);
-                String selectedNumber = credentials.getId().substring(3);
-                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                        storeDetectPhoneNumbersCallBack, selectedNumber); //mobile_number
-                bridgeComponents.getJsCallback().addJsToWebView(javascript);
-            }
+        switch (requestCode) {
+            case CREDENTIAL_PICKER_REQUEST:
+                if (resultCode == RESULT_OK) {
+                    Credential credentials = data.getParcelableExtra(Credential.EXTRA_KEY);
+                    String selectedNumber = credentials.getId().substring(3);
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                            storeDetectPhoneNumbersCallBack, selectedNumber); //mobile_number
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+                break;
         }
         return super.onActivityResult(requestCode, resultCode, data);
     }
-
-    @Override
-    public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
-        return super.onRequestPermissionResult(requestCode, permissions, grantResults);
-    }
-
-    // endregion
 }

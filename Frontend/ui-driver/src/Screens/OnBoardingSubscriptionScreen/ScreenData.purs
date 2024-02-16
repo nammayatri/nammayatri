@@ -3,7 +3,7 @@ module Screens.OnBoardingSubscriptionScreen.ScreenData where
 import Data.Maybe
 import Prelude
 
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
 import Screens.Types (OnBoardingSubscriptionScreenState)
 
@@ -13,10 +13,11 @@ initData = {
     data:{
         plansList : [dummyPlanConfig],
         selectedPlanItem : Nothing,
-        subscriptionConfig : DC.config.subscriptionConfig
+        subscriptionConfig : (getAppConfig appConfig).subscriptionConfig
     },
     props:{
         isSelectedLangTamil : false,
-        screenCount : 0
+        screenCount : 0,
+        supportPopup : false
     }
 }

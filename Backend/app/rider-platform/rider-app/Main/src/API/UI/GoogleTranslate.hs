@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI, withPersonIdLogTag)
 import Servant
 import qualified SharedLogic.GoogleTranslate as GoogleTranslate
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 import qualified Tools.Maps as Maps
 

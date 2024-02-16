@@ -112,7 +112,7 @@ headerLayout state push heading =
         , height WRAP_CONTENT
         , text (getString EDIT)
         , margin (MarginRight 10)
-        , color Color.blueBtn
+        , color Color.brightBlue
         , gravity RIGHT
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , visibility if state.props.isInEditBankDetailsScreen then GONE else VISIBLE

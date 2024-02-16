@@ -17,6 +17,7 @@ module API.Dashboard where
 import qualified API.Dashboard.Booking as Booking
 import qualified API.Dashboard.Customer as Customer
 import qualified API.Dashboard.Exotel as Exotel
+import qualified API.Dashboard.HotSpot as HotSpot
 import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.IssueList as IssueList
 import qualified API.Dashboard.Merchant as Merchant
@@ -59,6 +60,7 @@ type OperationsAPI =
            :<|> IssueList.API
            :<|> Issue.API
            :<|> Tickets.API
+           :<|> HotSpot.API
        )
 
 type RideBookingAPI =
@@ -91,13 +93,14 @@ handlerV2 =
 
 operationHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperationsAPI
 operationHandler merchantId city _ = do
-  Customer.handler merchantId
-    :<|> Booking.handler merchantId
+  Customer.handler merchantId city
+    :<|> Booking.handler merchantId city
     :<|> Merchant.handler merchantId city
     :<|> Ride.handler merchantId
     :<|> IssueList.handler merchantId
     :<|> Issue.handler merchantId city
     :<|> Tickets.handler merchantId
+    :<|> HotSpot.handler merchantId
 
 rideBookingHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingAPI
 rideBookingHandler merchantId _ _ = RideBookings.handler merchantId

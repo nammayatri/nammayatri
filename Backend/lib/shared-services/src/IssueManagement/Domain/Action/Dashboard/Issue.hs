@@ -4,6 +4,7 @@ import qualified AWS.S3 as S3
 import qualified Data.Text as T hiding (count, map)
 import IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue as Common
+import qualified IssueManagement.Domain.Action.UI.Issue as UIR
 import qualified IssueManagement.Domain.Types.Issue.Comment as DC
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIR
@@ -29,9 +30,28 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
 
-newtype ServiceHandle m = ServiceHandle
-  { findPersonById :: Id Person -> m (Maybe Person)
+data ServiceHandle m = ServiceHandle
+  { findPersonById :: Id Person -> m (Maybe Person),
+    findByMerchantShortIdAndCity :: ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
   }
+
+checkMerchantCityAccess :: (BeamFlow m r) => ShortId Merchant -> Context.City -> DIR.IssueReport -> Maybe Person -> ServiceHandle m -> m ()
+checkMerchantCityAccess merchantShortId opCity issueReport mbPerson issueHandle = do
+  merchantOperatingCity <-
+    issueHandle.findByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
+  case issueReport.merchantOperatingCityId of
+    Nothing -> do
+      person <-
+        maybe
+          (issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId))
+          return
+          mbPerson
+      unless (person.merchantOperatingCityId == merchantOperatingCity.id) $
+        throwError $ IssueReportDoNotExist issueReport.id.getId
+    Just moCityId ->
+      unless (moCityId == merchantOperatingCity.id) $
+        throwError $ IssueReportDoNotExist issueReport.id.getId
 
 issueCategoryList :: BeamFlow m r => ShortId Merchant -> Context.City -> Identifier -> m Common.IssueCategoryListRes
 issueCategoryList _merchantShortId _opCity identifier = do
@@ -57,13 +77,32 @@ issueList ::
   Maybe IssueStatus ->
   Maybe (Id DIC.IssueCategory) ->
   Maybe Text ->
+  ServiceHandle m ->
   Identifier ->
   m Common.IssueReportListResponse
-issueList _merchantShortId _opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee identifier = do
+issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
   issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee
   let count = length issueReports
   let summary = Common.Summary {totalCount = count, count}
-  issues <- mapM mkIssueReport issueReports
+  issues <-
+    catMaybes
+      <$> mapM
+        ( \issueReport ->
+            case issueReport.merchantOperatingCityId of
+              Nothing -> do
+                person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)
+                if person.merchantOperatingCityId /= merchantOperatingCity.id
+                  then return Nothing
+                  else Just <$> mkIssueReport issueReport
+              Just moCityId ->
+                if moCityId /= merchantOperatingCity.id
+                  then return Nothing
+                  else Just <$> mkIssueReport issueReport
+        )
+        issueReports
   pure $ Common.IssueReportListResponse {issues, summary}
   where
     mkIssueReport :: (Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
@@ -72,6 +111,7 @@ issueList _merchantShortId _opCity mbLimit mbOffset mbStatus mbCategoryId mbAssi
       pure $
         Common.IssueReportListItem
           { issueReportId = cast issueReport.id,
+            issueReportShortId = issueReport.shortId,
             personId = cast issueReport.personId,
             rideId = cast <$> issueReport.rideId,
             deleted = issueReport.deleted,
@@ -88,32 +128,48 @@ issueInfo ::
   ) =>
   ShortId Merchant ->
   Context.City ->
-  Id DIR.IssueReport ->
+  Maybe (Id DIR.IssueReport) ->
+  Maybe (ShortId DIR.IssueReport) ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueInfoRes
-issueInfo _merchantShortId _opCity issueReportId issueHandle identifier = do
-  issueReport <- B.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId identifier
-  comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
-  category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
-  personDetail <- mapM mkPersonDetail =<< issueHandle.findPersonById issueReport.personId
-  option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
-  pure $
-    Common.IssueInfoRes
-      { issueReportId = cast issueReport.id,
-        personDetail,
-        rideId = cast <$> issueReport.rideId,
-        category = category.category,
-        option = option <&> (.option),
-        mediaFiles = mediaFiles,
-        comments = mkIssueReportComment <$> comments,
-        description = issueReport.description,
-        assignee = issueReport.assignee,
-        status = issueReport.status,
-        createdAt = issueReport.createdAt
-      }
+issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandle identifier = do
+  issueReport <- case mbIssueReportId of
+    Just iReportId -> B.runInReplica $ QIR.findById iReportId >>= fromMaybeM (IssueReportDoNotExist iReportId.getId)
+    Nothing -> case mbIssueReportShortId of
+      Just iReportShortId -> B.runInReplica $ QIR.findByShortId iReportShortId >>= fromMaybeM (IssueReportDoNotExist iReportShortId.getShortId)
+      Nothing -> throwError (InvalidRequest "Either issueReportId or issueReportShortId is required")
+  person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)
+  checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
+  mkIssueInfoRes person issueReport
   where
+    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> m Common.IssueInfoRes
+    mkIssueInfoRes person issueReport = do
+      personDetail <- Just <$> mkPersonDetail person
+      mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
+      comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
+      category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
+      option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
+      issueChats <- case identifier of
+        DRIVER -> return Nothing
+        CUSTOMER -> Just <$> UIR.mkIssueChats issueReport ENGLISH identifier
+      pure $
+        Common.IssueInfoRes
+          { issueReportId = cast issueReport.id,
+            issueReportShortId = issueReport.shortId,
+            personDetail,
+            rideId = cast <$> issueReport.rideId,
+            category = category.category,
+            chats = issueChats,
+            option = option <&> (.option),
+            mediaFiles = mediaFiles,
+            comments = mkIssueReportComment <$> comments,
+            description = issueReport.description,
+            assignee = issueReport.assignee,
+            status = issueReport.status,
+            createdAt = issueReport.createdAt
+          }
+
     mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> m Common.PersonDetail
     mkPersonDetail personDetail = do
       mobileNumber <- traverse decrypt personDetail.mobileNumber
@@ -145,12 +201,14 @@ issueUpdate ::
   ShortId Merchant ->
   Context.City ->
   Id DIR.IssueReport ->
+  ServiceHandle m ->
   Common.IssueUpdateByUserReq ->
   m APISuccess
-issueUpdate _merchantShortId _opCity issueReportId req = do
+issueUpdate merchantShortId opCity issueReportId issueHandle req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
-  _ <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   QIR.updateStatusAssignee issueReportId req.status req.assignee
   whenJust req.assignee mkIssueAssigneeUpdateComment
   pure Success
@@ -175,10 +233,12 @@ issueAddComment ::
   ShortId Merchant ->
   Context.City ->
   Id DIR.IssueReport ->
+  ServiceHandle m ->
   Common.IssueAddCommentByUserReq ->
   m APISuccess
-issueAddComment _merchantShortId _opCity issueReportId req = do
-  void $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+issueAddComment merchantShortId opCity issueReportId issueHandle req = do
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+  checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   _ <- QC.create =<< mkComment
   pure Success
   where

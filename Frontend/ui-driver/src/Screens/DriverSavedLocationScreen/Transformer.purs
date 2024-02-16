@@ -21,12 +21,14 @@ import Prelude
 import Data.Array as DA
 import Data.Maybe (isJust)
 import Data.String (toLower, trim)
-import Screens.Types (GoToLocation, DriverSavedLocationScreenState)
+import Screens.Types (GoToLocation)
 import Services.API (DriverHomeLocationAPIEntity(..), GetHomeLocationsRes(..))
+import Storage as Storage
 
 getLocationArray :: GetHomeLocationsRes -> Array GoToLocation
 getLocationArray (GetHomeLocationsRes resp) = 
     let locations = resp.locations
+        _ = Storage.setValueToLocalStore Storage.SAVED_GOTO_COUNT $ show $ DA.length locations
     in map (\ (DriverHomeLocationAPIEntity entity) -> {
         id : entity.id,
         lat : entity.lat,

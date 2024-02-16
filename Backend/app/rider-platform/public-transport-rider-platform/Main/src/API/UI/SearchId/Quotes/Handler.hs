@@ -23,5 +23,5 @@ import Kernel.Utils.Common
 import Tools.Auth
 
 handler :: Id DSearch.Search -> PersonId -> FlowHandler DQuotes.GetQuotesRes
-handler searchId _personId = withFlowHandlerAPI $ do
+handler searchId _personId = withFlowHandlerAPI' $ do
   DQuotes.getQuotesHandler searchId

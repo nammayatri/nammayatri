@@ -18,11 +18,10 @@ module Domain.Types.Booking.Type where
 import Data.Aeson
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
@@ -33,6 +32,9 @@ import Tools.Beam.UtilsTH
 
 activeBookingStatus :: [BookingStatus]
 activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
+
+activeScheduledBookingStatus :: [BookingStatus]
+activeScheduledBookingStatus = [AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
 
 data BookingStatus
   = NEW
@@ -53,7 +55,6 @@ data BPPBooking
 data Booking = Booking
   { id :: Id Booking,
     transactionId :: Text,
-    driverId :: Maybe Text,
     fulfillmentId :: Maybe Text,
     bppBookingId :: Maybe (Id BPPBooking),
     quoteId :: Maybe (Id DQuote.Quote),
@@ -63,15 +64,16 @@ data Booking = Booking
     providerId :: Text,
     providerUrl :: BaseUrl,
     itemId :: Text,
-    providerName :: Text,
-    providerMobileNumber :: Text,
     primaryExophone :: Text,
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
     fromLocation :: DLoc.Location,
     estimatedFare :: Money,
+    estimatedDistance :: Maybe HighPrecMeters,
+    estimatedDuration :: Maybe Seconds,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
+    isScheduled :: Bool,
     vehicleVariant :: VehicleVariant,
     bookingDetails :: BookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,
@@ -85,9 +87,15 @@ data Booking = Booking
 
 data BookingDetails
   = OneWayDetails OneWayBookingDetails
-  | RentalDetails DRentalSlab.RentalSlab
+  | RentalDetails RentalBookingDetails
   | DriverOfferDetails OneWayBookingDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails
+  | InterCityDetails InterCityBookingDetails
+  deriving (Show)
+
+newtype RentalBookingDetails = RentalBookingDetails
+  { stopLocation :: Maybe DLoc.Location
+  }
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails
@@ -100,5 +108,11 @@ data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
   { toLocation :: DLoc.Location,
     distance :: HighPrecMeters,
     otpCode :: Maybe Text
+  }
+  deriving (Show)
+
+data InterCityBookingDetails = InterCityBookingDetails
+  { toLocation :: DLoc.Location,
+    distance :: HighPrecMeters
   }
   deriving (Show)

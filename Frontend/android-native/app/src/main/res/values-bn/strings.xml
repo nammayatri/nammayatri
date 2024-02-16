@@ -45,4 +45,5 @@
     <string name="no_enabled_browser">আপনার ডিভাইসে কোনো সক্ষম ব্রাউজার পাওয়া যায়নি, অনুগ্রহ করে একটি ব্রাউজার সক্ষম বা ইনস্টল করুন</string>
     <string name="message_from_customer">গ্রাহক থেকে বার্তা</string>
     <string name="go_to">গো-টু</string>
+    <string name="call_support">সাহায্য কল করুন</string>
 </resources>

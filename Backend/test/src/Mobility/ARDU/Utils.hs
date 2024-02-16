@@ -239,7 +239,7 @@ endRide ::
   Id AppRB.Booking ->
   ClientsM ()
 endRide driver destination tRide bBookingId = do
-  void . callBPP $ API.ui.ride.rideEnd driver.token tRide.id $ RideAPI.EndRideReq destination Nothing Nothing
+  void . callBPP $ API.ui.ride.rideEnd driver.token tRide.id $ RideAPI.EndRideReq Nothing destination Nothing Nothing Nothing
   void $
     pollDesc "ride completed" $ do
       completedRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)
@@ -340,15 +340,15 @@ search'Confirm appToken driver searchReq' = do
 changeCachedMapsConfig :: Maps.MapsServiceConfig -> IO ()
 changeCachedMapsConfig googleCfg = runARDUFlow "change cached maps config" $ do
   let serviceConfig = TDMSC.MapsServiceConfig googleCfg
-  nammaYatriPartnerServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.nammaYatriPartnerMerchantId serviceConfig
-  otherMerchant2ServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.otherMerchant2Id serviceConfig
-  TCQMSC.cacheMerchantServiceConfig nammaYatriPartnerServiceConfig
-  TCQMSC.cacheMerchantServiceConfig otherMerchant2ServiceConfig
+  nammaYatriPartnerServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.nammaYatriPartnerMerchantId serviceConfig (Id "mobility-opcity")
+  otherMerchant2ServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.otherMerchant2Id serviceConfig (Id "mobility-opcity")
+  TCQMSC.cacheMerchantServiceConfig "mobility-opcity" nammaYatriPartnerServiceConfig
+  TCQMSC.cacheMerchantServiceConfig "mobility-opcity" otherMerchant2ServiceConfig
 
 clearCachedMapsConfig :: IO ()
 clearCachedMapsConfig = runARDUFlow "clear cached maps config" do
-  TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantId (TDMSC.MapsService Maps.Google)
-  TCQMSC.clearCache Fixtures.otherMerchant2Id (TDMSC.MapsService Maps.Google)
+  TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantId (TDMSC.MapsService Maps.Google) (Id "mobility-opcity")
+  TCQMSC.clearCache Fixtures.otherMerchant2Id (TDMSC.MapsService Maps.Google) (Id "mobility-opcity")
 
 rideSync :: ShortId TDM.Merchant -> Context.City -> Id TRide.Ride -> ClientsM ()
 rideSync merchantId city rideId = do

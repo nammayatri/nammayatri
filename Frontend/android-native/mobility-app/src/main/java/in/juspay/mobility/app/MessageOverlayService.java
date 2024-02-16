@@ -272,10 +272,10 @@ public class MessageOverlayService extends Service implements View.OnClickListen
         try {
             JSONObject dols1BP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\"}");
             JSONObject dols2BP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\"}");
-            JSONObject dols3BP = new JSONObject("{\"en_us\":\"On my way\",\"ta_in\":\"வந்துகொண்டிருக்கிறேன்\",\"kn_in\":\"ಬರುತ್ತಿದ್ದೇನೆ\",\"hi_in\":\"मैं आ रहा हूँ \",\"ml_in\":\"ഞാൻ വന്നുകൊണ്ടിരിക്കുകയാണ്\",\"bn_in\":\"আমি আসছি\"}");
+            JSONObject dols3BP = new JSONObject("{\"en_us\":\"5 mins\",\"ta_in\":\"5 mins\",\"kn_in\":\"5 mins\",\"hi_in\":\"5 mins\",\"ml_in\":\"5 mins\",\"bn_in\":\"5 mins\"}");
             JSONObject dols1AP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\"}");
             JSONObject dols2AP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\"}");
-            JSONObject dols3AP = new JSONObject("{\"en_us\" : \"At pick-up\", \"ta_in\" : \"பிக்-அப்பில் உள்ளேன்\", \"kn_in\" : \"ಪಿಕ್ ಅಪ್ ನಲ್ಲಿ \", \"hi_in\" : \"मैं लोकेशन पे हूँ\", \"ml_in\" : \"ഞാൻ പിക്ക്-അപ്പിൽ ആണ്\", \"bn_in\" : \"আমি পিক-আপ স্থানে আছি\" }");
+            JSONObject dols3AP = new JSONObject("{\"en_us\":\"5 mins\",\"ta_in\":\"5 mins\",\"kn_in\":\"5 mins\",\"hi_in\":\"5 mins\",\"ml_in\":\"5 mins\",\"bn_in\":\"5 mins\"}");
             JSONObject suggestions = new JSONObject();
             suggestions.put("dols1BP", dols1BP);
             suggestions.put("dols2BP", dols2BP);

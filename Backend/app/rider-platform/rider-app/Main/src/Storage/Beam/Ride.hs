@@ -35,12 +35,13 @@ data RideT f = RideT
     driverRating :: B.C f (Maybe Centesimal),
     driverMobileNumber :: B.C f Text,
     driverMobileCountryCode :: B.C f (Maybe Text),
-    driverRegisteredAt :: B.C f UTCTime,
+    driverRegisteredAt :: B.C f (Maybe UTCTime),
     vehicleNumber :: B.C f Text,
     vehicleModel :: B.C f Text,
     vehicleColor :: B.C f Text,
     vehicleVariant :: B.C f VehVar.VehicleVariant,
     otp :: B.C f Text,
+    endOtp :: B.C f (Maybe Text),
     trackingUrl :: B.C f (Maybe Text),
     fare :: B.C f (Maybe HighPrecMoney),
     totalFare :: B.C f (Maybe HighPrecMoney),
@@ -50,9 +51,14 @@ data RideT f = RideT
     rideStartTime :: B.C f (Maybe UTCTime),
     rideEndTime :: B.C f (Maybe UTCTime),
     rideRating :: B.C f (Maybe Int),
+    allowedEditLocationAttempts :: B.C f (Maybe Int),
+    startOdometerReading :: B.C f (Maybe Centesimal),
+    endOdometerReading :: B.C f (Maybe Centesimal),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    driverImage :: B.C f (Maybe Text)
+    driverImage :: B.C f (Maybe Text),
+    safetyCheckStatus :: B.C f (Maybe Bool),
+    isFreeRide :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

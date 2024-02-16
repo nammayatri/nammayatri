@@ -52,7 +52,8 @@ initData = {
       showRecordModel: false,
       showViewImageModel: false,
       isPopupModelOpen: false,
-      submitIsInProgress: false
+      submitIsInProgress: false,
+      timerId : ""
     }
 }
 
@@ -69,7 +70,7 @@ chatConfig' = ChatView.config {
                      , messages = []
                      , sendMessageActive = false
                      , vehicleNo = ""
-                     , suggestionsList = []
+                     , chatSuggestionsList = []
                      , hint = "Message"
                      , suggestionHeader = "Start Chat"
                      , suggestionDelay = 750

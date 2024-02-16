@@ -18,7 +18,10 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.SDKEvents as SDKEvents
 import qualified API.UI.Call as Call
+import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.City as City
 import qualified API.UI.Driver as Driver
@@ -78,11 +81,14 @@ type API =
            :<|> LeaderBoard.API
            :<|> OnMessage.API
            :<|> RideRoute.API
+           :<|> CallEvent.API
            :<|> Plan.API
            :<|> KioskLocation.API
            :<|> DriverCoins.API
            :<|> RideSummary.API
            :<|> City.API
+           :<|> LmsModule.API
+           :<|> SDKEvents.API
        )
 
 handler :: FlowServer API
@@ -111,8 +117,11 @@ handler =
     :<|> LeaderBoard.handler
     :<|> OnMessage.handler
     :<|> RideRoute.handler
+    :<|> CallEvent.handler
     :<|> Plan.handler
     :<|> KioskLocation.handler
     :<|> DriverCoins.handler
     :<|> RideSummary.handler
     :<|> City.handler
+    :<|> LmsModule.handler
+    :<|> SDKEvents.handler

@@ -19,7 +19,7 @@ import Common.Types.App
 
 import Animation (translateInXForwardAnim)
 import Common.Types.App (LazyCheck(..))
-import Components.QuoteListItem.Controller (Action(..), QuoteListItemState)
+import Components.QuoteListItem.Controller (Action(..))
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -28,11 +28,10 @@ import Data.Number (ceil)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, os, countDown)
+import Engineering.Helpers.Commons (flowRunner, os, parseFloat)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import JBridge (startTimerWithTime)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, pure, show, unit, ($), (/=), (<>), (==))
@@ -42,6 +41,11 @@ import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Timers
+import Debug
+import Engineering.Helpers.Commons (liftFlow)
+import Screens.Types (QuoteListItemState(..), City(..))
+import Locale.Utils
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -57,9 +61,7 @@ view push state =
           , stroke if state.selectedQuote == Just state.id then ("1,"<>Color.blue700') else ("1," <> Color.grey)
           , afterRender (\action -> do
                           _ <- push action
-                          _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do
-                            if (os == "IOS") then liftEffect $ startTimerWithTime (show state.seconds) state.id "1" push CountDown
-                              else liftEffect $ countDown state.seconds state.id push CountDown
+                          _ <- launchAff $ flowRunner defaultGlobalState $ liftFlow $ startTimer state.seconds state.id "1" push CountDown
                           pure unit
                         ) (const NoAction)
           , onClick push (const $ Click state)
@@ -102,11 +104,11 @@ ratingAndExpiryTime state push =
 
 driverImageView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
 driverImageView state =
- linearLayout
- [ width WRAP_CONTENT
- , height WRAP_CONTENT
- , orientation VERTICAL
- ][ frameLayout
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ frameLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , gravity CENTER
@@ -125,11 +127,19 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback $ fetchImage FF_ASSET $ if state.vehicleType == "auto" then "ny_ic_auto_quote_list" else "ny_ic_auto_quote_list"
+        , imageWithFallback $ fetchImage FF_ASSET $ getAutoImage state.city
         , weight 1.0
         ]
       ]
- ]
+  ]
+  where 
+    getAutoImage :: City -> String
+    getAutoImage city = case city of
+      Hyderabad -> "ny_ic_black_yellow_auto_quote_list"
+      Chennai -> "ny_ic_black_yellow_auto_quote_list"
+      Kochi -> "ny_ic_black_auto_quote_list"
+      _ -> "ny_ic_auto_quote_list"
+
 
 driverRatingView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
 driverRatingView state  =
@@ -149,7 +159,7 @@ driverRatingView state  =
       , textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ if ceil state.driverRating == 0.0 then (getString NEW_) else show $ ceil state.driverRating
+        , text $ if state.driverRating == 0.0 then (getString NEW_) else parseFloat state.driverRating 2
         ] <> FontStyle.tags LanguageStyle)
     ]
 
@@ -180,7 +190,7 @@ timerView state push =
   ][  textView (
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , text $ case (getValueToLocalStore LANGUAGE_KEY) of
+      , text $ case (getLanguageLocale languageKey) of
             "EN_US" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
             "FR_FR" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
             _ -> state.timer <> "s " <> (getString EXPIRES_IN )
@@ -222,7 +232,7 @@ primaryButtonView state push =
   , cornerRadius state.appConfig.quoteListItemConfig.primaryButtonCorner
   , onClick push $ const ConfirmRide
   , gravity CENTER
-  ] <> if state.appConfig.isGradient == "true" then [gradient (Linear 90.0 state.appConfig.gradient)] else [background state.appConfig.primaryBackground])
+  ] <> if state.appConfig.primaryButtonConfig.isGradient then [gradient (Linear 90.0 state.appConfig.primaryButtonConfig.gradient)] else [background state.appConfig.primaryBackground])
   [ textView (
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
@@ -268,7 +278,7 @@ autoAcceptingView state push =
             , weight 1.0
             , gravity CENTER_VERTICAL
             , color Color.black900
-            , text $ case (getValueToLocalStore LANGUAGE_KEY) of
+            , text $ case (getLanguageLocale languageKey) of
                 "EN_US" -> (getString AUTO_ACCEPTING_SELECTED_RIDE) <> " : " <> state.timer <> "s"
                 _ -> state.timer <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE)
             ] <> FontStyle.tags LanguageStyle)

@@ -93,11 +93,11 @@ driverProfileScreen = do
     GoToDriverSavedLocationScreen state -> do 
       modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
       App.BackT $ App.BackPoint <$> pure SAVED_LOCATIONS_SCREEN
-    GoBack -> do
+    GoBack updatedState -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverDetailsScreen ->
         DriverProfileScreenData.initData { data { driverVehicleType = driverDetailsScreen.data.driverVehicleType
                                                 , capacity = driverDetailsScreen.data.capacity
                                                 , downgradeOptions = driverDetailsScreen.data.downgradeOptions
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
-      App.BackT $ App.NoBack <$> pure GO_HOME
+      App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)

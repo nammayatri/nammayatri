@@ -1,12 +1,35 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-      "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
+      "homeScreen" : {
+        "primaryBackground" : "#FFFFFF",
+        "pickUpViewColor" : "#EFEFEF",
+        "pickupLocationTextColor" : "#1D1D1D",
+        "bannerViewVisibility" : false,
+        "header" : {
+          "menuButtonBackground" : "#F6F6F6",
+          "showLogo" : false,
+          "titleColor" : "#1D1D1D",
+          "showSeparator" : true,
+        },
+        "whereToButton" : {
+          "margin" : {
+            "top" : 3
+          },
+          "shadow" : {
+            "x": 0.3,
+            "y": 0.3,
+            "blur": 3.0,
+            "spread": 10.0
+          }
+        }
+      },
+      "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US"],
       "isReferralEnabled": "false",
       "showBookingPreference": "true",
       "showRateCard": "true",
@@ -20,12 +43,15 @@ window.getMerchantConfig = function () {
       "CUSTOMER_TIP": "true",
       "isShareAppEnabled": "false",
       "addFavouriteScreenBackArrow": "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
-      "showPickUpandDrop": false,
+      "showPickUpandDrop": true,
       "apiLoaderLottie": "https://assets.juspay.in/beckn/mobilityredbus/user/lottie/primary_button_loader.json",
       "isEmergencyContacts": "false",
       "showCorporateAddress": false,
       "isChatEnabled": "false",
     "loaderColor": "#D63941",
+    "loaderConfig" : {
+      "color": "#D63941"
+    },
       "isGradient": "false",
       "gradient": [],
       "primaryTextColor": "#FFFFFF",
@@ -49,16 +75,21 @@ window.getMerchantConfig = function () {
       "searchLocationConfig": {
         "searchLocationTheme": "#D84E55",
         "setLocationOnMapColor": "#2C2F3A",
-        "strokeColor": "1,#13101010",
-        "enableLocationTagbar": "true",
+        "strokeColor": "1,#818181",
+        "enableLocationTagbar" : "true",
+        "editTextBackground" : "#EFEFEF",
+        "editTextDefaultColor" : "#818181",
+        "backgroundColor" : "#FFFFFF",
+        "separatorColor" : "#E4E4E4",
+        "showSeparator" : true,
+        "editTextColor" : "#818181",
+        "hintColor" : "#E4E4E4",
         "resultsCardCornerRadius": 8.0,
         "showRateCardDetails": true,
-        "editTextBackground" : "#DA4C54",
-        "editTextDefaultColor" : "#E89398",
         "lottieHeight": 96,
         "lottieWidth": 96,
         "primaryButtonHeight": 60,
-        "backArrow": "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
+        "backArrow": "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
         },
         "ratingConfig": {
         "secondaryButtonTextColor": "#1D1D1D",
@@ -71,8 +102,10 @@ window.getMerchantConfig = function () {
         "buttonCornerRadius": 8.0
         },
         "quoteListModel": {
-        "backgroundColor": "#D63941",
-        "textColor": "#FFFFFF",
+        "backgroundColor": "#FFFFFF",
+        "textColor": "#4F4F4F",
+        "separatorColor" : "#E4E4E4",
+        "showSeparator" : true,
         "loaderColor": "#80B2FF",
         "otpTextBackground": "#FFFFFF",
         "otpBackground": "#FFF0F6",
@@ -85,7 +118,7 @@ window.getMerchantConfig = function () {
         "topMargin": 0,
         "noQuotesImageHeight": 115,
         "noQuotesImageWidth": 137,
-        "closeIcon": "ny_ic_close_white,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_close_white.png",
+        "closeIcon": "ny_ic_close,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_close.png",
         },
         "driverInfoConfig": {
         "ratingTextColor": "#D84E55",
@@ -102,13 +135,18 @@ window.getMerchantConfig = function () {
         "showNumberPlateSuffix": false,
         "numberPlateBackground": "#E9BE4D",
         "showCancelPrevention": false,
-        "showTrackingButton": true
+        "showTrackingButton": false,
+        "footerVisibility" : true
+      , "footerImageUrl" : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_namma_yatri_logo.png"
+      , "footerBackgroundColor" : "#FFFFFF"
         },
-        "profileBackground": "#D63941",
-        "profileName": "#FFFFFF",
+        "profileBackground": "#EFEFEF",
+        "profileName": "#1D1D1D",
         "profileImage": "#012A72",
         "feedbackBackground": "#D63941",
         "profileCompletion": "#FFFFFF",
+        "profileArrowImage": "ny_ic_chevron_right,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_right.png",
+        "showProfileStatus": false,
         "cancelRideColor": "#BD5500",
         "merchantLogo": "ic_launcher,https://assets.juspay.in/beckn/mobilityredbus/user/images/ny_ic_launcher.png",
         "infoIconUrl": "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
@@ -125,24 +163,18 @@ window.getMerchantConfig = function () {
         "popupBackground": "#FFFFFF",
         "englishStrings": {
         "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
-        "LOCATION_PERMISSION_SUBTITLE_NEW_USER": "Welcome to Redbus Mobility! \nTo start booking rides, please allow us to find you!",
         "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "Website: <u>https://nammayatri.in/</u>",
-        "YOUR_FEEDBACK_HELPS_US": "Your feedback helps us improve the Redbus Mobility experience",
-        "ABOUT_APP_DESCRIPTION": "Redbus Mobility is an open platform to connect commuters with transport providers. The app makes it convenient for travellers to find available means of transport, and avail these options by connecting them with service providers "
+        "YOUR_FEEDBACK_HELPS_US": "Your feedback helps us improve the Namma Yatri experience"
         },
         "hindiStrings": {
         "YOUR_LOCATION_HELPS_OUR_SYSTEM": "आपका स्थान हमारे सिस्टम को आस-पास के सभी ऑटो को मैप करने और आपको सबसे तेज़ संभव सवारी दिलाने में मदद करता है।",
-        "LOCATION_PERMISSION_SUBTITLE_NEW_USER": "रेडबस मोबिलिटी में आपका स्वागत है! \nसवारी की बुकिंग शुरू करने के लिए, कृपया हमें आपको ढूंढने की अनुमति दें!",
         "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "वेबसाइट: <u>https://nammayatri.in/</u>",
-        "YOUR_FEEDBACK_HELPS_US": "आपका फीडबैक हमें रेडबस मोबिलिटी अनुभव को बेहतर बनाने में मदद करता है",
-        "ABOUT_APP_DESCRIPTION": "रेडबस मोबिलिटी यात्रियों को परिवहन प्रदाताओं के साथ जोड़ने के लिए एक खुला मंच है। ऐप यात्रियों के लिए परिवहन के उपलब्ध साधनों को ढूंढना सुविधाजनक बनाता है, और उन्हें सेवा प्रदाताओं के साथ जोड़कर इन विकल्पों का लाभ उठाता है"
+        "YOUR_FEEDBACK_HELPS_US": "आपकी प्रतिक्रिया हमें नम्मा यात्री अनुभव को बेहतर बनाने में मदद करती है"
         },
         "kannadaStrings": {
         "YOUR_LOCATION_HELPS_OUR_SYSTEM": "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ಮ್ಯಾಪ್ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ತ್ವರಿತವಾದ ಸವಾರಿ ಸಾಧ್ಯ.",
-        "LOCATION_PERMISSION_SUBTITLE_NEW_USER": "ರೆಡ್‌ಬಸ್ ಮೊಬಿಲಿಟಿಗೆ ಸುಸ್ವಾಗತ! \nಬುಕಿಂಗ್ ರೈಡ್‌ಗಳನ್ನು ಪ್ರಾರಂಭಿಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮನ್ನು ಹುಡುಕಲು ನಮಗೆ ಅನುಮತಿಸಿ!",
         "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "ವೆಬ್‌ಸೈಟ್: <u>https://nammayatri.in/</u>",
-        "YOUR_FEEDBACK_HELPS_US": "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ ನಮಗೆ Redbus Mobility ಅನುಭವವನ್ನು ಸುಧಾರಿಸಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ",
-        "ABOUT_APP_DESCRIPTION": "ರೆಡ್‌ಬಸ್ ಮೊಬಿಲಿಟಿಯು ಪ್ರಯಾಣಿಕರನ್ನು ಸಾರಿಗೆ ಪೂರೈಕೆದಾರರೊಂದಿಗೆ ಸಂಪರ್ಕಿಸಲು ಮುಕ್ತ ವೇದಿಕೆಯಾಗಿದೆ. ಈ ಅಪ್ಲಿಕೇಶನ್ ಪ್ರಯಾಣಿಕರಿಗೆ ಲಭ್ಯವಿರುವ ಸಾರಿಗೆ ಸಾಧನಗಳನ್ನು ಹುಡುಕಲು ಅನುಕೂಲಕರವಾಗಿಸುತ್ತದೆ ಮತ್ತು ಸೇವೆ ಒದಗಿಸುವವರೊಂದಿಗೆ ಅವರನ್ನು ಸಂಪರ್ಕಿಸುವ ಮೂಲಕ ಈ ಆಯ್ಕೆಗಳನ್ನು ಪಡೆದುಕೊಳ್ಳಿ "
+        "YOUR_FEEDBACK_HELPS_US": "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ ನಮ್ಮ ಯಾತ್ರಿ ಅನುಭವವನ್ನು ಸುಧಾರಿಸಲು ನಮಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ"
         },
         "languageList": [{
         "name": "English",
@@ -168,7 +200,8 @@ window.getMerchantConfig = function () {
         "terminateBtnConfig": {
         "visibility": true,
         "title": "Redbus",
-        "imageUrl": "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+        "backgroundColor" : "#F6F6F6",
+        "imageUrl": "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
         },
         "showDeleteAccount": false,
         "fontName": "PlusJakartaSans",
@@ -179,7 +212,7 @@ window.getMerchantConfig = function () {
 			"showGenderBanner": false,
 			"autoSelectBackground": "#53BB6F",
 			"OTP_MESSAGE_REGEX": "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+",
-			"SUPPORT_EMAIL": "nammayatri.support@juspay.in",
+			"SUPPORT_EMAIL": "support@nammayatri.in",
 			"specialLocationView": false,
 			"rideCompletedGradient": "#F2A2A2",
 			"navigationAppConfig": {
@@ -188,14 +221,31 @@ window.getMerchantConfig = function () {
         }
     , "features" : {
         "enableAutoReadOtp" : false
+      , "enableLiveDashboard" : false
     }
     , "estimateAndQuoteConfig" : { "enableOnlyAuto" : true
     }
     , "rideCompletedCardConfig" : {
         "topCard" : {
           "gradient" : "#F2A2A2"
+        , "enableGradient" : false
+        , "background" : "#1D1D1D"
         }
       }
     , "enableContactSupport" : false
+    , "feature" : {
+      "enableAutoReadOtp" : false,
+      "enableShareRide" : false,
+      "enableChat": false,
+      "enableEmergencyContacts": false,
+      "enableReferral": false,
+      "enableSupport": false,
+    }
+    , "dashboard" : {
+      "enable" : false
+    }
+    , "fontConfig" : {
+      "type" : "System"
+    }
   })
 }

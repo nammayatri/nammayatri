@@ -18,6 +18,7 @@ module Domain.Types.Message.Message where
 
 import Data.Map as HM
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified IssueManagement.Domain.Types.MediaFile as MF
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -41,7 +42,9 @@ data Message = Message
     viewCount :: Int,
     mediaFiles :: [Id MF.MediaFile],
     messageTranslations :: [MessageTranslation],
+    alwaysTriggerOnOnboarding :: Bool,
     merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     createdAt :: UTCTime
   }
 
@@ -63,6 +66,7 @@ data RawMessage = RawMessage
     label :: Maybe Text,
     likeCount :: Int,
     viewCount :: Int,
+    alwaysTriggerOnOnboarding :: Bool,
     mediaFiles :: [Id MF.MediaFile],
     merchantId :: Id Merchant,
     createdAt :: UTCTime

@@ -22,14 +22,13 @@ where
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
+import Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Reexport
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_ENDED))
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, tags, title, value)
 import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
-import Kernel.Utils.GenericPretty (PrettyShow)
-import Kernel.Utils.Schema
 
 data RideCompletedEvent = RideCompletedEvent
   { id :: Text,
@@ -48,12 +47,12 @@ instance ToJSON RideCompletedEvent where
         -- <> "update_target" .= update_target
         <> "quote" .= quote
         <> "payment" .= payment
-        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_COMPLETED <> "name" .= A.String "Ride Completed") :: A.Object) :: A.Object)))
+        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_ENDED <> "name" .= A.String "Ride Completed") :: A.Object) :: A.Object)))
 
 instance FromJSON RideCompletedEvent where
   parseJSON = withObject "RideCompletedEvent" $ \obj -> do
     update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
-    unless (update_type == RIDE_COMPLETED) $ fail "Wrong update_type."
+    unless (update_type == RIDE_ENDED) $ fail "Wrong update_type."
     RideCompletedEvent
       <$> obj .: "id"
       -- <*> obj .: "update_target"
@@ -105,45 +104,3 @@ instance ToSchema RideCompletedEvent where
                    "fulfillment",
                    "payment"
                  ]
-
-data RideCompletedQuote = RideCompletedQuote
-  { price :: QuotePrice,
-    breakup :: [BreakupItem]
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema RideCompletedQuote where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data QuotePrice = QuotePrice
-  { currency :: Text,
-    value :: DecimalValue,
-    computed_value :: DecimalValue
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema QuotePrice where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data BreakupItem = BreakupItem
-  { title :: Text,
-    price :: BreakupPrice
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
-
-instance ToSchema BreakupItem where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data BreakupPrice = BreakupPrice
-  { currency :: Text,
-    value :: DecimalValue
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
-
-instance ToSchema BreakupPrice where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data DistanceRelatedTags = DistanceRelatedTags
-  { chargeable_distance :: DecimalValue,
-    traveled_distance :: DecimalValue
-  }

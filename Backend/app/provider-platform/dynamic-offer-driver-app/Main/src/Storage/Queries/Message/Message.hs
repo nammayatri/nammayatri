@@ -17,6 +17,7 @@ module Storage.Queries.Message.Message where
 
 import qualified Data.Time as T
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Message.Message
 import Domain.Types.Message.MessageTranslation as DomainMT
 import Kernel.Beam.Functions
@@ -26,7 +27,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Message.MessageTranslation as MT
+import Tools.Error
 
 createMessage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Message -> m ()
 createMessage msg = do
@@ -37,48 +41,40 @@ createMessage msg = do
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Message -> m ()
 create = createWithKV
 
+findAllOnboardingMessages :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> m [RawMessage]
+findAllOnboardingMessages merchantParam moCity = do
+  messages <-
+    findAllWithDb
+      [ Se.And
+          [ Se.Is BeamM.merchantId $ Se.Eq (getId merchantParam.id),
+            Se.Or
+              ( [Se.Is BeamM.merchantOperatingCityId $ Se.Eq (Just $ getId $ moCity.id)]
+                  <> [Se.Is BeamM.merchantOperatingCityId $ Se.Eq Nothing | merchantParam.city == moCity.city]
+              ),
+            Se.Is BeamM.alwaysTriggerOnOnboarding $ Se.Eq (Just True)
+          ]
+      ]
+  pure $ map castToRawMessage messages
+
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> m (Maybe RawMessage)
 findById (Id messageId) = do
   message <- findOneWithKV [Se.Is BeamM.id $ Se.Eq messageId]
-  pure $
-    ( \Message {..} ->
-        RawMessage
-          { id = id,
-            _type = _type,
-            title = title,
-            description = description,
-            shortDescription = shortDescription,
-            label = label,
-            likeCount = likeCount,
-            viewCount = viewCount,
-            mediaFiles = mediaFiles,
-            merchantId = merchantId,
-            createdAt = createdAt
-          }
-    )
-      <$> message
+  pure $ castToRawMessage <$> message
 
-findAllWithLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
-findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
-  messages <- findAllWithOptionsDb [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Desc BeamM.createdAt) (Just limitVal) (Just offsetVal)
-  pure $
-    map
-      ( \Message {..} ->
-          RawMessage
-            { id = id,
-              _type = _type,
-              title = title,
-              description = description,
-              shortDescription = shortDescription,
-              label = label,
-              likeCount = likeCount,
-              viewCount = viewCount,
-              mediaFiles = mediaFiles,
-              merchantId = merchantId,
-              createdAt = createdAt
-            }
-      )
-      messages
+findAllWithLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Merchant -> DMOC.MerchantOperatingCity -> m [RawMessage]
+findAllWithLimitOffset mbLimit mbOffset merchantParam moCity = do
+  messages <-
+    findAllWithOptionsDb
+      [ Se.And [Se.Is BeamM.merchantId $ Se.Eq (getId merchantParam.id)],
+        Se.Or
+          ( [Se.Is BeamM.merchantOperatingCityId $ Se.Eq (Just $ getId $ moCity.id)]
+              <> [Se.Is BeamM.merchantOperatingCityId $ Se.Eq Nothing | merchantParam.city == moCity.city]
+          )
+      ]
+      (Se.Desc BeamM.createdAt)
+      (Just limitVal)
+      (Just offsetVal)
+  pure $ map castToRawMessage messages
   where
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
@@ -103,10 +99,15 @@ updateMessageViewCount messageId value = do
         [Se.Is BeamM.id (Se.Eq $ getId messageId)]
     Nothing -> pure ()
 
+castToRawMessage :: Message -> RawMessage
+castToRawMessage Message {..} = RawMessage {..}
+
 instance FromTType' BeamM.Message Message where
   fromTType' BeamM.MessageT {..} = do
     mT' <- MT.findByMessageId (Id id)
     let mT = (\(DomainMT.MessageTranslation _ language_ title_ label_ description_ shortDescription_ createdAt_) -> Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) <$> mT'
+    merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
     pure $
       Just
         Message
@@ -118,9 +119,11 @@ instance FromTType' BeamM.Message Message where
             label = label,
             likeCount = likeCount,
             viewCount = viewCount,
+            alwaysTriggerOnOnboarding = fromMaybe False alwaysTriggerOnOnboarding,
             mediaFiles = Id <$> mediaFiles,
             messageTranslations = mT,
             merchantId = Id merchantId,
+            merchantOperatingCityId = merchantOpCityId,
             createdAt = T.localTimeToUTC T.utc createdAt
           }
 
@@ -135,7 +138,9 @@ instance ToTType' BeamM.Message Message where
         BeamM.label = label,
         BeamM.likeCount = likeCount,
         BeamM.viewCount = viewCount,
+        BeamM.alwaysTriggerOnOnboarding = Just alwaysTriggerOnOnboarding,
         BeamM.mediaFiles = getId <$> mediaFiles,
         BeamM.merchantId = getId merchantId,
+        BeamM.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         BeamM.createdAt = T.utcToLocalTime T.utc createdAt
       }

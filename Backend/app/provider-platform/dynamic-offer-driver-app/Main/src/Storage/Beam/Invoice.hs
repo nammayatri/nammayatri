@@ -6,6 +6,7 @@ module Storage.Beam.Invoice where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Invoice as Domain
+import Domain.Types.Plan (ServiceNames)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -21,7 +22,9 @@ data InvoiceT f = InvoiceT
     lastStatusCheckedAt :: B.C f (Maybe UTCTime),
     bankErrorMessage :: B.C f (Maybe Text),
     bankErrorCode :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     bankErrorUpdatedAt :: B.C f (Maybe UTCTime),
+    serviceName :: B.C f (Maybe ServiceNames),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

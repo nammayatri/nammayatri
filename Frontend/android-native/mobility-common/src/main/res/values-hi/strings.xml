@@ -15,4 +15,6 @@
     <string name="invoice_downloaded">रसीद डाउनलोड!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">आपकी सवारी की रसीद डाउनलोड हो गई है!!!</string>
     <string name="qr_downloaded">QR डाउनलोड!!!</string>
+    <string name="upload_image">तस्विर अपलोड करें</string>
+    <string name="please_allow_permission_to_capture_the_image">कृपया छवि को कैप्चर करने के लिए अनुमति दें</string>
 </resources>

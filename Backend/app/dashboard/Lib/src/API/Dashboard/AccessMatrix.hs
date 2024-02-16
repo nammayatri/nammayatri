@@ -22,6 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.BeamFlow
 import Tools.Auth
 
 type API =
@@ -35,15 +36,24 @@ type API =
              :> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "roleId" (Id DRole.Role) -- role.name?
              :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
+           :<|> "merchantWithCityList"
+             :> Get '[JSON] [DMatrix.MerchantCityList]
        )
 
-handler :: FlowServer API
-handler = getAccessMatrix :<|> getAccessMatrixByRole
+handler :: BeamFlow' => FlowServer API
+handler =
+  getAccessMatrix
+    :<|> getAccessMatrixByRole
+    :<|> getMerchantWithCityList
 
-getAccessMatrix :: TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
+getAccessMatrix :: BeamFlow' => TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
 getAccessMatrix tokenInfo mbLimit =
-  withFlowHandlerAPI . DAccessMatrix.getAccessMatrix tokenInfo mbLimit
+  withFlowHandlerAPI' . DAccessMatrix.getAccessMatrix tokenInfo mbLimit
 
-getAccessMatrixByRole :: TokenInfo -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
+getAccessMatrixByRole :: BeamFlow' => TokenInfo -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
 getAccessMatrixByRole tokenInfo =
-  withFlowHandlerAPI . DAccessMatrix.getAccessMatrixByRole tokenInfo
+  withFlowHandlerAPI' . DAccessMatrix.getAccessMatrixByRole tokenInfo
+
+getMerchantWithCityList :: BeamFlow' => FlowHandler [DMatrix.MerchantCityList]
+getMerchantWithCityList =
+  withFlowHandlerAPI' DAccessMatrix.getMerchantWithCityList

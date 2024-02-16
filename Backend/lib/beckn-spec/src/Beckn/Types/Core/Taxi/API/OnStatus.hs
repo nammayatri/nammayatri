@@ -15,19 +15,39 @@
 module Beckn.Types.Core.Taxi.API.OnStatus where
 
 import Beckn.Types.Core.Taxi.OnStatus (OnStatusMessage)
+import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnStatusReq = BecknCallbackReq OnStatusMessage
+
+type OnStatusReqV2 = Spec.OnStatusReq
 
 type OnStatusRes = AckResponse
 
 type OnStatusAPI =
   "on_status"
-    :> ReqBody '[JSON] OnStatusReq
+    :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] OnStatusRes
 
 onStatusAPI :: Proxy OnStatusAPI
 onStatusAPI = Proxy
+
+type OnStatusAPIV1 =
+  "on_status"
+    :> ReqBody '[JSON] OnStatusReq
+    :> Post '[JSON] OnStatusRes
+
+onStatusAPIV1 :: Proxy OnStatusAPIV1
+onStatusAPIV1 = Proxy
+
+type OnStatusAPIV2 =
+  "on_status"
+    :> ReqBody '[JSON] OnStatusReqV2
+    :> Post '[JSON] OnStatusRes
+
+onStatusAPIV2 :: Proxy OnStatusAPIV2
+onStatusAPIV2 = Proxy

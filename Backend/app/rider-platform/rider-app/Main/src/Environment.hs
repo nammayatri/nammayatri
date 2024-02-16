@@ -17,7 +17,7 @@ module Environment
     FlowHandler,
     FlowServer,
     Flow,
-    AppCfg (),
+    AppCfg (..),
     AppEnv (..),
     BAPs (..),
     RideConfig (..),
@@ -27,10 +27,12 @@ module Environment
 where
 
 import AWS.S3
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
-import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
+import Kernel.External.Infobip.Types (InfoBIPConfig)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config
@@ -39,7 +41,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache
-import Kernel.Types.Common (HighPrecMeters, Meters, Seconds, Tables)
+import Kernel.Types.Common (HighPrecMeters, Meters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow
@@ -53,11 +55,14 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
+import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.Merchant as CM
+import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -73,12 +78,11 @@ data AppCfg = AppCfg
     hedisMigrationStage :: Bool,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
-    webengageCfg :: WebengageConfig,
     port :: Int,
     metricsPort :: Int,
     hostName :: Text,
     searchRequestExpiry :: Maybe Seconds,
-    migrationPath :: Maybe FilePath,
+    migrationPath :: [FilePath],
     autoMigrate :: Bool,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
@@ -114,10 +118,18 @@ data AppCfg = AppCfg
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    tables :: Tables,
-    dontEnableForDb :: [Text],
+    kvConfigUpdateFrequency :: Int,
     maxMessages :: Text,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    maxShards :: Int,
+    jobInfoMapx :: M.Map RiderJobType Bool,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType,
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text,
+    hotSpotExpiry :: Seconds,
+    collectRouteData :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -125,7 +137,9 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
-    webengageCfg :: WebengageConfig,
+    jobInfoMap :: M.Map Text Bool,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType,
     hostName :: Text,
     searchRequestExpiry :: Maybe Seconds,
     coreVersion :: Text,
@@ -179,9 +193,14 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     eventRequestCounter :: EventCounterMetric,
-    dontEnableForDb :: [Text],
     maxMessages :: Text,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    maxShards :: Int,
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text,
+    hotSpotExpiry :: Seconds,
+    collectRouteData :: Bool
   }
   deriving (Generic)
 
@@ -198,6 +217,7 @@ buildAppEnv cfg@AppCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
+  let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let nonCriticalModifierFunc = ("ab:n_c:" <>)
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
@@ -211,6 +231,7 @@ buildAppEnv cfg@AppCfg {..} = do
       else connectHedisCluster hedisNonCriticalClusterCfg nonCriticalModifierFunc
   let s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -241,13 +262,20 @@ instance AuthenticatingEntity AppEnv where
 instance Registry Flow where
   registryLookup =
     Registry.withSubscriberCache $ \sub -> do
-      fetchFromDB sub.merchant_id >>= \registryUrl ->
-        Registry.registryLookup registryUrl sub >>= Registry.whitelisting isWhiteListed
+      fetchFromDB sub.merchant_id >>= \registryUrl -> do
+        subId <- Registry.registryLookup registryUrl sub
+        totalSubIds <- QWhiteList.countTotalSubscribers
+        if totalSubIds == 0
+          then do
+            Registry.checkBlacklisted isBlackListed subId
+          else do
+            Registry.checkWhitelisted isNotWhiteListed subId
     where
       fetchFromDB merchantId = do
         merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
         pure $ merchant.registryUrl
-      isWhiteListed subscriberId = QBlackList.findBySubscriberId (ShortId subscriberId) <&> isNothing
+      isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
+      isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest

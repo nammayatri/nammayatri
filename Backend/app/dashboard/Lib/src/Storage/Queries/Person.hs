@@ -11,166 +11,194 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Person where
 
-import Control.Applicative (liftA2)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
-import Database.Esqueleto.PostgreSQL
+import qualified Database.Beam as B
 import Domain.Types.Merchant as Merchant
+import Domain.Types.MerchantAccess as MerchantAccess
 import Domain.Types.Person as Person
 import Domain.Types.Role as Role
+import qualified EulerHS.Language as L
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.MerchantAccess as Access
-import Storage.Tabular.Person as Person
-import Storage.Tabular.Role as Role
+import Sequelize as Se
+import Storage.Beam.BeamFlow
+import qualified Storage.Beam.Common as SBC
+import qualified Storage.Beam.MerchantAccess as BeamMA
+import qualified Storage.Beam.Person as BeamP
+import qualified Storage.Beam.Role as BeamR
+import Storage.Queries.MerchantAccess ()
+import Storage.Queries.Role ()
 
-create :: Person -> SqlDB ()
-create = Esq.create
+create :: BeamFlow m r => Person -> m ()
+create = createWithKV
 
 findById ::
-  Transactionable m =>
+  BeamFlow m r =>
   Id Person ->
   m (Maybe Person)
-findById = Esq.findById
+findById personId = findOneWithKV [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
 findByEmail ::
-  (Transactionable m, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   Text ->
   m (Maybe Person)
 findByEmail email = do
   emailDbHash <- getDbHash (T.toLower email)
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonEmailHash ==. val (Just emailDbHash)
-    return person
+  findOneWithKV [Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash]
 
 findByEmailAndPassword ::
-  (Transactionable m, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Person)
 findByEmailAndPassword email password = do
   emailDbHash <- getDbHash (T.toLower email)
   passwordDbHash <- getDbHash password
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonEmailHash ==. val (Just emailDbHash)
-        &&. person ^. PersonPasswordHash ==. val (Just passwordDbHash)
-    return person
+  findOneWithKV [Se.And [Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash, Se.Is BeamP.passwordHash $ Se.Eq $ Just passwordDbHash]]
 
 findByMobileNumber ::
-  (Transactionable m, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Person)
 findByMobileNumber mobileNumber mobileCountryCode = do
   mobileDbHash <- getDbHash mobileNumber
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonMobileNumberHash ==. val mobileDbHash
-        &&. person ^. PersonMobileCountryCode ==. val mobileCountryCode
-    return person
+  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode]]
 
--- TODO add filtering by role
 findAllWithLimitOffset ::
-  Transactionable m =>
+  BeamFlow m r =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
   Maybe Integer ->
   Maybe (Id Person.Person) ->
   m [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
-findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personId =
-  fromMaybeList <$> do
-    findAll $ do
-      merchantAccessAggTable <- with $ do
-        merchantAccess <-
-          from $
-            table @MerchantAccessT
-        groupBy (merchantAccess ^. MerchantAccessPersonId)
-        return (merchantAccess ^. MerchantAccessPersonId, arrayAggWith AggModeAll (merchantAccess ^. MerchantAccessMerchantShortId) [desc $ merchantAccess ^. MerchantAccessCreatedAt], arrayAggWith AggModeAll (merchantAccess ^. MerchantAccessOperatingCity) [desc $ merchantAccess ^. MerchantAccessCreatedAt])
-      (person :& role :& (_, mbMerchantShortIds, mbMerchantOperatingCityIds)) <-
-        from $
-          table @PersonT
-            `innerJoin` table @RoleT
-              `Esq.on` ( \(person :& role) ->
-                           person ^. Person.PersonRoleId ==. role ^. Role.RoleTId
-                       )
-            `leftJoin` merchantAccessAggTable
-              `Esq.on` ( \(person :& _ :& (mbPersonId, _mbMerchantShortIds, _mbMerchantOperatingCityIds)) ->
-                           just (person ^. Person.PersonTId) ==. mbPersonId
-                       )
-      where_ $
-        Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
-          &&. Esq.whenJust_ personId (\defaultPerson -> person ^. PersonId ==. val (getId defaultPerson))
-      orderBy [desc $ person ^. PersonCreatedAt]
-      limit limitVal
-      offset offsetVal
-      return (person, role, mbMerchantShortIds, mbMerchantOperatingCityIds)
+findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personId = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ limitVal $
+          B.offset_ offsetVal $
+            B.orderBy_ (\(person, _, _) -> B.desc_ person.createdAt) $
+              B.filter_'
+                ( \(person, _role, _) ->
+                    ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.concat_ [person.firstName, person.lastName] `B.like_` B.val_ ("%" <> searchString <> "%"))) mbSearchString
+                        B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                    )
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultPerson -> person.id B.==?. B.val_ (getId defaultPerson)) personId
+                )
+                $ do
+                  person <- B.all_ (SBC.person SBC.atlasDB)
+                  role <- B.join_' (SBC.role SBC.atlasDB) (\role -> BeamP.roleId person B.==?. BeamR.id role)
+                  merchantAccess <- B.leftJoin_' (B.all_ $ SBC.merchantAccess SBC.atlasDB) (\merchantAccess -> BeamP.id person B.==?. BeamMA.personId merchantAccess)
+                  pure (person, role, merchantAccess)
+  case res of
+    Right res' -> do
+      finalRes <- forM res' $ \(person, role, mbMerchantAccess) -> runMaybeT $ do
+        p <- MaybeT $ fromTType' person
+        r <- MaybeT $ fromTType' role
+        ma <- forM mbMerchantAccess (MaybeT . fromTType')
+        pure (p, r, ma)
+      pure $ groupByPerson $ catMaybes finalRes
+    Left _ -> pure []
   where
-    limitVal = maybe 100 fromIntegral mbLimit
-    offsetVal = maybe 0 fromIntegral mbOffset
+    limitVal = fromMaybe 100 mbLimit
+    offsetVal = fromMaybe 0 mbOffset
+    groupByPerson ::
+      [(Person, Role, Maybe MerchantAccess)] ->
+      [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
+    groupByPerson inputList =
+      map processGroup $ groupByPerson' inputList
 
-    filterBySearchString person (searchStr, searchStrDBHash) = do
-      let likeSearchStr = (%) ++. val searchStr ++. (%)
-      ( concat_ @Text [person ^. PersonFirstName, person ^. PersonLastName]
-          `ilike` likeSearchStr
-        )
-        ||. person ^. PersonMobileNumberHash ==. val searchStrDBHash --find by email also?
-    fromMaybeList :: [(Person, Role, Maybe [Text], Maybe [City.City])] -> [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
-    fromMaybeList = map (\(person, role, mbMerchantShortIds, mbMerchantOperatingCityIds) -> (person, role, ShortId <$> fromMaybe [] mbMerchantShortIds, fromMaybe [] mbMerchantOperatingCityIds))
+    groupByPerson' ::
+      [(Person, Role, Maybe MerchantAccess)] ->
+      [NonEmpty (Person, Role, Maybe MerchantAccess)]
+    groupByPerson' = NE.groupBy ((==) `on` (\(p, _, _) -> p.id))
 
-updatePersonRole :: Id Person -> Id Role -> SqlDB ()
+    processGroup ::
+      NonEmpty (Person, Role, Maybe MerchantAccess) ->
+      (Person, Role, [ShortId Merchant.Merchant], [City.City])
+    processGroup group =
+      let (person, role, _) = NE.head group
+          merchantAccessList = mapMaybe (\(_, _, ma) -> ma) $ toList group
+          cities = merchantAccessList <&> (.operatingCity)
+          merchantIds = merchantAccessList <&> MerchantAccess.merchantShortId
+       in (person, role, merchantIds, cities)
+
+updatePersonRole :: BeamFlow m r => Id Person -> Id Role -> m ()
 updatePersonRole personId roleId = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonRoleId =. val (toKey roleId),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateWithKV
+    [ Se.Set BeamP.roleId $ getId roleId,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
 
-updatePersonPassword :: Id Person -> DbHash -> SqlDB ()
+updatePersonPassword :: BeamFlow m r => Id Person -> DbHash -> m ()
 updatePersonPassword personId newPasswordHash = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonPasswordHash =. val (Just newPasswordHash),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateWithKV
+    [ Se.Set BeamP.passwordHash $ Just newPasswordHash,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
 
-updatePersonEmail :: Id Person -> EncryptedHashed Text -> SqlDB ()
+updatePersonEmail :: BeamFlow m r => Id Person -> EncryptedHashed Text -> m ()
 updatePersonEmail personId encEmail = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonEmailEncrypted =. val (Just (unEncrypted encEmail.encrypted)),
-        PersonEmailHash =. val (Just encEmail.hash),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateWithKV
+    [ Se.Set BeamP.emailEncrypted $ Just (unEncrypted encEmail.encrypted),
+      Se.Set BeamP.emailHash $ Just encEmail.hash,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
 
-updatePersonMobile :: Id Person -> EncryptedHashed Text -> SqlDB ()
+updatePersonMobile :: BeamFlow m r => Id Person -> EncryptedHashed Text -> m ()
 updatePersonMobile personId encMobileNumber = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonMobileNumberEncrypted =. val (unEncrypted encMobileNumber.encrypted),
-        PersonMobileNumberHash =. val encMobileNumber.hash,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateWithKV
+    [ Se.Set BeamP.mobileNumberEncrypted $ unEncrypted encMobileNumber.encrypted,
+      Se.Set BeamP.mobileNumberHash $ encMobileNumber.hash,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+instance FromTType' BeamP.Person Person.Person where
+  fromTType' BeamP.PersonT {..} = do
+    return $
+      Just
+        Person.Person
+          { id = Id id,
+            roleId = Id roleId,
+            email = case (emailEncrypted, emailHash) of
+              (Just email, Just hash) -> Just $ EncryptedHashed (Encrypted email) hash
+              _ -> Nothing,
+            mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            ..
+          }
+
+instance ToTType' BeamP.Person Person.Person where
+  toTType' Person.Person {..} =
+    BeamP.PersonT
+      { id = getId id,
+        roleId = getId roleId,
+        emailEncrypted = email <&> (unEncrypted . (.encrypted)),
+        emailHash = email <&> (.hash),
+        mobileNumberEncrypted = mobileNumber & unEncrypted . (.encrypted),
+        mobileNumberHash = mobileNumber.hash,
+        ..
+      }

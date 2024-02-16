@@ -23,7 +23,9 @@ onBoardingSubscriptionScreen = do
     action <- lift $ lift $ runScreen $ OnBoardingSubscriptionScreen.screen state.onBoardingSubscriptionScreen
     case action of 
         GoBack -> App.BackT $ pure App.GoBack
-        GoToHome -> App.BackT $ App.NoBack <$> pure GOTO_HOME_SCREEN_FROM_ONBOARDING_SUBSCRIPTION_SCREEN
         StartFreeTrialExit updatedState -> do
             modifyScreenState $ OnBoardingSubscriptionScreenStateType (\_ -> updatedState)
             App.BackT $ App.NoBack <$> (pure $ MAKE_PAYMENT_FROM_ONBOARDING updatedState)
+        GoToRegisterationScreen updatedState -> do
+            modifyScreenState $ OnBoardingSubscriptionScreenStateType (\_ -> updatedState)
+            App.BackT $ App.NoBack <$> (pure $ REGISTERATION_ONBOARDING updatedState)

@@ -16,11 +16,11 @@
 module Screens.ChooseLanguageScreen.View where
 
 import Common.Types.App (LazyCheck(..))
-import Screens.ChooseLanguageScreen.ComponentConfig (primaryButtonViewConfig)
+import Screens.ChooseLanguageScreen.ComponentConfig (primaryButtonViewConfig, menuButtonConfig)
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Components.PrimaryButton as PrimaryButton
-import Components.SelectMenuButton.View as MenuButton
+import Components.SelectMenuButton as MenuButton
 import Data.Array as DA
 import Effect (Effect)
 import Effect.Uncurried (runEffectFn1)
@@ -110,7 +110,7 @@ scrollableView state push =
             ] $ textView $
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , text $ getString WELCOME_TEXT
+                , text $ getString $ WELCOME_TEXT "WELCOME_TEXT"
                 , color Color.greyTextColor
                 , gravity CENTER_HORIZONTAL
                 , margin $ Margin 70 32 74 32
@@ -144,6 +144,5 @@ menuButtonDriver state push =
       PrestoAnim.animationSet 
       [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
       ] $ MenuButton.view
-          (push <<< (MenuButtonAction))
-          { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index, lineVisiblity : false }) (state.data.config.languageList)
+          (push <<< MenuButtonAction) (menuButtonConfig state index language)) (state.data.config.languageList)
   )

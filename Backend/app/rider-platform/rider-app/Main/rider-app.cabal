@@ -29,6 +29,11 @@ library
   exposed-modules:
       API
       API.Beckn
+      API.Beckn.FRFS.OnConfirm
+      API.Beckn.FRFS.OnInit
+      API.Beckn.FRFS.OnSearch
+      API.Beckn.FRFS.OnStatus
+      API.Beckn.OnCancel
       API.Beckn.OnConfirm
       API.Beckn.OnInit
       API.Beckn.OnSearch
@@ -40,6 +45,7 @@ library
       API.Dashboard.Booking
       API.Dashboard.Customer
       API.Dashboard.Exotel
+      API.Dashboard.HotSpot
       API.Dashboard.Issue
       API.Dashboard.IssueList
       API.Dashboard.Merchant
@@ -56,6 +62,7 @@ library
       API.Dashboard.RideBooking.Search
       API.Dashboard.RideBooking.Select
       API.Dashboard.Tickets
+      API.FRFS
       API.Internal
       API.Internal.Rating
       API.MetroBeckn
@@ -65,10 +72,10 @@ library
       API.UI.AppInstalls
       API.UI.Booking
       API.UI.Call
+      API.UI.CallEvent
       API.UI.Cancel
       API.UI.CancellationReason
       API.UI.Confirm
-      API.UI.CustomerSupport
       API.UI.Disability
       API.UI.FeedbackForm
       API.UI.Frontend
@@ -90,18 +97,26 @@ library
       API.UI.Serviceability
       API.UI.Sos
       API.UI.Support
-      API.UI.Tickets
-      API.UI.Webengage.InfoBIPWebhook
-      API.UI.Webengage.Webengage
       API.UI.Whatsapp
       App
       App.Server
       Beckn.ACL.Cancel
       Beckn.ACL.Common
       Beckn.ACL.Confirm
+      Beckn.ACL.FRFS.Cancel
+      Beckn.ACL.FRFS.Confirm
+      Beckn.ACL.FRFS.Init
+      Beckn.ACL.FRFS.OnConfirm
+      Beckn.ACL.FRFS.OnInit
+      Beckn.ACL.FRFS.OnSearch
+      Beckn.ACL.FRFS.OnStatus
+      Beckn.ACL.FRFS.Search
+      Beckn.ACL.FRFS.Status
+      Beckn.ACL.FRFS.Utils
       Beckn.ACL.Init
       Beckn.ACL.Metro.OnSearch
       Beckn.ACL.Metro.Search
+      Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
       Beckn.ACL.OnSearch
@@ -116,6 +131,20 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.OnSearch
+      Beckn.OnDemand.Transformer.Search
+      Beckn.OnDemand.Utils.Common
+      Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.OnSearch
+      Beckn.OnDemand.Utils.Search
+      Domain.Action.Beckn.Common
+      Domain.Action.Beckn.FRFS.Common
+      Domain.Action.Beckn.FRFS.OnConfirm
+      Domain.Action.Beckn.FRFS.OnInit
+      Domain.Action.Beckn.FRFS.OnSearch
+      Domain.Action.Beckn.FRFS.OnStatus
+      Domain.Action.Beckn.OnCancel
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch
@@ -135,13 +164,15 @@ library
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.Booking
       Domain.Action.UI.Call
+      Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
-      Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Disability
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
+      Domain.Action.UI.FollowRide
+      Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
       Domain.Action.UI.Maps
@@ -153,16 +184,12 @@ library
       Domain.Action.UI.Ride
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
-      Domain.Action.UI.Search.Common
-      Domain.Action.UI.Search.OneWay
-      Domain.Action.UI.Search.Rental
+      Domain.Action.UI.Search
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
       Domain.Action.UI.Support
-      Domain.Action.UI.Tickets
-      Domain.Action.UI.Webengage.InfoBIPWebhook
-      Domain.Action.UI.Webengage.Webengage
+      Domain.Action.UI.TicketService
       Domain.Action.UI.Whatsapp
       Domain.Types.AadhaarVerification.AadhaarOtp
       Domain.Types.AadhaarVerification.AadhaarVerification
@@ -193,7 +220,6 @@ library
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
-      Domain.Types.Merchant.MerchantOperatingCity
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
@@ -207,34 +233,32 @@ library
       Domain.Types.Quote
       Domain.Types.Rating
       Domain.Types.RegistrationToken
-      Domain.Types.RentalSlab
+      Domain.Types.RentalDetails
       Domain.Types.Ride
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
-      Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
-      Domain.Types.Tickets
-      Domain.Types.Tickets.TicketBooking
-      Domain.Types.Tickets.TicketBookingService
-      Domain.Types.Tickets.TicketPlace
-      Domain.Types.Tickets.TicketService
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
-      Domain.Types.Webengage
+      Domain.Types.WhiteListOrg
       Environment
       Lib.Mesh
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
+      SharedLogic.CallFRFSBPP
       SharedLogic.Confirm
       SharedLogic.GoogleTranslate
+      SharedLogic.JobScheduler
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
       SharedLogic.Person
+      SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
+      SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       Storage.Beam.AadhaarVerification.AadhaarOtpReq
       Storage.Beam.AadhaarVerification.AadhaarOtpVerify
       Storage.Beam.AadhaarVerification.AadhaarVerification
@@ -265,7 +289,6 @@ library
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
-      Storage.Beam.Merchant.MerchantOperatingCity
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
@@ -280,24 +303,21 @@ library
       Storage.Beam.Quote
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
-      Storage.Beam.RentalSlab
+      Storage.Beam.RentalDetails
       Storage.Beam.Ride
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
-      Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
-      Storage.Beam.Tickets.TicketBooking
-      Storage.Beam.Tickets.TicketBookingService
-      Storage.Beam.Tickets.TicketBookingServicePriceBreakup
-      Storage.Beam.Tickets.TicketPlace
-      Storage.Beam.Tickets.TicketService
-      Storage.Beam.Tickets.TicketServicePrice
+      Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
-      Storage.Beam.Webengage
+      Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
+      Storage.CachedQueries.BppDetails
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.FollowRide
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
@@ -307,10 +327,15 @@ library
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.CachedQueries.Merchant.MerchantState
+      Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
+      Storage.CachedQueries.Sos
+      Storage.CachedQueries.ValueAddNP
+      Storage.CachedQueries.WhiteListOrg
       Storage.Queries.AadhaarVerification.AadhaarOtp
       Storage.Queries.AadhaarVerification.AadhaarVerification
       Storage.Queries.AppInstalls
@@ -328,6 +353,7 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
       Storage.Queries.FeedbackForm
+      Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.Geometry
       Storage.Queries.HotSpotConfig
       Storage.Queries.Issues
@@ -336,7 +362,6 @@ library
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
-      Storage.Queries.Merchant.MerchantOperatingCity
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
@@ -350,21 +375,14 @@ library
       Storage.Queries.Quote
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
-      Storage.Queries.RentalSlab
+      Storage.Queries.RentalDetails
       Storage.Queries.Ride
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
-      Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
-      Storage.Queries.Tickets.TicketBooking
-      Storage.Queries.Tickets.TicketBookingService
-      Storage.Queries.Tickets.TicketBookingServicePriceBreakup
-      Storage.Queries.Tickets.TicketPlace
-      Storage.Queries.Tickets.TicketService
-      Storage.Queries.Tickets.TicketServicePrice
       Storage.Queries.TripTerms
-      Storage.Queries.Webengage
+      Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH
@@ -385,10 +403,103 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.UI.FollowRide
+      API.Action.UI.FRFSTicketService
+      API.Action.UI.Sos
+      API.Action.UI.TicketService
+      API.Types.UI.FollowRide
+      API.Types.UI.FRFSTicketService
+      API.Types.UI.Sos
+      API.Types.UI.TicketService
+      Domain.Types.AutoCompleteData
+      Domain.Types.BecknConfig
+      Domain.Types.BppDetails
+      Domain.Types.BusinessHour
+      Domain.Types.FRFSQuote
+      Domain.Types.FRFSSearch
+      Domain.Types.FRFSTicket
+      Domain.Types.FRFSTicketBooking
+      Domain.Types.FRFSTicketBookingPayment
+      Domain.Types.FRFSTrip
+      Domain.Types.MerchantOperatingCity
+      Domain.Types.MerchantState
+      Domain.Types.NextBillionData
+      Domain.Types.NotificationSoundsConfig
+      Domain.Types.RiderConfig
+      Domain.Types.SeatManagement
+      Domain.Types.ServiceCategory
+      Domain.Types.ServicePeopleCategory
+      Domain.Types.Sos
+      Domain.Types.SpecialOccasion
+      Domain.Types.Station
+      Domain.Types.TicketBooking
+      Domain.Types.TicketBookingPeopleCategory
+      Domain.Types.TicketBookingService
+      Domain.Types.TicketBookingServiceCategory
+      Domain.Types.TicketPlace
+      Domain.Types.TicketService
+      Domain.Types.ValueAddNP
+      Storage.Beam.AutoCompleteData
+      Storage.Beam.BecknConfig
+      Storage.Beam.BppDetails
+      Storage.Beam.BusinessHour
+      Storage.Beam.FRFSQuote
+      Storage.Beam.FRFSSearch
+      Storage.Beam.FRFSTicket
+      Storage.Beam.FRFSTicketBooking
+      Storage.Beam.FRFSTicketBookingPayment
+      Storage.Beam.FRFSTrip
+      Storage.Beam.MerchantOperatingCity
+      Storage.Beam.MerchantState
+      Storage.Beam.NextBillionData
+      Storage.Beam.NotificationSoundsConfig
+      Storage.Beam.RiderConfig
+      Storage.Beam.SeatManagement
+      Storage.Beam.ServiceCategory
+      Storage.Beam.ServicePeopleCategory
+      Storage.Beam.Sos
+      Storage.Beam.SpecialOccasion
+      Storage.Beam.Station
+      Storage.Beam.TicketBooking
+      Storage.Beam.TicketBookingPeopleCategory
+      Storage.Beam.TicketBookingService
+      Storage.Beam.TicketBookingServiceCategory
+      Storage.Beam.TicketPlace
+      Storage.Beam.TicketService
+      Storage.Beam.ValueAddNP
+      Storage.Queries.AutoCompleteData
+      Storage.Queries.BecknConfig
+      Storage.Queries.BppDetails
+      Storage.Queries.BusinessHour
+      Storage.Queries.FRFSQuote
+      Storage.Queries.FRFSSearch
+      Storage.Queries.FRFSTicket
+      Storage.Queries.FRFSTicketBooking
+      Storage.Queries.FRFSTicketBookingPayment
+      Storage.Queries.FRFSTrip
+      Storage.Queries.MerchantOperatingCity
+      Storage.Queries.MerchantState
+      Storage.Queries.NextBillionData
+      Storage.Queries.NotificationSoundsConfig
+      Storage.Queries.RiderConfig
+      Storage.Queries.SeatManagement
+      Storage.Queries.ServiceCategory
+      Storage.Queries.ServicePeopleCategory
+      Storage.Queries.Sos
+      Storage.Queries.SpecialOccasion
+      Storage.Queries.Station
+      Storage.Queries.TicketBooking
+      Storage.Queries.TicketBookingPeopleCategory
+      Storage.Queries.TicketBookingService
+      Storage.Queries.TicketBookingServiceCategory
+      Storage.Queries.TicketPlace
+      Storage.Queries.TicketService
+      Storage.Queries.ValueAddNP
   other-modules:
       Paths_rider_app
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -444,8 +555,10 @@ library
     , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
+    , directory
     , euler-hs
     , extra
+    , filepath
     , geohash ==1.0.1
     , http-media
     , http-types
@@ -459,8 +572,11 @@ library
     , prometheus-client
     , prometheus-metrics-ghc
     , random
+    , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-posix
+    , scheduler
     , sequelize
     , servant
     , servant-client
@@ -469,6 +585,8 @@ library
     , servant-server
     , sessionizer-metrics
     , shared-services
+    , singletons
+    , singletons-th
     , special-zone
     , special-zone-a
     , template-haskell
@@ -551,8 +669,10 @@ executable rider-app-exe
     , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
+    , directory
     , euler-hs
     , extra
+    , filepath
     , geohash ==1.0.1
     , http-media
     , http-types
@@ -565,15 +685,20 @@ executable rider-app-exe
     , prometheus-client
     , prometheus-metrics-ghc
     , random
+    , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-posix
     , rider-app
+    , scheduler
     , sequelize
     , servant
     , servant-client
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , singletons
+    , singletons-th
     , template-haskell
     , text
     , text-conversions

@@ -19,8 +19,10 @@ import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
+import qualified Domain.Types.Merchant.MerchantOperatingCity as MOC
+import Domain.Types.Merchant.TransporterConfig as TC
 import Domain.Types.Person (Person)
-import Domain.Types.Plan (Plan)
+import Domain.Types.Plan (Plan, ServiceNames (..))
 import EulerHS.Prelude hiding (id, state)
 import GHC.Float (double2Int)
 import GHC.Records.Extra
@@ -116,6 +118,8 @@ groupDriverFeeByInvoices driverFees_ = do
           driverId = driverFee.driverId,
           lastStatusCheckedAt = Nothing,
           updatedAt = now,
+          merchantOperatingCityId = driverFee.merchantOperatingCityId,
+          serviceName = driverFee.serviceName,
           createdAt = now
         }
 
@@ -153,10 +157,16 @@ changeAutoPayFeesAndInvoicesForDriverFeesToManual :: (MonadFlow m, EsqDBFlow m r
 changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDriverFeeIds = do
   let driverFeeIdsToBeShiftedToManual = alldriverFeeIdsInBatch \\ validDriverFeeIds
   QDF.updateToManualFeeByDriverFeeIds driverFeeIdsToBeShiftedToManual
-  QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE driverFeeIdsToBeShiftedToManual
+  QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE driverFeeIdsToBeShiftedToManual Nothing
 
 roundToHalf :: HighPrecMoney -> HighPrecMoney
 roundToHalf x = fromInteger (round (x * 2)) / 2
+
+calcNumRides :: DDF.DriverFee -> TC.TransporterConfig -> Int
+calcNumRides driverFee transporterConfig =
+  if transporterConfig.considerSpecialZoneRidesForPlanCharges
+    then driverFee.numRides
+    else driverFee.numRides - driverFee.specialZoneRideCount
 
 calculatePlatformFeeAttr :: HighPrecMoney -> Plan -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
 calculatePlatformFeeAttr totalFee plan = do
@@ -170,7 +180,7 @@ setCoinToCashUsedAmount driverFee totalFee = do
   coinAdjustedInSubscriptionKeyExists <- getCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)
   let integralTotalFee = double2Int $ realToFrac totalFee
   case coinAdjustedInSubscriptionKeyExists of
-    Just _ -> void $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)) (fromIntegral integralTotalFee)
+    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)) (fromIntegral integralTotalFee)
     Nothing -> setCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId) (fromIntegral integralTotalFee)
 
 mkCoinAdjustedInSubscriptionByDriverIdKey :: Id Person -> Text
@@ -180,12 +190,32 @@ coinToCashProcessingLockKey :: Id Person -> Text
 coinToCashProcessingLockKey (Id driverId) = "CoinToCash:Processing:DriverId" <> driverId
 
 getCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Int)
-getCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.get (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
+getCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
 
 delCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
-delCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.del (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
+delCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.del (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
 
 setCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Integer -> m ()
 setCoinAdjustedInSubscriptionByDriverIdKey driverId count = do
-  _ <- Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) count
-  Hedis.expire (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) 2592000 -- expire in 30 days
+  _ <- Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) count
+  Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) 2592000 -- expire in 30 days
+
+notificationSchedulerKey :: UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> Text
+notificationSchedulerKey startTime endTime merchantOpCityId serviceName = "NotificationScheduler:st:" <> show startTime <> ":et:" <> show endTime <> ":opCityid:" <> merchantOpCityId.getId <> ":serviceName:" <> show serviceName
+
+isNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> m (Maybe Bool)
+isNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName = Hedis.withCrossAppRedis $ Hedis.get (notificationSchedulerKey startTime endTime merchantOpCityId serviceName)
+
+setIsNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> Bool -> m ()
+setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName isNotificationSchedulerRunning = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (notificationSchedulerKey startTime endTime merchantOpCityId serviceName) isNotificationSchedulerRunning (3600 * 24) -- one day expiry
+
+createDriverFeeForServiceInSchedulerKey :: ServiceNames -> Id MOC.MerchantOperatingCity -> Text
+createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId = "CreateDriverFeeFor:service:" <> show serviceName <> ":opCityid:" <> merchantOpCityId.getId
+
+toCreateDriverFeeForService :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceNames -> Id MOC.MerchantOperatingCity -> m (Maybe Bool)
+toCreateDriverFeeForService serviceName merchantOpCityId = Hedis.withCrossAppRedis $ Hedis.get (createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId)
+
+setCreateDriverFeeForServiceInSchedulerKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceNames -> Id MOC.MerchantOperatingCity -> Bool -> m ()
+setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId createDriverFeeForService = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId) createDriverFeeForService (3600 * 24) -- one day expiry

@@ -20,6 +20,7 @@ where
 
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
+import qualified API.FRFS as FRFS
 import qualified API.Internal as Internal
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI as UI
@@ -36,17 +37,21 @@ import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp, throwError)
 import Servant.OpenApi
+import Storage.Beam.SystemConfigs ()
 
 type API =
   MainAPI
+    :<|> FRFS.APIM
+    :<|> Beckn.API -- TODO : Revert after 2.x release
+    :<|> Beckn.APIV2 -- TODO : Revert after 2.x release
     :<|> SwaggerAPI
     :<|> OpenAPI
     :<|> Raw
 
 type MainAPI =
   UI.API
-    :<|> Beckn.API -- TODO :: Needs to be deprecated
-    :<|> Beckn.APIV2
+    -- :<|> Beckn.API -- TODO :: Needs to be deprecated  -- TODO : Revert after 2.x release
+    -- :<|> Beckn.APIV2 -- TODO : Revert after 2.x release
     :<|> MetroBeckn.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Juspay.JuspayWebhookAPI
@@ -58,6 +63,9 @@ type MainAPI =
 handler :: FlowServer API
 handler =
   mainServer
+    :<|> const FRFS.handler
+    :<|> Beckn.handler -- TODO : Revert after 2.x release
+    :<|> const Beckn.handler -- TODO : Revert after 2.x release
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"
@@ -65,8 +73,8 @@ handler =
 mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
-    :<|> Beckn.handler
-    :<|> const Beckn.handler
+    -- :<|> Beckn.handler  -- TODO : Revert after 2.x release
+    -- :<|> const Beckn.handler  -- TODO : Revert after 2.x release
     :<|> MetroBeckn.handler
     :<|> juspayWebhookHandler
     :<|> Dashboard.handler

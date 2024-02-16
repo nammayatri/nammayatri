@@ -17,18 +17,23 @@
 module API.Dashboard.RideBooking.Search where
 
 import qualified API.UI.Search as SH
+import qualified Data.List as L
+import qualified Data.Text as T
+import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
-import Prelude
+import Storage.Beam.SystemConfigs ()
+import Text.Regex.Posix ((=~))
 
 data RideSearchEndPoint = SearchEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "RideSearchEndPoint"
 
@@ -40,12 +45,74 @@ type CustomerRideSearchAPI =
   Capture "customerId" (Id DP.Person)
     :> "rideSearch"
     :> ReqBody '[JSON] SH.SearchReq
-    :> Post '[JSON] SH.SearchRes
+    :> Post '[JSON] SH.SearchResp
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler = callSearch
 
-callSearch :: ShortId DM.Merchant -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchRes
+callSearch :: ShortId DM.Merchant -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchResp
 callSearch merchantId personId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  SH.search (personId, m.id) req Nothing Nothing Nothing
+  let req' = parseReq req
+  SH.search (personId, m.id) req' Nothing Nothing Nothing
+
+parseReq :: SH.SearchReq -> SH.SearchReq
+parseReq (SH.OneWaySearch oneWaySearchReq) = SH.OneWaySearch (splitAddressInSearchReq oneWaySearchReq)
+parseReq (SH.RentalSearch rentalSearchReq) = SH.RentalSearch rentalSearchReq
+
+splitAddressInSearchReq :: SH.OneWaySearchReq -> SH.OneWaySearchReq
+splitAddressInSearchReq SH.OneWaySearchReq {..} = do
+  let originAddress = origin.address.area
+      originGps = origin.gps
+      destinationAddress = destination.address.area
+      destinationGps = destination.gps
+      splitOriginAddress = splitAddress originAddress
+      splitDestinationAddress = splitAddress destinationAddress
+  SH.OneWaySearchReq
+    { origin =
+        SH.SearchReqLocation
+          { address = splitOriginAddress,
+            gps = originGps
+          },
+      destination =
+        SH.SearchReqLocation
+          { address = splitDestinationAddress,
+            gps = destinationGps
+          },
+      ..
+    }
+
+splitAddress :: Maybe Text -> DLA.LocationAddress
+splitAddress fullAddress = do
+  let totalAddressComponents = L.length $ T.splitOn "," (fromMaybe "" fullAddress)
+  let splitedAddress = T.splitOn "," (fromMaybe "" fullAddress)
+      door
+        | totalAddressComponents > 7 = Just $ head splitedAddress <> ", " <> splitedAddress !! 1
+        | totalAddressComponents == 7 = Just $ head splitedAddress
+        | otherwise = Nothing
+      area = splitedAddress !? (totalAddressComponents - 4)
+      building = splitedAddress !? (totalAddressComponents - 6)
+  DLA.LocationAddress
+    { street = splitedAddress !? (totalAddressComponents - 5),
+      door = door,
+      city = splitedAddress !? (totalAddressComponents - 3),
+      state = splitedAddress !? (totalAddressComponents - 2),
+      country = splitedAddress !? (totalAddressComponents - 1),
+      building = building,
+      areaCode = extractAreaCode (fromMaybe "" fullAddress),
+      area = area,
+      ward = Just $ T.intercalate ", " $ catMaybes [door, building, area],
+      placeId = Nothing
+    }
+
+extractAreaCode :: Text -> Maybe Text
+extractAreaCode fullAddress = do
+  let addressString = T.unpack fullAddress
+  let areaCodeString = addressString =~ ("[0-9]{6}" :: String) :: String
+  Just $ T.pack areaCodeString
+
+(!?) :: [a] -> Int -> Maybe a
+(!?) xs i
+  | i < 0 = Nothing
+  | i >= length xs = Nothing
+  | otherwise = Just $ xs !! i

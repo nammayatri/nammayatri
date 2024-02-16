@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -21,6 +22,7 @@ module Storage.Queries.Merchant.TransporterConfig
 where
 
 import qualified Data.Aeson as A
+import Domain.Types.Location (dummyFromLocationData, dummyToLocationData)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Kernel.Beam.Functions
@@ -130,7 +132,17 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             coinConversionRate = coinConversionRate,
             cancellationTimeDiff = secondsToNominalDiffTime cancellationTimeDiff,
             coinExpireTime = secondsToNominalDiffTime coinExpireTime,
+            stepFunctionToConvertCoins = stepFunctionToConvertCoins,
             cancellationDistDiff = cancellationDistDiff,
+            notificationRetryTimeGap = secondsToNominalDiffTime notificationRetryTimeGap,
+            badDebtRescheduleTime = secondsToNominalDiffTime badDebtRescheduleTime,
+            badDebtSchedulerTime = secondsToNominalDiffTime badDebtSchedulerTime,
+            badDebtTimeThreshold = badDebtTimeThreshold,
+            driverAutoPayExecutionTimeFallBack = secondsToNominalDiffTime driverAutoPayExecutionTimeFallBack,
+            orderAndNotificationStatusCheckFallBackTime = secondsToNominalDiffTime orderAndNotificationStatusCheckFallBackTime,
+            dummyFromLocation = fromMaybe dummyFromLocationData (valueToMaybe =<< dummyFromLocation),
+            dummyToLocation = fromMaybe dummyToLocationData (valueToMaybe =<< dummyToLocation),
+            scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
             ..
           }
     where
@@ -140,6 +152,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
         A.Error _ -> Nothing
 
 instance ToTType' BeamTC.TransporterConfig TransporterConfig where
+  toTType' :: TransporterConfig -> BeamTC.TransporterConfig
   toTType' TransporterConfig {..} = do
     BeamTC.TransporterConfigT
       { BeamTC.merchantId = getId merchantId,
@@ -203,6 +216,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.useOfferListCache = useOfferListCache,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
+        BeamTC.canSwitchToRental = canSwitchToRental,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.canSuvDowngradeToTaxi = canSuvDowngradeToTaxi,
         BeamTC.avgSpeedOfVehicle = toJSON <$> avgSpeedOfVehicle,
@@ -222,9 +236,40 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit,
         BeamTC.snapToRoadConfidenceThreshold = snapToRoadConfidenceThreshold,
         BeamTC.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
-        BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt,
+        BeamTC.badDebtRescheduleTime = nominalDiffTimeToSeconds badDebtRescheduleTime,
+        BeamTC.badDebtSchedulerTime = nominalDiffTimeToSeconds badDebtSchedulerTime,
+        BeamTC.badDebtBatchSize = badDebtBatchSize,
+        BeamTC.badDebtTimeThreshold = badDebtTimeThreshold,
         BeamTC.cancellationTimeDiff = nominalDiffTimeToSeconds cancellationTimeDiff,
         BeamTC.cancellationDistDiff = cancellationDistDiff,
-        BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime
+        BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime,
+        BeamTC.stepFunctionToConvertCoins = stepFunctionToConvertCoins,
+        BeamTC.considerSpecialZoneRidesForPlanCharges = considerSpecialZoneRidesForPlanCharges,
+        BeamTC.considerSpecialZoneRideChargesInFreeTrial = considerSpecialZoneRideChargesInFreeTrial,
+        BeamTC.enableUdfForOffers = enableUdfForOffers,
+        BeamTC.nightSafetyRouteDeviationThreshold = nightSafetyRouteDeviationThreshold,
+        BeamTC.nightSafetyStartTime = nightSafetyStartTime,
+        BeamTC.nightSafetyEndTime = nightSafetyEndTime,
+        BeamTC.cancellationFee = cancellationFee,
+        BeamTC.driverDistanceTravelledOnPickupThresholdOnCancel = driverDistanceTravelledOnPickupThresholdOnCancel,
+        BeamTC.driverTimeSpentOnPickupThresholdOnCancel = driverTimeSpentOnPickupThresholdOnCancel,
+        BeamTC.driverDistanceToPickupThresholdOnCancel = driverDistanceToPickupThresholdOnCancel,
+        BeamTC.cancellationFeeDisputeLimit = cancellationFeeDisputeLimit,
+        BeamTC.numOfCancellationsAllowed = numOfCancellationsAllowed,
+        BeamTC.canAddCancellationFee = canAddCancellationFee,
+        BeamTC.allowDefaultPlanAllocation = allowDefaultPlanAllocation,
+        BeamTC.notificationRetryEligibleErrorCodes = notificationRetryEligibleErrorCodes,
+        BeamTC.notificationRetryCountThreshold = notificationRetryCountThreshold,
+        BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap,
+        BeamTC.driverAutoPayExecutionTimeFallBack = nominalDiffTimeToSeconds driverAutoPayExecutionTimeFallBack,
+        BeamTC.orderAndNotificationStatusCheckFallBackTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckFallBackTime,
+        BeamTC.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
+        BeamTC.considerDriversForSearch = considerDriversForSearch,
+        BeamTC.createdAt = createdAt,
+        BeamTC.updatedAt = updatedAt,
+        BeamTC.specialDrivers = specialDrivers,
+        BeamTC.specialLocationTags = specialLocationTags,
+        BeamTC.kaptureDisposition = kaptureDisposition,
+        BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
+        BeamTC.dummyToLocation = Just $ toJSON dummyToLocation
       }

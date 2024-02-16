@@ -17,7 +17,9 @@ module API.Beckn.OnInit (API, handler) where
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnInit as TaxiACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
+import qualified BecknV2.OnDemand.Utils.Common as Common
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
 import Domain.Types.CancellationReason
@@ -29,35 +31,36 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified Storage.Queries.Booking as QRideB
+import Storage.Beam.SystemConfigs ()
 
-type API = OnInit.OnInitAPI
+type API = OnInit.OnInitAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onInit
 
 onInit ::
   SignatureAuthResult ->
-  OnInit.OnInitReq ->
+  OnInit.OnInitReqV2 ->
   FlowHandler AckResponse
-onInit _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnInitReq <- TaxiACL.buildOnInitReq req
-  whenJust mbDOnInitReq $ \onInitReq ->
-    Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
-      fork "oninit request processing" $ do
-        onInitRes <- DOnInit.onInit onInitReq
-        booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
-        handle (errHandler booking) $
-          void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
-  pure Ack
+onInit _ reqV2 = withFlowHandlerBecknAPI $ do
+  transactionId <- Common.getTransactionId reqV2.onInitReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
+    mbDOnInitReq <- TaxiACL.buildOnInitReqV2 reqV2
+    whenJust mbDOnInitReq $ \onInitReq ->
+      Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
+        fork "oninit request processing" $ do
+          (onInitRes, booking) <- DOnInit.onInit onInitReq
+          handle (errHandler booking) . void . withShortRetry $
+            CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+    pure Ack
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = do
         dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-        void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
+        void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = do
         dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-        void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
+        void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
       | otherwise = throwM exc
 
     cancelReq =

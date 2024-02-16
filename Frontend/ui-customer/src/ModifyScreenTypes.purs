@@ -22,12 +22,13 @@ import Engineering.Helpers.BackTrack (modifyState, getState)
 import Prelude (Unit, bind, ($))
 import Resources.Constants (encodeAddress, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreen
-import Screens.Types (MyRidesScreenState, Stage(..))
+import Screens.Types (MyRidesScreenState, Stage(..), Trip(..))
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
 modifyScreenState st =
   case st of
+    TicketingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ ticketingScreen = a state.ticketingScreen}) 
     ChooseLanguageScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { chooseLanguageScreen = a state.chooseLanguageScreen})
     EnterMobileNumberScreenType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { enterMobileNumberScreen = a state.enterMobileNumberScreen})
     AccountSetUpScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { accountSetUpScreen = a state.accountSetUpScreen})
@@ -48,7 +49,18 @@ modifyScreenState st =
     AboutUsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {aboutUsScreen = a state.aboutUsScreen})
     AppUpdatePopUpScreenType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appUpdatePopUpScreen = a state.appUpdatePopUpScreen })
     TicketInfoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {ticketInfoScreen = a state.ticketInfoScreen})
-
+    FollowRideScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {followRideScreen = a state.followRideScreen})
+    AppConfigType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appConfig = a state.appConfig })
+    RideScheduledScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideScheduledScreen = a state.rideScheduledScreen})
+    SearchLocationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {searchLocationScreen = a state.searchLocationScreen})
+    GlobalPropsType a -> modifyState (\(GlobalState state) -> GlobalState $ state {globalProps = a state.globalProps})
+    NammaSafetyScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {nammaSafetyScreen = a state.nammaSafetyScreen})
+    RideSelectionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSelectionScreen = a state.rideSelectionScreen})
+    ReportIssueChatScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {reportIssueChatScreen = a state.reportIssueChatScreen})
+    MetroTicketDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketDetailsScreen = a state.metroTicketDetailsScreen})
+    MetroMyTicketsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroMyTicketsScreen = a state.metroMyTicketsScreen})
+    MetroTicketBookingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketBookingScreen = a state.metroTicketBookingScreen})
+    MetroTicketStatusScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketStatusScreen = a state.metroTicketStatusScreen})
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit
 updateRideDetails state = do 
@@ -65,6 +77,7 @@ updateRideDetails state = do
     , settingSideBar {
         gender = globalState.homeScreen.data.settingSideBar.gender 
       , email = globalState.homeScreen.data.settingSideBar.email
+      , hasCompletedSafetySetup = globalState.homeScreen.data.settingSideBar.hasCompletedSafetySetup
     }
     }
     , props{
@@ -77,5 +90,40 @@ updateRideDetails state = do
     , rideRequestFlow = true
     , isSpecialZone = state.data.selectedItem.isSpecialZone
     , isBanner = globalState.homeScreen.props.isBanner
+    , sosBannerType = globalState.homeScreen.props.sosBannerType 
+    , followsRide = globalState.homeScreen.props.followsRide
+    }
+    })
+    
+updateRepeatRideDetails :: Trip -> FlowBT String Unit
+updateRepeatRideDetails state = do 
+  (GlobalState globalState) <- getState
+  modifyScreenState $ HomeScreenStateType 
+    (\homeScreen -> HomeScreen.initData{ 
+    data {
+      source =  state.source
+    , destination = state.destination
+    , locationList = homeScreen.data.locationList
+    , sourceAddress = state.sourceAddress
+    , savedLocations = homeScreen.data.savedLocations
+    , destinationAddress = state.destinationAddress 
+    , settingSideBar {
+        gender = globalState.homeScreen.data.settingSideBar.gender 
+      , email = globalState.homeScreen.data.settingSideBar.email
+      , hasCompletedSafetySetup = globalState.homeScreen.data.settingSideBar.hasCompletedSafetySetup
+    }
+    }
+    , props{
+      sourceSelectedOnMap = true
+    , sourceLat = state.sourceLat
+    , sourceLong = state.sourceLong
+    , destinationLat = state.destLat
+    , destinationLong = state.destLong
+    , currentStage = FindingEstimate
+    , rideRequestFlow = true
+    , isSpecialZone = state.isSpecialZone
+    , isBanner = globalState.homeScreen.props.isBanner
+    , sosBannerType = globalState.homeScreen.props.sosBannerType 
+    , followsRide = globalState.homeScreen.props.followsRide
     }
     })

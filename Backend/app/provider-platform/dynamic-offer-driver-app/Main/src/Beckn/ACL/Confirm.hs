@@ -14,13 +14,15 @@
 
 module Beckn.ACL.Confirm where
 
-import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
-import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Tags as Tag
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Utils.Context as Utils
+import qualified BecknV2.Utils as Utils
+import qualified Data.Text as T
 import Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Location as DL
-import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
-import Kernel.Product.Validation.Context
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -28,33 +30,33 @@ import Kernel.Types.Field
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 
-buildConfirmReq ::
-  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
-  Confirm.ConfirmReq ->
+buildConfirmReqV2 ::
+  (HasFlowEnv m r '["_version" ::: Text]) =>
+  Spec.ConfirmReq ->
+  Bool ->
   m DConfirm.DConfirmReq
-buildConfirmReq req = do
-  validateContext Context.CONFIRM req.context
-  let bookingId = Id req.message.order.id
-      fulfillment = req.message.order.fulfillment
-      phone = fulfillment.customer.contact.phone
-      customerMobileCountryCode = phone.phoneCountryCode
-      customerPhoneNumber = phone.phoneNumber
-      fromAddress = castAddress fulfillment.start.location.address
-      mbRiderName = fulfillment.customer.person <&> (.name)
-      vehicleVariant = castVehicleVariant fulfillment.vehicle.category
-      driverId = req.message.order.provider <&> (.id)
-  toAddress <- (castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing")
-
+buildConfirmReqV2 req isValueAddNP = do
+  Utils.validateContext Context.CONFIRM req.confirmReqContext
+  bookingId <- fmap Id req.confirmReqMessage.confirmReqMessageOrder.orderId & fromMaybeM (InvalidRequest "orderId not found")
+  fulfillment <- req.confirmReqMessage.confirmReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
+  customerPhoneNumber <- fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "Customer Phone not found")
+  let customerMobileCountryCode = "+91" -- TODO: check how to get countrycode via ONDC
+  fromAddress' <- fulfillment.fulfillmentStops >>= Utils.getStartLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
+  fromAddress <- fromAddress' & fromMaybeM (InvalidRequest "Start location not found")
+  let mbRiderName = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personName)
+  let vehCategory = fulfillment.fulfillmentVehicle >>= (.vehicleCategory)
+      vehVariant = fulfillment.fulfillmentVehicle >>= (.vehicleVariant)
+  vehicleVariant <- Utils.parseVehicleVariant vehCategory vehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show vehCategory <> ", variant:-" <> show vehVariant)
+  let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag isValueAddNP
+  toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
   return $
     DConfirm.DConfirmReq
       { ..
       }
+
+getNightSafetyCheckTag :: Bool -> Maybe [Spec.TagGroup] -> Bool
+getNightSafetyCheckTag isValueAddNP = maybe isValueAddNP getTagValue
   where
-    castAddress Confirm.Address {..} = DL.LocationAddress {areaCode = area_code, area = locality, fullAddress = Nothing, ..}
-    castVehicleVariant = \case
-      Confirm.SEDAN -> VehVar.SEDAN
-      Confirm.SUV -> VehVar.SUV
-      Confirm.HATCHBACK -> VehVar.HATCHBACK
-      Confirm.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
-      Confirm.TAXI -> VehVar.TAXI
-      Confirm.TAXI_PLUS -> VehVar.TAXI_PLUS
+    getTagValue tagGroups =
+      let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.NIGHT_SAFETY_CHECK (Just tagGroups)
+       in fromMaybe isValueAddNP (readMaybe . T.unpack =<< tagValue)

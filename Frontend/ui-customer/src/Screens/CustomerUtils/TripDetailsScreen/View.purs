@@ -15,31 +15,36 @@
 
 module Screens.TripDetailsScreen.View where
 
-import Animation as Anim
-import Components.PrimaryButton as PrimaryButton
-import Components.PopUpModal as PopUpModal
-import Effect (Effect)
-import Language.Types (STR(..))
-import Language.Strings (getString)
-import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==), (/))
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), Accessiblity(..),PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback, hintColor, adjustViewWithKeyboard, accessibilityHint, accessibility )
-import Screens.Types as ST 
-import Screens.Types (PaymentMode(..))
-import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
-import Font.Size as FontSize
-import Font.Style as FontStyle
-import Components.GenericHeader as GenericHeader
-import Components.SourceToDestination as SourceToDestination
-import Engineering.Helpers.Commons as EHC
-import Styles.Colors as Color
-import Debug (spy)
 import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getVariantRideType)
-import Prelude ((<>), show)
-import Data.Maybe(fromMaybe, isJust, Maybe(..))
+
+import Animation as Anim
+import Components.GenericHeader as GenericHeader
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.SourceToDestination as SourceToDestination
+import Data.Array as DA
+import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Data.String as DS
+import Effect (Effect)
+import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getVariantRideType)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Mobility.Prelude (boolToVisibility)
+import Prelude ((<>), show)
+import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==), (/), not, (-), (||))
+import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd)
+import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Types (PaymentMode(..))
+import Screens.Types as ST
+import Styles.Colors as Color
+import Debug (spy)
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -53,47 +58,36 @@ screen initialState =
       eval state action
   }
 
-view
-  :: forall w
-  . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
+view :: forall w. (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $ relativeLayout
+  Anim.screenAnimation $ linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , background Color.white900
   , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-  , onBackPressed push (const BackPressed)
-  , afterRender push (const AfterRender)
-  ][  linearLayout
-      [ height MATCH_PARENT
+  , onBackPressed push $ const BackPressed
+  , afterRender push $ const AfterRender
+  ][ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+  , scrollView
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    ][ linearLayout
+      [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , accessibility if state.props.showConfirmationPopUp then DISABLE_DESCENDANT else DISABLE
-  ][ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-    , relativeLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , visibility if state.props.issueReported then GONE else VISIBLE
-      , adjustViewWithKeyboard "true"
-      ][  tripDetailsLayout state push
-        , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , alignParentBottom "true,-1"
-          , background Color.white900
-          , visibility if state.props.reportIssue then VISIBLE else GONE
-          ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
-
-        ]]
-    , issueReportedView state push
-    , lostAndFoundPopUpView push state
+      , padding $ PaddingVertical 16 16
+      , gravity CENTER_VERTICAL
+      ][tripDetailsLayout state push
+      , reportIssueView state push
+      ]
     ]
+  ]
 
 tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tripDetailsLayout state push =
-  scrollView
-  [height MATCH_PARENT
+  linearLayout
+  [height WRAP_CONTENT
   , width MATCH_PARENT
   ][  linearLayout
       [ height WRAP_CONTENT
@@ -104,8 +98,8 @@ tripDetailsLayout state push =
           , width MATCH_PARENT
           , orientation VERTICAL
           , background Color.blue600
-          , visibility if state.props.issueReported then GONE else VISIBLE
-          , padding (Padding 16 16 16 10)
+          , padding $ Padding 16 16 16 10
+          , margin $ MarginBottom 24
           ][ tripDetailsView state
            , separatorView
            , tripIdView push state
@@ -115,54 +109,18 @@ tripDetailsLayout state push =
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , padding (Padding 16 0 16 50)
-          , margin (MarginBottom 40)
-          , visibility if state.props.issueReported then GONE else VISIBLE
+          , visibility $ boolToVisibility $ not $ state.data.selectedItem.status == "CANCELLED" 
+          , padding $ PaddingHorizontal 16 16 
           , orientation VERTICAL
           ][ invoiceView state push
             , linearLayout
-             [ height (V 1)
+             [ height $ V 1
              , width MATCH_PARENT
              , background Color.lightGreyShade
-             , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
+             , margin $ MarginVertical 16 16
              ][]
-            , lostAndFoundView push state
-            , linearLayout
-              [ height (V 1)
-              , width MATCH_PARENT
-              , background Color.lightGreyShade
-              , visibility if (state.data.selectedItem.status /= "CANCELLED" && state.props.canConnectWithDriver)  then VISIBLE else GONE
-              ][]
-            , reportIssueView state push
            ]
         ]]
-
-lostAndFoundView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
-lostAndFoundView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , gravity CENTER_VERTICAL
-  , orientation HORIZONTAL
-  , padding (Padding 0 16 0 16)
-  , disableClickFeedback false
-  , visibility if (state.data.selectedItem.status /= "CANCELLED" && state.props.canConnectWithDriver) then VISIBLE else GONE
-  , onClick push $ (const ShowPopUp)
-  ][  textView $
-      [ text (getString LOST_SOMETHING)
-      , color Color.darkCharcoal
-      ] <> FontStyle.body1 LanguageStyle
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , gravity RIGHT
-      ][  imageView
-          [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
-          , height (V 15)
-          , width (V 15)
-          ]
-        ]
-  ]
 
 ---------------------- tripIdView ---------------------------
 tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
@@ -174,16 +132,15 @@ tripIdView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin (MarginBottom 16)
+  , margin $ MarginBottom 16
   , orientation HORIZONTAL
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
       , width WRAP_CONTENT
       , visibility if state.data.tripId == "" then GONE else VISIBLE
-      , weight 1.0
       ][  textView $
-          [ text (getString RIDE_ID)
+          [ text $ getString RIDE_ID
           , accessibilityHint $ "Ride I-D :" <> ( DS.replaceAll (DS.Pattern "") (DS.Replacement " ") state.data.tripId)
           , accessibility ENABLE
           , color Color.black700
@@ -192,7 +149,7 @@ tripIdView push state =
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
-          , onClick push (const Copy)
+          , onClick push $ const Copy
           , accessibility DISABLE_DESCENDANT
           , gravity CENTER_VERTICAL
           ][ textView $
@@ -202,9 +159,9 @@ tripIdView push state =
               ] <> FontStyle.paragraphText LanguageStyle
             , imageView
               [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_copy"
-              , height (V 13)
-              , width (V 11)
-              , margin (MarginLeft 10)
+              , height $ V 13
+              , width $ V 11
+              , margin $ MarginLeft 10
               ]
           ]
       ]
@@ -212,10 +169,10 @@ tripIdView push state =
       [ orientation VERTICAL
       , height WRAP_CONTENT
       , width WRAP_CONTENT
-      , weight 1.0
+      -- , weight 1.0
       , visibility if isJust state.data.vehicleVariant && (getMerchant FunctionCall) == YATRISATHI then VISIBLE else GONE
       ][  textView $
-          [ text (getString RIDE_TYPE)
+          [ text $ getString RIDE_TYPE
           , accessibilityHint $ "Ride Type :" <> rideType
           , accessibility ENABLE
           , color Color.black700
@@ -228,14 +185,6 @@ tripIdView push state =
           ] <> FontStyle.paragraphText LanguageStyle
       ]
    ]
-
-lostAndFoundPopUpView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
-lostAndFoundPopUpView push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , visibility if state.props.showConfirmationPopUp then VISIBLE else GONE
-    ][PopUpModal.view (push <<< PopUpModalAction) (confirmLostAndFoundConfig state)]
 
 ---------------------- tripDetails ---------------------------
 tripDetailsView ::  forall w . ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
@@ -261,9 +210,9 @@ tripDetailsView state =
               [ imageWithFallback $ case state.data.vehicleVariant of
                                       Just variant -> getVehicleVariantImage (show variant)
                                       Nothing      -> fetchImage FF_ASSET "ic_vehicle_side" 
-              , width (V 40)
+              , width $ V 40
               , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
-              , height (V 40)
+              , height $ V 40
               ]
             ]
 
@@ -271,7 +220,7 @@ tripDetailsView state =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
-      , margin (MarginLeft 10)
+      , margin $ MarginLeft 10
       ][  textView $
           [ text state.data.driverName
           , accessibilityHint $ "Driver : " <> state.data.driverName
@@ -295,9 +244,9 @@ tripDetailsView state =
               ][  linearLayout
                   [ background Color.greyishBlue
                   , cornerRadius 2.5
-                  , margin (Margin 5 3 5 0)
-                  , height (V 5)
-                  , width (V 5)
+                  , margin $ Margin 5 3 5 0
+                  , height $ V 5
+                  , width $ V 5
                   ][]
                ]
             , textView $
@@ -312,13 +261,13 @@ tripDetailsView state =
       , gravity RIGHT
       , orientation VERTICAL
       ][  textView $
-          [ text (state.data.totalAmount)
+          [ text state.data.totalAmount
           , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
           , accessibility ENABLE
           , color Color.black
           ] <> FontStyle.h2 LanguageStyle
         , textView $
-          [ text $ if state.data.selectedItem.status == "CANCELLED" then (getString CANCELLED) else (getString PAID) <> " " <> if state.data.paymentMode == CASH then (getString BY_CASH) else (getString ONLINE_)
+          [ text $ if state.data.selectedItem.status == "CANCELLED" then getString CANCELLED else getString PAID <> " " <> if state.data.paymentMode == CASH then getString BY_CASH else getString ONLINE_
           , color if state.data.selectedItem.status == "CANCELLED" then Color.red else Color.greyShade
           , accessibility DISABLE
           ] <> FontStyle.captions LanguageStyle
@@ -329,9 +278,9 @@ tripDetailsView state =
 separatorView ::  forall w . PrestoDOM (Effect Unit) w
 separatorView =
   linearLayout
-  [ height (V 1)
+  [ height $ V 1
   , width MATCH_PARENT
-  , margin (Margin 0 16 0 8)
+  , margin $ MarginVertical 16  8
   , background Color.lightGreyShade
   ][]
 
@@ -345,7 +294,7 @@ ratingAndInvoiceView state push =
   , orientation HORIZONTAL
   , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
   ][  textView $ 
-      [ text $ (getString YOU_RATED)
+      [ text $ getString YOU_RATED
       , accessibilityHint $ "You Rated " <> (show state.data.rating) <> " Stars"
       , accessibility ENABLE
       , color Color.greyDavy
@@ -353,31 +302,19 @@ ratingAndInvoiceView state push =
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , padding (Padding 0 10 0 10)
+        , padding $ PaddingVertical 10 10
         , gravity CENTER
-        , margin (MarginLeft 5)
+        , margin $ MarginLeft 5
         ](map (\ item ->  linearLayout
                           [ height WRAP_CONTENT
                           , width WRAP_CONTENT
-                          , margin (Margin 0 0 4 0)
+                          , margin $ MarginRight 4
                           ][imageView
                               [ height $ V 14
                               , width $ V 14
                               , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= state.data.rating then "ny_ic_star_active" else "ny_ic_star_inactive" 
                               ]
                             ]) [1 ,2 ,3 ,4 ,5])
-    -- , linearLayout
-    --   [ height WRAP_CONTENT
-    --   , width MATCH_PARENT
-    --   , gravity RIGHT
-    --   , onClick push $ (const DownloadInvoice)
-    --   ][  textView
-    --       [ text (getString DOWNLOAD_DRIVER_RECEIPT)
-    --       , textSize FontSize.a_12
-    --       , color Color.blue900
-    --       , visibility if not state.props.invoiceDownloaded then VISIBLE else GONE
-    --       ]
-    --     ]
     ]
 
 -------- invoice --------
@@ -388,15 +325,20 @@ invoiceView state push =
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
     , orientation HORIZONTAL
-    , padding (Padding 0 16 0 16)
     , disableClickFeedback false
-    , onClick push $ (const ViewInvoice)
+    , onClick push $ const ViewInvoice
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
-    ][  textView $
-        [ text (getString VIEW_DRIVER_RECEIPT)
+    ][ imageView [
+          imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_invoice_sheet_icon"
+        , height $ V 20
+        , width $ V 20
+        , margin $ MarginRight 12
+        ]
+     , textView $
+        [ text $ getString VIEW_DRIVER_RECEIPT
         , accessibilityHint "View Invoice : Button"
         , accessibility ENABLE
-        , color Color.darkCharcoal
+        , color Color.black800
         ] <> FontStyle.body1 LanguageStyle
      ,  linearLayout
         [ height WRAP_CONTENT
@@ -404,8 +346,8 @@ invoiceView state push =
         , gravity RIGHT
         ][  imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
-            , height (V 15)
-            , width (V 15)
+            , height $ V 20
+            , width $ V 20
             ]
           ]
       ]
@@ -417,7 +359,6 @@ reportIssueView state push =
     [ orientation VERTICAL
     , width MATCH_PARENT
     , height WRAP_CONTENT
-    , padding (Padding 0 16 0 16)
     , disableClickFeedback true
     , onClick push $ const ReportIssue
     ][  linearLayout
@@ -425,103 +366,91 @@ reportIssueView state push =
         , width MATCH_PARENT
         , gravity CENTER_VERTICAL
         , orientation HORIZONTAL
-        , margin (MarginBottom 16)
-        ][  textView $
-            [ text (getString REPORT_AN_ISSUE)
+        , margin $ Margin 16 0 16 16 
+        ][  
+          imageView
+            [ width $ V 20
+            , height $ V 20 
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET if state.props.reportIssue then "ny_ic_help_and_support_dark" else "ny_ic_help"
+            , margin $ MarginRight 12
+            ]
+        , textView $
+            [ text $ getString HELP_AND_SUPPORT
             , accessibilityHint "Report an Issue : Button"
             , accessibility ENABLE
-            , color Color.darkCharcoal
-            ] <> FontStyle.body1 LanguageStyle
-          , linearLayout
+            , color if state.props.reportIssue then Color.black900 else Color.black800
+            ] <> (if state.props.reportIssue then FontStyle.body4 else FontStyle.body1) LanguageStyle 
+        , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity RIGHT
+            ][imageView[ 
+                imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.reportIssue then "ny_ic_chevron_up_dark" else "ny_ic_chevron_down_light"
+              , height $ V 20
+              , width $ V 20
+              ]
+            ]
+          ] 
+        , allTopicsView state push $ topicsList state
+        ]
+
+
+allTopicsView :: forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> PrestoDOM (Effect Unit) w
+allTopicsView state push topicList = 
+  PrestoAnim.animationSet ([] <>
+    if EHC.os == "IOS" then
+      [ Anim.fadeIn state.props.reportIssue 
+      , Anim.fadeOut $ not state.props.reportIssue ]
+    else
+      [Anim.listExpandingAnimation $ listExpandingAnimationConfig state.props.reportIssue])
+   $ 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , orientation VERTICAL
+    , margin $ Margin 32 16 16 0 
+    , visibility $ boolToVisibility $ state.props.reportIssue
+    , onAnimationEnd push $ const ListExpandAinmationEnd
+    ](DA.mapWithIndex (\index item ->
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ MarginHorizontal 16 16
+        , onClick push $ const $ OpenChat item
+        , orientation VERTICAL
+        ][  linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
             ][  imageView
-                [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.reportIssue then "ny_ic_chevron_up" else "ny_ic_chevron_right"
-                , height $ if state.props.reportIssue then V 6 else V 15
-                , width $ if state.props.reportIssue then V 12 else V 15
+                [ imageWithFallback item.categoryImageUrl
+                , height $ V 20
+                , width $ V 20
                 ]
+              , textView $
+                [ accessibilityHint $ item.categoryName <> " : Button"
+                , accessibility ENABLE
+                , text item.categoryName
+                , color Color.darkCharcoal
+                , margin $ MarginLeft 13
+                ] <> FontStyle.paragraphText LanguageStyle
+              , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity RIGHT
+                ][  imageView
+                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
+                    , height $ V 20
+                    , width $ V 20 
+                    ]
+                  ]
               ]
-          ]
-          -- TODO add animations
-          -- , PrestoAnim.animationSet[
-          --   fadeIn state.props.reportIssue
-          -- , fadeOut $ not state.props.reportIssue
-          -- ] $
-          , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation VERTICAL
-            , visibility if state.props.reportIssue then VISIBLE else GONE
-            ][ linearLayout
-               [ width MATCH_PARENT
-               , height $ V 120
-               , orientation HORIZONTAL
-               , cornerRadius 5.0
-               , padding ( Padding 2 2 2 2)
-               , gravity LEFT
-               , stroke ("1," <> Color.borderColorLight)
-               ][  (if EHC.os == "ANDROID" then editText else multiLineEditText)
-                      $ [ height MATCH_PARENT
-                      , width WRAP_CONTENT
-                      , weight 1.0
-                      , padding (Padding 14 14 14 14)
-                      , color Color.black800
-                      , gravity LEFT
-                      , background Color.white900
-                      , text ""
-                      , hint $ getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE
-                      , hintColor $ Color.blueGrey
-                      , pattern "[^\n]*,255"
-                      , onChange push $ MessageTextChanged
-                      ] <> FontStyle.body6 LanguageStyle
-
-                 ]
-              ]
-
-        ]
-
--------------------------- issueReportedView -----------------------
-issueReportedView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-issueReportedView state push =
-  relativeLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , gravity CENTER
-  , visibility if state.props.issueReported then VISIBLE else GONE
-  ][  linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , gravity CENTER
-      , orientation VERTICAL
-      ][ imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_letter"
-          , height $ V 149
-          , width $ V 149
-          , margin (MarginBottom 32)
-          ]
-        , textView $
-          [ text $ getString THANK_YOU_FOR_WRITING
-          , gravity CENTER
-          , width MATCH_PARENT
-          , color Color.black900
-          , margin (MarginBottom 12)
-          ] <> FontStyle.h1 LanguageStyle
-        , textView $
-          [ text $ getString WE_HAVE_RECEIVED_YOUR_ISSUE
-          , margin (Margin 42 0 42 0)
-          , gravity CENTER
-          , width MATCH_PARENT
-          , color Color.blackLightGrey
-          ] <> FontStyle.body3 TypoGraphy
-        ]
-        , linearLayout
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          , alignParentBottom "true,-1"
-          , gravity BOTTOM
-          , margin (MarginBottom 16)
-          ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (goHomeButtonConfig state)]
-      ]
-
+            , linearLayout
+              [ height $ V 1
+              , width MATCH_PARENT
+              , margin $ MarginVertical 20 20
+              , background Color.greyLight
+              , visibility $ boolToVisibility $ not $ index == (DA.length (topicList)) - 1
+              ][]
+          ]) topicList)

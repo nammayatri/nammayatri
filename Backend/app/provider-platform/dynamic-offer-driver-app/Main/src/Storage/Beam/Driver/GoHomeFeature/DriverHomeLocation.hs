@@ -16,9 +16,6 @@
 
 module Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Kernel.Prelude
@@ -44,17 +41,6 @@ instance B.Table DriverHomeLocationT where
 
 type DriverHomeLocation = DriverHomeLocationT Identity
 
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-driverHomeLocationToHSModifiers :: M.Map Text (A.Value -> A.Value)
-driverHomeLocationToHSModifiers =
-  M.empty
-
-driverHomeLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
-driverHomeLocationToPSModifiers =
-  M.empty
-
-$(enableKVPG ''DriverHomeLocationT ['id] [])
+$(enableKVPG ''DriverHomeLocationT ['id] [['driverId]])
 
 $(mkTableInstancesWithTModifier ''DriverHomeLocationT "driver_home_location" [("address", "home_address")])

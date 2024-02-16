@@ -23,7 +23,6 @@ import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
-import qualified Data.HashMap as HM
 import qualified Data.Map.Strict as Map
 import Environment
 import qualified EulerHS.Runtime as L
@@ -73,15 +72,15 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
     & S.mapM (Map.traverseWithKey commitAllPartitions)
     & S.drain
   where
-    commitAllPartitions _ (Just v) = traverse_ (void . Consumer.commitOffsetMessage Consumer.OffsetCommit kafkaConsumer) $ HM.elems v
+    commitAllPartitions _ (Just v) = traverse_ (void . Consumer.commitOffsetMessage Consumer.OffsetCommit kafkaConsumer) $ Map.elems v
     commitAllPartitions _ Nothing = pure ()
 
     keepMax latestCrMap cr =
       let latestCR =
-            case HM.lookup (partition' cr) latestCrMap of
+            case Map.lookup (partition' cr) latestCrMap of
               Just latestCRInPartition -> if offset' cr > offset' latestCRInPartition then cr else latestCRInPartition
               Nothing -> cr
-       in HM.insert (partition' cr) latestCR latestCrMap
+       in Map.insert (partition' cr) latestCR latestCrMap
 
     calculateAvailableTime (driverId, merchantId) (timeSeries, mbCR) = do
       mbCR
@@ -105,7 +104,7 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
     --   ([UTCTime], Maybe ConsumerRecordD)
     buildTimeSeries = SF.mkFold step start extract
       where
-        step (!acc, Nothing) (val, cr) = SF.Partial (fromMaybe val.ts val.st : acc, Just $ HM.singleton (partition' cr) cr) -- TODO: remove fromMaybe default ts once old data is processed.
+        step (!acc, Nothing) (val, cr) = SF.Partial (fromMaybe val.ts val.st : acc, Just $ Map.singleton (partition' cr) cr) -- TODO: remove fromMaybe default ts once old data is processed.
         step (!acc, Just latestCrMap) (val, cr) = SF.Partial (fromMaybe val.ts val.st : acc, Just $ keepMax latestCrMap cr) -- TODO: remove fromMaybe default ts once old data is processed.
         start = SF.Partial ([], Nothing)
         extract = id

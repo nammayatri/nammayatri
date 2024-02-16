@@ -15,11 +15,9 @@
 
 module Storage.Queries.Instances.DriverInformation where
 
-import qualified Data.ByteString as BS
 import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DriverInfo
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -32,7 +30,9 @@ instance FromTType' BeamDI.DriverInformation DriverInformation where
           { driverId = Id driverId,
             adminId = Id <$> adminId,
             merchantId = Id <$> merchantId,
-            referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
+            referredByDriverId = Id <$> referredByDriverId,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
+            canSwitchToRental = fromMaybe True canSwitchToRental,
             ..
           }
 
@@ -42,6 +42,7 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
       { BeamDI.driverId = getId driverId,
         BeamDI.adminId = getId <$> adminId,
         BeamDI.merchantId = getId <$> merchantId,
+        BeamDI.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamDI.active = active,
         BeamDI.onRide = onRide,
         BeamDI.enabled = enabled,
@@ -53,11 +54,14 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.subscribed = subscribed,
         BeamDI.paymentPending = paymentPending,
         BeamDI.aadhaarVerified = aadhaarVerified,
-        BeamDI.referralCode = referralCode <&> unEncrypted . (.encrypted),
+        BeamDI.referralCode = referralCode,
+        BeamDI.referredByDriverId = getId <$> referredByDriverId,
+        BeamDI.totalReferred = totalReferred,
         BeamDI.lastEnabledOn = lastEnabledOn,
         BeamDI.canDowngradeToSedan = canDowngradeToSedan,
         BeamDI.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamDI.canDowngradeToTaxi = canDowngradeToTaxi,
+        BeamDI.canSwitchToRental = Just canSwitchToRental,
         BeamDI.mode = mode,
         BeamDI.autoPayStatus = autoPayStatus,
         BeamDI.payerVpa = payerVpa,
@@ -66,5 +70,6 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.createdAt = createdAt,
         BeamDI.updatedAt = updatedAt,
         BeamDI.compAadhaarImagePath = compAadhaarImagePath,
-        BeamDI.availableUpiApps = availableUpiApps
+        BeamDI.availableUpiApps = availableUpiApps,
+        BeamDI.driverDob = driverDob
       }

@@ -66,6 +66,7 @@ library
       JuicyPixels
     , JuicyPixels-extra
     , aeson
+    , async
     , base >=4.7 && <5
     , base64-bytestring
     , beam-core
@@ -87,7 +88,6 @@ library
     , extra
     , generic-lens
     , geohash ==1.0.1
-    , hashmap
     , hspec
     , http-client
     , http-types

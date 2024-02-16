@@ -97,6 +97,7 @@ callS3API =
     (identity @S3Error)
     (Just $ ET.ManagerSelector s3AuthManagerKey)
     (Just "S3_NOT_AVAILABLE")
+    Nothing
 
 get'' ::
   ( CoreMetrics m,

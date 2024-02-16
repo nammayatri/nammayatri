@@ -17,9 +17,12 @@
 module Domain.Types.AccessMatrix where
 
 import Data.Singletons.TH
+import Domain.Types.Merchant
 import Domain.Types.Role as DRole
 import Domain.Types.ServerName as DSN
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 
 -------- Possible user action for helper API --------
@@ -27,7 +30,9 @@ import Kernel.Types.Id
 data UserAccessType
   = USER_FULL_ACCESS
   | USER_NO_ACCESS
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
+
+$(mkBeamInstancesForEnum ''UserAccessType)
 
 data UserActionType
   = DOCUMENTS_INFO
@@ -39,6 +44,8 @@ data UserActionType
   | BLOCK
   | BLOCK_WITH_REASON
   | BLOCK_REASON_LIST
+  | CUSTOMER_CANCELLATION_DUES_SYNC
+  | CUSTOMER_CANCELLATION_DUES_DETAILS
   | UNBLOCK
   | LOCATION
   | INFO
@@ -163,9 +170,13 @@ data UserActionType
   | AADHAAR_UPDATE
   | CREATE_FP_DRIVER_EXTRA_FEE
   | UPDATE_FP_DRIVER_EXTRA_FEE
+  | UPDATE_FP_PER_EXTRA_KM_RATE
+  | UPDATE_FARE_POLICY
   | BALANCE_DUE
   | COLLECT_CASH
   | EXEMPT_CASH
+  | COLLECT_CASH_V2
+  | EXEMPT_CASH_V2
   | CURRENT_ACTIVE_RIDE
   | LIST_PLAN
   | SELECT_PLAN
@@ -175,6 +186,14 @@ data UserActionType
   | CURRENT_PLAN
   | PAYMENT_HISTORY
   | PAYMENT_HISTORY_ENTITY_DETAILS
+  | PAYMENT_HISTORY_V2
+  | PAYMENT_HISTORY_ENTITY_DETAILS_V2
+  | LIST_PLAN_V2
+  | SELECT_PLAN_V2
+  | PAYMENT_STATUS_V2
+  | SUSPEND_PLAN_V2
+  | SUBSCRIBE_PLAN_V2
+  | CURRENT_PLAN_V2
   | CREATE_OVERLAY
   | DELETE_OVERLAY
   | LIST_OVERLAY
@@ -186,17 +205,32 @@ data UserActionType
   | GET_DRIVER_VEHICLE_ASSOCIATION
   | GET_DRIVER_ASSOCIATION
   | GET_VEHICLE_ASSOCIATION
+  | GET_DRIVER_ASSOCIATION_BY_SEARCH
+  | GET_VEHICLE_ASSOCIATION_BY_SEARCH
   | SEND_DASHBOARD_MESSAGE
   | VERIFY_BOOKING_DETAILS
+  | GET_TICKET_SERVICES
+  | UPDATE_SEAT_MANAGEMENT
   | SEND_DUMMY_NOTIFICATION
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  | CHANGE_OPERATING_CITY
+  | TOGGLE_SERVICE_USAGE_CHARGE
+  | SCHEDULER_TRIGGER
+  | DRIVER_COIN_BULK_UPLOAD
+  | DRIVER_COIN_HISTORY
+  | REMOVE_EXPIRED_HOTSPOTS
+  | GET_OPERATING_CITY
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
+
+$(mkBeamInstancesForEnum ''UserActionType)
 
 genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
 data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
+
+$(mkBeamInstancesForEnum ''ApiEntity)
 
 genSingletons [''ApiEntity]
 
@@ -219,6 +253,12 @@ data AccessMatrixItem = AccessMatrixItem
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
+
+data MerchantCityList = MerchantCityList
+  { merchantId :: ShortId Merchant,
+    cityList :: [City.City]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype AccessMatrixAPIEntity = AccessMatrixAPIEntity
   {accessMatrix :: [AccessMatrixRowAPIEntity]}

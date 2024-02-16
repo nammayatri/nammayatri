@@ -18,6 +18,8 @@ import qualified Database.Redis as R
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
 import qualified EulerHS.Types as ET
+import GHC.Float (int2Double)
+import Kafka.Producer as KafkaProd
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import Types.DBSync
 import qualified Types.Event as Event
@@ -102,7 +104,6 @@ dropDBCommand dbStreamKey entryId = do
 runCriticalDBSyncOperations :: Text -> [(CreateDBCommand, ByteString)] -> [(UpdateDBCommand, ByteString)] -> [(DeleteDBCommand, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries = do
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
-
   (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries dbStreamKey
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
@@ -189,7 +190,11 @@ process dbStreamKey count = do
     Right Nothing -> do
       pure 0
     Right (Just c) -> do
-      run c
+      res <- run c
+      _afterProcess <- EL.getCurrentDateInMillis
+      void $ publishProcessLatency "QueryExecutionTime" (int2Double (_afterProcess - _beforeProcess))
+      void flushKafkaProducerAndPublishMetrics
+      pure res
   where
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
     run entries = do
@@ -237,7 +242,11 @@ startDBSync = do
           }
   forever $ do
     stopRequested <- EL.runIO $ isJust <$> tryTakeMVar readinessFlag
-    EL.runIO $ when stopRequested shutDownHandler
+    -- EL.runIO $ when stopRequested (shutDownHandler)
+    when stopRequested $ do
+      EL.logInfo ("RECEIVED SIGINT/SIGTERM" :: Text) "Stopping the rider drainer after flushing the kafka producer"
+      void flushKafkaProducerAndPublishMetrics
+      EL.runIO shutDownHandler
 
     StateRef
       { _config = config,
@@ -276,3 +285,12 @@ startDBSync = do
           then pure ()
           else EL.runIO $ delay waitTime
       pure history'
+
+flushKafkaProducerAndPublishMetrics :: Flow ()
+flushKafkaProducerAndPublishMetrics = do
+  Env {..} <- ask
+  _beforeFlush <- EL.getCurrentDateInMillis
+  EL.runIO $ KafkaProd.flushProducer _kafkaConnection
+  _afterFlush <- EL.getCurrentDateInMillis
+  EL.logDebug ("KafkaFlushTime : " :: Text) ("Time taken to flush kafka producer in rider-drainer : " <> show (int2Double (_afterFlush - _beforeFlush)) <> "ms")
+  void $ publishProcessLatency "KafkaFlushTime" (int2Double (_afterFlush - _beforeFlush))

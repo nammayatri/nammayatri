@@ -15,7 +15,7 @@
 
 module Components.LocationTagBar.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..),PrestoDOM, accessibilityHint, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback, singleLine, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..),PrestoDOM, accessibilityHint, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback, singleLine, accessibility, rippleColor)
 import Components.LocationTagBar.Controller(Action(..))
 import Data.Array (mapWithIndex, filter, findIndex, (!!), null)
 import Effect (Effect)
@@ -30,27 +30,32 @@ import Language.Types (STR(..))
 import Engineering.Helpers.Commons(os, screenWidth)
 import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import ConfigProvider
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarState -> PrestoDOM ( Effect Unit ) w
 view push state = 
+  let config = (getAppConfig appConfig).locationTagBar
+  in
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , orientation VERTICAL
+ , gravity CENTER 
  ][ linearLayout
     [ width $ V (screenWidth unit - 32)
     , height WRAP_CONTENT 
     ](mapWithIndex (\index item -> 
         linearLayout
         [ height WRAP_CONTENT
-        , stroke $ "1," <> Color.grey900
+        , stroke $ config.stroke
         , gravity CENTER
         , weight 1.0
         , background Color.white900
         , padding $ Padding 6 8 6 8
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
-        , cornerRadius 8.0
+        , cornerRadius config.cornerRadius
+        , rippleColor Color.rippleShade
         ][ imageView
             [ width $ V 15
             , height $ V 17
@@ -64,7 +69,7 @@ view push state =
             , width WRAP_CONTENT
             , margin $ MarginLeft 8
             , singleLine true
-            , color Color.black800
+            , color config.textColor
             , gravity CENTER_VERTICAL
             , lineHeight "18"
             , padding $ PaddingBottom 1

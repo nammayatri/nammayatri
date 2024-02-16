@@ -28,9 +28,9 @@ module Tools.Maps
 where
 
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity (..))
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Domain.Types.Person (Person)
 import Kernel.External.Maps as Reexport hiding
   ( autoComplete,
@@ -104,8 +104,7 @@ getTripRoutes personId merchantId mbMOCId req = do
   runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) merchantId mOCId req
 
 snapToRoad ::
-  ( ServiceFlow m r,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+  ( ServiceFlow m r
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->

@@ -15,16 +15,16 @@
 
 module Screens.TripDetailsScreen.Handler where
 
-import Prelude ( bind , discard, ($), pure, (<$>))
-import Engineering.Helpers.BackTrack (getState)
-import Screens.TripDetailsScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
-import Screens.TripDetailsScreen.View as TripDetailsScreen
-import Types.App (FlowBT, GlobalState(..), TRIP_DETAILS_SCREEN_OUTPUT(..),ScreenType(..))
+import Engineering.Helpers.BackTrack (getState)
 import ModifyScreenState (modifyScreenState)
+import Prelude (bind, discard, ($), pure, (<$>))
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Screens.TripDetailsScreen.Controller (ScreenOutput(..))
+import Screens.TripDetailsScreen.View as TripDetailsScreen
 import Screens.Types (TripDetailsGoBackType(..))
+import Types.App (FlowBT, GlobalState(..), TRIP_DETAILS_SCREEN_OUTPUT(..), ScreenType(..))
 
 tripDetailsScreen :: FlowBT String TRIP_DETAILS_SCREEN_OUTPUT
 tripDetailsScreen = do
@@ -32,7 +32,7 @@ tripDetailsScreen = do
     act <- lift $ lift $ runScreen $ TripDetailsScreen.screen state.tripDetailsScreen
     case act of
         GoBack fromMyRides -> do
-          modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = false}})
+          modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = false, reportIssue = false}})
           case fromMyRides of 
             Home -> App.BackT $ pure App.GoBack
             MyRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDES)
@@ -43,3 +43,9 @@ tripDetailsScreen = do
             modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> updatedState {props{issueReported = false}})
             App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME updatedState)
         ConnectWithDriver updatedState -> App.BackT $ App.NoBack <$> (pure $ CONNECT_WITH_DRIVER updatedState)
+        GetCategorieList updatedState -> do
+            modifyScreenState $ TripDetailsScreenStateType (\_ -> updatedState)
+            App.BackT $ App.BackPoint <$> (pure $ GET_CATEGORIES_LIST updatedState)
+        GoToIssueChatScreen updatedState item -> do
+            modifyScreenState $ TripDetailsScreenStateType (\_ -> updatedState)
+            App.BackT $ App.BackPoint <$> (pure $ GO_TO_ISSUE_CHAT_SCREEN updatedState item)

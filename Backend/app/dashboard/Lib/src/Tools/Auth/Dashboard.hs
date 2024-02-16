@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Common as Common
@@ -84,7 +85,7 @@ instance
   where
   toPayloadType _ = fromSing (sing @at)
 
-verifyDashboardAccess :: EsqDBFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
+verifyDashboardAccess :: BeamFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
 verifyDashboardAccess requiredAccessType personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   case requiredAccessType of
@@ -98,9 +99,19 @@ verifyDashboardAccess requiredAccessType personId = do
       if role.dashboardAccessType == DRole.FLEET_OWNER
         then pure person.id
         else throwError AccessDenied
+    DRole.RENTAL_FLEET_OWNER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
+        then pure person.id
+        else throwError AccessDenied
     DRole.DASHBOARD_RELEASE_ADMIN -> do
       role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
       if role.dashboardAccessType == DRole.DASHBOARD_RELEASE_ADMIN
+        then pure person.id
+        else throwError AccessDenied
+    DRole.MERCHANT_ADMIN -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.MERCHANT_ADMIN
         then pure person.id
         else throwError AccessDenied
     DRole.DASHBOARD_USER ->

@@ -41,6 +41,7 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantPaymentMethod as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
+import qualified "rider-app" Storage.Beam.NextBillionData as NextBillionData
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment ()
 import qualified "rider-app" Storage.Beam.Person as Person
@@ -48,20 +49,13 @@ import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
 import qualified "rider-app" Storage.Beam.Quote as Quote
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
-import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
+import qualified "rider-app" Storage.Beam.RentalDetails as RentalDetails
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
-import qualified "rider-app" Storage.Beam.Tickets.TicketBooking as TicketBooking
-import qualified "rider-app" Storage.Beam.Tickets.TicketBookingService as TicketBookingService
-import qualified "rider-app" Storage.Beam.Tickets.TicketBookingServicePriceBreakup as TicketBookingServicePriceBreakup
-import qualified "rider-app" Storage.Beam.Tickets.TicketPlace as TicketPlace
-import qualified "rider-app" Storage.Beam.Tickets.TicketService as TicketService
-import qualified "rider-app" Storage.Beam.Tickets.TicketServicePrice as TicketServicePrice
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
-import qualified "rider-app" Storage.Beam.Webengage as Webengage
 import Utils.Parse
 
 data DeleteModel
@@ -100,25 +94,19 @@ data DeleteModel
   | PersonFlowStatusDelete
   | QuoteDelete
   | RegistrationTokenDelete
-  | RentalSlabDelete
+  | RentalDetailsDelete
   | RideDelete
   | SavedReqLocationDelete
   | SearchRequestDelete
   | SosDelete
   | SpecialZoneQuoteDelete
   | TripTermsDelete
-  | WebengageDelete
   | FeedbackFormDelete
   | HotSpotConfigDelete
   | BecknRequestDelete
   | LocationDelete
   | LocationMappingDelete
-  | TicketBookingDelete
-  | TicketBookingServiceDelete
-  | TicketServiceDelete
-  | TicketServicePriceDelete
-  | TicketBookingServicePriceBreakupDelete
-  | TicketPlaceDelete
+  | NextBillionDataDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -157,25 +145,19 @@ getTagDelete PersonDefaultEmergencyNumberDelete = "PersonDefaultEmergencyNumberO
 getTagDelete PersonFlowStatusDelete = "PersonFlowStatusOptions"
 getTagDelete QuoteDelete = "QuoteOptions"
 getTagDelete RegistrationTokenDelete = "RegistrationTokenOptions"
-getTagDelete RentalSlabDelete = "RentalSlabOptions"
+getTagDelete RentalDetailsDelete = "RentalDetailsOptions"
 getTagDelete RideDelete = "RideOptions"
 getTagDelete SavedReqLocationDelete = "SavedReqLocationOptions"
 getTagDelete SearchRequestDelete = "SearchRequestOptions"
 getTagDelete SosDelete = "SosOptions"
 getTagDelete SpecialZoneQuoteDelete = "SpecialZoneQuoteOptions"
 getTagDelete TripTermsDelete = "TripTermsOptions"
-getTagDelete WebengageDelete = "WebengageOptions"
 getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
 getTagDelete LocationDelete = "LocationOptions"
 getTagDelete LocationMappingDelete = "LocationMappingOptions"
-getTagDelete TicketBookingDelete = "TicketBookingOptions"
-getTagDelete TicketBookingServiceDelete = "TicketBookingServiceOptions"
-getTagDelete TicketServiceDelete = "TicketServiceOptions"
-getTagDelete TicketServicePriceDelete = "TicketServicePriceOptions"
-getTagDelete TicketBookingServicePriceBreakupDelete = "TicketBookingServicePriceBreakupOptions"
-getTagDelete TicketPlaceDelete = "TicketPlaceOptions"
+getTagDelete NextBillionDataDelete = "NextBillionDataOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
@@ -213,25 +195,19 @@ parseTagDelete "PersonDefaultEmergencyNumberOptions" = return PersonDefaultEmerg
 parseTagDelete "PersonFlowStatusOptions" = return PersonFlowStatusDelete
 parseTagDelete "QuoteOptions" = return QuoteDelete
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
-parseTagDelete "RentalSlabOptions" = return RentalSlabDelete
+parseTagDelete "RentalDetailsOptions" = return RentalDetailsDelete
 parseTagDelete "RideOptions" = return RideDelete
 parseTagDelete "SavedReqLocationOptions" = return SavedReqLocationDelete
 parseTagDelete "SearchRequestOptions" = return SearchRequestDelete
 parseTagDelete "SosOptions" = return SosDelete
 parseTagDelete "SpecialZoneQuoteOptions" = return SpecialZoneQuoteDelete
 parseTagDelete "TripTermsOptions" = return TripTermsDelete
-parseTagDelete "WebengageOptions" = return WebengageDelete
 parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
 parseTagDelete "LocationOptions" = return LocationDelete
 parseTagDelete "LocationMappingOptions" = return LocationMappingDelete
-parseTagDelete "TicketBookingOptions" = return TicketBookingDelete
-parseTagDelete "TicketBookingServiceOptions" = return TicketBookingServiceDelete
-parseTagDelete "TicketServiceOptions" = return TicketServiceDelete
-parseTagDelete "TicketServicePriceOptions" = return TicketServicePriceDelete
-parseTagDelete "TicketBookingServicePriceBreakupOptions" = return TicketBookingServicePriceBreakupDelete
-parseTagDelete "TicketPlaceOptions" = return TicketPlaceDelete
+parseTagDelete "NextBillionDataOptions" = return NextBillionDataDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -270,25 +246,19 @@ data DBDeleteObject
   | PersonFlowStatusDeleteOptions DeleteModel (Where Postgres PersonFlowStatus.PersonFlowStatusT)
   | QuoteDeleteOptions DeleteModel (Where Postgres Quote.QuoteT)
   | RegistrationTokenDeleteOptions DeleteModel (Where Postgres RegistrationToken.RegistrationTokenT)
-  | RentalSlabDeleteOptions DeleteModel (Where Postgres RentalSlab.RentalSlabT)
+  | RentalDetailsDeleteOptions DeleteModel (Where Postgres RentalDetails.RentalDetailsT)
   | RideDeleteOptions DeleteModel (Where Postgres Ride.RideT)
   | SavedReqLocationDeleteOptions DeleteModel (Where Postgres SavedReqLocation.SavedReqLocationT)
   | SearchRequestDeleteOptions DeleteModel (Where Postgres SearchRequest.SearchRequestT)
   | SosDeleteOptions DeleteModel (Where Postgres Sos.SosT)
   | SpecialZoneQuoteDeleteOptions DeleteModel (Where Postgres SpecialZoneQuote.SpecialZoneQuoteT)
   | TripTermsDeleteOptions DeleteModel (Where Postgres TripTerms.TripTermsT)
-  | WebengageDeleteOptions DeleteModel (Where Postgres Webengage.WebengageT)
   | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigDeleteOptions DeleteModel (Where Postgres HotSpotConfig.HotSpotConfigT)
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
   | LocationDeleteOptions DeleteModel (Where Postgres Location.LocationT)
   | LocationMappingDeleteOptions DeleteModel (Where Postgres LocationMapping.LocationMappingT)
-  | TicketBookingDeleteOptions DeleteModel (Where Postgres TicketBooking.TicketBookingT)
-  | TicketBookingServiceDeleteOptions DeleteModel (Where Postgres TicketBookingService.TicketBookingServiceT)
-  | TicketServiceDeleteOptions DeleteModel (Where Postgres TicketService.TicketServiceT)
-  | TicketServicePriceDeleteOptions DeleteModel (Where Postgres TicketServicePrice.TicketServicePriceT)
-  | TicketBookingServicePriceBreakupDeleteOptions DeleteModel (Where Postgres TicketBookingServicePriceBreakup.TicketBookingServicePriceBreakupT)
-  | TicketPlaceDeleteOptions DeleteModel (Where Postgres TicketPlace.TicketPlaceT)
+  | NextBillionDataDeleteOptions DeleteModel (Where Postgres NextBillionData.NextBillionDataT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -403,9 +373,9 @@ instance FromJSON DBDeleteObject where
       RegistrationTokenDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ RegistrationTokenDeleteOptions deleteModel whereClause
-      RentalSlabDelete -> do
+      RentalDetailsDelete -> do
         whereClause <- parseDeleteCommandValues contents
-        return $ RentalSlabDeleteOptions deleteModel whereClause
+        return $ RentalDetailsDeleteOptions deleteModel whereClause
       RideDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ RideDeleteOptions deleteModel whereClause
@@ -424,9 +394,6 @@ instance FromJSON DBDeleteObject where
       TripTermsDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ TripTermsDeleteOptions deleteModel whereClause
-      WebengageDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ WebengageDeleteOptions deleteModel whereClause
       FeedbackFormDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ FeedbackFormDeleteOptions deleteModel whereClause
@@ -442,21 +409,6 @@ instance FromJSON DBDeleteObject where
       LocationMappingDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ LocationMappingDeleteOptions deleteModel whereClause
-      TicketBookingDelete -> do
+      NextBillionDataDelete -> do
         whereClause <- parseDeleteCommandValues contents
-        return $ TicketBookingDeleteOptions deleteModel whereClause
-      TicketBookingServiceDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketBookingServiceDeleteOptions deleteModel whereClause
-      TicketServiceDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketServiceDeleteOptions deleteModel whereClause
-      TicketServicePriceDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketServicePriceDeleteOptions deleteModel whereClause
-      TicketBookingServicePriceBreakupDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketBookingServicePriceBreakupDeleteOptions deleteModel whereClause
-      TicketPlaceDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketPlaceDeleteOptions deleteModel whereClause
+        return $ NextBillionDataDeleteOptions deleteModel whereClause

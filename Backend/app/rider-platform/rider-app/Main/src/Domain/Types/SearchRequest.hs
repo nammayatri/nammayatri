@@ -11,22 +11,29 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.SearchRequest where
 
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters, Money, Seconds)
 import Kernel.Types.Id
 import Kernel.Types.Version
+import Tools.Beam.UtilsTH
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data RiderPerferredOption = Rental | OneWay -- this is just to store the rider preference for the ride type to handle backward compatibility
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkBeamInstancesForEnum ''RiderPerferredOption)
 
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
@@ -39,7 +46,7 @@ data SearchRequest = SearchRequest
     maxDistance :: Maybe HighPrecMeters,
     estimatedRideDuration :: Maybe Seconds,
     device :: Maybe Text,
-    merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
+    merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
@@ -50,6 +57,7 @@ data SearchRequest = SearchRequest
     autoAssignEnabledV2 :: Maybe Bool,
     availablePaymentMethods :: [Id DMPM.MerchantPaymentMethod],
     selectedPaymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    riderPreferredOption :: RiderPerferredOption,
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

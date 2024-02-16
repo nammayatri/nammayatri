@@ -153,6 +153,7 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
             driverMaxExtraFee = driverMaxExtraFee,
             rideRequestPopupDelayDuration = rideRequestPopupDelayDuration,
             isPartOfIntelligentPool = isPartOfIntelligentPool,
+            pickupZone = pickupZone,
             cancellationRatio = cancellationRatio,
             acceptanceRatio = acceptanceRatio,
             driverAvailableTime = driverAvailableTime,
@@ -160,7 +161,9 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
             keepHiddenForSeconds = keepHiddenForSeconds,
             driverSpeed = driverSpeed,
             mode = mode,
-            goHomeRequestId = Id <$> goHomeRequestId
+            goHomeRequestId = Id <$> goHomeRequestId,
+            rideFrequencyScore = rideFrequencyScore,
+            customerCancellationDues = fromMaybe 0 customerCancellationDues
           }
 
 instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
@@ -188,6 +191,7 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         BeamSRFD.driverMaxExtraFee = driverMaxExtraFee,
         BeamSRFD.rideRequestPopupDelayDuration = rideRequestPopupDelayDuration,
         BeamSRFD.isPartOfIntelligentPool = isPartOfIntelligentPool,
+        BeamSRFD.pickupZone = pickupZone,
         BeamSRFD.cancellationRatio = cancellationRatio,
         BeamSRFD.acceptanceRatio = acceptanceRatio,
         BeamSRFD.driverAvailableTime = driverAvailableTime,
@@ -195,5 +199,7 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         BeamSRFD.keepHiddenForSeconds = keepHiddenForSeconds,
         BeamSRFD.driverSpeed = driverSpeed,
         BeamSRFD.mode = mode,
-        BeamSRFD.goHomeRequestId = getId <$> goHomeRequestId
+        BeamSRFD.goHomeRequestId = getId <$> goHomeRequestId,
+        BeamSRFD.rideFrequencyScore = rideFrequencyScore,
+        BeamSRFD.customerCancellationDues = Just customerCancellationDues
       }

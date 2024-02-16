@@ -22,7 +22,8 @@ data SpecialLocation = SpecialLocation
   { id :: Id SpecialLocation,
     locationName :: Text,
     category :: Text,
-    gates :: [GatesInfo],
+    merchantOperatingCityId :: Maybe Text,
+    gates :: [GatesInfo], --TODO: deprecate this later
     createdAt :: UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

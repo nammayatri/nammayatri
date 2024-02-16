@@ -6,8 +6,6 @@ import Kernel.Types.Id
 
 data HotSpotConfig = HotSpotConfig
   { id :: Id HotSpotConfig,
-    hotSpotGeoHashPrecision :: Int,
-    nearbyGeohashPrecision :: Int,
     blockRadius :: Int,
     minFrequencyOfHotSpot :: Int,
     weightOfManualPickup :: Int,
@@ -18,6 +16,13 @@ data HotSpotConfig = HotSpotConfig
     maxNumHotSpotsToShow :: Int,
     weightOfTripEnd :: Int,
     weightOfSpecialLocation :: Int,
-    shouldTakeHotSpot :: Bool
+    shouldTakeHotSpot :: Bool,
+    shouldSaveSearchHotSpot :: Bool,
+    hotSpotRadius :: Double,
+    precisionToSetGeohash :: Int,
+    precisionToGetGeohash :: Int,
+    precisionToFilterGeohash :: Int,
+    maxGeoHashToFilter :: Int,
+    hotSpotExpiry :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, Eq)

@@ -35,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth (TokenAuth)
 import Tools.SignatureAuth (SignatureAuth, SignatureAuthResult (..))
 

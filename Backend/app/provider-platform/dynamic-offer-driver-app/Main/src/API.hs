@@ -23,6 +23,7 @@ import Data.OpenApi
 import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
 import qualified Domain.Action.UI.Payment as Payment
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Plan as Plan
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
@@ -34,16 +35,18 @@ import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
+import Storage.Beam.SystemConfigs ()
 
 type DriverOfferAPI =
   MainAPI
+    :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> SwaggerAPI
     :<|> OpenAPI
     :<|> Raw
 
 type MainAPI =
   UI.API
-    :<|> Beckn.API
+    -- :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> Idfy.IdfyWebhookAPI
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Idfy.IdfyWebhookAPI
@@ -53,6 +56,12 @@ type MainAPI =
              :> Idfy.IdfyWebhookAPI
          )
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Juspay.JuspayWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceName" Plan.ServiceNames
+             :> "v2"
              :> Juspay.JuspayWebhookAPI
          )
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
@@ -65,11 +74,12 @@ driverOfferAPI = Proxy
 mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
-    :<|> Beckn.handler
+    -- :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> oldIdfyWebhookHandler
     :<|> idfyWebhookHandler
     :<|> idfyWebhookV2Handler
     :<|> juspayWebhookHandler
+    :<|> juspayWebhookHandlerV2
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
@@ -77,6 +87,7 @@ mainServer =
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =
   mainServer
+    :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"
@@ -131,5 +142,15 @@ juspayWebhookHandler ::
   BasicAuthData ->
   Value ->
   FlowHandler AckResponse
-juspayWebhookHandler merchantShortId secret =
-  withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId secret
+juspayWebhookHandler merchantShortId secret value' =
+  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId Nothing Nothing secret value'
+
+juspayWebhookHandlerV2 ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Plan.ServiceNames ->
+  BasicAuthData ->
+  Value ->
+  FlowHandler AckResponse
+juspayWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
+  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret value'

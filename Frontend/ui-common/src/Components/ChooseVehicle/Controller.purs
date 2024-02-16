@@ -6,12 +6,13 @@ import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import PrestoDOM (Margin(..))
 
 data Action
   = NoAction
   | OnSelect Config
   | OnImageClick
-  | ShowRateCard String
+  | ShowRateCard Config
 
 type Config
   = { vehicleImage :: String
@@ -30,6 +31,8 @@ type Config
     , showInfo :: Boolean
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
+    , pickUpCharges :: Int 
+    , layoutMargin :: Margin 
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -59,4 +62,6 @@ config =
   , showInfo : false
   , searchResultType : QUOTES
   , isBookingOption : false
+  , pickUpCharges : 0
+  , layoutMargin : MarginHorizontal 12 12
   }

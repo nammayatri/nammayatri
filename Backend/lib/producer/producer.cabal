@@ -80,7 +80,6 @@ library
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
-    , hashmap
     , hedis
     , mobility-core
     , monad-control
@@ -90,6 +89,7 @@ library
     , random
     , record-dot-preprocessor
     , record-hasfield
+    , rider-app
     , scheduler
     , sequelize
     , servant-server
@@ -157,7 +157,6 @@ executable producer-exe
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
-    , hashmap
     , hedis
     , mobility-core
     , monad-control
@@ -168,6 +167,7 @@ executable producer-exe
     , random
     , record-dot-preprocessor
     , record-hasfield
+    , rider-app
     , scheduler
     , sequelize
     , servant-server

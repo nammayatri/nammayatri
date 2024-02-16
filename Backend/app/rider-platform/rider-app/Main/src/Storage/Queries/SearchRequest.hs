@@ -15,19 +15,18 @@
 
 module Storage.Queries.SearchRequest where
 
+import Data.List (sortBy)
 import Data.Ord
-import qualified Domain.Types.Location as DL
+import Data.Text (strip)
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Version
@@ -37,7 +36,7 @@ import qualified Storage.Beam.SearchRequest as BeamSR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
-import qualified Storage.Queries.SearchRequest.SearchReqLocation as QSRL
+import Tools.Error
 
 createDSReq' :: MonadFlow m => SearchRequest -> m ()
 createDSReq' = createWithKV
@@ -95,55 +94,32 @@ updatePaymentMethods (Id searchReqId) availablePaymentMethods =
 
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
-    bundleVersion' <- forM bundleVersion readVersion
-    clientVersion' <- forM clientVersion readVersion
+    bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
+    clientVersion' <- mapM readVersion (strip <$> clientVersion)
+
+    fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+    fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
+
     mappings <- QLM.findByEntityId id
-    (fl, tl) <-
-      if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-        then do
-          logInfo "Accessing Search Request Location Table"
-          pickupLoc <- upsertFromLocationAndMappingForOldData (Id <$> fromLocationId) id merchantId merchantOperatingCityId
-          dropLoc <- upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-          return (pickupLoc, dropLoc)
-        else do
-          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-              toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-          fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
-          when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-          tl <-
-            if null toLocationMappings
-              then return Nothing
-              else do
-                let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-                QL.findById toLocMap.locationId
-          return (fl, tl)
+    let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
+
     merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId
     pure $
       Just
         SearchRequest
           { id = Id id,
-            startTime = startTime,
-            validTill = validTill,
             riderId = Id riderId,
-            fromLocation = fl,
-            toLocation = tl,
             distance = HighPrecMeters <$> distance,
             maxDistance = HighPrecMeters <$> maxDistance,
-            estimatedRideDuration = estimatedRideDuration,
-            device = device,
             merchantId = Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             bundleVersion = bundleVersion',
             clientVersion = clientVersion',
-            language = language,
-            disabilityTag = disabilityTag,
-            customerExtraFee = customerExtraFee,
-            autoAssignEnabled = autoAssignEnabled,
-            autoAssignEnabledV2 = autoAssignEnabledV2,
             availablePaymentMethods = Id <$> availablePaymentMethods,
             selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
-            createdAt = createdAt
+            riderPreferredOption = fromMaybe OneWay riderPreferredOption,
+            ..
           }
     where
       backfillMOCId = \case
@@ -174,32 +150,6 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.autoAssignEnabledV2 = autoAssignEnabledV2,
         BeamSR.availablePaymentMethods = getId <$> availablePaymentMethods,
         BeamSR.selectedPaymentMethodId = getId <$> selectedPaymentMethodId,
+        BeamSR.riderPreferredOption = Just riderPreferredOption,
         BeamSR.createdAt = createdAt
       }
-
--- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-
-buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
-buildLocation DSSL.SearchReqLocation {..} = do
-  return $
-    DL.Location
-      { id = cast id,
-        ..
-      }
-
-upsertFromLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id DSSL.SearchReqLocation) -> Text -> Text -> Maybe Text -> m DL.Location
-upsertFromLocationAndMappingForOldData locationId searchRequestId merchantId merchantOperatingCityId = do
-  loc <- QSRL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Search Request Table")
-  pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Search Request Location Table for SearchRequestId : " <> searchRequestId)) buildLocation loc
-  fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id searchRequestId DLM.SEARCH_REQUEST (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
-  void $ QL.create pickupLoc >> QLM.create fromLocationMapping
-  return pickupLoc
-
-upsertToLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> Text -> Maybe Text -> m (Maybe DL.Location)
-upsertToLocationAndMappingForOldData toLocationId searchReqId merchantId merchantOperatingCityId = do
-  tl <- maybe (pure Nothing) (QSRL.findById . Id) toLocationId
-  dropLocation <- maybe (pure Nothing) (fmap Just . buildLocation) tl
-  whenJust dropLocation $ \dropLoc -> do
-    toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id searchReqId DLM.SEARCH_REQUEST (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
-    void $ QL.create dropLoc >> QLM.create toLocationMapping
-  return dropLocation

@@ -17,28 +17,15 @@ module Components.QuoteListItem.Controller where
 
 import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Screens.Types (City(..), QuoteListItemState(..))
 
 data Action = Click QuoteListItemState
               | NoAction 
-              | CountDown Int String String String 
+              | CountDown Int String String 
               | ConfirmRide
               | CancelAutoAssigning
 
-type QuoteListItemState = 
-  {
-    seconds :: Int
-  , id :: String  
-  , timer :: String
-  , timeLeft :: Int
-  , driverRating :: Number
-  , profile :: String
-  , price :: String
-  , vehicleType :: String
-  , driverName :: String
-  , selectedQuote :: Maybe String
-  , appConfig :: AppConfig
-  }
 
 config :: QuoteListItemState
 config = {
@@ -52,5 +39,6 @@ config = {
   , vehicleType : "auto"
   , driverName : "Drive_Name"
   , selectedQuote : Nothing
-  , appConfig : DC.config
+  , appConfig : getAppConfig appConfig
+  , city : AnyCity
   }

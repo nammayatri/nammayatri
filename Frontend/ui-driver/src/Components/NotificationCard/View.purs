@@ -68,6 +68,7 @@ notificationCardView push =
                 [ PrestoList.imageUrlHolder "imageUrl"
                 , height MATCH_PARENT
                 , width MATCH_PARENT
+                , PrestoList.backgroundHolder "backgroundHolder"
                 ]
             ]
         , linearLayout
@@ -97,6 +98,7 @@ notificationCardView push =
             , height $ V 159
             , PrestoList.visibilityHolder "imageWithUrlVisibility"
             , PrestoList.imageUrlHolder "imageWithUrl"
+            , PrestoList.backgroundHolder "backgroundHolder"
             , gravity CENTER
             , cornerRadius 4.0
             ]

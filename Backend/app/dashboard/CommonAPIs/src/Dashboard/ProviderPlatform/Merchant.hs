@@ -25,6 +25,7 @@ import Dashboard.Common.Merchant as Reexport
 import Data.Aeson
 import Data.OpenApi hiding (description, name, password, url)
 import Data.Text as T
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
@@ -263,6 +264,7 @@ type DriverPoolConfigUpdateAPI =
     :> "update"
     :> MandatoryQueryParam "tripDistance" Meters
     :> QueryParam "vehicleVariant" Variant
+    :> QueryParam "tripCategory" Text
     :> ReqBody '[JSON] DriverPoolConfigUpdateReq
     :> Post '[JSON] APISuccess
 
@@ -314,6 +316,7 @@ type DriverPoolConfigCreateAPI =
     :> "create"
     :> MandatoryQueryParam "tripDistance" Meters
     :> QueryParam "vehiclevariant" Variant
+    :> QueryParam "tripCategory" Text
     :> ReqBody '[JSON] DriverPoolConfigCreateReq
     :> Post '[JSON] APISuccess
 
@@ -383,7 +386,7 @@ data DriverIntelligentPoolConfigRes = DriverIntelligentPoolConfigRes
     acceptanceRatioWeightage :: Int,
     acceptanceRatioWindowOption :: SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: Int,
-    cancellationRatioWindowOption :: SWC.SlidingWindowOptions,
+    cancellationAndRideFrequencyRatioWindowOption :: SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: Int,
     minQuotesToQualifyForIntelligentPoolWindowOption :: SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: Maybe Int,
@@ -414,7 +417,7 @@ data DriverIntelligentPoolConfigUpdateReq = DriverIntelligentPoolConfigUpdateReq
     acceptanceRatioWeightage :: Maybe (MandatoryValue Int),
     acceptanceRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: Maybe (MandatoryValue Int),
-    cancellationRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
+    cancellationAndRideFrequencyRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: Maybe (MandatoryValue Int),
     minQuotesToQualifyForIntelligentPoolWindowOption :: Maybe SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: Maybe (OptionalValue Int),
@@ -440,8 +443,8 @@ validateDriverIntelligentPoolConfigUpdateReq DriverIntelligentPoolConfigUpdateRe
       whenJust acceptanceRatioWindowOption $ \obj ->
         validateObject "acceptanceRatioWindowOption" obj validateSlidingWindowOptions,
       validateField "cancellationRatioWeightage" cancellationRatioWeightage $ InMaybe $ InValue $ InRange @Int (-100) 100,
-      whenJust cancellationRatioWindowOption $ \obj ->
-        validateObject "cancellationRatioWindowOption" obj validateSlidingWindowOptions,
+      whenJust cancellationAndRideFrequencyRatioWindowOption $ \obj ->
+        validateObject "cancellationAndRideFrequencyRatioWindowOption" obj validateSlidingWindowOptions,
       validateField "minQuotesToQualifyForIntelligentPool" minQuotesToQualifyForIntelligentPool $ InMaybe $ InValue $ Min @Int 1,
       whenJust minQuotesToQualifyForIntelligentPoolWindowOption $ \obj ->
         validateObject "minQuotesToQualifyForIntelligentPoolWindowOption" obj validateSlidingWindowOptions,
@@ -476,6 +479,7 @@ data OnboardingDocumentConfigItem = OnboardingDocumentConfigItem
     vehicleClassCheckType :: VehicleClassCheckType,
     rcNumberPrefix :: Text,
     rcNumberPrefixList :: Maybe [Text],
+    maxRetryCount :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -525,7 +529,8 @@ data VehicleClassVariantMap = VehicleClassVariantMap
   { vehicleClass :: Text,
     vehicleCapacity :: Maybe Int,
     vehicleVariant :: Variant,
-    manufacturer :: Maybe Text
+    manufacturer :: Maybe Text,
+    bodyType :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -557,6 +562,7 @@ data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
     supportedVehicleClasses :: Maybe SupportedVehicleClasses, -- value wrapper make no sense for lists and objects
     rcNumberPrefix :: Maybe (MandatoryValue Text),
     rcNumberPrefixList :: Maybe (MandatoryValue [Text]),
+    maxRetryCount :: Maybe (MandatoryValue Int),
     vehicleClassCheckType :: Maybe (MandatoryValue VehicleClassCheckType)
   }
   deriving stock (Show, Generic)
@@ -582,6 +588,7 @@ data OnboardingDocumentConfigCreateReq = OnboardingDocumentConfigCreateReq
     supportedVehicleClasses :: SupportedVehicleClasses,
     rcNumberPrefix :: Text,
     rcNumberPrefixList :: Maybe [Text],
+    maxRetryCount :: Int,
     vehicleClassCheckType :: VehicleClassCheckType
   }
   deriving stock (Show, Generic)
@@ -625,3 +632,103 @@ type UpdateFPDriverExtraFee =
     :> MandatoryQueryParam "startDistance" Meters
     :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
     :> Post '[JSON] APISuccess
+
+type UpdateFPPerExtraKmRate =
+  "config"
+    :> "farePolicy"
+    :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> Capture "startDistance" Meters
+    :> "perExtraKmRate"
+    :> "update"
+    :> ReqBody '[JSON] UpdateFPPerExtraKmRateReq
+    :> Post '[JSON] APISuccess
+
+newtype UpdateFPPerExtraKmRateReq = UpdateFPPerExtraKmRateReq
+  { perExtraKmRate :: HighPrecMoney
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateFPPerExtraKmRateReq where
+  hideSecrets = identity
+
+type UpdateFarePolicy =
+  "config"
+    :> "farePolicy"
+    :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> "update"
+    :> ReqBody '[JSON] UpdateFarePolicyReq
+    :> Post '[JSON] APISuccess
+
+data UpdateFarePolicyReq = UpdateFarePolicyReq
+  { serviceCharge :: Maybe Money,
+    nightShiftBounds :: Maybe NightShiftBounds,
+    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    govtCharges :: Maybe Double,
+    perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
+    description :: Maybe Text,
+    baseDistance :: Maybe Meters,
+    baseFare :: Maybe Money,
+    deadKmFare :: Maybe Money,
+    waitingCharge :: Maybe WaitingCharge,
+    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    freeWaitingTime :: Maybe Minutes,
+    nightShiftCharge :: Maybe NightShiftCharge
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateFarePolicyReq where
+  hideSecrets = identity
+
+data WaitingChargeInfo = WaitingChargeInfo
+  { freeWaitingTime :: Minutes,
+    waitingCharge :: WaitingCharge
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+
+data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data NightShiftBounds = NightShiftBounds
+  { nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+data AllowedTripDistanceBounds = AllowedTripDistanceBounds
+  { maxAllowedTripDistance :: Meters,
+    minAllowedTripDistance :: Meters
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForJSON ''NightShiftCharge)
+$(mkBeamInstancesForJSON ''WaitingCharge)
+
+---- generic trigger for schedulers ----
+
+type SchedulerTriggerAPI =
+  "scheduler"
+    :> "trigger"
+    :> ReqBody '[JSON] SchedulerTriggerReq
+    :> Post '[JSON] APISuccess
+
+data SchedulerTriggerReq = SchedulerTriggerReq
+  { scheduledAt :: Maybe UTCTime,
+    jobName :: Maybe JobName,
+    jobData :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data JobName = BadDebtCalculationTrigger | DriverFeeCalculationTrigger | SendManualPaymentLinkTrigger
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SchedulerTriggerReq where
+  hideSecrets = identity

@@ -16,8 +16,9 @@
 module Components.RideActionModal.Controller where
 import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Screens.Types as ST
+import Prelude(negate)
 
 data Action = StartRide 
             | EndRide 
@@ -46,13 +47,13 @@ type Config = {
   currentStage :: ST.HomeScreenStage,
   unReadMessages :: Boolean,
   specialLocationTag :: Mb.Maybe String,
-  waitTime :: String,
-  isChatOpened :: Boolean,
   requestedVehicleVariant :: Mb.Maybe String,
   accessibilityTag :: Mb.Maybe ST.DisabilityType,
   appConfig :: AppConfig,
   gotoTag :: Boolean,
-  waitTimeStatus :: ST.TimerStatus
+  waitTimeStatus :: ST.TimerStatus,
+  waitTimeSeconds :: Int,
+  thresholdTime :: Int
   }
 
 type AddressConfig = {
@@ -76,15 +77,15 @@ config = {
   estimatedRideFare : 0,
   notifiedCustomer : true,
   buttonTimeOut : 10,
-  waitTime : "__",
   id : "buttonTimer",
   currentStage : ST.RideAccepted,
   unReadMessages : false,
   specialLocationTag : Mb.Nothing,
-  isChatOpened : false,
   requestedVehicleVariant : Mb.Nothing,
   accessibilityTag : Mb.Nothing,
-  appConfig : DC.config,
+  appConfig : getAppConfig appConfig,
   gotoTag : false,
-  waitTimeStatus : ST.NoStatus
+  waitTimeStatus : ST.NoStatus,
+  waitTimeSeconds : -1,
+  thresholdTime : 0
 }

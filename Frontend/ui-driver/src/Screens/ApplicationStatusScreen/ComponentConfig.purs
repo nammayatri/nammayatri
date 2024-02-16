@@ -24,6 +24,8 @@ primaryButtonConfig state = let
       , background = Color.black900
       , height = (V 48)
       , id = "ApplicationStatusScreenButton"
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in primaryButtonConfig'
 
@@ -56,7 +58,7 @@ completeOnboardingConfig state = let
       text = getString CONTACT_SUPPORT <>"?"
     }
   , secondaryText {
-      text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
+      text = getString (YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT")
     }
     , option1 {
      text =  getString CANCEL

@@ -30,9 +30,10 @@ import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant
+import Storage.Beam.SystemConfigs ()
 
 data RideCancelEndPoint = RideBookingCancelEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "RideCancelEndPoint"
 
@@ -54,5 +55,5 @@ callBookingCancel :: ShortId DM.Merchant -> Id SRB.Booking -> Id DP.Person -> DC
 callBookingCancel merchantId bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   m <- findMerchantByShortId merchantId
   dCancelRes <- DCancel.cancel bookingId (personId, m.id) req
-  void $ withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
+  void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
   return Success

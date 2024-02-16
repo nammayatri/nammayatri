@@ -40,4 +40,4 @@ addNewAddressScreen = do
     GoToFavourites -> App.BackT $ App.NoBack <$> (pure $ GO_TO_FAVOURITES)
     CheckLocServiceability updatedState locItemType -> App.BackT $ App.NoBack <$> (pure $ CHECK_LOCATION_SERVICEABILITY updatedState locItemType)
     GoToHome -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN_FLOW)
-
+    GoToSearchLocScreen -> App.BackT $ App.NoBack <$> (pure $ GO_TO_SEARCH_LOC_SCREEN)

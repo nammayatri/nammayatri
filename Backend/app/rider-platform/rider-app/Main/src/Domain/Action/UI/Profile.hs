@@ -20,23 +20,31 @@ module Domain.Action.UI.Profile
     PersonDefaultEmergencyNumber (..),
     UpdateProfileDefaultEmergencyNumbersResp,
     GetProfileDefaultEmergencyNumbersResp (..),
+    UpdateEmergencySettingsReq (..),
+    UpdateEmergencySettingsResp,
+    EmergencySettingsRes,
     getPersonDetails,
     updatePerson,
     updateDefaultEmergencyNumbers,
     getDefaultEmergencyNumbers,
+    updateEmergencySettings,
+    getEmergencySettings,
   )
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.Person.PersonDisability as PersonDisability
+import Environment
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -49,7 +57,11 @@ import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
 import SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.MessageBuilder as MessageBuilder
+import SharedLogic.Person as SLP
+import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
@@ -98,7 +110,9 @@ validateUpdateProfileDefaultEmergencyNumbersReq maxEmergencyNumberCount UpdatePr
 data PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumber
   { name :: Text,
     mobileCountryCode :: Text,
-    mobileNumber :: Text
+    mobileNumber :: Text,
+    priority :: Maybe Int,
+    enableForFollowing :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -125,7 +139,7 @@ getPersonDetails (personId, _) = do
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson tag
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
@@ -181,7 +195,7 @@ updateDisability hasDisability mbDisability personId = do
               }
   pure APISuccess.Success
 
-validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> Text -> m (Maybe Text)
+validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> Text -> m (Maybe Text)
 validateRefferalCode personId refCode = do
   unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
@@ -198,37 +212,71 @@ validateRefferalCode personId refCode = do
         (Just mobileNumber, Just countryCode) -> do
           void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
           return $ Just refCode
-        _ -> throwError (InvalidRequest "Mobile number is null")
+        _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
 
 updateDefaultEmergencyNumbers ::
-  ( EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["maxEmergencyNumberCount" ::: Int]
-  ) =>
   Id Person.Person ->
+  Id Merchant.Merchant ->
   UpdateProfileDefaultEmergencyNumbersReq ->
-  m UpdateProfileDefaultEmergencyNumbersResp
-updateDefaultEmergencyNumbers personId req = do
+  Flow UpdateProfileDefaultEmergencyNumbersResp
+updateDefaultEmergencyNumbers personId merchantId req = do
   maxEmergencyNumberCount <- asks (.maxEmergencyNumberCount)
+  oldPersonDENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   runRequestValidation (validateUpdateProfileDefaultEmergencyNumbersReq maxEmergencyNumberCount) req
   now <- getCurrentTime
   let uniqueRecords = getUniquePersonByMobileNumber req
   newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` uniqueRecords
+  fork "Send Emergency Contact Added Message" $ do
+    sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList
   QPersonDEN.replaceAll personId newPersonDENList
+  let enableTripShare = any (.enableForFollowing) newPersonDENList
+  void $ updateEmergencySettings personId $ updateSettingReq enableTripShare $ not $ null newPersonDENList
   pure APISuccess.Success
   where
     buildPersonDefaultEmergencyNumber now defEmNum = do
       encMobNum <- encrypt defEmNum.mobileNumber
+      dbHash <- getDbHash defEmNum.mobileNumber
+      mbEmNumPerson <- QPerson.findByMobileNumberAndMerchantId defEmNum.mobileCountryCode dbHash merchantId
       return $
         DPDEN.PersonDefaultEmergencyNumber
           { mobileNumber = encMobNum,
             name = defEmNum.name,
             mobileCountryCode = defEmNum.mobileCountryCode,
             createdAt = now,
+            contactPersonId = (.id) <$> mbEmNumPerson,
+            enableForFollowing = fromMaybe False defEmNum.enableForFollowing,
+            enableForShareRide = False,
+            priority = fromMaybe 1 defEmNum.priority,
+            merchantId = Just merchantId,
             ..
           }
+    updateSettingReq enableTripShare enableEmergencySharing =
+      UpdateEmergencySettingsReq
+        { shareEmergencyContacts = Just enableEmergencySharing,
+          shareTripWithEmergencyContacts = Just enableTripShare,
+          hasCompletedSafetySetup = Nothing,
+          nightSafetyChecks = Nothing
+        }
+
+sendEmergencyContactAddedMessage :: Id Person.Person -> [DPDEN.PersonDefaultEmergencyNumber] -> [DPDEN.PersonDefaultEmergencyNumber] -> Flow ()
+sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
+  decNew <- decrypt `mapM` newPersonDENList
+  decOld <- decrypt `mapM` oldPersonDENList
+  let oldList = (.mobileNumber) <$> decOld
+      newList = DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decNew
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  message <-
+    MessageBuilder.buildAddedAsEmergencyContactMessage person.merchantOperatingCityId $
+      MessageBuilder.BuildAddedAsEmergencyContactMessageReq
+        { userName = SLP.getName person,
+          appUrl = riderConfig.appUrl
+        }
+  let filterNewContacts personDEN = return $ not $ personDEN.mobileNumber `elem` oldList
+  newlyAddedContacts <- filterM filterNewContacts newList
+  SPDEN.notifyEmergencyContacts person (notificationMessage person) "Emergency Contact Added" Notification.EMERGENCY_CONTACT_ADDED (Just message) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts
+  where
+    notificationMessage person = "You have been added as an emergency contact by " <> SLP.getName person <> "."
 
 getDefaultEmergencyNumbers :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
 getDefaultEmergencyNumbers (personId, _) = do
@@ -239,3 +287,58 @@ getDefaultEmergencyNumbers (personId, _) = do
 getUniquePersonByMobileNumber :: UpdateProfileDefaultEmergencyNumbersReq -> [PersonDefaultEmergencyNumber]
 getUniquePersonByMobileNumber req =
   nubBy ((==) `on` mobileNumber) req.defaultEmergencyNumbers
+
+data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
+  { shareEmergencyContacts :: Maybe Bool,
+    shareTripWithEmergencyContacts :: Maybe Bool,
+    nightSafetyChecks :: Maybe Bool,
+    hasCompletedSafetySetup :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type UpdateEmergencySettingsResp = APISuccess.APISuccess
+
+updateEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateEmergencySettingsReq -> m UpdateEmergencySettingsResp
+updateEmergencySettings personId req = do
+  personENList <- QPersonDEN.findAllByPersonId personId
+  let safetySetupCompleted = guard (req.hasCompletedSafetySetup == Just True) >> Just True
+  when (fromMaybe False req.shareEmergencyContacts && null personENList) do
+    throwError (InvalidRequest "Add atleast one emergency contact.")
+  void $
+    QPerson.updateEmergencyInfo
+      personId
+      req.shareEmergencyContacts
+      req.shareTripWithEmergencyContacts
+      req.nightSafetyChecks
+      safetySetupCompleted
+  pure APISuccess.Success
+
+data EmergencySettingsRes = EmergencySettingsRes
+  { shareEmergencyContacts :: Bool,
+    shareTripWithEmergencyContacts :: Bool,
+    hasCompletedMockSafetyDrill :: Bool,
+    nightSafetyChecks :: Bool,
+    hasCompletedSafetySetup :: Bool,
+    defaultEmergencyNumbers :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity],
+    enablePoliceSupport :: Bool,
+    localPoliceNumber :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+getEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> m EmergencySettingsRes
+getEmergencySettings personId = do
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
+  decPersonENList <- decrypt `mapM` personENList
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  return $
+    EmergencySettingsRes
+      { shareEmergencyContacts = person.shareEmergencyContacts,
+        shareTripWithEmergencyContacts = fromMaybe False person.shareTripWithEmergencyContacts,
+        nightSafetyChecks = person.nightSafetyChecks,
+        hasCompletedSafetySetup = person.hasCompletedSafetySetup,
+        defaultEmergencyNumbers = DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList,
+        enablePoliceSupport = riderConfig.enableLocalPoliceSupport,
+        localPoliceNumber = riderConfig.localPoliceNumber,
+        hasCompletedMockSafetyDrill = fromMaybe False person.hasCompletedMockSafetyDrill
+      }

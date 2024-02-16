@@ -14,12 +14,16 @@
 
 module Environment where
 
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import Domain.Types.ServerName
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Tools.Slack.Internal
+import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.SlidingWindowLimiter
@@ -29,6 +33,7 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
 import Tools.Metrics
+import Tools.Streaming.Kafka
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -40,7 +45,7 @@ data AppCfg = AppCfg
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     port :: Int,
-    migrationPath :: Maybe FilePath,
+    migrationPath :: [FilePath],
     autoMigrate :: Bool,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
@@ -54,8 +59,15 @@ data AppCfg = AppCfg
     encTools :: EncTools,
     exotelToken :: Text,
     dataServers :: [DataServer],
+    merchantUserAccountNumber :: Int,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    slackToken :: Text,
+    slackChannel :: Text,
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    cacheConfig :: CacheConfig,
+    kafkaProducerCfg :: KafkaProducerCfg,
+    kvConfigUpdateFrequency :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -85,9 +97,14 @@ data AppEnv = AppEnv
     authTokenCacheKeyPrefix :: Text,
     exotelToken :: Text,
     dataServers :: [DataServer],
+    merchantUserAccountNumber :: Int,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    slackEnv :: SlackEnv,
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
+    cacheConfig :: CacheConfig,
+    kafkaProducerTools :: KafkaProducerTools
   }
   deriving (Generic)
 
@@ -99,6 +116,8 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
+  slackEnv <- createSlackConfig slackToken slackChannel
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let modifierFunc = ("dashboard:" <>)
   let nonCriticalModifierFunc = ("dashboard:non-critical:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc
@@ -112,6 +131,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
   isShuttingDown <- mkShutdown
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

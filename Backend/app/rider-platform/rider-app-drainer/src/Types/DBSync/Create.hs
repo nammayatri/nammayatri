@@ -39,6 +39,7 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantPaymentMethod as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
+import qualified "rider-app" Storage.Beam.NextBillionData as NextBillionData
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment ()
 import qualified "rider-app" Storage.Beam.Person as Person
@@ -47,20 +48,13 @@ import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowS
 import qualified "rider-app" Storage.Beam.Quote as Quote
 import qualified "rider-app" Storage.Beam.Rating as Rating
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
-import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
+import qualified "rider-app" Storage.Beam.RentalDetails as RentalDetails
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
-import qualified "rider-app" Storage.Beam.Tickets.TicketBooking as TicketBooking
-import qualified "rider-app" Storage.Beam.Tickets.TicketBookingService as TicketBookingService
-import qualified "rider-app" Storage.Beam.Tickets.TicketBookingServicePriceBreakup as TicketBookingServicePriceBreakup
-import qualified "rider-app" Storage.Beam.Tickets.TicketPlace as TicketPlace
-import qualified "rider-app" Storage.Beam.Tickets.TicketService as TicketService
-import qualified "rider-app" Storage.Beam.Tickets.TicketServicePrice as TicketServicePrice
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
-import qualified "rider-app" Storage.Beam.Webengage as Webengage
 
 data DBCreateObject
   = AppInstallsObject AppInstalls.AppInstalls
@@ -98,7 +92,7 @@ data DBCreateObject
   | PersonFlowStatusObject PersonFlowStatus.PersonFlowStatus
   | QuoteObject Quote.Quote
   | RegistrationTokenObject RegistrationToken.RegistrationToken
-  | RentalSlabObject RentalSlab.RentalSlab
+  | RentalDetailsObject RentalDetails.RentalDetails
   | RatingObject Rating.Rating
   | RideObject Ride.Ride
   | SavedReqLocationObject SavedReqLocation.SavedReqLocation
@@ -106,18 +100,12 @@ data DBCreateObject
   | SosObject Sos.Sos
   | SpecialZoneQuoteObject SpecialZoneQuote.SpecialZoneQuote
   | TripTermsObject TripTerms.TripTerms
-  | WebengageObject Webengage.Webengage
   | FeedbackFormObject FeedbackForm.FeedbackForm
   | HotSpotConfigObject HotSpotConfig.HotSpotConfig
   | BecknRequestObject BecknRequest.BecknRequest
   | LocationObject Location.Location
   | LocationMappingObject LocationMapping.LocationMapping
-  | TicketBookingObject TicketBooking.TicketBooking
-  | TicketBookingServiceObject TicketBookingService.TicketBookingService
-  | TicketServiceObject TicketService.TicketService
-  | TicketServicePriceObject TicketServicePrice.TicketServicePrice
-  | TicketBookingServicePriceBreakupObject TicketBookingServicePriceBreakup.TicketBookingServicePriceBreakup
-  | TicketPlaceObject TicketPlace.TicketPlace
+  | NextBillionDataObject NextBillionData.NextBillionData
   deriving (Generic, FromJSON, ToJSON, Show)
 
 modelName :: DBCreateObject -> Text
@@ -156,7 +144,7 @@ modelName (PersonDefaultEmergencyNumberObject _) = "PersonDefaultEmergencyNumber
 modelName (PersonFlowStatusObject _) = "PersonFlowStatus"
 modelName (QuoteObject _) = "Quote"
 modelName (RegistrationTokenObject _) = "RegistrationToken"
-modelName (RentalSlabObject _) = "RentalSlab"
+modelName (RentalDetailsObject _) = "RentalDetails"
 modelName (RatingObject _) = "Rating"
 modelName (RideObject _) = "Ride"
 modelName (SavedReqLocationObject _) = "SavedReqLocation"
@@ -164,15 +152,9 @@ modelName (SearchRequestObject _) = "SearchRequest"
 modelName (SosObject _) = "Sos"
 modelName (SpecialZoneQuoteObject _) = "SpecialZoneQuote"
 modelName (TripTermsObject _) = "TripTerms"
-modelName (WebengageObject _) = "Webengage"
 modelName (FeedbackFormObject _) = "FeedbackForm"
 modelName (HotSpotConfigObject _) = "HotSpotConfig"
 modelName (BecknRequestObject _) = "BecknRequest"
 modelName (LocationObject _) = "Location"
 modelName (LocationMappingObject _) = "LocationMapping"
-modelName (TicketBookingObject _) = "TicketBooking"
-modelName (TicketBookingServiceObject _) = "TicketBookingService"
-modelName (TicketServiceObject _) = "TicketService"
-modelName (TicketServicePriceObject _) = "TicketServicePrice"
-modelName (TicketBookingServicePriceBreakupObject _) = "TicketBookingServicePriceBreakup"
-modelName (TicketPlaceObject _) = "TicketPlace"
+modelName (NextBillionDataObject _) = "NextBillionData"

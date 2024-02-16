@@ -37,7 +37,7 @@ onStatus ::
   SignatureAuthResult ->
   BecknCallbackReq OnStatus.OnStatusMessage ->
   FlowHandler AckResponse
-onStatus _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onStatus _ req = withFlowHandlerBecknAPI' . withTransactionIdLogTag req $ do
   validateContext Context.ON_STATUS $ req.context
   transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
   case req.contents of

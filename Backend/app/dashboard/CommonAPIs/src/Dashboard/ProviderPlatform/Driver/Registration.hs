@@ -35,7 +35,7 @@ data DriverRegistrationEndpoint
   | GenerateAadhaarOtpEndpoint
   | VerifyAadhaarOtpEndpoint
   | AuthEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverRegistrationEndpoint"
 

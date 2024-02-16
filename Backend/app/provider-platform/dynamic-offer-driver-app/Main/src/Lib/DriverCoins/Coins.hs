@@ -18,17 +18,27 @@ module Lib.DriverCoins.Coins
     getCoinAccumulationByDriverIdKey,
     setCoinAccumulationByDriverIdKey,
     getCoinsByDriverId,
+    getExpirationSeconds,
+    checkHasTakenValidRide,
+    incrementValidRideCount,
+    updateDriverCoins,
+    sendCoinsNotification,
   )
 where
 
-import Data.Time (UTCTime (utctDay))
+import qualified Data.Text as T
+import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory (CoinStatus (..))
 import qualified Domain.Types.Coins.CoinHistory as DTCC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
+import qualified Kernel.Beam.Functions as B
+import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Types as L
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis.Queries as Hedis
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -37,65 +47,61 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as DCQ
 import qualified Storage.Queries.Person as Person
-import Storage.Queries.Ride as Ride
+import qualified Storage.Queries.Translations as MTQuery
+import qualified Tools.Notifications as Notify
 
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
 
-mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
-mkCoinAccumulationByDriverIdKey driverId date = "DriverCoinBalance:DriverId:" <> driverId.getId <> ":" <> date
-
-getCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> m (Maybe Int)
-getCoinAccumulationByDriverIdKey driverId currentDate = Hedis.get (mkCoinAccumulationByDriverIdKey driverId currentDate)
-
-setCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> Int -> m ()
-setCoinAccumulationByDriverIdKey driverId currentDate count = do
-  void $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral count)
-  Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) 86400
-
-udpateCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> m ()
-udpateCoinsByDriverId driverId coinUpdateValue = do
+getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
+getCoinsByDriverId driverId timeDiffFromUtc = do
   now <- getCurrentTime
-  let currentDate = show $ utctDay now
-  void $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue)
-
-getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m Int
-getCoinsByDriverId driverId = do
-  now <- getCurrentTime
-  let currentDate = show $ utctDay now
+  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+  let currentDate = show $ utctDay istTime
+  expirationPeriod <- getExpirationSeconds timeDiffFromUtc
   coinKeyExists <- getCoinAccumulationByDriverIdKey driverId currentDate
   case coinKeyExists of
     Just coinBalance -> pure coinBalance
     Nothing -> do
-      totalCoins <- CHistory.getTotalCoins driverId
+      totalCoins <- CHistory.getTotalCoins driverId (secondsToNominalDiffTime timeDiffFromUtc)
       let coinBalance = sum $ map (\coinHistory -> coinHistory.coins - coinHistory.coinsUsed) totalCoins
       Hedis.whenWithLockRedis (mkCoinAccumulationByDriverIdKey driverId currentDate) 60 $ do
-        setCoinAccumulationByDriverIdKey driverId currentDate coinBalance
+        setCoinAccumulationByDriverIdKey driverId currentDate coinBalance expirationPeriod
       pure coinBalance
+
+updateCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Seconds -> m ()
+updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
+  now <- getCurrentTime
+  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+  let currentDate = show $ utctDay istTime
+  expirationPeriod <- getExpirationSeconds timeDiffFromUtc
+  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue)
+  Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
+
+updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Seconds -> m ()
+updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
+  driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  void $ Person.updateTotalEarnedCoins driverId (finalCoinsValue + driver.totalEarnedCoins)
+  updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
 
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> m ()
 driverCoinsEvent driverId merchantId merchantOpCityId eventType = do
   logDebug $ "Driver Coins Event Triggered for merchantOpCityId - " <> merchantOpCityId.getId <> " and driverId - " <> driverId.getId
+  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   coinConfiguration <- DCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId
-  finalCoinsValue <- sum <$> forM coinConfiguration (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins)
-  updateDriverCoins driverId finalCoinsValue
+  finalCoinsValue <- sum <$> forM coinConfiguration (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig)
+  updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
-updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> m ()
-updateDriverCoins driverId finalCoinsValue = do
-  driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  void $ Person.updateTotalEarnedCoins driverId (finalCoinsValue + driver.totalEarnedCoins)
-  udpateCoinsByDriverId driverId finalCoinsValue
-
-calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> m Int
-calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins = do
+calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
+calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig = do
   case eventType of
-    DCT.Rating {..} -> handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance eventFunction mbexpirationTime numCoins
-    DCT.EndRide {..} -> handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ eventFunction mbexpirationTime numCoins
-    DCT.DriverToCustomerReferral {..} -> handleDriverReferral driverId merchantId merchantOpCityId chargeableDistance eventFunction mbexpirationTime numCoins
-    DCT.Cancellation {..} -> handleCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup eventFunction mbexpirationTime numCoins
+    DCT.Rating {..} -> handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance eventFunction mbexpirationTime numCoins transporterConfig
+    DCT.EndRide {..} -> handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ eventFunction mbexpirationTime numCoins transporterConfig
+    DCT.DriverToCustomerReferral {..} -> handleDriverReferral driverId merchantId merchantOpCityId chargeableDistance eventFunction mbexpirationTime numCoins transporterConfig
+    DCT.Cancellation {..} -> handleCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup eventFunction mbexpirationTime numCoins transporterConfig
     _ -> pure 0
 
-handleRating :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> m Int
-handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance eventFunction mbexpirationTime numCoins = do
+handleRating :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
+handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance eventFunction mbexpirationTime numCoins _ = do
   logDebug $ "Driver Coins Handle Rating Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.OneOrTwoStarRating ->
@@ -112,36 +118,33 @@ handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
     _ -> pure 0
 
-handleEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> m Int
-handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ eventFunction mbexpirationTime numCoins = do
+handleEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
+handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ eventFunction mbexpirationTime numCoins _ = do
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
+  validRideTaken <- checkHasTakenValidRide (Just chargeableDistance_)
   case eventFunction of
-    DCT.RideCompleted ->
+    DCT.RideCompleted -> do
       runActionWhenValidConditions
-        [ checkHasTakenValidRide (Just chargeableDistance_)
+        [ pure validRideTaken
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
     DCT.EightPlusRidesInOneDay -> do
-      now <- getCurrentTime
-      transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      let dateInIst = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) now
-      rideList <- Ride.findTotalRidesInDay driverId dateInIst
-      let totalRides = length rideList
+      validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
       runActionWhenValidConditions
-        [ pure (totalRides > 8),
-          checkHasTakenValidRide (Just chargeableDistance_)
+        [ pure (validRideCount == 8),
+          pure validRideTaken
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
     DCT.PurpleRideCompleted ->
       runActionWhenValidConditions
         [ pure isDisabled,
-          checkHasTakenValidRide (Just chargeableDistance_)
+          pure validRideTaken
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
     _ -> pure 0
 
-handleDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> m Int
-handleDriverReferral driverId merchantId merchantOpCityId chargeableDistance eventFunction mbexpirationTime numCoins = do
+handleDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
+handleDriverReferral driverId merchantId merchantOpCityId chargeableDistance eventFunction mbexpirationTime numCoins _ = do
   logDebug $ "Driver Coins Handle Referral Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.DriverReferral ->
@@ -151,12 +154,11 @@ handleDriverReferral driverId merchantId merchantOpCityId chargeableDistance eve
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
     _ -> pure 0
 
-handleCancellation :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe Meters -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> m Int
-handleCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup eventFunction mbexpirationTime numCoins = do
+handleCancellation :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe Meters -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
+handleCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup eventFunction mbexpirationTime numCoins transporterConfig = do
   logDebug $ "Driver Coins Handle Cancellation Event Triggered - " <> show eventFunction
   now <- getCurrentTime
   let timeDiff = diffUTCTime now rideStartTime
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case eventFunction of
     DCT.BookingCancellation -> do
       let validConditions = case (intialDisToPickup, cancellationDisToPickup) of
@@ -182,9 +184,8 @@ updateEventAndGetCoinsvalue :: EventFlow m r => Id DP.Person -> Id DM.Merchant -
 updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins = do
   now <- getCurrentTime
   uuid <- generateGUIDText
-  -- Extract the integer value from maybeExpirationTime
-  let expiryTime = (\expirationTime -> addUTCTime (fromIntegral expirationTime) now) <$> mbexpirationTime
-  let status_ = if numCoins > 0 then Remaining else Used
+  let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
+      status_ = if numCoins > 0 then Remaining else Used
   let driverCoinEvent =
         DTCC.CoinHistory
           { id = Id uuid,
@@ -195,11 +196,31 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
             coins = numCoins,
             status = status_,
             createdAt = now,
+            updatedAt = now,
             expirationAt = expiryTime,
-            coinsUsed = 0
+            coinsUsed = 0,
+            bulkUploadTitle = Nothing
           }
   CHistory.updateCoinEvent driverCoinEvent
+  when (numCoins > 0) $ do
+    sendCoinsNotification merchantOpCityId driverId numCoins
   pure numCoins
+
+sendCoinsNotification :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> m ()
+sendCoinsNotification merchantOpCityId driverId coinsValue =
+  B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
+    let language = fromMaybe L.ENGLISH driver.language
+     in MTQuery.findByErrorAndLanguage (T.pack (show DCT.CoinAdded)) language >>= processMessage driver
+  where
+    processMessage driver mbCoinsMessage =
+      case mbCoinsMessage of
+        Just coinsMessage ->
+          case T.splitOn " | " coinsMessage.message of
+            [title, description] ->
+              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title (replaceCoinsValue description) driverId (driver.deviceToken)
+            _ -> logDebug "Invalid message format."
+        Nothing -> logDebug "Could not find Translations."
+    replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
 
 checkHasTakenValidRide :: (MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) => Maybe Meters -> m Bool
 checkHasTakenValidRide chargeableDistance = do
@@ -210,3 +231,39 @@ checkHasTakenValidRide chargeableDistance = do
         Just meters -> meters >= distance
         Nothing -> False
     Nothing -> False
+
+getExpirationSeconds :: MonadFlow m => Seconds -> m Int
+getExpirationSeconds timeDiffFromUtc = do
+  now <- getCurrentTime
+  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+  let expirationSeconds = round $ diffUTCTime (UTCTime (addDays 1 $ utctDay istTime) 0) istTime -- expire at 12:00 AM IST
+  pure expirationSeconds
+
+incrementValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
+incrementValidRideCount driverId expirationPeriod incrementValue = do
+  validRideCountKeyExists <- getValidRideCountByDriverIdKey driverId
+  case validRideCountKeyExists of
+    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
+    Nothing -> setValidRideCountByDriverIdKey driverId expirationPeriod incrementValue
+
+mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
+mkCoinAccumulationByDriverIdKey driverId date = "DriverCoinBalance:DriverId:" <> driverId.getId <> ":" <> date
+
+getCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> m (Maybe Int)
+getCoinAccumulationByDriverIdKey driverId currentDate = Hedis.withCrossAppRedis $ Hedis.get (mkCoinAccumulationByDriverIdKey driverId currentDate)
+
+setCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> Int -> Int -> m ()
+setCoinAccumulationByDriverIdKey driverId currentDate count expirationPeriod = do
+  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral count)
+  Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
+
+mkValidRideCountByDriverIdKey :: Id DP.Person -> Text
+mkValidRideCountByDriverIdKey driverId = "DriverValidRideCount:DriverId:" <> driverId.getId
+
+getValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
+getValidRideCountByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdKey driverId)
+
+setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
+setValidRideCountByDriverIdKey driverId expirationPeriod count = do
+  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
+  Hedis.withCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod

@@ -15,11 +15,11 @@
 
 module Main where
 
-import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void, discard)
+import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void, discard, identity)
 import Data.Either (Either(..))
 import Effect (Effect)
 import Effect.Aff (killFiber, launchAff, launchAff_)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable, setEventTimestamp)
 import AssetsProvider (fetchAssets)
 import Flow as Flow
 import Control.Monad.Except.Trans (runExceptT)
@@ -33,7 +33,7 @@ import Common.Types.App (GlobalPayload, Event, FCMBundleUpdate)
 import Types.App (defaultGlobalState)
 import Effect.Class (liftEffect)
 import Control.Monad.Except (runExcept)
-import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Maybe (fromMaybe, Maybe(..), maybe)
 import Screens.Types (AllocationData)
 import Types.ModifyScreenState (modifyScreenState)
 import Types.App (FlowBT, ScreenType(..))
@@ -44,15 +44,20 @@ import Data.Function.Uncurried (runFn2)
 import Screens (ScreenName(..)) as ScreenNames
 import Data.Array as DA
 import Effect.Uncurried (runEffectFn1)
+import Screens.Types as ST
+import Common.Types.App as Common
+import Storage (KeyStore(..), setValueToLocalStore)
 
 main :: Event -> Effect Unit
 main event = do
   mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
+    liftFlow $ setEventTimestamp "main_purs"
     _ <- runExceptT $ runBackT $ updateEventData event
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow true Nothing
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event
+  JBridge.storeMainFiberOb mainFiber
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
   pure unit
 
@@ -97,7 +102,9 @@ onConnectivityEvent triggertype = do
     _ ← runExceptT $ runBackT $ case triggertype of
       "LOCATION_DISABLED" -> Flow.noInternetScreenFlow triggertype
       "INTERNET_ACTION" -> Flow.noInternetScreenFlow triggertype
-      "REFRESH" -> Flow.baseAppFlow false Nothing
+      "REFRESH" -> do
+        void $ restorePreviousState
+        Flow.baseAppFlow false Nothing
       "CHECK_NETWORK_TIME" ->  Flow.checkTimeSettings
       _ -> Flow.baseAppFlow false Nothing
     pure unit
@@ -118,6 +125,10 @@ onNewIntent event = do
     _ ← runExceptT $ runBackT $ case event.type of
       "DEEP_VIEW_NEW_INTENT" -> Flow.baseAppFlow false (Just event)
       "DEEP_VIEW" -> Flow.baseAppFlow true (Just event)
+      "REFERRAL" -> setValueToLocalStore REFERRER_URL event.data
+      "REFERRAL_NEW_INTENT" -> do
+        setValueToLocalStore REFERRER_URL event.data
+        Flow.baseAppFlow true Nothing
       _ -> Flow.baseAppFlow false Nothing
     pure unit
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
@@ -130,3 +141,8 @@ updateEventData event = do
       "NEW_MESSAGE" -> modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> notificationScreen{ selectedNotification = Just event.data, deepLinkActivated = true })
       "PAYMENT_MODE_MANUAL" -> modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {callScreen = ScreenNames.SUBSCRIPTION_SCREEN})
       _ -> pure unit
+
+restorePreviousState :: FlowBT String Unit
+restorePreviousState = do
+  let popupType = maybe ST.NO_POPUP_VIEW identity (runFn2 Utils.getPopupType Just Nothing)
+  modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = popupType})

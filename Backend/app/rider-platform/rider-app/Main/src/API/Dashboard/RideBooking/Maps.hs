@@ -27,12 +27,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Error.FlowHandling
 import Servant
 import SharedLogic.Merchant
+import Storage.Beam.SystemConfigs ()
 
 data MapEndPoints
   = AutoCompleteEndPoint
   | GetPlaceDetailsEndPoints
   | GetPlaceNameEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "MapEndPoints"
 

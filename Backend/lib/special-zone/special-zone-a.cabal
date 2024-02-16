@@ -26,10 +26,13 @@ flag Local
 
 library
   exposed-modules:
+      Lib.Queries.GateInfo
       Lib.Queries.SpecialLocation
       Lib.Queries.SpecialLocationPriority
+      Lib.Tabular.GateInfo
       Lib.Tabular.SpecialLocation
       Lib.Tabular.SpecialLocationPriority
+      Lib.Types.GateInfo
       Lib.Types.SpecialLocation
       Lib.Types.SpecialLocationPriority
   other-modules:

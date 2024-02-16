@@ -17,6 +17,7 @@ module Screens.NotificationsScreen.Controller where
 
 import Prelude
 
+import Common.Types.App (YoutubeData)
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.ErrorModal as ErrorModalController
 import Components.NotificationCard.Controller as NotificationCardAC
@@ -27,15 +28,18 @@ import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), union, length, unionBy, any, filter) as Array
+import Data.Function.Uncurried (runFn5)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
 import Data.String.CodeUnits (charAt)
-import Debug (spy)
+import PrestoDOM.Core (getPushFn)
 import Effect.Aff (launchAff)
-import Helpers.Utils (getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
+import Effect.Uncurried (runEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner, getImageUrl)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer)
+import Helpers.Utils (getTimeStampString, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer, removeMediaPlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
@@ -48,6 +52,8 @@ import Types.App (defaultGlobalState)
 import Effect.Unsafe (unsafePerformEffect)
 import Data.Function.Uncurried (runFn3)
 import Common.Types.App(YoutubeData)
+import PrestoDOM.List as PrestoList
+import Common.Styles.Colors as Color
 
 instance showAction :: Show Action where
   show _ = ""
@@ -66,6 +72,7 @@ data ScreenOutput
   | GoToProfileScreen
   | GoToCurrentRideFlow
   | SubscriptionScreen NotificationsScreenState
+  | EarningsScreen
 
 data Action
   = OnFadeComplete String
@@ -80,6 +87,7 @@ data Action
   | NoAction
   | LoadMore
   | BottomNavBarAction BottomNavBar.Action
+  | YoutubeVideoStatus String
 
 eval :: Action -> NotificationsScreenState -> Eval Action ScreenOutput NotificationsScreenState
 eval Refresh state = exit $ RefreshScreen state
@@ -88,15 +96,16 @@ eval BackPressed state = do
   if state.notifsDetailModelVisibility == VISIBLE && state.notificationDetailModelState.addCommentModelVisibility == GONE then
     continueWithCmd state { notifsDetailModelVisibility = GONE }
       [ do
-          _ <- pure $ runFn3 setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") $ show PAUSE
-          _ <- removeMediaPlayer ""
+          push <- getPushFn Nothing "NotificationDetailModel"
+          _ <- pure $ runFn5 setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") (show PAUSE) push YoutubeVideoStatus
+          void $ runEffectFn1 removeMediaPlayer ""
           _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
           pure NoAction
       ]
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
     continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing} }
   else
-    exit $ if state.deepLinkActivated then GoToCurrentRideFlow else GoBack
+    exit $ if state.deepLinkActivated then GoToCurrentRideFlow else GoToHomeScreen
 
 
 eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
@@ -235,23 +244,27 @@ eval LoadMore state = do
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
   case item of
     "Home" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToHomeScreen
     "Rides" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToRidesScreen
+    "Earnings" -> do
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit EarningsScreen
     "Profile" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToProfileScreen
     "Rankings" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit $ GoToReferralScreen
     "Join" -> do 
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
     _ -> continue state
@@ -319,6 +332,7 @@ propValueTransformer notificationArray =
       ( \(MessageAPIEntityResponse notificationItem) ->
           let
             (MediaFileApiResponse media) = (fromMaybe dummyMedia ((notificationItem.mediaFiles) Array.!! 0))
+            videoThumbnail = getImageUrl $ media.url
           in
             { mediaUrl: toPropValue $ media.url
             , description: toPropValue $ notificationCardDesc notificationItem.description
@@ -340,21 +354,22 @@ propValueTransformer notificationArray =
             , imageUrl:
                 toPropValue
                   $ case media.fileType of
-                      VideoLink -> getImageUrl $ media.url
-                      PortraitVideoLink -> getImageUrl media.url
+                      VideoLink -> PrestoList.renderImageSource $ PrestoList.ImageUrl videoThumbnail "ny_ic_play_no_background"
+                      PortraitVideoLink -> PrestoList.renderImageSource $ PrestoList.ImageUrl videoThumbnail "ny_ic_play_no_background"
                       Video -> ""
                       ImageLink -> ""
                       Image -> ""
                       AudioLink -> "ny_ic_audio_file"
                       Audio -> "ny_ic_audio_file"
             , previewImage: toPropValue $ if media.fileType == Image then "visible" else "gone"
-            , imageVisibility : toPropValue $ if media.fileType /= Image then "visible" else "gone"
+            , imageVisibility : toPropValue $ if (media.fileType /= Image && media.fileType /= ImageLink) then "visible" else "gone"
             , previewImageTitle: toPropValue "Preview Image"
             , messageId: toPropValue notificationItem.messageId
-            , imageWithUrl : toPropValue media.url
+            , imageWithUrl : toPropValue $ PrestoList.renderImageSource $ PrestoList.ImageUrl media.url "ny_ic_play_no_background"
             , imageWithUrlVisibility : toPropValue $ if media.fileType == ImageLink then "visible" else "gone"
             , likeCount : toPropValue $ parseNumber $ notificationItem.likeCount
             , viewCount : toPropValue $ parseNumber $ notificationItem.viewCount
+            , backgroundHolder : toPropValue Color.white900
             }
       )
       notificationArray
@@ -377,6 +392,8 @@ youtubeData =
   , videoId: ""
   , videoType: ""
   , videoHeight : 0
+  , showFullScreen : false
+  , hideFullScreenButton : false
   }
 
 splitUrlsAndText :: String -> Array String

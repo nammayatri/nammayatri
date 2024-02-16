@@ -73,6 +73,8 @@ dependencies:
   - template-haskell
   - euler-hs
   - stm
+  - unordered-containers
+  - containers
 
 ghc-options:
   - -Wall

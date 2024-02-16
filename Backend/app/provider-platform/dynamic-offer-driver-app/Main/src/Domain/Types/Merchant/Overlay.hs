@@ -30,6 +30,7 @@ data OverlayCondition
   | PaymentOverdueBetween Int Int
   | FreeTrialDaysLeft Int
   | InvoiceGenerated PaymentMode
+  | BlockedDrivers
   | InactiveAutopay
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -54,7 +55,8 @@ data OverlayD (s :: UsageSafety) = Overlay
     contactSupportNumber :: Maybe Text,
     toastMessage :: Maybe Text,
     secondaryActions :: Maybe [Text],
-    socialMediaLinks :: Maybe [FCM.FCMMediaLink]
+    socialMediaLinks :: Maybe [FCM.FCMMediaLink],
+    showPushNotification :: Maybe Bool
   }
   deriving (Generic, Show)
 

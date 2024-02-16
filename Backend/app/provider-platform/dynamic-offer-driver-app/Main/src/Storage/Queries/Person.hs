@@ -30,6 +30,7 @@ import Domain.Types.DriverLocation as DriverLocation
 import qualified Domain.Types.DriverLocation as DDL
 import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.Merchant hiding (MerchantAPIEntity)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as DV
@@ -81,7 +82,8 @@ findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 
 findAllDriversWithInfoAndVehicle ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id Merchant ->
+  Merchant ->
+  DMOC.MerchantOperatingCity ->
   Int ->
   Int ->
   Maybe Bool ->
@@ -91,7 +93,7 @@ findAllDriversWithInfoAndVehicle ::
   Maybe DbHash ->
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
+findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
   dbConf <- getMasterBeamConfig
   result <- L.runDB dbConf $
     L.findRows $
@@ -100,7 +102,8 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
           B.offset_ (fromIntegral offsetVal) $
             B.filter_'
               ( \(person, driverInfo, vehicle) ->
-                  person.merchantId B.==?. B.val_ (getId merchantId)
+                  person.merchantId B.==?. B.val_ (getId merchant.id)
+                    B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehNum -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rNo -> B.sqlBool_ (B.like_ rNo (B.val_ ("%" <> vehNum <> "%")))) vehicle.registrationNo) mbVehicleNumberSearchString
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInfo.enabled B.==?. B.val_ enabled) mbEnabled
@@ -248,9 +251,9 @@ data DriverWithRidesCount = DriverWithRidesCount
 mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
 mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
 
-fetchDriverInfoWithRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
-fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
-  mbDriverInfo <- fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash
+fetchDriverInfoWithRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
+  mbDriverInfo <- fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash
   addRidesCount `mapM` mbDriverInfo
   where
     addRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
@@ -266,8 +269,8 @@ fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleN
       let ridesCount = either (const (Just 0)) (snd <$>) resp
       pure (mkDriverWithRidesCount (person, info, vehicle, ridesCount))
 
-fetchDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
-fetchDriverInfo (Id merchantId) mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
+fetchDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
+fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = do
   dbConf <- getMasterBeamConfig
   now <- getCurrentTime
   result <- L.runDB dbConf $
@@ -275,7 +278,8 @@ fetchDriverInfo (Id merchantId) mbMobileNumberDbHashWithCode mbVehicleNumber mbD
       B.select $
         B.filter_'
           ( \(person, _driverInfo, vehicle, driverLicense, _driverRCAssociation, vehicleRegistrationCertificate) ->
-              person.merchantId B.==?. B.val_ merchantId
+              person.merchantId B.==?. B.val_ merchant.id.getId
+                B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId moCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == moCity.city))))
                 B.&&?. person.role B.==?. B.val_ Person.DRIVER
                 B.&&?. maybe
                   (B.sqlBool_ $ B.val_ True)
@@ -348,34 +352,6 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id mercha
           Se.Is BeamP.merchantId $ Se.Eq merchantId
         ]
     ]
-
-findAllDriverIdExceptProvided :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Driver] -> m [Id Driver]
-findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
-  dbConf <- getMasterBeamConfig
-  result <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.filter_'
-          ( \(person, driverInfo) ->
-              person.merchantId B.==?. B.val_ merchantId
-                B.&&?. driverInfo.verified B.==?. B.val_ True
-                B.&&?. driverInfo.enabled B.==?. B.val_ True
-                B.&&?. driverInfo.blocked B.==?. B.val_ False
-                B.&&?. B.sqlBool_ (B.not_ (driverInfo.driverId `B.in_` (B.val_ . getId <$> driverIdsToBeExcluded)))
-          )
-          do
-            person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
-            driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\info' -> BeamP.id person B.==?. BeamDI.driverId info')
-            pure (person, driverInfo)
-  case result of
-    Right x -> do
-      let persons = fmap fst x
-      p <- catMaybes <$> mapM fromTType' persons
-      pure (personIdToDrivrId . (Person.id :: PersonE e -> Id Person) <$> p)
-    Left _ -> pure []
-  where
-    personIdToDrivrId :: Id Person -> Id Driver
-    personIdToDrivrId = cast
 
 updateMerchantIdAndMakeAdmin :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Merchant -> m ()
 updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
@@ -517,3 +493,6 @@ updateTotalEarnedCoins (Id driverId) coinValue = updateWithKV [Se.Set BeamP.tota
 
 updateUsedCoins :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Int -> m ()
 updateUsedCoins (Id driverId) usedCoinValue = updateWithKV [Se.Set BeamP.usedCoins usedCoinValue] [Se.Is BeamP.id $ Se.Eq driverId]
+
+updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantOperatingCityId (Id driverId) (Id opCityId) = updateWithKV [Se.Set BeamP.merchantOperatingCityId (Just opCityId)] [Se.Is BeamP.id $ Se.Eq driverId]

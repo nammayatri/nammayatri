@@ -15,18 +15,23 @@
 module API.Beckn.OnSearch (API, handler) where
 
 import qualified Beckn.ACL.OnSearch as TaxiACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
+import qualified BecknV2.OnDemand.Utils.Common as Utils
+import Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 
 type API =
-  SignatureAuth "X-Gateway-Authorization"
-    :> OnSearch.OnSearchAPI
+  SignatureAuth 'Domain.MOBILITY "X-Gateway-Authorization"
+    :> OnSearch.OnSearchAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onSearch
@@ -34,17 +39,24 @@ handler = onSearch
 onSearch ::
   SignatureAuthResult ->
   SignatureAuthResult ->
-  OnSearch.OnSearchReq ->
+  OnSearch.OnSearchReqV2 ->
   FlowHandler AckResponse
-onSearch _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
-  whenJust mbDOnSearchReq $ \request -> do
-    Redis.whenWithLockRedis (onSearchLockKey req.context.message_id) 60 $ do
-      validatedRequest <- DOnSearch.validateRequest request
-      fork "on search processing" $ do
-        Redis.whenWithLockRedis (onSearchProcessingLockKey req.context.message_id) 60 $
-          DOnSearch.onSearch req.context.message_id validatedRequest
-  pure Ack
+onSearch _ _ reqV2 = withFlowHandlerBecknAPI do
+  transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
+  mbDOnSearchReq <- Utils.withTransactionIdLogTag transactionId $ TaxiACL.buildOnSearchReqV2 reqV2
+  messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
+  txnId <- Utils.getTransactionId reqV2.onSearchReqContext
+
+  Utils.withTransactionIdLogTag txnId $ do
+    logInfo $ "OnSearch received:-" <> show reqV2
+
+    whenJust mbDOnSearchReq $ \request -> do
+      Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
+        validatedRequest <- DOnSearch.validateRequest request
+        fork "on search processing" $ do
+          Redis.whenWithLockRedis (onSearchProcessingLockKey messageId) 60 $
+            DOnSearch.onSearch messageId validatedRequest
+    pure Ack
 
 onSearchLockKey :: Text -> Text
 onSearchLockKey id = "Customer:OnSearch:MessageId-" <> id

@@ -27,10 +27,10 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getCityConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (/), (<<<), (<>), (==), (||))
 import Prelude (show, (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, hint, horizontalScrollView, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarX, scrollView, stroke, text, textSize, textView, visibility, weight, width)
@@ -39,6 +39,8 @@ import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Styles.Colors as Colors
+import Storage(getValueToLocalStore , KeyStore(..))
+import ConfigProvider
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -252,7 +254,7 @@ tripDetailsView state =
       , gravity RIGHT
       , orientation VERTICAL
       ][  textView $
-          [ text $ (getValueFromConfig "currency") <> ( show state.data.totalAmount)
+          [ text $ (getCurrency appConfig) <> ( show state.data.totalAmount)
           , color Color.black
           ] <> FontStyle.body14 TypoGraphy
         , textView $
@@ -482,4 +484,10 @@ getVehicleImage state = case getMerchant FunctionCall of
                                           "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto1"
                                           _               -> fetchImage FF_ASSET "ic_vehicle_front"
                           YATRISATHI -> getVehicleVariantImage state.data.vehicleType
-                          _           -> fetchImage FF_ASSET  "ic_vehicle_front"
+                          _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+                        
+                        where
+                          mkAsset cityConfig =
+                            if cityConfig.cityCode == "std:040" 
+                              then fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+                              else fetchImage FF_ASSET "ic_vehicle_front" 

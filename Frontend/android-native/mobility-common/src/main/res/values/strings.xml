@@ -15,4 +15,7 @@
     <string name="driver_receipt_downloaded">Driver Receipt Downloaded!!!</string>
     <string name="driver_receipt_for_your_ride_is_downloaded">Driver Receipt for your ride is downloaded!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">Invoice for your ride is downloaded!!!</string>
+    <string name="upload_image">Upload Image</string>
+    <string name="TIME_STAMP_FILE_UPLOAD" translatable="false">TIME_STAMP_FILE_UPLOAD</string>
+    <string name="please_allow_permission_to_capture_the_image">Please allow permissions to capture the image</string>
 </resources>

@@ -221,7 +221,7 @@ type LayoutBound =
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
 
@@ -234,33 +234,6 @@ type ClevertapEventParams = {
   key :: String ,
   value :: Foreign
 }
-
-data PaymentStatus = Success | Pending | Failed | Scheduled
-
-derive instance genericPaymentStatus :: Generic PaymentStatus _
-instance standardEncodePaymentStatus :: StandardEncode PaymentStatus where standardEncode _ = standardEncode {}
-instance showPaymentStatus :: Show PaymentStatus where show = genericShow
-instance decodePaymentStatus :: Decode PaymentStatus where decode = defaultDecode
-instance encodePaymentStatus  :: Encode PaymentStatus where encode = defaultEncode
-instance eqPaymentStatus :: Eq PaymentStatus where eq = genericEq
-
-data APIPaymentStatus =  NEW
-                      | PENDING_VBV
-                      | CHARGED
-                      | AUTHENTICATION_FAILED 
-                      | AUTHORIZATION_FAILED
-                      | JUSPAY_DECLINED
-                      | AUTHORIZING
-                      | COD_INITIATED
-                      | STARTED
-                      | AUTO_REFUNDED
-
-derive instance genericAPIPaymentStatus :: Generic APIPaymentStatus _
-instance showAPIPaymentStatus :: Show APIPaymentStatus where show = genericShow
-instance decodeAPIPaymentStatus :: Decode APIPaymentStatus where decode = defaultEnumDecode
-instance encodeAPIPaymentStatus  :: Encode APIPaymentStatus where encode = defaultEnumEncode
-instance eqAPIPaymentStatus :: Eq APIPaymentStatus where eq = genericEq
-instance standardEncodeAPIPaymentStatus :: StandardEncode APIPaymentStatus where standardEncode _ = standardEncode {}
 
 type DateObj = {
   date :: Int
@@ -330,6 +303,8 @@ type YoutubeData = {
   , videoId :: String
   , videoType :: String
   , videoHeight :: Int
+  , showFullScreen :: Boolean
+  , hideFullScreenButton :: Boolean
 }
 
 type FCMBundleUpdate = {
@@ -411,3 +386,73 @@ type MarginConfig = {
   bottom :: Int,
   left :: Int
 }
+
+type CarouselHolderData = {
+  id :: Int
+, shouldPush :: Boolean
+}
+
+type CategoryListType = {
+    categoryName :: String
+  , categoryImageUrl :: String
+  , categoryAction :: String
+  , categoryId :: String
+  }
+
+type DisplayBase64ImageConig = {
+    source :: String
+  , id :: String
+  , scaleType :: String
+  , inSampleSize :: Int -- reduce image qulaity by this factor (highValue = low quality)
+}
+
+type CircleRippleConfig = {
+  delay :: Int
+, duration :: Int
+, pause :: Int
+, repeatMode :: Int
+, count :: Int
+, radius :: Number
+, maxRadius :: Number
+, strokeWidth :: Number
+, maxStrokeWidth :: Number
+, fromStrokeColor :: String
+, toStrokeColor :: String
+, prefix :: String
+, center :: Paths
+}
+
+type GroundOverlayConfig = {
+  id :: String
+, height :: Int
+, width :: Int
+, imageUrl :: String
+, fetchFromView :: Boolean
+, viewId :: String
+, center :: Paths
+}
+
+type MarkerLabelConfig = {
+  id :: String
+, title :: String
+, actionImage :: String
+, actionCallBack :: String
+, position :: Paths
+, markerImage :: String
+}
+
+
+type Paths = {
+    lat :: Number
+  , lng :: Number
+}
+
+data SosStatus = Pending | Resolved | NotResolved
+
+derive instance genericSosStatus :: Generic SosStatus _
+instance standardEncodeSosStatus :: StandardEncode SosStatus where standardEncode _ = standardEncode {}
+instance showSosStatus :: Show SosStatus where show = genericShow
+instance decodeSosStatus :: Decode SosStatus where decode = defaultEnumDecode
+instance encodeSosStatus  :: Encode SosStatus where encode = defaultEnumEncode
+instance eqSosStatus :: Eq SosStatus where eq = genericEq
+

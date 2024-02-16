@@ -15,13 +15,16 @@
 
 module Resource.Constants where
 
-import Prelude ((==), (&&), (<>))
-import Data.String (trim)
-import Services.API (LocationInfo(..))
-import Data.Maybe (fromMaybe, Maybe(..))
+import Common.Types.App as Common
 import Data.Array as DA
+import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..), split, toLower)
+import Data.String (trim)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude ((==), (&&), (<>))
 import Screens.Types as ST
+import Services.API (LocationInfo(..))
 
 type Language =
     {
@@ -35,7 +38,8 @@ getLanguages =
         {name:"English",value:"EN_US"},
         {name:"ಕನ್ನಡ",value:"KN_IN"},
         {name:"हिन्दी",value :"HI_IN"},
-        {name:"தமிழ்",value :"TA_IN"}
+        {name:"தமிழ்",value :"TA_IN"},
+        {name:"తెలుగు", value : "TE_IN"}
     ]
 
 decodeAddress :: LocationInfo -> Boolean -> String

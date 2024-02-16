@@ -14,9 +14,11 @@ import Kernel.Utils.Common
 
 data IssueReport = IssueReport
   { id :: Id IssueReport,
+    shortId :: Maybe (ShortId IssueReport),
     personId :: Id Person,
     driverId :: Maybe (Id Person),
     rideId :: Maybe (Id Ride),
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
     description :: Text,
     assignee :: Maybe Text,
     status :: IssueStatus,

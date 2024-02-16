@@ -22,6 +22,7 @@
     var newScript = document.createElement('script');
     newScript.type = 'text/javascript';
     newScript.id = 'socket';
+	window.prevTimeStamp = Date.now();
     newScript.src = url + '/dist/index_bundle.js';
     headID.appendChild(newScript);
 

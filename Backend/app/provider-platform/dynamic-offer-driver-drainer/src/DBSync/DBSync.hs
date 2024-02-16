@@ -17,6 +17,8 @@ import EulerHS.Language (runIO)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
 import qualified EulerHS.Types as ET
+import GHC.Float (int2Double)
+import Kafka.Producer as KafkaProd
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import Types.Config
 import Types.DBSync
@@ -196,7 +198,12 @@ process dbStreamKey count = do
       pure 0
     Right Nothing -> do
       pure 0
-    Right (Just c) -> run c
+    Right (Just c) -> do
+      res <- run c
+      _afterProcess <- EL.getCurrentDateInMillis
+      void $ publishProcessLatency "QueryExecutionTime" (int2Double (_afterProcess - _beforeProcess))
+      void flushKafkaProducerAndPublishMetrics
+      pure res
   where
     {- Let's try to decode and run the commands -}
     {- time taken to process batch -}
@@ -247,7 +254,11 @@ startDBSync = do
           }
   forever $ do
     stopRequested <- EL.runIO $ isJust <$> tryTakeMVar readinessFlag
-    EL.runIO $ when stopRequested shutDownHandler
+    -- EL.runIO $ when stopRequested shutDownHandler
+    when stopRequested $ do
+      EL.logInfo ("RECEIVED SIGINT/SIGTERM" :: Text) "Stopping the driver drainer after flushing the kafka producer"
+      void flushKafkaProducerAndPublishMetrics
+      EL.runIO shutDownHandler
 
     StateRef
       { _config = config,
@@ -286,3 +297,12 @@ startDBSync = do
           then pure ()
           else EL.runIO $ delay waitTime
       pure history'
+
+flushKafkaProducerAndPublishMetrics :: Flow ()
+flushKafkaProducerAndPublishMetrics = do
+  Env {..} <- ask
+  _beforeFlush <- EL.getCurrentDateInMillis
+  EL.runIO $ KafkaProd.flushProducer _kafkaConnection
+  _afterFlush <- EL.getCurrentDateInMillis
+  EL.logDebug ("KafkaFlushTime : " :: Text) ("Time taken to flush kafka producer in driver drainer : " <> show (int2Double (_afterFlush - _beforeFlush)) <> "ms")
+  void $ publishProcessLatency "KafkaFlushTime" (int2Double (_afterFlush - _beforeFlush))

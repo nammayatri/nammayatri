@@ -32,6 +32,11 @@ let rcfg =
       , connectTimeout = None Integer
       }
 
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let shareRideApiRateLimitOptions = { limit = +20, limitResetTimeInSec = +60 }
@@ -78,6 +83,8 @@ let specialZone =
       , token = sec.specialZoneToken
       }
 
+let cacheConfig = { configsExpTime = +86400 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -86,11 +93,12 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = True
+    , kafkaProducerCfg
     , port = +8018
-    , migrationPath = Some
-        (   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
-          ? "dev/migrations/provider-dashboard"
-        )
+    , migrationPath =
+      [   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
+        ? "dev/migrations/provider-dashboard"
+      ]
     , autoMigrate = True
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/provider-dashboard.log" }
@@ -106,6 +114,12 @@ in  { esqDBCfg
     , exotelToken = sec.exotelToken
     , dataServers =
       [ driverOfferBpp, driverOfferBppManagement, appBackend, specialZone ]
+    , merchantUserAccountNumber = +5
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , slackToken = sec.slackToken
+    , slackChannel = "CXXXXXXXXXF"
+    , internalEndPointMap = common.internalEndPointMap
+    , cacheConfig
+    , kvConfigUpdateFrequency = +60
     }

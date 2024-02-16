@@ -31,6 +31,7 @@ data RideT f = RideT
     status :: B.C f Domain.RideStatus,
     driverId :: B.C f Text,
     otp :: B.C f Text,
+    endOtp :: B.C f (Maybe Text),
     trackingUrl :: B.C f Text,
     fare :: B.C f (Maybe Money),
     traveledDistance :: B.C f HighPrecMeters,
@@ -42,6 +43,10 @@ data RideT f = RideT
     tripStartLon :: B.C f (Maybe Double),
     tripEndLat :: B.C f (Maybe Double),
     tripEndLon :: B.C f (Maybe Double),
+    startOdometerReadingValue :: B.C f (Maybe Centesimal),
+    endOdometerReadingValue :: B.C f (Maybe Centesimal),
+    startOdometerReadingFileId :: B.C f (Maybe Text),
+    endOdometerReadingFileId :: B.C f (Maybe Text),
     pickupDropOutsideOfThreshold :: B.C f (Maybe Bool),
     fareParametersId :: B.C f (Maybe Text),
     distanceCalculationFailed :: B.C f (Maybe Bool),
@@ -53,7 +58,9 @@ data RideT f = RideT
     numberOfDeviation :: B.C f (Maybe Bool),
     uiDistanceCalculationWithAccuracy :: B.C f (Maybe Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Maybe Int),
-    driverGoHomeRequestId :: B.C f (Maybe Text)
+    isFreeRide :: B.C f (Maybe Bool),
+    driverGoHomeRequestId :: B.C f (Maybe Text),
+    safetyAlertTriggered :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

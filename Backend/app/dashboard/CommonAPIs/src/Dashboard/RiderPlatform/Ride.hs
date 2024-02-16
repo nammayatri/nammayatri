@@ -46,10 +46,17 @@ type ShareRideInfoAPI =
     :> "info"
     :> Get '[JSON] ShareRideInfoRes
 
+type ShareRideInfoByShortIdAPI =
+  Capture "rideShortId" (ShortId DP.Ride)
+    :> "rideInfo"
+    :> Get '[JSON] ShareRideInfoRes
+
 type RideInfoAPI =
   "rideinfo"
     :> Capture "rideId" (Id DP.Ride)
     :> Get '[JSON] RideInfoRes
+
+data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | INTER_CITY | ONE_WAY_SPECIAL_ZONE deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
 
 data ShareRideInfoRes = ShareRideInfoRes
   { id :: Id Ride,
@@ -67,7 +74,12 @@ data ShareRideInfoRes = ShareRideInfoRes
     userFirstName :: Maybe Text,
     userLastName :: Maybe Text,
     fromLocation :: Location,
-    toLocation :: Maybe Location
+    toLocation :: Maybe Location,
+    sosStatus :: Maybe SosStatus,
+    vehicleVariant :: Variant,
+    nextStopLocation :: Maybe Location,
+    rideScheduledAt :: UTCTime,
+    fareProductType :: FareProductType
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
@@ -82,7 +94,7 @@ data RideInfoRes = RideInfoRes
     customerDropLocation :: Maybe Location,
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
-    driverRegisteredAt :: UTCTime,
+    driverRegisteredAt :: Maybe UTCTime,
     vehicleNo :: Text,
     vehicleModel :: Text,
     rideBookingTime :: UTCTime,
@@ -97,7 +109,11 @@ data RideInfoRes = RideInfoRes
     estimatedRideDuration :: Maybe Seconds,
     rideDuration :: Maybe Seconds,
     cancelledTime :: Maybe UTCTime,
-    cancelledBy :: Maybe CancellationSource
+    cancelledBy :: Maybe CancellationSource,
+    nextStopLocation :: Maybe Location,
+    rideScheduledAt :: UTCTime,
+    fareProductType :: FareProductType,
+    endOtp :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -115,6 +131,12 @@ data RideStatus
   | INPROGRESS
   | COMPLETED
   | CANCELLED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data SosStatus
+  = NotResolved
+  | Pending
+  | Resolved
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Location = Location
@@ -170,7 +192,11 @@ data RideListItem = RideListItem
     driverName :: Text,
     driverPhoneNo :: Text,
     vehicleNo :: Text,
-    bookingStatus :: BookingStatus
+    bookingStatus :: BookingStatus,
+    nextStopLocation :: Maybe Location,
+    rideScheduledAt :: UTCTime,
+    fareProductType :: FareProductType,
+    endOtp :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -271,6 +297,10 @@ data RideInfo = RideInfo
     dropLocationArea :: Maybe Text,
     fare :: Maybe Money,
     personId :: Id Customer,
+    nextStopLocation :: Maybe Location,
+    rideScheduledAt :: UTCTime,
+    fareProductType :: FareProductType,
+    endOtp :: Maybe Text,
     classification :: Ticket.Classification
   }
   deriving stock (Show, Generic)

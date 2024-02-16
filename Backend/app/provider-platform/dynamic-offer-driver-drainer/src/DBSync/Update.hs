@@ -154,7 +154,6 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (RiderDetailsOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("RiderDetails" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (SearchRequestOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchRequest" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (SearchRequestForDriverOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchRequestForDriver" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (SearchRequestSpecialZoneOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchRequestSpecialZone" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (SearchTryOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchTry" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (VehicleOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Vehicle" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (VolunteerOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Volunteer" :: Text) =<< dbConf
@@ -189,21 +188,21 @@ runUpdateCommands (cmd, val) dbStreamKey = do
                   newObject = replaceMappings (toJSON dataObj) mappings
               res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
-                ( \_ -> do
-                    void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Driver Update Error " :: Text)
+                ( \error' -> do
+                    void $ publishDBSyncMetric $ Event.KafkaPushFailure "Update" model
+                    EL.logError ("ERROR:" :: Text) (("Kafka Driver Update Error " <> error' <> " for model :" <> model) :: Text)
                     pure $ Left (UnexpectedError "Kafka Driver Update Error", id)
                 )
                 (\_ -> pure $ Right id)
                 res''
             Left _ -> do
-              let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
+              let updatedJSON = getDbUpdateDataJson model (A.String "No Data in Redis for updated condition")
               Env {..} <- ask
               res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
-                ( \_ -> do
-                    void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Driver Update Error " :: Text)
+                ( \error' -> do
+                    void $ publishDBSyncMetric $ Event.KafkaPushFailure "Update" model
+                    EL.logError ("ERROR:" :: Text) (("Kafka Driver Update Error " <> error' <> " for model :" <> model) :: Text)
                     pure $ Left (UnexpectedError "Kafka Driver Update Error", id)
                 )
                 (\_ -> pure $ Right id)

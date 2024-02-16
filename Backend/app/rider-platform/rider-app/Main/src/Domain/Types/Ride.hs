@@ -19,7 +19,7 @@ import Data.Aeson
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -54,13 +54,14 @@ data Ride = Ride
     driverRating :: Maybe Centesimal,
     driverMobileNumber :: Text,
     driverMobileCountryCode :: Maybe Text,
-    driverRegisteredAt :: UTCTime,
+    driverRegisteredAt :: Maybe UTCTime,
     driverImage :: Maybe Text,
     vehicleNumber :: Text,
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleVariant :: VehicleVariant,
     otp :: Text,
+    endOtp :: Maybe Text,
     trackingUrl :: Maybe BaseUrl,
     fare :: Maybe Money,
     totalFare :: Maybe Money,
@@ -70,8 +71,13 @@ data Ride = Ride
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    allowedEditLocationAttempts :: Maybe Int,
+    startOdometerReading :: Maybe Centesimal,
+    endOdometerReading :: Maybe Centesimal,
+    isFreeRide :: Maybe Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    safetyCheckStatus :: Maybe Bool
   }
   deriving (Generic, Show)
 
@@ -82,19 +88,23 @@ data RideAPIEntity = RideAPIEntity
     driverName :: Text,
     driverNumber :: Maybe Text,
     driverRatings :: Maybe Centesimal,
-    driverRegisteredAt :: UTCTime,
+    driverRegisteredAt :: Maybe UTCTime,
     driverImage :: Maybe Text,
     vehicleNumber :: Text,
     vehicleColor :: Text,
     vehicleVariant :: VehicleVariant,
     vehicleModel :: Text,
     rideOtp :: Text,
+    endOtp :: Maybe Text,
     computedPrice :: Maybe Money,
     chargeableRideDistance :: Maybe HighPrecMeters,
     driverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    isFreeRide :: Maybe Bool,
+    startOdometerReading :: Maybe Centesimal,
+    endOdometerReading :: Maybe Centesimal,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bppRideId :: Id BPPRide

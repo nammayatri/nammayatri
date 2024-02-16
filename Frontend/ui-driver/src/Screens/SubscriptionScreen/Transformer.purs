@@ -32,13 +32,13 @@ import Data.Number.Format (fixed, toStringWith)
 import Data.String (Pattern(..), split, toLower)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
-import Language.Strings (Language, getString)
+import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (SubscriptionConfig, GradientConfig)
 import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
 import Services.API (DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
-
+import Locale.Utils
 
 type PlanData = {
     title :: String,
@@ -65,7 +65,8 @@ getPromoConfig offerEntityArr gradientConfig =
             hasImage : true ,
             imageURL : fetchImage FF_ASSET "ny_ic_discount" ,
             offerDescription : Just $ decodeOfferDescription (fromMaybe "" item.description),
-            addedFromUI : false
+            addedFromUI : false,
+            isPaidByYatriCoins : false
         }
     ) offerEntityArr)
 
@@ -91,7 +92,7 @@ decodeOfferDescription str = do
     fromMaybe "" (strArray !! (getLanguage (length strArray)))
     where 
         getLanguage len = do
-            case getValueToLocalStore LANGUAGE_KEY of
+            case getLanguageLocale languageKey of
                 "KN_IN" | len > 1 -> 1
                 "HI_IN" | len > 2 -> 2
                 "BN_IN" | len > 3 -> 3
@@ -113,7 +114,8 @@ freeRideOfferConfig lazy =
     hasImage : false,
     imageURL : "",
     offerDescription : Nothing,
-    addedFromUI : false
+    addedFromUI : false,
+    isPaidByYatriCoins : false
     }
 
 introductoryOfferConfig :: LazyCheck -> PromoConfig
@@ -123,9 +125,10 @@ introductoryOfferConfig lazy =
     isGradient : true,
     gradient : [Color.blue600, Color.blue600],
     hasImage : true,
-    imageURL : fetchImage FF_ASSET "ny_ic_discount",
+    imageURL : fetchImage FF_ASSET "ny_ic_lock",
     offerDescription : Just $ getString NO_CHARGES_TILL,
-    addedFromUI : false
+    addedFromUI : false,
+    isPaidByYatriCoins : false
     }
 
 noChargesOfferConfig :: LazyCheck -> PromoConfig
@@ -137,7 +140,8 @@ noChargesOfferConfig lazy=
     hasImage : false,
     imageURL : "",
     offerDescription : Just $ "<b>" <> getString DAILY_PER_RIDE_DESC <> "</b>",
-    addedFromUI : true
+    addedFromUI : true,
+    isPaidByYatriCoins : false
     }
 
 alternatePlansTransformer :: UiPlansResp -> SubscriptionScreenState -> Array PlanCardConfig
@@ -145,7 +149,7 @@ alternatePlansTransformer (UiPlansResp planResp) state =
     let planEntityArray = planResp.list
         alternatePlansArray = (DA.filter(\(PlanEntity item) -> item.id /= state.data.myPlanData.planEntity.id) planEntityArray)
         isLocalized = fromMaybe false planResp.isLocalized
-    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.gradientConfig) alternatePlansArray
+    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.subscriptionConfig.gradientConfig) alternatePlansArray
 
 
 getAutoPayDetailsList :: MandateData -> Array KeyValType
@@ -208,38 +212,42 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientCon
             showOffer : planEntity.name /= getString DAILY_PER_RIDE
         }
 
-constructDues :: Array DriverDuesEntity -> Array DueItem
-constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
+constructDues :: Array DriverDuesEntity -> Boolean -> Array DueItem
+constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
   let offerAndPlanDetails = fromMaybe "" item.offerAndPlanDetails
+      feeBreakup = if showFeeBreakup then getFeeBreakup item.maxRidesEligibleForCharge (max 0.0 (item.planAmount - (fromMaybe 0.0 item.totalSpecialZoneCharges))) item.totalRides else ""
+      noOfRides = item.totalRides + fromMaybe 0 item.specialZoneRideCount
   in
   {    
     tripDate: item.rideTakenOn,
     amount: item.driverFeeAmount,
     earnings: item.totalEarnings,
-    noOfRides: item.totalRides,
+    noOfRides: noOfRides,
     scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
     paymentStatus: "",
-    feeBreakup: getFeeBreakup offerAndPlanDetails item.totalRides ,
+    feeBreakup: feeBreakup,
     plan: offerAndPlanDetails,
     mode: item.feeType,
     autoPayStage : item.autoPayStage,
     randomId : (getCurrentUTC "") <> show ind,
-    isSplit : item.isSplit
+    isSplit : item.isSplit,
+    specialZoneRideCount : item.specialZoneRideCount,
+    totalSpecialZoneCharges : item.totalSpecialZoneCharges,
+    amountPaidByYatriCoins : case item.isCoinCleared of
+                                true -> Just item.driverFeeAmount
+                                false -> item.coinDiscountAmount
   }) duesArr)
 
-getFeeBreakup :: String -> Int -> String
-getFeeBreakup plan rides = 
-    let planWithTranslations = fromMaybe "" ((split (Pattern "-*@*-") plan) !! 0)
-        planInEng = fromMaybe "" ((split (Pattern "-*$*-") planWithTranslations) !! 0)
-        planConfig = getPlanAmountConfig planInEng
-    in
-    case planConfig.isFixed of
-        true -> "₹" <> getFixedTwoDecimals planConfig.value
-        false -> if planConfig.value <= (toNumber rides) * planConfig.perRide 
-                    then "₹" <> getFixedTwoDecimals planConfig.value
-                 else show rides <> " " <> getString RIDES <> " X " <>  "₹" <> getFixedTwoDecimals planConfig.perRide
+getFeeBreakup :: Maybe Int -> Number -> Int -> String
+getFeeBreakup maxRidesEligibleForCharge planAmount totalRides =
+    case maxRidesEligibleForCharge of
+        Nothing ->  "₹" <> getFixedTwoDecimals planAmount
+        Just maxRides -> do
+            let ridesToConsider = min totalRides maxRides
+            if ridesToConsider /= 0 then 
+                show ridesToConsider <> " "<> getString (if ridesToConsider >1 then RIDES else RIDE) <>" x ₹" <> getFixedTwoDecimals (planAmount/ (toNumber ridesToConsider)) <> " " <> getString GST_INCLUDE
+            else getString $ NO_OPEN_MARKET_RIDES "NO_OPEN_MARKET_RIDES"
     
-
 
 getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}
 getPlanAmountConfig plan = case plan of
@@ -250,13 +258,13 @@ getPlanAmountConfig plan = case plan of
 introductoryPlanConfig :: LazyCheck -> PlanCardConfig
 introductoryPlanConfig lazy =  {
     id : "dummy",
-    title : getString DAILY_PER_RIDE,
+    title : getString DAILY_UNLIMITED,
     description : "",
     isSelected : true,
-    frequency : "PER_RIDE",
+    frequency : "PER_DAY",
     freeRideCount : 0,
     offers : [introductoryOfferConfig Language],
-    priceBreakup : [PaymentBreakUp{amount: 10.0, component: "FINAL_FEE"}],
+    priceBreakup : [PaymentBreakUp{amount: 25.0, component: "FINAL_FEE"}],
     showOffer : true
 } 
 

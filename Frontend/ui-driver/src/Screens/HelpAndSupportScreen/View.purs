@@ -15,17 +15,16 @@
 
 module Screens.HelpAndSupportScreen.View where
 
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), CategoryListType)
 import Data.Array (cons, uncons,length)
 import Data.Int (round, toNumber)
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Tuple (Tuple(Tuple), fst, snd)
 import Effect (Effect)
 import Language.Strings (getString)
-import Components.IssueListFlow.Controller (getTitle)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor)
 import PrestoDOM.Elements.Elements (scrollView)
 import PrestoDOM.Events (onClick)
 import PrestoDOM.Properties (cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, padding, scrollBarY, weight)
@@ -42,13 +41,14 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Components.IssueListFlow as IssueListFlow
+import Components.IssueList as IssueList
 import Animation as Anim
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Screens.Types as ST
 import Types.App (defaultGlobalState)
+import Screens.HelpAndSupportScreen.ComponentConfig as Config
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -124,19 +124,21 @@ headerLayout state push =
         , padding $ Padding 5 16 5 16
         ]
         [ imageView
-            [ width $ V 30
-            , height $ V 30
+            [ width $ V 40
+            , height $ V 40
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , onClick push $ const BackPressed
-            , padding $ Padding 2 2 2 2
+            , padding $ Padding 7 7 7 7
             , margin $ MarginLeft 5
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text (getString HELP_AND_SUPPORT)
               , textSize FontSize.a_18
-              , margin $ MarginLeft 20
+              , margin $ MarginLeft 10
               , weight 1.0
               , color Color.black900
               ]
@@ -215,7 +217,7 @@ recentRideDetails state push =
             ]
          ) (getModifiedCategories state.data.categories))
 
-categoryView :: ST.CategoryListType -> Number -> Number -> ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+categoryView :: CategoryListType -> Number -> Number -> ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 categoryView categoryGroup marginLeft marginRight state push =
   let vw = (toNumber (screenWidth unit)) / 100.0
   in
@@ -233,6 +235,7 @@ categoryView categoryGroup marginLeft marginRight state push =
   , cornerRadius 8.0
   , stroke $ "1," <> Color.grey900
   , gravity CENTER
+  , rippleColor Color.rippleShade
   ][ imageView
       [ width (V (round (30.0 * vw)))
       , height(V (round (30.0 * vw)))
@@ -282,7 +285,7 @@ allOtherTopics state push =
               , height WRAP_CONTENT
               , orientation HORIZONTAL
               , gravity CENTER_VERTICAL
-              , padding (Padding 15 17 15 17)
+              , padding $ Padding 15 17 15 17
               ][  textView $
                   [ height WRAP_CONTENT
                   , weight 1.0
@@ -304,32 +307,10 @@ allOtherTopics state push =
 -------------------------------------------- issueListModal ------------------------------------------
 issueListModal :: forall w . (Action -> Effect Unit) -> ST.HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
 issueListModal push state =
-  IssueListFlow.view (push <<< IssueScreenModal) (issueListState state)
-
-issueListState :: ST.HelpAndSupportScreenState -> IssueListFlow.IssueListFlowState
-issueListState state = let
-      config' = IssueListFlow.config
-      inAppModalConfig' = config'{
-        issues = (if (state.data.issueListType == ST.ONGOING_ISSUES_MODAL) then state.data.ongoingIssueList else state.data.resolvedIssueList),
-        issueListTypeModal = state.data.issueListType ,
-        headerConfig {
-          headTextConfig {
-            text = (if (state.data.issueListType == ST.ONGOING_ISSUES_MODAL) then (( getString ONGOING_ISSUE) <>(" : ") <> (toStringJSON (length state.data.ongoingIssueList))) else ((getString RESOLVED_ISSUE)))
-          }
-        },
-        fourthTextConfig {
-          visibility = (if (state.data.issueListType == ST.ONGOING_ISSUES_MODAL) then VISIBLE else GONE),
-          text = (getString REMOVE_ISSUE)
-        },
-         fifthTextConfig {
-          visibility = (if (state.data.issueListType == ST.ONGOING_ISSUES_MODAL) then VISIBLE else GONE),
-          text = (getString CALL_SUPPORT_NUMBER)
-        }
+  IssueList.view (push <<< IssueScreenModal) (Config.issueListState state)
 
 
 
-      }
-      in inAppModalConfig'
 --------------------------------------------------------------- horizontalLineView ----------------------------
 horizontalLineView :: forall w . PrestoDOM (Effect Unit) w
 horizontalLineView =

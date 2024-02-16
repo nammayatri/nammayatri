@@ -41,6 +41,7 @@ data IdfyVerificationT f = IdfyVerificationT
     idfyResponse :: B.C f (Maybe Text),
     multipleRC :: B.C f (Maybe Bool),
     dashboardPassedVehicleVariant :: B.C f (Maybe Vehicle.Variant),
+    retryCount :: B.C f (Maybe Int),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

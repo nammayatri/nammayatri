@@ -19,6 +19,7 @@ import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.RiderDetails as RD
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -29,22 +30,31 @@ import qualified Tools.Maps as Maps
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
     transactionId :: Text,
+    messageId :: Maybe Text,
     providerId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    riderId :: Maybe (Id RD.RiderDetails),
     fromLocation :: DLoc.Location,
-    toLocation :: DLoc.Location,
     area :: Maybe FareProductD.Area,
     bapId :: Text,
     bapUri :: BaseUrl,
     bapCity :: Maybe Context.City,
     bapCountry :: Maybe Context.Country,
-    estimatedDistance :: Meters,
-    estimatedDuration :: Seconds,
     specialLocationTag :: Maybe Text,
     autoAssignEnabled :: Maybe Bool,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
+    customerCancellationDues :: HighPrecMoney,
+    isReallocationEnabled :: Maybe Bool,
+    toLocation :: Maybe DLoc.Location,
+    estimatedDistance :: Maybe Meters,
+    estimatedDuration :: Maybe Seconds,
+    validTill :: UTCTime,
+    isScheduled :: Bool,
+    driverDefaultExtraFee :: Maybe Money,
+    pickupZoneGateId :: Maybe Text,
+    startTime :: UTCTime,
     createdAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)

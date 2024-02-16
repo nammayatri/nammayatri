@@ -13,49 +13,73 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Cancel (buildCancelReq, buildCancelSearchReq) where
+module Beckn.ACL.Cancel (buildCancelReqV2, buildCancelSearchReqV2) where
 
-import qualified Beckn.Types.Core.Taxi.Cancel.Req as Cancel
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.ReqTypes
 import Kernel.Utils.Common
 
-buildCancelReq ::
+buildCancelReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DCancel.CancelRes ->
-  m (BecknReq Cancel.CancelMessage)
-buildCancelReq res = do
+  m Spec.CancelReq
+buildCancelReqV2 res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.CANCEL messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.defaultCity res.merchant.country False
-  pure $ BecknReq context $ mkCancelMessage res
+  context <- ContextV2.buildContextV2 Context.CANCEL Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country
+  pure
+    Spec.CancelReq
+      { cancelReqContext = context,
+        cancelReqMessage = mkCancelMessageV2 res -- soft cancel and confirm cancel
+      }
 
-mkCancelMessage :: DCancel.CancelRes -> Cancel.CancelMessage
-mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId "" $ castCancellatonSource res.cancellationSource
+mkCancelMessageV2 :: DCancel.CancelRes -> Spec.CancelReqMessage
+mkCancelMessageV2 res =
+  Spec.CancelReqMessage
+    { cancelReqMessageCancellationReasonId = castCancellatonSource res.cancellationSource, -- TODO::Beckn, not following v2 spec here.
+      cancelReqMessageOrderId = res.bppBookingId.getId,
+      cancelReqMessageDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorName = Just "Cancel Ride",
+              descriptorCode = Just res.cancelStatus, -- TODO::Beckn, confirm mapping according to spec.
+              descriptorShortDesc = Nothing
+            }
+    }
   where
     castCancellatonSource = \case
-      SBCR.ByUser -> Cancel.ByUser
-      SBCR.ByDriver -> Cancel.ByDriver
-      SBCR.ByMerchant -> Cancel.ByMerchant
-      SBCR.ByAllocator -> Cancel.ByAllocator
-      SBCR.ByApplication -> Cancel.ByApplication
+      SBCR.ByUser -> Just "ByUser"
+      SBCR.ByDriver -> Just "ByDriver"
+      SBCR.ByMerchant -> Just "ByMerchant"
+      SBCR.ByAllocator -> Just "ByAllocator"
+      SBCR.ByApplication -> Just "ByApplication"
 
-buildCancelSearchReq ::
+buildCancelSearchReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DCancel.CancelSearch ->
-  m (BecknReq Cancel.CancelMessage)
-buildCancelSearchReq res = do
+  m Spec.CancelReq
+buildCancelSearchReqV2 res = do
   let messageId = res.estimateId.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.CANCEL messageId (Just res.searchReqId.getId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.defaultCity res.merchant.country False
-  pure $ BecknReq context $ mkCancelSearchMessage res
+  context <- ContextV2.buildContextV2 Context.CANCEL Context.MOBILITY messageId (Just res.searchReqId.getId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.city res.merchant.country
+  pure
+    Spec.CancelReq
+      { cancelReqContext = context,
+        cancelReqMessage = mkCancelSearchMessageV2 res
+      }
 
-mkCancelSearchMessage :: DCancel.CancelSearch -> Cancel.CancelMessage
-mkCancelSearchMessage res = Cancel.CancelMessage "" res.searchReqId.getId Cancel.ByUser
+mkCancelSearchMessageV2 :: DCancel.CancelSearch -> Spec.CancelReqMessage
+mkCancelSearchMessageV2 res =
+  Spec.CancelReqMessage
+    { cancelReqMessageCancellationReasonId = Just "ByUser", -- TODO::Beckn, not following v2 spec here.
+      cancelReqMessageOrderId = res.searchReqId.getId,
+      cancelReqMessageDescriptor = Nothing
+    }

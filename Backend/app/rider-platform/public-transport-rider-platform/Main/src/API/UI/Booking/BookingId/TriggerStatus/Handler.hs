@@ -30,7 +30,7 @@ handler :: FlowServer API
 handler = triggerStatusUpdate
 
 triggerStatusUpdate :: PersonId -> Id DBooking.Booking -> FlowHandler APISuccess
-triggerStatusUpdate _ bookingId = withFlowHandlerAPI $ do
+triggerStatusUpdate _ bookingId = withFlowHandlerAPI' $ do
   statusReq <- DStatus.triggerStatusUpdate bookingId
   becknStatusReq <- BecknACL.buildStatusReq statusReq
   ExternalAPI.status statusReq.bppUrl becknStatusReq

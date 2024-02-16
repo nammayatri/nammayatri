@@ -23,6 +23,8 @@ public class GeoCoderHelper {
     Context context;
     Geocoder geocoder;
 
+    String LOG_TAG = "GeoCoderHelper";
+
     public GeoCoderHelper(Context context){
         this.context = context;
         geocoder = new Geocoder(context, Locale.getDefault());
@@ -67,6 +69,7 @@ public class GeoCoderHelper {
         try {
             List<Address> addresses = geocoder.getFromLocationName(address, 1);
             if (addresses != null && addresses.size() > 0) {
+                Log.d(LOG_TAG, "FromLocationName: " + addresses + " \n" + "GivenAddress: " + address);
                 double latitude = addresses.get(0).getLatitude();
                 double longitude = addresses.get(0).getLongitude();
                 int decimalPlaces = 7;
@@ -80,6 +83,23 @@ public class GeoCoderHelper {
         }
         return new GeoCoordinate(0.0, 0.0);
     }
+
+    public String getAddressTranslation(String address){
+        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocationName(address, 1);
+            if (addresses != null && addresses.size() > 0) {
+                Log.d(LOG_TAG, "FromLocationName: " + addresses + " \n" + "GivenAddress: " + address);
+
+                return addresses.get(0).getAddressLine(0);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return address;
+        }
+        return address;
+    }
+
 
 }
 

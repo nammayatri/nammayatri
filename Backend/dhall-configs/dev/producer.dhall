@@ -44,11 +44,11 @@ let hedisClusterCfg =
 
 let cacheConfig = { configsExpTime = +86400 }
 
-let tables =
-      { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
-      , kafkaNonKVTables = [] : List Text
+let kvConfigUpdateFrequency = +10
+
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 in  { hedisCfg
@@ -76,6 +76,7 @@ in  { hedisCfg
     , schedulerType = common.schedulerType.RedisBased
     , maxShards = +5
     , metricsPort = +9990
-    , tables
+    , kvConfigUpdateFrequency
     , runReviver = True
+    , kafkaProducerCfg
     }

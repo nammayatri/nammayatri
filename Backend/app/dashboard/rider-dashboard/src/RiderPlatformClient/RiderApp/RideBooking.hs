@@ -81,7 +81,7 @@ data ProfileAPIs = ProfileAPIs
   }
 
 newtype SearchAPIs = SearchAPIs
-  { rsearch :: Id DP.Person -> SH.SearchReq -> Euler.EulerClient SH.SearchRes
+  { rsearch :: Id DP.Person -> SH.SearchReq -> Euler.EulerClient SH.SearchResp
   }
 
 newtype QuoteAPIs = QuoteAPIs

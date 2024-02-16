@@ -32,7 +32,7 @@ let loggerConfig =
       }
 
 in  { port = +8032
-    , migrationPath = Some "dev/migrations/special-zone"
+    , migrationPath = [ "dev/migrations/special-zone" ]
     , autoMigrate = True
     , esqDBCfg
     , esqDBReplicaCfg

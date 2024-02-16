@@ -28,7 +28,6 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int(fromString)
 
 data KeyStore = USER_NAME
-                | LANGUAGE_KEY
                 | FCM_TOKEN
                 | REGISTERATION_TOKEN
                 | VERSION_NAME
@@ -55,6 +54,7 @@ data KeyStore = USER_NAME
                 | RIDE_REQUEST_TIME
                 | LAST_KNOWN_LAT
                 | LAST_KNOWN_LON
+                | LAST_KNOWN_LOCATION_TS
                 | GPS_METHOD
                 | MAKE_NULL_API_CALL
                 | ALERT_RECEIVED
@@ -105,12 +105,27 @@ data KeyStore = USER_NAME
                 | BUNDLE_TIME_OUT
                 | APP_SESSION_TRACK_COUNT
                 | MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
+                | RIDE_SUMMARY_DATA
                 | TRIP_DISTANCE_ACC
                 | TRIP_DISTANCE
                 | TRIP_STATUS
                 | TRIP_STARTED
                 | TIMES_OPENED_NEW_SUBSCRIPTION
                 | CONFIG_VERSION
+                | DRIVER_LOCATION
+                | SHOW_SUBSCRIPTIONS
+                | TOTAL_WAITED
+                | VISITED_DRIVER_COINS_PAGE
+                | REFERRAL_CODE_ADDED
+                | SAVED_GOTO_COUNT
+                | OLD_COIN_BALANCE
+                | TIMES_OPENED_NEW_BENEFITS
+                | ENTERED_RC
+                | ENTERED_DL
+                | COINS_POPUP_SHOWN_DATE
+                | T_AND_C_VERSION
+                | NIGHT_SAFETY_POP_UP
+                | REFERRER_URL
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

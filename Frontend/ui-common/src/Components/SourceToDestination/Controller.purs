@@ -42,7 +42,17 @@ type Config =
   , separatorMargin :: Int
   , id :: Maybe String
   , overrideSeparatorCount :: Int
+  , horizontalSeperatorConfig :: SeparatorConfig
   }
+
+type SeparatorConfig = {
+    visibility :: Visibility
+  , margin :: Margin
+  , background :: String
+  , height :: Length
+  , width :: Length
+  , padding :: Padding
+}
 
 type DistanceConfig = {
     distanceVisibility :: Visibility
@@ -68,6 +78,7 @@ type TextConfig =
   , ellipsize :: Boolean
   , maxLines :: Int
   , textStyle :: Style
+  , isEditable :: Boolean
   }
 
 type TimeConfig =
@@ -103,6 +114,7 @@ config = {
     , ellipsize : false  
     , maxLines : 10
     , textStyle : Body3
+    , isEditable : false
   }
   , rideStartedAtConfig : {
       text : ""
@@ -130,6 +142,7 @@ config = {
     , ellipsize : false
     , maxLines : 10
     , textStyle : Body3
+    , isEditable : false
     }
   , rideEndedAtConfig : {
       text : ""
@@ -146,6 +159,14 @@ config = {
     , distanceValue : ""
     , background : ""
     , margin : Margin 0 0 0 0
+  },
+  horizontalSeperatorConfig : {
+      visibility : GONE
+    , background : ""
+    , margin : Margin 0 0 0 0
+    , padding : Padding 0 0 0 0
+    , width : MATCH_PARENT
+    , height : V 1
   }
   , id : Nothing
   , overrideSeparatorCount : 0

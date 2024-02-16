@@ -20,6 +20,7 @@ module SharedLogic.DriverPool.Types
     DriverPoolResultCurrentlyOnRide (..),
     DriverPoolWithActualDistResult (..),
     DriverPoolWithActualDistResultWithFlags (..),
+    PoolType (..),
     PoolRadiusStep,
     PoolBatchNum,
   )
@@ -27,10 +28,10 @@ where
 
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
+import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
-import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
@@ -46,6 +47,8 @@ type PoolRadiusStep = Meters
 
 data PoolCalculationStage = Estimate | DriverSelection
 
+data PoolType = NormalPool | GoHomePool | SpecialDriversPool | SpecialZoneQueuePool | SkipPool deriving (Ord, Eq, Show)
+
 data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
   { poolStage :: PoolCalculationStage,
     driverPoolCfg :: DriverPoolConfig,
@@ -53,7 +56,8 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     variant :: Maybe Vehicle.Variant,
     fromLocation :: a,
     toLocation :: a,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    isRental :: Bool
   }
 
 data GoHomeDriverPoolResult = GoHomeDriverPoolResult
@@ -104,6 +108,8 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     keepHiddenForSeconds :: Seconds,
     intelligentScores :: IntelligentScores,
     isPartOfIntelligentPool :: Bool,
+    pickupZone :: Bool,
+    specialZoneExtraTip :: Maybe Money,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -113,6 +119,7 @@ instance HasCoordinates DriverPoolWithActualDistResult where
 
 data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags
   { driverPoolWithActualDistResult :: [DriverPoolWithActualDistResult],
-    isGoHomeBatch :: Bool,
-    prevBatchDrivers :: [Id Driver]
+    poolType :: PoolType,
+    prevBatchDrivers :: [Id Driver],
+    nextScheduleTime :: Maybe Seconds
   }

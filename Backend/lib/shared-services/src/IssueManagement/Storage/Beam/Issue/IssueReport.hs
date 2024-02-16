@@ -24,9 +24,11 @@ import IssueManagement.Tools.UtilsTH
 
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,
+    shortId :: B.C f (Maybe Text),
     driverId :: B.C f (Maybe Text),
     personId :: B.C f Text,
     rideId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     description :: B.C f Text,
     assignee :: B.C f (Maybe Text),
     status :: B.C f Domain.IssueStatus,

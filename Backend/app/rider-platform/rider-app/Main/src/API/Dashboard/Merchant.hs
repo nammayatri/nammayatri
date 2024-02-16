@@ -24,6 +24,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
+import Storage.Beam.SystemConfigs ()
 
 type API =
   "merchant"

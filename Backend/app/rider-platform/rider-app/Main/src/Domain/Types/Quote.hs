@@ -16,10 +16,11 @@
 module Domain.Types.Quote where
 
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.RentalDetails as DRentalDetails
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
@@ -39,10 +40,7 @@ data Quote = Quote
     estimatedTotalFare :: Money,
     providerId :: Text,
     providerUrl :: BaseUrl,
-    providerName :: Text,
-    providerMobileNumber :: Text,
     itemId :: Text,
-    providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
     quoteDetails :: QuoteDetails,
@@ -55,7 +53,8 @@ data Quote = Quote
 
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
-  | RentalDetails DRentalSlab.RentalSlab
+  | InterCityDetails DSpecialZoneQuote.SpecialZoneQuote
+  | RentalDetails DRentalDetails.RentalDetails
   | DriverOfferDetails DDriverOffer.DriverOffer
   | OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote
   deriving (Generic, Show)
@@ -73,19 +72,20 @@ data QuoteAPIEntity = QuoteAPIEntity
     estimatedTotalFare :: Money,
     discount :: Maybe Money,
     agencyName :: Text,
-    agencyNumber :: Text,
-    agencyCompletedRidesCount :: Int,
+    agencyNumber :: Maybe Text,
     tripTerms :: [Text],
     quoteDetails :: QuoteAPIDetails,
     specialLocationTag :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    isValueAddNP :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 -- do not change constructor names without changing fareProductConstructorModifier
 data QuoteAPIDetails
   = OneWayAPIDetails OneWayQuoteAPIDetails
-  | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
+  | InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity
+  | RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity
   | DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity
   deriving (Show, Generic)
@@ -111,18 +111,24 @@ newtype OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails
 
 mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
-  RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
+  RentalDetails DRentalDetails.RentalDetails {..} -> RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity {..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
   DriverOfferDetails DDriverOffer.DriverOffer {..} -> DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
+  InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity {..}
 
-makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
-makeQuoteAPIEntity Quote {..} = do
+mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
+mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =
+  makeQuoteAPIEntity q bpp isValueAddNP : mkQAPIEntityList qRemaining bppRemaining remVNP
+mkQAPIEntityList [] [] [] = []
+mkQAPIEntityList _ _ _ = error "This should never happen as all the list are of same length"
+
+makeQuoteAPIEntity :: Quote -> DBppDetails.BppDetails -> Bool -> QuoteAPIEntity
+makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
   QuoteAPIEntity
-    { agencyName = providerName,
-      agencyNumber = providerMobileNumber,
-      agencyCompletedRidesCount = providerCompletedRidesCount,
-      tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
+    { agencyName = bppDetails.name,
+      agencyNumber = bppDetails.supportNumber,
+      tripTerms = maybe [] (.descriptions) tripTerms,
       quoteDetails = mkQuoteAPIDetails quoteDetails,
       ..
     }

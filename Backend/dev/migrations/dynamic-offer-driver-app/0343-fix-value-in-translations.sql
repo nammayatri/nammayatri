@@ -1,0 +1,1 @@
+UPDATE atlas_driver_offer_bpp.translations SET message = 'காய்ன்ஸ் பெற்றுள்ளீர்கள்! | நீங்கள் {#coinsValue#} காய்ன்ஸ் பெற்றுள்ளீர்கள்.அதை சரிபார்க்கவும்' where id = '6724c6e5-936c-40d5-85b5-4ca8f1434b6d';

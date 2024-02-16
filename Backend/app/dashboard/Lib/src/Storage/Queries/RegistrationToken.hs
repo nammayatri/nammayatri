@@ -11,98 +11,114 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.RegistrationToken where
 
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.RegistrationToken
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.RegistrationToken
+import Sequelize as Se
+import Storage.Beam.BeamFlow
+import qualified Storage.Beam.RegistrationToken as BeamRT
 
 {-# DEPRECATED findByPersonIdAndMerchantId "Use `findByPersonIdAndMerchantIdAndCity` instead of this function" #-}
 
-create :: RegistrationToken -> SqlDB ()
-create = Esq.create
+create :: BeamFlow m r => RegistrationToken -> m ()
+create = createWithKV
 
-findByToken :: Transactionable m => RegToken -> m (Maybe RegistrationToken)
+findByToken :: BeamFlow m r => RegToken -> m (Maybe RegistrationToken)
 findByToken token =
-  findOne $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $ regToken ^. RegistrationTokenToken ==. val token
-    return regToken
+  findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
 
-findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
+findAllByPersonId :: BeamFlow m r => Id Person -> m [RegistrationToken]
 findAllByPersonId personId =
-  findAll $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
-    return regToken
+  findAllWithKV [Se.Is BeamRT.personId $ Se.Eq $ getId personId]
 
-findAllByPersonIdAndMerchantId :: Transactionable m => Id Person -> Id Merchant -> m [RegistrationToken]
+findAllByPersonIdAndMerchantId :: BeamFlow m r => Id Person -> Id Merchant -> m [RegistrationToken]
 findAllByPersonIdAndMerchantId personId merchantId =
-  findAll $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $
-      regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
-        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
-    return regToken
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
+          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId
+        ]
+    ]
 
-findAllByPersonIdAndMerchantIdAndCity :: Transactionable m => Id Person -> Id Merchant -> City.City -> m [RegistrationToken]
+findAllByPersonIdAndMerchantIdAndCity :: BeamFlow m r => Id Person -> Id Merchant -> City.City -> m [RegistrationToken]
 findAllByPersonIdAndMerchantIdAndCity personId merchantId city =
-  findAll $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $
-      regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
-        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
-        &&. regToken ^. RegistrationTokenOperatingCity ==. val city
-    return regToken
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
+          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
+          Se.Is BeamRT.operatingCity $ Se.Eq city
+        ]
+    ]
 
-findByPersonIdAndMerchantId :: Transactionable m => Id Person -> Id Merchant -> m (Maybe RegistrationToken)
+findByPersonIdAndMerchantId :: BeamFlow m r => Id Person -> Id Merchant -> m (Maybe RegistrationToken)
 findByPersonIdAndMerchantId personId merchantId =
-  findOne $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $
-      regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
-        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
-    return regToken
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
+          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId
+        ]
+    ]
 
-findByPersonIdAndMerchantIdAndCity :: Transactionable m => Id Person -> Id Merchant -> City.City -> m (Maybe RegistrationToken)
+findByPersonIdAndMerchantIdAndCity :: BeamFlow m r => Id Person -> Id Merchant -> City.City -> m (Maybe RegistrationToken)
 findByPersonIdAndMerchantIdAndCity personId merchantId city =
-  findOne $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $
-      regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
-        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
-        &&. regToken ^. RegistrationTokenOperatingCity ==. val city
-    return regToken
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
+          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
+          Se.Is BeamRT.operatingCity $ Se.Eq city
+        ]
+    ]
 
-deleteAllByPersonId :: Id Person -> SqlDB ()
-deleteAllByPersonId personId =
-  Esq.delete $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
+deleteAllByPersonId :: BeamFlow m r => Id Person -> m ()
+deleteAllByPersonId personId = deleteWithKV [Se.Is BeamRT.personId $ Se.Eq $ getId personId]
 
-deleteAllByPersonIdAndMerchantId :: Id Person -> Id Merchant -> SqlDB ()
+deleteAllByPersonIdAndMerchantId :: BeamFlow m r => Id Person -> Id Merchant -> m ()
 deleteAllByPersonIdAndMerchantId personId merchantId =
-  Esq.delete $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $
-      regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
-        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
+  deleteWithKV
+    [ Se.And
+        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
+          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId
+        ]
+    ]
 
-deleteAllByPersonIdAndMerchantIdAndCity :: Id Person -> Id Merchant -> City.City -> SqlDB ()
+deleteAllByPersonIdAndMerchantIdAndCity :: BeamFlow m r => Id Person -> Id Merchant -> City.City -> m ()
 deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city =
-  Esq.delete $ do
-    regToken <- from $ table @RegistrationTokenT
-    where_ $
-      regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
-        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
-        &&. regToken ^. RegistrationTokenOperatingCity ==. val city
+  deleteWithKV
+    [ Se.And
+        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
+          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
+          Se.Is BeamRT.operatingCity $ Se.Eq city
+        ]
+    ]
 
-deleteById :: Id RegistrationToken -> SqlDB ()
-deleteById = Esq.deleteByKey @RegistrationTokenT
+deleteById :: BeamFlow m r => Id RegistrationToken -> m ()
+deleteById registrationTokenId = deleteWithKV [Se.Is BeamRT.id $ Se.Eq $ getId registrationTokenId]
+
+instance FromTType' BeamRT.RegistrationToken RegistrationToken where
+  fromTType' BeamRT.RegistrationTokenT {..} = do
+    return $
+      Just
+        RegistrationToken
+          { id = Id id,
+            personId = Id personId,
+            merchantId = Id merchantId,
+            ..
+          }
+
+instance ToTType' BeamRT.RegistrationToken RegistrationToken where
+  toTType' RegistrationToken {..} =
+    BeamRT.RegistrationTokenT
+      { id = getId id,
+        personId = getId personId,
+        merchantId = getId merchantId,
+        ..
+      }

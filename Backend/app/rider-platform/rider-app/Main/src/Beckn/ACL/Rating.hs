@@ -13,9 +13,11 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Rating (buildRatingReq) where
+module Beckn.ACL.Rating (buildRatingReq, buildRatingReqV2) where
 
 import qualified Beckn.Types.Core.Taxi.Rating as Rating
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Feedback as DFeedback
@@ -33,15 +35,77 @@ buildRatingReq DFeedback.FeedbackRes {..} = do
   msgId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.defaultCity merchant.country False
+  context <- buildTaxiContext Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) city merchant.country False
   let message =
         Rating.RatingMessage
           { id = bppBookingId.getId,
             value = ratingValue,
             feedback_form =
-              Rating.FeedbackForm
-                { question = "Evaluate your ride experience.",
-                  answer = feedbackDetails
-                }
+              [ Rating.FeedbackForm
+                  { question = "Evaluate your ride experience.",
+                    answer = feedbackDetails
+                  },
+                Rating.FeedbackForm
+                  { question = "Was Assistance Offered?",
+                    answer = case wasOfferedAssistance of
+                      Just True -> Just "True"
+                      Just False -> Just "False"
+                      _ -> Nothing
+                  },
+                Rating.FeedbackForm
+                  { question = "Get IssueId.",
+                    answer = issueId
+                  }
+              ]
           }
   pure $ BecknReq context message
+
+buildRatingReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DFeedback.FeedbackRes ->
+  m Spec.RatingReq
+buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do
+  msgId <- generateGUID
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- ContextV2.buildContextV2 Context.RATING Context.MOBILITY msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.defaultCity merchant.country
+  let message = tfMessage res
+  pure $
+    Spec.RatingReq
+      { ratingReqContext = context,
+        ratingReqMessage = message
+      }
+
+tfMessage :: DFeedback.FeedbackRes -> Spec.RatingReqMessage
+tfMessage res = do
+  Spec.RatingReqMessage
+    { ratingReqMessageRatings = Just [tfRating res]
+    }
+
+tfRating :: DFeedback.FeedbackRes -> Spec.Rating
+tfRating res@DFeedback.FeedbackRes {..} = do
+  Spec.Rating
+    { ratingId = Just $ bppBookingId.getId,
+      ratingValue = Just $ show ratingValue,
+      ratingRatingCategory = Nothing,
+      ratingFeedbackForm = Just $ tfFeedbackForm res
+    }
+
+tfFeedbackForm :: DFeedback.FeedbackRes -> [Spec.FeedbackForm]
+tfFeedbackForm DFeedback.FeedbackRes {..} = do
+  [ Spec.FeedbackForm
+      { feedbackFormQuestion = "Evaluate your ride experience.",
+        feedbackFormAnswer = feedbackDetails
+      },
+    Spec.FeedbackForm
+      { feedbackFormQuestion = "Was Assistance Offered?",
+        feedbackFormAnswer = case wasOfferedAssistance of
+          Just True -> Just "True"
+          Just False -> Just "False"
+          _ -> Nothing
+      },
+    Spec.FeedbackForm
+      { feedbackFormQuestion = "Get IssueId.",
+        feedbackFormAnswer = issueId
+      }
+    ]

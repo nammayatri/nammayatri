@@ -26,7 +26,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import "sessionizer-metrics" Lib.SessionizerMetrics.Types.Event as E
 import "rider-app" SharedLogic.Person as SP
-import "rider-app" Storage.CachedQueries.Merchant as CQMerchant
+import "rider-app" Storage.CachedQueries.Merchant.RiderConfig as QRC
 import "rider-app" Storage.Queries.BookingCancellationReason as QBCR
 import "rider-app" Storage.Queries.Person.PersonStats as QP
 import "rider-app" Tools.Error
@@ -37,41 +37,44 @@ updateCustomerStats event _ = do
   whenJust event.personId $ \pId -> do
     when (event.service == RIDER_APP) do
       let personId = Id pId
-          merchantId = Id event.merchantId
-      -- personStats <- Esq.runInReplica $ QP.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
-      personStats <- runInReplica $ QP.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
-      when (isNotBackfilled personStats) do
-        SP.backfillPersonStats personId merchantId
-      whenJust (event.payload) $ \payload -> do
-        unless (isNotBackfilled personStats) do
-          case event.eventType of
-            RideEnded -> do
-              case payload.rs of
-                DDR.COMPLETED -> do
-                  let createdAt = payload.cAt
-                  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-                  let minuteDiffFromUTC = (merchant.timeDiffFromUtc.getSeconds) `div` 60
+          mbOperatingCityId = Id <$> event.merchantOperatingCityId
+      case mbOperatingCityId of
+        Nothing -> logInfo "No merchant operating city id found"
+        Just merchantOperatingCityId -> do
+          -- personStats <- Esq.runInReplica $ QP.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+          personStats <- runInReplica $ QP.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
+          when (isNotBackfilled personStats) do
+            SP.backfillPersonStats personId merchantOperatingCityId
+          whenJust (event.payload) $ \payload -> do
+            unless (isNotBackfilled personStats) do
+              case event.eventType of
+                RideEnded -> do
+                  case payload.rs of
+                    DDR.COMPLETED -> do
+                      let createdAt = payload.cAt
+                      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+                      let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
+                      -- Esq.runNoTransaction $ do
+                      if SP.isWeekend createdAt minuteDiffFromUTC
+                        then do QP.incrementWeekendRidesCount personId
+                        else do QP.incrementWeekdayRidesCount personId
+                      let isMorningPeak = SP.checkMorningPeakInWeekday createdAt minuteDiffFromUTC
+                          isEveningPeak = SP.checkEveningPeakInWeekday createdAt minuteDiffFromUTC
+                          isWeekendPeak = SP.checkWeekendPeak createdAt minuteDiffFromUTC
+                      when isMorningPeak do QP.incrementMorningPeakRidesCount personId
+                      when isEveningPeak do QP.incrementEveningPeakRidesCount personId
+                      when isWeekendPeak do QP.incrementWeekendPeakRidesCount personId
+                      let isAnyPeak = isMorningPeak || isEveningPeak || isWeekendPeak
+                      unless isAnyPeak do QP.incrementOffpeakRidesCount personId
+                      QP.incrementCompletedRidesCount personId
+                    _ -> pure ()
+                BookingCancelled -> do
+                  let bookingId = cast payload.bId
+                  -- bookingCancellationReason <- Esq.runInReplica $ QBCR.findByRideBookingId bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+                  bookingCancellationReason <- runInReplica $ QBCR.findByRideBookingId bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
                   -- Esq.runNoTransaction $ do
-                  if SP.isWeekend createdAt minuteDiffFromUTC
-                    then do QP.incrementWeekendRidesCount personId
-                    else do QP.incrementWeekdayRidesCount personId
-                  let isMorningPeak = SP.checkMorningPeakInWeekday createdAt minuteDiffFromUTC
-                      isEveningPeak = SP.checkEveningPeakInWeekday createdAt minuteDiffFromUTC
-                      isWeekendPeak = SP.checkWeekendPeak createdAt minuteDiffFromUTC
-                  when isMorningPeak do QP.incrementMorningPeakRidesCount personId
-                  when isEveningPeak do QP.incrementEveningPeakRidesCount personId
-                  when isWeekendPeak do QP.incrementWeekendPeakRidesCount personId
-                  let isAnyPeak = isMorningPeak || isEveningPeak || isWeekendPeak
-                  unless isAnyPeak do QP.incrementOffpeakRidesCount personId
-                  QP.incrementCompletedRidesCount personId
+                  when (bookingCancellationReason.source == SBCR.ByUser) do QP.incrementUserCancelledRidesCount personId
+                  when (bookingCancellationReason.source == SBCR.ByDriver) do QP.incrementDriverCancelledRidesCount personId
                 _ -> pure ()
-            BookingCancelled -> do
-              let bookingId = cast payload.bId
-              -- bookingCancellationReason <- Esq.runInReplica $ QBCR.findByRideBookingId bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-              bookingCancellationReason <- runInReplica $ QBCR.findByRideBookingId bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-              -- Esq.runNoTransaction $ do
-              when (bookingCancellationReason.source == SBCR.ByUser) do QP.incrementUserCancelledRidesCount personId
-              when (bookingCancellationReason.source == SBCR.ByDriver) do QP.incrementDriverCancelledRidesCount personId
-            _ -> pure ()
   where
     isNotBackfilled personStats_ = all (== 0) [personStats_.userCancelledRides, personStats_.completedRides, personStats_.weekendRides, personStats_.weekdayRides, personStats_.offPeakRides, personStats_.eveningPeakRides, personStats_.morningPeakRides, personStats_.weekendPeakRides]

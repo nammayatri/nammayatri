@@ -21,15 +21,27 @@ import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Merchant as DTM
+import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Environment
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.Image as Query
+import qualified Storage.Queries.Message.Message as MessageQuery
+import qualified Storage.Queries.Person as QP
 import qualified Tools.Ticket as TT
+import Tools.Whatsapp as Whatsapp
 
 notifyErrorToSupport ::
   Person ->
@@ -40,17 +52,19 @@ notifyErrorToSupport ::
   [Maybe DriverOnboardingError] ->
   Flow ()
 notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reasons = catMaybes $ mapMaybe toMsg errs
   let description = T.intercalate ", " reasons
-  _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description)
+  _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig.kaptureDisposition)
   return ()
   where
     toMsg e = toMessage <$> e
 
-    mkTicket description =
+    mkTicket description disposition =
       Ticket.CreateTicketReq
         { category = "GENERAL",
           subCategory = Just "DRIVER ONBOARDING ISSUE",
+          disposition = disposition,
           issueId = Nothing,
           issueDescription = description,
           mediaFiles = Nothing,
@@ -71,3 +85,31 @@ getFreeTrialDaysLeft freeTrialDays driverInfo = do
   now <- getCurrentTime
   let driverEnablementDay = utctDay (fromMaybe now (driverInfo.enabledAt <|> driverInfo.lastEnabledOn))
   return $ max 0 (freeTrialDays - fromInteger (diffDays (utctDay now) driverEnablementDay))
+
+triggerOnboardingAlertsAndMessages :: Person -> DTM.Merchant -> DMOC.MerchantOperatingCity -> Flow ()
+triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
+  fork "Triggering onboarding messages" $ do
+    -- broadcast messages
+    messages <- MessageQuery.findAllOnboardingMessages merchant merchantOperatingCity
+    mapM_ (\msg -> addBroadcastMessageToKafka False msg driver.id) messages
+
+    -- whatsapp message
+    mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+    countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+    let phoneNumber = countryCode <> mobileNumber
+    merchantMessage <-
+      QMM.findByMerchantOpCityIdAndMessageKey merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM
+        >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCity.id.getId (show DMM.WELCOME_TO_PLATFORM))
+    let jsonData = merchantMessage.jsonData
+    result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing (Just merchantMessage.containsUrlButton))
+    when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
+
+enableAndTriggerOnboardingAlertsAndMessages :: Id DMOC.MerchantOperatingCity -> Id Person -> Bool -> Flow ()
+enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified = do
+  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  DIQuery.updateEnabledVerifiedState personId True (Just verified)
+  when (not driverInfo.enabled && isNothing driverInfo.enabledAt) $ do
+    merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+    merchant <- CQM.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
+    person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    triggerOnboardingAlertsAndMessages person merchant merchantOpCity

@@ -2,6 +2,34 @@ import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
 
+const bundleLoadTime = Date.now();
+window.flowTimeStampObject = {};
+const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
+window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT"];
+
+if (window.JBridge.firebaseLogEventWithParams){  
+  Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
+    return blackListFunctions.indexOf(fnName) == -1
+  }).forEach(fnName => {
+    window.JBridgeProxy = window.JBridgeProxy || {};
+    window.JBridgeProxy[fnName] = window.JBridge[fnName];
+    window.JBridge[fnName] = function () {
+      let params = Object.values(arguments).join(", ");
+      if (fnName === "callAPI") {
+        params = arguments[1].split("/").splice(6).join("/");
+      }
+      let shouldLog = true;
+      if (window.appConfig) {
+        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+      }
+      if (shouldLog) {
+        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+      }
+      const result = window.JBridgeProxy[fnName](...arguments);
+      return result;
+    };
+  });
+}
 
 function guid() {
   function s4() {
@@ -33,7 +61,7 @@ loadConfig();
 window.isObject = function (object) {
   return (typeof object == "object");
 }
-window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange"];
+window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "RestartAutoScroll"];
 
 setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
@@ -132,6 +160,14 @@ function makeEvent(_type, _data) {
   return { type : _type, data : _data };
 }
 
+function checkForReferral(viewParam, eventType) {
+  if (viewParam.slice(0,8) == "referrer") {
+    let referralData = viewParam.substring(viewParam.indexOf('=')+1);
+    purescript.onNewIntent(makeEvent(eventType, referralData))();
+    return true;
+  }
+  return false;
+}
 
 window.onMerchantEvent = function (_event, payload) {
   console.log(payload);
@@ -150,6 +186,16 @@ window.onMerchantEvent = function (_event, payload) {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
+    if (clientPaylod.payload && clientPaylod.payload.hasOwnProperty('onCreateTimeStamp') && clientPaylod.payload.hasOwnProperty('initiateTimeStamp'))
+    {
+      const onCreateTimeStamp = clientPaylod.payload.onCreateTimeStamp;
+      const initiateTimeStamp = clientPaylod.payload.initiateTimeStamp;
+      window.flowTimeStampObject["onCreateToBundle"] = window.prevTimeStamp - onCreateTimeStamp;
+      window.flowTimeStampObject["nativeIntiateToBundle"] = window.prevTimeStamp - initiateTimeStamp;
+    }
+    window.flowTimeStampObject["bundleLoadTime"] = bundleLoadTime - window.prevTimeStamp;
+    window.flowTimeStampObject["bundleToInitiate"] = Date.now() - bundleLoadTime;
+    window.prevTimeStamp = Date.now();
     callInitiateResult();
   } else if (_event == "process") {
     window.__payload.sdkVersion = "2.0.1"
@@ -174,13 +220,19 @@ window.onMerchantEvent = function (_event, payload) {
       }else if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "PAYMENT_MODE_MANUAL") {
         purescript.main(makeEvent("PAYMENT_MODE_MANUAL", ""))();
       } else if (parsedPayload.payload.viewParam){
-        purescript.onNewIntent(makeEvent("DEEP_VIEW", parsedPayload.payload.viewParam))();
+        if (!checkForReferral(parsedPayload.payload.viewParam, "REFERRAL_NEW_INTENT")) {
+          purescript.onNewIntent(makeEvent("DEEP_VIEW", parsedPayload.payload.viewParam))();
+        }
       } else if (parsedPayload.payload.view_param){
-        const deepLinkType = parsedPayload.payload.onNewIntent ? "DEEP_VIEW_NEW_INTENT" : "DEEP_VIEW";
-        const param = parsedPayload.payload.viewParam ? parsedPayload.payload.viewParam : parsedPayload.payload.view_param;
-        purescript.onNewIntent(makeEvent(deepLinkType, param))();
+        if (!checkForReferral(parsedPayload.payload.view_param, parsedPayload.payload.onNewIntent ? "REFERRAL" : "REFERRAL_NEW_INTENT")) {
+          const deepLinkType = parsedPayload.payload.onNewIntent ? "DEEP_VIEW_NEW_INTENT" : "DEEP_VIEW";
+          const param = parsedPayload.payload.viewParam ? parsedPayload.payload.viewParam : parsedPayload.payload.view_param;
+          purescript.onNewIntent(makeEvent(deepLinkType, param))();
+        }
       } else if (parsedPayload.payload.viewParamNewIntent){
-        purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
+        if (!checkForReferral(parsedPayload.payload.viewParamNewIntent, "REFERRAL_NEW_INTENT")) {
+          purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
+        }
       } else{
         purescript.main(makeEvent("", ""))();
       }
@@ -191,16 +243,35 @@ window.onMerchantEvent = function (_event, payload) {
 }
 
 window.callUICallback = function () {
-  const args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
+  const getCurrTime = () => (new Date()).getTime()
+  const args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null,
+    arguments));
   const fName = args[0]
   const functionArgs = args.slice(1)
+  let currTime;
+  let timeDiff;
 
-  try {
-    window.__PROXY_FN[fName].call(null, ...functionArgs);
-  } catch (err) {
-    console.error(err)
+  if (window.__THROTTELED_ACTIONS && window.__THROTTELED_ACTIONS.indexOf(fName) == -1) {
+    window.__PROXY_FN[fName].apply(null, functionArgs);
+  } else if (window.__LAST_FN_CALLED && (fName == window.__LAST_FN_CALLED.fName)) {
+    currTime = getCurrTime();
+    timeDiff = currTime - window.__LAST_FN_CALLED.timeStamp;
+
+    if (timeDiff >= 100) {
+      window.__PROXY_FN[fName].apply(null, functionArgs);
+      window.__LAST_FN_CALLED.timeStamp = currTime;
+    } else {
+      console.warn("function throtteled", fName);
+      console.warn("time diff", timeDiff);
+    }
+  } else {
+    window.__PROXY_FN[fName].apply(null, functionArgs);
+    window.__LAST_FN_CALLED = {
+      timeStamp: (new Date()).getTime(),
+      fName: fName
+    }
   }
-}
+};
 
 window.onResumeListeners = [];
 
@@ -269,7 +340,9 @@ window["onEvent'"] = function (_event, args) {
       purescript.onEvent(_event)();
     }
   } else if (_event == "onLocationChanged") {
-    purescript.onConnectivityEvent("LOCATION_DISABLED")();
+    if (JBridge.isLocationEnabled && !JBridge.isLocationEnabled()) {
+      purescript.onConnectivityEvent("LOCATION_DISABLED")();
+    }
   } else if (_event == "onInternetChanged") {
     purescript.onConnectivityEvent("INTERNET_ACTION")();
   } else if (_event == "onPause") {

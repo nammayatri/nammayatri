@@ -36,7 +36,7 @@ import Foreign.Generic (class Decode, decode)
 import Foreign.Object (Object, lookup)
 import Presto.Core.Utils.Encoding (defaultDecode)
 import ConfigProvider (loadFileInDUI)
-import Debug
+import DecodeUtil (parseJSON)
 
 foreign import getFromTopWindow :: EffectFn1 String Foreign
 
@@ -46,8 +46,6 @@ foreign import isUseLocalAssets :: Fn1 Unit Boolean
 
 foreign import renewFile :: EffectFn3 String String (Boolean -> Effect Unit) Unit
 
--- JSON Utils
-foreign import parseJSON :: String -> Foreign
 
 fetchAssets :: Effect Unit
 fetchAssets = do
@@ -58,7 +56,7 @@ fetchAssets = do
     (decodedConfig :: AssetConfig) <- case runExcept (decode config) of
       Right dConfig -> pure dConfig
       Left _ -> do
-        configFile <- runEffectFn1 loadFileInDUI $ "config" <> Constants.dotJSON
+        let configFile = loadFileInDUI $ "config" <> Constants.dotJSON
         case runExcept (decode $ parseJSON $ configFile) of
           Right dConfig -> pure dConfig
           Left _ -> throw "prefetch_failed"

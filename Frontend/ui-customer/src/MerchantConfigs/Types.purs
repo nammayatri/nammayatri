@@ -1,21 +1,24 @@
 module MerchantConfig.Types where
 
-type AppConfig =
+import Common.Types.Config
+
+type AppConfig = AppConfigCustomer CommonAppConfig
+
+type AppConfigCustomer a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
-    currency :: String,
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
     quoteListModelBackground :: String,
     quoteListModel :: QuoteListConfig,
     profileBackground :: String,
-    isGradient :: String,
-    gradient :: Array String,
     showPickUpandDrop :: Boolean,
     profileName :: String,
     profileImage :: String,
     profileCompletion :: String,
+    profileArrowImage :: String,
+    showProfileStatus :: Boolean,
     feedbackBackground :: String,
     sideBarList :: Array String,
     rateCardColor :: String,
@@ -32,7 +35,6 @@ type AppConfig =
     profileEditGravity :: String,
     merchantLogo :: String,
     logs :: Array String,
-    showCorporateAddress :: Boolean,
     searchLocationConfig :: SearchLocationConfig,
     quoteListItemConfig :: QuoteListItemConfig,
     alertDialogPrimaryColor :: String,
@@ -42,29 +44,32 @@ type AppConfig =
     cancelSearchTextColor :: String,
     cancelReasonConfig :: CancelReasonConfig,
     terminateBtnConfig :: TerminateBtnConfig,
+    suggestedTripsAndLocationConfig  :: SuggestedDestinationAndTripsConfig,
     showDeleteAccount :: Boolean
   , autoSelectBackground :: String
   , showGenderBanner :: Boolean
   , enableMockLocation :: Boolean
   , specialLocationView :: Boolean
-  , internationalNumberEnabled :: Boolean
-  , dashboardUrl :: String 
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
+  , showCheckoutRentalBanner :: Boolean
   , mapConfig :: MapConfig
+  , metroTicketingConfig :: MetroConfig
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
   , customerTip :: CustomerTip
-  , enableContactSupport :: Boolean
-  , features :: Features
+  , feature :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig
   , purpleRideConfig :: PurpleRideConfig
-  , enableGeocoder :: Boolean -- TODO:: Deprecated 21st Nov 2023
   , geoCoder :: GeoCoderConfig
-  , appLink :: String
-  } 
+  , shareAppConfig :: ShareAppConfig
+  , homeScreen :: HomeScreen
+  , locationTagBar :: LocationTagBarConfig
+  , cityConfig :: Array CityConfig
+  | a
+  }
 
 type GeoCoderConfig = {
   enableLLtoAddress :: Boolean,
@@ -113,15 +118,21 @@ type DriverInfoConfig = {
 , numberPlateBackground :: String
 , showCancelPrevention :: Boolean
 , specialZoneQuoteExpirySeconds :: Int
+, footerVisibility :: Boolean
+, footerImageUrl :: String
+, footerBackgroundColor :: String
 }
 
 type SearchLocationConfig = {
-  searchLocationTheme :: String, 
-  setLocationOnMapColor :: String, 
+  searchLocationTheme :: String,
+  setLocationOnMapColor :: String,
   strokeColor :: String,
   enableLocationTagbar :: String,
   resultsCardCornerRadius :: Number,
   showRateCardDetails :: Boolean,
+  backgroundColor :: String,
+  separatorColor :: String,
+  editTextColor :: String,
   showAdditionalChargesText :: Boolean,
   lottieHeight :: Int,
   lottieWidth :: Int,
@@ -129,6 +140,11 @@ type SearchLocationConfig = {
 , backArrow :: String
 , editTextBackground :: String
 , editTextDefaultColor :: String
+, hintColor :: String
+, showSeparator :: Boolean
+, showChargeDesc :: Boolean
+, enableRateCard :: Boolean
+, clearTextImage :: String
 }
 
 type QuoteListConfig = {
@@ -146,7 +162,27 @@ type QuoteListConfig = {
   topMargin :: Int,
   noQuotesImageHeight :: Int,
   noQuotesImageWidth :: Int,
-  closeIcon :: String
+  closeIcon :: String,
+  showSeparator :: Boolean,
+  separatorColor :: String
+}
+ 
+type SuggestedDestinationAndTripsConfig = {
+  geohashLimitForMap :: Int,
+  geohashPrecision :: Int,
+  maxLocationsToBeShown :: Int,
+  minLocationsToBeShown :: Int,
+  maxTripsToBeShown :: Int,
+  minTripsToBeShown :: Int,
+  locationsToBeStored :: Int,
+  tripsToBeStored :: Int,
+  frequencyWeight :: Number,
+  tripDistanceThreshold :: Number,
+  repeatRideTime :: Int,
+  autoScrollTime :: Int,
+  tripWithinXDist :: Number,
+  locationWithinXDist :: Number,
+  destinationGeohashPrecision :: Int
 }
 
 type Language =  {
@@ -164,15 +200,21 @@ type BannerViewState = {
   imageUrl :: String
 }
 type TerminateBtnConfig = {
-    visibility :: Boolean, 
+    visibility :: Boolean,
     title :: String,
-    imageUrl :: String
+    imageUrl :: String,
+    backgroundColor :: String
 }
 
 type EstimateAndQuoteConfig = {
   variantTypes :: Array (Array String),
-  variantOrder :: Array String
-  , enableOnlyAuto :: Boolean
+  variantOrder :: Array String,
+  enableOnlyAuto :: Boolean,
+  showNearByDrivers :: Boolean,
+  enableBookingPreference :: Boolean, 
+  textColor :: String,
+  showInfoIcon :: Boolean,
+  variantInfo :: VariantConfig
 }
 
 type CustomerTip = {
@@ -182,27 +224,59 @@ type CustomerTip = {
 
 type Features = {
   enableAutoReadOtp :: Boolean ,
-  enableZooTicketBookingFlow :: Boolean
+  enableZooTicketBookingFlow :: Boolean,
+  enableSuggestions :: Boolean,
+  enableLiveDashboard :: Boolean,
+  enableShareRide :: Boolean,
+  enableChat :: Boolean,
+  enableEmergencyContacts :: Boolean,
+  enableReferral :: Boolean,
+  enableSupport :: Boolean,
+  enableShareApp:: Boolean,
+  enableReAllocation :: Boolean,
+  forceLogReferrerUrl :: Boolean,
+  enableSelfServe :: Boolean,
+  enableAdditionalServices :: Boolean,
+  enableSafetyFlow :: Boolean,
+  shareWithEmergencyContacts :: Boolean,
+  enableAutoReferral :: Boolean,
+  enableRepeatTripBackfilling :: Boolean
   }
 
 type RideCompletedCardConfig = {
   topCard :: TopCardConfig
+, showCallSupport :: Boolean
 }
 
 type TopCardConfig = {
   gradient :: String
+, enableGradient :: Boolean
+, background :: String
+, titleColor :: String
+, rideDescription :: RideDescriptionConfig
+}
+
+type RideDescriptionConfig = {
+  background :: String
+, textColor :: String
 }
 
 type MapConfig = {
   locateOnMapConfig :: LocateOnMapConfigs,
   labelTextSize :: Int,
-  animationDuration :: Int
+  animationDuration :: Int,
+  vehicleMarkerSize :: Int
+}
+
+type MetroConfig = {
+  metroStationTtl :: Int
 }
 
 type LocateOnMapConfigs = {
   dottedLineConfig :: DottedLineConfig
 , apiTriggerRadius :: Number
 , pickUpToSourceThreshold :: Number
+, hotSpotConfig :: HotSpotConfig
 }
 
 type DottedLineConfig = {
@@ -216,4 +290,83 @@ type PurpleRideConfig = {
   visualImpairmentVideo :: String,
   physicalImpairmentVideo :: String,
   hearingImpairmentVideo :: String
+}
+
+type HomeScreen = {
+  primaryBackground :: String,
+  pickUpViewColor :: String,
+  header :: HomeScreenHeader,
+  bannerViewVisibility :: Boolean,
+  whereToButton :: WhereToButton,
+  pickupLocationTextColor :: String,
+  isServiceablePopupFullScreen :: Boolean
+}
+
+type HomeScreenHeader = {
+  menuButtonBackground :: String,
+  showLogo :: Boolean,
+  titleColor :: String,
+  showSeparator :: Boolean
+}
+
+type WhereToButton = {
+  margin :: MarginConfig,
+  shadow :: ShadowConfig
+}
+
+type MarginConfig = {
+  top :: Int,
+  bottom :: Int,
+  left :: Int,
+  right :: Int
+}
+type ShadowConfig = {
+  color :: String,
+  blur :: Number,
+  x :: Number,
+  y :: Number,
+  spread :: Number,
+  opacity :: Number
+}
+
+type ShareAppConfig = {
+  title :: String
+, description :: String
+}
+
+type LocationTagBarConfig = {
+  cornerRadius :: Number
+, textColor :: String
+, stroke:: String
+}
+
+type VariantConfig = {
+  hatchback :: VariantInfo,
+  sedan :: VariantInfo,
+  suv :: VariantInfo,
+  autoRickshaw :: VariantInfo,
+  taxi :: VariantInfo,
+  taxiPlus :: VariantInfo
+}
+
+type VariantInfo = {
+  name :: String,
+  image :: String
+}
+
+type HotSpotConfig = {
+  goToNearestPointWithinRadius :: Number,
+  showHotSpotsWithinRadius :: Number,
+  enableHotSpot :: Boolean
+}
+
+type CityConfig = {
+  cityName :: String,
+  cityCode :: String,
+  geoCodeConfig :: GeoCodeConfig
+}
+
+type GeoCodeConfig = {
+  radius :: Int,
+  strictBounds :: Boolean
 }

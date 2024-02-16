@@ -15,7 +15,7 @@
 module Domain.Types.MerchantConfig where
 
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC

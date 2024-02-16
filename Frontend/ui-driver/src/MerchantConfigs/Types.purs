@@ -1,14 +1,15 @@
 module MerchantConfig.Types where
 
-type AppConfig =
+import Common.Types.Config
+
+type AppConfig = AppConfigDriver CommonAppConfig
+
+type AppConfigDriver a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
-    fontType :: String,
     languageList :: Array Language,
     popupBackground :: String,
-    defaultLanguage :: String,
-    imageUploadOptional :: Boolean,
     rideCompletedCardConfig :: RideCompletedCardConfig, 
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
@@ -20,7 +21,27 @@ type AppConfig =
     bottomNavConfig :: BottomNavConfig,
     purpleRideConfig :: PurpleRideConfig,
     mapConfig :: MapConfig,
-    waitTimeConfig :: WaitTimeConfig
+    waitTimeConfig :: WaitTimeConfig,
+    cityConfig :: Array CityConfig,
+    unserviceableThreshold :: Number,
+    enableMockLocation :: Boolean,
+    flowConfig :: FlowConfig,
+    permissions :: PermissionsConfig,
+    homeScreen :: HomeScreenConfig,
+    feature :: Features,
+    vehicle :: VVConfig,
+    allowAllMobileNumber ::Boolean,
+    engilshInNative :: String,
+    banners :: BannerConfig,
+    referral :: ReferralConfig,
+    enableDriverReferral :: Boolean,
+    enableCustomerReferral :: Boolean,
+    rideRequest :: RideRequestConfig,
+    coinsConfig :: CoinsConfig,
+    inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
+    chooseCity :: ChooseCityScreenConfig,
+    safetyRide :: SafetyRideConfig
+    | a
   } 
 
 type PurpleRideConfig = {
@@ -64,7 +85,9 @@ type SubscriptionConfig =  {
   enableIntroductoryView :: Boolean,
   optionsMenuItems :: SubscriptionOptionsMenuItems,
   gradientConfig :: Array GradientConfig,
-  enableSubscriptionSupportPopup :: Boolean
+  enableSubscriptionSupportPopup :: Boolean,
+  earnAmountInADay :: Int,
+  showFeeBreakup :: Boolean
  }
 
 type SubscriptionOfferBannerConfig = {
@@ -94,11 +117,15 @@ type RideActionModelConfig = {
 }
 
 type RideCompletedCardConfig = {
-  showSavedCommission :: Boolean
+  showSavedCommission :: Boolean,
+  lottieQRAnim :: Boolean
 }
 
 type ProfileConfig = {
-  bookingOptionMenuForTaxi :: Boolean
+  bookingOptionMenuForTaxi :: Boolean,
+  showBookingOption :: Boolean
+, checkRCStatusForBookingOption :: Boolean
+
 }
 
 type GotoConfig = {
@@ -111,7 +138,8 @@ type BottomNavConfig = {
   rideHistory :: BottomNavItemConfig,
   subscription :: BottomNavItemConfig,
   referral :: BottomNavItemConfig,
-  notifications :: BottomNavItemConfig
+  notifications :: BottomNavItemConfig,
+  driverEarnings :: BottomNavItemConfig
 }
 
 type BottomNavItemConfig = {
@@ -125,5 +153,91 @@ type MapConfig = {
 
 type WaitTimeConfig = {
   enableWaitTime :: Boolean,
-  thresholdDist :: Number
+  thresholdDist :: Number,
+  thresholdTime :: Int,
+  routeDistance :: Int,
+  diffBtwTwoHeartBeats :: Int
+}
+
+type FlowConfig = {
+  chooseCity :: ChooseCityFlowConfig
+}
+
+type ChooseCityFlowConfig = {
+  runFlow :: Boolean,
+  defCity :: String
+}
+
+type PermissionsConfig = {
+  locationPermission :: Boolean,
+  notification :: Boolean
+}
+
+type HomeScreenConfig = {
+  specialRideOtpView :: Boolean,
+  showGenderBanner :: Boolean
+}
+
+type Features = {
+  enableBonus :: Boolean
+, enableImageUpload :: Boolean
+, enableGender ::Boolean
+, enableOtpRide :: Boolean
+, enableSuggestions :: Boolean
+, enableYatriCoins :: Boolean
+, enableAutoReferral :: Boolean
+}
+ 
+ -- VV - VechileVerfication
+type VVConfig = {
+  validationPrefix :: String
+}
+
+type BannerConfig = {
+  autoPay :: Boolean
+}
+
+type ReferralConfig = {
+  type :: String
+, link :: String
+, customerAppId :: String
+, driverAppId :: String
+}
+
+type RideRequestConfig = {
+  negotiationUnit :: NegotiationUnit
+}
+
+type NegotiationUnit = {
+  auto :: String,
+  cab :: String
+}
+
+type CoinsConfig = {
+  minCoinSliderValue :: Int,
+  maxCoinSliderValue :: Int,
+  numOfRideThresholdForCoins :: String,
+  leaderBoardThresholdForCoins :: String,
+  customerReferralCoins :: String,
+  eightPlusRidesCoins :: String,
+  purpleRideCoins :: String,
+  rideCompletedCoins :: String,
+  fiveStarRatingCoins :: String,
+  oneOrTwoStarRatingCoins :: String,
+  rideCancellationCoins :: String,
+  whatAreYatriCoinFAQ :: String,
+  howToEarnYatriCoinFAQ :: String,
+  howToRedeemYatriCoinFAQ :: String
+}
+
+type InAppKeyboardModalConfig = {
+  enableDeviceKeyboard :: Boolean
+}
+type ChooseCityScreenConfig = {
+  straightLineDistLogic :: Boolean
+}
+
+type SafetyRideConfig = {
+  startTime :: String
+, endTime :: String
 }

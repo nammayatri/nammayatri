@@ -34,7 +34,7 @@ import Servant hiding (Summary)
 
 data VolunteerEndpoint
   = AssignCreateAndStartOtpRideEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "VolunteerEndpoint"
 
@@ -48,10 +48,10 @@ type BookingInfoAPI =
 data BookingInfoResponse = BookingInfoResponse
   { bookingId :: Id Booking,
     fromLocation :: Location,
-    toLocation :: Location,
-    estimatedDistance :: Meters,
+    toLocation :: Maybe Location,
+    estimatedDistance :: Maybe Meters,
     estimatedFare :: Money,
-    estimatedDuration :: Seconds,
+    estimatedDuration :: Maybe Seconds,
     riderName :: Maybe Text,
     vehicleVariant :: Variant
   }

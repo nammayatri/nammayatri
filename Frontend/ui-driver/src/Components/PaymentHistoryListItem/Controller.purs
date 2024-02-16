@@ -1,6 +1,6 @@
 module Components.PaymentHistoryListItem.Controller where
 
-import Common.Types.App (PaymentStatus)
+import Domain.Payments (PaymentStatus)
 
 data Action
   = OnClick String

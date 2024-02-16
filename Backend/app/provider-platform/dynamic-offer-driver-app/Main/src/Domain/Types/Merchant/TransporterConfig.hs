@@ -16,6 +16,7 @@ module Domain.Types.Merchant.TransporterConfig where
 
 import Data.Time (NominalDiffTime, UTCTime)
 import Domain.Types.Common
+import Domain.Types.Location (DummyLocationInfo)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import EulerHS.Prelude hiding (id)
@@ -91,6 +92,10 @@ data TransporterConfigD u = TransporterConfig
     driverFeeRetryThresholdConfig :: Int,
     orderAndNotificationStatusCheckTime :: NominalDiffTime,
     orderAndNotificationStatusCheckTimeLimit :: NominalDiffTime,
+    badDebtBatchSize :: Int,
+    badDebtRescheduleTime :: NominalDiffTime,
+    badDebtSchedulerTime :: NominalDiffTime,
+    badDebtTimeThreshold :: Int,
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
     subscriptionStartTime :: UTCTime,
@@ -106,6 +111,7 @@ data TransporterConfigD u = TransporterConfig
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSuvDowngradeToTaxi :: Bool,
+    canSwitchToRental :: Bool,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
     languagesToBeTranslated :: [Language],
@@ -130,9 +136,36 @@ data TransporterConfigD u = TransporterConfig
     driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit,
     cancellationTimeDiff :: NominalDiffTime,
     coinExpireTime :: NominalDiffTime,
+    stepFunctionToConvertCoins :: Int,
     cancellationDistDiff :: Int,
+    considerSpecialZoneRidesForPlanCharges :: Bool,
+    considerSpecialZoneRideChargesInFreeTrial :: Bool,
+    enableUdfForOffers :: Bool,
+    nightSafetyRouteDeviationThreshold :: Meters,
+    nightSafetyStartTime :: Seconds,
+    nightSafetyEndTime :: Seconds,
+    cancellationFee :: HighPrecMoney,
+    driverDistanceTravelledOnPickupThresholdOnCancel :: Meters,
+    driverTimeSpentOnPickupThresholdOnCancel :: Seconds,
+    cancellationFeeDisputeLimit :: Int,
+    driverDistanceToPickupThresholdOnCancel :: Meters,
+    numOfCancellationsAllowed :: Int,
+    canAddCancellationFee :: Bool,
+    allowDefaultPlanAllocation :: Bool,
+    specialDrivers :: [Text],
+    specialLocationTags :: [Text],
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    notificationRetryEligibleErrorCodes :: [Text],
+    notificationRetryCountThreshold :: Int,
+    notificationRetryTimeGap :: NominalDiffTime,
+    driverAutoPayExecutionTimeFallBack :: NominalDiffTime,
+    orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime,
+    kaptureDisposition :: Text,
+    dummyFromLocation :: DummyLocationInfo,
+    dummyToLocation :: DummyLocationInfo,
+    scheduleRideBufferTime :: NominalDiffTime,
+    considerDriversForSearch :: Bool
   }
   deriving (Generic, Show)
 

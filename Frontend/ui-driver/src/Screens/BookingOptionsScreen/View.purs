@@ -2,14 +2,14 @@ module Screens.BookingOptionsScreen.View where
 
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
-import Components.ChooseVehicle as ChooseVehicle
 import Data.Maybe (Maybe(..), fromMaybe)
 import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (capitalizeFirstChar, getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions)
+import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions)
 import Language.Strings (getString)
+import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine)
@@ -19,6 +19,7 @@ import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Array as DA
+import Mobility.Prelude as MP
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -249,7 +250,7 @@ vehicleDetailsView push state =
         , weight 1.0
         ]
         [ customTV (getString YOUR_VEHICLE) FontSize.a_12 FontStyle.body3 Color.black650
-        , customTV (capitalizeFirstChar state.data.vehicleName) FontSize.a_20 FontStyle.h3 Color.black800
+        , customTV (MP.spaceSeparatedPascalCase state.data.vehicleName) FontSize.a_20 FontStyle.h3 Color.black800
         ]
     , linearLayout
         [ width WRAP_CONTENT
@@ -341,40 +342,6 @@ headerLayout push state =
         , background Color.greyLight
         ]
         []
-    ]
-
-downgradeOptionsView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
-downgradeOptionsView push state =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ MarginTop 56
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , padding $ PaddingHorizontal 16 16
-        , margin $ MarginBottom 14
-        ]
-        [ customTV (getString MAKE_YOURSELF_AVAILABLE_FOR) FontSize.a_20 FontStyle.h3 Color.black
-        ]
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ]
-        ( map
-            ( \item ->
-                linearLayout
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , padding $ PaddingVertical 6 6
-                  ]
-                  [ ChooseVehicle.view (push <<< ChooseVehicleAC) item
-                  ]
-            ) state.data.downgradeOptions
-        )
     ]
 
 customTV :: forall w. String -> Int -> (LazyCheck -> forall properties. (Array (Prop properties))) -> String -> PrestoDOM (Effect Unit) w

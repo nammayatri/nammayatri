@@ -31,7 +31,6 @@ import qualified Beckn.ACL.Cancel as CACL
 import qualified Beckn.ACL.Select as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
-import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
@@ -46,6 +45,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import Tools.Auth
 
@@ -82,8 +82,14 @@ select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate ->
 select2 (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
-    becknReq <- ACL.buildSelectReq dSelectReq
-    void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then do
+        becknReq <- ACL.buildSelectReqV2 dSelectReq
+        void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
+      else do
+        becknReq <- ACL.buildSelectReq dSelectReq
+        void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 selectList :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
@@ -94,7 +100,7 @@ selectResult (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . 
 
 cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
 cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  activeBooking <- B.runInReplica $ QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
+  activeBooking <- B.runInReplica $ QRB.findLatestByRiderId personId
   -- activeBooking <- QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
   if isJust activeBooking
     then do
@@ -105,8 +111,8 @@ cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag 
       let sendToBpp = dCancelSearch.estimateStatus /= DEstimate.NEW
       result <-
         try @_ @SomeException $
-          when sendToBpp . void . withShortRetry $
-            CallBPP.cancel dCancelSearch.providerUrl =<< CACL.buildCancelSearchReq dCancelSearch
+          when sendToBpp . void . withShortRetry $ do
+            CallBPP.cancelV2 dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
       case result of
         Left err -> do
           logTagInfo "Failed to cancel" $ show err

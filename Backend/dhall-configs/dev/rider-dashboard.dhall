@@ -60,6 +60,13 @@ let rccfg =
       , connectTimeout = None Integer
       }
 
+let cacheConfig = { configsExpTime = +86400 }
+
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -68,11 +75,12 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = True
+    , kafkaProducerCfg
     , port = +8017
-    , migrationPath = Some
-        (   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
-          ? "dev/migrations/rider-dashboard"
-        )
+    , migrationPath =
+      [   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
+        ? "dev/migrations/rider-dashboard"
+      ]
     , autoMigrate = True
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/rider-dashboard.log" }
@@ -87,6 +95,12 @@ in  { esqDBCfg
     , encTools
     , exotelToken = ""
     , dataServers = [ appBackend, appBackendManagement ]
+    , merchantUserAccountNumber = +5
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , slackToken = sec.slackToken
+    , slackChannel = "CXXXXXXXXXF"
+    , internalEndPointMap = common.internalEndPointMap
+    , cacheConfig
+    , kvConfigUpdateFrequency = +60
     }

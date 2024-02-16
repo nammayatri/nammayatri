@@ -113,8 +113,7 @@ getTripRoutes merchantId merchantOpCityId req = do
   runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getTripRoutes) merchantId merchantOpCityId req
 
 snapToRoad ::
-  ( ServiceFlow m r,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+  ( ServiceFlow m r
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
@@ -133,15 +132,17 @@ getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
 
 snapToRoadWithFallback ::
   ( ServiceFlow m r,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
   SnapToRoadReq ->
-  m (Maps.MapsService, SnapToRoadResp)
+  m ([Maps.MapsService], Either String SnapToRoadResp)
 snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback handler
   where
-    handler = Maps.SnapToRaodHandler {..}
+    handler = Maps.SnapToRoadHandler {..}
 
     getConfidenceThreshold = do
       transporterConfig <- TConfig.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantNotFound merchantOperatingCityId.getId)
@@ -155,7 +156,7 @@ snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithF
 
     getProviderConfig provider = do
       merchantMapsServiceConfig <-
-        QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService provider)
+        QOMSC.findByMerchantIdAndServiceWithCity merchantId (DOSC.MapsService provider) merchantOperatingCityId
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCityId.getId "Maps" (show provider))
       case merchantMapsServiceConfig.serviceConfig of
         DOSC.MapsServiceConfig msc -> pure msc
@@ -172,7 +173,7 @@ runWithServiceConfig ::
 runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
   orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService $ getCfg orgMapsConfig)
+    QOMSC.findByMerchantIdAndServiceWithCity merchantId (DOSC.MapsService $ getCfg orgMapsConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show $ getCfg orgMapsConfig))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> func msc req

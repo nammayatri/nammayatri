@@ -36,7 +36,16 @@ let esqLocationDBRepCfg =
       , connectionPoolCount = esqLocationDBCfg.connectionPoolCount
       }
 
-let clickhouseCfg =
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "test_db"
+      , tls = False
+      }
+
+let driverClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "xxxxx"
       , port = 1234
@@ -83,6 +92,16 @@ let sampleKafkaConfig
       , kafkaKey = "dynamic-offer-driver"
       }
 
+let exophoneKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "ExophoneData"
+      , kafkaKey = "dynamic-offer-driver-exophone-events"
+      }
+
+let sdkKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "SDKData", kafkaKey = "dynamic-offer-driver-sdk-events" }
+
 let sampleLogConfig
     : Text
     = "log-stream"
@@ -103,7 +122,23 @@ let eventStreamMappings =
           , globalCommon.eventType.Estimate
           ]
         }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream exophoneKafkaConfig
+        , eventTypes = [ globalCommon.eventType.ExophoneData ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig = globalCommon.streamConfig.KafkaStream sdkKafkaConfig
+        , eventTypes = [ globalCommon.eventType.SDKData ]
+        }
       , { streamName = globalCommon.eventStreamNameType.LOG_STREAM
+        , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
+        , eventTypes =
+          [ globalCommon.eventType.RideEnded
+          , globalCommon.eventType.RideCancelled
+          ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
         , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
         , eventTypes =
           [ globalCommon.eventType.RideEnded
@@ -135,14 +170,7 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
-let tables =
-      { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
-      , kafkaNonKVTables = [] : List Text
-      }
-
-let dontEnableForDb = [] : List Text
+let kvConfigUpdateFrequency = +10
 
 let appBackendBapInternal =
       { name = "APP_BACKEND"
@@ -163,24 +191,19 @@ let registryMap =
 
 let AllocatorJobType =
       < SendSearchRequestToDriver
-      | SendPaymentReminderToDriver
-      | UnsubscribeDriverForPaymentOverdue
       | UnblockDriver
       | SendPDNNotificationToDriver
       | MandateExecution
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
       | SendOverlay
+      | BadDebtCalculation
+      | RetryDocumentVerification
+      | SendManualPaymentLink
       >
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
-      , { mapKey = AllocatorJobType.SendPaymentReminderToDriver
-        , mapValue = False
-        }
-      , { mapKey = AllocatorJobType.UnsubscribeDriverForPaymentOverdue
-        , mapValue = True
-        }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
         , mapValue = True
@@ -191,6 +214,11 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.SendOverlay, mapValue = True }
+      , { mapKey = AllocatorJobType.BadDebtCalculation, mapValue = True }
+      , { mapKey = AllocatorJobType.RetryDocumentVerification
+        , mapValue = False
+        }
+      , { mapKey = AllocatorJobType.SendManualPaymentLink, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
@@ -210,7 +238,8 @@ let modelNamesMap =
 
 in  { esqDBCfg
     , esqDBReplicaCfg
-    , clickhouseCfg
+    , kafkaClickhouseCfg
+    , driverClickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
@@ -226,10 +255,11 @@ in  { esqDBCfg
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
-    , migrationPath = Some
-        (   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
-          ? "dev/migrations/dynamic-offer-driver-app"
-        )
+    , migrationPath =
+      [ "dev/migrations-read-only/dynamic-offer-driver-app"
+      ,   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
+        ? "dev/migrations/dynamic-offer-driver-app"
+      ]
     , autoMigrate = True
     , coreVersion = "0.9.4"
     , loggerConfig =
@@ -264,20 +294,25 @@ in  { esqDBCfg
     , broadcastMessageTopic = "broadcast-messages"
     , kafkaProducerCfg
     , snapToRoadSnippetThreshold = +300
+    , droppedPointsThreshold = +2000
+    , osrmMatchThreshold = +1500
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
+    , maxNotificationShards = +128
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , enableAPILatencyLogging = True
     , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
-    , tables
+    , kvConfigUpdateFrequency
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
-    , dontEnableForDb
     , maxMessages
     , modelNamesMap
     , incomingAPIResponseTimeout = +15
+    , internalEndPointMap = common.internalEndPointMap
+    , isBecknSpecVersion2 = True
+    , _version = "2.0.0"
     }

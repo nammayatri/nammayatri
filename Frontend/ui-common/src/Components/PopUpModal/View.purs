@@ -14,10 +14,10 @@
 -}
 module Components.PopUpModal.View where
 
-import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map)
+import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id)
-import Components.PopUpModal.Controller (Action(..), Config, CoverVideoConfig)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, rippleColor)
+import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
@@ -29,16 +29,18 @@ import Common.Types.App
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (os, clearTimer, countDown)
+import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
-import JBridge (startTimerWithTime, setYoutubePlayer, supportsInbuildYoutubePlayer)
+import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer)
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn5)
 import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Timers
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -51,16 +53,11 @@ view push state =
     , background state.backgroundColor
     , afterRender
         ( \action -> do
-            if (state.option2.enableTimer || state.option1.enableTimer) then do
-              let
-                timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue
-              if os == "IOS" then
-                liftEffect $ startTimerWithTime (show timerValue') "" "1" push CountDown
-              else
-                countDown timerValue' "" push CountDown
-              pure unit
-            else
-              pure unit
+            when 
+              (state.option2.enableTimer || state.option1.enableTimer)
+                $ do
+                  let timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue
+                  startTimer timerValue' state.timerId "1" push CountDown
         )
         (const NoAction)
     , onClick
@@ -124,7 +121,7 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER
-            , visibility state.coverVideoConfig.visibility
+            , visibility state.coverMediaConfig.visibility
             , cornerRadii state.cornerRadius
             , accessibility DISABLE_DESCENDANT
             , orientation VERTICAL
@@ -135,31 +132,61 @@ view push state =
                 , color state.topTitle.color
                 , gravity state.topTitle.gravity
                 , text state.topTitle.text
-                , visibility state.topTitle.visibility
-                ] <> (FontStyle.h2 LanguageStyle)
+                , visibility $ boolToVisibility $ state.topTitle.visibility == VISIBLE && state.onlyTopTitle == VISIBLE
+                ] <> (FontStyle.h2 LanguageStyle) 
+             , linearLayout
+                [ width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , gravity CENTER
+                    , margin $ state.coverMediaConfig.coverMediaText.margin
+                    , padding state.coverMediaConfig.coverMediaText.padding
+                    , visibility $ state.coverMediaConfig.coverMediaText.visibility
+                ][ textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color $ state.coverMediaConfig.coverMediaText.color
+                    , gravity $ state.coverMediaConfig.coverMediaText.gravity
+                    , textFromHtml state.coverMediaConfig.coverMediaText.text
+                    , accessibility ENABLE
+                    , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") state.coverMediaConfig.coverMediaText.text
+                    , visibility $ state.coverMediaConfig.coverMediaText.visibility
+                    ]  <> (FontStyle.getFontStyle state.coverMediaConfig.coverMediaText.textStyle LanguageStyle)
+                    , imageView [
+                    width state.coverMediaConfig.coverMediaText.suffixImage.width
+                    , height state.coverMediaConfig.coverMediaText.suffixImage.height
+                    , imageWithFallback state.coverMediaConfig.coverMediaText.suffixImage.imageUrl
+                    , visibility state.coverMediaConfig.coverMediaText.suffixImage.visibility
+                    , margin state.coverMediaConfig.coverMediaText.suffixImage.margin
+                    ]
+                ]
               , linearLayout[
-                  height $ state.coverVideoConfig.height
-                , width state.coverVideoConfig.width
-                , width MATCH_PARENT
+                 height WRAP_CONTENT
+                , width WRAP_CONTENT
                 , gravity CENTER
-                ][  PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $   linearLayout
-                    [ height WRAP_CONTENT
-                    , width state.coverVideoConfig.width
-                    , margin state.coverVideoConfig.margin
-                    , padding state.coverVideoConfig.padding
-                    , cornerRadius 16.0
-                    , visibility state.coverVideoConfig.visibility
-                    , id (getNewIDWithTag  state.coverVideoConfig.id)
+                , margin state.coverMediaConfig.margin
+                , background state.coverMediaConfig.background
+                
+                , stroke state.coverMediaConfig.stroke
+                , visibility state.coverMediaConfig.visibility
+                , cornerRadius state.coverMediaConfig.cornerRadius
+                ][  PrestoAnim.animationSet [Anim.fadeIn (state.coverMediaConfig.visibility == VISIBLE) ] $   linearLayout
+                    [ height state.coverMediaConfig.height
+                    , width state.coverMediaConfig.width
+                    , gravity CENTER_VERTICAL
+                    , padding state.coverMediaConfig.padding
+                    , id (getNewIDWithTag  state.coverMediaConfig.id)
                     , onAnimationEnd
                         ( \action -> do
                             let
-                                mediaType = state.coverVideoConfig.mediaType
-                                id = getNewIDWithTag state.coverVideoConfig.id
-                                url = state.coverVideoConfig.mediaUrl
+                                mediaType = state.coverMediaConfig.mediaType
+                                id = getNewIDWithTag state.coverMediaConfig.id
+                                url = state.coverMediaConfig.mediaUrl
                             if (supportsInbuildYoutubePlayer unit) then 
                                 case mediaType of
-                                    "VideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
-                                    "PortraitVideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0) id (show PLAY)
+                                    "VideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig  "VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
+                                    "PortraitVideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig  "PORTRAIT_VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
+                                    "Audio" -> addMediaPlayer id url
+                                    "AudioLink" -> addMediaPlayer id url
                                     _ -> pure unit
                                 else pure unit
                         )(const NoAction)
@@ -210,6 +237,7 @@ view push state =
             , gravity CENTER
             , margin $ state.secondaryText.margin
             , padding state.secondaryText.padding
+            , visibility $ state.secondaryText.visibility
             , onClick push $ const OnSecondaryTextClick
           ][ textView $
              [ width WRAP_CONTENT
@@ -251,9 +279,9 @@ view push state =
                 , orientation if state.optionButtonOrientation == "VERTICAL" then VERTICAL else HORIZONTAL
                 ]
                 [ linearLayout
-                    [ if state.option2.visibility then width state.option1.width else weight 1.0
+                    ([ if state.option2.visibility then width state.option1.width else weight 1.0
                     , background state.option1.background
-                    , height $ V 48
+                    , height $ state.option1.height
                     , cornerRadius 8.0
                     , visibility $ if state.option1.visibility then VISIBLE else GONE
                     , stroke $ "1," <> state.option1.strokeColor
@@ -270,7 +298,7 @@ view push state =
                             pure unit
                         )
                         (const OnButton1Click)
-                    ]
+                    ] <> (if state.option1.enableRipple then [rippleColor state.option1.rippleColor] else []))
                     [   shimmerFrameLayout
                         [ width MATCH_PARENT
                         , height MATCH_PARENT
@@ -287,7 +315,7 @@ view push state =
                         [ width $ MATCH_PARENT
                         , height $ MATCH_PARENT
                         , visibility $ if state.option1.showShimmer then GONE else VISIBLE
-                        , gravity $ CENTER
+                        , gravity state.option1.gravity
                         ]
                         [ imageView [
                             imageWithFallback state.option1.image.imageUrl
@@ -309,7 +337,7 @@ view push state =
                         ]
                     ]
                 , linearLayout
-                    [ if state.option1.visibility then width state.option2.width else weight 1.0
+                    ([ if state.option1.visibility then width state.option2.width else weight 1.0
                     , height state.option2.height
                     , background state.option2.background
                     , cornerRadius 8.0
@@ -327,9 +355,10 @@ view push state =
                     , padding state.option2.padding
                     , accessibility DISABLE
                     , orientation VERTICAL
+                    , gravity state.option2.gravity
                     , clickable state.option2.isClickable
                     , alpha (if state.option2.isClickable then 1.0 else 0.5)
-                    ]
+                    ] <> (if state.option2.enableRipple then [rippleColor state.option2.rippleColor] else []))
                     [   imageView [
                             imageWithFallback state.option2.image.imageUrl
                             , height state.option2.image.height
@@ -398,6 +427,11 @@ view push state =
             ]
         ]
     ]
+    where 
+    getYoutubeDataConfig videoType videoId = getYoutubeData {
+        videoType = videoType,
+        videoId = videoId
+        }
 
 listView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 listView push state = 
@@ -541,9 +575,9 @@ tipsView push state =
 clearTheTimer :: Config -> Effect Unit
 clearTheTimer config =
   if config.option1.enableTimer then do
-    pure $ clearTimer config.option1.timerID
+    pure $ clearTimerWithId config.option1.timerID
   else if config.option2.enableTimer then do
-    pure $ clearTimer config.option2.timerID
+    pure $ clearTimerWithId config.option2.timerID
   else
     pure unit
 

@@ -17,8 +17,9 @@ module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Screens.Types (DeleteStatus(..))
+import Screens.Types (DeleteStatus(..), IssueModalType(..))
 import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Data.Maybe(Maybe(..))
 import Foreign.Object (empty)
 
@@ -44,15 +45,22 @@ initData = {
     email : "",
     description : "",
     accountStatus : ACTIVE,
-    config : DC.config,
+    config : getAppConfig appConfig,
     vehicleVariant : Nothing,
-    logField : empty
+    logField : empty,
+    issueList : [],
+    resolvedIssueList : [],
+    ongoingIssueList : [],
+    issueListType : HELP_AND_SUPPORT_SCREEN_MODAL,
+    categories : [],
+    merchantExoPhone : ""
   },
   props:{
     apiFailure : false
   , isCallConfirmation : false
   , showDeleteAccountView : false
   , btnActive : false
+  , needIssueListApiCall : true
   }
 
 }

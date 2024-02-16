@@ -22,7 +22,7 @@ module Domain.Action.UI.Frontend
   )
 where
 
-import qualified Domain.Types.Booking as DRB
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
@@ -87,7 +87,7 @@ notifyEvent personId req = do
   _ <- case req.event of
     RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE
     SEARCH_CANCELLED -> do
-      activeBooking <- B.runInReplica $ QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
+      activeBooking <- B.runInReplica $ QB.findLatestByRiderId personId
       whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_EXISTS")
       QPFS.updateStatus personId DPFS.IDLE
   QPFS.clearCache personId
@@ -98,7 +98,8 @@ handleRideTracking ::
     EncFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    HasField "rideCfg" r RideConfig
+    HasField "rideCfg" r RideConfig,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id DP.Person ->
   Maybe Bool ->

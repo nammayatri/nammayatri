@@ -21,6 +21,7 @@ module Domain.Action.Beckn.OnSearch
     QuoteDetails (..),
     OneWayQuoteDetails (..),
     OneWaySpecialZoneQuoteDetails (..),
+    InterCityQuoteDetails (..),
     RentalQuoteDetails (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
@@ -31,12 +32,13 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
+import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
@@ -46,9 +48,11 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -103,7 +107,7 @@ data EstimateInfo = EstimateInfo
 
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Money,
-    oldNightShiftCharge :: Centesimal,
+    oldNightShiftCharge :: Maybe Centesimal,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
@@ -135,6 +139,7 @@ data QuoteInfo = QuoteInfo
 
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
+  | InterCityDetails InterCityQuoteDetails
   | RentalDetails RentalQuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
 
@@ -146,9 +151,19 @@ newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
   { quoteId :: Text
   }
 
+newtype InterCityQuoteDetails = InterCityQuoteDetails
+  { quoteId :: Text
+  }
+
 data RentalQuoteDetails = RentalQuoteDetails
-  { baseDistance :: Kilometers,
-    baseDuration :: Hours
+  { id :: Text,
+    baseFare :: Money,
+    perHourCharge :: Money,
+    perExtraMinRate :: Money,
+    includedKmPerHr :: Kilometers,
+    plannedPerKmRate :: Money,
+    perExtraKmRate :: Money,
+    nightShiftInfo :: Maybe NightShiftInfo
   }
 
 validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
@@ -166,8 +181,10 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   let merchantOperatingCityId = _searchRequest.merchantOperatingCityId
-  estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
-  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest) quotesInfo
+  mkBppDetails >>= CQBppDetails.createIfNotPresent
+
+  estimates <- traverse (buildEstimate providerInfo now _searchRequest) (filterEstimtesByPrefference estimatesInfo)
+  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest) (filterQuotesByPrefference quotesInfo)
   merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
   let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
   forM_ estimates $ \est -> do
@@ -177,6 +194,47 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   _ <- QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
   _ <- QSearchReq.updatePaymentMethods _searchRequest.id (paymentMethods <&> (.id))
   QPFS.clearCache _searchRequest.riderId
+  where
+    {- Author: Hemant Mangla
+      Rider quotes and estimates are filtered based on their preferences.
+      Currently, riders preferring rentals receive only rental options.
+      Ideally, rental options should also be available for one-way preferences, but frontend limitations prevent this.
+      Once the frontend is updated for compatibility, we can extend this feature.
+    -}
+    filterQuotesByPrefference :: [QuoteInfo] -> [QuoteInfo]
+    filterQuotesByPrefference _quotesInfo =
+      case _searchRequest.riderPreferredOption of
+        Rental -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> True; _ -> False) _quotesInfo
+        _ -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> False; _ -> True) _quotesInfo
+
+    filterEstimtesByPrefference :: [EstimateInfo] -> [EstimateInfo]
+    filterEstimtesByPrefference _estimateInfo =
+      case _searchRequest.riderPreferredOption of
+        Rental -> []
+        OneWay ->
+          case quotesInfo of
+            (qInfo : _) ->
+              case qInfo.quoteDetails of
+                OneWaySpecialZoneDetails _ -> []
+                _ -> _estimateInfo
+            _ -> _estimateInfo
+
+    mkBppDetails :: Flow BppDetails
+    mkBppDetails = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        BppDetails
+          { id,
+            subscriberId = providerInfo.providerId,
+            domain = show Domain.MOBILITY,
+            name = providerInfo.name,
+            supportNumber = Nothing,
+            logoUrl = Nothing, -- TODO: Parse this from on_search req
+            description = Nothing, -- TODO: Parse this from on_search req
+            createdAt = now,
+            updatedAt = now
+          }
 
 buildEstimate ::
   MonadFlow m =>
@@ -237,16 +295,15 @@ buildQuote requestId providerInfo now _searchRequest QuoteInfo {..} = do
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
       pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
-    RentalDetails rentalSlab -> do
-      DQuote.RentalDetails <$> buildRentalSlab rentalSlab
+    RentalDetails rentalDetails -> do
+      DQuote.RentalDetails <$> buildRentalDetails rentalDetails
     OneWaySpecialZoneDetails details -> do
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
+    InterCityDetails details -> do
+      DQuote.InterCityDetails <$> buildInterCityQuoteDetails details
   pure
     DQuote.Quote
       { id = uid,
-        providerMobileNumber = providerInfo.mobileNumber,
-        providerName = providerInfo.name,
-        providerCompletedRidesCount = providerInfo.ridesCompleted,
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
         createdAt = now,
@@ -264,10 +321,20 @@ buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
   id <- generateGUID
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
-buildRentalSlab :: MonadFlow m => RentalQuoteDetails -> m DRentalSlab.RentalSlab
-buildRentalSlab RentalQuoteDetails {..} = do
+buildInterCityQuoteDetails :: MonadFlow m => InterCityQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
+buildInterCityQuoteDetails InterCityQuoteDetails {..} = do
   id <- generateGUID
-  pure DRentalSlab.RentalSlab {..}
+  pure DSpecialZoneQuote.SpecialZoneQuote {..}
+
+buildRentalDetails :: MonadFlow m => RentalQuoteDetails -> m DRentalDetails.RentalDetails
+buildRentalDetails RentalQuoteDetails {..} = do
+  let quoteId = Id id
+      nightShiftinfo' =
+        ( \nightShiftInfo'' ->
+            DRentalDetails.NightShiftInfo nightShiftInfo''.nightShiftCharge Nothing nightShiftInfo''.nightShiftStart nightShiftInfo''.nightShiftEnd
+        )
+          <$> nightShiftInfo
+  pure DRentalDetails.RentalDetails {id = quoteId, nightShiftInfo = nightShiftinfo', ..}
 
 buildTripTerms ::
   MonadFlow m =>

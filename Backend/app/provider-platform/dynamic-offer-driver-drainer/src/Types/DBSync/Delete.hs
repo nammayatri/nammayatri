@@ -35,6 +35,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVe
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPlan as DriverPlan
+import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPoolConfig as DriverPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverStats as DriverStats
@@ -63,7 +64,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Mandate as Mandate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverPoolConfig as DriverPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.LeaderBoardConfig as MerchantLeaderBoardConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
@@ -77,7 +77,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslat
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
 import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
-import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
+import qualified "dynamic-offer-driver-app" Storage.Beam.Quote as Quote
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistryMapFallback as RegistryMapFallback
@@ -86,7 +86,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDeta
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
-import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
 import qualified "dynamic-offer-driver-app" Storage.Beam.Volunteer as Volunteer
@@ -159,7 +158,6 @@ data DeleteModel
   | RiderDetailsDelete
   | SearchRequestDelete
   | SearchRequestForDriverDelete
-  | SearchRequestSpecialZoneDelete
   | SearchTryDelete
   | VehicleDelete
   | VolunteerDelete
@@ -244,7 +242,6 @@ getTagDelete RideDetailsDelete = "RideDetailsOptions"
 getTagDelete RiderDetailsDelete = "RiderDetailsOptions"
 getTagDelete SearchRequestDelete = "SearchRequestOptions"
 getTagDelete SearchRequestForDriverDelete = "SearchRequestForDriverOptions"
-getTagDelete SearchRequestSpecialZoneDelete = "SearchRequestSpecialZoneOptions"
 getTagDelete SearchTryDelete = "SearchTryOptions"
 getTagDelete VehicleDelete = "VehicleOptions"
 getTagDelete VolunteerDelete = "VolunteerOptions"
@@ -324,7 +321,6 @@ parseTagDelete "RideDetailsOptions" = return RideDetailsDelete
 parseTagDelete "RiderDetailsOptions" = return RiderDetailsDelete
 parseTagDelete "SearchRequestOptions" = return SearchRequestDelete
 parseTagDelete "SearchRequestForDriverOptions" = return SearchRequestForDriverDelete
-parseTagDelete "SearchRequestSpecialZoneOptions" = return SearchRequestSpecialZoneDelete
 parseTagDelete "SearchTryOptions" = return SearchTryDelete
 parseTagDelete "VehicleOptions" = return VehicleDelete
 parseTagDelete "VolunteerOptions" = return VolunteerDelete
@@ -402,14 +398,13 @@ data DBDeleteObject
   | MessageTranslationDeleteOptions DeleteModel (Where Postgres MessageTranslation.MessageTranslationT)
   | MetaDataDeleteOptions DeleteModel (Where Postgres MetaData.MetaDataT)
   | PersonDeleteOptions DeleteModel (Where Postgres Person.PersonT)
-  | QuoteSpecialZoneDeleteOptions DeleteModel (Where Postgres QuoteSpecialZone.QuoteSpecialZoneT)
+  | QuoteSpecialZoneDeleteOptions DeleteModel (Where Postgres Quote.QuoteSpecialZoneT)
   | RatingDeleteOptions DeleteModel (Where Postgres Rating.RatingT)
   | RideDeleteOptions DeleteModel (Where Postgres Ride.RideT)
   | RideDetailsDeleteOptions DeleteModel (Where Postgres RideDetails.RideDetailsT)
   | RiderDetailsDeleteOptions DeleteModel (Where Postgres RiderDetails.RiderDetailsT)
   | SearchRequestDeleteOptions DeleteModel (Where Postgres SearchRequest.SearchRequestT)
   | SearchRequestForDriverDeleteOptions DeleteModel (Where Postgres SearchRequestForDriver.SearchRequestForDriverT)
-  | SearchRequestSpecialZoneDeleteOptions DeleteModel (Where Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT)
   | SearchTryDeleteOptions DeleteModel (Where Postgres SearchTry.SearchTryT)
   | VehicleDeleteOptions DeleteModel (Where Postgres Vehicle.VehicleT)
   | VolunteerDeleteOptions DeleteModel (Where Postgres Volunteer.VolunteerT)
@@ -632,9 +627,6 @@ instance FromJSON DBDeleteObject where
       SearchRequestForDriverDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ SearchRequestForDriverDeleteOptions deleteModel whereClause
-      SearchRequestSpecialZoneDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ SearchRequestSpecialZoneDeleteOptions deleteModel whereClause
       SearchTryDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ SearchTryDeleteOptions deleteModel whereClause

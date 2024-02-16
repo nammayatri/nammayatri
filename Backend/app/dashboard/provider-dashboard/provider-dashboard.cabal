@@ -33,6 +33,7 @@ library
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.Booking
       API.ProviderPlatform.DynamicOfferDriver.Driver
+      API.ProviderPlatform.DynamicOfferDriver.Driver.Coin
       API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
       API.ProviderPlatform.DynamicOfferDriver.DriverReferral
       API.ProviderPlatform.DynamicOfferDriver.Issue
@@ -52,6 +53,7 @@ library
       ProviderPlatformClient.DynamicOfferDriver.RideBooking
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
+      Storage.Beam.CommonInstances
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:
@@ -94,6 +96,7 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -170,6 +173,7 @@ executable provider-dashboard-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers

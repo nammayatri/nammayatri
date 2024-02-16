@@ -14,7 +14,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Lib.Scheduler.JobStorageType.Redis.Queries where
 
@@ -34,7 +33,7 @@ import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Kernel.Utils.Common (logDebug)
+import Kernel.Utils.Common (logDebug, logError)
 import Kernel.Utils.Time (utcToMilliseconds)
 import Lib.Scheduler.Environment
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
@@ -48,10 +47,17 @@ createJobIn :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> N
 createJobIn uuid inTime maxShards jobData = do
   void $ ScheduleJob.createJobIn @t @e uuid createJobFunc inTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
-createJobFunc :: (HedisFlow m r, HasField "schedulerSetName" r Text) => AnyJob t -> m ()
+createJobFunc :: (HedisFlow m r, HasField "schedulerSetName" r Text, HasField "maxShards" r Int) => AnyJob t -> m ()
 createJobFunc (AnyJob job) = do
-  key <- asks (.schedulerSetName)
+  key <- getShardKey
   Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds job.scheduledAt, AnyJob job)]
+
+getShardKey :: (HedisFlow m r, HasField "schedulerSetName" r Text, HasField "maxShards" r Int) => m Text
+getShardKey = do
+  setName <- asks (.schedulerSetName)
+  maxShards <- asks (.maxShards)
+  myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
+  return $ setName <> "{" <> show myShardId <> "}"
 
 createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> UTCTime -> Int -> JobContent e -> m ()
 createJobByTime uuid byTime maxShards jobData = do
@@ -79,13 +85,13 @@ getReadyTasks ::
 getReadyTasks _ = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
-  let lastEntryId :: Text = "$"
+  -- let lastEntryId :: Text = "$"
   version <- asks (.version)
   let consumerName = version.getDeploymentVersion
   let nextId :: Text = ">"
-  isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
-  unless isGroupExist $ do
-    Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
+  -- isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
+  -- unless isGroupExist $ do
+  --   Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
   result' <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xReadGroup groupName consumerName [(key, nextId)]
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
@@ -110,16 +116,16 @@ getReadyTask = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
   consumerId <- asks (.consumerId)
-  let lastEntryId :: Text = "$"
+  -- let lastEntryId :: Text = "$"
   version <- asks (.version)
   threadId <- L.runIO myThreadId
   let consumerName = version.getDeploymentVersion <> consumerId <> show threadId
   let nextId :: Text = ">"
   block <- asks (.block)
   readCount <- asks (.readCount)
-  isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
-  unless isGroupExist $ do
-    Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
+  -- isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key -- TODO: Enable after fixing these hedis stream operations for cluster redis.
+  -- unless isGroupExist $ do
+  --   Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
   result' <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xReadGroupOpts groupName consumerName [(key, nextId)] (Just block) (Just readCount)
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
@@ -141,7 +147,7 @@ markAsFailed :: (JobExecutor r m) => Id AnyJob -> m ()
 markAsFailed _ = pure ()
 
 updateErrorCountAndFail :: (JobExecutor r m, Forkable m, CoreMetrics m) => Id AnyJob -> Int -> m ()
-updateErrorCountAndFail _ _ = fork "" $ incrementSchedulerFailureCounter "RedisBased_Scheduler"
+updateErrorCountAndFail _ _ = pure ()
 
 updateKey :: AesonKey.Key -> Text -> Value -> Value
 updateKey key newString (A.Object obj) =
@@ -153,10 +159,12 @@ updateKey _ _ other = other
 reSchedule :: forall t m r. (JobCreator r m, HasField "schedulerSetName" r Text, JobProcessor t, ToJSON t) => AnyJob t -> UTCTime -> m ()
 reSchedule j byTime = do
   let jobJson = toJSON j
-  key <- asks (.schedulerSetName)
-  let A.String newScheduleTime = toJSON byTime
-  let newJOB = updateKey "scheduledAt" newScheduleTime jobJson
-  Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds byTime, newJOB)]
+  key <- getShardKey
+  case toJSON byTime of
+    A.String newScheduleTime -> do
+      let newJOB = updateKey "scheduledAt" newScheduleTime jobJson
+      Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds byTime, newJOB)]
+    jsonTime -> logError $ "got unsupported scheduleTime type: " <> show jsonTime
 
 updateFailureCount :: (JobExecutor r m) => Id AnyJob -> Int -> m ()
 updateFailureCount _ _ = pure ()

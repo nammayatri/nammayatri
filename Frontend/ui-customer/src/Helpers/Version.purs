@@ -23,13 +23,13 @@ import Screens.AppUpdatePopUp.Handler as UI
 import Control.Monad.Except.Trans (lift)
 import Engineering.Helpers.Commons (liftFlow, os, stringToVersion)
 import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Utils (showSplash, reboot)
 import Foreign (unsafeToForeign)
-import Common.Types.App (LazyCheck(..), Version(..))
+import Common.Types.App (LazyCheck(..), Version(..), FCMBundleUpdate(..))
 import Data.Int as INT
 import Data.Maybe (fromMaybe)
 import Data.String (split, Pattern(..))
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Utils (getAppConfig)
 import ModifyScreenState
 import Screens.Types (UpdatePopupType(..))
 import Data.Array ((!!), all, any)
@@ -39,7 +39,6 @@ import Services.Backend as Remote
 import Services.API (UpdateProfileReq(..))
 import Data.Lens ((^.))
 import Accessor (_minor, _major, _maintenance)
-import Constants as Constants
 
 type IosVersion = {
   majorUpdateIndex :: Int,
@@ -58,8 +57,7 @@ checkVersion = do
   if androidUpdateRequired versionCodeAndroid 
     then do
       liftFlowBT $ JB.hideLoader
-      config <- getAppConfig Constants.appConfig
-      modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion, config = config}) --TODO:: Make update popUp screen generic if it's used for other purposes also
+      modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion}) --TODO:: Make update popUp screen generic if it's used for other purposes also
       appUpdatedFlow <- UI.handleAppUpdatePopUp
       case appUpdatedFlow of
         Later -> pure unit
@@ -93,6 +91,16 @@ checkVersion = do
 
     versionIndex :: Array String -> Int -> Int
     versionIndex versionArray index = fromMaybe (-1) $ INT.fromString =<< versionArray !! index
+
+appUpdatedFlow :: FCMBundleUpdate -> FlowBT String Unit
+appUpdatedFlow payload = do
+  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image}})
+  fl <- UI.handleAppUpdatePopUp
+  case fl of
+    UpdateNow -> do 
+      liftFlowBT showSplash
+      liftFlowBT reboot
+    Later -> pure unit
 
 updateVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateVersion dbClientVersion dbBundleVersion = do

@@ -29,20 +29,19 @@ import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safe
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod)
-import Helpers.Utils (getPreviousVersion)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.Types (Stage(..))
+import Screens.Types (Stage(..), QuoteListItemState(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
+import Locale.Utils
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -392,7 +391,7 @@ selectRideAndConfirmView state push =
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
        "false"                 -> "Select a Ride"
-       _                       -> case (getValueToLocalStore LANGUAGE_KEY) of
+       _                       -> case (getLanguageLocale languageKey) of
                                     _ -> "Confirming selected ride in" <> " : " <> (fromMaybe dummyQuoteList ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
                                     -- _ -> "state.timer" <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE) TODO :: NEED TO UPDATE LANGUAGE
     ] <> FontStyle.subHeading2 TypoGraphy)]
@@ -470,6 +469,7 @@ quoteListTopSheetView state push =
       , background state.appConfig.quoteListModel.backgroundColor
       , accessibility DISABLE
       , padding $ PaddingTop safeMarginTop
+      , orientation VERTICAL
       ][  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -481,22 +481,31 @@ quoteListTopSheetView state push =
               , width MATCH_PARENT
               , orientation HORIZONTAL
               ][ linearLayout
-                  [ height $ V 40
-                  , width $ V 40
+                  [ height $ V 36
+                  , width $ V 36
                   , onClick push $ const GoBack
                   , accessibilityHint "Cancel Search : Button"
                   , accessibility ENABLE
+                  , rippleColor Color.rippleShade
+                  , cornerRadius 18.0
                   ][  imageView
                       [ height $ V 24
                       , width $ V 24
                       , accessibility DISABLE
                       , imageWithFallback state.appConfig.quoteListModel.closeIcon
-                      , margin $ MarginTop 7
+                      , margin $ Margin 6 6 6 6
                       ]
                   ]
                 , sourceDestinationView state push
                 ]
             ]
+        , linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background state.appConfig.quoteListModel.separatorColor
+          , visibility if state.appConfig.quoteListModel.showSeparator then VISIBLE else GONE
+          ]
+          []
         ]
 
 noQuotesErrorModel :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
@@ -614,6 +623,8 @@ continueWithTipButtonConfig state = let
       , id = "ContinueWithTipButtonQuoteList"
       , margin = MarginTop 10
       , background = state.appConfig.primaryBackground
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in continueWithTipButtonConfig'
 
@@ -649,6 +660,8 @@ tryAgainButtonConfig state = let
       , id = "TryAgainButtonQuoteList"
       , enableLoader = (getBtnLoader "TryAgainButtonQuoteList")
       , background = state.appConfig.primaryBackground
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in tryAgainButtonConfig'
 
@@ -661,7 +674,7 @@ getPrice state =
 
 
 
-dummyQuoteList :: QuoteListItem.QuoteListItemState
+dummyQuoteList :: QuoteListItemState
 dummyQuoteList = QuoteListItem.config{
    seconds = 15
   , id = ""  
@@ -686,7 +699,7 @@ checkVisibility state =
 setText :: QuoteListModelState -> String
 setText state =
   case state.selectedQuote ,(null state.quoteListModel) of
-    Just _ ,_                           -> (getString CONFIRM_FOR) <> (getValueFromConfig "currency") <> " " <> getPrice state
+    Just _ ,_                           -> (getString CONFIRM_FOR) <> state.appConfig.currency <> " " <> getPrice state
     Nothing , true                      -> (getString GO_HOME_)
     _,_                                 -> ""
 
@@ -703,6 +716,7 @@ separatorConfig =
   , count : 3
   , height : V 4
   , width : V 2
-  , layoutWidth : V 12
+  , layoutWidth : V 15
   , layoutHeight : V 15
+  , color : Color.black500
   }

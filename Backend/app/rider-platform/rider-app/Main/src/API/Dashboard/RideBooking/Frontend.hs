@@ -24,9 +24,10 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 data RideNotifyEventEndPoint = NotifyEventEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "RideNotifyEventEndPoint"
 

@@ -64,6 +64,7 @@ library
       Beckn.Types.Core.Taxi.API.Cancel
       Beckn.Types.Core.Taxi.API.Confirm
       Beckn.Types.Core.Taxi.API.Init
+      Beckn.Types.Core.Taxi.API.OnCancel
       Beckn.Types.Core.Taxi.API.OnConfirm
       Beckn.Types.Core.Taxi.API.OnInit
       Beckn.Types.Core.Taxi.API.OnSearch
@@ -88,7 +89,6 @@ library
       Beckn.Types.Core.Taxi.Common.Descriptor
       Beckn.Types.Core.Taxi.Common.FareProductType
       Beckn.Types.Core.Taxi.Common.FulfillmentInfo
-      Beckn.Types.Core.Taxi.Common.FulfillmentType
       Beckn.Types.Core.Taxi.Common.Gps
       Beckn.Types.Core.Taxi.Common.ItemCode
       Beckn.Types.Core.Taxi.Common.Location
@@ -99,6 +99,7 @@ library
       Beckn.Types.Core.Taxi.Common.Price
       Beckn.Types.Core.Taxi.Common.Provider
       Beckn.Types.Core.Taxi.Common.Quote
+      Beckn.Types.Core.Taxi.Common.RideCompletedQuote
       Beckn.Types.Core.Taxi.Common.StartInfo
       Beckn.Types.Core.Taxi.Common.StopInfo
       Beckn.Types.Core.Taxi.Common.Tags
@@ -149,8 +150,14 @@ library
       Beckn.Types.Core.Taxi.OnSelect.StartInfo
       Beckn.Types.Core.Taxi.OnSelect.StopInfo
       Beckn.Types.Core.Taxi.OnStatus
-      Beckn.Types.Core.Taxi.OnStatus.Fulfillment
       Beckn.Types.Core.Taxi.OnStatus.Order
+      Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.BookingReallocationOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.OrderState
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder
       Beckn.Types.Core.Taxi.OnTrack
       Beckn.Types.Core.Taxi.OnTrack.Tracking
       Beckn.Types.Core.Taxi.OnUpdate
@@ -164,6 +171,8 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm
       Beckn.Types.Core.Taxi.Search
@@ -183,9 +192,24 @@ library
       Beckn.Types.Core.Taxi.Track.Order
       Beckn.Types.Core.Taxi.Update
       Beckn.Types.Core.Taxi.Update.UpdateEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.AddStopEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.EditStopEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent.Payment
       Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType
+      BecknV2.FRFS.APIs
+      BecknV2.FRFS.Enums
+      BecknV2.FRFS.Types
+      BecknV2.FRFS.Utils
+      BecknV2.OnDemand.Enums
+      BecknV2.OnDemand.Tags
+      BecknV2.OnDemand.Types
+      BecknV2.OnDemand.Utils.Common
+      BecknV2.OnDemand.Utils.Context
+      BecknV2.OnDemand.Utils.Payment
+      BecknV2.Utils
+      Domain.Types
   other-modules:
       Paths_beckn_spec
   hs-source-dirs:
@@ -285,6 +309,7 @@ library
     , servant-server
     , stm
     , string-conversions
+    , syb
     , tasty
     , tasty-hunit
     , template-haskell

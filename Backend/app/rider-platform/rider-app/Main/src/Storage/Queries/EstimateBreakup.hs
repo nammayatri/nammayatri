@@ -29,7 +29,7 @@ create :: MonadFlow m => EstimateBreakup -> m ()
 create = createWithKV
 
 findAllByEstimateIdT :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m [EstimateBreakup]
-findAllByEstimateIdT (Id estimateId) = findAllWithKV [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
+findAllByEstimateIdT (Id estimateId) = findAllWithKVAndConditionalDB [Se.Is BeamEB.estimateId $ Se.Eq estimateId] Nothing
 
 instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where
   fromTType' BeamEB.EstimateBreakupT {..} = do

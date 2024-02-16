@@ -31,19 +31,19 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth, getVideoID, getYoutubeData)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), addMediaPlayer, parseNumber)
-import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseNumber)
+import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer, addMediaPlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, discard, ($), (<<<), (<>), (==), (&&), (-), (*), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml, imageWithFallback, rippleColor)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (NotificationDetailModelState, YoutubeVideoStatus(..))
 import Services.API (MediaType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn5)
 
 view :: forall w. (Action -> Effect Unit) -> NotificationDetailModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -106,8 +106,8 @@ view push state =
 
                                             url = state.mediaUrl
                                           case mediaType of
-                                            VideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
-                                            PortraitVideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0 ) id (show PLAY)
+                                            VideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
+                                            PortraitVideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "PORTRAIT_VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
                                             Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true "FIT_CENTER"
                                             Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
                                             AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
@@ -159,7 +159,11 @@ view push state =
           ]
             <> if state.addCommentModelVisibility == VISIBLE then [ addCommentModel state push ] else []
         )
-
+    where 
+      getYoutubeDataConfig videoType videoId = getYoutubeData {
+        videoType = videoType,
+        videoId = videoId
+      }
 addCommentModel :: NotificationDetailModelState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 addCommentModel state push =
   linearLayout
@@ -254,25 +258,28 @@ headerLayout state push =
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , orientation HORIZONTAL
-        , padding $ Padding 5 16 5 16
+        , gravity CENTER_VERTICAL
+        , padding $ Padding 5 8 5 8
         ]
         [ imageView
-            [ width $ V 30
-            , height $ V 30
-            , imageUrl "ny_ic_chevron_left"
+            [ width $ V 40
+            , height $ V 40
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackArrow
-            , padding $ Padding 2 2 2 2
-            , margin $ MarginLeft 5
+            , padding $ Padding 7 7 7 7
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString MESSAGE
-              , margin $ MarginLeft 20
+              , margin $ MarginLeft 10
               , weight 1.0
               , gravity CENTER_VERTICAL
               , color Color.black900
+              , padding $ PaddingBottom 3
               ]
             <> FontStyle.h3 TypoGraphy
         ]

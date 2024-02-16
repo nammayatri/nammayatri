@@ -16,6 +16,7 @@ module Domain.Action.Internal.Auth where
 
 import Data.OpenApi (ToSchema)
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
@@ -24,20 +25,22 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Auth (verifyPerson)
 
-newtype InternalResp = InternalResp
-  { driverId :: Id DP.Person
+data InternalResp = InternalResp
+  { driverId :: Id DP.Person,
+    merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-internalAuth :: (HasField "locationTrackingServiceKey" AppEnv Text) => Maybe RegToken -> Maybe Text -> Maybe (Id Merchant) -> Flow InternalResp
-internalAuth token apiKey merchantId = do
+internalAuth :: (HasField "locationTrackingServiceKey" AppEnv Text) => Maybe RegToken -> Maybe Text -> Flow InternalResp
+internalAuth token apiKey = do
   locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
   unless (apiKey == Just locationTrackingServiceKey) $ do
     throwError $ InvalidRequest "Invalid API key"
-  (driverId, currentMerchantId, _merchantOpCityId) <- verifyPerson (fromMaybe "" token)
-  unless (currentMerchantId == fromMaybe "" merchantId) $ do
-    throwError $ InvalidRequest "Invalid merchant id"
+  (driverId, currentMerchantId, merchantOpCityId) <- verifyPerson (fromMaybe "" token)
   pure $
     InternalResp
-      { driverId
+      { driverId,
+        merchantId = currentMerchantId,
+        merchantOperatingCityId = merchantOpCityId
       }

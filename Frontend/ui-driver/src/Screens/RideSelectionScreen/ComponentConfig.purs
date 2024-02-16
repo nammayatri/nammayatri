@@ -42,6 +42,7 @@ cancelButtonConfig state = let
     , isClickable  = true
     , cornerRadius = 8.0
     , id = "RideSelectionScreenPrimaryButton"
+    , enableRipple = true
     }
   in primaryButtonConfig'
 

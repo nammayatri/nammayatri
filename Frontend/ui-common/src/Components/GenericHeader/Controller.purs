@@ -21,7 +21,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Prelude ((<>))
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 
 data Action = SuffixImgOnClick | PrefixImgOnClick
 
@@ -51,6 +51,10 @@ type ImageConfig =
   , visibility :: Visibility
   , accessibilityHint :: String
   , accessibility :: Accessiblity
+  , cornerRadius :: Number
+  , layoutMargin :: Margin
+  , enableRipple :: Boolean
+  , rippleColor :: String
   }
 
 type TextConfig =
@@ -63,7 +67,10 @@ type TextConfig =
   }
 
 config :: Config
-config = {
+config = 
+  let 
+    config = getAppConfig appConfig
+  in {
     height : V 56
   , width : MATCH_PARENT
   , margin : (Margin 0 0 0 0)
@@ -75,12 +82,16 @@ config = {
   , prefixImageConfig : {
       height : V 25
     , width : V 25
-    , imageUrl : getValueFromConfig "addFavouriteScreenBackArrow"
+    , imageUrl : config.genericHeaderConfig.backArrow
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 12 12 12 12)
     , visibility : VISIBLE
     , accessibility : ENABLE
     , accessibilityHint : "Back : Button"
+    , cornerRadius : 30.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , textConfig : {
       text : ""
@@ -98,12 +109,19 @@ config = {
     , visibility : GONE
     , accessibility : DISABLE 
     , accessibilityHint : ""
+    , cornerRadius : 0.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , visibility : VISIBLE
 }
 
 merchantConfig :: Config
-merchantConfig = {
+merchantConfig = 
+  let 
+    config = getAppConfig appConfig
+  in {
     height : V 56
   , width : MATCH_PARENT
   , margin : (Margin 0 0 0 0)
@@ -115,12 +133,16 @@ merchantConfig = {
   , prefixImageConfig : {
       height : V 25
     , width : V 25
-    , imageUrl : getValueFromConfig "addFavouriteScreenBackArrow"
+    , imageUrl : config.genericHeaderConfig.backArrow
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 16 16 16 12)
     , visibility : VISIBLE
     , accessibility : ENABLE 
     , accessibilityHint : "Back : Button"
+    , cornerRadius : 30.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , textConfig : {
       text : ""
@@ -138,6 +160,10 @@ merchantConfig = {
     , visibility : GONE
     , accessibility : DISABLE 
     , accessibilityHint : ""
+    , cornerRadius : 0.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , visibility : VISIBLE
 }

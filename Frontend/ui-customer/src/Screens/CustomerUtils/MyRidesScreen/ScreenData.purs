@@ -18,7 +18,7 @@ module Screens.MyRidesScreen.ScreenData where
 import Data.Maybe (Maybe(..))
 import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState, ZoneType(..))
 import Services.API (BookingLocationAPIEntity(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Prelude ((<>))
 import Foreign.Object (empty)
 
@@ -32,12 +32,13 @@ initData =
       , receivedResponse: false
       , apiFailure: false
       , fromNavBar: true
+      , optionsVisibility: true
       }
   , data:
       { selectedItem: dummyIndividualCard
       , offsetValue: 0
-      , loadMoreText: "LoadMore"
-      , config: DC.config
+      , loadMoreText: true
+      , config: getAppConfig appConfig
       , logField : empty
       , isSrcServiceable: true
       }
@@ -105,4 +106,6 @@ dummyIndividualCard = {
   , zoneType : NOZONE
   , vehicleVariant : Nothing
   , isSrcServiceable : true
+  , optionsVisibility : true
+  , merchantExoPhone : ""
 }

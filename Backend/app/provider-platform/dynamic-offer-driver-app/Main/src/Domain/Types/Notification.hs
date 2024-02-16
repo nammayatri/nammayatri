@@ -5,6 +5,7 @@ module Domain.Types.Notification where
 import Data.Aeson
 import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.Mandate (Mandate)
+import Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -26,6 +27,7 @@ data Notification = Notification
     responseMessage :: Maybe Text,
     dateCreated :: UTCTime,
     lastUpdated :: UTCTime,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     lastStatusCheckedAt :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

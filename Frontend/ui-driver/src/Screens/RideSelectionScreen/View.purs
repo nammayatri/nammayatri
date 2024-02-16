@@ -31,7 +31,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (/), (<$>), (<<<), (<>), (==), (>))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, rippleColor, cornerRadius)
 import PrestoDOM.Elements.Elements (imageView)
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Properties (alpha, fontStyle, imageUrl, imageWithFallback, layoutGravity, lineHeight)
@@ -140,19 +140,21 @@ headerLayout state push =
      , layoutGravity "center_vertical"
      , padding $ Padding 5 16 5 16
      ][ imageView
-        [ width $ V 30
-        , height $ V 30
+        [ width $ V 40
+        , height $ V 40
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left"
         , onClick push $ const BackPressed
-        , padding $ Padding 2 2 2 2
+        , padding $ Padding 7 7 7 7
         , margin $ MarginLeft 5
+        , rippleColor Color.rippleShade
+        , cornerRadius 20.0
         ]
       , textView
         ([ width WRAP_CONTENT
          , height WRAP_CONTENT
          , text $ getCategoryName state.selectedCategory.categoryAction
          , textSize FontSize.a_18
-         , margin $ MarginLeft 20
+         , margin $ MarginLeft 10
          , weight 1.0
          , color Color.black900
          ]

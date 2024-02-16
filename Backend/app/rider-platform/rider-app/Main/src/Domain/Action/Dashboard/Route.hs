@@ -42,6 +42,7 @@ mkGetLocation _ rideId pickupLocationLat pickupLocationLon = do
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+        DRB.InterCityDetails details -> Just details.toLocation
   bookingLocation <- mbToLocation & fromMaybeM (InvalidRequest "Drop location does not exist for this ride")
   let merchantOperatingCityId = booking.merchantOperatingCityId
   let fromLocation = LatLong pickupLocationLat pickupLocationLon

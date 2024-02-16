@@ -2,11 +2,12 @@ module Components.RideCompletedCard.View where
 
 import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..))
 
-import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom)
+import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView, rippleColor)
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
 import Data.Functor (map)
 import PrestoDOM.Animation as PrestoAnim
+import Animation (fadeIn,fadeInWithDelay) as Anim
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
 import Common.Styles.Colors as Color
@@ -23,10 +24,13 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Halogen.VDom.DOM.Prop (Prop)
 import Components.PopUpModal as PopUpModal
-import MerchantConfig.Utils (getValueFromConfig)
 import Language.Strings (getString)
 import JBridge as JB
 import Data.Function.Uncurried (runFn1)
+import Mobility.Prelude
+import ConfigProvider
+import Mobility.Prelude (boolToVisibility)
+import Engineering.Helpers.Commons as EHC
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -56,7 +60,7 @@ topGradientView config push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , padding $ Padding 16 16 16 16
+    , padding $ Padding 16 16 16 6
     , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) config.topCard.gradient
     , id $ getNewIDWithTag "topViewId"
     ]
@@ -90,6 +94,7 @@ topPillAndSupportView config push =
               , accessibilityHint "Contact Support : Button"
               , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if config.theme == LIGHT then "ny_ic_black_headphone" else "ny_ic_headphone"
               , onClick push $ const Support
+              , rippleColor Color.rippleShade
               ]
             ]
         ]
@@ -122,14 +127,14 @@ priceAndDistanceUpdateView config push =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text config.topCard.title
-          , color $ if config.theme == LIGHT then Color.black800 else Color.grey900
+          , color $ if config.theme == LIGHT then Color.black800 else config.topCard.titleColor
           ] <> if config.theme == LIGHT then FontStyle.h3 TypoGraphy else FontStyle.h1 TypoGraphy
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER
           ][ textView $ 
-              [ text $ "₹" <> (show config.topCard.finalAmount)
+              [ text if config.isFreeRide then "₹0" else "₹" <> (show config.topCard.finalAmount)
               , accessibilityHint $ "Ride Complete: Final Fare ₹"  <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , color $ if config.theme == LIGHT then Color.black800 else Color.white900
@@ -143,7 +148,7 @@ priceAndDistanceUpdateView config push =
               , margin $ Margin 8 5 0 0
               , width WRAP_CONTENT
               , height WRAP_CONTENT
-              , color Color.black600
+              , color config.topCard.titleColor
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
@@ -153,7 +158,7 @@ priceAndDistanceUpdateView config push =
 pillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pillView config push =
   linearLayout
-    [ width WRAP_CONTENT
+    [ width if os == "IOS" then (V 300) else WRAP_CONTENT
     , height WRAP_CONTENT
     , padding config.topCard.infoPill.padding
     , margin config.topCard.infoPill.margin
@@ -190,11 +195,14 @@ rideDetailsButtonView config push =
     linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , margin $ MarginTop 10
+          , margin $ MarginTop 4
           , gravity CENTER_VERTICAL
           , onClick push $ const RideDetails
           , accessibility config.accessibility
           , accessibilityHint "Ride Details : Button"
+          , cornerRadius 4.0
+          , padding $ Padding 4 5 4 5
+          , rippleColor Color.rippleShade
           ][  textView $
               [ height WRAP_CONTENT
               , text config.topCard.bottomText
@@ -236,20 +244,24 @@ customerSideBottomCardsView config push =
     , padding $ Padding 16 16 16 16
     , background Color.white900
     , gravity CENTER
-    ][
+    ]$[
       customerIssueView config push
     , customerRatingDriverView config push
-    ]
+    ] <> if config.customerIssueCard.isNightRide then [] else [needHelpPillView config push]
   ]
 
 
 ---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
 customerIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerIssueView config push =
-  scrollView [
-    width MATCH_PARENT 
+  let
+  showOptions =  boolToVisibility $ (config.customerIssueCard.selectedYesNoButton == boolToInt config.customerIssueCard.isNightRide) && not config.customerIssueCard.wasOfferedAssistanceCardView
+  lineVisibility index = boolToVisibility $ index == 0 && config.customerIssueCard.showCallSupport
+  in
+  (if os == "IOS" then linearLayout else scrollView) 
+  [ width MATCH_PARENT 
   , height WRAP_CONTENT
-  , visibility $ if config.customerIssueCard.issueFaced then VISIBLE else GONE
+  , visibility $ boolToVisibility (config.customerIssueCard.issueFaced || config.customerIssueCard.wasOfferedAssistanceCardView)
   ][
     linearLayout
     [ width MATCH_PARENT
@@ -267,7 +279,7 @@ customerIssueView config push =
         , gravity CENTER
         , margin $ MarginTop 15
         , orientation VERTICAL
-        , visibility if config.customerIssueCard.selectedYesNoButton == 0 then VISIBLE else GONE
+        , visibility GONE -- Removed as per the design
         ](mapWithIndex (\ index item ->
             linearLayout
             [ height WRAP_CONTENT
@@ -296,9 +308,9 @@ customerIssueView config push =
                 , height $ V 1
                 , background Color.grey900
                 , margin $ MarginBottom 15
-                , visibility if index == 0 then VISIBLE else GONE
+                , visibility $ lineVisibility index
                 ][]
-            ]) [config.customerIssueCard.option1Text, config.customerIssueCard.option2Text])
+            ]) ([config.customerIssueCard.option1Text] <> if config.customerIssueCard.showCallSupport then [config.customerIssueCard.option2Text] else []))
     ]
   ]
 
@@ -335,14 +347,17 @@ yesNoRadioButton config push =
 ------------------------------------------- customerRatingDriverView -------------------------------------------------------------------------------------------------------------------------------------------------------------
 customerRatingDriverView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerRatingDriverView config push =
+  let 
+  ratingVisibility = boolToVisibility $ config.customerBottomCard.visible && not config.customerIssueCard.wasOfferedAssistanceCardView
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
+  , visibility ratingVisibility
   , cornerRadius 8.0
   , stroke $ "1,"<>Color.grey800
   , padding $ Padding 10 10 10 10
-  , margin $ MarginBottom 24
   , gravity CENTER
   ][ imageView [
       imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_driver_avatar"
@@ -371,12 +386,40 @@ customerRatingDriverView config push =
               ]
           ]) [1,2,3,4,5])
   ]
+
+needHelpPillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+needHelpPillView config push = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , background Color.blue600
+    , gravity CENTER
+    , padding $ Padding 10 12 10 12
+    , cornerRadius if os == "IOS" then 20.0 else 24.0
+    , onClick push $ const $ HelpAndSupportAC
+    , margin $ MarginVertical 20 20
+    , rippleColor Color.rippleShade
+    ][imageView [
+        width $ V 16
+      , height $ V 16
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_headphone_black"
+      , margin $ MarginRight 8
+      ]
+     , textView $ [
+        text config.needHelpText
+      , color Color.black700
+      ] <> FontStyle.tags TypoGraphy
+    ]
+
+
+
 ------------------------------------- Driver Side Bottom Cards View --------------------------------------------------------------------------------------------------------------------------------------------------------------
 driverSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverSideBottomCardsView config push = 
   scrollView[
     width MATCH_PARENT
   , height MATCH_PARENT
+  , scrollBarY false 
   ][
     linearLayout[
       height WRAP_CONTENT
@@ -417,7 +460,12 @@ rideEndBannerView config push =
 ------------------------------------- (Driver Card 2) driverUpiQrCodeView --------------------------------------------------------------------------------------------------------------
 driverUpiQrCodeView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 driverUpiQrCodeView config push = 
-  linearLayout 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ if config.lottieQRAnim.visible then lottieQRView config push else dummyTextView
+  , linearLayout 
     [
       height WRAP_CONTENT
     , width MATCH_PARENT
@@ -425,7 +473,7 @@ driverUpiQrCodeView config push =
     , orientation VERTICAL
     , cornerRadius 16.0
     , gravity CENTER
-    , margin $ MarginBottom 24
+    , margin $ MarginVertical 10 14
     ][linearLayout 
     [
       height MATCH_PARENT
@@ -461,14 +509,15 @@ driverUpiQrCodeView config push =
         ] <> FontStyle.body2 TypoGraphy
       ]
       ]
-      , imageView [
+      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ] $ imageView [
           height $ V 165
         , width $ V 165
         , margin $ MarginVertical 8 13
         , id $ getNewIDWithTag config.driverUpiQrCard.id
-        , afterRender push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
+        , onAnimationEnd push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
       ]
     ]
+  ]
 
 --------------------------------------------------- (Driver Card 3) noVpaView --------------------------------------------------------------------------------------------------------------------------------------------
 noVpaView :: forall w. Config -> PrestoDOM (Effect Unit) w 
@@ -530,7 +579,9 @@ badgeCardView config push =
 
 ---------------------------------------------- (Driver Card 6) driverFareBreakUpView  ------------------------------------------------------------------------------------------------------------------------------------------
 driverFareBreakUpView ::  forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-driverFareBreakUpView config push = 
+driverFareBreakUpView config push =
+  let currency = (getAppConfig appConfig).currency
+  in
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -565,7 +616,7 @@ driverFareBreakUpView config push =
               , padding $ PaddingHorizontal 8 8
               ][
                 textView $ [
-                  text $ (getValueFromConfig "currency") <> (show item.amount)
+                  text $ currency <> (show item.amount)
                 , color Color.pigmentGreen
                 , margin $ MarginRight 8
                 ] <> FontStyle.h0 LanguageStyle
@@ -617,7 +668,7 @@ contactSupportPopUpView config push =
   linearLayout [
     width MATCH_PARENT,
     height MATCH_PARENT
-  ][PopUpModal.view (push <<< ContactSupportPopUpAC) config.contactSupportPopUpConfig]
+  ][PopUpModal.view (push <<< ContactSupportPopUpAC) config.contactSupportPopUpConfig] 
 
 --------------------------------- Helpers ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 commonTextView :: forall w. Config -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w
@@ -654,8 +705,21 @@ whiteHorizontalLine config =
   linearLayout
     [ width MATCH_PARENT
     , height $ V 1
-    , background if config.isDriver then Color.white900 else Color.black800
+    , background if config.isDriver then Color.white900 else config.topCard.titleColor
     ][]
 
 getBottomCardHeight :: String -> Length 
 getBottomCardHeight id = V $ (screenHeight unit) - (runFn1 JB.getLayoutBounds $ getNewIDWithTag id).height - 82
+
+lottieQRView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+lottieQRView config push = 
+  PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ] $
+    lottieAnimationView
+      [ id $ EHC.getNewIDWithTag "QRLottie"
+      , background Color.white900
+      , cornerRadius 16.0
+      , height WRAP_CONTENT
+      , padding $ PaddingTop 5
+      , width MATCH_PARENT
+      , onAnimationEnd (\_-> void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = config.lottieQRAnim.url , lottieId = (EHC.getNewIDWithTag "QRLottie"), speed = 1.0 , scaleType = "CENTER_CROP"})(const UpiQrRendered)
+      ]

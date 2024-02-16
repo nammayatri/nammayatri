@@ -27,16 +27,16 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getRideLabelData, getRequiredTag, clearTimer, getCurrentUTC, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..))
 import Helpers.Utils (getRideTypeColor, getCategorizedVariant)
 import JBridge (getVersionCode)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import MerchantConfig.Utils (getMerchant, getValueFromConfig, Merchant(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude ((<>))
-import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id)
+import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id, layoutGravity, horizontalScrollView, scrollBarX, fillViewport, rippleColor)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..))
@@ -45,7 +45,12 @@ import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Helpers.Utils(getRideTypeColor, getVariantRideType)
+import Helpers.Utils as HU
 import JBridge as JB
+import Data.Int as Int
+import Animation as Anim
+import ConfigProvider
+import Locale.Utils
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -94,6 +99,7 @@ messageButton push config =
   , onClick push $ const $  if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then VisuallyImpairedCustomer else MessageCustomer
   , alpha if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then 0.5 else 1.0
   , clickable true
+  , rippleColor Color.rippleShade
   ][  imageView
       [ imageWithFallback $ fetchImage FF_ASSET $ if config.unReadMessages then "ic_chat_badge" else "ic_chat"
       , height $ V 20
@@ -130,6 +136,7 @@ callButton push config =
   , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) then VISIBLE else GONE
   , onClick push (const $ CallCustomer)
   , clickable (not (config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT))
+  , rippleColor Color.rippleShade
   ][  imageView
       [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_phone"
       , height $ V 20
@@ -139,10 +146,12 @@ callButton push config =
   
 rideActionViewWithLabel :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM ( Effect Unit) w
 rideActionViewWithLabel push config =
+  let specialZoneConfig = getRideLabelData config.specialLocationTag
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background $ getRideLabelData "backgroundColor" config.specialLocationTag
+  , background $ specialZoneConfig.backgroundColor
   , cornerRadii $ Corners 25.0 true true false false
   , orientation VERTICAL
   , padding $ PaddingTop 5
@@ -155,12 +164,12 @@ rideActionViewWithLabel push config =
       ][ imageView
           [ width $ V 18
           , height $ V 18
-          , imageWithFallback $ getRideLabelData "imageUrl" config.specialLocationTag
+          , imageWithFallback $ specialZoneConfig.imageUrl
           ]
         , textView $
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , text $ getRideLabelData "text" config.specialLocationTag
+          , text $ specialZoneConfig.text
           , gravity CENTER_VERTICAL
           , color Color.white900
           , margin $ MarginLeft 5
@@ -187,7 +196,7 @@ rideActionViewWithLabel push config =
               [ textView $ 
                   [ width WRAP_CONTENT
                   , height MATCH_PARENT
-                  , text $ getRideLabelData "secondaryText" config.specialLocationTag
+                  , text $ specialZoneConfig.secondaryText
                   , gravity CENTER_VERTICAL
                   , color Color.white900
                   ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
@@ -289,6 +298,7 @@ openGoogleMap push config =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
+      , rippleColor Color.rippleShade
       ][  imageView
           [ width $ V 20
           , height $ V 20
@@ -386,6 +396,7 @@ startRide push config =
   , pivotY 0.0
   , onAnimationEnd push $ const NoAction
   , afterRender push $ const NoAction
+  , rippleColor Color.rippleShade
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -406,6 +417,7 @@ endRide push config =
   , cornerRadius 8.0
   , gravity CENTER
   , onClick push (const $ EndRide)
+  , rippleColor Color.rippleShade
   , afterRender push $ const NoAction
   ][  textView (
       [ width WRAP_CONTENT
@@ -478,15 +490,28 @@ estimatedFareView push config =
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
-      , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text ((getValueFromConfig "currency") <> (show config.estimatedRideFare))
-        , color Color.black900
-        , ellipsize true
-        , singleLine true
-        ] <> FontStyle.body10 TypoGraphy
+      , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ][  textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ currency <> (show config.estimatedRideFare)
+            , color Color.black900
+            , ellipsize true
+            , singleLine true
+            ] <> FontStyle.body10 TypoGraphy
+          , if config.waitTimeSeconds > (config.thresholdTime + 60) then yellowPill push pillText (not config.startRideActive) else linearLayout[visibility GONE][]
+        ]
     ]
+    where currency = getCurrency appConfig
+          pillText = "+" <> currency <> " " <> show (calculateCharges (config.waitTimeSeconds - config.thresholdTime))
+
+          calculateCharges :: Int -> Number
+          calculateCharges sec =
+            let min = Int.floor $ Int.toNumber sec / 60.0
+            in 1.5 * Int.toNumber min
 
 waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 waitTimeView push config =
@@ -495,7 +520,7 @@ waitTimeView push config =
      , gravity START
      , orientation VERTICAL
      , weight 1.0
-     , visibility if config.waitTime /= "__" && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered then VISIBLE else GONE
+     , visibility if config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered then VISIBLE else GONE
      ]
      [ linearLayout
          [
@@ -513,43 +538,91 @@ waitTimeView push config =
         ,
         imageView
           [ height MATCH_PARENT
-            , width  $ V 25
+            , width  $ V 20
             , visibility if config.notifiedCustomer then VISIBLE else GONE
             , onClick push (const WaitingInfo)
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
           ]
          ]
-        , textView $
-         [ height WRAP_CONTENT
-         , width WRAP_CONTENT
-         , text (config.waitTime)
-         , color Color.black900
-         , ellipsize true
-         , textSize FontSize.a_20
-         , singleLine true
-         , fontStyle (FontStyle.semiBold TypoGraphy)
-         ]
+       , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ][ textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text if config.waitTimeSeconds > config.thresholdTime then HU.formatSecIntoMinSecs config.thresholdTime else HU.formatSecIntoMinSecs config.waitTimeSeconds
+            , color Color.black900
+            , ellipsize true
+            , textSize FontSize.a_20
+            , singleLine true
+            , fontStyle $ FontStyle.semiBold TypoGraphy
+            ]
+            , if config.waitTimeSeconds > config.thresholdTime then 
+                yellowPill push ("+ " <> HU.formatSecIntoMinSecs (config.waitTimeSeconds - config.thresholdTime)) false 
+              else linearLayout[visibility GONE][]
+        ]
      ]
 
+yellowPill :: forall w. (Action -> Effect Unit) -> String -> Boolean -> PrestoDOM (Effect Unit) w
+yellowPill push text' showInfo = 
+  PrestoAnim.animationSet [Anim.fadeIn true] $
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , background Color.yellow800
+    , padding $ Padding 3 2 3 2
+    , gravity CENTER_VERTICAL
+    , margin $ Margin 2 2 0 0
+    , cornerRadius 10.0
+    ][ textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text text'
+        , color Color.black800
+        , ellipsize true
+        , singleLine true
+        ] <> FontStyle.body9 TypoGraphy
+      , imageView
+        [ height $ V 12
+        , width  $ V 12
+        , margin $ Margin 1 1 0 0
+        , visibility if showInfo then VISIBLE else GONE
+        , onClick push $ const WaitingInfo
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
+        ]
+    ]
 
 rideInfoView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideInfoView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , stroke ("1," <> Color.grey900)
+    , stroke $ "1," <> Color.grey900
     , cornerRadius 8.0
-    , padding (Padding 16 16 5 16)
+    , padding $ Padding 14 14 5 14
     , afterRender push $ const NoAction
-    ][ estimatedFareView push config
-     , separator true
-     , totalDistanceView push config
-     , separator $ config.waitTime /= "__" && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
-     , waitTimeView push config
-     , linearLayout
-       [ weight 1.0
-       , height MATCH_PARENT
-       ][]
+    ][  horizontalScrollView
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , scrollBarX false
+        , fillViewport true
+        ][ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            ][ estimatedFareView push config
+            , separator true
+            , totalDistanceView push config
+            , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+            , waitTimeView push config
+            , linearLayout
+              [ weight 1.0
+              , height MATCH_PARENT
+              ][]
+            ]
+          ]
     ]
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
@@ -682,7 +755,7 @@ getTitle :: Config -> String
 getTitle config = case config.startRideActive,  config.notifiedCustomer of
   false, _ -> (getString YOU_ARE_ON_A_RIDE)
   true, false  ->  (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
-  true, true -> case (getValueToLocalStore LANGUAGE_KEY) of
+  true, true -> case (getLanguageLocale languageKey) of
       "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
       "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
       _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
@@ -697,10 +770,11 @@ separatorConfig =
   , width : V 2
   , layoutWidth : V 14
   , layoutHeight : V 16
+  , color : Color.black500
   }
 
 isSpecialRide :: Config -> Boolean
-isSpecialRide config = (Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag "text" config.specialLocationTag)
+isSpecialRide config = (Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50

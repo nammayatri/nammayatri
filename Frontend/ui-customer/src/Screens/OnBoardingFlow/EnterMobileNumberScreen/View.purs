@@ -17,7 +17,6 @@ module Screens.EnterMobileNumberScreen.View where
 
 import Common.Types.App
 import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
-
 import Animation as Anim
 import Animation.Config (translateYAnimConfig)
 import Components.GenericHeader as GenericHeader
@@ -41,7 +40,6 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width, textFromHtml, accessibility, accessibilityHint)
@@ -51,6 +49,8 @@ import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Timers
+import Locale.Utils
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -61,13 +61,10 @@ screen initialState =
     do
       _ <- JB.setFCMToken push $ SetToken
       if not initialState.props.enterOTP then JB.detectPhoneNumbers push $ SetPhoneNumber else pure unit
-      if initialState.data.timerID == "" then pure unit else pure $ EHC.clearTimer initialState.data.timerID
-      if not initialState.props.resendEnable && initialState.data.attempts >= 0 && initialState.props.enterOTP then do
-          _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do 
-            if (EHC.os == "IOS") then liftEffect $ JB.startTimerWithTime (show initialState.data.timer) "otp" "1" push CountDown
-            else  liftEffect $ EHC.countDown initialState.data.timer "otp" push CountDown
-          pure unit
-        else pure unit
+      if initialState.data.timerID == "" then pure unit else pure $ clearTimerWithId initialState.data.timerID
+      when
+        (not initialState.props.resendEnable && initialState.data.attempts >= 0 && initialState.props.enterOTP)
+          $ startTimer initialState.data.timer "otp" "1" push CountDown
       pure (pure unit)) ] <> if EHC.os == "IOS" then [] else [ startOtpReciever AutoFill ]
   , eval : \action state -> do
       let _ = printLog  "EnterMobileNumber state -----" state
@@ -78,7 +75,7 @@ view
   :: forall w
   . (Action -> Effect Unit) -> ST.EnterMobileNumberScreenState -> PrestoDOM (Effect Unit) w
 view push state = let
-  lang = getValueToLocalStore LANGUAGE_KEY
+  lang = getLanguageLocale languageKey
    in
    linearLayout
    [  height MATCH_PARENT
@@ -122,6 +119,8 @@ view push state = let
 ---------------------------------- enterMobileNumberView -----------------------------------
 enterMobileNumberView:: ST.EnterMobileNumberScreenState  -> String -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 enterMobileNumberView  state lang push =
+  let config = state.data.config
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -139,7 +138,7 @@ enterMobileNumberView  state lang push =
             , margin (Margin 0 8 0 12)
             , visibility  if state.props.countryCodeOptionExpanded then GONE else VISIBLE
             ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false false ""
-            , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true true ( " By Clicking Continue: You Agree To Our Terms And Conditions" )
+            , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just config.termsLink) push true true ( " By Clicking Continue: You Agree To Our Terms And Conditions" )
               ]
         , PrestoAnim.animationSet
           [ Anim.fadeIn $ not state.props.enterOTP 
@@ -150,17 +149,17 @@ enterMobileNumberView  state lang push =
             , width MATCH_PARENT
             , visibility  if state.props.countryCodeOptionExpanded then GONE else VISIBLE
             ][PrimaryButton.view (push <<< MobileNumberButtonAction) (mobileNumberButtonConfig state)]
-        , if (not state.props.countryCodeOptionExpanded) && (elem state.data.countryObj.countryShortCode state.data.config.enableWhatsappOTP) then whatsAppOTPButtonView state push else dummyView push
+        , if (not state.props.countryCodeOptionExpanded) && (elem state.data.countryObj.countryShortCode state.data.config.enableWhatsappOTP) then whatsAppOTPButtonView state push "PrimaryButtonWhatsAppOTP" true else dummyView push
     ]
 
-whatsAppOTPButtonView  :: ST.EnterMobileNumberScreenState  -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
-whatsAppOTPButtonView state push = 
+whatsAppOTPButtonView  :: ST.EnterMobileNumberScreenState  -> (Action -> Effect Unit) -> String -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+whatsAppOTPButtonView state push id enableLoader = 
   linearLayout [
     height WRAP_CONTENT,
     width MATCH_PARENT, 
     orientation VERTICAL,
     gravity CENTER
-  ][PrestoAnim.animationSet [Anim.fadeOut state.props.countryCodeOptionExpanded] $ 
+  ][ PrestoAnim.animationSet [Anim.fadeOut state.props.countryCodeOptionExpanded] $ 
     textView $ [
       height WRAP_CONTENT
     , width MATCH_PARENT
@@ -170,14 +169,14 @@ whatsAppOTPButtonView state push =
     , color Color.black500
     ] <> FontStyle.tags TypoGraphy
   , PrestoAnim.animationSet
-    [ Anim.fadeIn $ not state.props.enterOTP
-    , Anim.fadeOut $ state.props.countryCodeOptionExpanded || state.props.enterOTP
+    [ Anim.fadeIn true
+    , Anim.fadeOut $ state.props.countryCodeOptionExpanded
     ] $
     linearLayout
       [ height WRAP_CONTENT
       , width $ V (EHC.screenWidth unit - 32)
       , gravity CENTER
-      ][PrimaryButton.view (push <<< WhatsAppOTPButtonAction) (whatsAppOTPButtonConfig state)]
+      ][PrimaryButton.view (push <<< WhatsAppOTPButtonAction) (whatsAppOTPButtonConfig state id enableLoader)]
     ]
 
 
@@ -241,6 +240,7 @@ enterOTPView state lang push =
         , accessibility DISABLE
         , visibility if state.props.resendEnable then GONE else VISIBLE
         ] <> FontStyle.body9 TypoGraphy]
+    , if state.props.resendEnable then whatsAppOTPButtonView state push "ResendButtonViaWhatsapp" false else dummyView push
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT

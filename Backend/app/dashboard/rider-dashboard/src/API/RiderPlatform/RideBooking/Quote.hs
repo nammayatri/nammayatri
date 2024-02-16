@@ -38,6 +38,6 @@ handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler = callGetQuotes
 
 callGetQuotes :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SSR.SearchRequest -> Id DP.Person -> FlowHandler DQuote.GetQuotesRes
-callGetQuotes merchantShortId opCity apiTokenInfo searchRequestId personId = withFlowHandlerAPI $ do
+callGetQuotes merchantShortId opCity apiTokenInfo searchRequestId personId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderApp checkedMerchantId opCity (.rideBooking.quote.getQuote) searchRequestId personId

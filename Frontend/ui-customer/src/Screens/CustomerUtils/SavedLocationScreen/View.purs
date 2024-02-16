@@ -179,6 +179,9 @@ savedLocationsView push state =
               , distance : Nothing
               , showDistance : Just false
               , actualDistance : Nothing
+              , frequencyCount : Nothing
+              , recencyDate : Nothing
+              , locationScore : Nothing
             }))state.data.savedLocations)
         , linearLayout
           [ height $ V 100

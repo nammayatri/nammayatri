@@ -1,17 +1,17 @@
 module Screens.EmergencyContactsScreen.ScreenData where
 
 import Prelude
-import Screens.Types (EmergencyContactsScreenState(..))
+
 import Foreign.Object (empty)
+import Screens.Types (EmergencyContactsScreenState(..))
 
 initData :: EmergencyContactsScreenState
 initData = {
     data: {
-      contactInfoState : []
-    , contactsCount : 0
-    , contactsList : []
-    , contactsNewList : []
-    , contactsUpdatedNewList: []
+      emergencyContactsList : []
+    , storedContactsList : []
+    , selectedContacts : []
+    , searchResult: []
     , prestoListArrayItems: []
     , loadMoreDisabled: true
     , offsetForEmergencyContacts : 0
@@ -19,6 +19,8 @@ initData = {
     , removedContactDetail : { isSelected :false
                               , name : ""
                               , number : ""
+                              , enableForFollowing: false
+                              , priority: 1
                               }
     , editedText : ""
     , logField : empty
@@ -26,5 +28,6 @@ initData = {
     props:{
         showContactList : false
       , showInfoPopUp : false  
+      , fromSosFlow : false
     }
 }

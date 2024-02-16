@@ -17,6 +17,7 @@
 module Storage.Beam.DriverQuote where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -30,12 +31,13 @@ data DriverQuoteT f = DriverQuoteT
     searchTryId :: B.C f Text,
     searchRequestForDriverId :: B.C f (Maybe Text),
     estimateId :: B.C f Text,
+    tripCategory :: B.C f (Maybe DTC.TripCategory),
     driverId :: B.C f Text,
     driverName :: B.C f Text,
     driverRating :: B.C f (Maybe Centesimal),
     status :: B.C f Domain.DriverQuoteStatus,
     vehicleVariant :: B.C f Variant.Variant,
-    distance :: B.C f Meters,
+    distance :: B.C f (Maybe Meters),
     distanceToPickup :: B.C f Meters,
     durationToPickup :: B.C f Seconds,
     validTill :: B.C f LocalTime,

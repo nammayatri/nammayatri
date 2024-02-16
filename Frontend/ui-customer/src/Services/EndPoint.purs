@@ -16,7 +16,7 @@
 module Types.EndPoint where
 
 import Prelude ((<>),show, (==))
-
+import Data.Maybe (maybe, Maybe(..))
 import Services.Config (getBaseUrl)
 
 
@@ -68,8 +68,12 @@ selectEstimate estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/
 selectList :: String -> String
 selectList estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/results"
 
-rideBookingList :: String -> String -> String -> String
-rideBookingList limit offset isActive = (getBaseUrl "16") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive
+rideBookingList :: String -> String -> String -> Maybe String -> String
+rideBookingList limit offset isActive status = 
+  maybe 
+    ((getBaseUrl "16") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
+    (\rideStatus -> ((getBaseUrl "41") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=false" <>"&status=" <> show rideStatus))
+    status
 
 ridebooking :: String ->  String
 ridebooking bookingId  = (getBaseUrl "17") <> "/rideBooking/"<> bookingId
@@ -137,7 +141,7 @@ userSosStatus :: String -> String
 userSosStatus sosId = (getBaseUrl "37") <> "/sos/" <> sosId <>"/status"
 
 onCall :: String -> String
-onCall _ = (getBaseUrl "38") <> "/onCall"
+onCall _ = (getBaseUrl "38") <> "/callEvent"
 
 callbackRequest :: String -> String
 callbackRequest dummy = (getBaseUrl "38") <> "/support/callbackRequest"
@@ -169,3 +173,77 @@ ticketStatus shortId = (getBaseUrl "41") <> "/ticket/bookings/" <> shortId <> "/
 
 ticketBookingDetails :: String -> String
 ticketBookingDetails shortid = (getBaseUrl "41") <> "/ticket/bookings/" <> shortid <> "/details"
+
+getCategories :: String -> String
+getCategories language = (getBaseUrl "40") <> "/issue/category?language=" <> language
+
+postIssue :: String -> String
+postIssue language = (getBaseUrl "41") <> "/issue?language=" <> language
+
+uploadFile :: String -> String
+uploadFile dummy = (getBaseUrl "42") <> "/issue/upload"
+
+getOptions :: String -> String -> String -> String -> String
+getOptions categoryId optionId issueReportId language = 
+  if (optionId == "") 
+    then (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&language=" <> language
+    else if (issueReportId == "")
+      then (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&optionId=" <> optionId <> "&language=" <> language
+      else (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&optionId=" <> optionId <> "&issueReportId=" <> issueReportId <> "&language=" <> language
+
+issueInfo :: String -> String -> String
+issueInfo issueId language = (getBaseUrl "44") <> "/issue/" <> issueId <> "/info?language=" <> language
+
+updateIssue :: String -> String -> String
+updateIssue issueId language = (getBaseUrl "45") <> "/issue/" <> issueId <> "/updateStatus" <> "?language=" <> language
+
+fetchIssueList :: String -> String
+fetchIssueList language = (getBaseUrl "46") <> "/issue/list?language=" <> language
+
+getEmergencySettings :: String -> String
+getEmergencySettings dummy = (getBaseUrl "47") <> "/profile/getEmergencySettings"
+
+updateEmergencySettings :: String -> String
+updateEmergencySettings dummy = (getBaseUrl "48") <> "/profile/updateEmergencySettings"
+
+updateSafeRide :: String -> String
+updateSafeRide sosId = (getBaseUrl "49") <> "/sos/markRideAsSafe/" <> sosId
+
+updateSosVideo :: String -> String
+updateSosVideo sosId = (getBaseUrl "50") <> "/sos/" <> sosId <> "/addVideo"
+
+getSosDetails :: String -> String
+getSosDetails rideId = (getBaseUrl "51") <> "/sos/getDetails/" <> rideId
+
+safetySupport :: String -> String
+safetySupport dummy = (getBaseUrl "52") <> "/support/safetyCheckSupport"
+
+createMockSos :: String -> String
+createMockSos dummy = (getBaseUrl "53") <> "/sos/createMockSos"
+
+shareRide :: String -> String
+shareRide dummy = (getBaseUrl "54") <> "/share/ride"
+
+followRide :: String -> String
+followRide _ = (getBaseUrl "47") <> "/follow/ride"
+
+getMetroStations :: String -> String
+getMetroStations dummy = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"METRO\""
+
+searchMetro :: String -> String
+searchMetro dummy = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"METRO\""
+
+getMetroQuotes :: String -> String
+getMetroQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
+
+confirmMetroQuote :: String -> String
+confirmMetroQuote quoteId = (getBaseUrl "50") <> "/frfs/quote/" <> quoteId <> "/confirm"
+
+getMetroBookingStatus :: String -> String
+getMetroBookingStatus bookingId = (getBaseUrl "51") <> "/frfs/booking/" <> bookingId <> "/status"
+
+getMetroBookingList :: String -> String
+getMetroBookingList dummy = (getBaseUrl "52") <> "/frfs/booking/list"
+
+retryMetrTicketPayment :: String -> String
+retryMetrTicketPayment quoteId = (getBaseUrl "53") <> "/frfs/quote/" <> quoteId <> "/payment/retry"

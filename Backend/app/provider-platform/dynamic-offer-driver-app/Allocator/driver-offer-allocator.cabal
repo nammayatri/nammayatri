@@ -81,7 +81,6 @@ library
     , exceptions
     , extra
     , generic-lens
-    , hashmap
     , hspec
     , mobility-core
     , openapi3
@@ -102,6 +101,7 @@ library
     , text
     , text-conversions
     , time
+    , unordered-containers
     , uuid
     , wai
     , warp
@@ -164,7 +164,6 @@ executable driver-offer-allocator-exe
     , exceptions
     , extra
     , generic-lens
-    , hashmap
     , hspec
     , mobility-core
     , openapi3
@@ -185,6 +184,7 @@ executable driver-offer-allocator-exe
     , text
     , text-conversions
     , time
+    , unordered-containers
     , uuid
     , wai
     , warp

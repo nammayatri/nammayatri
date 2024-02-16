@@ -134,6 +134,7 @@ public class RideRequestActivity extends AppCompatActivity {
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
             updateIndicators();
             updateProgressBars(false);
+            RideRequestUtils.addRideReceivedEvent(null,rideRequestBundle,null,"ride_request_popped_in_activity", this);
         });
     }
 
@@ -236,6 +237,9 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
             holder.destinationAddress.setText(model.getDestinationAddress());
+
+            if (!model.isTranslated()) RideRequestUtils.updateViewFromMlTranslation(holder, model, sharedPref, RideRequestActivity.this);
+
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
             if(model.getSourcePinCode() != null &&  model.getSourcePinCode().trim().length()>0){

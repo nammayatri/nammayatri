@@ -1,3 +1,5 @@
+@app-host = http://localhost:8013/v2
+
 # @name login
 POST {{app-host}}/auth
 content-type: application/json

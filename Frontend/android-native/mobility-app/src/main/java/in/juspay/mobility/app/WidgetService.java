@@ -77,16 +77,18 @@ public class WidgetService extends Service {
     private static FirebaseAnalytics mFirebaseAnalytics;
     private int LAYOUT_FLAG;
 
+    private Runnable animationRunnable;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
         String intentMessage = intent != null && intent.hasExtra(getResources().getString(R.string.WIDGET_MESSAGE)) ? intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE)) : null;
-        if (intent != null && calculatedTime == 0 && intentMessage == null) {
+        if (intent != null && calculatedTime == 0 && intentMessage == null && animationRunnable == null) {
             showSilentNotification(intent);
         } else {
             if (intentMessage != null && intentMessage.equals("CLEAR_FARE") && silentRideRequest != null && progressBar != null && dismissRequest != null && handler != null) {
                 removeViewAndRequest(0);
-            } else if (isRemovingInProcess) {
+            } else if (isRemovingInProcess || animationRunnable != null) {
                 rideRequestQueue.offer(intent);
             } else if (intentMessage != null && !intentMessage.equals("CLEAR_FARE")) {
                 addMessageToWidget(intent);
@@ -111,6 +113,8 @@ public class WidgetService extends Service {
 
     private void showSilentNotification(Intent intent) {
         if(widgetView == null) return;
+        animationRunnable = null;
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
         try {
             // Fetch TextView for fare and distanceToPickup
             TextView fareTextView = widgetView.findViewById(R.id.ride_fare);
@@ -260,18 +264,37 @@ public class WidgetService extends Service {
                     silentRideRequest = null;
                     progressBar = null;
                     handler.removeCallbacksAndMessages(null);
+                    animationRunnable = null;
                     calculatedTime = 0;
                 });
-                mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
                 mFirebaseAnalytics.logEvent("ny_silent_ride_request", params);
+                RideRequestUtils.addRideReceivedEvent(entity_payload,null,null,"silent_ride_request_popped", this);
             }
         } catch (Exception e) {
             e.printStackTrace();
             calculatedTime = 0;
+            if (mFirebaseAnalytics!=null) mFirebaseAnalytics.logEvent("exception_ny_silent_ride_request", params);
         }
     }
 
     private void removeViewAndRequest(int delayInMilliSeconds) {
+        animationRunnable = () -> {
+            if (silentRideRequest != null && progressBar != null && dismissRequest != null) {
+                silentRideRequest.setVisibility(View.GONE);
+                progressBar.setVisibility(View.GONE);
+                dismissRequest.setVisibility(View.GONE);
+                silentRideRequest = null;
+                progressBar = null;
+                dismissRequest = null;
+                calculatedTime = 0;
+                isRemovingInProcess = false;
+                handler.removeCallbacksAndMessages(null);
+                animationRunnable = null;
+                if (rideRequestQueue.size() > 0 && rideRequestQueue.peek() != null) {
+                    showSilentNotification(rideRequestQueue.poll());
+                }
+            }
+        };
         handler.postDelayed(() -> {
             isRemovingInProcess = true;
             if (silentRideRequest != null) {
@@ -289,22 +312,7 @@ public class WidgetService extends Service {
 
             rotationAnimation(floatingWidget, mAngleToRotate, 0.0f);
 
-            handler.postDelayed(() -> {
-                if (silentRideRequest != null && progressBar != null && dismissRequest != null) {
-                    silentRideRequest.setVisibility(View.GONE);
-                    progressBar.setVisibility(View.GONE);
-                    dismissRequest.setVisibility(View.GONE);
-                    silentRideRequest = null;
-                    progressBar = null;
-                    dismissRequest = null;
-                    calculatedTime = 0;
-                    isRemovingInProcess = false;
-                    handler.removeCallbacksAndMessages(null);
-                    if (rideRequestQueue.size() > 0 && rideRequestQueue.peek() != null) {
-                        showSilentNotification(rideRequestQueue.poll());
-                    }
-                }
-            }, 700);
+            handler.postDelayed(animationRunnable, 700);
         }, delayInMilliSeconds);
     }
 
@@ -401,12 +409,12 @@ public class WidgetService extends Service {
         imageClose = new ImageView(this);
         try {
             imageClose.setImageResource(R.drawable.ny_ic_close_transparent);
+            imageClose.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.widget_close_gradient, null));
         } catch (Exception e) {
             Log.e("Exception in rendering Image", e.toString());
         }
         imageClose.setPadding(0, 0, 0, (int) (10 * scale + 0.5f));
         imageClose.setVisibility(View.INVISIBLE);
-        imageClose.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.widget_close_gradient, null));
         windowManager.addView(imageClose, closeImageParams);
         windowManager.addView(widgetView, widgetLayoutParams);
         widgetView.setVisibility(View.VISIBLE);

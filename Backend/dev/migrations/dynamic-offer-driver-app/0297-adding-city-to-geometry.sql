@@ -16,19 +16,6 @@ ALTER COLUMN city SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request_special_zone
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
 
--- Changing primary-key for driver_pool_config
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config
-ADD COLUMN id character(36);
-
-UPDATE atlas_driver_offer_bpp.driver_pool_config
-SET id = md5(random()::TEXT || clock_timestamp()::TEXT || random()::TEXT || random()::TEXT || random()::TEXT || random()::TEXT)::UUID;
-
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config
-DROP CONSTRAINT driver_pool_config_pkey;
-
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config
-ADD PRIMARY KEY (id);
-
 -- Dropping indexes based on merchant_id
 DROP INDEX atlas_driver_offer_bpp.idx_fare_product;
 DROP INDEX atlas_driver_offer_bpp.idx_merchant_overlay_key;

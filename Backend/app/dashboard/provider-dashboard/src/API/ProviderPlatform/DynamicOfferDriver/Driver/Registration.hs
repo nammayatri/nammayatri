@@ -33,6 +33,7 @@ import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import qualified ProviderPlatformClient.DynamicOfferDriver.RideBooking as Client
 import Servant
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Storage.Queries.Role as QRole
 import "lib-dashboard" Tools.Auth
@@ -96,19 +97,19 @@ buildTransaction endpoint apiTokenInfo driverId =
 
 documentsList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
 documentsList merchantShortId opCity apiTokenInfo driverId =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.documentsList) driverId
 
 getDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
 getDocument merchantShortId opCity apiTokenInfo imageId =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.getDocument) imageId
 
 uploadDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
 uploadDocument merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     transaction <- buildTransaction Common.UploadDocumentEndpoint apiTokenInfo driverId (Just req)
     T.withResponseTransactionStoring transaction $
@@ -116,7 +117,7 @@ uploadDocument merchantShortId opCity apiTokenInfo driverId req =
 
 registerDL :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
 registerDL merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     transaction <- buildTransaction Common.RegisterDLEndpoint apiTokenInfo driverId (Just req)
     T.withTransactionStoring transaction $
@@ -124,7 +125,7 @@ registerDL merchantShortId opCity apiTokenInfo driverId req =
 
 registerRC :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
 registerRC merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     transaction <- buildTransaction Common.RegisterRCEndpoint apiTokenInfo driverId (Just req)
     T.withTransactionStoring transaction $
@@ -132,7 +133,7 @@ registerRC merchantShortId opCity apiTokenInfo driverId req =
 
 generateAadhaarOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> FlowHandler Common.GenerateAadhaarOtpRes
 generateAadhaarOtp merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     transaction <- buildTransaction Common.GenerateAadhaarOtpEndpoint apiTokenInfo driverId (Nothing :: Maybe Common.GenerateAadhaarOtpReq)
     T.withTransactionStoring transaction $
@@ -140,7 +141,7 @@ generateAadhaarOtp merchantShortId opCity apiTokenInfo driverId req =
 
 verifyAadhaarOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
 verifyAadhaarOtp merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     transaction <- buildTransaction Common.VerifyAadhaarOtpEndpoint apiTokenInfo driverId (Nothing :: Maybe Common.VerifyAadhaarOtpReq)
     T.withTransactionStoring transaction $
@@ -148,15 +149,15 @@ verifyAadhaarOtp merchantShortId opCity apiTokenInfo driverId req =
 
 auth :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AuthReq -> FlowHandler Common.AuthRes
 auth merchantShortId opCity apiTokenInfo req =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     Client.callDriverOfferBPP checkedMerchantId opCity (.driverRegistration.auth) req
 
 verify :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
 verify merchantShortId opCity apiTokenInfo authId req =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
     role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-    let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER
+    let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER || role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
     Client.callDriverOfferBPP checkedMerchantId opCity (.driverRegistration.verify) authId mbFleet apiTokenInfo.personId.getId req

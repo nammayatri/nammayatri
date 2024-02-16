@@ -38,8 +38,8 @@ create = createWithKV
 createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Overlay] -> m ()
 createMany = traverse_ create
 
-deleteByOverlayKeyMerchantIdUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> Maybe Text -> m ()
-deleteByOverlayKeyMerchantIdUdf merchantOperatingCityId overlayKey udf1 =
+deleteByOverlayKeyMerchantOpCityIdUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> Maybe Text -> m ()
+deleteByOverlayKeyMerchantOpCityIdUdf merchantOperatingCityId overlayKey udf1 =
   deleteWithKV
     [ Se.And
         [ Se.Is BeamMPN.overlayKey (Se.Eq overlayKey),
@@ -118,5 +118,6 @@ instance ToTType' BeamMPN.Overlay Overlay where
         BeamMPN.contactSupportNumber = contactSupportNumber,
         BeamMPN.toastMessage = toastMessage,
         BeamMPN.secondaryActions = secondaryActions,
-        BeamMPN.socialMediaLinks = toJSON <$> socialMediaLinks
+        BeamMPN.socialMediaLinks = toJSON <$> socialMediaLinks,
+        BeamMPN.showPushNotification = showPushNotification
       }

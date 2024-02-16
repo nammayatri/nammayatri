@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.DriverCoin where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins hiding (CoinStatus)
 import Data.OpenApi hiding (title)
 import Data.Time (UTCTime (utctDay))
 import Domain.Types.Coins.CoinHistory
@@ -24,6 +25,7 @@ import Domain.Types.Merchant.TransporterConfig ()
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
@@ -36,12 +38,14 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.Coins.PurchaseHistory as PHistory
 import Storage.Queries.DriverPlan as DPlan
+import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Tools.Error
 
 data CoinTransactionHistoryItem = CoinTransactionHistoryItem
   { coins :: Int,
     eventFunction :: DCT.DriverCoinsFunctionType,
+    bulkUploadTitle :: Maybe DCoins.Translations,
     createdAt :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -89,18 +93,19 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
   transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
-  coinBalance_ <- Coins.getCoinsByDriverId driverId
-  let dateInIst = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dateInUTC
-  driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
+  let timeDiffFromUtc = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+  let dateInIst = addUTCTime timeDiffFromUtc dateInUTC
+  driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let coinUsed_ = driver.usedCoins
       totalCoinsEarned_ = driver.totalEarnedCoins
       coinExpired_ = totalCoinsEarned_ - (coinBalance_ + coinUsed_)
-  coinSummary <- CHistory.getCoinEventSummary driverId dateInIst
+  coinSummary <- B.runInReplica $ CHistory.getCoinEventSummary driverId dateInIst timeDiffFromUtc
   let todayCoinSummary_ = sum $ map (.coins) coinSummary
-  lastDayHistory <- CHistory.getCoinsEarnedLastDay driverId dateInIst
+  lastDayHistory <- B.runInReplica $ CHistory.getCoinsEarnedLastDay driverId dateInIst timeDiffFromUtc
   let coinsEarnedPreviousDay_ = sum $ map (.coins) lastDayHistory
       coinTransactionHistory = map toTransactionHistoryItem coinSummary
-  coinsExpiring <- CHistory.getExpiringCoinsInXDay driverId transporterConfig.coinExpireTime
+  coinsExpiring <- B.runInReplica $ CHistory.getExpiringCoinsInXDay driverId transporterConfig.coinExpireTime timeDiffFromUtc
   let totalExpiringCoins = sum $ map (\coinHistory -> coinHistory.coins - coinHistory.coinsUsed) coinsExpiring
       expiringDays_ = fromIntegral (nominalDiffTimeToSeconds transporterConfig.coinExpireTime) `div` 86400
   pure
@@ -121,17 +126,18 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
       CoinTransactionHistoryItem
         { coins = historyItem.coins,
           eventFunction = historyItem.eventFunction,
-          createdAt = historyItem.createdAt
+          createdAt = historyItem.createdAt,
+          bulkUploadTitle = historyItem.bulkUploadTitle
         }
 
-getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow CoinsUsageRes
-getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) = do
+getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Flow CoinsUsageRes
+getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset = do
   transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
-  coinBalance_ <- Coins.getCoinsByDriverId driverId
-  purchaseSummary <- PHistory.getPurchasedHistory driverId
-  mbDriverPlan <- DPlan.findByDriverId driverId
+  coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
+  purchaseSummary <- B.runInReplica $ PHistory.getPurchasedHistory driverId mbLimit mbOffset
+  mbDriverStat <- QDS.findById driverId
   let coinUsageHistory = map toUsageHistoryItem purchaseSummary
   coinAdjustedInSubscriptionKeyExists <- getCoinAdjustedInSubscriptionByDriverIdKey driverId
   coinConvertedToCashUsage <- case coinAdjustedInSubscriptionKeyExists of
@@ -139,8 +145,8 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) = do
       delCoinAdjustedInSubscriptionByDriverIdKey driverId
       pure $ Just cashUsed
     Nothing -> pure Nothing
-  let coinConvertedTocashLeft = mbDriverPlan <&> (.coinCovertedToCashLeft)
-      totalCoinConvertedToCash = mbDriverPlan <&> (.totalCoinsConvertedCash)
+  let coinConvertedTocashLeft = mbDriverStat <&> (.coinCovertedToCashLeft)
+      totalCoinConvertedToCash = mbDriverStat <&> (.totalCoinsConvertedCash)
   pure
     CoinsUsageRes
       { coinBalance = coinBalance_,
@@ -183,11 +189,16 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   _ <- DPlan.findByDriverId driverId >>= fromMaybeM (InternalError $ "No plan against the driver id" <> driverId.getId <> "Please choose a plan")
   now <- getCurrentTime
   uuid <- generateGUIDText
-  coinBalance <- Coins.getCoinsByDriverId driverId
-  let currentDate = show $ utctDay now
-      coinConversionRateRational = getHighPrecMoney (transporterConfig.coinConversionRate)
-      calculatedAmountRational = coinConversionRateRational * (toRational coins)
-      calculatedAmount = HighPrecMoney calculatedAmountRational
+  coinBalance <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
+  let stepFunctionToConvertCoins = transporterConfig.stepFunctionToConvertCoins
+      timeDiffFromUtc = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+  when (coins < stepFunctionToConvertCoins) $
+    throwError $ CoinConversionToCash driverId.getId coins
+  when (coins `mod` stepFunctionToConvertCoins /= 0) $
+    throwError $ CoinUsedForConverting driverId.getId coins
+  let istTime = addUTCTime timeDiffFromUtc now
+      currentDate = show $ utctDay istTime
+      calculatedAmount = fromIntegral coins * transporterConfig.coinConversionRate
   if coinBalance >= coins
     then do
       let history =
@@ -203,13 +214,15 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 title = "converted from coins"
               }
       void $ PHistory.createPurchaseHistory history
-      void $ DPlan.updateCoinFieldsByDriverId driverId calculatedAmount
-      driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      void $ QDS.updateCoinFieldsByDriverId driverId calculatedAmount
+      driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       void $ Person.updateUsedCoins driverId (coins + driver.usedCoins)
-      histories <- CHistory.getDriverCoinInfo driverId
+      histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
+      logDebug $ "histories : " <> show histories
       let result = accumulateCoins coins histories
+      logDebug $ "result : " <> show result
       mapM_ (\(id, coinValue, status) -> CHistory.updateStatusOfCoins id coinValue status) result
-      void $ Hedis.incrby (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins))
+      void $ Hedis.withCrossAppRedis $ Hedis.incrby (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins))
     else do
-      throwError $ InsufficientCoins driverId.getId
+      throwError $ InsufficientCoins driverId.getId coins
   pure Success

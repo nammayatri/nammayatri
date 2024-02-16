@@ -52,6 +52,7 @@ data IdfyVerificationE e = IdfyVerification
     idfyResponse :: Maybe Text,
     multipleRC :: Maybe Bool,
     dashboardPassedVehicleVariant :: Maybe Vehicle.Variant,
+    retryCount :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

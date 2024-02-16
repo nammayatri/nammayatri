@@ -33,7 +33,7 @@ findByMerchantOpCityId id = do
   Hedis.safeGet (makeGoHomeKey id) >>= \case
     Just cfg -> return cfg
     Nothing -> do
-      cfg <- fromMaybeM (InternalError "Could not find Go-To config corresponding to the stated merchant id") =<< Queries.findByMerchantOpCityId id
+      cfg <- fromMaybeM (InternalError ("Could not find Go-To config corresponding to the stated merchant id" <> show id)) =<< Queries.findByMerchantOpCityId id
       Hedis.setExp (makeGoHomeKey id) cfg expTime
       return cfg
 

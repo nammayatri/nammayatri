@@ -22,20 +22,23 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number as Number
 import Engineering.Helpers.BackTrack (getState)
 import Helpers.Utils (getCurrentLocation, LatLon(..))
-import Prelude (bind, ($), pure, (<$>), discard)
+import Prelude (bind, ($), pure, (<$>), discard, show)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverSavedLocationScreen.Controller (ScreenOutput(..))
 import Screens.DriverSavedLocationScreen.View as DriverSavedLocationScreen
 import Storage (KeyStore(..), getValueToLocalNativeStore)
 import Types.App (DRIVE_SAVED_LOCATION_OUTPUT(..), ScreenType(..), FlowBT, GlobalState(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Data.Array as DA
 
 driverSavedLocationScreen :: FlowBT String DRIVE_SAVED_LOCATION_OUTPUT
 driverSavedLocationScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ DriverSavedLocationScreen.screen state.driverSavedLocationScreen
   case action of
-    GoBack -> App.BackT $ pure App.GoBack
+    GoBack updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{ data { driverGotoState { savedLocationCount = DA.length updatedState.data.savedLocationsArray}}})
+      App.BackT $ pure App.GoBack
     UpdateConfirmLocation updatedScreen -> do
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedScreen)
       App.BackT $ App.NoBack <$> pure (GET_LOCATION_NAME updatedScreen)
@@ -60,6 +63,6 @@ driverSavedLocationScreen = do
         _ , _ -> do
                   let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
                       currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
-                  (LatLon lat lon) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false
+                  (LatLon lat lon _) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false true
                   modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState{ data { currentLat = Just lat, currentLon = Just lon}})
                   App.BackT $ App.NoBack <$> pure (AUTO_COMPLETE updatedState searchVal lat lon)

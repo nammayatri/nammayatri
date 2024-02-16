@@ -24,32 +24,23 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Sos as Sos
 import Environment
 import EulerHS.Prelude
-import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.ServantMultipart
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
   "sos"
-    :> ( "create"
-           :> TokenAuth
-           :> ReqBody '[JSON] DSos.SosReq
-           :> Post '[JSON] DSos.SosRes
-           :<|> Capture "sosId" (Id Sos.Sos)
-             :> "status"
-             :> TokenAuth
-             :> ReqBody '[JSON] DSos.SosFeedbackReq
-             :> Post '[JSON] APISuccess.APISuccess
-       )
+    :> Capture "sosId" (Id Sos.Sos)
+    :> "addVideo"
+    :> TokenAuth
+    :> MultipartForm Tmp DSos.SOSVideoUploadReq
+    :> Post '[JSON] DSos.AddSosVideoRes
 
 handler :: FlowServer API
-handler =
-  createSosDetails
-    :<|> updateSosDetails
+handler = addSosVideo
 
-createSosDetails :: (Id Person.Person, Id Merchant.Merchant) -> DSos.SosReq -> FlowHandler DSos.SosRes
-createSosDetails (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId
-
-updateSosDetails :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SosFeedbackReq -> FlowHandler APISuccess.APISuccess
-updateSosDetails sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId personId
+addSosVideo :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SOSVideoUploadReq -> FlowHandler DSos.AddSosVideoRes
+addSosVideo sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.addSosVideo sosId personId

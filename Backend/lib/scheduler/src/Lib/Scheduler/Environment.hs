@@ -17,16 +17,24 @@ module Lib.Scheduler.Environment where
 
 import qualified Data.Map as M
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types
+import Kernel.Beam.Lib.UtilsTH
+import Kernel.Beam.Types (KafkaConn (..))
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+import Kernel.Storage.Beam.SystemConfigs
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, HedisFlow, disconnectHedis)
+import Kernel.Storage.Queries.SystemConfigs as QSC
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Flow
-import Kernel.Utils.App (Shutdown)
+import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
@@ -60,7 +68,8 @@ data SchedulerConfig = SchedulerConfig
     tasksPerIteration :: Int,
     graceTerminationPeriod :: Seconds,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    kafkaProducerCfg :: KafkaProducerCfg
   }
   deriving (Generic, FromDhall)
 
@@ -77,6 +86,7 @@ data SchedulerEnv = SchedulerEnv
     loggerEnv :: LoggerEnv,
     schedulerType :: SchedulerType,
     schedulerSetName :: Text,
+    kafkaProducerTools :: KafkaProducerTools,
     streamName :: Text,
     groupName :: Text,
     block :: Integer,
@@ -94,8 +104,10 @@ data SchedulerEnv = SchedulerEnv
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     maxThreads :: Int,
+    maxShards :: Int,
     jobInfoMap :: JobInfoMap,
-    tables :: Tables
+    kvConfigUpdateFrequency :: Int,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic)
 
@@ -109,24 +121,39 @@ releaseSchedulerEnv SchedulerEnv {..} = do
 
 type SchedulerM = FlowR SchedulerEnv
 
-type JobCreator r m = (HasField "jobInfoMap" r (M.Map Text Bool), HasField "schedulerSetName" r Text, JobMonad r m)
+type JobCreatorEnv r = (HasField "jobInfoMap" r (M.Map Text Bool), HasField "maxShards" r Int, HasField "schedulerSetName" r Text)
 
-type JobExecutor r m = (HasField "streamName" r Text, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m)
+type JobCreator r m = (JobCreatorEnv r, JobMonad r m)
+
+type JobExecutor r m = (HasField "streamName" r Text, HasField "maxShards" r Int, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m)
 
 type JobMonad r m = (HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m)
 
-runSchedulerM :: SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
+runSchedulerM :: HasSchemaName SystemConfigsT => SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM schedulerConfig env action = do
   let loggerRt = L.getEulerLoggerRuntime Nothing env.loggerConfig
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
-      ( prepareConnectionDriver
-          ConnectionConfigDriver
-            { esqDBCfg = schedulerConfig.esqDBCfg,
-              esqDBReplicaCfg = schedulerConfig.esqDBCfg,
-              hedisClusterCfg = schedulerConfig.hedisClusterCfg
-            }
-          env.tables
+      ( ( prepareConnectionDriver
+            ConnectionConfigDriver
+              { esqDBCfg = schedulerConfig.esqDBCfg,
+                esqDBReplicaCfg = schedulerConfig.esqDBCfg,
+                hedisClusterCfg = schedulerConfig.hedisClusterCfg
+              }
+            env.kvConfigUpdateFrequency
+        )
+          >> L.setOption KafkaConn env.kafkaProducerTools
       )
-    runFlowR flowRt env action
+    flowRt' <- runFlowR flowRt env $ do
+      fork
+        "Fetching Kv configs"
+        ( forever $ do
+            kvConfigs <-
+              QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
+                >>= fromMaybeM (InternalError "Couldn't find kv_configs table for scheduler app")
+            L.setOption KBT.Tables kvConfigs
+            threadDelay (env.kvConfigUpdateFrequency * 1000000)
+        )
+      pure flowRt
+    runFlowR flowRt' env action

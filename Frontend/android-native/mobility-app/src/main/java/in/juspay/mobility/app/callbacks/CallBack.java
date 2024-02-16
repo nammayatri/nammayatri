@@ -3,9 +3,9 @@ package in.juspay.mobility.app.callbacks;
 import org.json.JSONObject;
 
 public interface CallBack {
-    void customerCallBack(String notificationType);
+    void customerCallBack(String notificationType, String notificationData);
 
-    void driverCallBack(String notificationType);
+    void driverCallBack(String notificationType, String notificationData);
 
     void imageUploadCallBack(String encImage, String filename, String filePath);
 

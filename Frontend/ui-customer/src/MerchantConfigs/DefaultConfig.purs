@@ -1,18 +1,18 @@
 module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
+import Common.DefaultConfig
 
-config :: AppConfig
+config :: AppConfig 
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
   , estimateConfirmText: "Request a NammaYatri Ride"
   , autoConfirmingLoaderColor: "#80B2FF"
   , quoteListModelBackground: "#2C2F3A"
+  , defaultLanguage : "EN_US"
   , currency: "₹"
-  , isGradient: "false"
   , primaryButtonCornerRadius: 8.0
-  , gradient: []
   , showPickUpandDrop: true
   , alertDialogPrimaryColor: "#2194FF"
   , cancelSearchTextColor: "#E55454"
@@ -37,9 +37,11 @@ config =
     , lineImage : "ic_line"
     , lottieHeight : 300
     , lottieWidth : 300
-    , topMargin : 100
+    , topMargin : 0
     , noQuotesImageHeight: 115
     , noQuotesImageWidth : 137
+    , separatorColor : "#00FFFFFF"
+    , showSeparator : false
     , closeIcon : "ny_ic_close_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_close_white.png"
     }
   , searchLocationConfig : 
@@ -48,6 +50,9 @@ config =
     , editTextBackground : "#313440"
     , editTextDefaultColor : "#A7A7A7"
     , strokeColor: "1,#E5E7EB"
+    , backgroundColor : "#2C2F3A"
+    , editTextColor : "#FFFFFF"
+    , separatorColor : "#00FFFFFF"
     , enableLocationTagbar : "true"
     , resultsCardCornerRadius : 20.0
     , showRateCardDetails : true
@@ -55,28 +60,36 @@ config =
     , lottieHeight : 96
     , lottieWidth : 96
     , primaryButtonHeight : 60
+    , hintColor : "#A7A7A7"
+    , showSeparator : false
+    , showChargeDesc: false
     , backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
+    , enableRateCard: true
+    , clearTextImage: "ny_ic_close_grey"
     }
   , driverInfoConfig : 
     { ratingTextColor: "#454545"
     , ratingBackground: "#F1F1F1"
     , ratingStroke: "0,#717171"
-    , ratingCornerRadius: 6.0
+    , ratingCornerRadius: 10.0
     , callBackground: "#2053BB6F"
     , callButtonStroke: "0,#EB0055" 
     , cardStroke: "1,#E5E7EB"
     , otpStroke: "0,#717171"
     , showNumberPlatePrefix : true
     , showNumberPlateSuffix : false
-    , callHeight: 24
-    , callWidth: 24
+    , callHeight: 32
+    , callWidth: 32
     , numberPlateBackground : "#E9BE4D"
-    , showCancelPrevention : false
+    , showCancelPrevention : true
     , showTrackingButton : true
     , specialZoneQuoteExpirySeconds : 3600
+    , footerVisibility : false
+    , footerImageUrl : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+    , footerBackgroundColor : "#FFFFFF"
     }
   , ratingConfig : 
-    { secondaryButtonTextColor : "#FCC32C"
+    { secondaryButtonTextColor : "#2C2F3A"
     , secondaryButtonStroke : "1,#2C2F3A"
     , buttonCornerRadius : 8.0
     }
@@ -89,32 +102,52 @@ config =
   , profileName: "#FFFFFF"
   , profileImage: "#012A72"
   , feedbackBackground: "#2C2F3A"
-  , sideBarList: [ "MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "Logout" ]
+  , sideBarList: [ "MyRides", "Favorites", "NammaSafety", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout", "MetroTickets"]
   , rateCardColor: "#2C2F3A"
   , nyBrandingVisibility: false
   , fontType: "Assets"
   , languageList : []
-  , confirmPickUpLocationBorder: "#101010"
+  , confirmPickUpLocationBorder: "#E5E7EB"
   , bannerConfig : {
         backgroundColor : "#F0FAF0"
       , title : "Complete your profile for a personalised ride experience"
-      , titleColor :"#269574"
+      , titleColor :"#21C179"
       , actionText : "Update now"
-      , actionTextColor : "#269574"
+      , actionTextColor : "#27AE5F"
       , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
   , popupBackground : "#FFFFFF"
   , profileCompletion : "#FCC32C"
+  , showProfileStatus: true
+  , profileArrowImage: "ny_ic_chevron_right_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_right_white.png"
   , cancelRideColor : "#E55454"
   , infoIconUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
   , profileEditGravity : "center"
   , merchantLogo : "ic_launcher,https://assets.juspay.in/nammayatri/images/user/ny_ic_launcher.png"
-  , logs : ["JUSPAY", "FIREBASE", "CLEVERTAP"]
-  , showCorporateAddress : false
+  , logs: [ "JUSPAY" ]
+  , showCorporateAddress : true
   , terminateBtnConfig : {
           visibility: false, 
-          title : "Paytm",
+          title : "",
+          backgroundColor : "#00FFFFFF",
           imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+      }
+  , suggestedTripsAndLocationConfig : {
+        geohashLimitForMap : 60,
+        geohashPrecision : 7,
+        maxLocationsToBeShown : 10,
+        minLocationsToBeShown : 2,
+        maxTripsToBeShown : 10,
+        minTripsToBeShown : 2,
+        locationsToBeStored : 30,
+        tripsToBeStored : 30,
+        frequencyWeight : 0.85,
+        tripDistanceThreshold : 0.021,
+        repeatRideTime : 8,
+        autoScrollTime : 5,
+        tripWithinXDist : 0.05,
+        locationWithinXDist : 100.0,
+        destinationGeohashPrecision : 9 
       }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
@@ -122,11 +155,10 @@ config =
   , enableMockLocation : false
   , specialLocationView : false
   , internationalNumberEnabled : false
-  , dashboardUrl : "https://nammayatri.in/open/"
   , callOptions : ["ANONYMOUS"]
   , autoVariantEnabled : true
-  , showDisabilityBanner : true
-  , enableGeocoder : true --TODO:: Deprecated
+  , showDisabilityBanner : false
+  , showCheckoutRentalBanner : false
   , geoCoder: {
       enableLLtoAddress : true
     , enableAddressToLL : true 
@@ -139,41 +171,177 @@ config =
   , estimateAndQuoteConfig : 
       { variantTypes : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
       , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "AUTO_RICKSHAW"]
+      , variantInfo : {
+        hatchback : {
+          name : "Hatchback",
+          image : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
+          },
+        taxiPlus : {
+          name : "AC Taxi",
+          image : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
+        },
+        sedan : {
+          name : "Sedan",
+          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+        },
+        taxi : {
+          name : "Non-AC Taxi",
+          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+        },
+        suv : {
+          name : "SUV",
+          image : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png"
+        },
+        autoRickshaw : {
+          name : "Auto Rickshaw",
+          image : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+        }
+
+      }
       , enableOnlyAuto : false
+      , showNearByDrivers: false
+      , enableBookingPreference: true
+      , textColor: "#6D7280"
+      , showInfoIcon : true 
       }
   , customerTip : {
       auto : true,
       cabs : false
     }
-  , enableContactSupport : true
-  , features : {
+  , feature : {
     enableAutoReadOtp : true,
-    enableZooTicketBookingFlow : false
+    enableZooTicketBookingFlow : false,
+    enableLiveDashboard : true,
+    enableSuggestions : true,
+    enableShareRide : true,
+    enableChat: true,
+    enableEmergencyContacts: true,
+    enableReferral: true,
+    enableSupport: true,
+    enableShareApp: false,
+    enableReAllocation : true,
+    enableRepeatTripBackfilling : false,
+    forceLogReferrerUrl : true,
+    enableSelfServe : true,
+    enableAdditionalServices : false,
+    enableSafetyFlow : true, 
+    shareWithEmergencyContacts: true,
+    enableAutoReferral : true
   }
 
   , rideCompletedCardConfig : {
       topCard : {
         gradient : "#29334A"
-      } 
-  }
+      , enableGradient : true
+      , background : "#2C2F3A"
+      , titleColor : "#E5E7EB"
+      , rideDescription : { 
+          background : "#00FFFFFF"
+        , textColor : "#A7A7A7"
+        }                     
+      }
+     , showCallSupport : false
+    }
   , mapConfig : 
       { locateOnMapConfig : 
           { dottedLineConfig : 
-              { visible : true
+              { visible : false
               , range : 100
               , color : "#323643"
               },
             apiTriggerRadius : 10.0,
-            pickUpToSourceThreshold : 1.0
+            pickUpToSourceThreshold : 1.0,
+            hotSpotConfig :
+              { goToNearestPointWithinRadius : 30.0
+              , showHotSpotsWithinRadius : 150.0
+              , enableHotSpot : false
+              }
           }
       , labelTextSize : 30
       , animationDuration : 500
+      , vehicleMarkerSize: 90
       }
+  , metroTicketingConfig : {
+    metroStationTtl : 10080 -- in Minutes
+  }
   , purpleRideConfig : {
       genericVideoUrl : "" ,
       visualImpairmentVideo : "" ,
       physicalImpairmentVideo : "",
       hearingImpairmentVideo : ""
     }
-  , appLink : ""
+  , homeScreen: {
+      primaryBackground : "#2C2F3A",
+      isServiceablePopupFullScreen : false,
+      pickUpViewColor : "#303440",
+      header : {
+        menuButtonBackground : "#00FFFFFF",
+        showLogo : true,
+        titleColor : "#1D1D1D",
+        showSeparator : false
+      },
+      bannerViewVisibility : true,
+      pickupLocationTextColor : "#A7A7A7",
+      whereToButton : {
+        margin : {
+          top : 0,
+          left : 16,
+          right : 16,
+          bottom : 16
+        },
+        shadow : {
+          color : "#2C2F3A",
+          x: 0.0,
+          y: 0.9,
+          blur: 10.0,
+          spread: 24.0,
+          opacity : 0.14
+        }
+      }
+    }
+  , appData : defaultAppData
+  , navigationAppConfig : defaultNavigationAppConfig
+  , genericHeaderConfig : defaultGenericHeader
+  , colors : defaultColors
+  , primaryButtonConfig : defaultPrimaryButtonConfig
+  , fontConfig : defaultFontConfig
+  , loaderConfig : defaultLoaderConfig
+  , otpRegex :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+  , termsLink : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA"
+  , termsVersion : 1.0
+  , privacyLink : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F"
+  , shareAppConfig : {
+      title : "Share Namma Yatri!"
+    , description : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
+  }
+  , dashboard :{
+      url : "https://nammayatri.in/open?source=in-app"
+    , enable : false
+  }
+  , logFunctionCalls : false
+  , locationTagBar : {
+    cornerRadius : 8.0
+  , textColor : "#454545"
+  , stroke: "1,#E5E7EB"
+  }
+  , cityConfig :
+      [ { cityCode : "std:080"
+        , cityName : "Bangalore"
+        , geoCodeConfig :
+            { radius : 50000
+            , strictBounds : true
+            }
+        }
+      ]
+  , bannerCarousel : defaultBannerCarousel
+}
+
+defaultCityConfig :: CityConfig
+defaultCityConfig =
+  { cityName : "",
+    cityCode : "",
+    geoCodeConfig :
+      { radius : 100000
+      , strictBounds : false
+      }
   }

@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 -------- Feedback Flow ----------
@@ -47,6 +48,12 @@ handler = rating
 rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
 rating (personId, _) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dFeedbackRes <- DFeedback.feedback request
-  becknReq <- ACL.buildRatingReq dFeedbackRes
-  void $ withLongRetry $ CallBPP.feedback dFeedbackRes.providerUrl becknReq
+  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  if isBecknSpecVersion2
+    then do
+      becknReq <- ACL.buildRatingReqV2 dFeedbackRes
+      void $ withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq
+    else do
+      becknReq <- ACL.buildRatingReq dFeedbackRes
+      void $ withLongRetry $ CallBPP.feedback dFeedbackRes.providerUrl becknReq
   pure Success

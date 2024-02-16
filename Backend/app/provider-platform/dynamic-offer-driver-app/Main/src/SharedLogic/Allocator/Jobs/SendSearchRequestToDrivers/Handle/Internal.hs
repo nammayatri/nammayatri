@@ -23,7 +23,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
   )
 where
 
-import Domain.Types.Merchant.DriverPoolConfig
+import Domain.Types.DriverPoolConfig
 import Domain.Types.SearchTry as DST
 import Kernel.Prelude
 -- import qualified Kernel.Storage.Esqueleto as Esq

@@ -47,6 +47,7 @@ import android.util.Log;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -54,15 +55,21 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.HashMap;
 import java.util.TimeZone;
 import javax.net.ssl.HttpsURLConnection;
 import in.juspay.mobility.app.callbacks.CallBack;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 
 public class NotificationUtils {
@@ -81,6 +88,7 @@ public class NotificationUtils {
     public static String DRIVER_REACHED = "DRIVER_REACHED";
     public static String RIDE_STARTED = "RIDE_STARTED";
     public static String NO_VARIANT = "NO_VARIANT";
+    public static String SAFETY_ALERT = "SAFETY_ALERT";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
@@ -90,7 +98,6 @@ public class NotificationUtils {
     public static int notificationId = rand.nextInt(1000000);
     public static MediaPlayer mediaPlayer;
     public static Bundle lastRideReq = new Bundle();
-
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
     public static void registerCallback(CallBack notificationCallback) {
@@ -113,16 +120,17 @@ public class NotificationUtils {
                 MyFirebaseMessagingService.clearedRideRequest.remove(data.getString("entity_ids"));
                 return;
             }
+            SharedPreferences sharedPref = context.getSharedPreferences(
+                    context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("In_if_in_notification before");
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                 mFirebaseAnalytics.logEvent("ride_request_received", params);
+                RideRequestUtils.addRideReceivedEvent(entity_payload,null,null, "ride_request_received", context );
                 //Recieved Notification && checking for permission if overlay permission is given, if not then it will redirect to give permission
 
                 Intent svcT = new Intent(context, OverlaySheetService.class);
-                SharedPreferences sharedPref = context.getSharedPreferences(
-                        context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 svcT.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 System.out.println("Call Service before");
                 Bundle sheetData = new Bundle();
@@ -148,7 +156,7 @@ public class NotificationUtils {
                     sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
                     sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
                     sheetData.putInt("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
-                    sheetData.putBoolean("isTranslated", (entity_payload.has("isTranslated") && !entity_payload.isNull("isTranslated") ? entity_payload.getBoolean("isTranslated") : true));
+                    sheetData.putBoolean("isTranslated", (!entity_payload.has("isTranslated") || entity_payload.isNull("isTranslated") || entity_payload.getBoolean("isTranslated")));
                     sheetData.putString("sourcePinCode", addressPickUp.has("areaCode") && !addressPickUp.isNull("areaCode") ? addressPickUp.getString("areaCode"): "");
                     sheetData.putString("destinationPinCode", addressDrop.has("areaCode") && !addressDrop.isNull("areaCode") ? addressDrop.getString("areaCode") : "");
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
@@ -253,6 +261,7 @@ public class NotificationUtils {
                     overlayParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
                     mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                     mFirebaseAnalytics.logEvent("overlay_popup_expired", overlayParams);
+                    RideRequestUtils.addRideReceivedEvent(entity_payload, null,null,"overlay_popup_expired", context);
                 }
                 notificationId++;
                 for(Iterator<Map.Entry<String, Long>> iterator = MyFirebaseMessagingService.clearedRideRequest.entrySet().iterator(); iterator.hasNext(); ) {
@@ -265,6 +274,7 @@ public class NotificationUtils {
             handleClearedReq(context, notificationType, data);
         } catch (Exception e) {
             e.printStackTrace();
+            if (mFirebaseAnalytics!=null) mFirebaseAnalytics.logEvent("exception_in_showAllocationNotification", new Bundle());
         }
     }
 
@@ -294,7 +304,7 @@ public class NotificationUtils {
 
     public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
-        int smallIcon = Utils.getResIdentifier(context,"ic_launcher", "drawable");
+        int smallIcon =  Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", "drawable") ;
         Bitmap bitmap = null;
         if (imageUrl != null) {
             bitmap = getBitmapfromUrl(imageUrl);
@@ -307,8 +317,12 @@ public class NotificationUtils {
         System.out.println("Notificationn111" + data.getString("notification_type"));
         System.out.println("Notificationn222" + (data.getString("entity_ids")));
         System.out.println("imageUrl" + imageUrl);
-        System.out.println("imageUrl" + imageUrl);
+        System.out.println("smallIcon" + smallIcon);
         intent.putExtra("NOTIFICATION_DATA", data.toString());
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("title",title)
+                  .put("msg",msg);
+        intent.putExtra("fullNotificationBody",jsonObject.toString());
         //            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId, intent, PendingIntent.FLAG_IMMUTABLE);
@@ -320,7 +334,7 @@ public class NotificationUtils {
         System.out.println("showNotification:- " + notificationType);
         if (TRIP_STARTED.equals(notificationType)) {
             channelId = RIDE_STARTED;
-        } else if (CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
+        } else if (CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType) || notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED) || notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED)) {
             channelId = notificationType;
         } else if (TRIP_FINISHED.equals(notificationType) && disabilityName.equals("BLIND_LOW_VISION")){
             channelId = TRIP_FINISHED;
@@ -328,13 +342,14 @@ public class NotificationUtils {
         else {
             channelId = FLOATING_NOTIFICATION;
         }
-
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, channelId);
         if (imageUrl != null) {
             mBuilder.setLargeIcon(bitmap)
                     .setSmallIcon(smallIcon)
                     .setContentTitle(title)
                     .setContentText(msg)
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(title))
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(msg))
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
                     .setChannelId(channelId)
@@ -346,6 +361,8 @@ public class NotificationUtils {
             mBuilder.setSmallIcon(smallIcon)
                     .setContentTitle(title)
                     .setContentText(msg)
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(title))
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(msg))
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
                     .setChannelId(channelId);
@@ -358,16 +375,18 @@ public class NotificationUtils {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
             } else if (notificationType.equals(TRIP_STARTED)) {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_started);
-                mBuilder.setSound(notificationSound);
             } else if (notificationType.equals(CANCELLED_PRODUCT) || notificationType.equals(REALLOCATE_PRODUCT)){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
-                mBuilder.setSound(notificationSound);
              } else if (notificationType.equals(TRIP_FINISHED) && disabilityName.equals("BLIND_LOW_VISION")){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
-                mBuilder.setSound(notificationSound);
-            }else {
+            } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED)){
+                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ny_ic_sos_danger);
+            } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED)){
+                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ny_ic_sos_safe);
+            } else {
                 notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
+            mBuilder.setSound(notificationSound);
             System.out.println("Default sound" + notificationSound);
        }
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
@@ -377,7 +396,7 @@ public class NotificationUtils {
             System.out.println("In clean notification if");
         }
 
-                
+
         if (TRIP_STARTED.equals(notificationType)) {
             if (key.equals("USER")) {
                 Utils.logEvent ("ny_user_ride_started", context);
@@ -438,20 +457,17 @@ public class NotificationUtils {
             startMediaPlayer(context, audio, !key.equals("USER"));
         }
         notificationId++;
-        if (DRIVER_ASSIGNMENT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_REACHED.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType)) {
-            for (int i = 0; i < callBack.size(); i++) {
-                callBack.get(i).driverCallBack(notificationType);
-            }
-        }
-        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_STARTED.equals(notificationType)) && (key.equals("USER"))) {
-            for (int i = 0; i < callBack.size(); i++) {
-                callBack.get(i).customerCallBack(notificationType);
-            }
-        }
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             Log.e(LOG_TAG, "no notification permission");
         } else {
             notificationManager.notify(notificationId, mBuilder.build());
+        }
+    }
+
+    public static void triggerUICallbacks (String notificationType, String notificationData) {
+        for (int i = 0; i < callBack.size(); i++) {
+            callBack.get(i).customerCallBack(notificationType,notificationData);
+            callBack.get(i).driverCallBack(notificationType, notificationData);
         }
     }
 
@@ -473,7 +489,7 @@ public class NotificationUtils {
     }
 
     private static boolean checkPermission(Context context) {
-        return Settings.canDrawOverlays(context);
+        return Settings.canDrawOverlays(context.getApplicationContext());
     }
 
     public static void createNotificationChannel(Context context, String channel_Id) {
@@ -494,6 +510,10 @@ public class NotificationUtils {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.driver_arrived);
                 } else if (channel_Id.equals(TRIP_FINISHED)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
+                }  else if (channel_Id.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED)){
+                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ny_ic_sos_danger);
+                } else if (channel_Id.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED)){
+                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ny_ic_sos_safe);
                 } else {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                 }
@@ -549,9 +569,10 @@ public class NotificationUtils {
                 new NotificationCompat.Builder(context, "MessageUpdates")
                         .setContentTitle(titleBold)
                         .setAutoCancel(true)
-                        .setColor(rgb(33,148,255))
                         .setContentText(message)
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setStyle(new NotificationCompat.BigTextStyle().bigText(titleBold))
+                        .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                        .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setContentIntent(pendingIntent)

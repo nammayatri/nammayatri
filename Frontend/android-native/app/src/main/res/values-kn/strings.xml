@@ -46,4 +46,5 @@
     <string name="no_enabled_browser">ನಿಮ್ಮ ಸಾಧನದಲ್ಲಿ ಯಾವುದೇ ಸಕ್ರಿಯಗೊಳಿಸಿದ ಬ್ರೌಸರ್ ಕಂಡುಬಂದಿಲ್ಲ, ದಯವಿಟ್ಟು ಬ್ರೌಸರ್ ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ ಅಥವಾ ಸ್ಥಾಪಿಸಿ</string>
     <string name="message_from_customer">ಗ್ರಾಹಕರಿಂದ ಸಂದೇಶ</string>
     <string name="go_to">ಗೋ-ಟು</string>
+    <string name="call_support">ಬೆಂಬಲವನ್ನು ಕರೆಯಿರಿ</string>
 </resources>

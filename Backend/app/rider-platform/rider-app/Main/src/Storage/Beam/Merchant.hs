@@ -25,9 +25,9 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Kernel.Prelude
 import Kernel.Types.Base64
 import Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common hiding (id)
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
-import Kernel.Utils.Common (Seconds)
 import Tools.Beam.UtilsTH
 
 fromFieldEnum' ::
@@ -44,6 +44,7 @@ data MerchantT f = MerchantT
     subscriberId :: B.C f Text,
     name :: B.C f Text,
     city :: B.C f Context.City,
+    state :: B.C f Context.IndianState,
     country :: B.C f Context.Country,
     bapId :: B.C f Text,
     bapUniqueKeyId :: B.C f Text,
@@ -55,19 +56,25 @@ data MerchantT f = MerchantT
     driverOfferApiKey :: B.C f Text,
     driverOfferMerchantId :: B.C f Text,
     geoHashPrecisionValue :: B.C f Int,
+    fallbackShortId :: B.C f Text,
     signingPublicKey :: B.C f Base64,
     minimumDriverRatesCount :: B.C f Int,
     cipherText :: B.C f (Maybe Base64),
     signatureExpiry :: B.C f Int,
     distanceWeightage :: B.C f Int,
     updatedAt :: B.C f UTCTime,
+    scheduleRideBufferTime :: B.C f Seconds,
     createdAt :: B.C f UTCTime,
-    timeDiffFromUtc :: B.C f Seconds,
     isAvoidToll :: B.C f Bool,
     aadhaarVerificationTryLimit :: B.C f Int,
     aadhaarKeyExpiryTime :: B.C f Seconds,
     mediaFileSizeUpperLimit :: B.C f Int,
-    mediaFileUrlPattern :: B.C f Text
+    mediaFileUrlPattern :: B.C f Text,
+    editPickupDistanceThreshold :: B.C f HighPrecMeters,
+    driverDistanceThresholdFromPickup :: B.C f HighPrecMeters,
+    numOfAllowedEditPickupLocationAttemptsThreshold :: B.C f Int,
+    publicMediaFileUrlPattern :: B.C f Text,
+    kaptureDisposition :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 

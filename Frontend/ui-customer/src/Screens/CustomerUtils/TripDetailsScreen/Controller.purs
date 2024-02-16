@@ -15,10 +15,12 @@
 
 module Screens.TripDetailsScreen.Controller where
 
+import Common.Types.App (CategoryListType)
 import Components.GenericHeader as GenericHeaderController
 import Components.PopUpModal as PopUpModalController
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
+import Data.Array (null)
 import Data.String (length)
 import Data.String (trim)
 import JBridge (hideKeyboardOnNavigation, copyToClipboard, toast)
@@ -61,13 +63,16 @@ instance loggableAction :: Loggable Action where
             PopUpModalController.NoAction -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "no_action"
             PopUpModalController.OnImageClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "image"
             PopUpModalController.ETextController act -> trackAppTextInput appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
-            PopUpModalController.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
+            PopUpModalController.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
             PopUpModalController.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
             PopUpModalController.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "secondary_text_clicked"
             PopUpModalController.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "option_with_html_clicked"
             PopUpModalController.DismissPopup -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
+            PopUpModalController.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "youtube_video_status"
         SourceToDestinationActionController (SourceToDestinationController.Dummy) -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "source_to_destination"
         NoAction -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "no_action"
+        OpenChat arg1 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "open_chat"
+        ListExpandAinmationEnd -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "list_expand_animation_end"
 
 data Action = PrimaryButtonActionController PrimaryButtonController.Action
             | GenericHeaderActionController GenericHeaderController.Action
@@ -81,8 +86,10 @@ data Action = PrimaryButtonActionController PrimaryButtonController.Action
             | Copy
             | ShowPopUp
             | PopUpModalAction PopUpModalController.Action
+            | OpenChat CategoryListType
+            | ListExpandAinmationEnd
 
-data ScreenOutput = GoBack TripDetailsGoBackType | OnSubmit TripDetailsScreenState | GoToInvoice TripDetailsScreenState | GoHome TripDetailsScreenState | ConnectWithDriver TripDetailsScreenState
+data ScreenOutput = GoBack TripDetailsGoBackType | OnSubmit TripDetailsScreenState | GoToInvoice TripDetailsScreenState | GoHome TripDetailsScreenState | ConnectWithDriver TripDetailsScreenState | GetCategorieList TripDetailsScreenState | GoToIssueChatScreen TripDetailsScreenState CategoryListType
 
 eval :: Action -> TripDetailsScreenState -> Eval Action ScreenOutput TripDetailsScreenState
 
@@ -96,7 +103,9 @@ eval (PopUpModalAction (PopUpModalController.OnButton2Click)) state = exit $ Con
 
 eval ViewInvoice state = exit $ GoToInvoice state
 
-eval ReportIssue state = continue state { props { reportIssue = not state.props.reportIssue}}
+eval ReportIssue state =  do
+    let updatedState = state { props { reportIssue = not state.props.reportIssue, showIssueOptions = true } }
+    if  null state.data.categories then exit $ GetCategorieList updatedState else continue updatedState
 
 eval (MessageTextChanged a) state = continue state { data { message = trim(a) }, props{activateSubmit = if (length (trim(a)) > 1) then true else false}}
 
@@ -113,5 +122,11 @@ eval Copy state = continueWithCmd state [ do
     _ <- pure $ toast (getString COPIED)
     pure NoAction
   ]
+
+eval (OpenChat item) state = exit $ GoToIssueChatScreen state item
+
+eval AfterRender state = continue state {props {triggerUIUpdate = not state.props.triggerUIUpdate}}
+
+eval ListExpandAinmationEnd state = continue state {props {showIssueOptions = false }}
 
 eval _ state = continue state

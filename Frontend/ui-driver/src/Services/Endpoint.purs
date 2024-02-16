@@ -53,8 +53,11 @@ getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 getRideHistory :: String -> String -> String -> String -> String -> String
 getRideHistory limit offset isActive status day= do
   case status of
-    "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
+    "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive <> if day == "null" then "" else "&day=" <> day
     _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive="<>isActive<>"&status="<> (show status) <> if day == "null" then "" else "&day=" <> day
+
+getRidesSummaryList :: Array String -> String
+getRidesSummaryList dateList = (getBaseUrl "") <> "/rideSummary/list"
 
 offerRide :: String -> String
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"
@@ -159,7 +162,7 @@ otpRide :: String -> String
 otpRide dummyRideOtp = (getBaseUrl "") <> "/driver/otpRide/start"
 
 onCall :: String -> String
-onCall _ = (getBaseUrl "") <> "/onCall"
+onCall _ = (getBaseUrl "") <> "/callEvent"
 
 likeMessage :: String -> String
 likeMessage messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/like"
@@ -169,6 +172,9 @@ leaderBoardDaily date = (getBaseUrl "") <> "/driver/leaderBoard/daily?date=" <> 
 
 leaderBoardWeekly :: String -> String -> String
 leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/weekly?fromDate=" <> fromDate <> "&toDate=" <> toDate
+
+referredDrivers :: String -> String
+referredDrivers dummy = (getBaseUrl "") <> "/driver/referral/getReferredDrivers"
 
 currentDateAndTime :: String -> String
 currentDateAndTime _ = "https://tools.aimylogic.com/api/now"
@@ -264,3 +270,18 @@ updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/updat
 
 rideRoute :: String -> String
 rideRoute rideId = (getBaseUrl "") <> "/" <> rideId <>"/route"
+
+getMerchantIdList :: String -> String 
+getMerchantIdList merchantId = getBaseUrl "" <> "/city/" <> merchantId <> "/list"
+
+detectCity :: String -> String
+detectCity _ = (getBaseUrl "") <> "/driver/city"
+
+getCoinTransactions :: String -> String
+getCoinTransactions date =  (getBaseUrl "") <> "/coins/transactions" <> "?date=" <> date
+
+getCoinUsageHistory :: String -> String -> String
+getCoinUsageHistory limit offset =  (getBaseUrl "") <> "/coins/usageHistory?limit="<>limit<>"&offset="<>offset
+
+convertCoinToCash :: String -> String
+convertCoinToCash _ =  (getBaseUrl "") <> "/coins/convertCoinToCash"

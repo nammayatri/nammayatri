@@ -2,14 +2,12 @@ module DBSync.Delete where
 
 import Config.Env
 import Data.Aeson
-import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe (fromJust)
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
-import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
@@ -17,8 +15,6 @@ import Kafka.Producer
 import qualified Kafka.Producer as KafkaProd
 import qualified Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
-import Sequelize
-import Text.Casing
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -62,25 +58,19 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (PersonFlowStatusDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("PersonFlowStatus" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (QuoteDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Quote" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (RegistrationTokenDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("RegistrationToken" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (RentalSlabDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("RentalSlab" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (RentalDetailsDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("RentalDetails" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (RideDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Ride" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SavedReqLocationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SavedReqLocation" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SearchRequestDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SearchRequest" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SosDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Sos" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (SpecialZoneQuoteDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("SpecialZoneQuote" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (TripTermsDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TripTerms" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (WebengageDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Webengage" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (FeedbackFormDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FeedbackForm" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (HotSpotConfigDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("HotSpotConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (BecknRequestDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("BecknRequest" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (LocationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Location" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (LocationMappingDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("LocationMapping" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (TicketBookingDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketBooking" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (TicketBookingServiceDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketBookingService" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (TicketServiceDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketService" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (TicketServicePriceDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketServicePrice" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (TicketBookingServicePriceBreakupDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketBookingServicePriceBreakup" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (TicketPlaceDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketPlace" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (NextBillionDataDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("NextBillionData" :: Text) =<< dbConf
   where
     runDelete id value _ whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
@@ -142,14 +132,3 @@ streamRiderDrainerDeletes producer dbObject dbStreamKey = do
           prKey = Just $ TE.encodeUtf8 dbStreamKey,
           prValue = Just . LBS.toStrict $ encode event
         }
-
-getDbDeleteDataJson :: forall be table. (Model be table, MeshMeta be table) => Text -> Where be table -> A.Value
-getDbDeleteDataJson model whereClause =
-  A.object
-    [ "contents"
-        .= A.object
-          [ "where" .= modelEncodeWhere whereClause
-          ],
-      "tag" .= T.pack (pascal (T.unpack model)),
-      "type" .= ("DELETE" :: Text)
-    ]

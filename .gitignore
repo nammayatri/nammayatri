@@ -6,9 +6,14 @@ result-*
 .direnv
 /.pre-commit-config.yaml
 .envrc
+## Data directory used by services
+/data
 
 # Backend ignores
 dist-newstyle
+/data
+# process-compose log files
+*.log
 
 # Frontend ignores
 Frontend/.DS_Store

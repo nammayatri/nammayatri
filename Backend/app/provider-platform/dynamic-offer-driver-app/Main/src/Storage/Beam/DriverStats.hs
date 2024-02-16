@@ -32,6 +32,8 @@ data DriverStatsT f = DriverStatsT
     totalDistance :: B.C f Double,
     ridesCancelled :: B.C f (Maybe Int),
     totalRidesAssigned :: B.C f (Maybe Int),
+    coinCovertedToCashLeft :: B.C f (Maybe HighPrecMoney),
+    totalCoinsConvertedCash :: B.C f (Maybe HighPrecMoney),
     updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)

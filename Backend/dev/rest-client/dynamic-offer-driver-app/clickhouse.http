@@ -1,0 +1,110 @@
+# @name healthcheck
+
+GET {{clickhouse-host}}
+
+###
+
+# @name verision
+
+POST {{clickhouse-host}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+Select version()
+
+###
+
+# @name testQuery
+
+POST {{clickhouse-host}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+Select 1
+
+###
+
+# @name createDriverEdaKafkaTable
+
+# Nullable column (e.g. Nullable(String)) creates a separate column of UInt8 type. This additional column has to be processed every time a user works with a nullable column. This leads to additional storage space used and almost always negatively affects performance.
+# To avoid Nullable columns, consider setting a default value for that column.
+
+POST {{clickhouse-host}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+CREATE TABLE default.driver_eda_kafka
+( `driver_id` String,
+  `rid` Nullable(String),
+  `ts` DateTime64(3) DEFAULT now(),
+  `acc` Nullable(String),
+  `rideStatus` Nullable(String),
+  `lat` Nullable(String),
+  `lon` Nullable(String),
+  `mid` Nullable(String),
+  `updated_at` Nullable(String),
+  `created_at` Nullable(String),
+  `on_ride` Nullable(String),
+  `active` Nullable(String),
+  `partition_date` Date,
+  `date` DateTime DEFAULT now()
+)
+PRIMARY KEY (ts)
+
+###
+
+# @name insertDriverEdaKafkaTable
+
+POST {{clickhouse-host}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+INSERT INTO default.driver_eda_kafka
+(driver_id,rid,ts,acc,rideStatus,lat,lon,mid,updated_at,created_at,on_ride,active,partition_date,date)
+Values
+( 'favorit-auto1-0000000000000000000000',
+  '4697ed78-1d05-4c96-a1d5-5b55ee751b02',
+  '2024-01-09 07:02:42.932',
+  '3.900000095367432',
+  'ON_PICKUP',
+  '12.9104517',
+  '77.6765917',
+  'favorit0-0000-0000-0000-00000favorit',
+  null,
+  null,
+  '1',
+  '1',
+  '2024-01-10',
+  '2024-01-10'
+)
+
+
+###
+
+# @name rideRoute
+
+POST {{clickhouse-host}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT * FROM driver_eda_kafka WHERE (((partition_date='2023-12-27') OR (partition_date='2023-12-28')) AND ((driver_id='favorit-auto1-0000000000000000000000') AND (rid='8a679397-21e3-4f3b-8922-e3b009b20505'))) ORDER BY ts ASC
+
+###
+
+# @name deleteDriverEdaKafkaTable
+
+POST {{clickhouse-host}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+DELETE FROM default.driver_eda_kafka WHERE True
+
+###
+
+# @name dropDriverEdaKafkaTable
+
+POST {{clickhouse-host}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+DROP TABLE default.driver_eda_kafka

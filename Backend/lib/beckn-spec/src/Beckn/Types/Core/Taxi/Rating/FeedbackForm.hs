@@ -22,7 +22,7 @@ data FeedbackForm = FeedbackForm
   { question :: Text,
     answer :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, Read)
 
 instance ToSchema FeedbackForm where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

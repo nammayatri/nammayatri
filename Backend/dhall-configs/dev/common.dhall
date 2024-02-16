@@ -20,6 +20,12 @@ let mockGoogleCfg =
       , googleKey = "mock-google-key"
       }
 
+let internalEndPointMap =
+      [ { mapKey = "http://localhost:8015/v1"
+        , mapValue = "http://localhost:8015/v1"
+        }
+      ]
+
 let SchedulerType = < RedisBased | DbBased >
 
 in  { smsSessionConfig = globalCommon.smsSessionConfig
@@ -50,4 +56,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , authServiceUrl = "http://localhost:8013/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
+    , internalEndPointMap
     }

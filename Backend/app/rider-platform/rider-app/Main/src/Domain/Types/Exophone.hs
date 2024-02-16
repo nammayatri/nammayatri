@@ -17,7 +17,7 @@ module Domain.Types.Exophone where
 -- import qualified Domain.Types.Merchant as DM
 
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Kernel.Types.Id

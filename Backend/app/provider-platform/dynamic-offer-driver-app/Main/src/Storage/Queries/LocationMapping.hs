@@ -26,19 +26,54 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.LocationMapping as BeamLM
 
+latestTag :: Text
+latestTag = "LATEST"
+
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LocationMapping -> m ()
 create = createWithKV
 
-countOrders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
-countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] <&> length
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id LocationMapping -> m (Maybe LocationMapping)
+findById (Id locationMapping) = findOneWithKV [Se.Is BeamLM.id $ Se.Eq locationMapping]
 
-findByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping] --TODO : SORT BY ORDER
-findByEntityId entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId]
+countOrders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
+countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing <&> length
+
+maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
+maxOrderByEntity entityId = do
+  lms <- findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing
+  let orders = map order lms
+  case orders of
+    [] -> pure 0
+    _ -> pure $ maximum orders
+
+findByEntityIdOrderAndVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Text -> m [LocationMapping]
+findByEntityIdOrderAndVersion entityId order version =
+  findAllWithKVAndConditionalDB
+    [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order, Se.Is BeamLM.version $ Se.Eq version]]
+    Nothing
+
+findByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
+findByEntityId entityId =
+  findAllWithKVAndConditionalDB
+    [ Se.Is BeamLM.entityId $ Se.Eq entityId
+    ]
+    (Just (Se.Desc BeamLM.createdAt))
+
+getLatestStartByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
+getLatestStartByEntityId entityId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamLM.entityId $ Se.Eq entityId,
+          Se.Is BeamLM.order $ Se.Eq 0,
+          Se.Is BeamLM.version $ Se.Eq latestTag
+        ]
+    ]
 
 findAllByEntityIdAndOrder :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m [LocationMapping]
 findAllByEntityIdAndOrder entityId order =
   findAllWithKVAndConditionalDB
     [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]]
+    Nothing
 
 updatePastMappingVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m ()
 updatePastMappingVersions entityId order = do
@@ -59,7 +94,7 @@ getNewVersion oldVersion =
 updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Text -> m ()
 updateVersion entityId order version = do
   now <- getCurrentTime
-  updateOneWithKV
+  updateWithKV
     [ Se.Set BeamLM.version version,
       Se.Set BeamLM.updatedAt now
     ]

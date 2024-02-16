@@ -54,7 +54,7 @@ searchServices ::
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
-  ClientM AppBESearch.SearchRes
+  ClientM AppBESearch.SearchResp
 searchServices = client (Proxy :: Proxy AppBESearch.API)
 
 getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM AbeQuoteAPI.GetQuotesRes

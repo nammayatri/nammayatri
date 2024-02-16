@@ -39,16 +39,16 @@ finishSearchMetrics merchantName txnId = do
   version <- asks (.version)
   finishSearchMetrics' bmContainer merchantName version txnId
 
-incrementRideCreatedRequestCount :: HasBAPMetrics m r => Text -> m ()
-incrementRideCreatedRequestCount merchantId = do
+incrementRideCreatedRequestCount :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementRideCreatedRequestCount merchantId merchantOperatingCityId category = do
   bmContainer <- asks (.bapMetrics)
   version <- asks (.version)
-  incrementRideCreatedRequestCount' bmContainer merchantId version
+  incrementRideCreatedRequestCount' bmContainer merchantId merchantOperatingCityId version category
 
-incrementRideCreatedRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> DeploymentVersion -> m ()
-incrementRideCreatedRequestCount' bmContainer merchantId version = do
+incrementRideCreatedRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> Text -> DeploymentVersion -> Text -> m ()
+incrementRideCreatedRequestCount' bmContainer merchantId merchantOperatingCityId version category = do
   let rideCreatedCounter = bmContainer.rideCreatedCounter
-  liftIO $ P.withLabel rideCreatedCounter (merchantId, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel rideCreatedCounter (merchantId, version.getDeploymentVersion, category, merchantOperatingCityId) P.incCounter
 
 incrementSearchRequestCount :: HasBAPMetrics m r => Text -> m ()
 incrementSearchRequestCount merchantName = do

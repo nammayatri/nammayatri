@@ -77,31 +77,26 @@ ui = do
       :<|> driverClient
       :<|> rideClient = client (Proxy :: Proxy UIAPI)
 
-    _ :<|> (_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel) = rideClient
+    _ :<|> (_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel :<|> _) = rideClient
 
-    ( _
+    ( setDriverOnline
+        :<|> _
+        :<|> getNearbySearchRequests
+        :<|> offerQuote
+        :<|> respondQuote
+        :<|> ( getDriverInfo
+                 :<|> _
+                 :<|> _
+               )
+        :<|> updateMetaData
+        :<|> ( validate
+                 :<|> verifyAuth
+                 :<|> resendOtp
+                 :<|> remove
+               )
         :<|> _
         :<|> _
-        :<|> _
-      )
-      :<|> ( setDriverOnline
-               :<|> _
-               :<|> getNearbySearchRequests
-               :<|> offerQuote
-               :<|> respondQuote
-               :<|> ( getDriverInfo
-                        :<|> _
-                        :<|> _
-                      )
-               :<|> updateMetaData
-               :<|> ( validate
-                        :<|> verifyAuth
-                        :<|> resendOtp
-                        :<|> remove
-                      )
-               :<|> _
-               :<|> _
-             ) = driverClient
+      ) = driverClient
 
 newtype DashboardAPIs = DashboardAPIs
   { management :: DashboardManagementAPIs
@@ -132,7 +127,8 @@ buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =
   RideAPI.StartRideReq
     { RideAPI.rideOtp = otp,
-      point = initialPoint
+      point = initialPoint,
+      odometer = Nothing
     }
 
 getDriverOfferBppBaseUrl :: BaseUrl

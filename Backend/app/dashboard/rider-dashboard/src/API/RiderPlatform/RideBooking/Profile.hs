@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp.RideBooking as Client
 import Servant
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 
@@ -57,12 +58,12 @@ buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.ProfileAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
 callGetPersonDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> FlowHandler DProfile.ProfileRes
-callGetPersonDetails merchantShortId opCity apiTokenInfo personId = withFlowHandlerAPI $ do
+callGetPersonDetails merchantShortId opCity apiTokenInfo personId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderApp checkedMerchantId opCity (.rideBooking.profile.personDetails) personId
 
 callUpdatePerson :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DProfile.UpdateProfileReq -> FlowHandler APISuccess
-callUpdatePerson merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+callUpdatePerson merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.UpdatePersonEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $

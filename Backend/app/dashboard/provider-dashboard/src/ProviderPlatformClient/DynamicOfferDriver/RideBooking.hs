@@ -50,7 +50,9 @@ data DriversAPIs = DriversAPIs
   { getDriverDue :: Maybe Text -> Text -> Euler.EulerClient [Driver.DriverOutstandingBalanceResp],
     enableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     collectCash :: Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
+    collectCashV2 :: Id Driver.Driver -> Text -> Driver.ServiceNames -> Euler.EulerClient APISuccess,
     exemptCash :: Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
+    exemptCashV2 :: Id Driver.Driver -> Text -> Driver.ServiceNames -> Euler.EulerClient APISuccess,
     driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Euler.EulerClient Driver.DriverInfoRes,
     unlinkVehicle :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
@@ -99,7 +101,9 @@ mkDriverRideBookingAPIs merchantId city token = do
     getDriverDue
       :<|> enableDriver
       :<|> collectCash
+      :<|> collectCashV2
       :<|> exemptCash
+      :<|> exemptCashV2
       :<|> driverInfo
       :<|> unlinkVehicle
       :<|> endRCAssociation

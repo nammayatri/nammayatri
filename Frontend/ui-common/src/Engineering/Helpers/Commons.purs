@@ -21,13 +21,13 @@ import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
-import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData)
+import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
 import Data.Int as INT
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..),split)
-import Data.Int (fromString)
+import Data.Int (fromString, toNumber)
 import Data.Number.Format (toStringWith, fixed) as Number
 import Data.String as DS
 import Effect (Effect)
@@ -37,7 +37,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref (Ref, read, write)
-import Effect.Uncurried (EffectFn2, EffectFn8, EffectFn7, mkEffectFn2, mkEffectFn6, mkEffectFn7, runEffectFn2, runEffectFn6, runEffectFn7, runEffectFn8)
+import Effect.Uncurried (EffectFn2, EffectFn8, EffectFn7, mkEffectFn2, mkEffectFn6, mkEffectFn7, runEffectFn2, runEffectFn6, runEffectFn7, runEffectFn8, EffectFn1)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (empty, insert, lookup, Object, foldM, delete)
 import JSURI (decodeURIComponent)
@@ -50,10 +50,9 @@ import Presto.Core.Types.API (Header(..), Headers(..), Request(..), RestAPIOptio
 import Presto.Core.Types.Language.Flow (Flow, doAff, defaultState, getState, modifyState)
 import Presto.Core.Types.Permission (PermissionStatus(..))
 import Presto.Core.Utils.Encoding (defaultDecodeJSON, defaultEncodeJSON)
-import Common.Types.App (FlowBT)
+import Common.Types.App (FlowBT, ClevertapEventParams)
 import Effect.Aff.AVar (new)
 import Data.String as DS
-import Data.Int as INT
 import Data.Array ((!!))
 import Data.Number.Format as Number
 import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
@@ -61,6 +60,8 @@ import Data.Function.Uncurried (Fn1(..), runFn2)
 import Data.Either (Either(..), either, hush)
 import Data.Foldable (foldl)
 import Log (printLog)
+import Data.Maybe (maybe)
+import Data.Number (pow, round)
 
 foreign import callAPI :: EffectFn7 String String String String Boolean Boolean String Unit
 foreign import callAPIWithOptions :: EffectFn8 String String String String Boolean Boolean String String Unit
@@ -69,6 +70,8 @@ foreign import atobImpl :: String -> String
 foreign import getWindowVariable :: forall a. String -> (a -> (Maybe a)) -> (Maybe a) -> Effect a
 foreign import setWindowVariableImpl :: forall a. String -> a -> Effect Unit
 foreign import screenWidth :: Unit -> Int
+foreign import getDeviceHeight :: Unit -> Int
+foreign import getScreenPpi :: Unit -> Int
 foreign import screenHeight :: Unit -> Int
 foreign import getVersionByKey :: String -> String
 foreign import callSahay ::  String  -> EffectFnAff String
@@ -77,11 +80,10 @@ foreign import safeMarginBottomImpl :: Unit -> Int
 foreign import getNewIDWithTag :: String -> String
 foreign import getOs :: Unit -> String
 foreign import setText :: String -> String -> Unit
-foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
-foreign import clearTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
+foreign import convertUTCTimeToISTTimeinHHMMSS :: String -> String
 foreign import getCurrentTimeStamp :: Unit -> Number
 foreign import getDateFromObj :: Fn1 DateObj String
 foreign import getFormattedDate :: Fn1 String String
@@ -91,8 +93,15 @@ foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+foreign import getDayName :: String -> String
+foreign import getFutureDate :: String -> Int -> String
+foreign import setEventTimestamp :: String -> Effect Unit
+foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
+foreign import updateIdMap :: EffectFn1 String CarouselHolderData
+foreign import updatePushInIdMap :: Fn2 String Boolean Unit
+foreign import getValueFromIdMap :: EffectFn1 String CarouselHolderData
 
-
+foreign import isTrue :: forall a. a -> Boolean
 os :: String
 os = getOs unit
 
@@ -191,6 +200,16 @@ modifyEpassRef f ref = do
 safeMarginTop :: Int
 safeMarginTop = safeMarginTopImpl unit
 
+safeMarginTopWithDefault :: Int -> Int
+safeMarginTopWithDefault def = 
+  let safeMargin = safeMarginTop
+  in if safeMargin == 0 then def else safeMargin
+
+safeMarginBottomWithDefault :: Int -> Int
+safeMarginBottomWithDefault def = 
+  let safeMargin = safeMarginBottom
+  in if safeMargin == 0 then def else safeMargin
+
 safeMarginBottom :: Int
 safeMarginBottom = safeMarginBottomImpl unit
 
@@ -199,6 +218,9 @@ strToBool value = case (DS.toLower value) of
                     "true"  -> Just true
                     "false" -> Just false
                     _       -> Nothing
+
+truncate :: Int -> Number -> Number
+truncate precision num = (round (num * (10.0 `pow` (toNumber  precision)))) / (10.0 `pow` (toNumber precision))
 
 isPreviousVersion :: String -> String -> Boolean
 isPreviousVersion currentVersion previousVersion = numericVersion currentVersion <= numericVersion previousVersion
@@ -266,16 +288,25 @@ getMapsLanguageFormat key =
     "KN_IN" -> "KANNADA"
     "BN_IN" -> "BENGALI"
     "ML_IN" -> "MALAYALAM"
+    "TE_IN" -> "TELUGU"
     _       -> "ENGLISH"
 
-getYoutubeData :: String -> String -> Int -> YoutubeData
-getYoutubeData videoId videoType videoHeight = {
+
+getYoutubeData :: YoutubeData
+getYoutubeData  = {
   videoTitle : "title",
   setVideoTitle : false,
   showMenuButton : false,
   showDuration : true,
   showSeekBar : true,
-  videoId : videoId,
-  videoType : videoType,
-  videoHeight : videoHeight
+  videoId : "videoId",
+  videoType : "PORTRAIT_VIDEO",
+  videoHeight : 0,
+  showFullScreen : false,
+  hideFullScreenButton : false
 }
+
+isInvalidUrl :: String -> Boolean
+isInvalidUrl url = do
+  let strippedUrl = DS.stripPrefix (DS.Pattern "https://") url
+  maybe false (\val ->  DS.contains (DS.Pattern "(null)") val || DS.contains (DS.Pattern "__failed") val || DS.contains (DS.Pattern "//") val) strippedUrl

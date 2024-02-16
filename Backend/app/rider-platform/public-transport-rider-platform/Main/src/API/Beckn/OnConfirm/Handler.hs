@@ -27,7 +27,7 @@ import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Tools.Error
 
 handler :: SignatureAuthResult -> FlowServer OnConfirmAPI
-handler _ onConfirmCb = withFlowHandlerAPI . withTransactionIdLogTag onConfirmCb $ do
+handler _ onConfirmCb = withFlowHandlerAPI' . withTransactionIdLogTag onConfirmCb $ do
   validateContext Context.ON_CONFIRM $ onConfirmCb.context
   transactionId <- onConfirmCb.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
   case onConfirmCb.contents of
