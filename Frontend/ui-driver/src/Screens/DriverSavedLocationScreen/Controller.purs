@@ -115,7 +115,6 @@ eval (UpdateLocation _ lat lon) state = case NUM.fromString lat, NUM.fromString 
   _, _ -> continue state
 
 eval LocateOnMap state = do
-  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}
   exit $ ChangeView state { props { viewType = LOCATE_ON_MAP } }
 
 eval (ConfirmLocEDT val) state =
@@ -191,5 +190,9 @@ eval (SuggestionClick pred) state = case pred.placeId of
   Nothing -> continue state
 
 eval (Respones resp) state = continue state { data { savedLocationsArray = getLocationArray resp } }
+
+eval (MAPREADY _ _ _) state = 
+  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}
+  in continue state
 
 eval _ state = continue state
