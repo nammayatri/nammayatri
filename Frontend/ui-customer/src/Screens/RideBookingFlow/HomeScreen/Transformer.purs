@@ -40,8 +40,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage)
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage,fetchImage, FetchImageFrom(..))
 import JBridge (fromMetersToKm, getLatLonFromAddress)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -52,10 +51,8 @@ import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType, dummyRentalBookingConfig)
-import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
-import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
-import Screens.Types (Stage(..))
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails, dummyIndividualCard)
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..),Stage(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..))
 import Services.Backend as Remote
 import Storage (isLocalStageOn)
@@ -483,7 +480,7 @@ getTripDetailsState (RideBookingRes ride) state = do
   let (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0))
       timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
       nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
-      estimatedDistance = spy "base distance zxc " ride.estimatedDistance
+      estimatedDistance = ride.estimatedDistance
       baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
       updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
       (RideBookingAPIDetails bookingDetails) = ride.bookingDetails
