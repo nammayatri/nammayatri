@@ -21,6 +21,7 @@ import Services.API (BookingLocationAPIEntity(..))
 import ConfigProvider
 import Prelude ((<>))
 import Foreign.Object (empty)
+import Common.Types.App as RideType
 
 initData :: MyRidesScreenState
 initData =
@@ -109,4 +110,6 @@ dummyIndividualCard = {
   , optionsVisibility : true
   , merchantExoPhone : ""
   , showRepeatRide : ""
+  , rideType : RideType.NORMAL_RIDE
+  , estimatedDistance : 0
 }
