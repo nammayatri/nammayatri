@@ -24,6 +24,7 @@ LmsModule:
     variant : Maybe Variant
     moduleCompletionCriteria : ModuleCompletionCriteria
     languagesAvailableForQuiz : "[Language]"
+    languagesAvailableForVideos : "[Language]"
 
   types:
     LmsCategory:
@@ -33,10 +34,12 @@ LmsModule:
 
   sqlType:
     languagesAvailableForQuiz : "text[]"
+    languagesAvailableForVideos : "text[]"
 
   default:
     category : "'Training'"
     languagesAvailableForQuiz : "'{}'"
+    languagesAvailableForVideos : "'{}'"
 
   queries:
     getAllModules:
@@ -330,7 +333,7 @@ QuestionInformation:
       isCorrect : Bool
       derive: "Read, Eq, Ord"
     SingleOption:
-      enum: "TextOption Text, SingleLineImage Text Int, TwoColumnImage Text"
+      enum: "TextOption Text, SingleLineImage Text Int Int, TwoColumnImage Text Int Int, TwoColumnOption Text"
 
   queries:
     findByIdAndLanguage:
