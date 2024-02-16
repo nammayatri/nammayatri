@@ -18,6 +18,7 @@ data LmsModule = LmsModule
     duration :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     languagesAvailableForQuiz :: [Kernel.External.Types.Language],
+    languagesAvailableForVideos :: [Kernel.External.Types.Language],
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
     moduleCompletionCriteria :: Domain.Types.LmsModule.ModuleCompletionCriteria,
     noOfVideos :: Kernel.Prelude.Int,

@@ -38,7 +38,7 @@ data QuizOptions = SingleSelect Domain.Types.QuestionInformation.Options | Multi
 data QuizQuestion = TextQuestion Kernel.Prelude.Text | ImageQuestion Kernel.Prelude.Text Kernel.Prelude.Text Kernel.Prelude.Int Kernel.Prelude.Int
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SingleOption = TextOption Kernel.Prelude.Text | SingleLineImage Kernel.Prelude.Text Kernel.Prelude.Int | TwoColumnImage Kernel.Prelude.Text
+data SingleOption = TextOption Kernel.Prelude.Text | SingleLineImage Kernel.Prelude.Text Kernel.Prelude.Int Kernel.Prelude.Int | TwoColumnImage Kernel.Prelude.Text Kernel.Prelude.Int Kernel.Prelude.Int | TwoColumnOption Kernel.Prelude.Text
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''QuizOptions)

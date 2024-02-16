@@ -23,6 +23,7 @@ data LmsModuleT f = LmsModuleT
     duration :: B.C f Kernel.Prelude.Int,
     id :: B.C f Kernel.Prelude.Text,
     languagesAvailableForQuiz :: B.C f [Kernel.External.Types.Language],
+    languagesAvailableForVideos :: B.C f [Kernel.External.Types.Language],
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     moduleCompletionCriteria :: B.C f Domain.Types.LmsModule.ModuleCompletionCriteria,
     noOfVideos :: B.C f Kernel.Prelude.Int,

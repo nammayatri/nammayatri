@@ -46,6 +46,7 @@ data LmsModuleRes = LmsModuleRes
     description :: Data.Text.Text,
     duration :: Kernel.Prelude.Int,
     languagesAvailableForQuiz :: [Kernel.External.Types.Language],
+    languagesAvailableForVideos :: [Kernel.External.Types.Language],
     moduleCompletionStatus :: Domain.Types.DriverModuleCompletion.ModuleCompletionStatus,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     name :: Data.Text.Text,
