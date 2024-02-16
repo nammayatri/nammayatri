@@ -23,8 +23,6 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
-import Tools.Error
-import qualified Tools.Maps as Maps
 
 buildSearchReqV2 ::
   (HasFlowEnv m r '["_version" ::: Text], CacheFlow m r, EsqDBFlow m r) =>

@@ -60,7 +60,7 @@ buildSelectReqV2 subscriber req = do
   item <- case order.orderItems of
     Just [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
-  let customerExtraFee = getCustomerExtraFeeV2 =<< item.itemTags
+  let customerExtraFee = getCustomerExtraFeeV2 item.itemTags
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure fulfillment
@@ -78,21 +78,19 @@ buildSelectReqV2 subscriber req = do
         estimateId = Id estimateIdText
       }
 
-getCustomerExtraFeeV2 :: [Spec.TagGroup] -> Maybe Money
+getCustomerExtraFeeV2 :: Maybe [Spec.TagGroup] -> Maybe Money
 getCustomerExtraFeeV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.CUSTOMER_TIP_INFO Tag.CUSTOMER_TIP tagGroups
   customerExtraFee <- readMaybe $ T.unpack tagValue
   Just $ Money customerExtraFee
 
 getAutoAssignEnabledV2 :: Maybe [Spec.TagGroup] -> Bool
-getAutoAssignEnabledV2 = \case
-  Nothing -> True -- By default we only need to send one quote
-  Just tagGroups ->
-    let tagValue = Utils.getTagV2 Tag.AUTO_ASSIGN_ENABLED Tag.IS_AUTO_ASSIGN_ENABLED tagGroups
-     in case tagValue of
-          Just "True" -> True
-          Just "False" -> False
-          _ -> False
+getAutoAssignEnabledV2 tagGroups =
+  let tagValue = Utils.getTagV2 Tag.AUTO_ASSIGN_ENABLED Tag.IS_AUTO_ASSIGN_ENABLED tagGroups
+   in case tagValue of
+        Just "True" -> True
+        Just "False" -> False
+        _ -> False
 
 cacheSelectMessageId :: CacheFlow m r => Text -> Text -> m ()
 cacheSelectMessageId messageId transactionId = do

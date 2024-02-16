@@ -26,7 +26,6 @@ import EulerHS.Prelude hiding (state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Utils.Common
-import qualified Tools.Maps as Maps
 
 buildSearchReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>

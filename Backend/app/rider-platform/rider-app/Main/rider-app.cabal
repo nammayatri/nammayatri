@@ -435,8 +435,8 @@ library
       Domain.Types.TicketBookingServiceCategory
       Domain.Types.TicketPlace
       Domain.Types.TicketService
-      Storage.Beam.AutoCompleteData
       Domain.Types.ValueAddNP
+      Storage.Beam.AutoCompleteData
       Storage.Beam.BecknConfig
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
@@ -463,8 +463,8 @@ library
       Storage.Beam.TicketBookingServiceCategory
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
-      Storage.Queries.AutoCompleteData
       Storage.Beam.ValueAddNP
+      Storage.Queries.AutoCompleteData
       Storage.Queries.BecknConfig
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour

@@ -623,8 +623,8 @@ library
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
       Domain.Types.SubscriptionConfig
-      Storage.Beam.DriverModuleCompletion
       Domain.Types.ValueAddNP
+      Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPoolConfig
       Storage.Beam.Estimate
       Storage.Beam.EventTracker
@@ -638,8 +638,8 @@ library
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
       Storage.Beam.SubscriptionConfig
-      Storage.Queries.DriverModuleCompletion
       Storage.Beam.ValueAddNP
+      Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPoolConfig
       Storage.Queries.Estimate
       Storage.Queries.EventTracker
