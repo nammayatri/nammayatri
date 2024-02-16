@@ -19,6 +19,7 @@ module Beckn.ACL.OnCancel
 where
 
 import qualified Beckn.OnDemand.Utils.Common as BUtils
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import qualified Data.List as List
@@ -26,7 +27,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.OnCancel as Reexport
-import qualified Domain.Types.OnCancel as OU
+import qualified Domain.Types.OnCancel as OC
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -50,9 +51,9 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus req = do
       city = fromMaybe merchant.city mbBapCity
       country = fromMaybe merchant.country mbBapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  buildOnCancelReqV2 Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus req
+  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus req
 
-buildOnCancelReqV2 ::
+buildOnCancelReq ::
   (MonadFlow m, EncFlow m r) =>
   Context.Action ->
   Context.Domain ->
@@ -62,17 +63,16 @@ buildOnCancelReqV2 ::
   Context.City ->
   Context.Country ->
   Text ->
-  OU.OnCancelBuildReq ->
+  OC.OnCancelBuildReq ->
   m Spec.OnCancelReq
-buildOnCancelReqV2 action domain messageId bppSubscriberId bppUri city country cancelStatus = \case
-  OU.BookingCancelledBuildReqV2 OU.DBookingCancelledReqV2 {..} -> do
-    context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    pure $
-      Spec.OnCancelReq
-        { onCancelReqError = Nothing,
-          onCancelReqContext = context,
-          onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource
-        }
+buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) = do
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+  pure $
+    Spec.OnCancelReq
+      { onCancelReqError = Nothing,
+        onCancelReqContext = context,
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource
+      }
 
 buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe Spec.ConfirmReqMessage
 buildOnCancelMessageReqV2 booking cancelStatus cancellationSource =
@@ -115,7 +115,7 @@ tfFulfillments =
           { fulfillmentStateDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just "RIDE_BOOKING_CANCELLED", -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+                  { descriptorCode = Just (show Enums.RIDE_CANCELLED),
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   }
