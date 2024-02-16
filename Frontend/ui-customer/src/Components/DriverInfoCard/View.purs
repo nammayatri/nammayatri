@@ -294,18 +294,17 @@ driverInfoView push state =
                   ][]
                   , contactView push state
                   , if state.props.currentStage == RideStarted then distanceView push state else dummyView push
-                ] <> (if state.props.showBanner then (maybe [] (\item -> if (Array.length state.data.bannerArray) > 0 then [CarouselHolder.carouselView push $ getCarouselConfig item state]  else []) state.data.bannerData.bannerItem) else [])
-                  <> ( [ linearLayout
-                          [ height WRAP_CONTENT
-                          , width MATCH_PARENT
-                          , orientation VERTICAL
-                          , margin $ MarginTop 12
-                          ]
-                          [ driverDetailsView (getDriverDetails state) "DriverDetailsView"
-                          , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
-                          ]
+                  , if state.props.showBanner then maybe (dummyView push) (\item -> CarouselHolder.carouselView push $ getCarouselConfig item state) state.data.bannerData.bannerItem else dummyView push
+                  , linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      , margin $ MarginTop 12
                       ]
-                    )
+                      [ driverDetailsView (getDriverDetails state) "DriverDetailsView"
+                      , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
+                      ]
+                  ]
               ]
               , linearLayout
                 [ width MATCH_PARENT
