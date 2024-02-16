@@ -13,7 +13,7 @@
 -}
 
 module Beckn.ACL.OnCancel
-  ( buildOnCancelReqV2,
+  ( buildOnCancelReq,
   )
 where
 
@@ -28,13 +28,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Error (GenericError (InvalidRequest))
 
-buildOnCancelReqV2 ::
+buildOnCancelReq ::
   ( HasFlowEnv m r '["_version" ::: Text],
     EsqDBFlow m r
   ) =>
   Spec.OnCancelReq ->
   m (Maybe DOnCancel.OnCancelReq)
-buildOnCancelReqV2 req = do
+buildOnCancelReq req = do
   ContextV2.validateContext Context.ON_CANCEL $ req.onCancelReqContext
   _transactionId <- Utils.getTransactionId req.onCancelReqContext
   handleErrorV2 req $ \message -> do

@@ -44,6 +44,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
@@ -88,7 +89,6 @@ import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
@@ -161,7 +161,7 @@ callOnStatusV2 req retryConfig = do
   let authKey = getHttpManagerKey bppSubscriberId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
-  
+
 callOnCancelV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     MonadFlow m,
@@ -178,7 +178,6 @@ callOnCancelV2 req retryConfig = do
   let authKey = getHttpManagerKey bppSubscriberId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
-
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -400,7 +399,7 @@ sendBookingCancelledUpdateToBAP ::
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry "CANCELLED" bookingCancelledBuildReqV2
+  bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2
   void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig
 
 sendDriverOffer ::

@@ -26,6 +26,7 @@ module Domain.Action.UI.Cancel
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -115,7 +116,7 @@ softCancel bookingId _ = do
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
         merchant = merchant,
-        cancelStatus = "softCancel",
+        cancelStatus = show Enums.SOFT_CANCEL,
         ..
       }
 
@@ -155,7 +156,7 @@ cancel bookingId _ req = do
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
         merchant = merchant,
-        cancelStatus = "confirmCancel",
+        cancelStatus = show Enums.CONFIRM_CANCEL,
         ..
       }
   where
