@@ -418,21 +418,24 @@ checkoutRentalBannerConfig _ =
     config = Banner.config
     config' = config
       { backgroundColor = Color.blue600
-      , stroke = "1," <> Color.grey900
+      , stroke = "0," <> Color.grey900
       , imageHeight = V 96
       , imageWidth = V 80
       , imagePadding = PaddingVertical 0 0
       , title = getString RENTALS_INTERCITY_AVAILABLE
       , titleColor = Color.blue800
-      , actionText = getString CHECK_IT_OUT
+      , actionText {
+          text = getString CHECK_IT_OUT,
+          backgroundColor = Just Color.blue800 ,
+          textColor = Color.white900,
+          cornerRadius = 50.0,
+          padding = PaddingHorizontal 16 16,
+          margin = MarginTop 6
+        }
+      , actionTextImgType = Banner.DownArrow
       , actionTextVisibility = true
-      , cornerRadius = 8.0
+      , cornerRadius = 12.0
       , imageUrl = fetchImage FF_ASSET "ny_ic_rental_banner"
-      , actionTextBackgroundColor = Just Color.blue800
-      , actionTextColor = Color.white900
-      , actionTextCornerRadius = 50.0
-      , actionTextPadding = PaddingHorizontal 16 16
-      , actionTextMargin = MarginTop 6
       }
   in config'
 
@@ -1797,8 +1800,8 @@ locationTagBarConfig state  = let
       map 
         (\item -> 
           { imageConfig : 
-              { height : V 16
-              , width : V 16
+              { height : V 20
+              , width : V 20
               , imageWithFallback : item.image
               } ,
             textConfig : 

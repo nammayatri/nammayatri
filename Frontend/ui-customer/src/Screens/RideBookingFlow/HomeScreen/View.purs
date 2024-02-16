@@ -3505,7 +3505,7 @@ homeScreenViewV2 push state =
                           , margin $ MarginTop 32 
                           , padding $ PaddingTop 30
                           , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
-                          , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.grey700]) else (Linear 180.0 [Color.white900 , Color.grey700])
+                          , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900, Color.grey700])
                           ][ scrollView
                               [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
                               , width MATCH_PARENT
@@ -3550,12 +3550,14 @@ isHomeScreenView :: HomeScreenState -> Boolean
 isHomeScreenView state = state.props.currentStage == HomeScreen
 
 footerView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-footerView push state = 
+footerView push state = let 
+  bottomPadding = if state.data.config.feature.enableZooTicketBookingFlow then 50 else 0 
+  in
   linearLayout  
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , padding $ Padding 24 5 24 30
+    , padding $ Padding 24 5 24 (30+bottomPadding)
     , gravity CENTER
     , accessibilityHint $  getString BOOK_AND_MOVE <>  getString ANYWHERE_IN_THE_CITY
     ][
@@ -4427,7 +4429,7 @@ additionalServicesView push state =
     , width MATCH_PARENT
     , orientation VERTICAL 
     , padding $ PaddingHorizontal 16 16
-    , margin $ MarginTop 20
+    , margin $ MarginVertical 20 20
     ][  textView $
           [ text "More Services"
           , color Color.black900
