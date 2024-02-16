@@ -4149,7 +4149,7 @@ rentalScreenFlow = do
             enterRentalRideSearchFlow resp.bookingId
             else rideScheduledFlow
         Left err -> do
-          void $ pure $ toast "A Rental Booking is already scheduled within 2 hours. Please Choose another time"
+          void $ pure $ toast "A Ride is already scheduled. Please Choose another time."
           pure unit
       rentalScreenFlow
     RentalScreenController.GoToSelectPackage updatedState -> do
