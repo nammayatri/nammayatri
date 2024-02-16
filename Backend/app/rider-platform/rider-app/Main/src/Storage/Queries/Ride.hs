@@ -165,7 +165,7 @@ findStuckRideItems merchant moCity bookingIds now = do
       [ Se.And
           [ Se.Is BeamB.providerId $ Se.Eq merchant.id.getId,
             Se.Is BeamB.id $ Se.In $ getId <$> bookingIds,
-            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DQuote.RENTAL,
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.In [DQuote.RENTAL, DQuote.INTER_CITY],
             Se.Or
               ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just $ getId moCity.id)]
                   <> [Se.Is BeamB.merchantOperatingCityId $ Se.Eq Nothing | merchant.defaultCity == moCity.city]

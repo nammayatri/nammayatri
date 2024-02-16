@@ -247,7 +247,7 @@ findStuckBookings merchant moCity bookingIds now =
           [ Se.Is BeamB.merchantId $ Se.Eq merchant.id.getId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
             Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
-            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DQuote.RENTAL,
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.In [DQuote.RENTAL, DQuote.INTER_CITY],
             Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp,
             Se.Or
               ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]
