@@ -60,23 +60,7 @@ upsertMerchantServiceConfig merchantServiceConfig = do
 
 instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
   fromTType' BeamMSC.MerchantServiceConfigT {..} = do
-    serviceConfig <- maybe (throwError $ InternalError "Unable to decode MerchantServiceConfigT.configJSON") return $ case serviceName of
-      Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> valueToMaybe configJSON
-      Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> valueToMaybe configJSON
-      Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> valueToMaybe configJSON
-      Domain.MapsService Maps.NextBillion -> Domain.MapsServiceConfig . Maps.NextBillionConfig <$> valueToMaybe configJSON
-      Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> valueToMaybe configJSON
-      Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> valueToMaybe configJSON
-      Domain.SmsService Sms.GupShup -> Domain.SmsServiceConfig . Sms.GupShupConfig <$> valueToMaybe configJSON
-      Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
-      Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
-      Domain.CallService Call.Knowlarity -> Nothing
-      Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
-      Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> valueToMaybe configJSON
-      Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
-      Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
-      Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-      Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
+    serviceConfig <- getServiceConfigFromDomain serviceName configJSON
     pure $
       Just
         MerchantServiceConfig
@@ -85,11 +69,31 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
             updatedAt = updatedAt,
             createdAt = createdAt
           }
-    where
-      valueToMaybe :: FromJSON a => A.Value -> Maybe a
-      valueToMaybe value = case A.fromJSON value of
-        A.Success a -> Just a
-        _ -> Nothing
+
+valueToMaybe :: FromJSON a => A.Value -> Maybe a
+valueToMaybe value = case A.fromJSON value of
+  A.Success a -> Just a
+  _ -> Nothing
+
+getServiceConfigFromDomain :: (MonadFlow m) => Domain.ServiceName -> A.Value -> m Domain.ServiceConfig
+getServiceConfigFromDomain serviceName configJSON = do
+  maybe (throwError $ InternalError "Unable to decode MerchantServiceConfigT.configJSON") return $ case serviceName of
+    Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> valueToMaybe configJSON
+    Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> valueToMaybe configJSON
+    Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> valueToMaybe configJSON
+    Domain.MapsService Maps.NextBillion -> Domain.MapsServiceConfig . Maps.NextBillionConfig <$> valueToMaybe configJSON
+    Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> valueToMaybe configJSON
+    Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> valueToMaybe configJSON
+    Domain.SmsService Sms.GupShup -> Domain.SmsServiceConfig . Sms.GupShupConfig <$> valueToMaybe configJSON
+    Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
+    Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
+    Domain.CallService Call.Knowlarity -> Nothing
+    Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
+    Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> valueToMaybe configJSON
+    Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
+    Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
+    Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
 
 instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
   toTType' MerchantServiceConfig {..} =
@@ -100,29 +104,29 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
         BeamMSC.updatedAt = updatedAt,
         BeamMSC.createdAt = createdAt
       }
-    where
-      getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
-      getServiceNameConfigJson = \case
-        Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
-          Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
-          Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
-          Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
-          Maps.NextBillionConfig cfg -> (Domain.MapsService Maps.NextBillion, toJSON cfg)
-        Domain.SmsServiceConfig smsCfg -> case smsCfg of
-          Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, toJSON cfg)
-          Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, toJSON cfg)
-          Sms.GupShupConfig cfg -> (Domain.SmsService Sms.GupShup, toJSON cfg)
-        Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
-          Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
-        Domain.CallServiceConfig callCfg -> case callCfg of
-          Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
-        Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
-          Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
-          Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
-          Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
-        Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
-          AadhaarVerification.GridlineConfig cfg -> (Domain.AadhaarVerificationService AadhaarVerification.Gridline, toJSON cfg)
-        Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
-          Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
-        Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
-          Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
+
+getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
+getServiceNameConfigJson = \case
+  Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
+    Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
+    Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+    Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
+    Maps.NextBillionConfig cfg -> (Domain.MapsService Maps.NextBillion, toJSON cfg)
+  Domain.SmsServiceConfig smsCfg -> case smsCfg of
+    Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, toJSON cfg)
+    Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, toJSON cfg)
+    Sms.GupShupConfig cfg -> (Domain.SmsService Sms.GupShup, toJSON cfg)
+  Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
+    Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
+  Domain.CallServiceConfig callCfg -> case callCfg of
+    Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
+  Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
+    Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
+    Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
+    Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
+  Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
+    AadhaarVerification.GridlineConfig cfg -> (Domain.AadhaarVerificationService AadhaarVerification.Gridline, toJSON cfg)
+  Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
+  Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
+    Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)

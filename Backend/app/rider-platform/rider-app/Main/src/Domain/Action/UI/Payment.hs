@@ -46,6 +46,7 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
 import qualified Tools.Payment as Payment
 
@@ -83,7 +84,7 @@ createOrder (personId, merchantId) rideId = do
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
-      createOrderCall = Payment.createOrder merchantId -- api call
+      createOrderCall = Payment.createOrder merchantId Nothing -- api call
   DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
@@ -99,8 +100,9 @@ getStatus ::
   Id DOrder.PaymentOrder ->
   m DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
+  ticketBooking <- QTB.findById (cast orderId)
   let commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId -- api call
+      orderStatusCall = Payment.orderStatus merchantId (ticketBooking <&> (.ticketPlaceId)) -- api call
   DPayment.orderStatusService commonPersonId orderId orderStatusCall
 
 getOrder ::

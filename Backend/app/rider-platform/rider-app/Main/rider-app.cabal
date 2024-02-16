@@ -226,6 +226,7 @@ library
       Domain.Types.Person.PersonDisability
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.Person.PersonStats
+      Domain.Types.PlaceBasedServiceConfig
       Domain.Types.Quote
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -296,6 +297,7 @@ library
       Storage.Beam.Person.PersonDisability
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.Person.PersonStats
+      Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.Quote
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
@@ -327,6 +329,7 @@ library
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
+      Storage.CachedQueries.PlaceBasedServiceConfig
       Storage.CachedQueries.SavedLocation
       Storage.CachedQueries.Sos
       Storage.CachedQueries.WhiteListOrg
@@ -366,6 +369,7 @@ library
       Storage.Queries.Person.PersonDisability
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.Person.PersonStats
+      Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.Quote
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
