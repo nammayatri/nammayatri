@@ -193,11 +193,7 @@ process dbStreamKey count = do
       res <- run c
       _afterProcess <- EL.getCurrentDateInMillis
       void $ publishProcessLatency "QueryExecutionTime" (int2Double (_afterProcess - _beforeProcess))
-      Env {..} <- ask
-      _beforeFlush <- EL.getCurrentDateInMillis
-      EL.runIO $ KafkaProd.flushProducer _kafkaConnection
-      _afterFlush <- EL.getCurrentDateInMillis
-      void $ publishProcessLatency "KafkaFlushTime" (int2Double (_afterFlush - _beforeFlush))
+      void flushKafkaProducerAndPublishMetrics
       pure res
   where
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
@@ -246,7 +242,11 @@ startDBSync = do
           }
   forever $ do
     stopRequested <- EL.runIO $ isJust <$> tryTakeMVar readinessFlag
-    EL.runIO $ when stopRequested shutDownHandler
+    -- EL.runIO $ when stopRequested (shutDownHandler)
+    when stopRequested $ do
+      EL.logInfo ("RECEIVED SIGINT/SIGTERM" :: Text) "Stopping the rider drainer after flushing the kafka producer"
+      void flushKafkaProducerAndPublishMetrics
+      EL.runIO shutDownHandler
 
     StateRef
       { _config = config,
@@ -285,3 +285,12 @@ startDBSync = do
           then pure ()
           else EL.runIO $ delay waitTime
       pure history'
+
+flushKafkaProducerAndPublishMetrics :: Flow ()
+flushKafkaProducerAndPublishMetrics = do
+  Env {..} <- ask
+  _beforeFlush <- EL.getCurrentDateInMillis
+  EL.runIO $ KafkaProd.flushProducer _kafkaConnection
+  _afterFlush <- EL.getCurrentDateInMillis
+  EL.logDebug ("KafkaFlushTime : " :: Text) ("Time taken to flush kafka producer in rider-drainer : " <> show (int2Double (_afterFlush - _beforeFlush)) <> "ms")
+  void $ publishProcessLatency "KafkaFlushTime" (int2Double (_afterFlush - _beforeFlush))
