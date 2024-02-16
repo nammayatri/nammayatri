@@ -19,8 +19,10 @@ module Tools.Payment
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import Domain.Types.TicketPlace
 import Kernel.External.Payment.Interface as Reexport hiding
   ( createOrder,
     orderStatus,
@@ -32,23 +34,28 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 
-createOrder :: ServiceFlow m r => Id DM.Merchant -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
+createOrder :: ServiceFlow m r => Id DM.Merchant -> Maybe (Id TicketPlace) -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfig Payment.createOrder
 
-orderStatus :: ServiceFlow m r => Id DM.Merchant -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+orderStatus :: ServiceFlow m r => Id DM.Merchant -> Maybe (Id TicketPlace) -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfig Payment.orderStatus
 
 runWithServiceConfig ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
   Id DM.Merchant ->
+  Maybe (Id TicketPlace) ->
   req ->
   m resp
-runWithServiceConfig func merchantId req = do
+runWithServiceConfig func merchantId mbPlaceId req = do
+  placeBasedConfig <- case mbPlaceId of
+    Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
+    Nothing -> return Nothing
   merchantServiceConfig <-
     CQMSC.findByMerchantIdAndService merchantId (DMSC.PaymentService Payment.Juspay)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
-  case merchantServiceConfig.serviceConfig of
-    DMSC.PaymentServiceConfig vsc -> func vsc req
+  case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
+    Just (DMSC.PaymentServiceConfig vsc) -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"
