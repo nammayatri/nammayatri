@@ -61,12 +61,14 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.collectedBy $ collectedBy,
+    [ Se.Set Beam.buyerFinderFee $ buyerFinderFee,
+      Se.Set Beam.collectedBy $ collectedBy,
       Se.Set Beam.domain $ domain,
       Se.Set Beam.gatewayUrl $ Kernel.Prelude.showBaseUrl $ gatewayUrl,
       Se.Set Beam.paymentParamsJson $ paymentParamsJson,
       Se.Set Beam.registryUrl $ Kernel.Prelude.showBaseUrl $ registryUrl,
       Se.Set Beam.settlementType $ settlementType,
+      Se.Set Beam.settlementWindow $ settlementWindow,
       Se.Set Beam.staticTermsUrl $ (Kernel.Prelude.fmap showBaseUrl) $ staticTermsUrl,
       Se.Set Beam.subscriberId $ subscriberId,
       Se.Set Beam.subscriberUrl $ Kernel.Prelude.showBaseUrl $ subscriberUrl,
@@ -92,13 +94,15 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
     pure $
       Just
         Domain.Types.BecknConfig.BecknConfig
-          { collectedBy = collectedBy,
+          { buyerFinderFee = buyerFinderFee,
+            collectedBy = collectedBy,
             domain = domain,
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
             paymentParamsJson = paymentParamsJson,
             registryUrl = registryUrl',
             settlementType = settlementType,
+            settlementWindow = settlementWindow,
             staticTermsUrl = staticTermsUrl',
             subscriberId = subscriberId,
             subscriberUrl = subscriberUrl',
@@ -113,13 +117,15 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
 instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' Domain.Types.BecknConfig.BecknConfig {..} = do
     Beam.BecknConfigT
-      { Beam.collectedBy = collectedBy,
+      { Beam.buyerFinderFee = buyerFinderFee,
+        Beam.collectedBy = collectedBy,
         Beam.domain = domain,
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl (gatewayUrl),
         Beam.id = Kernel.Types.Id.getId id,
         Beam.paymentParamsJson = paymentParamsJson,
         Beam.registryUrl = Kernel.Prelude.showBaseUrl (registryUrl),
         Beam.settlementType = settlementType,
+        Beam.settlementWindow = settlementWindow,
         Beam.staticTermsUrl = (Kernel.Prelude.fmap showBaseUrl) (staticTermsUrl),
         Beam.subscriberId = subscriberId,
         Beam.subscriberUrl = Kernel.Prelude.showBaseUrl (subscriberUrl),

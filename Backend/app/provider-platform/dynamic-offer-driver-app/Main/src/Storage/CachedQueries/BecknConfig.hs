@@ -14,24 +14,17 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.BecknConfig
-  ( findAll,
-    findByMerchantIdAndDomain,
+  ( findByMerchantIdAndDomain,
   )
 where
 
 import Domain.Types.BecknConfig
 import Domain.Types.Merchant
-import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Sequelize as Se
-import qualified Storage.Beam.BecknConfig as BeamM
 import qualified Storage.Queries.BecknConfig as Queries
-
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [BecknConfig]
-findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
 findByMerchantIdAndDomain :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> m (Maybe BecknConfig)
 findByMerchantIdAndDomain merchantId domain = do

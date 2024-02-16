@@ -16,19 +16,26 @@ module Beckn.ACL.OnConfirm (buildOnConfirmMessageV2) where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified BecknV2.OnDemand.Enums as Enums
+import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Payment
+import qualified Data.List as DL
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Confirm as DConfirm
+import Domain.Types
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant as CQMerch
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Text
 bookingStatusCode (DConfirm.DriverQuote _ _) = Nothing
 bookingStatusCode (DConfirm.StaticQuote _) = Just "NEW"
 bookingStatusCode (DConfirm.RideOtpQuote _) = Just "NEW"
 
-buildOnConfirmMessageV2 :: MonadFlow m => DConfirm.DConfirmResp -> m Spec.ConfirmReqMessage
+buildOnConfirmMessageV2 :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DConfirm.DConfirmResp -> m Spec.ConfirmReqMessage
 buildOnConfirmMessageV2 res = do
   order <- tfOrder res
   return $
@@ -36,9 +43,10 @@ buildOnConfirmMessageV2 res = do
       { confirmReqMessageOrder = order
       }
 
-tfOrder :: MonadFlow m => DConfirm.DConfirmResp -> m Spec.Order
+tfOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DConfirm.DConfirmResp -> m Spec.Order
 tfOrder res = do
   fulfillments <- tfFulfillments res
+  payments <- tfPayments res
   return $
     Spec.Order
       { orderBilling = Nothing,
@@ -47,7 +55,7 @@ tfOrder res = do
         orderFulfillments = fulfillments,
         orderId = Just res.booking.id.getId,
         orderItems = tfItems res,
-        orderPayments = tfPayments res,
+        orderPayments = payments,
         orderProvider = Nothing,
         orderQuote = tfQuotation res,
         orderStatus = Just "ACTIVE"
@@ -111,28 +119,13 @@ tfItemPrice res =
       }
 
 -- TODO: Discuss payment info transmission with ONDC
-tfPayments :: DConfirm.DConfirmResp -> Maybe [Spec.Payment]
-tfPayments res =
-  Just
-    [ Spec.Payment
-        { paymentCollectedBy = Just $ show Enums.BPP,
-          paymentId = Nothing,
-          paymentParams = mkParams,
-          paymentStatus = Nothing,
-          paymentTags = Nothing,
-          paymentType = Just $ show Enums.ON_FULFILLMENT
-        }
-    ]
-  where
-    mkParams =
-      Just
-        Spec.PaymentParams
-          { paymentParamsAmount = Just $ encodeToText res.booking.estimatedFare,
-            paymentParamsBankAccountNumber = Nothing,
-            paymentParamsBankCode = Nothing,
-            paymentParamsCurrency = Just "INR",
-            paymentParamsVirtualPaymentAddress = Nothing
-          }
+tfPayments :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DConfirm.DConfirmResp -> m (Maybe [Spec.Payment])
+tfPayments res = do
+  let amount = fromIntegral (res.booking.estimatedFare.getMoney)
+  merchant <- CQMerch.findById res.booking.providerId >>= fromMaybeM (MerchantNotFound res.booking.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdAndDomain merchant.id "MOBILITY" >>= fromMaybeM (InternalError "Beckn Config not found")
+  let mkParams :: (Maybe BknPaymentParams) = maybe Nothing (readMaybe . T.unpack) bppConfig.paymentParamsJson
+  return $ Just $ DL.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfQuotation :: DConfirm.DConfirmResp -> Maybe Spec.Quotation
 tfQuotation res =

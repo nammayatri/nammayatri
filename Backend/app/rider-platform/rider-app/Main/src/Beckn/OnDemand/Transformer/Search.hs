@@ -7,12 +7,16 @@ import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Search
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
+import BecknV2.OnDemand.Utils.Payment
+import Data.Text as T
 import qualified Data.Text
 import qualified Data.Time
 import qualified Data.UUID
 import qualified Domain.Action.UI.Search
+import Domain.Types
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.SearchRequest
 import EulerHS.Prelude hiding (id)
@@ -20,21 +24,23 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Tools.Maps
 import qualified Tools.Maps as Maps
 
-buildBecknSearchReqV2 :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Domain.Action.UI.Search.SearchReqLocation -> [Domain.Action.UI.Search.SearchReqLocation] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Domain.Types.Merchant.Merchant -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.Bool -> Data.Time.UTCTime -> Maybe [Maps.RouteInfo] -> m BecknV2.OnDemand.Types.SearchReq
+buildBecknSearchReqV2 :: (Kernel.Types.App.MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Domain.Action.UI.Search.SearchReqLocation -> [Domain.Action.UI.Search.SearchReqLocation] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Domain.Types.Merchant.Merchant -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.Bool -> Data.Time.UTCTime -> Maybe [Maps.RouteInfo] -> m BecknV2.OnDemand.Types.SearchReq
 buildBecknSearchReqV2 action domain origin stops searchId distance duration customerLanguage disabilityTag merchant bapUri city mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
   messageId <- generateGUIDText
   searchReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain messageId (Just searchId.getId) merchant.bapId bapUri Nothing Nothing city merchant.country
-  searchReqMessage_ <- buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes
+  searchReqMessage_ <- buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes merchant
   pure $ BecknV2.OnDemand.Types.SearchReq {searchReqContext = searchReqContext_, searchReqMessage = searchReqMessage_}
 
 buildSearchMessageV2 ::
-  (Kernel.Types.App.MonadFlow m) =>
+  (Kernel.Types.App.MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Domain.Action.UI.Search.SearchReqLocation ->
   [Domain.Action.UI.Search.SearchReqLocation] ->
   Maybe Kernel.Types.Common.Meters ->
@@ -46,9 +52,10 @@ buildSearchMessageV2 ::
   Maybe Kernel.Prelude.Bool ->
   Data.Time.UTCTime ->
   Maybe [Maps.RouteInfo] ->
+  Domain.Types.Merchant.Merchant ->
   m BecknV2.OnDemand.Types.SearchReqMessage
-buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
-  searchReqMessageIntent_ <- tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes
+buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes merchant = do
+  searchReqMessageIntent_ <- tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes merchant
   pure $ BecknV2.OnDemand.Types.SearchReqMessage {searchReqMessageIntent = searchReqMessageIntent_}
 
 tfCustomer :: (Kernel.Types.App.MonadFlow m) => Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> m (Maybe BecknV2.OnDemand.Types.Customer)
@@ -78,7 +85,7 @@ tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPo
     else pure $ Just returnData
 
 tfIntent ::
-  (Kernel.Types.App.MonadFlow m) =>
+  (Kernel.Types.App.MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Domain.Action.UI.Search.SearchReqLocation ->
   [Domain.Action.UI.Search.SearchReqLocation] ->
   Maybe Tools.Maps.Language ->
@@ -90,30 +97,23 @@ tfIntent ::
   Maybe Kernel.Prelude.Bool ->
   Data.Time.UTCTime ->
   Maybe [Maps.RouteInfo] ->
+  Domain.Types.Merchant.Merchant ->
   m (Maybe BecknV2.OnDemand.Types.Intent)
-tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
+tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes merchant = do
   let intentTags_ = Nothing
   intentFulfillment_ <- tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes
-  intentPayment_ <- tfPayment (show Enums.BPP)
+  intentPayment_ <- tfPayment (show Enums.BPP) merchant
   let returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
   let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then pure Nothing
     else pure $ Just returnData
 
-tfPayment :: (Kernel.Types.App.MonadFlow m) => Data.Text.Text -> m (Maybe BecknV2.OnDemand.Types.Payment)
-tfPayment collectedBy = do
-  let paymentCollectedBy_ = Just collectedBy
-  let paymentId_ = Nothing
-  let paymentParams_ = Nothing
-  let paymentStatus_ = Nothing
-  let paymentTags_ = Beckn.OnDemand.Utils.Common.mkPaymentTags
-  let paymentType_ = Nothing
-  let returnData = BecknV2.OnDemand.Types.Payment {paymentCollectedBy = paymentCollectedBy_, paymentId = paymentId_, paymentParams = paymentParams_, paymentStatus = paymentStatus_, paymentTags = paymentTags_, paymentType = paymentType_}
-  let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
-  if allNothing
-    then pure Nothing
-    else pure $ Just returnData
+tfPayment :: (Kernel.Types.App.MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Data.Text.Text -> Domain.Types.Merchant.Merchant -> m (Maybe Spec.Payment)
+tfPayment _collectedBy merchant = do
+  bppConfig <- QBC.findByMerchantIdAndDomain merchant.id "MOBILITY" >>= fromMaybeM (InternalError "Beckn Config not found")
+  let mkParams :: (Maybe BknPaymentParams) = maybe Nothing (readMaybe . T.unpack) bppConfig.paymentParamsJson
+  return $ Just $ mkPayment (show merchant.defaultCity) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfPerson :: (Kernel.Types.App.MonadFlow m) => Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> m (Maybe BecknV2.OnDemand.Types.Person)
 tfPerson customerLanguage disabilityTag mbPhoneNumber = do

@@ -390,7 +390,8 @@ sendBookingCancelledUpdateToBAP ::
     CacheFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r
   ) =>
   DRB.Booking ->
   DM.Merchant ->
@@ -420,7 +421,7 @@ sendDriverOffer ::
 sendDriverOffer transporter searchReq searchTry driverQuote = do
   logDebug $ "on_select ttl request driver: " <> show driverQuote.validTill
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
-  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP)
+  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote >>= ACL.mkOnSelectMessageV2 isValueAddNP)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>

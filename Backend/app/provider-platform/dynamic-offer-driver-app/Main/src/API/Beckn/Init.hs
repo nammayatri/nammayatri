@@ -86,11 +86,12 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
               context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
               void . handle (errHandler dInitRes.booking dInitRes.transporter) $
                 Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
+                  onInitMsgV2 <- ACL.mkOnInitMessageV2 dInitRes
                   pure $
                     Spec.OnInitReq
                       { onInitReqContext = context,
                         onInitReqError = Nothing,
-                        onInitReqMessage = Just $ ACL.mkOnInitMessageV2 dInitRes
+                        onInitReqMessage = Just onInitMsgV2
                       }
             else do
               context <- buildTaxiContext Context.ON_SELECT msgId txnId bapId bapUri bppId bppUri city country False

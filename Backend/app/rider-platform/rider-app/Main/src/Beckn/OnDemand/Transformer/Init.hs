@@ -17,18 +17,18 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (type (:::))
+import Kernel.Utils.Common
 import qualified Kernel.Utils.Text
 import qualified SharedLogic.Confirm
 import qualified Storage.CachedQueries.ValueAddNP as VNP
 
-buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> m BecknV2.OnDemand.Types.InitReq
+buildInitReq :: (Kernel.Types.App.MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> m BecknV2.OnDemand.Types.InitReq
 buildInitReq uiConfirm bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP = do
   initReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain uiConfirm.booking.id.getId (Just uiConfirm.searchRequestId.getId) uiConfirm.merchant.bapId bapUrl (Just uiConfirm.providerId) (Just uiConfirm.providerUrl) uiConfirm.city uiConfirm.merchant.country
   initReqMessage_ <- buildInitReqMessage uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP
   pure $ BecknV2.OnDemand.Types.InitReq {initReqContext = initReqContext_, initReqMessage = initReqMessage_}
 
-buildInitReqMessage :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> m BecknV2.OnDemand.Types.ConfirmReqMessage
+buildInitReqMessage :: (Kernel.Types.App.MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> m BecknV2.OnDemand.Types.ConfirmReqMessage
 buildInitReqMessage uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP = do
   confirmReqMessageOrder_ <- tfOrder uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP
   pure $ BecknV2.OnDemand.Types.ConfirmReqMessage {confirmReqMessageOrder = confirmReqMessageOrder_}
@@ -44,12 +44,12 @@ tfFulfillmentVehicle uiConfirm = do
   let vehicleVariant_ = Just variant
   pure $ BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_}
 
-tfOrder :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> m BecknV2.OnDemand.Types.Order
+tfOrder :: (Kernel.Types.App.MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> m BecknV2.OnDemand.Types.Order
 tfOrder uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP = do
   let orderCancellation_ = Nothing
   let orderCancellationTerms_ = Nothing
   let orderId_ = Nothing
-  let orderPayments_ = Beckn.OnDemand.Utils.Init.mkPayment uiConfirm.paymentMethodInfo & Just
+  orderPayments_ <- Beckn.OnDemand.Utils.Init.mkPayment uiConfirm.paymentMethodInfo uiConfirm.booking.id <&> Just
   let orderProvider_ = Nothing
   let orderStatus_ = Nothing
   let orderQuote_ = Nothing

@@ -1,5 +1,6 @@
 CREATE TABLE atlas_driver_offer_bpp.beckn_config ();
 
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN buyer_finder_fee text ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN collected_by text NOT NULL default 'BPP';
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN domain text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN gateway_url text NOT NULL;
@@ -7,6 +8,7 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN id character varying(
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN payment_params_json text ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN registry_url text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN settlement_type text ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN settlement_window text ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN static_terms_url text ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN subscriber_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN subscriber_url text NOT NULL;

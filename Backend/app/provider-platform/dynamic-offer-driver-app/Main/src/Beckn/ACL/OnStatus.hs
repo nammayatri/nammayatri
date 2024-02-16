@@ -147,7 +147,8 @@ buildOnStatusReqV2 ::
   ( MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CacheFlow m r
   ) =>
   DM.Merchant ->
   DRB.Booking ->
@@ -162,7 +163,7 @@ buildOnStatusReqV2 merchant booking req = do
   buildOnStatusReqV2' Context.STATUS Context.MOBILITY msgId bppId bppUri city country booking req
 
 buildOnStatusReqV2' ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Context.Action ->
   Context.Domain ->
   Text ->
@@ -184,7 +185,7 @@ buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country 
       }
 
 mkOnStatusMessageV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   DStatus.OnStatusBuildReq ->
   m (Maybe Spec.ConfirmReqMessage)
 mkOnStatusMessageV2 res = do
@@ -194,7 +195,7 @@ mkOnStatusMessageV2 res = do
       { confirmReqMessageOrder = order
       }
 
-tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> m Spec.Order
+tfOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DStatus.OnStatusBuildReq -> m Spec.Order
 tfOrder (DStatus.NewBookingBuildReq {bookingId}) =
   pure
     Spec.Order

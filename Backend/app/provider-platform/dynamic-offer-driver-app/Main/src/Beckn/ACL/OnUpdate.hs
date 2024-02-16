@@ -205,7 +205,8 @@ buildOnUpdateMessageV2 ::
   ( MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CacheFlow m r
   ) =>
   DM.Merchant ->
   DRB.Booking ->

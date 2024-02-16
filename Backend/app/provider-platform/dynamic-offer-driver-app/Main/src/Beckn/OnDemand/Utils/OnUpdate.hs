@@ -21,7 +21,11 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as List
+import qualified Data.Text as T
+import Domain.Types
+import Domain.Types.Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -30,6 +34,8 @@ import EulerHS.Prelude hiding (id, (%~))
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator as Fare
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant as CQMerch
 import Tools.Error
 
 -- TODO::Beckn, `Payment.ON_ORDER` Not present in spec.
@@ -127,26 +133,12 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CUSTOMER_CANCELLATION_DUES)
                    ]
 
-mkRideCompletedPayment :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> [Spec.Payment]
-mkRideCompletedPayment paymentMethodInfo _paymentUrl = do
-  let currency = "INR"
-  List.singleton $
-    Spec.Payment
-      { paymentCollectedBy = Just $ showPaymentCollectedBy paymentMethodInfo,
-        paymentParams =
-          Just $
-            Spec.PaymentParams
-              { paymentParamsCurrency = Just currency,
-                paymentParamsAmount = Nothing,
-                paymentParamsBankAccountNumber = Nothing,
-                paymentParamsBankCode = Nothing,
-                paymentParamsVirtualPaymentAddress = Nothing
-              },
-        paymentType = Just $ mkRideCompletedPaymentType paymentMethodInfo,
-        paymentId = Nothing,
-        paymentStatus = Nothing,
-        paymentTags = Nothing
-      }
+mkRideCompletedPayment :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Booking -> m [Spec.Payment]
+mkRideCompletedPayment _paymentMethodInfo _paymentUrl booking = do
+  merchant <- CQMerch.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdAndDomain merchant.id "MOBILITY" >>= fromMaybeM (InternalError "Beckn Config not found")
+  let mkParams :: (Maybe BknPaymentParams) = maybe Nothing (readMaybe . T.unpack) bppConfig.paymentParamsJson
+  return $ List.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkDistanceTagGroup :: MonadFlow m => DRide.Ride -> m (Maybe [Spec.TagGroup])
 mkDistanceTagGroup ride = do

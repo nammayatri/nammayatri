@@ -18,16 +18,20 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
 import qualified Data.Text as T
-import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
+import Domain.Types
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id (ShortId)
-import Kernel.Utils.Common (encodeToText)
+import Kernel.Utils.Common
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant as CQMerch
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
@@ -46,25 +50,28 @@ data TransporterInfo = TransporterInfo
   }
 
 mkOnSelectMessageV2 ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Bool ->
   DOnSelectReq ->
-  Spec.OnSelectReqMessage
+  m Spec.OnSelectReqMessage
 mkOnSelectMessageV2 isValueAddNP req@DOnSelectReq {..} = do
   let fulfillments = [mkFulfillmentV2 req driverQuote isValueAddNP]
-  Spec.OnSelectReqMessage $
-    Just
-      Spec.Order
-        { orderFulfillments = Just fulfillments,
-          orderItems = Just $ map (\fulf -> mkItemV2 fulf driverQuote transporterInfo isValueAddNP) fulfillments,
-          orderQuote = Just $ mkQuoteV2 driverQuote req.now,
-          orderPayments = Just [mkPaymentV2],
-          orderProvider = Nothing,
-          orderBilling = Nothing,
-          orderCancellation = Nothing,
-          orderCancellationTerms = Nothing,
-          orderId = Nothing,
-          orderStatus = Nothing
-        }
+  paymentV2 <- mkPaymentV2 driverQuote
+  return $
+    Spec.OnSelectReqMessage $
+      Just
+        Spec.Order
+          { orderFulfillments = Just fulfillments,
+            orderItems = Just $ map (\fulf -> mkItemV2 fulf driverQuote transporterInfo isValueAddNP) fulfillments,
+            orderQuote = Just $ mkQuoteV2 driverQuote req.now,
+            orderPayments = Just [paymentV2],
+            orderProvider = Nothing,
+            orderBilling = Nothing,
+            orderCancellation = Nothing,
+            orderCancellationTerms = Nothing,
+            orderId = Nothing,
+            orderStatus = Nothing
+          }
 
 mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillment
 mkFulfillmentV2 dReq quote isValueAddNP = do
@@ -79,26 +86,12 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
       fulfillmentTags = Nothing
     }
 
-mkPaymentV2 :: Spec.Payment
-mkPaymentV2 =
-  Spec.Payment
-    { paymentParams = Just mkPaymentParamsV2,
-      paymentType = Just $ show Enums.ON_FULFILLMENT,
-      paymentCollectedBy = Just $ show Enums.BPP,
-      paymentId = Nothing,
-      paymentStatus = Nothing,
-      paymentTags = Nothing
-    }
-
-mkPaymentParamsV2 :: Spec.PaymentParams
-mkPaymentParamsV2 =
-  Spec.PaymentParams
-    { paymentParamsCurrency = Just "INR",
-      paymentParamsAmount = Nothing,
-      paymentParamsBankAccountNumber = Nothing,
-      paymentParamsBankCode = Nothing,
-      paymentParamsVirtualPaymentAddress = Nothing
-    }
+mkPaymentV2 :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DQuote.DriverQuote -> m Spec.Payment
+mkPaymentV2 dquote = do
+  merchant <- CQMerch.findById dquote.providerId >>= fromMaybeM (MerchantNotFound dquote.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdAndDomain merchant.id "MOBILITY" >>= fromMaybeM (InternalError "Beckn Config not found")
+  let mkParams :: (Maybe BknPaymentParams) = maybe Nothing (readMaybe . T.unpack) bppConfig.paymentParamsJson
+  return $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkVehicleV2 :: DQuote.DriverQuote -> Spec.Vehicle
 mkVehicleV2 quote =

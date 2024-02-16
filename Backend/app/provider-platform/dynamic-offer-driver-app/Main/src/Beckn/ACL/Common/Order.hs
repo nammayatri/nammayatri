@@ -266,7 +266,7 @@ tfStartReqToOrder Common.DRideStartedReq {..} = do
         orderQuote = Nothing
       }
 
-tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideCompletedReq -> m Spec.Order
+tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Common.DRideCompletedReq -> m Spec.Order
 tfCompleteReqToOrder Common.DRideCompletedReq {..} = do
   let Common.BookingDetails {driver, vehicle, ride, booking} = bookingDetails
   let personTag = Utils.mkLocationTagGroupV2 tripEndLocation
@@ -274,12 +274,13 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} = do
   distanceTagGroup <- UtilsOU.mkDistanceTagGroup ride
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> distanceTagGroup) (Just personTag) False False (Just $ show Event.RIDE_ENDED)
   quote <- UtilsOU.mkRideCompletedQuote ride fareParams
+  payment <- UtilsOU.mkRideCompletedPayment paymentMethodInfo paymentUrl booking
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
         orderStatus = Just "COMPLETE",
         orderFulfillments = Just [fulfillment],
-        orderPayments = Just $ UtilsOU.mkRideCompletedPayment paymentMethodInfo paymentUrl,
+        orderPayments = Just payment,
         orderQuote = Just quote,
         orderBilling = Nothing,
         orderCancellation = Nothing,

@@ -32,7 +32,7 @@ import Kernel.Utils.Common
 import SharedLogic.Beckn.Common
 
 buildOnUpdateReqV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Context.Action ->
   Context.Domain ->
   Text ->
@@ -54,7 +54,7 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country b
       }
 
 mkOnUpdateMessageV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   OU.OnUpdateBuildReq ->
   m (Maybe Spec.ConfirmReqMessage)
 mkOnUpdateMessageV2 req = do
@@ -65,7 +65,7 @@ mkOnUpdateMessageV2 req = do
       }
 
 buildOnUpdateReqOrderV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   OU.OnUpdateBuildReq ->
   m Spec.Order
 buildOnUpdateReqOrderV2 = \case

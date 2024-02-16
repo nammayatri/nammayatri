@@ -26,3 +26,12 @@ ALTER TABLE atlas_app.beckn_config ADD COLUMN payment_params_json text ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN vehicle_category text NOT NULL default 'CAB';
 ALTER TABLE atlas_app.beckn_config ADD COLUMN static_terms_url text ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN collected_by text NOT NULL default 'BPP';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.beckn_config ADD COLUMN vehicle_category text NOT NULL default 'CAB';
+ALTER TABLE atlas_app.beckn_config ADD COLUMN static_terms_url text ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN settlement_window text ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN collected_by text NOT NULL default 'BPP';
+ALTER TABLE atlas_app.beckn_config ADD COLUMN buyer_finder_fee text ;

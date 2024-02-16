@@ -28,7 +28,7 @@ import Kernel.Types.Common
 import Kernel.Utils.Common
 
 buildSearchReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
   DSearch.SearchRes ->
   m Spec.SearchReq
 buildSearchReqV2 DSearch.SearchRes {..} = do

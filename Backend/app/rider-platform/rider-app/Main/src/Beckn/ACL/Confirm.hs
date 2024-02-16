@@ -20,17 +20,22 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import Control.Lens ((%~))
+import qualified Data.List as DL
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
+import Domain.Types
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id, state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
+import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildConfirmReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
   DOnInit.OnInitRes ->
   m Spec.ConfirmReq
 buildConfirmReqV2 res = do
@@ -39,29 +44,33 @@ buildConfirmReqV2 res = do
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country
 
-  let message = mkConfirmMessageV2 res
+  message <- mkConfirmMessageV2 res
   pure $ Spec.ConfirmReq context message
 
-mkConfirmMessageV2 :: DOnInit.OnInitRes -> Spec.ConfirmReqMessage
+mkConfirmMessageV2 :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DOnInit.OnInitRes -> m Spec.ConfirmReqMessage
 mkConfirmMessageV2 res = do
-  Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder res
-    }
+  x <- tfOrder res
+  return $
+    Spec.ConfirmReqMessage
+      { confirmReqMessageOrder = x
+      }
 
-tfOrder :: DOnInit.OnInitRes -> Spec.Order
-tfOrder res =
-  Spec.Order
-    { orderBilling = Nothing,
-      orderCancellation = Nothing,
-      orderCancellationTerms = Nothing,
-      orderFulfillments = tfFulfillments res,
-      orderId = Just res.bppBookingId.getId,
-      orderItems = tfItems res,
-      orderPayments = tfPayments res,
-      orderProvider = Nothing,
-      orderQuote = tfQuotation res,
-      orderStatus = Nothing
-    }
+tfOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DOnInit.OnInitRes -> m Spec.Order
+tfOrder res = do
+  x <- tfPayments res
+  return $
+    Spec.Order
+      { orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderFulfillments = tfFulfillments res,
+        orderId = Just res.bppBookingId.getId,
+        orderItems = tfItems res,
+        orderPayments = x,
+        orderProvider = Nothing,
+        orderQuote = tfQuotation res,
+        orderStatus = Nothing
+      }
 
 tfFulfillments :: DOnInit.OnInitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
@@ -99,28 +108,12 @@ tfItems res =
     ]
 
 -- TODO: Discuss payment info transmission with ONDC
-tfPayments :: DOnInit.OnInitRes -> Maybe [Spec.Payment]
-tfPayments res =
-  Just
-    [ Spec.Payment
-        { paymentCollectedBy = Just $ show Enums.BPP,
-          paymentId = Nothing,
-          paymentParams = mkParams,
-          paymentStatus = Nothing,
-          paymentTags = Nothing,
-          paymentType = Just $ show Enums.ON_FULFILLMENT
-        }
-    ]
-  where
-    mkParams =
-      Just $
-        Spec.PaymentParams
-          { paymentParamsAmount = Just $ encodeToText res.estimatedTotalFare,
-            paymentParamsBankAccountNumber = Nothing,
-            paymentParamsBankCode = Nothing,
-            paymentParamsCurrency = Just "INR",
-            paymentParamsVirtualPaymentAddress = Nothing
-          }
+tfPayments :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DOnInit.OnInitRes -> m (Maybe [Spec.Payment])
+tfPayments res = do
+  let amount = fromIntegral (res.estimatedTotalFare.getMoney)
+  bapConfig <- QBC.findByMerchantIdAndDomain res.merchant.id "MOBILITY" >>= fromMaybeM (InternalError "Beckn Config not found")
+  let mkParams :: (Maybe BknPaymentParams) = maybe Nothing (readMaybe . T.unpack) bapConfig.paymentParamsJson
+  return $ Just $ DL.singleton $ OUP.mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID (Just amount) Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
 tfQuotation res =
