@@ -1,0 +1,42 @@
+-- for local testing
+INSERT INTO
+    atlas_app.beckn_config (
+        id,
+        domain,
+        gateway_url,
+        registry_url,
+        subscriber_id,
+        subscriber_url,
+        merchant_id,
+        merchant_operating_city_id,
+        unique_key_id,
+        created_at,
+        updated_at
+    )
+VALUES
+    (
+        '3dee8a19-f659-4d87-8634-69573b9f3151',
+        'MOBILITY',
+        'http://localhost:8015/v1',
+        'http://localhost:8020',
+        'localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51',
+        'http://localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51',
+        'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51',
+        null,
+        'juspay-mobility-bap-1-key',
+        now(),
+        now()
+    ),
+    (
+        '3dee8a19-f659-4d87-8634-69573b9f3152',
+        'MOBILITY',
+        'http://localhost:8015/v1',
+        'http://localhost:8020',
+        'localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+        'http://localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+        'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+        null,
+        'juspay-mobility-bap-1-key',
+        now(),
+        now()
+    );
