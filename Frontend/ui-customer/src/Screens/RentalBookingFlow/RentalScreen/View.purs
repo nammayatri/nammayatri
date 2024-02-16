@@ -30,6 +30,7 @@ import Data.Array (singleton, null, mapWithIndex, filter, head)
 import Debug (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import ConfigProvider
 import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
 import JBridge (renderSlider, sliderConfig, toast)
@@ -40,7 +41,7 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback)
 import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, rentalRateCardConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
-import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval)
+import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote)
 import Screens.Types (RentalScreenState, RentalScreenStage(..), RentalQuoteList)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import Types.App (GlobalState, defaultGlobalState)
@@ -59,6 +60,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Animation (translateYAnimFromTop, fadeInWithDelay)
 import Components.PopUpModal.View as PopUpModal
+
 
 rentalScreen :: RentalScreenState -> Screen Action RentalScreenState ScreenOutput
 rentalScreen initialState =
@@ -81,7 +83,7 @@ rentalScreen initialState =
       pure $ pure unit
 
 view :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
-view push state =
+view push state = 
   Anim.screenAnimation
     $ relativeLayout
     [ height MATCH_PARENT
@@ -92,7 +94,7 @@ view push state =
     , background Color.white900
     ] $
     [ getRentalScreenView push state
-    ] <> if state.props.showRateCard then [RateCard.view (push <<< RateCardAC) (rentalRateCardConfig state)] else []
+    ] <> if state.props.showRateCard then [RateCard.view (push <<< RateCardAC) (rentalRateCardConfig (maybe dummyRentalQuote identity (fetchSelectedQuote state.data.rentalsQuoteList)))] else []
       <> if state.props.showPopUpModal then [locUnserviceableView push state] else []
       <> if state.props.showRentalPolicy then [rentalPolicyExplainerView push state] else []
 
@@ -350,7 +352,10 @@ descriptionView push state description =
           TollFee -> if toShowTitle then getString TOLLS_AND_PARKING_FEES else getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED
 
 noteAndPrimaryButtonView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
-noteAndPrimaryButtonView push state =
+noteAndPrimaryButtonView push state = let 
+  currency = getCurrency appConfig
+  selectedQuote = maybe dummyRentalQuote identity (fetchSelectedQuote state.data.rentalsQuoteList)
+  in 
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -369,7 +374,7 @@ noteAndPrimaryButtonView push state =
         , color Color.black900
         ] <> FontStyle.body3 TypoGraphy
         , textView $ [
-            text $ getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton state.data.rentalBookingData.nightCharge
+            text $ getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge)
         ] <> FontStyle.body3 TypoGraphy
       ]
     , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
@@ -504,3 +509,5 @@ locUnserviceableView push state =
     ][ PrestoAnim.animationSet
         [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  $ 
         PopUpModal.view (push <<< PopUpModalAC) (locUnserviceablePopUpConfig state) ]
+
+fetchSelectedQuote rentalsQuoteList = head $ filter (\item -> item.activeIndex == item.index) rentalsQuoteList

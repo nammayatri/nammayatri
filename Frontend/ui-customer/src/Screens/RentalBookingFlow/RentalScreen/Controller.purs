@@ -18,6 +18,7 @@ module Screens.RentalBookingFlow.RentalScreen.Controller
   , FareBreakupRowType(..)
   , ScreenOutput(..)
   , eval
+  , dummyRentalQuote
   )
   where
 
@@ -136,13 +137,24 @@ eval (GetRentalQuotes (GetQuotesRes quoteRes)) state = do
             in case (quoteEntity.quoteDetails)^._contents of
               (RENTAL contents) -> 
                 let (RentalQuoteAPIDetails quoteDetails) = contents 
-                in quoteDetails
+                in (transFormQuoteDetails quoteDetails)
               _ -> dummyFareQuoteDetails
           _  -> dummyFareQuoteDetails
     in { quoteDetails : quoteDetails, index : currIndex, activeIndex : 0 , fareDetails : fareDetails}
     ) filteredQuoteList)
   let _ = spy "rentalsQuoteList GetRentalQuotes" rentalsQuoteList
   continue state { data{rentalsQuoteList = rentalsQuoteList}, props{showShimmer = false, showPrimaryButton = if state.data.currentStage == RENTAL_SELECT_VARIANT then not (DA.null rentalsQuoteList) else true}}
+  where 
+    transFormQuoteDetails quoteDetails = 
+       { includedKmPerHr : fromMaybe 0 quoteDetails.includedKmPerHr 
+        , nightShiftCharge : fromMaybe 250 quoteDetails.nightShiftCharge 
+        , perExtraKmRate : fromMaybe 0 quoteDetails.perExtraKmRate 
+        , perExtraMinRate : fromMaybe 0 quoteDetails.perExtraMinRate 
+        , perHourCharge : fromMaybe 0 quoteDetails.perHourCharge 
+        , plannedPerKmRate : fromMaybe 0 quoteDetails.plannedPerKmRate 
+        , baseFare : quoteDetails.baseFare
+        }
+      
 
 eval (CheckFlowStatusAction) state = continue state{data{currentStage = RENTAL_SELECT_PACKAGE}, props{showShimmer = false, showPrimaryButton = false}}
 
@@ -267,7 +279,8 @@ dummyFareQuoteDetails = {
   perExtraKmRate : 0 ,
   perExtraMinRate : 0 ,
   perHourCharge : 0 ,
-  plannedPerKmRate : 0 
+  plannedPerKmRate : 0,
+  nightShiftCharge : 0
 }
 
 dummyRentalQuote = {

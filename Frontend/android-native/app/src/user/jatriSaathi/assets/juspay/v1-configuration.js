@@ -307,7 +307,7 @@ window.getMerchantConfig = function () {
         }
       }
     , "dashboard" : {
-      "enable" : false
+      "enable" : true
       , "url" : "https://yatrisathi.in/open/?source=in-app"
     }
     , "feature" : {

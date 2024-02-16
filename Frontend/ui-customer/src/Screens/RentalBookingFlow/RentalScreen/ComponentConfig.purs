@@ -34,7 +34,7 @@ import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Prelude (map, show, not, (<>), (==), ($), (>), (-), (<), (+), (||), (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
-import Screens.Types (DateTimeConfig, RentalScreenStage(..), RentalScreenState)
+import Screens.Types (DateTimeConfig, RentalScreenStage(..), RentalScreenState, RentalQuoteList)
 import Styles.Colors as Color
 import Data.String
 import JBridge 
@@ -42,6 +42,7 @@ import Data.Int (fromString)
 import Debug (spy)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resources.Localizable.EN (getEN)
+import ConfigProvider
 
 primaryButtonConfig :: RentalScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -241,9 +242,10 @@ mapInputViewConfig state =
       _ -> getString CHOOSE_YOUR_RENTAL_RIDE
 
 
-rentalRateCardConfig :: RentalScreenState -> RateCard.Config
+rentalRateCardConfig :: RentalQuoteList -> RateCard.Config
 rentalRateCardConfig state =
   let config = RateCard.config
+      currency = getCurrency appConfig
       rentalRateCardConfig' = config
         { currentRateCardType = RentalRateCard
         , title = getString RENTAL_PACKAGE
@@ -259,7 +261,7 @@ rentalRateCardConfig state =
         , additionalStrings = [
             {key : "FINAL_FARE_DESCRIPTION", val : (getString FINAL_FARE_DESCRIPTION)}
           , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION)}
-          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton state.data.rentalBookingData.nightCharge)}
+          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> (show state.fareDetails.nightShiftCharge))}
           , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
           ]
         }

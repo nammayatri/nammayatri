@@ -4110,7 +4110,7 @@ rentalScreenFlow = do
     RentalScreenController.OnRentalRideConfirm updatedState -> do
       let _ = spy "INside OnRentalRideConfirm" updatedState
       let selectedQuote = (fromMaybe { quoteDetails : ChooseVehicle.config
-                                    , index : 0 , activeIndex : 0, fareDetails : {plannedPerKmRate : 0, baseFare:0,includedKmPerHr : 0, perExtraKmRate : 0, perExtraMinRate : 0, perHourCharge : 0}} $ head (filter (\item -> item.index == item.activeIndex) updatedState.data.rentalsQuoteList)).quoteDetails
+                                    , index : 0 , activeIndex : 0, fareDetails : {plannedPerKmRate : 0, baseFare : 0,includedKmPerHr : 0, perExtraKmRate : 0, perExtraMinRate : 0, perHourCharge : 0, nightShiftCharge : 0}} $ head (filter (\item -> item.index == item.activeIndex) updatedState.data.rentalsQuoteList)).quoteDetails
       response <- lift $ lift $ Remote.rideConfirm (selectedQuote.id)
       case response of 
         Right (ConfirmRes resp) -> do 

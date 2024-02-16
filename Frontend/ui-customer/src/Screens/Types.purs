@@ -2146,12 +2146,13 @@ type RentalQuoteList = {
 }
 
 type RentalFareDetails = {
-  plannedPerKmRate :: Int,
+  plannedPerKmRate ::  Int,
   baseFare :: Int,
   includedKmPerHr :: Int,
   perExtraKmRate :: Int,
   perExtraMinRate :: Int,
-  perHourCharge :: Int
+  perHourCharge :: Int,
+  nightShiftCharge :: Int
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION

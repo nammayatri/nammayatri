@@ -682,11 +682,12 @@ newtype IntercityQuoteAPIDetails = IntercityQuoteAPIDetails {
 
 newtype RentalQuoteAPIDetails = RentalQuoteAPIDetails {
   baseFare :: Int ,
-  includedKmPerHr :: Int ,
-  perExtraKmRate :: Int ,
-  perExtraMinRate :: Int ,
-  perHourCharge :: Int ,
-  plannedPerKmRate :: Int 
+  includedKmPerHr :: Maybe Int ,
+  perExtraKmRate :: Maybe Int ,
+  perExtraMinRate :: Maybe Int ,
+  perHourCharge :: Maybe Int ,
+  plannedPerKmRate :: Maybe Int ,
+  nightShiftCharge :: Maybe Int 
 }
 
 newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
