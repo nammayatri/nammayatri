@@ -15,29 +15,42 @@
 
 module Screens.HomeScreen.Transformer where
 
+import ConfigProvider
+import Data.Eq
+import Data.Ord
+import Debug
+import Engineering.Helpers.LogEvent
+import Locale.Utils
 import Prelude
 
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _fareProductType, _stopLocation)
-
+import Common.Types.App (LazyCheck(..), Paths)
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
+import Control.Monad.Except.Trans (lift)
 import Data.Array (mapWithIndex, filter, head, find)
 import Data.Array as DA
+import Data.Function.Uncurried (runFn1)
 import Data.Int (toNumber, round)
 import Data.Lens ((^.), view)
-import Data.Ord
-import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
-import Data.Function.Uncurried (runFn1)
-import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage)
+import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage)
+import JBridge (fromMetersToKm, getLatLonFromAddress)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Types (EstimateAndQuoteConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
+import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType, dummyRentalBookingConfig)
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails,dummyIndividualCard)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), Stage(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..))
 import Services.Backend as Remote
@@ -60,6 +73,8 @@ import Debug
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Storage (isLocalStageOn)
 import Screens.Types (FareProductType(..)) as FPT
+import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
+import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -484,8 +499,11 @@ getTripDetailsState (RideBookingRes ride) state = do
   let (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0))
       timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
       nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
+      estimatedDistance = spy "base distance zxc " ride.estimatedDistance
       baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
       updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
+      (RideBookingAPIDetails bookingDetails) = ride.bookingDetails
+      rideType = getFareProductType $ bookingDetails.fareProductType
   state {
     data {
       tripId = rideDetails.shortRideId,
@@ -498,6 +516,8 @@ getTripDetailsState (RideBookingRes ride) state = do
       totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
       selectedItem = dummyIndividualCard{
         status = ride.status,
+        rideType = rideType,
+        estimatedDistance = fromMaybe 0 estimatedDistance,
         faresList = getFaresList ride.fareBreakup (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance))),
         rideId = rideDetails.id,
         date = (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),

@@ -16,7 +16,7 @@
 module Screens.RideSelectionScreen.Transformer where
 
 import Accessor (_computedPrice, _contents, _driverName, _estimatedDistance, _id, _otpCode, _rideRating, _toLocation, _vehicleNumber)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..)) as RideType
 import Data.Array (filter, null, (!!))
 import Data.Lens ((^.))
 import Data.Maybe (fromMaybe, isJust)
@@ -82,7 +82,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
     specialTags = getSpecialTag ride.specialLocationTag
-    referenceString' = (if nightChargesVal && (getMerchant FunctionCall) /= YATRI then "1.5" <> getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT else "")
+    referenceString' = (if nightChargesVal && (getMerchant RideType.FunctionCall) /= YATRI then "1.5" <> getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT else "")
                         <> (if isHaveFare "DRIVER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO else "")
                         <> (if isHaveFare "WAITING_CHARGES" updatedFareList then "\n\n" <> getEN WAITING_CHARGE_DESCRIPTION else "")
                         <> (if isHaveFare "EARLY_END_RIDE_PENALTY" updatedFareList then "\n\n" <> getEN EARLY_END_RIDE_CHARGES_DESCRIPTION else "")
@@ -128,6 +128,8 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
   , merchantExoPhone : ride.merchantExoPhone
   , showRepeatRide : if getFareProductType rideApiDetails.fareProductType == FPT.RENTAL then "gone" else "visible"
+  , rideType : getFareProductType $ rideApiDetails.fareProductType
+  , estimatedDistance : fromMaybe 0 ride.estimatedDistance
   }) listRes)
 
 matchRidebyId :: IndividualRideCardState -> IndividualRideCardState -> Boolean

@@ -15,19 +15,23 @@
 module Screens.InvoiceScreen.View where
 
 import Animation as Anim
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..)) as CTA
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
+import Data.Maybe (fromMaybe)
 import Data.String as DS
+import Data.Int (fromNumber)
+import Data.Number (fromString)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
+import Resources.Constants as Constants
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility)
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=), (-), (<$>), (>>=), (=<<), (*))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility, onClick)
 import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -57,6 +61,7 @@ view push state =
         , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 then 24 else EHC.safeMarginBottom)
         , onBackPressed push (const BackPressed)
         , afterRender push (const AfterRender)
+        , onClick push $ const NoAction
         ]
         [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
         , linearLayout
@@ -128,12 +133,12 @@ amountBreakupView state =
               , margin (MarginBottom 16)
               ]
               [ textView $
-                  [ text (getFareText item.fareType state.data.selectedItem.baseDistance)
+                  [ text (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType)
                   , color Color.black800
-                  , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
+                  , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
                   , accessibility ENABLE
                   , layoutGravity "bottom"
-                  ] <> FontStyle.paragraphText LanguageStyle
+                  ] <> FontStyle.paragraphText CTA.LanguageStyle
               , linearLayout
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
@@ -148,7 +153,7 @@ amountBreakupView state =
                       , height WRAP_CONTENT
                       , width WRAP_CONTENT
                       , lineHeight "18"
-                      ] <> FontStyle.body1 LanguageStyle
+                      ] <> FontStyle.body1 CTA.LanguageStyle
                   ]
               ]
         )
@@ -170,7 +175,7 @@ totalAmountView state =
         , accessibility ENABLE
         , color Color.black800
         , lineHeight "28"
-        ] <> FontStyle.h1 LanguageStyle
+        ] <> FontStyle.h1 CTA.LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , orientation HORIZONTAL
@@ -181,7 +186,7 @@ totalAmountView state =
         [ text state.data.totalAmount
         , color Color.black800
         , accessibility DISABLE
-        ] <> FontStyle.h1 LanguageStyle
+        ] <> FontStyle.h1 CTA.LanguageStyle
     ]
 
 --------------------------- RideDateAndTimeView --------------------
@@ -212,26 +217,33 @@ localTextView textValue colorValue =
     [ text textValue
     , color colorValue
     , width MATCH_PARENT
-    ] <> FontStyle.tags LanguageStyle
+    ] <> FontStyle.tags CTA.LanguageStyle
 
-getFareText :: String -> String -> String
-getFareText fareType baseDistance = case fareType of
-                      "BASE_FARE" -> (getString BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
-                      "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
-                      "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
-                      "TOTAL_FARE" -> getString TOTAL_PAID
-                      "DEAD_KILOMETER_FARE" -> getString PICKUP_CHARGE
-                      "PICKUP_CHARGES" -> getString PICKUP_CHARGE
-                      "WAITING_CHARGES" -> getString WAITING_CHARGE
-                      "EARLY_END_RIDE_PENALTY" -> getString EARLY_END_RIDE_CHARGES
-                      "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
-                      "SERVICE_CHARGE" -> getString SERVICE_CHARGES
-                      "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
-                      "WAITING_OR_PICKUP_CHARGES"  -> getString WAITING_CHARGE
-                      "PLATFORM_FEE" -> getString PLATFORM_FEE
-                      "SGST" -> getString PLATFORM_GST
-                      "CUSTOMER_CANCELLATION_DUES" -> getString CUSTOMER_CANCELLATION_DUES
-                      "DIST_BASED_FARE" -> getString DIST_BASED_CHARGES
-                      "TIME_BASED_FARE" -> getString TIME_BASED_CHARGES
-                      "EXTRA_TIME_FARE" -> getString EXTRA_TIME_CHARGES
-                      _ -> "Miscellaneous Charges"
+getBaseFareForRentalOrInterCity :: String -> Int
+getBaseFareForRentalOrInterCity baseDistance =
+  (fromMaybe 0 $ fromNumber =<< fromString =<< ((DS.split (DS.Pattern " ") baseDistance) DA.!! 0)) * 1000
+
+getFareText :: String -> String -> Int -> ST.FareProductType -> String
+getFareText fareType baseDistance estimatedDistance rideType = 
+    let baseDistance' = if rideType == ST.RENTAL then Constants.getKmMeter estimatedDistance else baseDistance
+        distanceBasedCharges = if rideType == ST.RENTAL then getString DIST_BASED_CHARGES <> " (" <> (Constants.getKmMeter $ (getBaseFareForRentalOrInterCity baseDistance) - estimatedDistance ) <> ")" else getString DIST_BASED_CHARGES
+    in case fareType of
+        "BASE_FARE" -> (getString BASE_FARES) <> if baseDistance' == "0 m" then "" else " (" <> baseDistance' <> ")"
+        "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
+        "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
+        "TOTAL_FARE" -> getString TOTAL_PAID
+        "DEAD_KILOMETER_FARE" -> getString PICKUP_CHARGE
+        "PICKUP_CHARGES" -> getString PICKUP_CHARGE
+        "WAITING_CHARGES" -> getString WAITING_CHARGE
+        "EARLY_END_RIDE_PENALTY" -> getString EARLY_END_RIDE_CHARGES
+        "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
+        "SERVICE_CHARGE" -> getString SERVICE_CHARGES
+        "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
+        "WAITING_OR_PICKUP_CHARGES"  -> getString WAITING_CHARGE
+        "PLATFORM_FEE" -> getString PLATFORM_FEE
+        "SGST" -> getString PLATFORM_GST
+        "CUSTOMER_CANCELLATION_DUES" -> getString CUSTOMER_CANCELLATION_DUES
+        "DIST_BASED_FARE" -> distanceBasedCharges
+        "TIME_BASED_FARE" -> getString TIME_BASED_CHARGES
+        "EXTRA_TIME_FARE" -> getString EXTRA_TIME_CHARGES
+        _ -> "Miscellaneous Charges"

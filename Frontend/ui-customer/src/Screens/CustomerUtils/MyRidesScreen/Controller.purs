@@ -42,7 +42,7 @@ import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter, fetchVehicleVariant)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..)) as RideType
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -115,7 +115,7 @@ data Action = NoAction
 eval :: Action -> MyRidesScreenState -> Eval Action ScreenOutput MyRidesScreenState
 
 eval BackPressed state = 
-  if isParentView FunctionCall 
+  if isParentView RideType.FunctionCall 
     then do 
       void $ pure $ emitTerminateApp Nothing true
       continue state
@@ -264,7 +264,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , waitingCharges : fares.waitingCharges
   , baseDistance : baseDistanceVal
   , extraDistance : getKmMeter $  (\a -> if a < 0 then - a else a) ((fromMaybe 0 (rideDetails.chargeableRideDistance)) - (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
-  , referenceString : (if (nightChargesVal && (getMerchant FunctionCall) /= YATRI) then "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) else "")
+  , referenceString : (if (nightChargesVal && (getMerchant RideType.FunctionCall) /= YATRI) then "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) else "")
                         <> (if (isHaveFare "DRIVER_SELECTED_FARE" (updatedFareList)) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) else "")
                         <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
@@ -277,6 +277,8 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , optionsVisibility : true
   , merchantExoPhone : ride.merchantExoPhone
   , showRepeatRide : if (getFareProductType $ rideApiDetails.fareProductType ) == FPT.RENTAL then "gone" else "visible"
+  , rideType : getFareProductType $ rideApiDetails.fareProductType
+  , estimatedDistance : fromMaybe 0 ride.estimatedDistance
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 dummyFareBreakUp :: FareBreakupAPIEntity
