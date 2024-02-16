@@ -52,7 +52,7 @@ handler merchant sReq estimate = do
   QDQ.setInactiveAllDQByEstId sReq.estimateId now
   when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
 
-  initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq estimate.tripCategory estimate.vehicleVariant (getId estimate.id) sReq.customerExtraFee sReq.messageId
+  initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq estimate.tripCategory estimate.vehicleVariant (getId estimate.id) sReq.customerExtraFee sReq.messageId False
 
 validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DEst.Estimate)
 validateRequest merchantId sReq = do

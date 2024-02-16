@@ -100,8 +100,9 @@ initiateDriverSearchBatch ::
   Text ->
   Maybe Money ->
   Text ->
+  Bool ->
   m ()
-initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCategory vehicleVariant estOrQuoteId customerExtraFee messageId = do
+initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCategory vehicleVariant estOrQuoteId customerExtraFee messageId isRepeatSearch = do
   farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleVariant searchReq.area estOrQuoteId
   searchTry <- createNewSearchTry farePolicy searchReq.customerCancellationDues
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleVariant searchTry.tripCategory searchReq.estimatedDistance
@@ -161,7 +162,10 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
           _ <- QST.create searchTry
           return searchTry
         Just oldSearchTry -> do
-          let searchRepeatType = if oldSearchTry.status == DST.ACTIVE then DST.CANCELLED_AND_RETRIED else DST.RETRIED
+          let searchRepeatType
+                | isRepeatSearch = DST.REALLOCATION
+                | oldSearchTry.status == DST.ACTIVE = DST.CANCELLED_AND_RETRIED
+                | otherwise = DST.RETRIED
           unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
             throwError SearchTryEstimatedFareChanged
           searchTry <- buildSearchTry merchant.id searchReq estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee messageId vehicleVariant
