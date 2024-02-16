@@ -74,6 +74,13 @@ data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | Est
 derive instance genericRentalRowView :: Generic RentalRowView _
 instance eqRentalRowView :: Eq RentalRowView where eq = genericEq
 
+type RentalTextConfig = {
+  title :: String,
+  estimatedValue :: String,
+  actualValue :: String,
+  color :: String
+}
+
 config :: Config 
 config = {
   isDriver : true,

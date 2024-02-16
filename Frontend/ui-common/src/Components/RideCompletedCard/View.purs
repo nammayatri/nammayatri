@@ -1,6 +1,6 @@
 module Components.RideCompletedCard.View where
 
-import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..), RentalRowView(..))
+import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..), RentalRowView(..), RentalTextConfig(..))
 
 import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView, rippleColor, Prop)
 import Components.Banner.View as Banner
@@ -29,6 +29,7 @@ import Mobility.Prelude
 import ConfigProvider
 import Mobility.Prelude (boolToVisibility)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as Utils
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -736,6 +737,7 @@ rentalTripDetailsView config push =
 rentalTripRowView :: forall w. Config -> (Action -> Effect Unit) -> RentalRowView -> PrestoDOM (Effect Unit) w
 rentalTripRowView config push description =
   let rentalBookingData = config.rentalBookingData
+      textConfig = getTextConfig config description
   in 
     linearLayout 
     [ height WRAP_CONTENT
@@ -744,7 +746,7 @@ rentalTripRowView config push description =
     , margin $ MarginTop if (description == RideTime || description == EstimatedFare) then 0 else 16
     ] 
     [ textView $ [
-        text $ showTitleAndValue config true description
+        text $ textConfig.title
       , weight 0.1
       , gravity LEFT
       ] <> FontStyle.body1 TypoGraphy
@@ -758,12 +760,13 @@ rentalTripRowView config push description =
         , width WRAP_CONTENT
         , ellipsize true
         , singleLine true
-        ] <> rideDurationOrDistanceProp config description 
-          <> FontStyle.body1 TypoGraphy
+        , text $ textConfig.actualValue
+        , color $ textConfig.color
+        ] <> FontStyle.body1 TypoGraphy
       , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ showTitleAndValue config false description
+        , text $ textConfig.estimatedValue
         , color Color.black700
         , ellipsize true
         , singleLine true
@@ -771,34 +774,25 @@ rentalTripRowView config push description =
       ]
     ]
     where
-      showTitleAndValue :: Config -> Boolean -> RentalRowView -> String
-      showTitleAndValue config isTitle description =
-        let rentalBookingData = config.rentalBookingData
-            rentalRowDetails = config.rentalRowDetails
-        in 
-          case description of
-            RideTime -> if isTitle then rentalRowDetails.rideTime else " / " <> show rentalBookingData.baseDuration <> "hr"
-            RideDistance -> if isTitle then rentalRowDetails.rideDistance else " / " <> show rentalBookingData.baseDistance <> "km"
-            RideStartedAt -> if isTitle then rentalRowDetails.rideStartedAt else rentalBookingData.startOdometer <> " km"
-            RideEndedAt -> if isTitle then rentalRowDetails.rideEndedAt else rentalBookingData.endOdometer <> " km"
-            EstimatedFare -> if isTitle then rentalRowDetails.estimatedFare else "₹" <> show rentalBookingData.estimatedFare
-            ExtraTimePrice -> if isTitle then rentalRowDetails.extraTimePrice else "₹" <> show (rentalBookingData.finalFare - rentalBookingData.estimatedFare)
-            TotalFare -> if isTitle then rentalRowDetails.totalFare else "₹" <>  show rentalBookingData.finalFare
-
-      rideDurationOrDistanceProp :: Config -> RentalRowView -> Array (Prop (Effect Unit))
-      rideDurationOrDistanceProp config description =
-        let rentalBookingData = config.rentalBookingData
-            finalHours = (rentalBookingData.finalDuration / 60)
-            finalMins = (rentalBookingData.finalDuration `mod` 60)
-        in 
-          case description of
-            RideTime -> [text $ (if finalMins < 10 then "0" else "") <> show finalHours <> " : " <> (if finalMins < 10 then "0" else "") <> show finalMins <> "hr"] <> showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration)
-            RideDistance -> [text $ show rentalBookingData.finalDistance <> "km"] <> showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance)
-            _ -> if any (_ == description) [RideStartedAt, RideEndedAt] then [color Color.black600] else []
-
-      showRedOrBlackColor :: Boolean -> Array (Prop (Effect Unit))
+      getTextConfig :: Config -> RentalRowView -> RentalTextConfig
+      getTextConfig config' description' = 
+        let rentalBookingData = config'.rentalBookingData
+            rentalRowDetails = config'.rentalRowDetails
+        in
+          case description' of
+            RideTime -> mkRentalTextConfig rentalRowDetails.rideTime (" / " <> show rentalBookingData.baseDuration <> "hr") (Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
+            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> "km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
+            RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt (rentalBookingData.startOdometer <> " km") "" Color.black600
+            RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt (rentalBookingData.endOdometer <> " km") "" Color.black600
+            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare ("₹" <> show rentalBookingData.estimatedFare) "" Color.black600
+            ExtraTimePrice -> mkRentalTextConfig rentalRowDetails.extraTimePrice ("₹" <> show (rentalBookingData.finalFare - rentalBookingData.estimatedFare)) "" Color.black600
+            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare ("₹" <> show rentalBookingData.finalFare) "" Color.black600
+            
+      mkRentalTextConfig :: String -> String -> String -> String -> RentalTextConfig
+      mkRentalTextConfig title' estimatedValue' actualValue' color' = { title: title', estimatedValue: estimatedValue', actualValue: actualValue', color: color'}
+      showRedOrBlackColor :: Boolean -> String
       showRedOrBlackColor isRed =
-        if isRed then [color Color.red] else [color Color.black900]
+        if isRed then Color.red else Color.black900
 
 --------------------------------- Helpers ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 commonTextView :: forall w. Config -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w

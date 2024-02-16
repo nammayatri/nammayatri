@@ -610,6 +610,8 @@ type IndividualRideCardState =
   , optionsVisibility :: Boolean
   , merchantExoPhone :: String
   , showRepeatRide :: String
+  , rideType :: RideType
+  , estimatedDistance :: Int
   }
 
 

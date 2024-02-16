@@ -20,6 +20,7 @@ import Screens.Types (AnimationState(..), RideSelectionScreenState, IndividualRi
 import Services.API (BookingLocationAPIEntity(..))
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
+import Common.Types.App as RideType
 
 initData :: RideSelectionScreenState
 initData =
@@ -114,4 +115,6 @@ dummyIndividualCard = {
   , vehicleVariant : Nothing
   , merchantExoPhone : ""
   , showRepeatRide : ""
+  , rideType : RideType.NORMAL_RIDE
+  , estimatedDistance : 0
 }
