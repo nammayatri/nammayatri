@@ -6,7 +6,6 @@ module Storage.Queries.BecknConfig where
 
 import qualified Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -52,15 +51,8 @@ updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.domain domain,
-      Se.Set Beam.gatewayUrl $ Kernel.Prelude.showBaseUrl gatewayUrl,
-      Se.Set Beam.paymentParamsJson paymentParamsJson,
       Se.Set Beam.registryUrl $ Kernel.Prelude.showBaseUrl registryUrl,
-      Se.Set Beam.settlementType settlementType,
-      Se.Set Beam.subscriberId subscriberId,
-      Se.Set Beam.subscriberUrl $ Kernel.Prelude.showBaseUrl subscriberUrl,
-      Se.Set Beam.uniqueKeyId uniqueKeyId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -71,24 +63,15 @@ updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
 
 instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   fromTType' Beam.BecknConfigT {..} = do
-    gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
     registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
-    subscriberUrl' <- Kernel.Prelude.parseBaseUrl subscriberUrl
 
     pure $
       Just
         Domain.Types.BecknConfig.BecknConfig
           { domain = domain,
-            gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
-            paymentParamsJson = paymentParamsJson,
             registryUrl = registryUrl',
-            settlementType = settlementType,
-            subscriberId = subscriberId,
-            subscriberUrl = subscriberUrl',
-            uniqueKeyId = uniqueKeyId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -97,16 +80,9 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' Domain.Types.BecknConfig.BecknConfig {..} = do
     Beam.BecknConfigT
       { Beam.domain = domain,
-        Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.paymentParamsJson = paymentParamsJson,
         Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
-        Beam.settlementType = settlementType,
-        Beam.subscriberId = subscriberId,
-        Beam.subscriberUrl = Kernel.Prelude.showBaseUrl subscriberUrl,
-        Beam.uniqueKeyId = uniqueKeyId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

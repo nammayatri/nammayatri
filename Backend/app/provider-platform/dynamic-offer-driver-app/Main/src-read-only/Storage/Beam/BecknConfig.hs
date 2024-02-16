@@ -8,7 +8,6 @@ module Storage.Beam.BecknConfig where
 import qualified Database.Beam as B
 import qualified Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -18,16 +17,9 @@ import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
   { domain :: B.C f Kernel.Prelude.Text,
-    gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
-    paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registryUrl :: B.C f Kernel.Prelude.Text,
-    settlementType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    subscriberId :: B.C f Kernel.Prelude.Text,
-    subscriberUrl :: B.C f Kernel.Prelude.Text,
-    uniqueKeyId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
