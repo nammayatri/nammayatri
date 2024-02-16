@@ -120,7 +120,7 @@ view push config =
                 Just value ->  [weight value]))
             [ lottieAnimationView
                 [ id (getNewIDWithTag config.id)
-                , visibility if config.enableLoader then VISIBLE else GONE
+                , visibility if config.enableLoader then VISIBLE else INVISIBLE
                 , height config.lottieConfig.height
                 , width config.lottieConfig.width
                 ]
