@@ -28,6 +28,7 @@ import Components.InputView.Controller as InputViewController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PopUpModal.Controller as PopUpModalController
 import Components.RateCard.Controller as RateCardController
+import Components.RequestInfoCard.Controller as RequestInfoCardController
 import Data.Array as DA
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
@@ -83,11 +84,13 @@ data Action =
   | SliderCallback Int
   | RateCardAC RateCardController.Action
   | BackpressAction
+  | RentalPolicyInfo
   | GetRentalQuotes GetQuotesRes
   | CheckFlowStatusAction 
   | GetRideConfirmation RideBookingRes
   | UpdateLocAndLatLong String String
   | PopUpModalAC PopUpModalController.Action
+  | RequestInfoCardAction RequestInfoCardController.Action
 
 data ScreenOutput = NoScreen
                   | GoToHomeScreen
@@ -107,6 +110,12 @@ instance eqFareBreakupRowType :: Eq FareBreakupRowType where eq = genericEq
 eval :: Action -> RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 
 eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = continue state {props{showPopUpModal = false}}
+
+eval RentalPolicyInfo state = continue state { props { showRentalPolicy = true}}
+
+eval (RequestInfoCardAction (RequestInfoCardController.Close)) state = continue state {props { showRentalPolicy = false}}
+
+eval (RequestInfoCardAction (RequestInfoCardController.BackPressed)) state = continue state {props { showRentalPolicy = false}}
 
 eval (UpdateLocAndLatLong lat lon) state =
   if fromMaybe 0.0 state.data.pickUpLoc.lat == 0.0 then continue state{data{pickUpLoc{lat = fromString lat, lon = fromString lon}}}

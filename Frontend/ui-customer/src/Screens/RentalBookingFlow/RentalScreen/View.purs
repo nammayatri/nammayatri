@@ -25,6 +25,7 @@ import Components.IncrementDecrementModel.View as IncrementDecrement
 import Components.InputView.View as InputView
 import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
+import Components.RequestInfoCard as RequestInfoCard
 import Data.Array (singleton, null, mapWithIndex, filter, head)
 import Debug (spy)
 import Effect (Effect)
@@ -38,7 +39,7 @@ import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookin
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback)
-import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, rentalRateCardConfig, locUnserviceablePopUpConfig)
+import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, rentalRateCardConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval)
 import Screens.Types (RentalScreenState, RentalScreenStage(..), RentalQuoteList)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
@@ -93,6 +94,16 @@ view push state =
     [ getRentalScreenView push state
     ] <> if state.props.showRateCard then [RateCard.view (push <<< RateCardAC) (rentalRateCardConfig state)] else []
       <> if state.props.showPopUpModal then [locUnserviceableView push state] else []
+      <> if state.props.showRentalPolicy then [rentalPolicyExplainerView push state] else []
+
+rentalPolicyExplainerView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
+rentalPolicyExplainerView push state = 
+  PrestoAnim.animationSet [ Anim.fadeIn true ]
+  $ linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility DISABLE
+  ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (rentalPolicyInfoConfig state) ]
 
 getRentalScreenView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 getRentalScreenView push state = 
@@ -119,7 +130,23 @@ rentalPackageSelectionView push state =
       , orientation VERTICAL
       , margin $ Margin 16 16 16 16
       ]
-      [ linearLayout [
+      [ linearLayout[
+          height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ MarginBottom 16
+        ][ textView  $ 
+            [ text $ getString SELECT_PACKAGE 
+            , color Color.black800
+            ] <> FontStyle.h1 TypoGraphy
+          , imageView
+            [ height $ V 16
+            , width $ V 16
+            , margin $ Margin 4 12 0 0
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_black"
+            , onClick push $ const RentalPolicyInfo
+            ]  
+          ]
+      , linearLayout [
           height WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.squidInkBlue

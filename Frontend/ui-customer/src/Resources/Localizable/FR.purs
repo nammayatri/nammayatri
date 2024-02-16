@@ -1005,3 +1005,7 @@ getFR stringKey =
         EXTRA_TIME_CHARGES -> "Frais de temps supplémentaire"
         DIST_BASED_CHARGES -> "Frais basés sur la distance"
         TIME_BASED_CHARGES -> "Frais basés sur le temps"
+        RENTAL_POLICY -> "Politique de location"
+        SELECT_PACKAGE -> "Sélectionnez le forfait"
+        RENTAL_POLICY_DESC -> "Chaque heure vous rapporte 10 km dans le forfait. Vous pouvez planifier des kilomètres supplémentaires jusqu'à une certaine limite et économiser sur les coûts supplémentaires si vous dépassez la distance de base."
+        RENTAL_POLICY_DESC_1 -> "Vous pouvez toujours consulter votre tarif sur l'écran suivant avant de confirmer la réservation."

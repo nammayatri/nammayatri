@@ -2171,6 +2171,7 @@ type RentalScreenProps = {
   , showShimmer :: Boolean
   , showPrimaryButton :: Boolean
   , showPopUpModal :: Boolean
+  , showRentalPolicy :: Boolean
 }
 
 type DateTimeConfig = {

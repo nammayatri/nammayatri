@@ -1002,3 +1002,7 @@ getEN stringKey =
         EXTRA_TIME_CHARGES -> "Extra Time Charges" 
         DIST_BASED_CHARGES -> "Distance Based Charges"
         TIME_BASED_CHARGES -> "Time Based Charges"
+        RENTAL_POLICY -> "Rental Policy"
+        SELECT_PACKAGE -> "Select Package"
+        RENTAL_POLICY_DESC -> "Every hour gets you 10 kms in the package. You can plan additional kms upto a limit and save on extra costs if you end up exceeding the base distance."
+        RENTAL_POLICY_DESC_1 -> "You can still review your fare on the next screen before confirming the booking."

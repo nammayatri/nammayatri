@@ -23,6 +23,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
 import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
+import Components.RequestInfoCard as RequestInfoCard
 import Data.Array ((!!), singleton, null)
 import Data.Maybe as MB
 import Engineering.Helpers.Commons as EHC
@@ -40,6 +41,7 @@ import JBridge
 import Data.Int (fromString)
 import Debug (spy)
 import PrestoDOM.Types.DomAttributes as PTD
+import Resources.Localizable.EN (getEN)
 
 primaryButtonConfig :: RentalScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -311,3 +313,42 @@ separatorConfig =
   , layoutHeight : V 15
   , color : Color.grey900
   }
+
+rentalPolicyInfoConfig :: RentalScreenState -> RequestInfoCard.Config
+rentalPolicyInfoConfig state = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString RENTAL_POLICY,
+      accessibilityHint = getEN RENTAL_POLICY,
+      textStyle = FontStyle.Heading1
+    }
+  , primaryText {
+      text = getString RENTAL_POLICY_DESC,
+      padding = Padding 16 16 0 0,
+      textStyle = FontStyle.ParagraphText,
+      color = Color.black700,
+      accessibilityHint =  getEN RENTAL_POLICY_DESC
+    }
+  , secondaryText {
+      text = getString RENTAL_POLICY_DESC_1,
+      visibility = VISIBLE,
+      padding = Padding 16 16 0 0 ,
+      color = Color.black700,
+      textStyle = FontStyle.ParagraphText,
+      width = MATCH_PARENT,
+      accessibilityHint = getEN RENTAL_POLICY_DESC_1
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_policy",
+      height = V 130,
+      width = V 130,
+      padding = Padding 0 2 2 0
+    }
+  , buttonConfig {
+      text = getString GOT_IT,
+      padding = PaddingVertical 16 20,
+      accessibilityHint = (getEN GOT_IT) <> " : Button"
+    }
+  }
+  in requestInfoCardConfig'

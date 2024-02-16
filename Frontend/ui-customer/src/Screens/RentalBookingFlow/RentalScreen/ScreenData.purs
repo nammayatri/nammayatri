@@ -67,5 +67,6 @@ initData =
     , showShimmer : true
     , showPrimaryButton : true
     , showPopUpModal : false
+    , showRentalPolicy : false
     }
   }
