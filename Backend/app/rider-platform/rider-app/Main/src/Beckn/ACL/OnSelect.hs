@@ -93,7 +93,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order item = do
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
   let mbVariant = Utils.parseVehicleVariant vehicle.vehicleCategory vehicle.vehicleVariant
   vehicleVariant <- mbVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicleCategory:-" <> show vehicle.vehicleCategory <> ",vehicleVariant:-" <> show vehicle.vehicleVariant)
-  let specialLocationTag = Utils.getTagV2 Tag.GENERAL_INFO Tag.SPECIAL_LOCATION_TAG =<< item.itemTags
+  let specialLocationTag = Utils.getTagV2 Tag.GENERAL_INFO Tag.SPECIAL_LOCATION_TAG =<< (Just item.itemTags)
   case parsedData order of
     Left err -> do
       logTagError "on_select req" $ "on_select error: " <> show err
@@ -143,9 +143,9 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp = do
   let agentTags = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personTags)
       itemTags = item.itemTags
       driverName = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personName) & fromMaybe "Driver"
-      durationToPickup = getPickupDurationV2 =<< agentTags
-      distanceToPickup' = getDistanceToNearestDriverV2 =<< itemTags
-      rating = getDriverRatingV2 =<< agentTags
+      durationToPickup = getPickupDurationV2 agentTags
+      distanceToPickup' = getDistanceToNearestDriverV2 itemTags
+      rating = getDriverRatingV2 agentTags
   validTill <- (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
   logDebug $ "on_select ttl request rider: " <> show validTill
   bppQuoteId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
@@ -156,7 +156,7 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp = do
         ..
       }
 
-getDriverRatingV2 :: [Spec.TagGroup] -> Maybe Centesimal
+getDriverRatingV2 :: Maybe [Spec.TagGroup] -> Maybe Centesimal
 getDriverRatingV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.AGENT_INFO Tag.RATING tagGroups
   driverRating <- readMaybe $ T.unpack tagValue
@@ -167,12 +167,12 @@ getQuoteValidTill contextTime time = do
   valid <- parseISO8601Duration time
   Just $ addDurationToUTCTime contextTime valid
 
-getPickupDurationV2 :: [Spec.TagGroup] -> Maybe Int
+getPickupDurationV2 :: Maybe [Spec.TagGroup] -> Maybe Int
 getPickupDurationV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.AGENT_INFO Tag.DURATION_TO_PICKUP_IN_S tagGroups
   readMaybe $ T.unpack tagValue
 
-getDistanceToNearestDriverV2 :: [Spec.TagGroup] -> Maybe Meters
+getDistanceToNearestDriverV2 :: Maybe [Spec.TagGroup] -> Maybe Meters
 getDistanceToNearestDriverV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.DISTANCE_TO_NEAREST_DRIVER_METER tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue

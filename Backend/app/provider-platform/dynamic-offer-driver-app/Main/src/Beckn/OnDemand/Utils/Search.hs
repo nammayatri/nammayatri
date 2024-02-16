@@ -75,57 +75,31 @@ getDropOffLocationGps req = do
 
 getDistance :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Meters)
 getDistance req = do
-  tagGroups <-
-    req.searchReqMessageIntent
-      >>= (.intentFulfillment)
-      >>= (.fulfillmentTags)
-      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
   let tagValue = Utils.getTagV2 Tag.ROUTE_INFO Tag.DISTANCE_INFO_IN_M tagGroups
   return $ tagValue >>= readMaybe . T.unpack >>= Just . Meters
 
 getDuration :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Seconds)
 getDuration req = do
-  tagGroups <-
-    req.searchReqMessageIntent
-      >>= (.intentFulfillment)
-      >>= (.fulfillmentTags)
-      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
   let tagValue = Utils.getTagV2 Tag.ROUTE_INFO Tag.DURATION_INFO_IN_S tagGroups
   return $ tagValue >>= readMaybe . T.unpack >>= Just . Seconds
 
 buildCustomerLanguage :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Language)
 buildCustomerLanguage req = do
-  tagGroups <-
-    req.searchReqMessageIntent
-      >>= (.intentFulfillment)
-      >>= (.fulfillmentCustomer)
-      >>= (.customerPerson)
-      >>= (.personTags)
-      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_LANGUAGE tagGroups
   return $ tagValue >>= readMaybe . T.unpack >>= Just
 
 buildDisabilityTag :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Text)
 buildDisabilityTag req = do
-  tagGroups <-
-    req.searchReqMessageIntent
-      >>= (.intentFulfillment)
-      >>= (.fulfillmentCustomer)
-      >>= (.customerPerson)
-      >>= (.personTags)
-      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_DISABILITY tagGroups
   return tagValue
 
 buildCustomerPhoneNumber :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Text)
 buildCustomerPhoneNumber req = do
-  tagGroups <-
-    req.searchReqMessageIntent
-      >>= (.intentFulfillment)
-      >>= (.fulfillmentCustomer)
-      >>= (.customerPerson)
-      >>= (.personTags)
-      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_PHONE_NUMBER tagGroups
   return tagValue
 
@@ -133,29 +107,18 @@ buildCustomerPhoneNumber req = do
 
 getIsReallocationEnabled :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Bool)
 getIsReallocationEnabled req = do
-  tagGroups <-
-    req.searchReqMessageIntent
-      >>= (.intentFulfillment)
-      >>= (.fulfillmentTags)
-      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
   let tagValue = Utils.getTagV2 Tag.REALLOCATION_INFO Tag.IS_REALLOCATION_ENABLED tagGroups
   return $ tagValue >>= readMaybe . T.unpack >>= Just
 
 buildRoutePoints :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe [Maps.LatLong])
 buildRoutePoints req = do
-  tagGroups <-
-    req.searchReqMessageIntent
-      >>= (.intentFulfillment)
-      >>= (.fulfillmentTags)
-      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
   return $ Utils.getTagV2 Tag.ROUTE_INFO Tag.WAYPOINTS tagGroups >>= decode . encodeUtf8 >>= Just
 
 buildMultipleRoutesTag :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe [Maps.RouteInfo])
 buildMultipleRoutesTag req = do
-  tagGroups <-
-    req.searchReqMessageIntent
-      >>= (.intentFulfillment)
-      >>= (.fulfillmentTags)
-      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
   return $ Utils.getTagV2 Tag.ROUTE_INFO Tag.MULTIPLE_ROUTES tagGroups >>= decode . encodeUtf8 >>= Just
-  ----------------------fix it---------Add new tag-------RITIKA
+
+----------------------fix it---------Add new tag-------RITIKA

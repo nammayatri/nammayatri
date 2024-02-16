@@ -97,7 +97,7 @@ parseNewMessageEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in NewMessage Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in NewMessage Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in NewMessage Event.")
-  message <- Utils.getTagV2 Tag.DRIVER_NEW_MESSAGE Tag.MESSAGE tagGroups & fromMaybeM (InvalidRequest "driver_new_message tag is not present in NewMessage Event.")
+  message <- Utils.getTagV2 Tag.DRIVER_NEW_MESSAGE Tag.MESSAGE (Just tagGroups) & fromMaybeM (InvalidRequest "driver_new_message tag is not present in NewMessage Event.")
   return $
     DOnUpdate.NewMessageReq
       { bppBookingId = Id bppBookingId,
@@ -111,7 +111,7 @@ parseEstimateRepetitionEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in EstimateRepetition Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in EstimateRepetition Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in EstimateRepetition Event.")
-  cancellationSource <- Utils.getTagV2 Tag.PREVIOUS_CANCELLATION_REASONS Tag.CANCELLATION_REASON tagGroups & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in EstimateRepetition Event.")
+  cancellationSource <- Utils.getTagV2 Tag.PREVIOUS_CANCELLATION_REASONS Tag.CANCELLATION_REASON (Just tagGroups) & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in EstimateRepetition Event.")
   return $
     DOnUpdate.EstimateRepetitionReq
       { searchRequestId = Id transactionId,
@@ -126,7 +126,7 @@ parseSafetyAlertEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in SafetyAlert Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in SafetyAlert Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in SafetyAlert Event.")
-  deviation <- Utils.getTagV2 Tag.SAFETY_ALERT Tag.DEVIATION tagGroups & fromMaybeM (InvalidRequest "safety_alert tag is not present in SafetyAlert Event.")
+  deviation <- Utils.getTagV2 Tag.SAFETY_ALERT Tag.DEVIATION (Just tagGroups) & fromMaybeM (InvalidRequest "safety_alert tag is not present in SafetyAlert Event.")
   return $
     DOnUpdate.SafetyAlertReq
       { bppBookingId = Id bppBookingId,

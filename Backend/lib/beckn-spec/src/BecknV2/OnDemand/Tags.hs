@@ -87,7 +87,7 @@ data Tag
     -- Custom tags
     -- ###################
     -- Fare policy tags
-    OLD_NIGHT_SHIFT_CHARGE
+    NIGHT_SHIFT_CHARGE
   | PER_HOUR_CHARGE
   | PER_MINUTE_CHARGE
   | UNPLANNED_PER_KM_CHARGE

@@ -114,6 +114,6 @@ getNightSafetyCheckTag tagGroups' = do
   maybe True getTagValue tagGroups'
   where
     getTagValue tagGroups = do
-      let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.NIGHT_SAFETY_CHECK tagGroups
+      let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.NIGHT_SAFETY_CHECK (Just tagGroups)
           res = maybe (Just True) ((\val -> readMaybe val :: Maybe Bool) . T.unpack) tagValue
       fromMaybe True res

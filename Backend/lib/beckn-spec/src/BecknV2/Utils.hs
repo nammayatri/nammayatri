@@ -17,14 +17,17 @@ import BecknV2.OnDemand.Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 
-getTagV2 :: TagGroup -> Tag -> [Spec.TagGroup] -> Maybe Text
-getTagV2 tagGroupCode tagCode tagGroups = do
-  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just (show tagGroupCode)) tagGroups
-  case tagGroup.tagGroupList of
+getTagV2 :: TagGroup -> Tag -> Maybe [Spec.TagGroup] -> Maybe Text
+getTagV2 tagGroupCode tagCode mbTagGroups = do
+  case mbTagGroups of
     Nothing -> Nothing
-    Just tagGroupList -> do
-      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just (show tagCode)) tagGroupList
-      tag.tagValue
+    Just tagGroups -> do
+      tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just (show tagGroupCode)) tagGroups
+      case tagGroup.tagGroupList of
+        Nothing -> Nothing
+        Just tagGroupList -> do
+          tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just (show tagCode)) tagGroupList
+          tag.tagValue
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
     descriptorCode (Just desc) = desc.descriptorCode

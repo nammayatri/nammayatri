@@ -39,7 +39,7 @@ tfProviderInfo req = do
 
 builRentalQuoteInfo :: BecknV2.OnDemand.Types.Item -> Text -> Maybe Domain.Action.Beckn.OnSearch.RentalQuoteDetails
 builRentalQuoteInfo item quoteId_ = do
-  itemTags <- item.itemTags
+  let itemTags = item.itemTags
   let id = quoteId_
   baseFare <- Beckn.OnDemand.Utils.OnSearch.getRentalBaseFare itemTags
   perHourCharge <- Beckn.OnDemand.Utils.OnSearch.getRentalPerHourCharge itemTags
