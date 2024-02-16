@@ -159,7 +159,7 @@ import Screens.TicketBookingFlow.PlaceDetails.View as PlaceDetailsS
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Control.Transformers.Back.Trans as App
 import Locale.Utils
-import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
+import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput 
 import Screens.SearchLocationScreen.Controller as SearchLocationController
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
 import Screens (ScreenName(..), getScreen) as Screen
@@ -187,6 +187,7 @@ import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.Config(getNumbersToWhiteList)
 import SessionCache(getValueFromWindow, setValueInWindow)
 
+import Services.FlowCache as FlowCache
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -1335,13 +1336,10 @@ homeScreenFlow = do
         else
           homeScreenFlow
     UPDATE_SAVED_LOCATION -> do
-      savedLocationResp <- lift $ lift $ Remote.getSavedLocationList ""
+      (SavedLocationsListRes savedLocationResp) <- FlowCache.updateAndFetchSavedLocations false
       updateSourceLocation ""
-      case savedLocationResp of
-        Right (SavedLocationsListRes listResp) -> do
-          fetchAndModifyLocationLists $ AddNewAddress.getSavedLocations listResp.list
-          homeScreenFlow
-        Left (err) -> homeScreenFlow
+      fetchAndModifyLocationLists $ AddNewAddress.getSavedLocations savedLocationResp.list
+      homeScreenFlow
 
     GO_TO_INVOICE_ updatedState -> do
       let prevRideState = updatedState.data.rideRatingState
@@ -1441,15 +1439,11 @@ homeScreenFlow = do
           resp <- Remote.addSavedLocationBT (encodeAddressDescription state.data.saveFavouriteCard.address tag state.data.saveFavouriteCard.selectedItem.placeId state.data.saveFavouriteCard.selectedItem.lat state.data.saveFavouriteCard.selectedItem.lon [])
           pure unit
       _ <-  pure $ toast (getString STR.FAVOURITE_ADDED_SUCCESSFULLY)
-      (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
-      case savedLocationResp of
-        Right (SavedLocationsListRes listResp) -> do
-          let updatedLocationList = getUpdatedLocationList state.data.locationList state.data.saveFavouriteCard.selectedItem.placeId
-              updatedRecents = getUpdatedLocationList state.data.recentSearchs.predictionArray  state.data.saveFavouriteCard.selectedItem.placeId
-              savedLocs = AddNewAddress.getSavedLocations listResp.list
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList = updatedLocationList, recentSearchs{predictionArray = updatedRecents},savedLocations = savedLocs }})
-          homeScreenFlow
-        Left (err) -> homeScreenFlow
+      (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocations true
+      let updatedLocationList = getUpdatedLocationList state.data.locationList state.data.saveFavouriteCard.selectedItem.placeId
+      let updatedRecents = getUpdatedLocationList state.data.recentSearchs.predictionArray  state.data.saveFavouriteCard.selectedItem.placeId
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList = updatedLocationList, recentSearchs{predictionArray = updatedRecents},savedLocations = (AddNewAddress.getSavedLocations savedLocationResp.list)}})
+      homeScreenFlow
     GO_TO_REFERRAL -> referralScreenFlow
     ON_CALL state callType exophoneNumber -> do
       (OnCallRes res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
@@ -1647,6 +1641,7 @@ fetchLatAndLong state tag  =
       let (PlaceName placeName) = (fromMaybe HomeScreenData.dummyLocationName (placeNameResp !! 0))
       let (LatLong placeLatLong) = (placeName.location)
       resp <- Remote.addSavedLocationBT (encodeAddressDescription state.data.saveFavouriteCard.address tag state.data.saveFavouriteCard.selectedItem.placeId (Just placeLatLong.lat) (Just placeLatLong.lon) placeName.addressComponents)
+      void $ FlowCache.updateAndFetchSavedLocations true
       pure unit
     Nothing -> pure unit
 
@@ -2231,7 +2226,7 @@ savedLocationFlow :: FlowBT String Unit
 savedLocationFlow = do
   void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
   flow <- UI.savedLocationScreen
-  (SavedLocationsListRes savedLocationResp )<- Remote.getSavedLocationBT SavedLocationReq
+  (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocationsBT SavedLocationReq false
   case flow of
     ADD_NEW_LOCATION state-> do
       (GlobalState newState) <- getState
@@ -2249,6 +2244,7 @@ savedLocationFlow = do
       addNewAddressScreenFlow "dummy"
     DELETE_LOCATION tagName -> do
       resp <- Remote.deleteSavedLocationBT (DeleteSavedLocationReq (trim tagName))
+      void $ FlowCache.updateAndFetchSavedLocations true
       pure $ toast (getString STR.FAVOURITE_REMOVED_SUCCESSFULLY)
       setValueToLocalStore RELOAD_SAVED_LOCATION "true"
       savedLocationFlow
@@ -2348,6 +2344,7 @@ addNewAddressScreenFlow input = do
                               }
 
       resp <- Remote.addSavedLocationBT (AddNewAddress.encodeAddressDescription newstate)
+      void $ FlowCache.updateAndFetchSavedLocations true
       if state.props.editSavedLocation then pure $ toast (getString STR.FAVOURITE_UPDATED_SUCCESSFULLY)
         else pure $ toast (getString STR.FAVOURITE_ADDED_SUCCESSFULLY)
 
@@ -2355,24 +2352,19 @@ addNewAddressScreenFlow input = do
       _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
       if state.props.fromHome || state.props.fromScreen == (Screen.getScreen Screen.HOME_SCREEN) then do
         (GlobalState globalState) <- getState
-        (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
-        case savedLocationResp of
-          Right (SavedLocationsListRes listResp) -> do
-            let updatedLocationList = getUpdatedLocationList globalState.homeScreen.data.locationList state.data.selectedItem.placeId
-                savedLocs = AddNewAddress.getSavedLocations listResp.list
-            updateSavedLocations savedLocs
-            modifyScreenState $ HomeScreenStateType (\homeScreen ->
-                                                        homeScreen
-                                                          { data
-                                                              { settingSideBar {opened = SettingSideBarController.CLOSED}
-                                                              , locationList = updatedLocationList
-                                                              , savedLocations = savedLocs 
-                                                              }
-                                                            } )
+        (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocations false
+        let updatedLocationList = getUpdatedLocationList globalState.homeScreen.data.locationList state.data.selectedItem.placeId
+        modifyScreenState $ HomeScreenStateType (\homeScreen ->
+                                                    homeScreen
+                                                      { data
+                                                          { settingSideBar {opened = SettingSideBarController.CLOSED}
+                                                          , locationList = updatedLocationList
+                                                          , savedLocations = (AddNewAddress.getSavedLocations savedLocationResp.list)
+                                                          }
+                                                        } )
 
-            homeScreenFlow
-          Left (err) -> homeScreenFlow
-        else savedLocationFlow
+        homeScreenFlow
+      else savedLocationFlow
 
     UPDATE_LOCATION_NAME_ADDRESS state lat lon -> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat lon)
@@ -2533,16 +2525,11 @@ isForLostAndFound = true
 
 checkAndUpdateSavedLocations :: HomeScreenState -> FlowBT String Unit
 checkAndUpdateSavedLocations state = do
-  if (getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || (state.props.currentStage == HomeScreen)
-    then do
-      (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
-      case savedLocationResp of
-        Right (SavedLocationsListRes listResp) -> do
-          fetchAndModifyLocationLists $ AddNewAddress.getSavedLocations listResp.list
-          pure unit
-        Left (err) -> pure unit
-      pure unit
-    else pure unit
+  when ((getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || state.props.currentStage == HomeScreen) $ do
+    (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocations false
+    fetchAndModifyLocationLists $ AddNewAddress.getSavedLocations savedLocationResp.list
+    pure unit
+  pure unit
 
 addLocationToRecents :: LocationListItemState -> HomeScreenState -> Boolean -> Boolean -> FlowBT String Unit
 addLocationToRecents item state srcServiceable destServiceable = do

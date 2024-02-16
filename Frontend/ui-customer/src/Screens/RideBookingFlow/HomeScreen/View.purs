@@ -122,6 +122,9 @@ import Components.BannerCarousel as BannerCarousel
 import Components.MessagingView.Common.Types
 import Components.MessagingView.Common.View
 import Data.FoldableWithIndex
+import Services.FlowCache as FlowCache
+import Engineering.Helpers.BackTrack
+import Types.App
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -134,7 +137,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
-            _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
+            _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             when (initialState.props.followsRide && isNothing initialState.data.followers) $ void $ launchAff $ flowRunner defaultGlobalState $ getFollowRide push UpdateFollowers
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
@@ -3130,21 +3133,15 @@ cancelRidePopUpView push state =
     , accessibility DISABLE
     ][ CancelRidePopUp.view (push <<< CancelRidePopUpAction) (cancelRidePopUpConfig state)]
 
-checkForLatLongInSavedLocations :: forall action. (action -> Effect Unit) -> (Array LocationListItemState -> action) -> HomeScreenState -> Flow GlobalState Unit
+checkForLatLongInSavedLocations :: forall action. (action -> Effect Unit) -> (Array LocationListItemState -> action) -> HomeScreenState -> FlowBT String Unit
 checkForLatLongInSavedLocations push action state = do
-  _ <- runExceptT $ runBackT $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
-  _ <- runExceptT $ runBackT $ transformSavedLocations state.data.savedLocations
-  if getValueToLocalStore RELOAD_SAVED_LOCATION == "true" then do
-    (savedLocationResp )<- getSavedLocationList ""
-    case savedLocationResp of
-        Right (SavedLocationsListRes listResp) -> do
-          doAff do liftEffect $ push $ action $ AddNewAddress.getSavedLocations listResp.list
-          pure unit
-        Left err -> pure unit
-    pure unit
-    else pure unit
-  _ <- runExceptT $ runBackT $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
-  pure unit
+  void $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
+  void $ transformSavedLocations state.data.savedLocations
+  if getValueToLocalStore RELOAD_SAVED_LOCATION == "true" then do 
+    (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocations false
+    liftFlowBT $ push $ action $ AddNewAddress.getSavedLocations savedLocationResp.list
+  else pure unit
+  void $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
 
 notinPickUpZoneView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 notinPickUpZoneView push state =
