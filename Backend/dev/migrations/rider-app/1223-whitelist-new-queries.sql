@@ -10,7 +10,7 @@ SELECT
 FROM atlas_app.white_list_org
 WHERE type = 'PROVIDER';
 
-UPDATE atlas_driver_offer_bpp.white_list_org
+UPDATE atlas_app.white_list_org
 SET domain = 'MOBILITY_OLD'
 WHERE type = 'PROVIDER';
 
