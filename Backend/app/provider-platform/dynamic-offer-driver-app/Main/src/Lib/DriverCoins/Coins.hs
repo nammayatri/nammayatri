@@ -124,8 +124,6 @@ handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance
   validRideTaken <- checkHasTakenValidRide (Just chargeableDistance_)
   case eventFunction of
     DCT.RideCompleted -> do
-      -- expirationPeriod <- getExpirationSeconds transporterConfig.timeDiffFromUtc
-      -- when validRideTaken $ incrementValidRideCount driverId expirationPeriod 1
       runActionWhenValidConditions
         [ pure validRideTaken
         ]
