@@ -202,9 +202,9 @@ castCancellationSourceV2 = \case
   "ByApplication" -> SBCR.ByApplication
   _ -> SBCR.ByUser
 
-getContextBapId :: MonadFlow m => Spec.Context -> m Text
-getContextBapId context = do
-  context.contextBapId & fromMaybeM (InvalidRequest "Missing contextBapId")
+getContextBppId :: MonadFlow m => Spec.Context -> m Text
+getContextBppId context = do
+  context.contextBppId & fromMaybeM (InvalidRequest "Missing contextBppId")
 
 getMessageIdText :: MonadFlow m => Spec.Context -> m Text
 getMessageIdText context = do

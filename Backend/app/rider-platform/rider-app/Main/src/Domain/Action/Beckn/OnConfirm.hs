@@ -16,10 +16,15 @@ module Domain.Action.Beckn.OnConfirm
   ( onConfirm,
     validateRequest,
     OnConfirmReq (..),
+    RideAssignedInfo (..),
+    BookingConfirmedInfo (..),
   )
 where
 
+import qualified Data.HashMap.Strict as HM
+import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -29,26 +34,66 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.SMS as Sms
 
-data OnConfirmReq = OnConfirmReq
+data OnConfirmReq
+  = RideAssigned RideAssignedInfo
+  | BookingConfirmed BookingConfirmedInfo
+
+data BookingConfirmedInfo = BookingConfirmedInfo
   { bppBookingId :: Id DRB.BPPBooking,
     specialZoneOtp :: Maybe Text
   }
 
-data ValidatedOnConfirmReq = ValidatedOnConfirmReq
+data RideAssignedInfo = RideAssignedInfo
+  { bppBookingId :: Id DRB.BPPBooking,
+    bppRideId :: Id DRide.BPPRide,
+    driverName :: Text,
+    driverImage :: Maybe Text,
+    driverMobileNumber :: Text,
+    driverMobileCountryCode :: Maybe Text,
+    driverRating :: Maybe Centesimal,
+    driverRegisteredAt :: Maybe UTCTime,
+    isDriverBirthDay :: Bool,
+    isFreeRide :: Bool,
+    rideOtp :: Text,
+    vehicleNumber :: Text,
+    vehicleColor :: Text,
+    vehicleModel :: Text
+  }
+
+data ValidatedOnConfirmReq
+  = ValidatedRideAssigned DCommon.RideAssignedReq
+  | ValidatedBookingConfirmed ValidatedBookingConfirmedReq
+
+data ValidatedBookingConfirmedReq = ValidatedBookingConfirmedReq
   { bppBookingId :: Id DRB.BPPBooking,
     specialZoneOtp :: Maybe Text,
     booking :: DRB.Booking
   }
 
-onConfirm :: (EncFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => ValidatedOnConfirmReq -> m ()
-onConfirm ValidatedOnConfirmReq {..} = do
+onConfirm ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasBAPMetrics m r,
+    EventStreamFlow m r
+  ) =>
+  ValidatedOnConfirmReq ->
+  m ()
+onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
   whenJust specialZoneOtp $ \otp -> do
     void $ QRB.updateOtpCodeBookingId booking.id otp
     fork "sending Booking confirmed dasboard sms" $ do
@@ -72,8 +117,12 @@ onConfirm ValidatedOnConfirmReq {..} = do
         else do
           logInfo "Merchant not configured to send dashboard sms"
   void $ QRB.updateStatus booking.id DRB.CONFIRMED
+onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
 
 validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
-validateRequest OnConfirmReq {..} = do
+validateRequest (BookingConfirmed BookingConfirmedInfo {..}) = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
-  return $ ValidatedOnConfirmReq {..}
+  return $ ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}
+validateRequest (RideAssigned RideAssignedInfo {..}) = do
+  let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
+  return $ ValidatedRideAssigned DCommon.RideAssignedReq {..}
