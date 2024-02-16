@@ -52,7 +52,7 @@ import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache) 
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
@@ -109,6 +109,7 @@ newtype GlobalState = GlobalState {
   , metroMyTicketsScreen :: MetroMyTicketsScreenState
   , metroTicketBookingScreen :: MetroTicketBookingScreenState
   , metroTicketStatusScreen :: MetroTicketStatusScreenState
+  , globalFlowCache :: GlobalFlowCache
   }
 
 defaultGlobalState :: GlobalState
@@ -149,6 +150,7 @@ defaultGlobalState = GlobalState {
   , globalProps : defaultGlobalProps
   , metroTicketBookingScreen : MetroTicketBookingScreenData.initData
   , metroTicketStatusScreen : MetroTicketStatusScreenData.initData
+  , globalFlowCache : defaultGlobalFlowCache 
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -156,6 +158,11 @@ defaultGlobalProps = {
   savedLocations : [] ,
   recentSearches : [] ,
   cachedSearches : []
+}
+
+defaultGlobalFlowCache :: GlobalFlowCache
+defaultGlobalFlowCache = {
+  savedLocations : Nothing
 }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
@@ -342,3 +349,4 @@ data ScreenType =
   | MetroMyTicketsScreenStateType (MetroMyTicketsScreenState -> MetroMyTicketsScreenState)
   | MetroTicketBookingScreenStateType (MetroTicketBookingScreenState -> MetroTicketBookingScreenState)
   | MetroTicketStatusScreenStateType (MetroTicketStatusScreenState -> MetroTicketStatusScreenState)
+  | GlobalFlowCacheType (GlobalFlowCache -> GlobalFlowCache)
