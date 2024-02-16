@@ -24,7 +24,6 @@ import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
 import Domain.Types.CancellationReason
 import Environment
-import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -33,43 +32,27 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Queries.Booking as QRideB
 
-type API = OnInit.OnInitAPI
+type API = OnInit.OnInitAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onInit
 
 onInit ::
   SignatureAuthResult ->
-  -- OnInit.OnInitReq ->
-  ByteString ->
+  OnInit.OnInitReqV2 ->
   FlowHandler AckResponse
-onInit _ reqBS = withFlowHandlerBecknAPI $ do
-  req <- Common.decodeReq reqBS
-  (txnId, mbDOnInitReq) <- case req of
-    Right reqV2 -> do
-      transactionId <- Common.getTransactionId reqV2.onInitReqContext
-      Utils.withTransactionIdLogTag transactionId $ do
-        mreq <- TaxiACL.buildOnInitReqV2 reqV2
-        return (transactionId, mreq)
-    Left reqV1 -> withTransactionIdLogTag reqV1 $ do
-      let txnId = fromMaybe "Unknown" $ reqV1.context.transaction_id
-      mreq <- TaxiACL.buildOnInitReq reqV1
-      return (txnId, mreq)
-
-  Utils.withTransactionIdLogTag txnId $
+onInit _ reqV2 = withFlowHandlerBecknAPI $ do
+  transactionId <- Common.getTransactionId reqV2.onInitReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
+    mbDOnInitReq <- TaxiACL.buildOnInitReqV2 reqV2
     whenJust mbDOnInitReq $ \onInitReq ->
       Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
         fork "oninit request processing" $ do
-          onInitRes <- DOnInit.onInit onInitReq
-          booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
-          isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-          handle (errHandler booking) $
-            if isBecknSpecVersion2
-              then void $ withShortRetry $ CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
-              else void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
-  pure Ack
+          (onInitRes, booking) <- DOnInit.onInit onInitReq
+          handle (errHandler booking) . void . withShortRetry $
+            CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+    pure Ack
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = do
