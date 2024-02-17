@@ -57,7 +57,7 @@ import Effect.Uncurried (EffectFn1(..), EffectFn5(..), mkEffectFn1, mkEffectFn4,
 import Effect.Uncurried (EffectFn1, EffectFn4, EffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
-import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText, toStringJSON) as ReExport
 import Engineering.Helpers.Utils (class Serializable, serialize)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
@@ -137,8 +137,6 @@ foreign import validateInputPattern :: String -> String -> Boolean
 foreign import strLenWithSpecificCharacters :: String -> String -> Int
 
 foreign import decodeError :: String -> String -> String
-
-foreign import toStringJSON :: forall a. a -> String
 
 foreign import setRefreshing :: String -> Boolean -> Unit
 

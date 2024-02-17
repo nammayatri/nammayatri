@@ -47,7 +47,7 @@ import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks, toStringJSON) as ReExport
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -96,13 +96,13 @@ type AffSuccess s = (s -> Effect Unit)
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
 foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
+foreign import onMarkerClickCallbackMapper :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> String
 foreign import getTime :: Unit -> Int
 foreign import hideSplash :: Effect Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
 foreign import clearTimer :: String -> Unit
 foreign import clearAllTimer :: String -> Unit
-foreign import toStringJSON :: forall a. a-> String
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit

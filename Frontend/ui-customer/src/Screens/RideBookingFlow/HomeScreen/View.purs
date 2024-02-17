@@ -332,28 +332,37 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom if os == "IOS" then 53 else 70)
+                    , padding (PaddingBottom if os == "IOS" then 53 else 95)
+                    , gravity CENTER
+                    , accessibility DISABLE
+                    , orientation VERTICAL
+                    ][ imageView
+                        [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        -- , background Color.black800
+                        -- , color Color.white900
+                        , accessibility DISABLE_DESCENDANT
+                        -- , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
+                        --           (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
+                        --        else
+                        --           state.props.defaultPickUpPoint
+                        -- , padding (Padding 5 5 5 5)
+                        -- , margin (MarginBottom 5)
+                        -- , cornerRadius 5.0
+                        , visibility if (showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)) then VISIBLE else INVISIBLE
+                        , id (getNewIDWithTag "LocateOnMapPin")
+                        ]
+                     ]
+                , linearLayout
+                    [ width MATCH_PARENT
+                    , height MATCH_PARENT
+                    , background Color.transparent
+                    , padding (PaddingBottom if os == "IOS" then 53 else 36)
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
                     ]
-                    [ textView
-                        [ width WRAP_CONTENT
-                        , height WRAP_CONTENT
-                        , background Color.black800
-                        , color Color.white900
-                        , accessibility DISABLE_DESCENDANT
-                        , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
-                                  (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
-                               else
-                                  state.props.defaultPickUpPoint
-                        , padding (Padding 5 5 5 5)
-                        , margin (MarginBottom 5)
-                        , cornerRadius 5.0
-                        , visibility if (showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)) then VISIBLE else INVISIBLE
-                        , id (getNewIDWithTag "LocateOnMapPin")
-                        ]
-                    , imageView
+                    [ imageView
                         [ width $ V 35
                         , height $ V 35
                         , accessibility DISABLE

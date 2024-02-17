@@ -132,6 +132,7 @@ import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Dash;
@@ -150,8 +151,6 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.SphericalUtil;
-import com.google.maps.android.clustering.ClusterItem;
-import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.data.Feature;
 import com.google.maps.android.data.Layer;
 import com.google.maps.android.data.geojson.GeoJsonFeature;
@@ -219,7 +218,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected JSONObject markers = new JSONObject();
     protected GoogleMap googleMap;
     protected HashMap <String, Marker> zoneMarkers = new HashMap <>();
-    protected GeoJsonLayer layer;
+    protected static GeoJsonLayer layer;
     protected String regToken, baseUrl;
     protected String zoneName = "";
     protected float zoom = 17.0f;
@@ -273,6 +272,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
     private  MediaPlayer mediaPlayer = null;
     private android.media.MediaPlayer audioPlayer;
+    protected LocateOnMapManager locateOnMapManager = null;
     public enum MapMode {
         NORMAL, SPECIAL_ZONE, HOTSPOT
     }
@@ -283,12 +283,51 @@ public class MobilityCommonBridge extends HyperBridge {
         Theme theme = Theme.DARK;
         String primaryText = "";
         String secondaryText = "";
+        boolean showLabelActionImage = false;
+        String labelActionImage = "";
         public void locationName(String primaryText, String secondaryText) {
             this.primaryText = primaryText;
             this.secondaryText = secondaryText;
         }
         public void locationName(String primaryText) {
             this.primaryText = primaryText;
+        }
+        public void labelActionImage(boolean showView, String imageName) {
+            this.showLabelActionImage = showView;
+            this.labelActionImage = imageName;
+        }
+        public boolean isShowLabelActionImage() {
+            return this.showLabelActionImage;
+        }
+        public String getPrimaryText() {
+            return this.primaryText;
+        }
+    }
+
+    public static class LocateOnMapManager {
+        GeoJsonFeature focusedGeoJsonFeature = null;
+        public GeoJsonFeature getFocusedGeoJsonFeature() {
+            return this.focusedGeoJsonFeature;
+        }
+        HashMap<String, GeoJsonFeature> gatesSpecialZone = new HashMap<>();
+        public void setFocusedGeoJsonFeature(GeoJsonFeature feature) {
+            this.focusedGeoJsonFeature = feature;
+        }
+        public GeoJsonFeature getGateFeature(String gateName) {
+            if (!this.gatesSpecialZone.isEmpty())
+                return this.gatesSpecialZone.get(gateName);
+            else {
+                if (layer != null) {
+                    Iterable<GeoJsonFeature> features = layer.getFeatures();
+                    for (GeoJsonFeature geoJsonFeature : features) {
+                        if (!geoJsonFeature.getProperty("name").equals("")) {
+                            this.gatesSpecialZone.put(geoJsonFeature.getProperty("name"), geoJsonFeature);
+                        }
+                    }
+                    return this.gatesSpecialZone.get(gateName);
+                }
+                return null;
+            }
         }
     }
 
@@ -618,7 +657,21 @@ public class MobilityCommonBridge extends HyperBridge {
             String geoJson = payload.optString("geoJson", "");
             String points = payload.optString("points", "[]");
             float zoomLevel = (float) payload.optDouble("zoomLevel", 17.0);
-            final TextView labelView = payload.optString("labelId", "").equals("") ? null : Objects.requireNonNull(bridgeComponents.getActivity()).findViewById(Integer.parseInt(payload.getString("labelId")));
+            final ImageView labelView = payload.optString("labelId", "").equals("") ? null : Objects.requireNonNull(bridgeComponents.getActivity()).findViewById(Integer.parseInt(payload.getString("labelId")));
+            String markerCallback = payload.optString("markerCallback", "");
+            JSONArray markerCallbackForTags = payload.has("markerCallbackForTags") ? payload.getJSONArray("markerCallbackForTags") : new JSONArray();
+            JSONObject specialZoneMarkerConfig = payload.optJSONObject("specialZoneMarkerConfig");
+            String spotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("spotIcon", "ny_ic_zone_pickup_marker_yellow") : "ny_ic_zone_pickup_marker_yellow";
+            String selectedSpotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("selectedSpotIcon", "ny_ic_selected_zone_pickup_marker_yellow") : "ny_ic_selected_zone_pickup_marker_yellow";
+            boolean navigateToNearestGate = payload.optBoolean("navigateToNearestGate", false);
+
+            List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
+
+            ArrayList<String> callbackTags = new ArrayList<String>();
+            for (int i = 0; i < markerCallbackForTags.length(); i++) {
+                callbackTags.add((String) markerCallbackForTags.get(i));
+            }
+
             final JSONObject hotSpotConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("hotSpotConfig") : null;
             final boolean enableHotSpot = hotSpotConfig != null && hotSpotConfig.optBoolean("enableHotSpot", false);
             if ((geoJson.equals("") && points.equals("[]") && enableHotSpot) || ((geoJson.equals("") || points.equals("[]")) && !enableHotSpot)){
@@ -631,6 +684,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 @Override
                 public void run() {
                     try {
+                        locateOnMapManager = new LocateOnMapManager();
                         if (zoneMarkers != null) {
                             for (Map.Entry<String, Marker> set : zoneMarkers.entrySet()) {
                                 Marker m = set.getValue();
@@ -641,17 +695,23 @@ public class MobilityCommonBridge extends HyperBridge {
                             layer.removeLayerFromMap();
                         removeMarker("ny_ic_customer_current_location");
                         JSONArray zonePoints = new JSONArray(points);
-                        drawPolygon(geoJson, "", zonePoints);
+                        drawPolygon(geoJson, "", zonePoints, markerCallback, callbackTags, specialZoneMarkerConfig);
                         for (int i = 0; i < zonePoints.length(); i++) {
                             Double zoneMarkerLat = (Double) zonePoints.getJSONObject(i).get("lat");
                             Double zoneMarkerLon = (Double) zonePoints.getJSONObject(i).get("lng");
-                            addZoneMarker(zoneMarkerLat, zoneMarkerLon, zoneMarkerLat + ":" + zoneMarkerLon, "ny_ic_zone_pickup_marker_yellow", false);
+                            addZoneMarker(zoneMarkerLat, zoneMarkerLon, zoneMarkerLat + ":" + zoneMarkerLon, spotIcon, specialZoneMarkerConfig, markerCallback, callbackTags);
                         }
                         JSONObject nearestPoint = getNearestPoint(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, zonePoints);
-                        if (mapMode.equals(MapMode.SPECIAL_ZONE) || SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"))) < goToNearestPointWithinRadius)
-                            animateCamera(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"), 20.0f, ZoomType.NO_ZOOM);
+                        if (mapMode.equals(MapMode.SPECIAL_ZONE) || SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"))) < goToNearestPointWithinRadius){
+                            animateToFitPolygon(polygonCoordinates, goToCurrentLocation, nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"));
+                        }
+//                        else {
+//                            animateToFitPolygon(geoJson, goToCurrentLocation, Double.parseDouble(lat), Double.parseDouble(lon));
+//                        }
+//                        if (navigateToNearestGate) {
+//                            animateCamera(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"), 20.0f, ZoomType.NO_ZOOM);
+//                        }
                     } catch (JSONException e) {
-                        e.printStackTrace();
                         e.printStackTrace();
                     }
 
@@ -678,7 +738,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                     public void run() {
                                         handler.post(() -> {
                                             try {
-                                                boolean isPointInsidePolygon = pointInsidePolygon(geoJson, lat1, lng);
+                                                boolean isPointInsidePolygon = false;
                                                 boolean isOnSpot = false;
                                                 JSONArray zonePoints = new JSONArray(points);
                                                 JSONObject nearestPickupPointObj = getNearestPoint(lat1, lng, zonePoints);
@@ -686,6 +746,8 @@ public class MobilityCommonBridge extends HyperBridge {
                                                 double nearestPointLng = nearestPickupPointObj.getDouble("long");
                                                 double nearestPointDistance = nearestPickupPointObj.getDouble("distance");
                                                 if (mapMode.equals(MapMode.SPECIAL_ZONE)) {
+                                                    isPointInsidePolygon = navigateToNearestGate && pointInsidePolygon(polygonCoordinates, lat1, lng);
+                                                    System.out.println("debug zone isPointInsidePolygon : " + isPointInsidePolygon);
                                                     if (isPointInsidePolygon) {
                                                         for (int i = 0; i < zonePoints.length(); i++) {
                                                             if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng((Double) zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"))) <= 1) {
@@ -695,10 +757,14 @@ public class MobilityCommonBridge extends HyperBridge {
                                                                 if (m != null)
                                                                     m.setVisible(false);
 
-                                                                addZoneMarker((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "selectedGate", "ny_ic_selected_zone_pickup_marker_yellow", false);
+                                                                addZoneMarker((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "selectedGate", selectedSpotIcon, specialZoneMarkerConfig, markerCallback, callbackTags);
+                                                                System.out.println("debug zone change polygon : " + locateOnMapManager.getFocusedGeoJsonFeature() + " : " + zoneName);
+                                                                changePolygonFocus(zoneName);
+                                                                break;
+//                                                                System.out.println("debug zone change polygon : " + locateOnMapManager.getFocusedGeoJsonFeature());
                                                             }
                                                         }
-                                                        if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target,new LatLng(nearestPointLat, nearestPointLng)) > 1)
+                                                        if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target,new LatLng(nearestPointLat, nearestPointLng)) > 1 && navigateToNearestGate)
                                                             animateCamera(nearestPointLat, nearestPointLng, 20.0f, ZoomType.NO_ZOOM);
                                                     } else {
                                                         zoneName = "LatLon";
@@ -710,15 +776,30 @@ public class MobilityCommonBridge extends HyperBridge {
                                                             Marker m = zoneMarkers.get("selectedGate");
                                                             if (m != null)
                                                                 m.setVisible(false);
-                                                            addZoneMarker((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "selectedGate", "ny_ic_selected_zone_pickup_marker_yellow", false);
+                                                            addZoneMarker((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "selectedGate", selectedSpotIcon, specialZoneMarkerConfig, markerCallback, callbackTags);
+                                                            break;
                                                         }
                                                     }
-                                                    if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPointLat, nearestPointLng)) > 1 && nearestPointDistance <= goToNearestPointWithinRadius)
+                                                    if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPointLat, nearestPointLng)) > 1 && nearestPointDistance <= goToNearestPointWithinRadius && navigateToNearestGate)
                                                         animateCamera(nearestPointLat, nearestPointLng, 20.0f, ZoomType.NO_ZOOM);
                                                     zoneName = "LatLon";
                                                 }
                                                 boolean sendCallback = storeLocateOnMapCallBack != null && ((mapMode.equals(MapMode.SPECIAL_ZONE) && (!isPointInsidePolygon || isOnSpot)) || (mapMode.equals(MapMode.HOTSPOT) && (isOnSpot || nearestPointDistance > goToNearestPointWithinRadius)));
                                                 if (sendCallback) {
+                                                    if (labelView != null && mapMode.equals(MapMode.SPECIAL_ZONE) && isOnSpot) {
+                                                        String labelText = zoneName.length() > labelTextSize ? zoneName.substring(0, labelTextSize - 3) + "..." : zoneName;
+                                                        MarkerConfig markerConfig = new MarkerConfig();
+
+                                                        GeoJsonFeature gateGeoJsonFeature = locateOnMapManager.getGateFeature(zoneName);
+                                                        if (gateGeoJsonFeature != null)
+                                                            markerConfig.locationName(zoneName, zoneName);
+                                                        else
+                                                            markerConfig.locationName(zoneName);
+                                                        System.out.println("debug zone gateGeoJsonFeature : " + gateGeoJsonFeature);
+                                                        Bitmap bitmap = getMarkerBitmapFromView("ny_ic_city_police", true, null, "ny_ic_city_police", MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
+                                                        labelView.setImageBitmap(bitmap);
+                                                        labelView.setVisibility(View.VISIBLE);
+                                                    }
                                                     String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, zoneName, lat1, lng);
                                                     Log.e(CALLBACK, javascript);
                                                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
@@ -742,39 +823,191 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    private Boolean pointInsidePolygon(String geoJson, Double latitude, Double longitide) {
+    private void animateToFitPolygon(List<List<LatLng>> polygonCoordinates, boolean goToCurrentLocation, double lat, double lon) {
         try {
-            JSONObject geo = new JSONObject(geoJson);
-            JSONArray coor = geo.getJSONArray("coordinates");
-            JSONArray coor2 = (JSONArray) coor.get(0);
-            JSONArray coor3 = (JSONArray) coor2.get(0);
+            double x = 0.0, y = 0.0;
+//            List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
+            List<LatLng> allCoordinates = new ArrayList<>();
+            for (List<LatLng> innerList : polygonCoordinates)
+                allCoordinates.addAll(innerList);
+            System.out.println("debug zone polygonCoordinates " + polygonCoordinates);
+            System.out.println("debug zone allCoordinates " + allCoordinates);
+            ArrayList<LatLng> endPoints = getCoordinateEndPoint(allCoordinates);
+            if (endPoints != null) {
+                LatLng topLeft = endPoints.get(0);
+                LatLng bottomRight = endPoints.get(1);
 
-            double y = latitude;
-            double x = longitide;
-            boolean inside = false;
-            for (int i = 0, j = coor3.length() - 1; i < coor3.length(); j = i++) {
-                JSONArray point1 = (JSONArray) coor3.get(i);
-                JSONArray point2 = (JSONArray) coor3.get(j);
-                double xi = (double) point1.get(0), yi = (double) point1.get(1);
-                double xj = (double) point2.get(0), yj = (double) point2.get(1);
+                x = bottomRight.longitude - topLeft.longitude;
+                y = topLeft.latitude - bottomRight.latitude;
 
-                boolean intersect = ((yi > y) != (yj > y)) && (x <= (xj - xi) * (y - yi) / (yj - yi) + xi);
-                if (intersect) {
-                    inside = !inside;
-                }
+                double currentLat = goToCurrentLocation ? lastLatitudeValue : lat;
+                double currentLon = goToCurrentLocation ? lastLongitudeValue : lon;
+
+                LatLngBounds bounds = LatLngBounds.builder().include(new LatLng(currentLat - y / 2, currentLon - x / 2)).include(new LatLng(currentLat + y / 2, currentLon + x / 2)).build();
+                googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0), animationDuration, null);
             }
 
-            return inside;
+        }catch (Exception e) {
+            System.out.println("debug error animateToFitPolygon : " + e);
+            e.printStackTrace();
+        }
+    }
+
+    private List<List<LatLng>> getPolygonCoordinates(String geoJson) {
+        try {
+            JSONObject jsonObject = new JSONObject(geoJson);
+//            List<LatLng> allCoordinates = new ArrayList<>();
+            List<List<LatLng>> polygonCoordinates = new ArrayList<>();
+
+            for (int i = 0; i < jsonObject.getJSONArray("features").length(); i++) {
+                JSONObject feature = jsonObject.getJSONArray("features").getJSONObject(i);
+                JSONArray coordinates = feature.getJSONObject("geometry").getJSONArray("coordinates");
+                String geometryType = feature.getJSONObject("geometry").getString("type");
+                switch (geometryType) {
+                    case "Point":
+//                        allCoordinates.add(new LatLng(coordinates.getDouble(1), coordinates.getDouble(0)));
+                        polygonCoordinates.add(Collections.singletonList(new LatLng(coordinates.getDouble(1), coordinates.getDouble(0))));
+                        break;
+                    case "Polygon":
+                        JSONArray innerPolygon = coordinates.getJSONArray(0);
+                        List<LatLng> coordinateLists = new ArrayList<>();
+                        for (int j = 0; j < innerPolygon.length(); j++) {
+                            JSONArray coordinate = (JSONArray) innerPolygon.get(j);
+//                            allCoordinates.add(new LatLng((Double) coordinate.get(1), (Double) coordinate.get(0)));
+                            coordinateLists.add(new LatLng((Double) coordinate.get(1), (Double) coordinate.get(0)));
+                        }
+                        polygonCoordinates.add(coordinateLists);
+                        break;
+                    case "MultiPolygon":
+                        JSONArray innerMultiPolygon = coordinates.getJSONArray(0).getJSONArray(0);
+                        List<LatLng> coordinateList = new ArrayList<>();
+                        for (int j = 0; j < innerMultiPolygon.length(); j++) {
+                            JSONArray coordinate = (JSONArray) innerMultiPolygon.get(j);
+//                            allCoordinates.add(new LatLng((Double) coordinate.get(1), (Double) coordinate.get(0)));
+                            coordinateList.add(new LatLng((Double) coordinate.get(1), (Double) coordinate.get(0)));
+                        }
+                        polygonCoordinates.add(coordinateList);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            return polygonCoordinates;
+        } catch (Exception e) {
+            System.out.println("debug error getPolygonCoordinates : " + e);
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
+
+    private ArrayList<LatLng> getCoordinateEndPoint(List<LatLng> allCoordinates) {
+        try {
+            ArrayList<Double> all_latitudes = new ArrayList<Double>();
+            ArrayList<Double> all_longitudes = new ArrayList<Double>();
+            for (int i = 0; i < allCoordinates.size(); i++) {
+                LatLng coordinate = (LatLng) allCoordinates.get(i);
+                double lat = coordinate.latitude;
+                double lon = coordinate.longitude;
+                all_latitudes.add(lat);
+                all_longitudes.add(lon);
+            }
+
+            System.out.println("debug zone all_latitudes : " + all_latitudes);
+            System.out.println("debug zone all_longitudes : " + all_longitudes);
+
+            double minLat = Collections.min(all_latitudes);
+            double maxLat = Collections.max(all_latitudes);
+            double minLon = Collections.min(all_longitudes);
+            double maxLon = Collections.max(all_longitudes);
+
+            double left = minLon - 0.1*(maxLon - minLon);
+            double right = maxLon + 0.1*(maxLon - minLon);
+            double top = maxLat + 0.1*(maxLat - minLat);
+            double bottom = minLat - (maxLat - minLat);
+
+            LatLng topLeft = new LatLng(top, left);
+            LatLng bottomRight = new LatLng(bottom, right);
+
+            ArrayList<LatLng> result = new ArrayList<>();
+            result.add(topLeft);
+            result.add(bottomRight);
+            return result;
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private Boolean pointInsidePolygon(List<List<LatLng>> polygonCoordinates, Double latitude, Double longitide) {
+        try {
+            double y = latitude;
+            double x = longitide;
+            boolean isInsidePolygon = false;
+            for (int k = 0; k < polygonCoordinates.size(); k++) {
+                List<LatLng> eachPolygonCoordinates = polygonCoordinates.get(k);
+                boolean inside = false;
+                for (int i = 0, j = eachPolygonCoordinates.size() - 1; i < eachPolygonCoordinates.size(); j = i++) {
+                    LatLng point1 = eachPolygonCoordinates.get(i);
+                    LatLng point2 = eachPolygonCoordinates.get(j);
+                    double xi = (double) point1.longitude, yi = (double) point1.latitude;
+                    double xj = (double) point2.longitude, yj = (double) point2.latitude;
+
+                    boolean intersect = ((yi > y) != (yj > y)) && (x <= (xj - xi) * (y - yi) / (yj - yi) + xi);
+//                    System.out.println("debug zone intersect : " + intersect);
+                    isInsidePolygon = isInsidePolygon || intersect;
+                    if (intersect)
+                        inside = !inside;
+                }
+                isInsidePolygon = inside;
+                if (inside)
+                    break;
+            }
+//            System.out.println("debug zone isInsidePolygon : " + isInsidePolygon);
+            return isInsidePolygon;
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
     }
 
+    public static boolean isInsidePolygon(List<List<LatLng>> polygons, LatLng currentLocation) {
+        int intersections = 0;
+        double x0 = currentLocation.latitude;
+        double y0 = currentLocation.longitude;
+
+        for (List<LatLng> polygon : polygons) {
+            int n = polygon.size();
+            for (int i = 0; i < n; ++i) {
+                int j = (i + 1) % n;
+                LatLng p1 = polygon.get(i);
+                LatLng p2 = polygon.get(j);
+                double x1 = p1.latitude;
+                double y1 = p1.longitude;
+                double x2 = p2.latitude;
+                double y2 = p2.longitude;
+
+                if ((y1 > y0) != (y2 > y0) &&
+                        x0 < (x2 - x1) * (y0 - y1) / (y2 - y1) + x1) {
+                    intersections++;
+                }
+            }
+        }
+
+        return intersections % 2 != 0;
+    }
+
     @JavascriptInterface
-    public void drawPolygon(String geoJson, String locationName, JSONArray zonePoints) {
+    public void drawPolygon(String geoJson, String locationName, JSONArray zonePoints, String markerCallback, ArrayList<String> callbackTags, JSONObject specialZoneMarkerConfig) {
 
         ExecutorManager.runOnMainThread(() -> {
+//            boolean showLabelActionImage = specialZoneMarkerConfig != null && specialZoneMarkerConfig.optBoolean("showLabelActionImage", false);
+//            boolean showLabel = specialZoneMarkerConfig != null && specialZoneMarkerConfig.optBoolean("showLabel", false);
+//            String labelActionImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("labelActionImage", "ny_ic_navigation_blue_frame") : "ny_ic_navigation_blue_frame";
+////            String spotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("spotIcon", "ny_ic_zone_pickup_marker_yellow") : "ny_ic_zone_pickup_marker_yellow";
+//            String selectedSpotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("selectedSpotIcon", "ny_ic_selected_zone_pickup_marker_yellow") : "ny_ic_selected_zone_pickup_marker_yellow";
+
             if(layer != null){
                 layer.removeLayerFromMap();
             }
@@ -787,27 +1020,30 @@ public class MobilityCommonBridge extends HyperBridge {
                         @Override
                         public void onFeatureClick(Feature feature) {
                             try {
-                                if (feature.getProperty("name") != null) {
+                                if (!feature.getProperty("name").equals("")) {
                                     GeoJsonFeature geoJsonFeature = (GeoJsonFeature) feature;
-                                    setPolygonStyle(geoJsonFeature);
+                                    changePolygonFocus(feature.getProperty("name"));
+//                                    setPolygonStyle(geoJsonFeature);
+//                                    if (locateOnMapManager != null)
+//                                        locateOnMapManager.setFocusedGeoJsonFeature(geoJsonFeature);
                                 }
 
                                 System.out.println("debug locateOnMap clicked geoJson " + feature.getProperty("name"));
-                                if (feature.getProperty("name") != null) {
+                                if (!feature.getProperty("name").equals("")) {
                                     String gateName = feature.getProperty("name");
                                     for (int i = 0; i < zonePoints.length(); i++) {
                                         zoneName = (String) zonePoints.getJSONObject(i).get("place");
-                                        System.out.println("debug locateOnMap : " + zoneName);
                                         if (zoneName.equals(gateName)) {
                                             Double zoneMarkerLat = (Double) zonePoints.getJSONObject(i).get("lat");
                                             Double zoneMarkerLon = (Double) zonePoints.getJSONObject(i).get("lng");
-                                            Marker m = zoneMarkers.get("selectedZoneGate");
-//                                            Marker m1 = zoneMarkers.get(zoneMarkerLat + ":" + zoneMarkerLon);
-//                                            if (m1 != null)
-//                                                m1.setVisible(false);
-                                            if (m != null)
-                                                m.setVisible(false);
-                                            addZoneMarker(zoneMarkerLat, zoneMarkerLon, "selectedZoneGate", "ny_ic_selected_zone_pickup_marker_yellow", true);
+//                                            Marker m = zoneMarkers.get("selectedZoneGate");
+//                                            if (m != null)
+//                                                m.setVisible(false);
+//                                            MarkerConfig markerConfig = new MarkerConfig();
+//                                            markerConfig.locationName(showLabel ? "Indiranagar Metro Exit 2" : "");
+//                                            markerConfig.labelActionImage(showLabelActionImage, labelActionImage);
+//                                            addZoneMarker(zoneMarkerLat, zoneMarkerLon, "selectedZoneGate", selectedSpotIcon, specialZoneMarkerConfig, markerCallback, callbackTags, markerConfig);
+                                            animateCamera(zoneMarkerLat, zoneMarkerLon, 20.0f, ZoomType.NO_ZOOM);
                                         }
                                     }
                                 }
@@ -830,6 +1066,14 @@ public class MobilityCommonBridge extends HyperBridge {
                             LatLng latLng = new LatLng(Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
                         }
                     }
+
+                    googleMap.setOnMapClickListener(listener -> {
+                        toast("debug locateOnMap onMapClickListener");
+                        Marker m = zoneMarkers.get("selectedZoneGate");
+                        if (m != null)
+                            m.setVisible(false);
+                    });
+
                     layer.addLayerToMap();
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -839,22 +1083,25 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     public void setPolygonStyle(GeoJsonFeature selectedGeoJsonFeature) {
-        if (layer != null) {
+        if (layer != null && locateOnMapManager != null) {
             Iterable<GeoJsonFeature> features = layer.getFeatures();
+            List<PatternItem> dottedPattern = Arrays.asList(new Dash(12), new Gap(12));
             for (GeoJsonFeature geoJsonFeature : features) {
                 GeoJsonPolygonStyle polyStyle = new GeoJsonPolygonStyle();
                 polyStyle.setStrokeWidth(3);
-                if (geoJsonFeature.getProperty("name") != null) {
+                if (!geoJsonFeature.getProperty("name").equals("")) {
                     if (geoJsonFeature.equals(selectedGeoJsonFeature)) {
                         polyStyle.setFillColor(Color.argb(75, 22, 150, 46));
                     }else {
                         polyStyle.setFillColor(Color.argb(35, 171, 226, 186));
+                        polyStyle.setStrokePattern(dottedPattern);
                     }
                     polyStyle.setClickable(true);
                     polyStyle.setStrokeColor(Color.argb(100, 22, 150, 46));
                 }else {
                     polyStyle.setFillColor(Color.argb(15, 0, 102, 255));
                     polyStyle.setStrokeColor(Color.BLUE);
+                    polyStyle.setStrokePattern(dottedPattern);
                     polyStyle.setClickable(false);
                 }
                 geoJsonFeature.setPolygonStyle(polyStyle);
@@ -862,17 +1109,78 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    public void addZoneMarker(double lat, double lng, String name, String icon, Boolean showLabel) {
+    public void removePolygonFocus(String name) {
+        if (layer != null && locateOnMapManager != null) {
+            Iterable<GeoJsonFeature> features = layer.getFeatures();
+            for (GeoJsonFeature geoJsonFeature : features) {
+                if (geoJsonFeature.getProperty("name").equals(name)) {
+                    removePolygonFocus(geoJsonFeature);
+                    break;
+                }
+            }
+        }
+    }
+
+    public void removePolygonFocus(@NonNull GeoJsonFeature feature) {
+        if (layer != null && locateOnMapManager != null) {
+            System.out.println("debug changePolygonFocus remove focus : " + feature);
+            locateOnMapManager.setFocusedGeoJsonFeature(null);
+            List<PatternItem> dottedPattern = Arrays.asList(new Dash(15), new Gap(15));
+            GeoJsonPolygonStyle polygonStyle = new GeoJsonPolygonStyle();
+            polygonStyle.setStrokeWidth(3);
+            polygonStyle.setFillColor(Color.argb(35, 171, 226, 186));
+            polygonStyle.setStrokePattern(dottedPattern);
+            polygonStyle.setStrokeColor(Color.argb(100, 22, 150, 46));
+            feature.setPolygonStyle(polygonStyle);
+        }
+    }
+
+    public void changePolygonFocus(String name) {
+        System.out.println("debug changePolygonFocus : " + name);
+        if (layer != null && locateOnMapManager != null) {
+            System.out.println("debug changePolygonFocus inside");
+            Iterable<GeoJsonFeature> features = layer.getFeatures();
+            GeoJsonFeature lastFocusedGeoJsonFeature = locateOnMapManager.getFocusedGeoJsonFeature();
+            System.out.println("debug changePolygonFocus get lastFocusedGeoJsonFeature : " + lastFocusedGeoJsonFeature);
+            if (lastFocusedGeoJsonFeature != null) {
+                if (lastFocusedGeoJsonFeature.getProperty("name").equals(name))
+                    return;
+                removePolygonFocus(lastFocusedGeoJsonFeature);
+            }
+            for (GeoJsonFeature geoJsonFeature : features) {
+                if (geoJsonFeature.getProperty("name").equals(name)) {
+                    locateOnMapManager.setFocusedGeoJsonFeature(geoJsonFeature);
+                    System.out.println("debug changePolygonFocus get feature after set : " + locateOnMapManager.getFocusedGeoJsonFeature());
+                    GeoJsonPolygonStyle polygonStyle = new GeoJsonPolygonStyle();
+                    polygonStyle.setStrokeWidth(3);
+                    polygonStyle.setFillColor(Color.argb(75, 22, 150, 46));
+                    polygonStyle.setStrokeColor(Color.argb(100, 22, 150, 46));
+                    geoJsonFeature.setPolygonStyle(polygonStyle);
+                    System.out.println("debug zone changePolygonFocus");
+                    break;
+                }
+            }
+        }
+    }
+
+    public void addZoneMarker(double lat, double lng, String name, String icon, JSONObject specialZoneMarkerConfig, String callback, ArrayList<String> tags) {
+        addZoneMarker(lat, lng, name, icon, specialZoneMarkerConfig, callback, tags, new MarkerConfig());
+    }
+    public void addZoneMarker(double lat, double lng, String name, String icon, JSONObject specialZoneMarkerConfig, String callback, ArrayList<String> tags, MarkerConfig markerConfig) {
         ExecutorManager.runOnMainThread(() -> {
             try {
-                MarkerConfig markerConfig = new MarkerConfig();
-                markerConfig.locationName(showLabel ? name : "", showLabel ? name : "");
+//                boolean showLabelActionImage = markerConfig.isShowLabelActionImage(); // specialZoneMarkerConfig != null && specialZoneMarkerConfig.optBoolean("showLabelActionImage", false);
+//                String labelActionImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("ny_ic_navigation_blue_frame") : "ny_ic_navigation_blue_frame";
+//                MarkerConfig markerConfig = new MarkerConfig();
+//                markerConfig.locationName(title != null ? title : "");
+//                markerConfig.labelActionImage(showLabelActionImage, labelActionImage);
+
                 MarkerOptions markerOptionsObj = new MarkerOptions()
                         .title("")
                         .position(new LatLng(lat, lng))
-                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(icon, false,null,"ic_metro", MarkerType.SPECIAL_ZONE_MARKER, markerConfig)));
-                if (showLabel)
-                    markerOptionsObj.anchor(markerOptionsObj.getAnchorU(),0.92f);
+                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(icon, false,null,"ny_ic_city_police", MarkerType.SPECIAL_ZONE_MARKER, markerConfig)));
+                if (!markerConfig.getPrimaryText().equals(""))
+                    markerOptionsObj.anchor(markerOptionsObj.getAnchorU(),0.88f);
                 else
                     markerOptionsObj.anchor(0.5f,0.5f);
                 Marker m = googleMap.addMarker(markerOptionsObj);
@@ -881,9 +1189,19 @@ public class MobilityCommonBridge extends HyperBridge {
                         m.setZIndex(100);
                     else
                         m.setZIndex(1);
+                    m.setTag(name);
                     m.hideInfoWindow();
                     zoneMarkers.put(name,m);
                 }
+                googleMap.setOnMarkerClickListener(marker -> {
+                    toast("debug locateOnMap setOnMarkerClickListener 4");
+                    if (!callback.equals("") && tags.contains(marker.getTag())) {
+                        String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');", callback, marker.getTag(), marker.getPosition().latitude, marker.getPosition().longitude);
+                        bridgeComponents.getJsCallback().addJsToWebView(js);
+                    }
+                    return false;
+                });
+
             } catch (Exception e) {
                 Log.d("error on pickup markers", e.toString());
             }
@@ -1907,7 +2225,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
     protected Bitmap getMarkerBitmapFromView(String pointerImage, boolean isInvisiblePointer, String actionImage, String labelImageName, MarkerType markerType, MarkerConfig markerConfig) {
-        System.out.println("debug getMarkerBitmapFromView : " + pointerImage + " " + labelImageName + " " + markerConfig);
+        System.out.println("debug getMarkerBitmapFromView : " + pointerImage + " " + labelImageName + " " + markerConfig.toString());
         Context context = bridgeComponents.getContext();
         @SuppressLint("InflateParams")
 
@@ -1921,7 +2239,7 @@ public class MobilityCommonBridge extends HyperBridge {
             setMarkerlabelImage(labelImageName, customMarkerView);
             setMarkerPointerImage(pointerImage, isInvisiblePointer, markerType, customMarkerView);
             setMarkerActionImage(actionImage, markerConfig.primaryText, customMarkerView);
-            setLabelImageAction(customMarkerView);
+            setLabelImageAction(customMarkerView, markerConfig.showLabelActionImage, markerConfig.labelActionImage);
         } catch (Exception e) {
             Log.e("getMarkerBitmapFromView", "Exception in rendering Image" + e);
         }
@@ -1938,19 +2256,14 @@ public class MobilityCommonBridge extends HyperBridge {
         return returnedBitmap;
     }
 
-    private void setLabelImageAction(View customMarkerView) {
-        Context context = bridgeComponents.getContext();
-        ImageView imageView = customMarkerView.findViewById(R.id.label_image_action);
-        imageView.setVisibility(View.VISIBLE);
-        imageView.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier("ic_navigation_blue", "drawable", context.getPackageName())));
-        imageView.setClickable(true);
-        imageView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                toast("navigation clicked");
-                System.out.println("debug locateOnMap inside navigation image action");
-            }
-        });
+    private void setLabelImageAction(View customMarkerView, boolean showLabelActionImage, String labelActionImage) {
+        if (showLabelActionImage) {
+            Context context = bridgeComponents.getContext();
+            ImageView imageView = customMarkerView.findViewById(R.id.label_image_action);
+            imageView.setVisibility(View.VISIBLE);
+            System.out.println("debug zone setLabelImageAction imageName : " + labelActionImage);
+            imageView.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(labelActionImage, "drawable", context.getPackageName())));
+        }
     }
 
     private void setMarkerActionImage(String actionImage, String primaryText, View customMarkerView) {
@@ -2037,8 +2350,10 @@ public class MobilityCommonBridge extends HyperBridge {
             } else {
                 ViewGroup.LayoutParams labelTextsViewLayoutParams = labelTextViews.getLayoutParams();
                 labelTextsViewLayoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT;
-                ViewGroup.LayoutParams primaryTextViewLayoutParams = labelTextViews.getLayoutParams();
+                labelTextViews.setLayoutParams(labelTextsViewLayoutParams);
+                ViewGroup.LayoutParams primaryTextViewLayoutParams = primaryTextView.getLayoutParams();
                 primaryTextViewLayoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                primaryTextView.setLayoutParams(primaryTextViewLayoutParams);
             }
         }catch (Exception e) {
             System.out.println("debug error setMarkerText : " + e);

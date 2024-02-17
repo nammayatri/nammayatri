@@ -477,43 +477,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         return newPoints.toString();
     }
 
-    private ArrayList<LatLng> getCoordinateEndPoint(JSONArray coor) {
-        try {
-            ArrayList<Double> all_latitudes = new ArrayList<Double>();
-            ArrayList<Double> all_longitudes = new ArrayList<Double>();
-            for (int i = 0; i < coor.length(); i++) {
-                JSONArray coordinate = (JSONArray) coor.get(i);
-                double lat = (double) coordinate.get(1);
-                double lon = (double) coordinate.get(0);
-                all_latitudes.add(lat);
-                all_longitudes.add(lon);
-            }
-
-            double minLat = Collections.min(all_latitudes);
-            double maxLat = Collections.max(all_latitudes);
-            double minLon = Collections.min(all_longitudes);
-            double maxLon = Collections.max(all_longitudes);
-
-            double left = minLon - 0.1*(maxLon - minLon);
-            double right = maxLon + 0.1*(maxLon - minLon);
-            double top = maxLat + 0.1*(maxLat - minLat);
-            double bottom = minLat - (maxLat - minLat);
-
-            LatLng topLeft = new LatLng(top, left);
-            LatLng bottomRight = new LatLng(bottom, right);
-
-            ArrayList<LatLng> result = new ArrayList<>();
-            result.add(topLeft);
-            result.add(bottomRight);
-
-            return result;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     private LatLng getNewLatLng(float fraction, LatLng a, LatLng b) {
         double lat = (b.latitude - a.latitude) * fraction + a.latitude;
         double lngDelta = b.longitude - a.longitude;

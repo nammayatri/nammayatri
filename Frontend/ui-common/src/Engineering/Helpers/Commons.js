@@ -59,6 +59,11 @@ export const callAPIWithOptions = function () {
 
 export const callbackMapper = PrestoCallbackMapper.map
 
+export const callbackMapper2 = function (callback) {
+  console.log(callback);
+  return "";
+}
+
 export const atobImpl = function (value) {
   try {
     return window.atob(value);
@@ -531,3 +536,7 @@ export const isTrue = function (a) {
   const bool = true;
   return a.toString() === bool.toString();
 }
+
+export const toStringJSON = function (attr) {
+  return JSON.stringify(attr);
+};

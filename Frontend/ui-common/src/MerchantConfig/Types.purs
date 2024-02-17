@@ -14,6 +14,7 @@
 -}
 module Common.Types.Config where
 
+import Data.Maybe (Maybe(..))
 
 type CommonAppConfig = (
     colors :: Colors
@@ -115,4 +116,22 @@ type RegistrationConfig = {
 type BannerCarousalConfig = {
   autoScrollDelay :: Number
 , enableAutoScroll :: Boolean
+}
+
+type GeoJson = {
+    type :: String
+  , features :: Array GeoJsonFeature
+}
+
+type GeoJsonFeature = {
+    type :: String
+  , properties :: GeoJsonProperties
+  , geometry :: String
+}
+
+type GeoJsonProperties = {
+    name :: String
+  , id :: String
+  , defaultDriverExtra :: Int
+  , canQueueUpOnGate :: Boolean
 }

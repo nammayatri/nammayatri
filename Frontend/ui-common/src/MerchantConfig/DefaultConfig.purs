@@ -1,6 +1,7 @@
 module Common.DefaultConfig where
 
 import Common.Types.Config
+import Data.Maybe (Maybe(..))
 
 defaultColors :: Colors
 defaultColors = {
@@ -58,4 +59,22 @@ defaultBannerCarousel :: BannerCarousalConfig
 defaultBannerCarousel = {
   autoScrollDelay : 5000.0,
   enableAutoScroll : true
+}
+
+defaultGeoJson :: GeoJson
+defaultGeoJson = {
+    type : "FeatureCollection"
+  , features : []
+}
+
+defaultGeoJsonFeature :: GeoJsonFeature
+defaultGeoJsonFeature = {
+    type : "Feature"
+  , properties : {
+        name : ""
+      , id : ""
+      , defaultDriverExtra : 0
+      , canQueueUpOnGate : false
+    }
+  , geometry : ""
 }

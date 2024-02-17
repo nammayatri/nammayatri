@@ -1609,6 +1609,7 @@ data ZoneType = METRO
               | RAILWAY
               | NOZONE
               | AUTO_BLOCKED
+              | SPECIAL_PICKUP
 
 derive instance genericZoneType :: Generic ZoneType _
 instance showZoneType :: Show ZoneType where show = genericShow

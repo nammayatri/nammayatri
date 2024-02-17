@@ -2329,7 +2329,7 @@ eval (NotificationListener notificationType) state = do
     _ -> exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
 
 eval RecenterCurrentLocation state = do
-  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap testLocateOnMapConfig
+  -- let _ = unsafePerformEffect $ runEffectFn1 locateOnMap testLocateOnMapConfig
   recenterCurrentLocation state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation state
@@ -3071,6 +3071,17 @@ testDefaultLocateOnMapConfig = {
   , points : []
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
   , labelId : getNewIDWithTag "LocateOnMapPin"
+  , markerCallbackForTags : []
+  , markerCallback : "" 
+  , specialZoneMarkerConfig : {
+        showLabelActionImage : false
+      , labelActionImage : "ny_ic_navigation_blue_frame"
+      , theme : "DARK"
+      , spotIcon : "ny_ic_zone_pickup_marker_green"
+      , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green"
+      , showLabel : false
+    }
+  , navigateToNearestGate : true
 }
 
 testDefaultGate :: JB.Location
@@ -3082,16 +3093,6 @@ testDefaultGate = {
   city : Nothing
 }
 
-testLocateOnMapConfig :: JB.LocateOnMapConfig
-testLocateOnMapConfig = {
-    goToCurrentLocation : false
-  , lat : 0.0
-  , lon : 0.0
-  , geoJson : testGeoJson
-  , points : [testGate1, testGate2]
-  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
-  , labelId : getNewIDWithTag "LocateOnMapPin"
-}
 
 testGeoJsons :: Array JB.LocateOnMapConfig
 testGeoJsons = [

@@ -56,11 +56,14 @@ import Data.Number (fromString)
 import JBridge (toast, setKeyInSharedPref)
 import Language.Strings (getString)
 import Language.Types
+import Common.Types.Config as CCT
 
 -- Common Utils
 foreign import reboot :: Effect Unit
 
 foreign import showSplash :: Effect Unit
+foreign import encodeGeohash :: Fn3 Number Number Int String
+foreign import stringifyGeoJson :: CCT.GeoJson -> String
 
 ifelse :: forall a. Boolean -> a -> a -> a
 ifelse p a b = if p then a else b

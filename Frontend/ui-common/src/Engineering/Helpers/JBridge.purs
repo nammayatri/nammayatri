@@ -447,6 +447,10 @@ type LocateOnMapConfig = {
   , points :: (Array Location)
   , zoomLevel :: Number
   , labelId :: String
+  , markerCallbackForTags :: Array String
+  , markerCallback :: String
+  , specialZoneMarkerConfig :: SpecialZoneMarkerConfig
+  , navigateToNearestGate :: Boolean
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -458,8 +462,27 @@ locateOnMapConfig = {
   , points : []
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
   , labelId : ""
+  , markerCallbackForTags : []
+  , markerCallback : ""
+  , specialZoneMarkerConfig : {
+        showLabelActionImage : false
+      , labelActionImage : ""
+      , theme : "LIGHT"
+      , spotIcon : "ny_ic_zone_pickup_marker_green"
+      , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green"
+      , showLabel : false
+      }
+  , navigateToNearestGate : true
 }
 
+type SpecialZoneMarkerConfig = {
+    showLabelActionImage :: Boolean
+  , labelActionImage :: String
+  , theme :: String
+  , spotIcon :: String
+  , selectedSpotIcon :: String
+  , showLabel :: Boolean
+}
 
 type MapRouteConfig = {
     sourceSpecialTagIcon :: String

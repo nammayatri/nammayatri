@@ -55,7 +55,7 @@ import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner)
 import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode, stringifyGeoJson)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
@@ -93,7 +93,7 @@ import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag, getTripFromRideHistory, getZoneType)
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag, getTripFromRideHistory, getZoneType, transformGeoJsonFeature)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -369,6 +369,7 @@ currentFlowStatus = do
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           (GlobalState currentState) <- getState
+          _ <- pure $ spy "debug tip TIP_VIEW_DATA" (getValueToLocalStore TIP_VIEW_DATA)
           let tipViewData = case (getTipViewData "LazyCheck") of
                               Just (TipViewData tipView) -> do
                                 currentState.homeScreen.props.tipViewProps{stage = tipView.stage , activeIndex = tipView.activeIndex , isVisible = tipView.activeIndex >= 0 }
@@ -707,7 +708,8 @@ homeScreenFlow = do
         let destServiceable = destServiceabilityResp.serviceable
         let pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
         setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", findingQuotesProgress = 0.0 }})
+        let geoJson = transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", findingQuotesProgress = 0.0 }})
         when (addToRecents) $ do
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
@@ -1093,13 +1095,14 @@ homeScreenFlow = do
                                                   }) srcSpecialLocation.gates
             if (sourceServiceabilityResp.serviceable ) then do
               let cityName = getCityNameFromCode sourceServiceabilityResp.city
+                  geoJson = transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo
               void $ pure $ setCleverTapUserProp [{key : "Customer Location", value : unsafeToForeign $ show cityName}]
               setValueToLocalStore CUSTOMER_LOCATION $ show cityName
               modifyScreenState $ HomeScreenStateType 
                 (\homeScreen -> 
                   homeScreen
                     { data
-                        { polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson
+                        { polygonCoordinates = geoJson
                         , nearByPickUpPoints = pickUpPoints 
                         }
                     , props
@@ -1126,16 +1129,18 @@ homeScreenFlow = do
       else homeScreenFlow
     CHECK_SERVICEABILITY updatedState lat long-> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat long)
+      let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation sourceServiceabilityResp.specialLocation
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
           cityName = if sourceServiceabilityResp.serviceable then getCityNameFromCode sourceServiceabilityResp.city else updatedState.props.city
+          geoJson = transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo
       setValueToLocalStore CUSTOMER_LOCATION (show cityName)
       _ <- pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
       modifyScreenState $ HomeScreenStateType 
         (\homeScreen -> 
         homeScreen
           { data
-            { polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson 
+            { polygonCoordinates = geoJson
             }
           , props
             { locateOnMapLocation
@@ -1177,6 +1182,7 @@ homeScreenFlow = do
       let srcServiceable = sourceServiceabilityResp.serviceable
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           cityName = getCityNameFromCode sourceServiceabilityResp.city
+          geoJson = transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo
           pickUpPoints = map (\(GatesInfo item) -> {
                                               place: item.name,
                                               lat  : (item.point)^._lat,
@@ -1187,7 +1193,7 @@ homeScreenFlow = do
           gateAddress = (fromMaybe HomeScreenData.dummyLocation ((filter( \ (item) -> (item.place == state.props.defaultPickUpPoint)) pickUpPoints) !! 0))
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       if (fromMaybe "" sourceServiceabilityResp.geoJson) /= "" && (fromMaybe "" sourceServiceabilityResp.geoJson) /= state.data.polygonCoordinates && pickUpPoints /= state.data.nearByPickUpPoints then do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , confirmLocationCategory = srcSpecialLocation.category}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , confirmLocationCategory = srcSpecialLocation.category}})
         _ <- pure $ removeAllPolylines ""
         liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybe "" sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
         homeScreenFlow
@@ -1262,9 +1268,11 @@ homeScreenFlow = do
           cityName = getCityNameFromCode sourceServiceabilityResp.city
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       if (fromMaybe "" sourceServiceabilityResp.geoJson) /= "" && (fromMaybe "" sourceServiceabilityResp.geoJson) /= state.data.polygonCoordinates && pickUpPoints /= state.data.nearByPickUpPoints then do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city, isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , confirmLocationCategory = srcSpecialLocation.category}})
+        let geoJson = transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city, isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , confirmLocationCategory = srcSpecialLocation.category}})
         _ <- pure $ removeAllPolylines ""
-        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybe "" sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+        let geoJson = spy "debug zone transformGeoJsonFeature" (transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo)
+        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
         homeScreenFlow
       else do
         let distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
@@ -1475,6 +1483,7 @@ homeScreenFlow = do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.sourceLat state.sourceLong)
       let cityName = getCityNameFromCode sourceServiceabilityResp.city
           (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
+          geoJson = transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo
           pickUpPoints = map (\(GatesInfo item) -> {
                                               place: item.name,
                                               lat  : (item.point)^._lat,
@@ -1492,7 +1501,7 @@ homeScreenFlow = do
                   { sourceSelectedOnMap = false
                   }
               , data
-                  { polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson
+                  { polygonCoordinates = geoJson
                   , nearByPickUpPoints = pickUpPoints
                   }
               }
@@ -2382,7 +2391,8 @@ addNewAddressScreenFlow input = do
                                             }) srcSpecialLocation.gates
       let gateAddress = (fromMaybe HomeScreenData.dummyLocation ((filter( \ (item) -> (item.place == state.props.defaultPickUpPoint)) pickUpPoints) !! 0))
       if (fromMaybe "" sourceServiceabilityResp.geoJson) /= "" && (fromMaybe "" sourceServiceabilityResp.geoJson) /= state.data.polygonCoordinates && pickUpPoints /= state.data.nearByPickUpPoints then do
-        modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{  data { polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson
+        let geoJson = transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo
+        modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{  data { polygonCoordinates = geoJson
                                                                                                              , nearByPickUpPoints = pickUpPoints
                                                                                                              }
                                                                                                       , props{ isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing

@@ -31,10 +31,9 @@ import Data.Array (null, head, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Data.Lens ((^.))
 import Accessor
-import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..), TipViewData(..))
+import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..))
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)

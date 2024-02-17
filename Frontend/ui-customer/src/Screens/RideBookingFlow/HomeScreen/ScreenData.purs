@@ -470,7 +470,8 @@ specialLocation :: SpecialLocation
 specialLocation = SpecialLocation{
     "category" :"",
      "gates": [],
-     "locationName" : ""
+     "locationName" : "",
+     "gatesInfo" : []
  }
 
 dummyLocation :: Location
