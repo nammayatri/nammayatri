@@ -20,8 +20,26 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, MonadFlow)
 import qualified Storage.Queries.Merchant.LeaderBoardConfig as Queries
+
+create :: (MonadFlow m, CacheFlow m r, Esq.EsqDBFlow m r) => LeaderBoardConfigs -> m ()
+create = Queries.create
+
+findAllByMerchantOpCityId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> m [LeaderBoardConfigs]
+findAllByMerchantOpCityId id =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
+    Just a -> return a
+    Nothing -> cacheLeaderBoardConfigs id /=<< Queries.findAllByMerchantOpCityId id
+
+cacheLeaderBoardConfigs :: CacheFlow m r => Id MerchantOperatingCity -> [LeaderBoardConfigs] -> m ()
+cacheLeaderBoardConfigs merchantOperatingCityId cfg = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let merchantIdKey = makeMerchantOpCityIdKey merchantOperatingCityId
+  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey cfg expTime
+
+makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
+makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:LeaderBoardConfigs:MerchantOperatingCityId-" <> id.getId
 
 findLeaderBoardConfigbyType :: (CacheFlow m r, Esq.EsqDBFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> m (Maybe LeaderBoardConfigs)
 findLeaderBoardConfigbyType leaderBType merchantOpCityId =

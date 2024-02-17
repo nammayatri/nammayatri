@@ -29,6 +29,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantServiceUsageConfig -> m ()
+create = createWithKV
+
 findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamMSUC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 

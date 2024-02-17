@@ -29,6 +29,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.GoHomeConfig as BeamGHC
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
+create = createWithKV
+
 findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
 findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamGHC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 

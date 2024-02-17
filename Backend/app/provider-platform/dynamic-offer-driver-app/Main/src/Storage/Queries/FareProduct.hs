@@ -33,6 +33,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareProduct as BeamFP
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FareProduct -> m ()
+create = createWithKV
+
 findAllFareProductForVariants ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->

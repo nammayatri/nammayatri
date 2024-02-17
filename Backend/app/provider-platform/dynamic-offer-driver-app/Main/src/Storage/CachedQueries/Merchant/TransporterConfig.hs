@@ -14,7 +14,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.TransporterConfig
-  ( findByMerchantOpCityId,
+  ( create,
+    findByMerchantOpCityId,
     clearCache,
     update,
     updateFCMConfig,
@@ -31,6 +32,9 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.TransporterConfig as Queries
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+create = Queries.create
 
 findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 findByMerchantOpCityId id =

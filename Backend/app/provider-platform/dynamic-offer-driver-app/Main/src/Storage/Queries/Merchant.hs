@@ -64,6 +64,16 @@ findAllShortIdById merchantIds =
     <$> findAllWithKV
       [Se.Is BeamM.id $ Se.In (getId <$> merchantIds)]
 
+updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig merchantId originRestriction destinationRestriction = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamM.originRestriction $ originRestriction,
+      Se.Set BeamM.destinationRestriction $ destinationRestriction,
+      Se.Set BeamM.updatedAt now
+    ]
+    [Se.Is BeamM.id (Se.Eq (getId merchantId))]
+
 instance FromTType' BeamM.Merchant Merchant where
   fromTType' BeamM.MerchantT {..} = do
     regUrl <- parseBaseUrl registryUrl

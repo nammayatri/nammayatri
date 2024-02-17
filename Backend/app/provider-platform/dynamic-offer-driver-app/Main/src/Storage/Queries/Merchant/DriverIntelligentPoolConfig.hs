@@ -29,6 +29,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverIntelligentPoolConfig -> m ()
+create = createWithKV
+
 findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamDIPC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 

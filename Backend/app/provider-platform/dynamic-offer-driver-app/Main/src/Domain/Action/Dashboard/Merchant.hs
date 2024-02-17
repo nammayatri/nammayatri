@@ -34,6 +34,7 @@ module Domain.Action.Dashboard.Merchant
     updateFPDriverExtraFee,
     updateFPPerExtraKmRate,
     updateFarePolicy,
+    createMerchantOperatingCity,
     schedulerTrigger,
   )
 where
@@ -45,12 +46,18 @@ import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
+import qualified Domain.Types.FareProduct as DFareProduct
+import qualified Domain.Types.GoHomeConfig as DGoHomeConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DDIPC
+import qualified Domain.Types.Merchant.LeaderBoardConfig as DLC
+import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DODC
+import qualified Domain.Types.Merchant.Overlay as DMO
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.Vehicle as DVeh
@@ -60,6 +67,7 @@ import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
@@ -70,13 +78,19 @@ import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy as CQFP
+import qualified Storage.CachedQueries.FareProduct as CQFProduct
+import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CQDPC
+import qualified Storage.CachedQueries.Merchant.LeaderBoardConfig as CQLBC
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as CQODC
+import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
@@ -771,3 +785,243 @@ updateFarePolicy _ _ farePolicyId req = do
           nightShiftCharge = req.nightShiftCharge <|> nightShiftCharge,
           ..
         }
+
+createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
+createMerchantOperatingCity merchantShortId city req = do
+  merchant <- findMerchantByShortId merchantShortId
+  baseOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
+
+  -- city
+  baseOperatingCity <- CQMOC.findById baseOperatingCityId >>= fromMaybeM (InvalidRequest "Base Operating City not found")
+  newOperatingCity <- buildMerchantOperatingCity merchant.id baseOperatingCity
+
+  -- intelligent pool config
+  intelligentPoolConfig <- CQDIPC.findByMerchantOpCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
+  newIntelligentPoolConfig <- buildIntelligentPoolConfig newOperatingCity.id intelligentPoolConfig
+
+  -- driver pool config
+  driverPoolConfigs <- CQDPC.findAllByMerchantOpCityId baseOperatingCityId
+  newDriverPoolConfigs <- mapM (buildPoolConfig newOperatingCity.id) driverPoolConfigs
+
+  -- exophones
+  exphones <- CQExophone.findAllByMerchantOpCityId baseOperatingCityId
+  newExphones <- mapM (buildNewExophone newOperatingCity.id) exphones
+
+  -- fare products
+  fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
+  newFareProducts <- mapM (buildFareProduct newOperatingCity.id) fareProducts
+
+  -- go home config
+  goHomeConfig <- CQGHC.findByMerchantOpCityId baseOperatingCityId
+  newGoHomeConfig <- buildGoHomeConfig newOperatingCity.id goHomeConfig
+
+  -- leader board configs
+  leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId
+  newLeaderBoardConfigs <- mapM (buildLeaderBoardConfig newOperatingCity.id) leaderBoardConfigs
+
+  -- merchant message
+  merchantMessages <- CQMM.findAllByMerchantOpCityId baseOperatingCityId
+  newMerchantMessages <- mapM (buildMerchantMessage newOperatingCity.id) merchantMessages
+
+  -- merchant overlay
+  merchantOverlays <- CQMO.findAllByMerchantOpCityId baseOperatingCityId
+  newMerchantOverlays <- mapM (buildMerchantOverlay newOperatingCity.id) merchantOverlays
+
+  -- merchant payment method
+  merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId baseOperatingCityId
+  newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newOperatingCity.id) merchantPaymentMethods
+
+  -- merchant service usage config
+  merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
+  newMerchantServiceUsageConfig <- buildMerchantServiceUsageConfig newOperatingCity.id merchantServiceUsageConfig
+
+  -- merchant service config
+  merchantServiceConfigs <- CQMSC.findAllMerchantOpCityId baseOperatingCityId
+  newMerchantServiceConfigs <- mapM (buildMerchantServiceConfig newOperatingCity.id) merchantServiceConfigs
+
+  -- onboarding document config
+  onboardingDocumentConfigs <- CQODC.findAllByMerchantOpCityId baseOperatingCityId
+  newOnboardingDocumentConfigs <- mapM (buildNewOnboardingDocumentConfig newOperatingCity.id) onboardingDocumentConfigs
+
+  -- transporter config
+  transporterConfig <- CQTC.findByMerchantOpCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+  newTransporterConfig <- buildTransporterConfig newOperatingCity.id transporterConfig
+
+  CQMOC.create newOperatingCity
+  CQDIPC.create newIntelligentPoolConfig
+  mapM_ CQDPC.create newDriverPoolConfigs
+  mapM_ CQExophone.create newExphones
+  mapM_ CQFProduct.create newFareProducts
+  CQGHC.create newGoHomeConfig
+  mapM_ CQLBC.create newLeaderBoardConfigs
+  mapM_ CQMM.create newMerchantMessages
+  mapM_ CQMO.create newMerchantOverlays
+  mapM_ CQMPM.create newMerchantPaymentMethods
+  CQMSUC.create newMerchantServiceUsageConfig
+  mapM_ CQMSC.create newMerchantServiceConfigs
+  mapM_ CQODC.create newOnboardingDocumentConfigs
+  CQTC.create newTransporterConfig
+
+  when req.enableForMerchant $ do
+    let newOrigin = updateGeoRestriction merchant.geofencingConfig.origin
+        newDestination = updateGeoRestriction merchant.geofencingConfig.destination
+    CQM.updateGeofencingConfig merchant.id newOrigin newDestination
+    CQM.clearCache merchant
+
+  pure $ Common.CreateMerchantOperatingCityRes newOperatingCity.id.getId
+  where
+    updateGeoRestriction = \case
+      Unrestricted -> Unrestricted
+      Regions regions -> Regions $ regions <> [(show req.city)]
+
+    buildMerchantOperatingCity merchantId baseCity = do
+      id <- generateGUID
+      pure
+        DMOC.MerchantOperatingCity
+          { id,
+            merchantId,
+            merchantShortId,
+            location = Maps.LatLong req.lat req.long,
+            city = req.city,
+            state = req.state,
+            supportNumber = req.supportNumber <|> baseCity.supportNumber,
+            language = fromMaybe baseCity.language req.primaryLanguage
+          }
+
+    buildIntelligentPoolConfig newCityId DDIPC.DriverIntelligentPoolConfig {..} = do
+      now <- getCurrentTime
+      return $
+        DDIPC.DriverIntelligentPoolConfig
+          { merchantOperatingCityId = newCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    buildPoolConfig newCityId DDPC.DriverPoolConfig {..} = do
+      newId <- generateGUID
+      now <- getCurrentTime
+      return $
+        DDPC.DriverPoolConfig
+          { id = newId,
+            merchantOperatingCityId = newCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    buildNewExophone newCityId DExophone.Exophone {..} = do
+      newId <- generateGUID
+      now <- getCurrentTime
+      return $
+        DExophone.Exophone
+          { id = newId,
+            merchantOperatingCityId = newCityId,
+            primaryPhone = fromMaybe primaryPhone req.exophone,
+            backupPhone = fromMaybe backupPhone req.exophone,
+            isPrimaryDown = False,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    buildFareProduct newCityId DFareProduct.FareProduct {..} = do
+      newId <- generateGUID
+      return $
+        DFareProduct.FareProduct
+          { id = newId,
+            merchantOperatingCityId = newCityId,
+            ..
+          }
+
+    buildGoHomeConfig newCityId DGoHomeConfig.GoHomeConfig {..} = do
+      now <- getCurrentTime
+      return $
+        DGoHomeConfig.GoHomeConfig
+          { merchantOperatingCityId = newCityId,
+            enableGoHome = False,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    buildLeaderBoardConfig newCityId DLC.LeaderBoardConfigs {..} = do
+      newId <- generateGUID
+      return $
+        DLC.LeaderBoardConfigs
+          { id = newId,
+            merchantOperatingCityId = newCityId,
+            ..
+          }
+
+    buildMerchantMessage newCityId DMM.MerchantMessage {..} = do
+      now <- getCurrentTime
+      return $
+        DMM.MerchantMessage
+          { merchantOperatingCityId = newCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    buildMerchantOverlay newCityId DMO.Overlay {..} = do
+      newId <- generateGUID
+      return $
+        DMO.Overlay
+          { id = newId,
+            merchantOperatingCityId = newCityId,
+            ..
+          }
+
+    buildMerchantPaymentMethod newCityId DMPM.MerchantPaymentMethod {..} = do
+      newId <- generateGUID
+      now <- getCurrentTime
+      return $
+        DMPM.MerchantPaymentMethod
+          { id = newId,
+            merchantOperatingCityId = newCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    buildMerchantServiceUsageConfig newCityId DMSUC.MerchantServiceUsageConfig {..} = do
+      now <- getCurrentTime
+      return $
+        DMSUC.MerchantServiceUsageConfig
+          { merchantOperatingCityId = newCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    buildMerchantServiceConfig newCityId DMSC.MerchantServiceConfig {..} = do
+      now <- getCurrentTime
+      return $
+        DMSC.MerchantServiceConfig
+          { merchantOperatingCityId = Just newCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    buildNewOnboardingDocumentConfig newCityId DODC.OnboardingDocumentConfig {..} = do
+      now <- getCurrentTime
+      return $
+        DODC.OnboardingDocumentConfig
+          { merchantOperatingCityId = newCityId,
+            rcNumberPrefixList = fromMaybe rcNumberPrefixList req.rcNumberPrefixList,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+    buildTransporterConfig newCityId DTC.TransporterConfig {..} = do
+      now <- getCurrentTime
+      return $
+        DTC.TransporterConfig
+          { merchantOperatingCityId = newCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }

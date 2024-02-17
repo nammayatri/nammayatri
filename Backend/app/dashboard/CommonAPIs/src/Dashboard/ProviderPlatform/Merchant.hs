@@ -26,8 +26,10 @@ import Data.Aeson
 import Data.OpenApi hiding (description, name, password, url)
 import Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -709,6 +711,39 @@ data AllowedTripDistanceBounds = AllowedTripDistanceBounds
 
 $(mkBeamInstancesForJSON ''NightShiftCharge)
 $(mkBeamInstancesForJSON ''WaitingCharge)
+
+---------------------------------------------------------
+
+---- CreateMerchantOperatingCity ------------------------
+type CreateMerchantOperatingCityAPI =
+  "config"
+    :> "operatingCity"
+    :> "create"
+    :> ReqBody '[JSON] CreateMerchantOperatingCityReq
+    :> Post '[JSON] CreateMerchantOperatingCityRes
+
+data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
+  { city :: Context.City,
+    state :: Context.IndianState,
+    lat :: Double,
+    long :: Double,
+    primaryLanguage :: Maybe Language,
+    supportNumber :: Maybe Text,
+    enableForMerchant :: Bool,
+    exophone :: Maybe Text,
+    rcNumberPrefixList :: Maybe [Text]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateMerchantOperatingCityReq where
+  hideSecrets = identity
+
+newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
+  { cityId :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---- generic trigger for schedulers ----
 

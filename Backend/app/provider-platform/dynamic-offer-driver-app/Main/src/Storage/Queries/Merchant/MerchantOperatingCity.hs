@@ -27,6 +27,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantOperatingCity as BeamMOC
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantOperatingCity -> m ()
+create = createWithKV
+
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
 findById (Id merchantOpCityId) = findOneWithKV [Se.Is BeamMOC.id $ Se.Eq merchantOpCityId]
 

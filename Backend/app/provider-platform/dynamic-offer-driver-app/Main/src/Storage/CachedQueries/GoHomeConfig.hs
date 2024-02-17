@@ -27,6 +27,9 @@ import Kernel.Utils.Error.Throwing
 import qualified Storage.Queries.GoHomeConfig as Queries
 import Tools.Error (GenericError (..))
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
+create = Queries.create
+
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
 findByMerchantOpCityId id = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)

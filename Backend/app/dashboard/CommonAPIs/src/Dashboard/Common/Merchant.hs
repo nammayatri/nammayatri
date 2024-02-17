@@ -59,6 +59,7 @@ data MerchantEndpoint
   | CreateFPDriverExtraFeeEndpoint
   | UpdateFPDriverExtraFeeEndpoint
   | UpdateFarePolicy
+  | CreateMerchantOperatingCityEndpoint
   | UpdateFPPerExtraKmRate
   | SchedulerTriggerAPIEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)

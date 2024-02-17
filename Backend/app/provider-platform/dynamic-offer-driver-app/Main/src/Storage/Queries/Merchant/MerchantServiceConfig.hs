@@ -45,6 +45,12 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
 import Tools.Error
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantServiceConfig -> m ()
+create = createWithKV
+
+findAllMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [MerchantServiceConfig]
+findAllMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ Just merchantOperatingCityId]
+
 findByMerchantIdAndServiceWithCity ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Merchant ->

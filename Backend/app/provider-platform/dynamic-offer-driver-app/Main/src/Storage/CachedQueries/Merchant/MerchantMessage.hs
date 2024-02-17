@@ -14,7 +14,9 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantMessage
-  ( findByMerchantOpCityIdAndMessageKey,
+  ( create,
+    findAllByMerchantOpCityId,
+    findByMerchantOpCityIdAndMessageKey,
     clearCache,
   )
 where
@@ -28,6 +30,24 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.MerchantMessage as Queries
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantMessage -> m ()
+create = Queries.create
+
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [MerchantMessage]
+findAllByMerchantOpCityId id =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
+    Just a -> return $ fmap (coerce @(MerchantMessageD 'Unsafe) @MerchantMessage) a
+    Nothing -> cacheMerchantMessageForCity id /=<< Queries.findAllByMerchantOpCityId id
+
+cacheMerchantMessageForCity :: CacheFlow m r => Id MerchantOperatingCity -> [MerchantMessage] -> m ()
+cacheMerchantMessageForCity merchantOperatingCityId cfg = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let merchantIdKey = makeMerchantOpCityIdKey merchantOperatingCityId
+  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (fmap (coerce @MerchantMessage @(MerchantMessageD 'Unsafe)) cfg) expTime
+
+makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
+makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId
 
 findByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantOpCityIdAndMessageKey id messageKey =

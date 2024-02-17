@@ -33,6 +33,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => TransporterConfig -> m ()
+create = createWithKV
+
 findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamTC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 

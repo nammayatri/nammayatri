@@ -14,7 +14,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
-  ( clearCache,
+  ( create,
+    clearCache,
     findByMerchantOpCityId,
     update,
   )
@@ -29,6 +30,9 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
+create = Queries.create
 
 findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId id =

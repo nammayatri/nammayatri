@@ -14,7 +14,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
-  ( findByMerchantOpCityId,
+  ( create,
+    findByMerchantOpCityId,
     clearCache,
     updateMerchantServiceUsageConfig,
   )
@@ -29,6 +30,9 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.MerchantServiceUsageConfig as Queries
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
+create = Queries.create
 
 findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantOpCityId id =
