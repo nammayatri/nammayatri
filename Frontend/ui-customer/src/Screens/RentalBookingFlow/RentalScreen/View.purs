@@ -319,7 +319,7 @@ fareBreakupView push state =
       ]
 
 descriptionView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> FareBreakupRowType -> PrestoDOM (Effect Unit) w
-descriptionView push state description =
+descriptionView push state description = 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -345,9 +345,11 @@ descriptionView push state description =
       let baseDuration = show state.data.rentalBookingData.baseDuration
           startTimeUTC = if state.data.startTimeUTC == "" then EHC.getCurrentUTC "" else state.data.startTimeUTC
           activeQuote = head $ filter (\item -> (item.index == item.activeIndex)) state.data.rentalsQuoteList
+          selectedQuote = maybe dummyRentalQuote identity (fetchSelectedQuote state.data.rentalsQuoteList)
+          currency = getCurrency appConfig
       in case description of
           BookingTime -> if toShowTitle then getString BOOKING_ON <> " " <> EHC.convertUTCtoISC startTimeUTC "Do" <> " " <> EHC.convertUTCtoISC startTimeUTC "MMM" <> ", " <> EHC.convertUTCtoISC startTimeUTC "hh" <> ":" <> EHC.convertUTCtoISC startTimeUTC "mm" <> " " <> EHC.convertUTCtoISC startTimeUTC "a" <> " (" <> baseDuration <> "hrs)" else getString FINAL_FARE_DESCRIPTION
-          BookingDistance -> if toShowTitle then getString INCLUDED_KMS <> show state.data.rentalBookingData.baseDistance else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> " " <> state.props.farePerKm <> "/km."
+          BookingDistance -> if toShowTitle then getString INCLUDED_KMS <> show state.data.rentalBookingData.baseDistance else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> " " <> currency <> (show selectedQuote.fareDetails.plannedPerKmRate) <> "/km."
           BaseFare -> if toShowTitle then getString BASE_FARE <> maybe "" (\quote -> quote.quoteDetails.price) activeQuote else getString ADDITIONAL_CHARGES_DESCRIPTION
           TollFee -> if toShowTitle then getString TOLLS_AND_PARKING_FEES else getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED
 

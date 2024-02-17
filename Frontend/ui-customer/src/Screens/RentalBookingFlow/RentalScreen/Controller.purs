@@ -244,8 +244,12 @@ eval _ state = continue state
 
 genericBackPressed :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 genericBackPressed state = case state.data.currentStage of
-  RENTAL_SELECT_PACKAGE -> exit GoToHomeScreen
-  RENTAL_SELECT_VARIANT -> exit $ GoToSelectPackage state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}
+  RENTAL_SELECT_PACKAGE -> do 
+    if state.props.showRentalPolicy then continue state { props {showRentalPolicy = false}}
+    else exit GoToHomeScreen
+  RENTAL_SELECT_VARIANT -> do 
+    if state.props.showRateCard then continue state { props {showRateCard = false}}
+    else exit $ GoToSelectPackage state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}
   RENTAL_CONFIRMATION -> continue state { data { currentStage = RENTAL_SELECT_VARIANT }}
   _ -> continue state
 

@@ -1489,6 +1489,7 @@ eval BackPressed state = do
                             _ <- pure $ pauseYoutubeVideo unit
                             continue state{props{showEducationalCarousel = false}}
                           else if state.data.waitTimeInfo then continue state { data {waitTimeInfo =false} }
+                          else if state.props.zoneOtpExpired then continue state {props {zoneOtpExpired = false}}
                           else do
                               pure $ terminateApp state.props.currentStage true
                               continue state
@@ -1818,7 +1819,7 @@ eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do
   if status == "EXPIRED" then do
     _ <- pure $ toast $ getString $ OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN"
     _ <- pure $ clearTimerWithId timerID
-    exit $ NotificationHandler "CANCELLED_PRODUCT" state
+    continue state{props{zoneOtpExpired = true}}
   else do
     let timeInMinutes = formatDigits $ seconds/60
         timeInSeconds = formatDigits $ seconds - (seconds/60) * 60
@@ -1826,6 +1827,8 @@ eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do
   where
     formatDigits :: Int -> String
     formatDigits time = (if time >= 10 then "" else "0") <> show time
+
+eval (ZoneTimerExpired (PopUpModal.OnButton2Click)) state = continue state{props{zoneOtpExpired = false}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate)) state = do
   void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng "DRIVE"

@@ -116,6 +116,7 @@ priceDetailsView push config =
         , width $ V 15
         , height $ V 15
         , margin $ Margin 4 6 0 0
+        , clickable isActiveIndex
         , visibility $ boolToVisibility config.showInfo
         , onClick push $ const $ ShowRateCard config
         ]

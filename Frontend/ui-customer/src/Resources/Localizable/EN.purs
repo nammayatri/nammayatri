@@ -959,7 +959,7 @@ getEN stringKey =
         EXCESS_DISTANCE_CHARGE_DESCRIPTION -> "Any distance covered in excess of the included kms hence, will be charged at"
         ADDITIONAL_CHARGES_DESCRIPTION -> "Any additional charges will be billed after your trip is completed."
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Parking fees and tolls are not included. Please pay those separately to the driver."
-        NIGHT_TIME_FEE_DESCRIPTION -> "A flat night time fee of {} will be charged if your ride starts/ends anytime between 10 PM and 5 AM"
+        NIGHT_TIME_FEE_DESCRIPTION -> "A flat night time fee of {} will be applied to your ride if any portion of your trip occurs between the hours of 10:00 PM and 5:00 AM"
         CHOOSE_YOUR_RENTAL_RIDE -> "Choose Your Rental Ride"
         FIRST_STOP_OPTIONAL -> "First Stop (Optional)"
         JANUARY -> "January"

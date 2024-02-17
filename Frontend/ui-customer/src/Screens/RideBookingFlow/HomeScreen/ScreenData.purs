@@ -317,6 +317,7 @@ initData = {
     , showRentalInfo : false
     , showIntercityUnserviceablePopUp : false
     , showNormalRideNotSchedulablePopUp : false
+    , zoneOtpExpired : false
     }
 }
 
