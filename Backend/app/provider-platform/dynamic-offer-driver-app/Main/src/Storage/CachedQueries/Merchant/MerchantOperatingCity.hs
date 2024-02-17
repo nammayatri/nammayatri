@@ -20,6 +20,9 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.MerchantOperatingCity as Queries
 import Tools.Error
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantOperatingCity -> m ()
+create = Queries.create
+
 getMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id MerchantOperatingCity) -> Merchant -> Maybe Context.City -> m (Id MerchantOperatingCity)
 getMerchantOpCityId mbMerchantOpCityId merchant mbCity =
   case mbMerchantOpCityId of

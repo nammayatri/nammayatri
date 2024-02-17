@@ -38,6 +38,9 @@ create = createWithKV
 createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Overlay] -> m ()
 createMany = traverse_ create
 
+findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [Overlay]
+findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamMPN.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+
 deleteByOverlayKeyMerchantOpCityIdUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> Maybe Text -> m ()
 deleteByOverlayKeyMerchantOpCityIdUdf merchantOperatingCityId overlayKey udf1 =
   deleteWithKV

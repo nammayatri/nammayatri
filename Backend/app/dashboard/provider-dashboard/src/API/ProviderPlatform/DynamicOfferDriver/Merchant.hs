@@ -25,13 +25,15 @@ import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
+import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (Meters, MonadFlow, withFlowHandlerAPI')
+import Kernel.Utils.Common (Meters, MonadFlow, fromMaybeM, withFlowHandlerAPI')
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import "lib-dashboard" Storage.Queries.Merchant as SQM
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -58,6 +60,7 @@ type API =
            :<|> UpdateFPDriverExtraFee
            :<|> UpdateFPPerExtraKmRate
            :<|> UpdateFarePolicy
+           :<|> CreateMerchantOperatingCityAPI
            :<|> SchedulerTriggerAPI
        )
 
@@ -145,6 +148,10 @@ type UpdateFarePolicy =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FARE_POLICY
     :> Common.UpdateFarePolicy
 
+type CreateMerchantOperatingCityAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
+    :> Common.CreateMerchantOperatingCityAPI
+
 type SchedulerTriggerAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SCHEDULER_TRIGGER
     :> Common.SchedulerTriggerAPI
@@ -172,6 +179,7 @@ handler merchantId city =
     :<|> updateFPDriverExtraFee merchantId city
     :<|> updateFPPerExtraKmRate merchantId city
     :<|> updateFarePolicy merchantId city
+    :<|> createMerchantOperatingCity merchantId city
     :<|> schedulerTrigger merchantId city
 
 buildTransaction ::
@@ -426,3 +434,13 @@ updateFarePolicy merchantShortId opCity apiTokenInfo farePolicyId req = withFlow
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.UpdateFarePolicy apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFarePolicy) farePolicyId req
+
+createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
+createMerchantOperatingCity merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
+  -- update entry in dashboard
+  merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
+  unless (req.city `elem` merchant.supportedOperatingCities) $
+    SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) req
