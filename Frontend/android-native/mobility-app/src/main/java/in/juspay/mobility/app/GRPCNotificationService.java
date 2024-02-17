@@ -26,6 +26,7 @@ import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
+import io.grpc.ConnectivityState;
 import io.grpc.ForwardingClientCall;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -36,7 +37,7 @@ import io.grpc.stub.StreamObserver;
 public class GRPCNotificationService extends Service {
     private static NotificationGrpc.NotificationStub asyncStub;
     private ManagedChannel channel;
-
+    private String token;
     private Context context;
 
     @Nullable
@@ -50,18 +51,8 @@ public class GRPCNotificationService extends Service {
         super.onCreate();
         this.context = getApplicationContext();
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
-
-        channel = ManagedChannelBuilder.forAddress("beta.beckn.uat.juspay.net", 50051)
-                .intercept(new GRPCNotificationHeaderInterceptor(token))
-                .keepAliveTime(15, TimeUnit.SECONDS)
-                .build();
-        asyncStub = NotificationGrpc.newStub(channel);
-        try {
-            startGRPCNotificationService();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+        initialize();
 //        this.startForeground(50051, createNotification());
     }
 
@@ -73,7 +64,24 @@ public class GRPCNotificationService extends Service {
         stopSelf();
     }
 
-    /*Creating channel for sticky notification*/
+    /* Initialize channel and connection for bi-directional notification streaming */
+    private void initialize() {
+        channel = ManagedChannelBuilder.forAddress("beta.beckn.uat.juspay.net", 50051)
+            .intercept(new GRPCNotificationHeaderInterceptor(token))
+            .keepAliveTime(15, TimeUnit.SECONDS)
+            .enableRetry()
+            .build();
+        asyncStub = NotificationGrpc.newStub(channel);
+        startGRPCNotificationService();
+
+        // Add a termination listener to the channel
+//        channel.notifyWhenStateChanged(ConnectivityState.SHUTDOWN, () -> {
+//            Log.e("GRPC", "[Shutdown]: Reconnecting...");
+//            initialize();
+//        });
+    }
+
+    /* Creating channel for sticky notification */
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("SEARCH_REQUEST_NOTIFICATION", LOCATION_SERVICE, NotificationManager.IMPORTANCE_MIN);
@@ -100,7 +108,7 @@ public class GRPCNotificationService extends Service {
     }
 
     // This method starts the GRPC Notification Service
-    private static void startGRPCNotificationService() throws Exception {
+    private static void startGRPCNotificationService() {
         GRPCNotificationResponseObserver notificationResponseObserver = new GRPCNotificationResponseObserver();
         StreamObserver<NotificationAck> notificationRequestObserver = asyncStub.streamPayload(notificationResponseObserver);
         notificationResponseObserver.startGRPCNotification(notificationRequestObserver);
@@ -109,11 +117,7 @@ public class GRPCNotificationService extends Service {
     // Method to close the gRPC channel
     private void closeChannel() {
         if (channel != null && !channel.isShutdown()) {
-            try {
-                channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            channel.shutdownNow();
         }
     }
 
@@ -137,7 +141,7 @@ class GRPCNotificationResponseObserver implements StreamObserver<NotificationPay
     private StreamObserver<NotificationAck> notificationRequestObserver;
 
     /***
-     *startGRPCNotification - this method is responsible for initiating the connection to the server ( initially the acknowledgement will be sent for a random notification id )'''
+     * This method is responsible for initiating the connection to the server ( initially the acknowledgement will be sent for a random notification id )'''
      * ***/
     public void startGRPCNotification( StreamObserver<NotificationAck> notificationRequestObserver){
         this.notificationRequestObserver = notificationRequestObserver;
@@ -148,8 +152,9 @@ class GRPCNotificationResponseObserver implements StreamObserver<NotificationPay
     @Override
     public void onNext(NotificationPayload value) {
         Log.i("GRPC", "[Message] : " + value.toString());
-        // here we receive the message
-        // we need to process the data here.
+        /***
+         * Here we receive the message, we need to process the data here.
+         */
         this.notificationRequestObserver.onNext(NotificationAck.newBuilder().setId(value.getId()).build());
     }
 
