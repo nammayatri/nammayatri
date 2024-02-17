@@ -16,8 +16,8 @@
 
 module Resources.Localizable.TA where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getTA :: STR -> String
 getTA stringKey =
@@ -1026,3 +1026,4 @@ getTA stringKey =
     ONE_WAY_STR -> "ஒரு வழி"
     SHARE_TICKET -> "பகிர் டிக்கெட்"
     ORIGIN -> "தொடக்கம்"
+    RENTAL_FARE -> "வாடகை கட்டணம்"

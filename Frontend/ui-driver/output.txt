@@ -1,0 +1,1193 @@
+
+> atlas-ui-driver@1.0.0 start
+> npm-run-all -p dev webpack-dev
+
+
+> atlas-ui-driver@1.0.0 webpack-dev
+> webpack-dev-server --env sandbox --mode development --config webpack.config.js --host
+
+
+> atlas-ui-driver@1.0.0 dev
+> spago build --watch
+
+[34mℹ[39m [90m｢wds｣[39m: Project is running at http://0.0.0.0:8083/webpack-dev-server/
+[34mℹ[39m [90m｢wds｣[39m: webpack output is served from /dist/
+[34mℹ[39m [90m｢wds｣[39m: Content not from webpack is served from /Users/vivek.vishal/Documents/nammayatri/NY/nammayatri/Frontend/ui-driver/dist
+[34mℹ[39m [90m｢wdm｣[39m: Hash: ae43fdb240c550217e9f
+Version: webpack 4.47.0
+Time: 43601ms
+Built at: 02/05/2024 6:38:53 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  23.5 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./index.js] 14 KiB {app} [built]
+[./node_modules/core-js/index.js] 640 bytes {app} [built]
+[./node_modules/core-js/modules/_core.js] 123 bytes {app} [built]
+[./node_modules/core-js/modules/core.delay.js] 406 bytes {app} [built]
+[./node_modules/core-js/modules/core.dict.js] 4.39 KiB {app} [built]
+[./node_modules/core-js/modules/core.function.part.js] 207 bytes {app} [built]
+[./node_modules/core-js/modules/core.get-iterator-method.js] 297 bytes {app} [built]
+[./node_modules/core-js/modules/core.get-iterator.js] 296 bytes {app} [built]
+[./node_modules/core-js/modules/core.is-iterable.js] 373 bytes {app} [built]
+[./node_modules/core-js/modules/core.number.iterator.js] 243 bytes {app} [built]
+[./node_modules/presto-ui/index.js] 1.65 KiB {app} [built]
+[./node_modules/regenerator-runtime/runtime.js] 24.6 KiB {app} [built]
+[./output/ConfigProvider/index.js] 32.5 KiB {app} [built]
+[./output/Engineering.Helpers.LogEvent/index.js] 10 KiB {app} [built]
+[./output/Main/index.js] 15.5 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: a261adb30fb9f40ed4be
+Version: webpack 4.47.0
+Time: 6841ms
+Built at: 02/05/2024 6:39:01 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Common.Types.App/index.js] 67.3 KiB {app} [built]
+[./output/Constants/index.js] 536 bytes {app} [built]
+[./output/Control.Applicative/index.js] 2.05 KiB {app} [built]
+[./output/Control.Bind/index.js] 2.67 KiB {app} [built]
+[./output/Control.Category/index.js] 442 bytes {app} [built]
+[./output/Control.Monad.Except.Trans/index.js] 14.9 KiB {app} [built]
+[./output/Control.Monad.Except/index.js] 996 bytes {app} [built]
+[./output/Control.Monad.Free/index.js] 17.3 KiB {app} [built]
+[./output/Control.Monad.Trans.Class/index.js] 108 bytes {app} [built]
+[./output/Control.Transformers.Back.Trans/index.js] 10.5 KiB {app} [built]
+[./output/Data.Array/index.js] 22.7 KiB {app} [built]
+[./output/Data.Either/index.js] 9.65 KiB {app} [built]
+[./output/Data.Functor/index.js] 1.57 KiB {app} [built]
+[./output/Data.List.Types/index.js] 28.4 KiB {app} [built]
+[./output/Data.Maybe/index.js] 10.4 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: f0c015cc663e27465788
+Version: webpack 4.47.0
+Time: 6858ms
+Built at: 02/05/2024 6:39:09 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/AssetsProvider/foreign.js] 1.38 KiB {app} [built]
+[./output/AssetsProvider/index.js] 16.3 KiB {app} [built]
+[./output/Common.Resources.Constants/index.js] 345 bytes {app} [built]
+[./output/Common.Styles.Colors/index.js] 4.11 KiB {app} [built]
+[./output/Components.ChatView.Controller/index.js] 3.47 KiB {app} [built]
+[./output/ConfigProvider/foreign.js] 3.55 KiB {app} [built]
+[./output/ConfigProvider/index.js] 32.5 KiB {app} [built]
+[./output/Engineering.Helpers.Commons/index.js] 20.5 KiB {app} [built]
+[./output/Engineering.Helpers.LogEvent/foreign.js] 96 bytes {app} [built]
+[./output/Engineering.Helpers.LogEvent/index.js] 10 KiB {app} [built]
+[./output/JBridge/index.js] 10.9 KiB {app} [built]
+[./output/Log/index.js] 7.84 KiB {app} [built]
+[./output/PrestoDOM.Core/index.js] 56.5 KiB {app} [built]
+[./output/Tracker.Types/index.js] 216 KiB {app} [built]
+[./output/Tracker/index.js] 19.7 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: a185a167dae2fa7f3a25
+Version: webpack 4.47.0
+Time: 6398ms
+Built at: 02/05/2024 6:39:44 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Services.API/index.js] 728 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 6bf1baad5c326355c356
+Version: webpack 4.47.0
+Time: 5989ms
+Built at: 02/05/2024 6:39:50 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Helpers.Firebase/index.js] 3.46 KiB {app} [built]
+[./output/Resource.Constants/index.js] 8.22 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.ScreenData/index.js] 588 bytes {app} [built]
+[./output/Screens.AboutUsScreen.ScreenData/index.js] 215 bytes {app} [built]
+[./output/Screens.AcknowledgementScreen.ScreenData/index.js] 833 bytes {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.ScreenData/index.js] 2.07 KiB {app} [built]
+[./output/Screens.AppUpdatePopUpScreen.ScreenData/index.js] 565 bytes {app} [built]
+[./output/Screens.ApplicationStatusScreen.ScreenData/index.js] 527 bytes {app} [built]
+[./output/Screens.BankDetailScreen.ScreenData/index.js] 232 bytes {app} [built]
+[./output/Screens.BookingOptionsScreen.ScreenData/index.js] 296 bytes {app} [built]
+[./output/Screens.ChooseCityScreen.ScreenData/index.js] 1.2 KiB {app} [built]
+[./output/Screens.ChooseLanguageScreen.ScreenData/index.js] 468 bytes {app} [built]
+[./output/Screens.DriverDetailsScreen.ScreenData/index.js] 4.39 KiB {app} [built]
+[./output/Screens.Types/index.js] 180 KiB {app} [built]
+[./output/Types.App/index.js] 78.9 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: fd36afc044df8943677e
+Version: webpack 4.47.0
+Time: 3270ms
+Built at: 02/05/2024 6:39:55 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  21.7 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Storage/index.js] 0 bytes {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 3b84e8a306ba679e1dda
+Version: webpack 4.47.0
+Time: 8213ms
+Built at: 02/05/2024 6:40:04 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Components.Banner.Controller/index.js] 1.53 KiB {app} [built]
+[./output/Components.BannerCarousel.Controller/index.js] 4.44 KiB {app} [built]
+[./output/Components.BottomNavBar.Controller/index.js] 4.04 KiB {app} [built]
+[./output/Components.GenericHeader.Controller/index.js] 5.02 KiB {app} [built]
+[./output/Components.GoToLocationModal.View/index.js] 9.39 KiB {app} [built]
+[./output/Components.InAppKeyboardModal.Controller/index.js] 6.33 KiB {app} [built]
+[./output/Components.OptionsMenu.Controller/index.js] 1.19 KiB {app} [built]
+[./output/Components.PrimaryButton.Controller/index.js] 3.46 KiB {app} [built]
+[./output/Components.PrimaryEditText.Controller/index.js] 3.77 KiB {app} [built]
+[./output/Components.RequestInfoCard.Controller/index.js] 2.94 KiB {app} [built]
+[./output/Helpers.API/index.js] 9.96 KiB {app} [built]
+[./output/Helpers.Utils/foreign.js] 15.1 KiB {app} [built]
+[./output/Helpers.Utils/index.js] 37.6 KiB {app} [built]
+[./output/Screens.DriverSavedLocationScreen.Transformer/index.js] 1.16 KiB {app} [built]
+[./output/Storage/index.js] 1.75 MiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: b518b435612da1e2621f
+Version: webpack 4.47.0
+Time: 6169ms
+Built at: 02/05/2024 6:40:11 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/CarouselHolder.View/index.js] 7.23 KiB {app} [built]
+[./output/Components.AppOnboardingNavBar.Controller/index.js] 1.68 KiB {app} [built]
+[./output/Components.BannerCarousel.View/index.js] 6.61 KiB {app} [built]
+[./output/Components.BottomNavBar.View/index.js] 8.93 KiB {app} [built]
+[./output/Components.ChatView.View/index.js] 38.5 KiB {app} [built]
+[./output/Components.ErrorModal.Controller/index.js] 2.37 KiB {app} [built]
+[./output/Components.ErrorModal.View/index.js] 6.93 KiB {app} [built]
+[./output/Engineering.Helpers.Utils/index.js] 23.4 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 2.72 KiB {app} [built]
+[./output/Screens.BookingOptionsScreen.Controller/index.js] 9.06 KiB {app} [built]
+[./output/Screens.DriverProfileScreen.Transformer/index.js] 1.6 KiB {app} [built]
+[./output/Screens.EditBankDetailsScreen.Handler/index.js] 2.01 KiB {app} [built]
+[./output/Screens.PaymentHistoryScreen.Transformer/index.js] 18 KiB {app} [built]
+[./output/Screens.PopUpScreen.Controller/index.js] 19 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.Transformer/index.js] 15.9 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 1392f7af1e178ddaf48d
+Version: webpack 4.47.0
+Time: 4888ms
+Built at: 02/05/2024 6:40:16 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Components.RideCompletedCard.Controller/index.js] 13.2 KiB {app} [built]
+[./output/Screens.AboutUsScreen.Handler/index.js] 2.59 KiB {app} [built]
+[./output/Screens.AboutUsScreen.View/index.js] 13.2 KiB {app} [built]
+[./output/Screens.AppUpdatePopUpScreen.Handler/index.js] 3.81 KiB {app} [built]
+[./output/Screens.AppUpdatePopUpScreen.View/index.js] 24.3 KiB {app} [built]
+[./output/Screens.ChooseCityScreen.View/index.js] 21.6 KiB {app} [built]
+[./output/Screens.DriverDetailsScreen.Controller/index.js] 54.1 KiB {app} [built]
+[./output/Screens.NoInternetScreen.Handler/index.js] 3.08 KiB {app} [built]
+[./output/Screens.RegistrationScreen.Controller/index.js] 54.8 KiB {app} [built]
+[./output/Screens.ReportIssueChatScreen.Handler/index.js] 2.88 KiB {app} [built]
+[./output/Screens.SelectLanguageScreen.Handler/index.js] 2.28 KiB {app} [built]
+[./output/Screens.TripDetailsScreen.Handler/index.js] 3.05 KiB {app} [built]
+[./output/Screens.VehicleDetailsScreen.Handler/index.js] 2.7 KiB {app} [built]
+[./output/Screens.WelcomeScreen.Handler/index.js] 2.22 KiB {app} [built]
+[./output/Screens.WriteToUsScreen.Handler/index.js] 2.62 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 0dd56714f7d4293c6971
+Version: webpack 4.47.0
+Time: 4771ms
+Built at: 02/05/2024 6:40:21 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Components.IndividualRideCard.View/index.js] 23.3 KiB {app} [built]
+[./output/Components.RideCompletedCard.View/index.js] 58.8 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.Controller/index.js] 22.8 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.View/index.js] 23.1 KiB {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.ComponentConfig/index.js] 20.1 KiB {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.Controller/index.js] 124 KiB {app} [built]
+[./output/Screens.DriverDetailsScreen.View/index.js] 21.6 KiB {app} [built]
+[./output/Screens.DriverEarningsScreen.Controller/index.js] 105 KiB {app} [built]
+[./output/Screens.PermissionsScreen.View/index.js] 16 KiB {app} [built]
+[./output/Screens.RegistrationScreen.View/index.js] 43.3 KiB {app} [built]
+[./output/Screens.RideHistoryScreen.Controller/index.js] 45.8 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.ComponentConfig/index.js] 69.3 KiB {app} [built]
+    + 1203 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 3de8d19f42ef2395fb41
+Version: webpack 4.47.0
+Time: 3866ms
+Built at: 02/05/2024 6:40:25 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.AddVehicleDetailsScreen.Views/index.js] 66.7 KiB {app} [built]
+[./output/Screens.HomeScreen.ComponentConfig/index.js] 273 KiB {app} [built]
+[./output/Screens.UploadDrivingLicenseScreen.View/index.js] 81.5 KiB {app} [built]
+    + 1212 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 5eaa371c9dffb9c2fa0b
+Version: webpack 4.47.0
+Time: 4949ms
+Built at: 02/05/2024 6:40:31 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.AadhaarVerificationScreen.Handler/index.js] 4.9 KiB {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.Handler/index.js] 9.07 KiB {app} [built]
+[./output/Screens.BookingOptionsScreen.Handler/index.js] 3.34 KiB {app} [built]
+[./output/Screens.ChooseCityScreen.Handler/index.js] 3.65 KiB {app} [built]
+[./output/Screens.ChooseLanguageScreen.Handler/index.js] 3.04 KiB {app} [built]
+[./output/Screens.DriverDetailsScreen.Handler/index.js] 4.17 KiB {app} [built]
+[./output/Screens.EnterMobileNumberScreen.Handler/index.js] 4.61 KiB {app} [built]
+[./output/Screens.EnterOTPScreen.Handler/index.js] 3.15 KiB {app} [built]
+[./output/Screens.PermissionsScreen.Handler/index.js] 3.88 KiB {app} [built]
+[./output/Screens.PopUpScreen.Handler/index.js] 3.42 KiB {app} [built]
+[./output/Screens.RegistrationScreen.Handler/index.js] 5.15 KiB {app} [built]
+[./output/Screens.UploadDrivingLicenseScreen.Handler/index.js] 7.46 KiB {app} [built]
+[./output/Types.ModifyScreenState/index.js] 126 KiB {app} [built]
+    + 1202 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 46502fb453aa9afc8cce
+Version: webpack 4.47.0
+Time: 4095ms
+Built at: 02/05/2024 6:40:35 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Components.NotificationDetailModel.View/index.js] 34 KiB {app} [built]
+[./output/Screens.ApplicationStatusScreen.Handler/index.js] 3.96 KiB {app} [built]
+[./output/Screens.ApplicationStatusScreen.View/index.js] 26.5 KiB {app} [built]
+[./output/Screens.DriverReferralScreen.View/index.js] 34.5 KiB {app} [built]
+[./output/Screens.DriverSavedLocationScreen.Handler/index.js] 10.6 KiB {app} [built]
+[./output/Screens.DriverSavedLocationScreen.View/index.js] 51.6 KiB {app} [built]
+[./output/Screens.HelpAndSupportScreen.Handler/index.js] 4.42 KiB {app} [built]
+[./output/Screens.HelpAndSupportScreen.View/index.js] 21.2 KiB {app} [built]
+[./output/Screens.PaymentHistoryScreen.View/index.js] 50.5 KiB {app} [built]
+[./output/Screens.RideHistoryScreen.Handler/index.js] 9.71 KiB {app} [built]
+[./output/Screens.RideHistoryScreen.View/index.js] 28.7 KiB {app} [built]
+[./output/Screens.RideSelectionScreen.Handler/index.js] 4.4 KiB {app} [built]
+[./output/Screens.RideSelectionScreen.View/index.js] 19.6 KiB {app} [built]
+[./output/Services.Backend/index.js] 113 KiB {app} [built]
+    + 1201 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: a6a2f84cde730bdb527e
+Version: webpack 4.47.0
+Time: 4765ms
+Built at: 02/05/2024 6:40:40 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Components.NotificationCard.View/index.js] 16.9 KiB {app} [built]
+[./output/Screens.DriverEarningsScreen.Handler/index.js] 7.04 KiB {app} [built]
+[./output/Screens.DriverEarningsScreen.View/index.js] 115 KiB {app} [built]
+[./output/Screens.DriverReferralScreen.Handler/index.js] 5.56 KiB {app} [built]
+[./output/Screens.NotificationsScreen.Controller/index.js] 60.9 KiB {app} [built]
+[./output/Screens.NotificationsScreen.Handler/index.js] 6.89 KiB {app} [built]
+[./output/Screens.NotificationsScreen.View/index.js] 22.6 KiB {app} [built]
+[./output/Screens.PaymentHistoryScreen.Handler/index.js] 4.19 KiB {app} [built]
+[./output/Screens.ReferralScreen.Handler/index.js] 7.01 KiB {app} [built]
+[./output/Screens.ReferralScreen.View/index.js] 91 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.Controller/index.js] 138 KiB {app} [built]
+    + 1204 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: ed68bb73225a701fa138
+Version: webpack 4.47.0
+Time: 3404ms
+Built at: 02/05/2024 6:40:44 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.OnBoardingSubscriptionScreen.Handler/index.js] 4.29 KiB {app} [built]
+[./output/Screens.OnBoardingSubscriptionScreen.View/index.js] 39.2 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 40b22f743c9f5d9bbee9
+Version: webpack 4.47.0
+Time: 4933ms
+Built at: 02/05/2024 6:40:49 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.DriverProfileScreen.ComponentConfig/index.js] 84 KiB {app} [built]
+[./output/Screens.DriverProfileScreen.Controller/index.js] 245 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.Handler/index.js] 9.65 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.View/index.js] 156 KiB {app} [built]
+    + 1211 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 58a61c3001672f98f113
+Version: webpack 4.47.0
+Time: 3859ms
+Built at: 02/05/2024 6:40:53 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.DriverProfileScreen.Handler/index.js] 18.9 KiB {app} [built]
+[./output/Screens.DriverProfileScreen.View/index.js] 135 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 6f08be4164218a352735
+Version: webpack 4.47.0
+Time: 3865ms
+Built at: 02/05/2024 6:40:57 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Controller/index.js] 569 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 651e0a3d532c59ee66f6
+Version: webpack 4.47.0
+Time: 3491ms
+Built at: 02/05/2024 6:41:01 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.View/index.js] 156 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 5c196deddeec16ff1673
+Version: webpack 4.47.0
+Time: 2985ms
+Built at: 02/05/2024 6:41:04 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Handler/index.js] 20.9 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: e5bbb6bd4fa526a87fbb
+Version: webpack 4.47.0
+Time: 1989ms
+Built at: 02/05/2024 6:41:21 PM
+          Asset    Size  Chunks                    Chunk Names
+index_bundle.js  13 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 0 bytes {app} [built]
+    + 903 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 61c3877021896c4d3bfb
+Version: webpack 4.47.0
+Time: 9545ms
+Built at: 02/05/2024 6:41:30 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Common.Resources.Constants/index.js] 345 bytes {app} [built]
+[./output/Constants.Configs/index.js] 757 bytes {app} [built]
+[./output/Data.Lens.Getter/index.js] 1.63 KiB {app} [built]
+[./output/Data.Lens.Internal.Forget/index.js] 2.56 KiB {app} [built]
+[./output/Engineering.Helpers.Suggestions/index.js] 113 KiB {app} [built]
+[./output/Engineering.Helpers.Utils/index.js] 23.4 KiB {app} [built]
+[./output/Flow/index.js] 666 KiB {app} [built]
+[./output/Helpers.API/index.js] 9.96 KiB {app} [built]
+[./output/Helpers.Firebase/index.js] 3.46 KiB {app} [built]
+[./output/Main/index.js] 15.5 KiB {app} [built]
+[./output/Mobility.Prelude/index.js] 2.76 KiB {app} [built]
+[./output/PrestoDOM.Core.Types.Language.Flow/index.js] 6.88 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.Handler/index.js] 4.9 KiB {app} [built]
+[./output/Screens.AboutUsScreen.Handler/index.js] 2.59 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 2.72 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: fde18cf64d9e75972c10
+Version: webpack 4.47.0
+Time: 5372ms
+Built at: 02/05/2024 6:43:05 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.Types/index.js] 181 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 4428ms
+Built at: 02/05/2024 6:43:10 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Resource.Constants/index.js] 8.22 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.ScreenData/index.js] 588 bytes {app} [built]
+[./output/Screens.AboutUsScreen.ScreenData/index.js] 215 bytes {app} [built]
+[./output/Screens.AcknowledgementScreen.ScreenData/index.js] 833 bytes {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.ScreenData/index.js] 2.07 KiB {app} [built]
+[./output/Screens.AppUpdatePopUpScreen.ScreenData/index.js] 565 bytes {app} [built]
+[./output/Screens.ApplicationStatusScreen.ScreenData/index.js] 527 bytes {app} [built]
+[./output/Screens.BankDetailScreen.ScreenData/index.js] 232 bytes {app} [built]
+[./output/Screens.BookingOptionsScreen.ScreenData/index.js] 296 bytes {app} [built]
+[./output/Screens.ChooseCityScreen.ScreenData/index.js] 1.2 KiB {app} [built]
+[./output/Screens.ChooseLanguageScreen.ScreenData/index.js] 468 bytes {app} [built]
+[./output/Screens.DriverDetailsScreen.ScreenData/index.js] 4.39 KiB {app} [built]
+[./output/Screens.DriverEarningsScreen.ScreenData/index.js] 3.18 KiB {app} [built]
+[./output/Screens.DriverProfileScreen.ScreenData/index.js] 6.11 KiB {app} [built]
+[./output/Screens.Types/index.js] 180 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 3056ms
+Built at: 02/05/2024 6:43:13 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/CarouselHolder.Controller/index.js] 2.77 KiB {app} [built]
+[./output/Helpers.Firebase/index.js] 3.46 KiB {app} [built]
+[./output/Types.App/index.js] 78.9 KiB {app} [built]
+    + 1212 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 6839c6a972f5551ad832
+Version: webpack 4.47.0
+Time: 3754ms
+Built at: 02/05/2024 6:43:22 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  21.8 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Storage/index.js] 0 bytes {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 9910ms
+Built at: 02/05/2024 6:43:33 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/CarouselHolder.View/index.js] 7.23 KiB {app} [built]
+[./output/Components.Banner.Controller/index.js] 1.53 KiB {app} [built]
+[./output/Components.BannerCarousel.Controller/index.js] 4.44 KiB {app} [built]
+[./output/Components.GenericHeader.Controller/index.js] 5.02 KiB {app} [built]
+[./output/Components.InAppKeyboardModal.Controller/index.js] 6.33 KiB {app} [built]
+[./output/Components.OptionsMenu.Controller/index.js] 1.19 KiB {app} [built]
+[./output/Components.PrimaryButton.Controller/index.js] 3.46 KiB {app} [built]
+[./output/Components.PrimaryEditText.Controller/index.js] 3.77 KiB {app} [built]
+[./output/Components.RequestInfoCard.Controller/index.js] 2.94 KiB {app} [built]
+[./output/Components.StatsModel.Controller/index.js] 2.13 KiB {app} [built]
+[./output/Helpers.API/index.js] 9.96 KiB {app} [built]
+[./output/Helpers.Utils/foreign.js] 15.1 KiB {app} [built]
+[./output/Helpers.Utils/index.js] 37.6 KiB {app} [built]
+[./output/Screens.DriverSavedLocationScreen.Transformer/index.js] 1.16 KiB {app} [built]
+[./output/Storage/index.js] 1.75 MiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 57725e2abddb3ac2e7dc
+Version: webpack 4.47.0
+Time: 5897ms
+Built at: 02/05/2024 6:43:40 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Components.AppOnboardingNavBar.Controller/index.js] 1.68 KiB {app} [built]
+[./output/Components.BannerCarousel.View/index.js] 6.61 KiB {app} [built]
+[./output/Components.BottomNavBar.Controller/index.js] 4.04 KiB {app} [built]
+[./output/Components.BottomNavBar.View/index.js] 8.93 KiB {app} [built]
+[./output/Components.ChatView.View/index.js] 38.5 KiB {app} [built]
+[./output/Components.ErrorModal.Controller/index.js] 2.37 KiB {app} [built]
+[./output/Components.ErrorModal.View/index.js] 6.93 KiB {app} [built]
+[./output/Engineering.Helpers.Utils/index.js] 23.4 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 0 bytes {app} [built]
+[./output/Screens.BookingOptionsScreen.Controller/index.js] 9.06 KiB {app} [built]
+[./output/Screens.DriverProfileScreen.Transformer/index.js] 1.6 KiB {app} [built]
+[./output/Screens.EditBankDetailsScreen.Handler/index.js] 2.01 KiB {app} [built]
+[./output/Screens.PaymentHistoryScreen.Transformer/index.js] 18 KiB {app} [built]
+[./output/Screens.PopUpScreen.Controller/index.js] 19 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.Transformer/index.js] 15.9 KiB {app} [built]
+    + 1198 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 6381ms
+Built at: 02/05/2024 6:43:47 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Components.RateCard.View/index.js] 30.4 KiB {app} [built]
+[./output/Components.RatingCard.View/index.js] 16.7 KiB {app} [built]
+[./output/Components.RideCompletedCard.Controller/index.js] 13.2 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Controller/index.js] 3.61 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 2.72 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.View/index.js] 10.9 KiB {app} [built]
+[./output/Screens.AppUpdatePopUpScreen.Controller/index.js] 6.43 KiB {app} [built]
+[./output/Screens.BookingOptionsScreen.View/index.js] 23.7 KiB {app} [built]
+[./output/Screens.ChooseLanguageScreen.View/index.js] 7.88 KiB {app} [built]
+[./output/Screens.DriverDetailsScreen.ComponentConfig/index.js] 38.9 KiB {app} [built]
+[./output/Screens.DriverReferralScreen.Controller/index.js] 19.3 KiB {app} [built]
+[./output/Screens.NoInternetScreen.Handler/index.js] 3.08 KiB {app} [built]
+[./output/Screens.SelectLanguageScreen.Handler/index.js] 2.28 KiB {app} [built]
+[./output/Screens.VehicleDetailsScreen.Handler/index.js] 2.7 KiB {app} [built]
+[./output/Screens.WelcomeScreen.Handler/index.js] 2.22 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 4828ms
+Built at: 02/05/2024 6:43:52 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.AboutUsScreen.Handler/index.js] 2.59 KiB {app} [built]
+[./output/Screens.AboutUsScreen.View/index.js] 13.2 KiB {app} [built]
+[./output/Screens.AppUpdatePopUpScreen.Handler/index.js] 3.81 KiB {app} [built]
+[./output/Screens.AppUpdatePopUpScreen.View/index.js] 24.3 KiB {app} [built]
+[./output/Screens.ChooseCityScreen.View/index.js] 21.6 KiB {app} [built]
+[./output/Screens.DriverDetailsScreen.Controller/index.js] 54.1 KiB {app} [built]
+[./output/Screens.DriverEarningsScreen.ComponentConfig/index.js] 30.8 KiB {app} [built]
+[./output/Screens.DriverReferralScreen.ComponentConfig/index.js] 7.25 KiB {app} [built]
+[./output/Screens.DriverSavedLocationScreen.Controller/index.js] 26.8 KiB {app} [built]
+[./output/Screens.PermissionsScreen.Controller/index.js] 33.7 KiB {app} [built]
+[./output/Screens.PermissionsScreen.View/index.js] 16 KiB {app} [built]
+[./output/Screens.RegistrationScreen.Controller/index.js] 54.8 KiB {app} [built]
+[./output/Screens.ReportIssueChatScreen.View/index.js] 27.1 KiB {app} [built]
+[./output/Screens.TripDetailsScreen.Handler/index.js] 3.05 KiB {app} [built]
+[./output/Screens.WriteToUsScreen.Handler/index.js] 2.62 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 4073ms
+Built at: 02/05/2024 6:43:56 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Components.IndividualRideCard.View/index.js] 23.3 KiB {app} [built]
+[./output/Components.RideCompletedCard.View/index.js] 58.8 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.Controller/index.js] 22.8 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.View/index.js] 23.1 KiB {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.ComponentConfig/index.js] 20.1 KiB {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.Controller/index.js] 124 KiB {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.Views/index.js] 66.7 KiB {app} [built]
+[./output/Screens.DriverDetailsScreen.View/index.js] 21.6 KiB {app} [built]
+[./output/Screens.DriverEarningsScreen.Controller/index.js] 105 KiB {app} [built]
+[./output/Screens.RegistrationScreen.View/index.js] 43.3 KiB {app} [built]
+[./output/Screens.ReportIssueChatScreen.Handler/index.js] 2.88 KiB {app} [built]
+[./output/Screens.RideHistoryScreen.Controller/index.js] 45.8 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.ComponentConfig/index.js] 69.3 KiB {app} [built]
+[./output/Screens.UploadDrivingLicenseScreen.Controller/index.js] 83.4 KiB {app} [built]
+    + 1201 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 5346ms
+Built at: 02/05/2024 6:44:02 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.ComponentConfig/index.js] 273 KiB {app} [built]
+[./output/Screens.UploadDrivingLicenseScreen.View/index.js] 81.5 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 5483ms
+Built at: 02/05/2024 6:44:08 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.AadhaarVerificationScreen.Handler/index.js] 4.9 KiB {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.Handler/index.js] 9.07 KiB {app} [built]
+[./output/Screens.BookingOptionsScreen.Handler/index.js] 3.34 KiB {app} [built]
+[./output/Screens.ChooseCityScreen.Handler/index.js] 3.65 KiB {app} [built]
+[./output/Screens.ChooseLanguageScreen.Handler/index.js] 3.04 KiB {app} [built]
+[./output/Screens.DriverDetailsScreen.Handler/index.js] 4.17 KiB {app} [built]
+[./output/Screens.EnterMobileNumberScreen.Handler/index.js] 4.61 KiB {app} [built]
+[./output/Screens.EnterOTPScreen.Handler/index.js] 3.15 KiB {app} [built]
+[./output/Screens.PermissionsScreen.Handler/index.js] 3.88 KiB {app} [built]
+[./output/Screens.PopUpScreen.Handler/index.js] 3.42 KiB {app} [built]
+[./output/Screens.RegistrationScreen.Handler/index.js] 5.15 KiB {app} [built]
+[./output/Screens.UploadDrivingLicenseScreen.Handler/index.js] 7.46 KiB {app} [built]
+[./output/Types.ModifyScreenState/index.js] 126 KiB {app} [built]
+    + 1202 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 5400ms
+Built at: 02/05/2024 6:44:14 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Components.NotificationDetailModel.View/index.js] 34 KiB {app} [built]
+[./output/Screens.ApplicationStatusScreen.View/index.js] 26.5 KiB {app} [built]
+[./output/Screens.HelpAndSupportScreen.View/index.js] 21.2 KiB {app} [built]
+[./output/Screens.RideSelectionScreen.Handler/index.js] 4.4 KiB {app} [built]
+[./output/Screens.RideSelectionScreen.View/index.js] 19.6 KiB {app} [built]
+[./output/Services.Backend/index.js] 113 KiB {app} [built]
+    + 1209 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 3489ms
+Built at: 02/05/2024 6:44:18 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.ApplicationStatusScreen.Handler/index.js] 3.96 KiB {app} [built]
+[./output/Screens.DriverReferralScreen.Handler/index.js] 5.56 KiB {app} [built]
+[./output/Screens.DriverReferralScreen.View/index.js] 34.5 KiB {app} [built]
+[./output/Screens.DriverSavedLocationScreen.Handler/index.js] 10.6 KiB {app} [built]
+[./output/Screens.DriverSavedLocationScreen.View/index.js] 51.6 KiB {app} [built]
+[./output/Screens.HelpAndSupportScreen.Handler/index.js] 4.42 KiB {app} [built]
+[./output/Screens.NotificationsScreen.Controller/index.js] 60.9 KiB {app} [built]
+[./output/Screens.PaymentHistoryScreen.Handler/index.js] 4.19 KiB {app} [built]
+[./output/Screens.PaymentHistoryScreen.View/index.js] 50.5 KiB {app} [built]
+[./output/Screens.ReferralScreen.View/index.js] 91 KiB {app} [built]
+[./output/Screens.RideHistoryScreen.Handler/index.js] 9.71 KiB {app} [built]
+[./output/Screens.RideHistoryScreen.View/index.js] 28.7 KiB {app} [built]
+    + 1203 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 3614ms
+Built at: 02/05/2024 6:44:22 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Components.NotificationCard.View/index.js] 16.9 KiB {app} [built]
+[./output/Screens.DriverEarningsScreen.Handler/index.js] 7.04 KiB {app} [built]
+[./output/Screens.DriverEarningsScreen.View/index.js] 115 KiB {app} [built]
+[./output/Screens.NotificationsScreen.Handler/index.js] 6.89 KiB {app} [built]
+[./output/Screens.NotificationsScreen.View/index.js] 22.6 KiB {app} [built]
+[./output/Screens.OnBoardingSubscriptionScreen.View/index.js] 39.2 KiB {app} [built]
+[./output/Screens.ReferralScreen.Handler/index.js] 7.01 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.Controller/index.js] 138 KiB {app} [built]
+    + 1207 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 4359ms
+Built at: 02/05/2024 6:44:26 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.DriverProfileScreen.Controller/index.js] 245 KiB {app} [built]
+[./output/Screens.OnBoardingSubscriptionScreen.Handler/index.js] 4.29 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.View/index.js] 156 KiB {app} [built]
+    + 1212 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 3297ms
+Built at: 02/05/2024 6:44:30 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.DriverProfileScreen.ComponentConfig/index.js] 84 KiB {app} [built]
+[./output/Screens.SubscriptionScreen.Handler/index.js] 9.65 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2478025e9cdc04c556fb
+Version: webpack 4.47.0
+Time: 3377ms
+Built at: 02/05/2024 6:44:34 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.DriverProfileScreen.Handler/index.js] 18.9 KiB {app} [built]
+[./output/Screens.DriverProfileScreen.View/index.js] 135 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 62fa263aa99a974c89bd
+Version: webpack 4.47.0
+Time: 5037ms
+Built at: 02/05/2024 6:45:35 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  23.5 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Controller/index.js] 0 bytes {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 66a5f995a740f7785128
+Version: webpack 4.47.0
+Time: 4955ms
+Built at: 02/05/2024 6:45:41 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Controller/index.js] 569 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 66a5f995a740f7785128
+Version: webpack 4.47.0
+Time: 3794ms
+Built at: 02/05/2024 6:45:45 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Handler/index.js] 20.9 KiB {app} [built]
+[./output/Screens.HomeScreen.View/index.js] 156 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 16fda781ac526a76fd66
+Version: webpack 4.47.0
+Time: 5182ms
+Built at: 02/05/2024 6:46:17 PM
+          Asset    Size  Chunks                    Chunk Names
+index_bundle.js  13 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 0 bytes {app} [built]
+    + 903 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 19d2ebf250fc09fbb1f4
+Version: webpack 4.47.0
+Time: 11968ms
+Built at: 02/05/2024 6:46:29 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Common.Resources.Constants/index.js] 345 bytes {app} [built]
+[./output/Constants.Configs/index.js] 757 bytes {app} [built]
+[./output/Data.Lens.Getter/index.js] 1.63 KiB {app} [built]
+[./output/Data.Lens.Internal.Forget/index.js] 2.56 KiB {app} [built]
+[./output/Engineering.Helpers.Suggestions/index.js] 113 KiB {app} [built]
+[./output/Engineering.Helpers.Utils/index.js] 23.4 KiB {app} [built]
+[./output/Flow/index.js] 666 KiB {app} [built]
+[./output/Helpers.API/index.js] 9.96 KiB {app} [built]
+[./output/Helpers.Firebase/index.js] 3.46 KiB {app} [built]
+[./output/Mobility.Prelude/index.js] 2.76 KiB {app} [built]
+[./output/PrestoDOM.Core.Types.Language.Flow/index.js] 6.88 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.Handler/index.js] 4.9 KiB {app} [built]
+[./output/Screens.AboutUsScreen.Handler/index.js] 2.59 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 2.72 KiB {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.Handler/index.js] 9.07 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 19d2ebf250fc09fbb1f4
+Version: webpack 4.47.0
+Time: 3666ms
+Built at: 02/05/2024 6:46:33 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Main/index.js] 15.5 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 1a5aee2fee0747e6261c
+Version: webpack 4.47.0
+Time: 5515ms
+Built at: 02/05/2024 6:48:51 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 667 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: bf1bcd625ff04d686cf1
+Version: webpack 4.47.0
+Time: 5196ms
+Built at: 02/05/2024 6:48:56 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 666 KiB {app} [built]
+[./output/Main/index.js] 15.5 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 3de398b8a13579a043f6
+Version: webpack 4.47.0
+Time: 6022ms
+Built at: 02/05/2024 6:51:01 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 663 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 3de398b8a13579a043f6
+Version: webpack 4.47.0
+Time: 3734ms
+Built at: 02/05/2024 6:51:04 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 663 KiB {app} [built]
+[./output/Main/index.js] 15.5 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: ee3c879badfe60494862
+Version: webpack 4.47.0
+Time: 3969ms
+Built at: 02/05/2024 6:51:09 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 664 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 59eb58b0aac380d4d4bb
+Version: webpack 4.47.0
+Time: 7614ms
+Built at: 02/05/2024 7:07:37 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Controller/index.js] 570 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: c08c29b481262e5ef0d4
+Version: webpack 4.47.0
+Time: 5156ms
+Built at: 02/05/2024 7:07:42 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Controller/index.js] 569 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: c08c29b481262e5ef0d4
+Version: webpack 4.47.0
+Time: 4165ms
+Built at: 02/05/2024 7:07:47 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Handler/index.js] 20.9 KiB {app} [built]
+[./output/Screens.HomeScreen.View/index.js] 156 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 16fda781ac526a76fd66
+Version: webpack 4.47.0
+Time: 3540ms
+Built at: 02/05/2024 7:08:24 PM
+          Asset    Size  Chunks                    Chunk Names
+index_bundle.js  13 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 0 bytes {app} [built]
+    + 903 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 50fba9def58bc283132e
+Version: webpack 4.47.0
+Time: 12046ms
+Built at: 02/05/2024 7:08:36 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Common.Resources.Constants/index.js] 345 bytes {app} [built]
+[./output/Constants.Configs/index.js] 757 bytes {app} [built]
+[./output/Data.Lens.Getter/index.js] 1.63 KiB {app} [built]
+[./output/Data.Lens.Internal.Forget/index.js] 2.56 KiB {app} [built]
+[./output/Engineering.Helpers.Suggestions/index.js] 113 KiB {app} [built]
+[./output/Engineering.Helpers.Utils/index.js] 23.4 KiB {app} [built]
+[./output/Flow/index.js] 663 KiB {app} [built]
+[./output/Helpers.API/index.js] 9.96 KiB {app} [built]
+[./output/Helpers.Firebase/index.js] 3.46 KiB {app} [built]
+[./output/Main/index.js] 15.5 KiB {app} [built]
+[./output/Mobility.Prelude/index.js] 2.76 KiB {app} [built]
+[./output/PrestoDOM.Core.Types.Language.Flow/index.js] 6.88 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.Handler/index.js] 4.9 KiB {app} [built]
+[./output/Screens.AboutUsScreen.Handler/index.js] 2.59 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 2.72 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 16fda781ac526a76fd66
+Version: webpack 4.47.0
+Time: 2356ms
+Built at: 02/05/2024 7:09:37 PM
+          Asset    Size  Chunks                    Chunk Names
+index_bundle.js  13 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 0 bytes {app} [built]
+    + 903 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 729d7e8ee59f417afa9d
+Version: webpack 4.47.0
+Time: 12252ms
+Built at: 02/05/2024 7:09:49 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Common.Resources.Constants/index.js] 345 bytes {app} [built]
+[./output/Constants.Configs/index.js] 757 bytes {app} [built]
+[./output/Data.Lens.Getter/index.js] 1.63 KiB {app} [built]
+[./output/Data.Lens.Internal.Forget/index.js] 2.56 KiB {app} [built]
+[./output/Engineering.Helpers.Suggestions/index.js] 113 KiB {app} [built]
+[./output/Engineering.Helpers.Utils/index.js] 23.4 KiB {app} [built]
+[./output/Flow/index.js] 667 KiB {app} [built]
+[./output/Helpers.API/index.js] 9.96 KiB {app} [built]
+[./output/Helpers.Firebase/index.js] 3.46 KiB {app} [built]
+[./output/Mobility.Prelude/index.js] 2.76 KiB {app} [built]
+[./output/PrestoDOM.Core.Types.Language.Flow/index.js] 6.88 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.Handler/index.js] 4.9 KiB {app} [built]
+[./output/Screens.AboutUsScreen.Handler/index.js] 2.59 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 2.72 KiB {app} [built]
+[./output/Screens.AddVehicleDetailsScreen.Handler/index.js] 9.07 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 1983da047538a94a5a41
+Version: webpack 4.47.0
+Time: 4955ms
+Built at: 02/05/2024 7:11:29 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Controller/index.js] 573 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 0cf8c99d83199872490c
+Version: webpack 4.47.0
+Time: 4695ms
+Built at: 02/05/2024 7:11:34 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Controller/index.js] 572 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 0cf8c99d83199872490c
+Version: webpack 4.47.0
+Time: 3719ms
+Built at: 02/05/2024 7:11:37 PM
+ 1 asset
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.View/index.js] 156 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 5237ba7ba0e63b765dae
+Version: webpack 4.47.0
+Time: 5405ms
+Built at: 02/05/2024 7:12:54 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Handler/index.js] 21.8 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 4ec9d501a8931a2b3c94
+Version: webpack 4.47.0
+Time: 5366ms
+Built at: 02/05/2024 7:12:59 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Handler/index.js] 21.1 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 16fda781ac526a76fd66
+Version: webpack 4.47.0
+Time: 2365ms
+Built at: 02/05/2024 7:13:16 PM
+          Asset    Size  Chunks                    Chunk Names
+index_bundle.js  13 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 0 bytes {app} [built]
+    + 903 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: a4cb46da87c83d74f553
+Version: webpack 4.47.0
+Time: 11275ms
+Built at: 02/05/2024 7:13:27 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Common.Resources.Constants/index.js] 345 bytes {app} [built]
+[./output/Constants.Configs/index.js] 757 bytes {app} [built]
+[./output/Data.Lens.Getter/index.js] 1.63 KiB {app} [built]
+[./output/Data.Lens.Internal.Forget/index.js] 2.56 KiB {app} [built]
+[./output/Engineering.Helpers.Suggestions/index.js] 113 KiB {app} [built]
+[./output/Engineering.Helpers.Utils/index.js] 23.4 KiB {app} [built]
+[./output/Flow/index.js] 666 KiB {app} [built]
+[./output/Helpers.API/index.js] 9.96 KiB {app} [built]
+[./output/Helpers.Firebase/index.js] 3.46 KiB {app} [built]
+[./output/Main/index.js] 15.5 KiB {app} [built]
+[./output/Mobility.Prelude/index.js] 2.76 KiB {app} [built]
+[./output/PrestoDOM.Core.Types.Language.Flow/index.js] 6.88 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.Handler/index.js] 4.9 KiB {app} [built]
+[./output/Screens.AboutUsScreen.Handler/index.js] 2.59 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 2.72 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 7021ae9a76abce2bab04
+Version: webpack 4.47.0
+Time: 5639ms
+Built at: 02/05/2024 7:39:34 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.View/index.js] 156 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 73b1b29f46995383a72b
+Version: webpack 4.47.0
+Time: 3942ms
+Built at: 02/05/2024 7:39:38 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Handler/index.js] 21.1 KiB {app} [built]
+[./output/Screens.HomeScreen.View/index.js] 156 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 16fda781ac526a76fd66
+Version: webpack 4.47.0
+Time: 3868ms
+Built at: 02/05/2024 7:39:58 PM
+          Asset    Size  Chunks                    Chunk Names
+index_bundle.js  13 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 0 bytes {app} [built]
+    + 903 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 73b1b29f46995383a72b
+Version: webpack 4.47.0
+Time: 11926ms
+Built at: 02/05/2024 7:40:10 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Common.Resources.Constants/index.js] 345 bytes {app} [built]
+[./output/Constants.Configs/index.js] 757 bytes {app} [built]
+[./output/Data.Lens.Getter/index.js] 1.63 KiB {app} [built]
+[./output/Data.Lens.Internal.Forget/index.js] 2.56 KiB {app} [built]
+[./output/Engineering.Helpers.Suggestions/index.js] 113 KiB {app} [built]
+[./output/Engineering.Helpers.Utils/index.js] 23.4 KiB {app} [built]
+[./output/Flow/index.js] 666 KiB {app} [built]
+[./output/Helpers.API/index.js] 9.96 KiB {app} [built]
+[./output/Helpers.Firebase/index.js] 3.46 KiB {app} [built]
+[./output/Main/index.js] 15.5 KiB {app} [built]
+[./output/Mobility.Prelude/index.js] 2.76 KiB {app} [built]
+[./output/PrestoDOM.Core.Types.Language.Flow/index.js] 6.88 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.Handler/index.js] 4.9 KiB {app} [built]
+[./output/Screens.AboutUsScreen.Handler/index.js] 2.59 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 2.72 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 2052efab840345b73d6e
+Version: webpack 4.47.0
+Time: 4427ms
+Built at: 02/05/2024 7:42:27 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 666 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 5c6c3fbd6a31c476b2b9
+Version: webpack 4.47.0
+Time: 3988ms
+Built at: 02/05/2024 7:42:31 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 668 KiB {app} [built]
+[./output/Main/index.js] 15.5 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 23deca78a71dc3282ec4
+Version: webpack 4.47.0
+Time: 4198ms
+Built at: 02/05/2024 7:44:29 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.View/index.js] 156 KiB {app} [built]
+    + 1214 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 4dc77b8335197ff654d9
+Version: webpack 4.47.0
+Time: 5840ms
+Built at: 02/05/2024 7:44:35 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Screens.HomeScreen.Handler/index.js] 21.1 KiB {app} [built]
+[./output/Screens.HomeScreen.View/index.js] 156 KiB {app} [built]
+    + 1213 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 16fda781ac526a76fd66
+Version: webpack 4.47.0
+Time: 2535ms
+Built at: 02/05/2024 7:44:54 PM
+          Asset    Size  Chunks                    Chunk Names
+index_bundle.js  13 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Flow/index.js] 0 bytes {app} [built]
+    + 903 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.
+[34mℹ[39m [90m｢wdm｣[39m: Compiling...
+[34mℹ[39m [90m｢wdm｣[39m: Hash: 64ab3184ab1b382cff0c
+Version: webpack 4.47.0
+Time: 11002ms
+Built at: 02/05/2024 7:45:05 PM
+          Asset      Size  Chunks                    Chunk Names
+index_bundle.js  24.1 MiB     app  [emitted]  [big]  app
+Entrypoint app [big] = index_bundle.js
+[./output/Common.Resources.Constants/index.js] 345 bytes {app} [built]
+[./output/Constants.Configs/index.js] 757 bytes {app} [built]
+[./output/Data.Lens.Getter/index.js] 1.63 KiB {app} [built]
+[./output/Data.Lens.Internal.Forget/index.js] 2.56 KiB {app} [built]
+[./output/Engineering.Helpers.Suggestions/index.js] 113 KiB {app} [built]
+[./output/Engineering.Helpers.Utils/index.js] 23.4 KiB {app} [built]
+[./output/Flow/index.js] 666 KiB {app} [built]
+[./output/Helpers.API/index.js] 9.96 KiB {app} [built]
+[./output/Helpers.Firebase/index.js] 3.46 KiB {app} [built]
+[./output/Main/index.js] 15.5 KiB {app} [built]
+[./output/Mobility.Prelude/index.js] 2.76 KiB {app} [built]
+[./output/PrestoDOM.Core.Types.Language.Flow/index.js] 6.88 KiB {app} [built]
+[./output/Screens.AadhaarVerificationScreen.Handler/index.js] 4.9 KiB {app} [built]
+[./output/Screens.AboutUsScreen.Handler/index.js] 2.59 KiB {app} [built]
+[./output/Screens.AcknowledgementScreen.Handler/index.js] 2.72 KiB {app} [built]
+    + 1200 hidden modules
+[34mℹ[39m [90m｢wdm｣[39m: Compiled successfully.

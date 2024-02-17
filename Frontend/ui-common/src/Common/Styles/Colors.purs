@@ -249,7 +249,6 @@ squidInkBlue = "#303440"
 
 rippleShade :: Color
 rippleShade = "#D5D5D8"
-
 green200 :: Color
 green200 = "#2053BB6F"
 
@@ -300,3 +299,6 @@ tealishGreen = "#E5F5E9"
 
 darkGradientBlue :: Color
 darkGradientBlue = "#E2EAFF"
+
+blueGreen :: Color
+blueGreen = "#42B8BA"

@@ -10,11 +10,14 @@
 package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.NO_VARIANT;
+import static in.juspay.mobility.app.NotificationUtils.RENTAL;
+import static in.juspay.mobility.app.NotificationUtils.INTERCITY;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
+import java.util.Locale;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -103,6 +106,32 @@ public class RideRequestActivity extends AppCompatActivity {
             }
             SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
+            String rentalStartTime = "";
+            String rentalStartDate= "";
+            try {            
+                final SimpleDateFormat dateTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+                dateTime.setTimeZone(TimeZone.getTimeZone("UTC"));
+                final Date rentalDateTime = dateTime.parse(rideRequestBundle.getString("rentalStartTime"));
+                rentalDateTime.setTime(rentalDateTime.getTime() + (330 * 60 * 1000));
+                final SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
+                final SimpleDateFormat tf1 = new SimpleDateFormat("h:mm a");
+                df1.setTimeZone(TimeZone.getTimeZone("IST"));
+                tf1.setTimeZone(TimeZone.getTimeZone("IST"));
+                String date = df1.format(rentalDateTime);
+                String time = tf1.format(rentalDateTime);
+                
+                rentalStartTime = time;
+                rentalStartDate = date.equals(df1.format(new Date())) ? "Today" : date;
+            }
+            catch(Exception e) {
+                System.out.println("Exception in parsing rental start date and time");
+                rentalStartDate = "Today";
+                rentalStartTime = "now";
+                e.printStackTrace();
+            }
+            String rentalRideDuration = String.format("%d:%d hr", rideRequestBundle.getInt("rentalRideDuration") / 3600 ,( rideRequestBundle.getInt("rentalRideDuration") % 3600 ) / 60);
+            String rentalRideDistance = String.format("%d km", rideRequestBundle.getInt("rentalRideDistance") / 1000);
+                    
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     (df.format(distanceTobeCovered / 1000)),
                     (df.format(Integer.parseInt(durationToPickup)/ 60)),
@@ -126,9 +155,13 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString("requestedVehicleVariant"),
                     rideRequestBundle.getBoolean("disabilityTag"),
                     rideRequestBundle.getBoolean("isTranslated"),
-                    rideRequestBundle.getBoolean("gotoTag")
+                    rideRequestBundle.getBoolean("gotoTag"),
+                    rideRequestBundle.getString("rideProductType"),
+                    rentalRideDuration,
+                    rentalRideDistance,
+                    rentalStartTime,
+                    rentalStartDate
             );
-
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
@@ -142,7 +175,52 @@ public class RideRequestActivity extends AppCompatActivity {
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag()) {
+            if(model.getRideProductType().equals(RENTAL)){
+                holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.reqButton.setTextColor(getColor(R.color.white));
+                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.turquoise)));
+                if (!variant.equals(NO_VARIANT) && service.equals("yatrisathiprovider")) {
+                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                    } else {
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_non_ac_variant_tag);
+                        holder.rideTypeImage.setVisibility(View.GONE);
+                    }
+                    holder.rideTypeText.setText(variant);
+                }
+                holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
+                holder.rentalDateTimeTag.setVisibility(View.VISIBLE);
+                holder.rentalStartTime.setText(model.getRentalRideStartTime());
+                holder.rentalStartDate.setVisibility(View.VISIBLE);
+                if(model.getRentalRideStartDate() != "")
+                {
+                    holder.rentalStartDate.setText(model.getRentalRideStartDate());
+                }
+                holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
+                holder.rentalRideDuration.setText(model.getRentalRideDuration());
+                holder.rentalRideDistance.setText(model.getRentalRideDistance());
+                holder.destinationArea.setVisibility(View.GONE);
+                holder.destinationAddress.setVisibility(View.GONE);
+                holder.distanceToBeCovered.setVisibility(View.GONE);
+                holder.destinationPinCode.setVisibility(View.GONE);
+                holder.locationDashedLine.setVisibility(View.GONE);
+                holder.locationDestinationPinTag.setVisibility(View.GONE);
+                holder.gotoTag.setVisibility(View.GONE);
+                holder.customerTipTag.setVisibility(View.GONE);
+                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
+            }
+            else if(model.getRideProductType().equals(INTERCITY))
+            {
+                holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.reqButton.setTextColor(getColor(R.color.white));
+                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.blue800)));
+                holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
+                holder.gotoTag.setVisibility(View.GONE);
+                holder.customerTipTag.setVisibility(View.GONE);
+            }
+            else if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag()) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
                 holder.textIncludesCharges.setText(model.getCustomerTip() > 0 ?
@@ -473,10 +551,17 @@ public class RideRequestActivity extends AppCompatActivity {
             indicatorText1 = findViewById(R.id.indicatorText1);
             indicatorText2 = findViewById(R.id.indicatorText2);
             indicatorText3 = findViewById(R.id.indicatorText3);
+
             progressIndicator1 = findViewById(R.id.progress_indicator_1);
             progressIndicator2 = findViewById(R.id.progress_indicator_2);
             progressIndicator3 = findViewById(R.id.progress_indicator_3);
+
+
+            
+            
+
             indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1, indicatorText2, indicatorText3));
+           
             progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1, progressIndicator2, progressIndicator3));
             indicatorList = new ArrayList<>(Arrays.asList(
                     findViewById(R.id.indicator1),
@@ -496,7 +581,21 @@ public class RideRequestActivity extends AppCompatActivity {
                             (sheetArrayList.get(i).getRequestedVehicleVariant().equals(NotificationUtils.NO_VARIANT) ? "" : (sheetArrayList.get(i).getRequestedVehicleVariant() + "\n")) +
                             (sharedPref.getString("CURRENCY", "₹")) +
                             (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
+
+//                   
+                    if(viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getRideProductType().equals(RENTAL))
+                    {
+                        indicatorList.get(i).setBackgroundColor(getColor(R.color.turquoise10));
+                    }
+
+//                   
+                    if(viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getRideProductType().equals(INTERCITY))
+                    {
+                        indicatorList.get(i).setBackgroundColor(getColor(R.color.blue800));
+                    }
+
                 } else {
                     indicatorTextList.get(i).setText("--");
                     progressIndicatorsList.get(i).setVisibility(View.GONE);

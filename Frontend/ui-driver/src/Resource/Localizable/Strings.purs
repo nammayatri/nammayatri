@@ -17,7 +17,8 @@ module Language.Strings where
 
 import Data.String.Common (trim)
 import Language.Types (STR)
-import MerchantConfig.Utils (getStringFromConfig, getStringWithVar)
+import MerchantConfig.Utils (getStringFromConfig, getStringWithVar, getMerchant, Merchant(..))
+import Common.Types.App (LazyCheck(..))
 import Prelude (($))
 import ConfigJBridge (getKeyInSharedPrefKeysConfig)
 import Data.Maybe (Maybe(..))
@@ -30,12 +31,23 @@ import Resources.Localizable.TA (getTA)
 import Resources.Localizable.FR (getFR)
 import Resources.Localizable.TE (getTE)
 import Locale.Utils
+import Prelude
 
 getString :: STR -> String
 getString key = 
   let language = getLanguageLocale languageKey
   in getStringFromConfigOrLocal language key
 
+getStringEnToHi :: STR -> String
+getStringEnToHi key = 
+  let language = getLanguageLocale "languageKey"
+  in case language of
+    "EN_US" -> 
+      if getMerchant FunctionCall == YATRISATHI 
+        then getStringFromLocal "HI_IN" key 
+        else getStringFromConfigOrLocal language key
+    _ -> getStringFromConfigOrLocal language key
+    
 getStringFromConfigOrLocal :: String -> STR -> String
 getStringFromConfigOrLocal language key = 
   case (getStringFromConfig key Just Nothing) of

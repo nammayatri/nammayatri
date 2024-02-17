@@ -105,6 +105,7 @@ initData =
     checkAlternateNumber : true,
     otpAttemptsExceeded: false,
     enterOtpFocusIndex : 0,
+    enterOdometerFocusIndex : 0,
     otpIncorrect : false,
     alternateMobileOtp : "",
     isEditAlternateMobile : false,
@@ -124,7 +125,8 @@ initData =
     upiQrView : false,
     paymentInfoView : false,
     enableGoto : false,
-    isRideActive : false
+    isRideActive : false,
+    canSwitchToRental : false
    }
 }
 
@@ -206,6 +208,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , isGoHomeEnabled       : false
     , maskedDeviceToken     : Nothing
     , operatingCity         : Nothing
+    , canSwitchToRental      : false
 }
 
 organizationInfo :: OrganizationInfo

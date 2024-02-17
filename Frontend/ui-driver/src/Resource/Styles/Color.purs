@@ -432,3 +432,15 @@ peacoat = "#33394A"
 
 mangolia :: Color 
 mangolia = "#F4ECFF"
+
+athensGray :: Color
+athensGray = "#F4F4F6"
+
+cyanBlue :: Color
+cyanBlue = "#1A42B8BA"
+
+lightGray :: Color
+lightGray = "#A7A7A7"
+
+turquoiseBlue :: Color
+turquoiseBlue = "#42B8BA"

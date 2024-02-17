@@ -85,6 +85,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -103,6 +104,8 @@ public class OverlayMessagingService extends Service {
     private String toastMessage;
     private String supportPhoneNumber;
 
+    private double editLat, editlon;
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -119,6 +122,7 @@ public class OverlayMessagingService extends Service {
     @SuppressLint("InflateParams")
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+
         String intentMessage = intent != null && intent.hasExtra("payload") ? intent.getStringExtra("payload") : null;
         if (!Settings.canDrawOverlays(this) || intentMessage == null) return START_STICKY;
         int layoutParamsType = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
@@ -167,6 +171,8 @@ public class OverlayMessagingService extends Service {
             secondaryActions = data.has("secondaryActions") ? data.getJSONArray("secondaryActions") : null;
             toastMessage = data.optString("toastMessage", null);
             supportPhoneNumber = data.optString("contactSupportNumber", null);
+            editLat = data.has("editlat") ? data.getDouble("editlat") : 0.0;
+            editlon = data.has("editlon") ? data.getDouble("editlon") : 0.0;
             Glide.with(this).load(data.getString("imageUrl")).into(imageView);
             boolean titleVisibility = data.has("titleVisibility") && data.getBoolean("titleVisibility");
             boolean descriptionVisibility = data.has("descriptionVisibility") && data.getBoolean("descriptionVisibility");
@@ -246,7 +252,6 @@ public class OverlayMessagingService extends Service {
                         stopSelf();
                     });
                 }
-
                 dynamicView.addView(mediaView);
             }
         }
@@ -279,11 +284,26 @@ public class OverlayMessagingService extends Service {
         });
     }
 
+    public void openNavigation(double lat, double lon) {
+        try {
+            Uri mapsURI = Uri.parse("google.navigation:q=" + lat + "," + lon);
+            Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
+            mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            mapIntent.setPackage("com.google.android.apps.maps");
+            startActivity(mapIntent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     void performAction(String action){
         switch (action) {
             case "SET_DRIVER_ONLINE":
                 RideRequestUtils.updateDriverStatus(true, "ONLINE", this, false);
                 RideRequestUtils.restartLocationService(this);
+                break;
+            case "NAVIGATE":
+                openNavigation(editLat, editlon);
                 break;
             case "OPEN_LINK":
                 openLink(link);

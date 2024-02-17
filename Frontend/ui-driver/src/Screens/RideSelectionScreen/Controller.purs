@@ -18,7 +18,7 @@ module Screens.RideSelectionScreen.Controller where
 import Log
 import Data.Array (length, union, filter, (!!))
 import Data.Int (fromString, toNumber)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust,maybe)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool, convertUTCtoISC)
 import Helpers.Utils (parseFloat, setEnabled, setRefreshing)
@@ -27,7 +27,7 @@ import Language.Types (STR(..))
 import Prelude (class Show, bind, discard, map, not, pure, unit, ($), (&&), (+), (/), (/=), (<>), (==), (||))
 import PrestoDOM (Eval, ScrollState(..), continue, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Resource.Constants (decodeAddress)
+import Resource.Constants (decodeAddress, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AnimationState(..), IndividualRideCardState, ItemState, RideSelectionScreenState)
 import Services.API (RidesInfo(..))
@@ -167,7 +167,7 @@ rideHistoryListTransformer list categoryAction =
     , source : toPropValue (decodeAddress (ride.fromLocation) false)
     , updatedAt  : toPropValue ride.updatedAt
     , driverName : toPropValue ride.driverName
-    , destination  : toPropValue (decodeAddress (ride.toLocation) false)
+    , destination  : toPropValue (maybe "" (\toLocation -> decodeAddress (toLocation) false) ride.toLocation)
     , shortRideId  : toPropValue ((getString TRIP_ID )<> ": " <> ride.shortRideId)
     , rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km " <> (getString RIDE) <> case ride.riderName of
                                       Just name -> " " <> (getString WITH) <> " " <> name
@@ -209,7 +209,7 @@ rideListResponseTransformer list categoryAction =
     , status :  (ride.status)
     , updatedAt   : ride.updatedAt
     , driverName  : ride.driverName
-    , destination : (decodeAddress (ride.toLocation) false)
+    , destination : maybe "" (\toLocation -> decodeAddress (toLocation) false) ride.toLocation
     , shortRideId : ride.shortRideId
     , vehicleColor : ride.vehicleColor
     , rideDistance : parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2
@@ -234,6 +234,7 @@ rideListResponseTransformer list categoryAction =
     , specialZoneLayoutBackground : ""
     , specialZoneImage : ""
     , specialZoneText : ""
+    , tripType : rideTypeConstructor ride.tripCategory
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

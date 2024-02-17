@@ -18,7 +18,7 @@ import Helpers.Utils
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Screens as ScreenNames
-import Language.Strings (getString)
+import Language.Strings (getString, getStringEnToHi)
 import Language.Types (STR(..))
 import Components.PrimaryButton as PrimaryButton
 import Engineering.Helpers.Commons
@@ -452,7 +452,7 @@ rideLeaderBoardView push state =
     , orientation VERTICAL
     ]
     [ textView
-        $ [ text $ getString RIDE_LEADERBOARD
+        $ [ text $ getStringEnToHi RIDE_LEADERBOARD
           , color Color.black800
           , margin $ MarginBottom 12
           , visibility $ boolToVisibility (shouldShowReferral state)
@@ -481,7 +481,7 @@ rideLeaderBoardView push state =
             , margin $ MarginLeft 25
             ]
             [ textView
-                $ [ text $ if driverNotInLBdOrLBNotReady then getString YOUR_DAILY_RANK else getString ACCEPT_RIDE_TO_ENTER_LEADERBOARD
+                $ [ text $ if driverNotInLBdOrLBNotReady then getStringEnToHi YOUR_DAILY_RANK else getStringEnToHi ACCEPT_RIDE_TO_ENTER_LEADERBOARD
                   , padding $ PaddingBottom 2
                   , color Color.green700
                   ]

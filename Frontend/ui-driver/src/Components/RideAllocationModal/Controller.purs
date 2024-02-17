@@ -38,6 +38,7 @@ type Config = {
     countDown :: CountDownConfig,
     title :: TitleConfig,
     source :: SourceConfig,
+    stop :: StopConfig,
     destination :: DestinationConfig,
     totalPrice :: Number,
     basePrice :: Number,
@@ -78,6 +79,16 @@ type RequestConfig = {
 }
 
 type DestinationConfig = {
+    imageUrl :: String,
+    imageWidth :: Length,
+    imageHeight :: Length,
+    text :: String,
+    textSize :: Int,
+    fontStyle :: String,
+    textColor :: String
+}
+
+type StopConfig = {
     imageUrl :: String,
     imageWidth :: Length,
     imageHeight :: Length,
@@ -137,6 +148,15 @@ config = {
     },
     source : {
         imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_source_dot",
+        imageWidth : (V 10),
+        imageHeight : (V 10),
+        text : "",
+        textSize : FontSize.a_14,
+        fontStyle : FontStyle.regular LanguageStyle,
+        textColor : Color.black800
+    },
+    stop : {
+        imageUrl : fetchImage FF_ASSET "ny_ic_drop_location",
         imageWidth : (V 10),
         imageHeight : (V 10),
         text : "",
