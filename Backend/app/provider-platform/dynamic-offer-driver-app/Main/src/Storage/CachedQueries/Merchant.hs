@@ -21,6 +21,7 @@ module Storage.CachedQueries.Merchant
     loadAllProviders,
     clearCache,
     findAllShortIdById,
+    updateGeofencingConfig,
   )
 where
 
@@ -30,6 +31,7 @@ import Domain.Types.Merchant
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant as Queries
@@ -90,6 +92,9 @@ makeShortIdKey shortId = "driver-offer:CachedQueries:Merchant:ShortId-" <> short
 
 update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> m ()
 update = Queries.update
+
+updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig = Queries.updateGeofencingConfig
 
 loadAllProviders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
 loadAllProviders = Queries.loadAllProviders

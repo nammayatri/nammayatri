@@ -14,7 +14,9 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.Overlay
-  ( findByMerchantOpCityIdPNKeyLangaugeUdf,
+  ( create,
+    findAllByMerchantOpCityId,
+    findByMerchantOpCityIdPNKeyLangaugeUdf,
     clearMerchantIdPNKeyLangaugeUdf,
   )
 where
@@ -29,6 +31,24 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.Overlay as Queries
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Overlay -> m ()
+create = Queries.create
+
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [Overlay]
+findAllByMerchantOpCityId id =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
+    Just a -> return $ fmap (coerce @(OverlayD 'Unsafe) @Overlay) a
+    Nothing -> cacheOverlayForCity id /=<< Queries.findAllByMerchantOpCityId id
+
+cacheOverlayForCity :: CacheFlow m r => Id MerchantOperatingCity -> [Overlay] -> m ()
+cacheOverlayForCity merchantOperatingCityId cfg = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let merchantIdKey = makeMerchantOpCityIdKey merchantOperatingCityId
+  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (fmap (coerce @Overlay @(OverlayD 'Unsafe)) cfg) expTime
+
+makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
+makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:Overlay:MerchantOperatingCityId-" <> id.getId
 
 findByMerchantOpCityIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
 findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1 =

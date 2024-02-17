@@ -219,6 +219,7 @@ data UserActionType
   | DRIVER_COIN_HISTORY
   | REMOVE_EXPIRED_HOTSPOTS
   | GET_OPERATING_CITY
+  | CREATE_MERCHANT_OPERATING_CITY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

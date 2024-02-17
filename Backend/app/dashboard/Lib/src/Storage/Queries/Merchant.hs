@@ -19,6 +19,7 @@ import Domain.Types.Merchant as Domain
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
+import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Id
 import Sequelize as Se
 import Storage.Beam.BeamFlow
@@ -41,6 +42,16 @@ findAllMerchants ::
   BeamFlow m r =>
   m [Merchant]
 findAllMerchants = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq ""]
+
+updateSupportedOperatingCities ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  [City] ->
+  m ()
+updateSupportedOperatingCities mShortId cities = do
+  updateWithKV
+    [Se.Set BeamM.supportedOperatingCities cities]
+    [Se.Is BeamM.shortId $ Se.Eq $ getShortId mShortId]
 
 instance FromTType' BeamM.Merchant Domain.Merchant where
   fromTType' BeamM.MerchantT {..} = do
