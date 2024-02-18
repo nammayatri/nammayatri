@@ -197,7 +197,6 @@ library
       Domain.Action.UI.RideRoute
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
-      Domain.Action.UI.SDKEvents
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
@@ -607,10 +606,8 @@ library
       Tools.Verification
       Tools.Whatsapp
       API.Action.UI.LmsModule
-      API.Action.UI.SDKEvents
       API.Action.UI.SpecialLocation
       API.Types.UI.LmsModule
-      API.Types.UI.SDKEvents
       Domain.Types.BecknConfig
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
