@@ -56,6 +56,7 @@ import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
+import in.juspay.mobility.common.services.TLSSocketFactory;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 

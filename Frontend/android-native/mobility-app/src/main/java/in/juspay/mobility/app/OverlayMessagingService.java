@@ -58,14 +58,11 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
-import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
-import android.text.Html;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -84,14 +81,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-import in.juspay.mobility.app.services.MobilityAPIResponse;
-import in.juspay.mobility.app.services.MobilityCallAPI;
+import in.juspay.mobility.common.services.MobilityAPIResponse;
+import in.juspay.mobility.common.services.MobilityCallAPI;
 
 public class OverlayMessagingService extends Service {
     private WindowManager windowManager;

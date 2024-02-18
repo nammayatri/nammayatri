@@ -87,7 +87,6 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -96,39 +95,29 @@ import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.CheckPermissionOverlay;
-import in.juspay.mobility.app.SliderComponent;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.OverlaySheetService;
+import in.juspay.mobility.app.SliderComponent;
 import in.juspay.mobility.app.TranslatorMLKit;
-import in.juspay.mobility.app.Utils;
 import in.juspay.mobility.app.callbacks.CallBack;
-import in.juspay.mobility.common.MediaPlayerView;
 import in.juspay.mobility.common.MobilityCommonBridge;
+import in.juspay.mobility.common.Utils;
 import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
 
 public class MobilityDriverBridge extends MobilityCommonBridge {
 
     private static final String LOG_TAG = "MobilityDriverBridge";
 
-    private static final int IMAGE_CAPTURE_REQ_CODE = 101;
-    private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
-
     // Media Utils
     public static YouTubePlayerView youTubePlayerView;
     public static YouTubePlayer youtubePlayer;
     public static float videoDuration = 0;
-    public static ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
     private static final int IMAGE_PERMISSION_REQ_CODE_PROFILE = 1243;
 
-    // Others
-    private static boolean isUploadPopupOpen = false;
-
     // CallBacks
-    private static String storeDriverCallBack = null;
     private static String storeUpdateTimeCallBack = null;
-    private CallBack callBack;
     private LocationUpdateService.UpdateTimeCallback locationCallback;
     private PreviewView previewView;
     private ImageCapture imageCapture;
@@ -140,20 +129,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         super(bridgeComponents);
         registerCallBacks();
         translator = new TranslatorMLKit(bridgeComponents.getContext());
-    }
-
-    //region Store and Trigger CallBack
-    @JavascriptInterface
-    public void storeCallBackForNotification(String callback) {
-        storeDriverCallBack = callback;
-    }
-
-    public void callDriverNotificationCallBack(String notificationType, String notificationData) {
-        if (storeDriverCallBack != null) {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                    storeDriverCallBack, notificationType, notificationData.replace("'",""));
-            bridgeComponents.getJsCallback().addJsToWebView(javascript);
-        }
     }
 
     @JavascriptInterface
@@ -203,58 +178,15 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     public void registerCallBacks() {
-        if (isClassAvailable("in.juspay.mobility.app.callbacks.CallBack")) {
-            callBack = new CallBack() {
-                @Override
-                public void customerCallBack(String notificationType, String notificationData) {
-                    Log.i(OTHERS, "No Customer CallBack Required");
-                }
-
-                @Override
-                public void driverCallBack(String notificationType, String notificationData) {
-                    callDriverNotificationCallBack(notificationType,notificationData);
-                }
-
-                @Override
-                public void imageUploadCallBack(String encImage, String filename, String filePath) {
-                    Log.i(OTHERS, "No Required");
-                }
-
-                @Override
-                public void chatCallBack(String message, String sentBy, String time, String len) {
-                    Log.i(OTHERS, "No Required");
-                }
-
-                @Override
-                public void inAppCallBack(String onTapAction) {
-                    Log.i(OTHERS, "No Required");
-                }
-
-                @Override
-                public void bundleUpdatedCallBack(String event, JSONObject desc) {
-                    Log.i(CALLBACK, "No Required");
-                }
-            };
-            NotificationUtils.registerCallback(callBack);
-            Utils.registerCallback(callBack);
-        }
         if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
             locationCallback = this::callUpdateTimeCallBack;
             LocationUpdateService.registerCallback(locationCallback);
-        }
-        if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
-            OverlaySheetService.registerCallback(callBack);
         }
     }
 
     public void onDestroy() {
         Log.e("onDestroy", "onDestroy");
-        NotificationUtils.deRegisterCallback(callBack);
-        Utils.deRegisterCallback(callBack);
         DefaultMediaPlayerControl.mediaPlayer.reset();
-        if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
-            OverlaySheetService.deRegisterCallback(callBack);
-        }
         if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
             LocationUpdateService.deRegisterCallback(locationCallback);
         }
@@ -265,9 +197,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         videoDuration = 0;
 
         // CallBacks
-        storeDriverCallBack = null;
         storeUpdateTimeCallBack = null;
-        callBack = null;
     }
     //endregion
 

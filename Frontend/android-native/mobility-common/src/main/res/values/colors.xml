@@ -2,4 +2,6 @@
 <resources>
     <color name="Black900">#121212</color>
     <color name="yellow900">#FCC32C</color>
+    <color name="Black500">#B9BABE</color>
+    <color name="blue700">#80B2FF</color>
 </resources>

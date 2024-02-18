@@ -29,12 +29,12 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 public class MobilityAppUpdate {
 
-    private AppUpdateManager appUpdateManager;
+    private final AppUpdateManager appUpdateManager;
     private static int updateType;
 
 
     private static final int REQUEST_CODE_UPDATE_APP = 587;
-    private String LOG_TAG = "MobilityAppUpdate";
+    private final String LOG_TAG = "MobilityAppUpdate";
 
     Context context;
 

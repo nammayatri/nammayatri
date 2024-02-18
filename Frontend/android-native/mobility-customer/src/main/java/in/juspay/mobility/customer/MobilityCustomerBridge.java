@@ -80,8 +80,6 @@ import java.util.concurrent.Executors;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JuspayLogger;
-import in.juspay.mobility.app.NotificationUtils;
-import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
@@ -95,48 +93,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     // CallBacks Strings
     private static String storeContactsCallBack = null;
-    private static String storeCustomerCallBack = null;
     public enum MapMode {
         NORMAL, SPECIAL_ZONE, HOTSPOT
     }
 
     public MobilityCustomerBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
-        if (isClassAvailable("in.juspay.mobility.app.callbacks.CallBack")) {
-            CallBack callBack = new CallBack() {
-                @Override
-                public void customerCallBack(String notificationType, String notificationData) {
-                    callingStoreCallCustomer(notificationType, notificationData);
-                }
-
-                @Override
-                public void driverCallBack(String notificationType, String notificationData) {
-                    Log.i(CALLBACK, "No Required");
-                }
-
-                @Override
-                public void imageUploadCallBack(String encImage, String filename, String filePath) {
-                    Log.i(CALLBACK, "No Required");
-                }
-
-
-                @Override
-                public void chatCallBack(String message, String sentBy, String time, String len) {
-                    Log.i(CALLBACK, "No Required");
-                }
-
-                @Override
-                public void inAppCallBack(String onTapAction) {
-                    Log.i(CALLBACK, "No Required");
-                }
-
-                @Override
-                public void bundleUpdatedCallBack(String event, JSONObject desc) {
-                    Log.i(CALLBACK, "No Required");
-                }
-            };
-            NotificationUtils.registerCallback(callBack);
-        }
     }
 
 
@@ -173,22 +135,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         storeContactsCallBack = callback;
     }
     // endregion
-
-    @JavascriptInterface
-    public void storeCallBackCustomer(String callback) {
-        storeCustomerCallBack = callback;
-    }
-
-    public void callingStoreCallCustomer(String notificationType, String notificationData) {
-        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                storeCustomerCallBack, notificationType, notificationData.replace("'",""));
-        bridgeComponents.getJsCallback().addJsToWebView(javascript);
-    }
-
-    @JavascriptInterface
-    public void storeCallBackLocateOnMap(String callback) {
-        storeLocateOnMapCallBack = callback;
-    }
 
     //region Maps
     @JavascriptInterface
