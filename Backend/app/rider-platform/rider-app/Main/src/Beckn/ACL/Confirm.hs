@@ -197,6 +197,17 @@ tfCustomer res =
                     },
               tagDisplay = Just False,
               tagValue = Just $ show res.nightSafetyCheck
+            },
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "enable_frequent_location_updates",
+                      descriptorName = Just "Enable Frequent Location Updates",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show res.enableFrequentLocationUpdates
             }
         ]
 

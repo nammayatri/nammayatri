@@ -86,6 +86,7 @@ data Ride = Ride
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     isFreeRide :: Maybe Bool,
     driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-    safetyAlertTriggered :: Bool
+    safetyAlertTriggered :: Bool,
+    enableFrequentLocationUpdates :: Maybe Bool
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

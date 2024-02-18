@@ -346,7 +346,7 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         clientVersion = clientVersion,
         whatsappNotificationEnrollStatus = Nothing,
         shareEmergencyContacts = False,
-        shareTripWithEmergencyContacts = Nothing,
+        shareTripWithEmergencyContactOption = Nothing,
         hasCompletedMockSafetyDrill = Nothing,
         nightSafetyChecks = True,
         hasCompletedSafetySetup = False,

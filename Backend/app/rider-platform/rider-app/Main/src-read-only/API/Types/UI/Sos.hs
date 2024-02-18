@@ -16,6 +16,16 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
+data MarkAsSafeReq = MarkAsSafeReq
+  { isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data MockSosReq = MockSosReq
+  { onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data SosDetailsRes = SosDetailsRes
   { sos :: Kernel.Prelude.Maybe Domain.Types.Sos.Sos
   }
