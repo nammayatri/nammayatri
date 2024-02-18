@@ -50,6 +50,7 @@ buildConfirmReq req = do
       vehicleVariant = castVehicleVariant fulfillment.vehicle.category
       driverId = req.message.order.provider <&> (.id)
       nightSafetyCheck = buildNightSafetyCheckTag $ (.tags) =<< fulfillment.customer.person
+      enableFrequentLocationUpdates = buildEnableFrequentLocationUpdatesTag $ (.tags) =<< fulfillment.customer.person
   let toAddress = (castAddress . (.location.address) <$> fulfillment.end)
 
   return $
@@ -83,6 +84,15 @@ buildNightSafetyCheckTag tagGroups' = do
           res = maybe (Just True) ((\val -> readMaybe val :: Maybe Bool) . T.unpack) tagValue
       fromMaybe True res
 
+buildEnableFrequentLocationUpdatesTag :: Maybe Confirm.TagGroups -> Bool
+buildEnableFrequentLocationUpdatesTag tagGroups' = do
+  maybe False getTagValue tagGroups'
+  where
+    getTagValue tagGroups = do
+      let tagValue = getTag "customer_info" "enable_frequent_location_updates" tagGroups
+          res = maybe (Just False) ((\val -> readMaybe val :: Maybe Bool) . T.unpack) tagValue
+      fromMaybe False res
+
 buildConfirmReqV2 ::
   (HasFlowEnv m r '["_version" ::: Text]) =>
   Spec.ConfirmReq ->
@@ -101,6 +111,7 @@ buildConfirmReqV2 req = do
   vehicleVariant <- Utils.parseVehicleVariant vehCategory vehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:- " <> show vehCategory <> " and variant:- " <> show vehVariant)
   let driverId = req.confirmReqMessage.confirmReqMessageOrder.orderProvider >>= (.providerId)
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag
+      enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
   return $
     DConfirm.DConfirmReq
@@ -115,3 +126,12 @@ getNightSafetyCheckTag tagGroups' = do
       let tagValue = Utils.getTagV2 "customer_info" "night_safety_check" tagGroups
           res = maybe (Just True) ((\val -> readMaybe val :: Maybe Bool) . T.unpack) tagValue
       fromMaybe True res
+
+getEnableFrequentLocationUpdatesTag :: Maybe [Spec.TagGroup] -> Bool
+getEnableFrequentLocationUpdatesTag tagGroups' = do
+  maybe False getTagValue tagGroups'
+  where
+    getTagValue tagGroups = do
+      let tagValue = Utils.getTagV2 "customer_info" "enable_frequent_location_updates" tagGroups
+          res = maybe (Just False) ((\val -> readMaybe val :: Maybe Bool) . T.unpack) tagValue
+      fromMaybe False res

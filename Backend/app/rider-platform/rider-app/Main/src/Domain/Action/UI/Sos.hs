@@ -30,6 +30,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.ServantMultipart
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -79,15 +80,37 @@ getSosGetDetails (mbPersonId, _) rideId_ = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   mbSosDetails <- CQSos.findByRideId rideId_
   case mbSosDetails of
-    Nothing -> throwError $ InvalidRequest "SosId not found"
+    Nothing -> do
+      mockSos :: Maybe DSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId_
+      case mockSos of
+        Nothing -> return SosDetailsRes {sos = Nothing}
+        Just mSos -> do
+          now <- getCurrentTime
+          return SosDetailsRes {sos = Just $ buildMockSos mSos now}
     Just sosDetails -> do
       unless (personId_ == sosDetails.personId) $ throwError $ InvalidRequest "PersonId not same"
       return SosDetailsRes {sos = Just sosDetails}
+  where
+    buildMockSos :: DSos.SosMockDrill -> UTCTime -> DSos.Sos
+    buildMockSos mockSos now =
+      DSos.Sos
+        { flow = DSos.SafetyFlow,
+          id = "mock-sos",
+          personId = mockSos.personId,
+          rideId = rideId_,
+          status = mockSos.status,
+          ticketId = Nothing,
+          merchantId = Nothing,
+          merchantOperatingCityId = Nothing,
+          createdAt = now,
+          updatedAt = now
+        }
 
 postSosCreate :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> SosReq -> Flow SosRes
 postSosCreate (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  Redis.del $ CQSos.mockSosKey personId
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
   merchantConfig <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
@@ -160,29 +183,44 @@ postSosStatus (mbPersonId, _) sosId req = do
   void $ callUpdateTicket person sosDetails req.comment
   pure APISuccess.Success
 
-postSosMarkRideAsSafe :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DSos.Sos -> Flow APISuccess.APISuccess
-postSosMarkRideAsSafe (mbPersonId, _) sosId = do
+postSosMarkRideAsSafe :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DSos.Sos -> MarkAsSafeReq -> Flow APISuccess.APISuccess
+postSosMarkRideAsSafe (mbPersonId, _) sosId MarkAsSafeReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
-  when (sosDetails.status == DSos.Resolved) $ throwError $ InvalidRequest "Sos already resolved."
-  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  void $ callUpdateTicket person sosDetails $ Just "Mark Ride as Safe"
-  void $ QSos.updateStatus DSos.Resolved sosId
-  void $ CQSos.clearCache sosDetails.rideId
-  when (person.shareEmergencyContacts) $ do
-    emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-    SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers
-  pure APISuccess.Success
+  case isMock of
+    Just True -> do
+      mockSos :: Maybe DSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
+      case mockSos of
+        Nothing -> throwError $ InvalidRequest "No mockSos found"
+        Just _ -> do
+          Redis.setExp (CQSos.mockSosKey personId) (DSos.SosMockDrill {personId, status = DSos.MockResolved}) 13400
+          return APISuccess.Success
+    _ -> do
+      sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
+      when (sosDetails.status == DSos.Resolved) $ throwError $ InvalidRequest "Sos already resolved."
+      person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      void $ callUpdateTicket person sosDetails $ Just "Mark Ride as Safe"
+      void $ QSos.updateStatus DSos.Resolved sosId
+      void $ CQSos.clearCache sosDetails.rideId
+      when (person.shareEmergencyContacts) $ do
+        emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+        SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers
+      pure APISuccess.Success
   where
     notificationBody person_ = SLP.getName person_ <> " has marked the ride as safe. Tap to view the ride details"
     notificationTitle = "Ride Safe"
 
-postSosCreateMockSos :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Flow APISuccess.APISuccess
-postSosCreateMockSos (mbPersonId, _) = do
+postSosCreateMockSos :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> MockSosReq -> Flow APISuccess.APISuccess
+postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus personId $ Just True
   emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+  when (fromMaybe False onRide) $ do
+    let mockEntity = DSos.SosMockDrill {personId, status = DSos.MockPending}
+    void $ QPDEN.updateShareRideForAll personId (Just True)
+    riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+    enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers riderConfig
+    Redis.setExp (CQSos.mockSosKey personId) mockEntity 13400
   SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_MOCK_DRILL Nothing False emergencyContacts.defaultEmergencyNumbers
   pure APISuccess.Success
   where
