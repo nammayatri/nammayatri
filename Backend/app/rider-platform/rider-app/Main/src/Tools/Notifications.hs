@@ -40,6 +40,7 @@ import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (count, runInReplica)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -48,6 +49,7 @@ import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.SearchRequest as QSearchReq
@@ -240,6 +242,7 @@ notifyOnRideCompleted booking ride = do
             "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
           ]
   updateFollowsRideCount personId
+  Redis.del $ CQSos.mockSosKey personId
   notifyPerson person.merchantId merchantOperatingCityId notificationData
   where
     updateFollowsRideCount personId = do
@@ -585,7 +588,7 @@ notifySafetyAlert booking _ = do
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let notificationData =
         Notification.NotificationReq
-          { category = Notification.SAFETY_ALERT_DEVIATION,
+          { category = Notification.SAFETY_ALERT,
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
@@ -643,9 +646,11 @@ notifyRideStartToEmergencyContacts booking ride = do
   rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId rider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
-  case (rider.shareTripWithEmergencyContacts == Just True && checkTimeConstraintForFollowRide riderConfig now) of
-    True -> do
-      unless (checkTimeConstraintForFollowRide riderConfig now) $ return ()
+  let shouldShare =
+        rider.shareTripWithEmergencyContactOption == Just ALWAYS_SHARE
+          || (rider.shareTripWithEmergencyContactOption == Just SHARE_WITH_TIME_CONSTRAINTS && checkTimeConstraintForFollowRide riderConfig now)
+  if shouldShare
+    then do
       let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
       emContacts <- QPDEN.findAllByPersonId booking.riderId
       decEmContacts <- decrypt `mapM` emContacts
@@ -656,7 +661,7 @@ notifyRideStartToEmergencyContacts booking ride = do
             updateFollowsRideCount personId
             sendFCM personId rider.firstName
           Nothing -> sendSMS contact rider.firstName trackLink
-    False -> logInfo "Follow ride is not enabled"
+    else logInfo "Follow ride is not enabled"
   where
     updateFollowsRideCount emPersonId = do
       _ <- CQFollowRide.incrementFollowRideCount emPersonId

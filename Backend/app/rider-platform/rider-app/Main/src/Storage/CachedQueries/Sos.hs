@@ -16,9 +16,11 @@ module Storage.CachedQueries.Sos
   ( findByRideId,
     clearCache,
     cacheSosIdByRideId,
+    mockSosKey,
   )
 where
 
+import qualified Domain.Types.Person as Person
 import Domain.Types.Ride
 import Domain.Types.Sos as DSos
 import Kernel.Prelude
@@ -44,3 +46,6 @@ makeIdKey rideId = "CachedQueries:Sos:RideId-" <> rideId.getId
 
 clearCache :: (CacheFlow m r) => Id Ride -> m ()
 clearCache rideId = Hedis.del $ makeIdKey rideId
+
+mockSosKey :: Id Person.Person -> Text
+mockSosKey personId = "mock-sos-" <> getId personId

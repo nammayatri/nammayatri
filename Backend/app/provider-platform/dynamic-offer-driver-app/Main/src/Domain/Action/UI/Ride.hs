@@ -159,7 +159,8 @@ data DriverRideRes = DriverRideRes
     lastStopLocation :: Maybe DLoc.Location,
     startOdometerReading :: Maybe DRide.OdometerReading,
     endOdometerReading :: Maybe DRide.OdometerReading,
-    tripScheduledAt :: UTCTime
+    tripScheduledAt :: UTCTime,
+    enableFrequentLocationUpdates :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -270,7 +271,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         tripCategory = booking.tripCategory,
         nextStopLocation = nextStopLocation,
         lastStopLocation = lastStopLocation,
-        tripScheduledAt = booking.startTime
+        tripScheduledAt = booking.startTime,
+        enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates
       }
 
 calculateLocations ::
@@ -320,7 +322,7 @@ otpRideCreate driver otpCode booking = do
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
 
-  (ride, rideDetails, _) <- initializeRide transporter.id driver booking (Just otpCode) booking.id.getId
+  (ride, rideDetails, _) <- initializeRide transporter.id driver booking (Just otpCode) booking.id.getId Nothing
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
 

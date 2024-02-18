@@ -23,7 +23,11 @@ Sos:
       enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow"
 
     SosStatus:
-      enum: "Resolved,NotResolved,Pending"
+      enum: "Resolved,NotResolved,Pending,MockPending,MockResolved"
+
+    SosMockDrill:
+      personId: Id Person
+      status : SosStatus
 
   queries:
     updateStatus:

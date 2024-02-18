@@ -253,9 +253,10 @@ updateDefaultEmergencyNumbers personId merchantId req = do
     updateSettingReq enableTripShare enableEmergencySharing =
       UpdateEmergencySettingsReq
         { shareEmergencyContacts = Just enableEmergencySharing,
-          shareTripWithEmergencyContacts = Just enableTripShare,
+          shareTripWithEmergencyContacts = Nothing,
           hasCompletedSafetySetup = Nothing,
-          nightSafetyChecks = Nothing
+          nightSafetyChecks = Nothing,
+          shareTripWithEmergencyContactOption = if enableTripShare then Just Person.ALWAYS_SHARE else Nothing
         }
 
 sendEmergencyContactAddedMessage :: Id Person.Person -> [DPDEN.PersonDefaultEmergencyNumber] -> [DPDEN.PersonDefaultEmergencyNumber] -> Flow ()
@@ -291,6 +292,7 @@ getUniquePersonByMobileNumber req =
 data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
   { shareEmergencyContacts :: Maybe Bool,
     shareTripWithEmergencyContacts :: Maybe Bool,
+    shareTripWithEmergencyContactOption :: Maybe Person.RideShareOptions,
     nightSafetyChecks :: Maybe Bool,
     hasCompletedSafetySetup :: Maybe Bool
   }
@@ -302,13 +304,19 @@ updateEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Per
 updateEmergencySettings personId req = do
   personENList <- QPersonDEN.findAllByPersonId personId
   let safetySetupCompleted = guard (req.hasCompletedSafetySetup == Just True) >> Just True
+      shareTripOptions = case req.shareTripWithEmergencyContactOption of
+        Nothing ->
+          if fromMaybe False req.shareEmergencyContacts
+            then Just Person.ALWAYS_SHARE
+            else Just Person.NEVER_SHARE
+        _ -> req.shareTripWithEmergencyContactOption
   when (fromMaybe False req.shareEmergencyContacts && null personENList) do
     throwError (InvalidRequest "Add atleast one emergency contact.")
   void $
     QPerson.updateEmergencyInfo
       personId
       req.shareEmergencyContacts
-      req.shareTripWithEmergencyContacts
+      shareTripOptions
       req.nightSafetyChecks
       safetySetupCompleted
   pure APISuccess.Success
@@ -316,6 +324,7 @@ updateEmergencySettings personId req = do
 data EmergencySettingsRes = EmergencySettingsRes
   { shareEmergencyContacts :: Bool,
     shareTripWithEmergencyContacts :: Bool,
+    shareTripWithEmergencyContactOption :: Person.RideShareOptions,
     hasCompletedMockSafetyDrill :: Bool,
     nightSafetyChecks :: Bool,
     hasCompletedSafetySetup :: Bool,
@@ -334,7 +343,8 @@ getEmergencySettings personId = do
   return $
     EmergencySettingsRes
       { shareEmergencyContacts = person.shareEmergencyContacts,
-        shareTripWithEmergencyContacts = fromMaybe False person.shareTripWithEmergencyContacts,
+        shareTripWithEmergencyContacts = isJust person.shareTripWithEmergencyContactOption && person.shareTripWithEmergencyContactOption /= Just Person.NEVER_SHARE,
+        shareTripWithEmergencyContactOption = fromMaybe Person.NEVER_SHARE person.shareTripWithEmergencyContactOption,
         nightSafetyChecks = person.nightSafetyChecks,
         hasCompletedSafetySetup = person.hasCompletedSafetySetup,
         defaultEmergencyNumbers = DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList,

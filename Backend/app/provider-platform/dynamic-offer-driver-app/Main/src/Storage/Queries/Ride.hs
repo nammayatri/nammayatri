@@ -825,5 +825,6 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
         BeamR.isFreeRide = isFreeRide,
         BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
-        BeamR.safetyAlertTriggered = safetyAlertTriggered
+        BeamR.safetyAlertTriggered = safetyAlertTriggered,
+        BeamR.enableFrequentLocationUpdates = enableFrequentLocationUpdates
       }
