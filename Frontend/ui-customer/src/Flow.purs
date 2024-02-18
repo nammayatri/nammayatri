@@ -42,6 +42,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Newtype (unwrap)
 import Data.Number (fromString)
+import Data.Int as INT
 import Data.Ord (compare)
 import Data.String (Pattern(..), Replacement(..), drop, indexOf, split, toLower, trim, take, joinWith)
 import Data.String (length) as STR
@@ -49,6 +50,7 @@ import Data.String as DS
 import Data.String.Common (joinWith, split, toUpper, trim, replaceAll)
 import Debug (spy)
 import Effect (Effect)
+import Effect.Random as ER
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2)
@@ -195,6 +197,9 @@ baseAppFlow gPayload callInitUI = do
   when showSplashScreen $ toggleSplash true
   tokenValidity <- validateToken signatureAuthData
   lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
+  when (getValueToLocalStore CAC_TOSS == "__failed") $ do
+      toss <- lift $ lift $ liftFlow $ ER.randomInt 1 100
+      void $ pure $ setValueToLocalStore CAC_TOSS (show toss)
   if tokenValidity 
     then handleDeepLinks (Just gPayload) false
     else validateAuthData $ signatureAuthData
@@ -278,7 +283,8 @@ currentFlowStatus = do
   where
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
-      response <- Remote.getProfileBT ""
+      let toss = fromMaybe 49 $ INT.fromString $  getValueToLocalStore CAC_TOSS
+      response <- Remote.getProfileBT toss
       updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
       updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
       updateLanguageAndReferralCode $ response ^. _language
@@ -942,7 +948,8 @@ homeScreenFlow = do
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
                                         _ <- pure $ metaLogEvent "ny_user_first_ride_completed"
-                                        (GetProfileRes response) <- Remote.getProfileBT ""
+                                        let toss = fromMaybe 49 $ INT.fromString $ getValueToLocalStore CAC_TOSS
+                                        (GetProfileRes response) <- Remote.getProfileBT toss
                                         setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
                                         else pure unit
                                       let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag

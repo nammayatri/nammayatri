@@ -1227,7 +1227,7 @@ instance decodeFeedbackRes :: Decode FeedbackRes where decode = defaultDecode
 instance encodeFeedbackRes  :: Encode FeedbackRes where encode = defaultEncode
 
 
-data GetProfileReq = GetProfileReq
+newtype GetProfileReq = GetProfileReq Int
 
 newtype GetProfileRes = GetProfileRes
   {
@@ -1249,6 +1249,7 @@ newtype GetProfileRes = GetProfileRes
   , hasCompletedSafetySetup :: Maybe Boolean
   , hasCompletedMockSafetyDrill :: Maybe Boolean
   , followsRide :: Maybe Boolean
+  , frontendConfigHash    :: Maybe String
   }
 
 
@@ -1288,12 +1289,12 @@ instance decodeDisability :: Decode Disability where decode = defaultDecode
 instance encodeDisability  :: Encode Disability where encode = defaultEncode
 
 instance makeGetProfileReq :: RestEndpoint GetProfileReq GetProfileRes where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.profile "") headers reqBody Nothing
+  makeRequest reqBody@(GetProfileReq toss) headers = defaultMakeRequest GET (EP.profile (Just toss)) headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 instance makeUpdateProfileReq :: RestEndpoint UpdateProfileReq UpdateProfileRes where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.profile "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.profile Nothing) headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
@@ -1305,7 +1306,7 @@ instance decodeGetProfileRes :: Decode GetProfileRes where decode = defaultDecod
 instance encodeGetProfileRes  :: Encode GetProfileRes where encode = defaultEncode
 
 derive instance genericGetProfileReq :: Generic GetProfileReq _
-instance standardEncodeGetProfileReq :: StandardEncode GetProfileReq where standardEncode (GetProfileReq) = standardEncode {}
+instance standardEncodeGetProfileReq :: StandardEncode GetProfileReq where standardEncode (GetProfileReq req) = standardEncode req
 instance showGetProfileReq :: Show GetProfileReq where show = genericShow
 instance decodeGetProfileReq :: Decode GetProfileReq where decode = defaultDecode
 instance encodeGetProfileReq  :: Encode GetProfileReq where encode = defaultEncode
@@ -3295,3 +3296,34 @@ instance standardEncodeRetryMetrTicketPaymentResp :: StandardEncode RetryMetrTic
 instance showRetryMetrTicketPaymentResp :: Show RetryMetrTicketPaymentResp where show = genericShow
 instance decodeRetryMetrTicketPaymentResp :: Decode RetryMetrTicketPaymentResp where decode = defaultDecode
 instance encodeRetryMetrTicketPaymentResp  :: Encode RetryMetrTicketPaymentResp where encode = defaultEncode
+
+
+------------------------------------------- CAC --------------------------------------------------------
+
+data GetUiConfigReq = GetUiConfigReq Int
+ 
+
+data GetUiConfigResp = EmptyGetUiConfigResp {}
+  | GetUiConfigResp { --CACTODO: Change to actual resp type
+      k1 :: String
+  ,   k2 :: String
+  }
+instance makeGetUiConfigReq :: RestEndpoint GetUiConfigReq GetUiConfigResp where
+  makeRequest reqBody@(GetUiConfigReq toss) headers = defaultMakeRequest GET (EP.getUiConfig toss) headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericGetUiConfigReq :: Generic GetUiConfigReq _
+instance showGetUiConfigReq :: Show GetUiConfigReq where show = genericShow
+instance standardEncodeGetUiConfigReq :: StandardEncode GetUiConfigReq where standardEncode (GetUiConfigReq req) = standardEncode req
+instance decodeGetUiConfigReq :: Decode GetUiConfigReq where decode = defaultDecode
+instance encodeGetUiConfigReq :: Encode GetUiConfigReq where encode = defaultEncode
+
+derive instance genericGetUiConfigResp :: Generic GetUiConfigResp _
+instance standardGetUiConfigResp :: StandardEncode GetUiConfigResp where 
+  standardEncode (GetUiConfigResp body) = standardEncode body
+  standardEncode (EmptyGetUiConfigResp _) = standardEncode {} 
+instance showGetUiConfigResp :: Show GetUiConfigResp where show = genericShow
+instance decodeGetUiConfigResp :: Decode GetUiConfigResp where decode body = (GetUiConfigResp <$> decode body) <|> (EmptyGetUiConfigResp <$> decode body) <|> (fail $ ForeignError "Unknown response")
+instance encodeGetUiConfigResp  :: Encode GetUiConfigResp where encode = defaultEncode
+instance eqGetUiConfigResp :: Eq GetUiConfigResp where eq = genericEq

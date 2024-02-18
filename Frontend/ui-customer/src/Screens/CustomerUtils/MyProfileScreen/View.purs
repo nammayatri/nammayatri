@@ -30,6 +30,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (mapWithIndex, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Int (fromString)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -66,7 +67,8 @@ screen initialState =
                       _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
                         lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
                         lift $ lift $ toggleLoader true
-                        response <- Remote.getProfileBT ""
+                        let toss = fromMaybe 49 $ fromString $ getValueToLocalStore CAC_TOSS
+                        response <- Remote.getProfileBT toss
                         lift $ lift $ toggleLoader false
                         if initialState.props.isEmailValid then
                           lift $ lift $ doAff do liftEffect $ push $ UserProfile response

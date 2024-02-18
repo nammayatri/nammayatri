@@ -97,6 +97,9 @@ data KeyStore
   | T_AND_C_VERSION
   | METRO_PAYMENT_STATUS_POOLING
   | METRO_STATIONS
+  | UI_CONFIG_HASH
+  | UI_CONFIGS
+  | CAC_TOSS
 
 derive instance genericKeyStore :: Generic KeyStore _
 

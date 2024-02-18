@@ -108,8 +108,9 @@ getPlaceName dummyString = (getBaseUrl "26") <> "/maps/getPlaceName"
 feedback :: String -> String
 feedback dummy = (getBaseUrl "27") <> "/feedback/rateRide"
 
-profile :: String -> String
-profile _ = (getBaseUrl "28") <> "/profile"
+profile :: Maybe Int -> String
+profile (Just toss) = (getBaseUrl "28") <> "/profile?toss=" <> show toss
+profile Nothing = (getBaseUrl "28") <> "/profile"
 
 addLocation :: String -> String 
 addLocation _ = (getBaseUrl "29") <> "/savedLocation"
@@ -247,3 +248,6 @@ getMetroBookingList dummy = (getBaseUrl "52") <> "/frfs/booking/list"
 
 retryMetrTicketPayment :: String -> String
 retryMetrTicketPayment quoteId = (getBaseUrl "53") <> "/frfs/quote/" <> quoteId <> "/payment/retry"
+
+getUiConfig :: Int -> String
+getUiConfig toss = (getBaseUrl "") <> "/getUiConfigs?toss=" <> show toss 
