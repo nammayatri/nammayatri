@@ -26,6 +26,8 @@ import Screens.Types (HomeScreenStage)
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int(fromString)
+import Presto.Core.Types.Language.Flow (Flow)
+import Types.App (GlobalState(..))
 
 data KeyStore = USER_NAME
                 | FCM_TOKEN
@@ -126,6 +128,9 @@ data KeyStore = USER_NAME
                 | T_AND_C_VERSION
                 | NIGHT_SAFETY_POP_UP
                 | REFERRER_URL
+                | UI_CONFIG_HASH
+                | UI_CONFIGS
+                | CAC_TOSS
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
@@ -133,6 +138,9 @@ instance showKeyStore :: Show KeyStore where
 
 setValueToLocalStore :: KeyStore -> String -> FlowBT String Unit
 setValueToLocalStore keyStore val = void $ lift $ lift $ pure $ JBridge.setKeyInSharedPrefKeys (show keyStore) val
+
+setValueToLocalStore' :: KeyStore -> String -> Flow GlobalState Unit
+setValueToLocalStore' keyStore val = void $ pure $ JBridge.setKeyInSharedPrefKeys (show keyStore) val
 
 getValueToLocalStore :: KeyStore -> String
 getValueToLocalStore = JBridge.getKeyInSharedPrefKeys <<< show

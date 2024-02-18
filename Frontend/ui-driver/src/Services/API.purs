@@ -16,7 +16,7 @@
 module Services.API where
 
 import Data.Maybe
-
+import Data.Map as DM
 import Common.Types.App (Version(..)) as Common
 import Domain.Payments as PP
 import Control.Alt ((<|>))
@@ -390,7 +390,7 @@ instance encodeLogOutRes :: Encode LogOutRes where encode = defaultEncode
 ------------------------------------------------------------GET DRIVER PROFILE----------------------------------------------------------------------------------------------------------------------------------------------
 
 -- GetDriverInfo API request, response types
-data GetDriverInfoReq = GetDriverInfoReq { }
+newtype GetDriverInfoReq = GetDriverInfoReq Int 
 
 newtype GetDriverInfoResp = GetDriverInfoResp
     { id                    :: String
@@ -430,6 +430,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isGoHomeEnabled       :: Boolean
     , maskedDeviceToken     :: Maybe String
     , operatingCity         :: Maybe String
+    , frontendConfigHash    :: Maybe String
     }
 
 
@@ -463,7 +464,7 @@ newtype Vehicle = Vehicle
     }
 
 instance makeGetDriverInfoReq :: RestEndpoint GetDriverInfoReq GetDriverInfoResp where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getDriverInfo "") headers reqBody Nothing
+    makeRequest reqBody@(GetDriverInfoReq toss) headers = defaultMakeRequest GET (EP.getDriverInfo toss) headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
 
@@ -3532,3 +3533,32 @@ instance standardDetectCityResp :: StandardEncode DetectCityResp where standardE
 instance showDetectCityResp :: Show DetectCityResp where show = genericShow
 instance decodeDetectCityResp :: Decode DetectCityResp where decode = defaultDecode
 instance encodeDetectCityResp  :: Encode DetectCityResp where encode = defaultEncode
+
+--------------------------------------------------------- CAC ---------------------------------------------------------
+data GetUiConfigReq = GetUiConfigReq Int
+ 
+
+data GetUiConfigResp = EmptyGetUiConfigResp {} --CACTODO: Change to actual resp type
+  | GetUiConfigResp {
+      k1 :: String
+  ,   k2 :: String
+  }
+instance makeGetUiConfigReq :: RestEndpoint GetUiConfigReq GetUiConfigResp where
+  makeRequest reqBody@(GetUiConfigReq toss) headers = defaultMakeRequest GET (EP.getUiConfig toss) headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericGetUiConfigReq :: Generic GetUiConfigReq _
+instance showGetUiConfigReq :: Show GetUiConfigReq where show = genericShow
+instance standardEncodeGetUiConfigReq :: StandardEncode GetUiConfigReq where standardEncode (GetUiConfigReq req) = standardEncode req
+instance decodeGetUiConfigReq :: Decode GetUiConfigReq where decode = defaultDecode
+instance encodeGetUiConfigReq :: Encode GetUiConfigReq where encode = defaultEncode
+
+derive instance genericGetUiConfigResp :: Generic GetUiConfigResp _
+instance standardGetUiConfigResp :: StandardEncode GetUiConfigResp where 
+  standardEncode (GetUiConfigResp body) = standardEncode body
+  standardEncode (EmptyGetUiConfigResp _) = standardEncode {} 
+instance showGetUiConfigResp :: Show GetUiConfigResp where show = genericShow
+instance decodeGetUiConfigResp :: Decode GetUiConfigResp where decode body = (GetUiConfigResp <$> decode body) <|> (EmptyGetUiConfigResp <$> decode body) <|> (fail $ ForeignError "Unknown response")
+instance encodeGetUiConfigResp  :: Encode GetUiConfigResp where encode = defaultEncode
+instance eqGetUiConfigResp :: Eq GetUiConfigResp where eq = genericEq

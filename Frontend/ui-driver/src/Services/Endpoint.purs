@@ -47,8 +47,8 @@ cancelRide rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/cancel"
 logout :: String -> String
 logout dummyString = (getBaseUrl "") <> "/auth/logout"
 
-getDriverInfo :: String -> String
-getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
+getDriverInfo :: Int -> String
+getDriverInfo toss = (getBaseUrl "") <> "/driver/profile?toss=" <> show toss
 
 getRideHistory :: String -> String -> String -> String -> String -> String
 getRideHistory limit offset isActive status day= do
@@ -285,3 +285,6 @@ getCoinUsageHistory limit offset =  (getBaseUrl "") <> "/coins/usageHistory?limi
 
 convertCoinToCash :: String -> String
 convertCoinToCash _ =  (getBaseUrl "") <> "/coins/convertCoinToCash"
+
+getUiConfig :: Int -> String
+getUiConfig toss = (getBaseUrl "") <> "/driver/getUiConfigs?toss=" <> show toss 
