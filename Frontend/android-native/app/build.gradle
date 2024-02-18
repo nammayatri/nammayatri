@@ -28,12 +28,16 @@ repositories {
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
     namespace "in.juspay.mobility"
+
+    buildFeatures{
+        buildConfig = true
+    }
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 1
         versionName "1.0.0"
         multiDexEnabled true
@@ -220,7 +224,7 @@ android {
 }
 
 ext {
-    jpSDKversion = '2.1.20-nammayatri.13'
+    jpSDKversion = '2.1.25-nammayatri.02'
 }
 
 def cameraxVersion = "1.1.0-alpha05"
@@ -235,6 +239,7 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     implementation "in.juspay:hypersdk:$jpSDKversion"
     implementation "in.juspay:hyperqr:$jpSDKversion"
+    implementation "in.juspay:hypersmshandler:$jpSDKversion"
     implementation project(path: ':mobility-app')
     compileOnly project(path: ':mobility-common')
     nyDriverImplementation project(path: ':mobility-driver')

@@ -3,11 +3,12 @@ plugins {
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
+    namespace "in.juspay.mobility.common"
 
     defaultConfig {
         minSdk 21
-        targetSdkVersion 33
+        targetSdkVersion 34
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -39,7 +40,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
-    implementation 'in.juspay:hyper:2.1.20-nammayatri.13'
+    implementation 'in.juspay:hyper:2.1.25-nammayatri.02'
     compileOnly 'in.juspay:hypersdk:2.1.14'
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
     testImplementation 'junit:junit:4.13.2'
