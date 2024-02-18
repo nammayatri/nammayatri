@@ -82,7 +82,8 @@ data MerchantAPIs = MerchantAPIs
     mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReq -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes
   }
 
 data RidesAPIs = RidesAPIs
@@ -168,7 +169,8 @@ mkAppBackendAPIs merchantId city token = do
       :<|> mapsServiceConfigUpdate
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
-      :<|> smsServiceUsageConfigUpdate = merchantClient
+      :<|> smsServiceUsageConfigUpdate
+      :<|> createMerchantOperatingCity = merchantClient
 
     listIssue
       :<|> ticketStatusCallBack = issueClient

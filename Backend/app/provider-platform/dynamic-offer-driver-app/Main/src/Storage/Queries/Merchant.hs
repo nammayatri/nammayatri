@@ -68,8 +68,8 @@ updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merc
 updateGeofencingConfig merchantId originRestriction destinationRestriction = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamM.originRestriction $ originRestriction,
-      Se.Set BeamM.destinationRestriction $ destinationRestriction,
+    [ Se.Set BeamM.originRestriction originRestriction,
+      Se.Set BeamM.destinationRestriction destinationRestriction,
       Se.Set BeamM.updatedAt now
     ]
     [Se.Is BeamM.id (Se.Eq (getId merchantId))]

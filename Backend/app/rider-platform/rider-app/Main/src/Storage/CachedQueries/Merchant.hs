@@ -22,6 +22,7 @@ module Storage.CachedQueries.Merchant
     clearCache,
     getDefaultMerchantOperatingCity,
     getDefaultMerchantOperatingCity_,
+    updateGeofencingConfig,
   )
 where
 
@@ -31,6 +32,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
@@ -113,3 +115,6 @@ getDefaultMerchantOperatingCity_ merchantShortId = do
       ( MerchantOperatingCityNotFound $
           "merchantId:- " <> merchant.id.getId <> " city:- " <> show merchant.defaultCity
       )
+
+updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig = Queries.updateGeofencingConfig
