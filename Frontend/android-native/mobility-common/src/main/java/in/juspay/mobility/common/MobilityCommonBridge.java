@@ -273,7 +273,6 @@ public class MobilityCommonBridge extends HyperBridge {
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
-        bridgeComponents.getJsCallback().addJsToWebView("window.JBridge.setAnalyticsHeader(JSON.stringify({\"x-client-id\": \"mobility\"}));");
         client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
         receivers = new Receivers(bridgeComponents);
         receivers.initReceiver();
@@ -2987,15 +2986,23 @@ public class MobilityCommonBridge extends HyperBridge {
                     invokeOnEvent(bridgeComponents.getJsCallback(), "onTimeChanged");
                 }
             };
-            bridgeComponents.getContext().registerReceiver(timeChangeCallback, new IntentFilter(Intent.ACTION_TIME_CHANGED));
-            bridgeComponents.getContext().registerReceiver(gpsReceiver, new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION));
-            bridgeComponents.getContext().registerReceiver(internetActionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bridgeComponents.getContext().registerReceiver(timeChangeCallback, new IntentFilter(Intent.ACTION_TIME_CHANGED),Context.RECEIVER_EXPORTED);
+                bridgeComponents.getContext().registerReceiver(gpsReceiver, new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION), Context.RECEIVER_EXPORTED);
+                bridgeComponents.getContext().registerReceiver(internetActionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION), Context.RECEIVER_EXPORTED);
+            } else {
+                bridgeComponents.getContext().registerReceiver(timeChangeCallback, new IntentFilter(Intent.ACTION_TIME_CHANGED));
+                bridgeComponents.getContext().registerReceiver(gpsReceiver, new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION));
+                bridgeComponents.getContext().registerReceiver(internetActionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+            }
         }
 
-        protected void invokeOnEvent(JsCallback callback, String event) {
-            String encoded = Base64.encodeToString("{}".getBytes(), Base64.NO_WRAP);
-            String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", event, encoded);
-            callback.addJsToWebView(command);
+        protected void invokeOnEvent(@Nullable JsCallback callback, String event) {
+            if (callback != null) {
+                String encoded = Base64.encodeToString("{}".getBytes(), Base64.NO_WRAP);
+                String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", event, encoded);
+                callback.addJsToWebView(command);
+            }
         }
 
         private boolean isNetworkAvailable(Context context) {

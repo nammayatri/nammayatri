@@ -288,7 +288,7 @@ public class MainActivity extends AppCompatActivity {
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
         activity = this;
-        sharedPref = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         handleSplashScreen();
 
         WebView.setWebContentsDebuggingEnabled(true);
@@ -297,7 +297,7 @@ public class MainActivity extends AppCompatActivity {
             widgetService = new Intent(this, WidgetService.class);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             if (sharedPref != null) {
-                Utils.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
+                Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
             }
         }
         MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
@@ -457,7 +457,7 @@ public class MainActivity extends AppCompatActivity {
         String merchantId = key.equals("USER") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
         String baseUrl = key.equals("USER") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         SharedPreferences sharedPreff = getApplicationContext().getSharedPreferences(
-                activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                activity.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreff.edit();
         editor.putString("MERCHANT_ID", merchantId);
         editor.putString("BASE_URL", baseUrl);
@@ -918,7 +918,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean migrateLocalStore(Context context) {
         SharedPreferences oldSharedPref = context.getSharedPreferences("namma_yatri_app_local_keys",MODE_PRIVATE);
-        SharedPreferences currentSharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key),MODE_PRIVATE);
+        SharedPreferences currentSharedPref = context.getSharedPreferences(context.getString(in.juspay.mobility.app.R.string.preference_file_key),MODE_PRIVATE);
         Map<String,?> oldEntries = oldSharedPref.getAll();
         for (Map.Entry<String, ?> entry : oldEntries.entrySet()) {
             Object current = entry.getValue();
@@ -953,7 +953,7 @@ public class MainActivity extends AppCompatActivity {
         payload.put("logLevel",1);
         payload.put("isBootable",true);
         payload.put(PaymentConstants.ENV, "prod");
-        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
+        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(in.juspay.mobility.app.R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
         payload.put("bundleTimeOut",bundleTimeOut);
         return payload;
     }
