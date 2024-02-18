@@ -14,7 +14,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantOperatingCity
-  ( findById,
+  ( create,
+    findById,
     findByMerchantIdAndCity,
     findByMerchantShortIdAndCity,
     findAllByMerchantIdAndState,
@@ -29,6 +30,9 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantOperatingCity as Queries
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantOperatingCity -> m ()
+create = Queries.create
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
 findById id =

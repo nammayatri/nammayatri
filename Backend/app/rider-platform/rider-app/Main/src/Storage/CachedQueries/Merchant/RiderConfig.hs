@@ -14,7 +14,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.RiderConfig
-  ( findByMerchantOperatingCityId,
+  ( create,
+    findByMerchantOperatingCityId,
     clearCache,
   )
 where
@@ -26,6 +27,9 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.RiderConfig as Queries
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RiderConfig -> m ()
+create = Queries.create
 
 findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m (Maybe RiderConfig)
 findByMerchantOperatingCityId id =

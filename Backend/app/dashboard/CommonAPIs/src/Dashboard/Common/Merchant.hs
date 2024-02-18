@@ -32,10 +32,12 @@ import qualified Kernel.External.Notification.FCM.Flow as FCM
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS as SMS
 import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
+import Kernel.External.Types (Language)
 import qualified Kernel.External.Verification as Verification
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
@@ -617,3 +619,35 @@ validateSmsServiceUsageConfigUpdateReq :: Validate SmsServiceUsageConfigUpdateRe
 validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
   let mkMessage field = "All values in list " <> field <> " should be unique"
   validateField "smsProvidersPriorityList" smsProvidersPriorityList $ PredicateFunc mkMessage (not . anySame @SMS.SmsService)
+
+---- CreateMerchantOperatingCity ------------------------
+
+type CreateMerchantOperatingCityAPI =
+  "config"
+    :> "operatingCity"
+    :> "create"
+    :> ReqBody '[JSON] CreateMerchantOperatingCityReq
+    :> Post '[JSON] CreateMerchantOperatingCityRes
+
+data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
+  { city :: Context.City,
+    state :: Context.IndianState,
+    lat :: Double,
+    long :: Double,
+    primaryLanguage :: Maybe Language,
+    supportNumber :: Maybe Text,
+    enableForMerchant :: Bool,
+    exophone :: Maybe Text,
+    rcNumberPrefixList :: Maybe [Text]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateMerchantOperatingCityReq where
+  hideSecrets = identity
+
+newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
+  { cityId :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

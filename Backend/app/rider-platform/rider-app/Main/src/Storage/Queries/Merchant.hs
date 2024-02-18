@@ -23,6 +23,7 @@ where
 import Domain.Types.Merchant as DOrg
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Geofencing
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
@@ -52,6 +53,16 @@ update org = do
       Se.Set BeamM.updatedAt now
     ]
     [Se.Is BeamM.id (Se.Eq (getId org.id))]
+
+updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig merchantId originRestriction destinationRestriction = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamM.originRestriction originRestriction,
+      Se.Set BeamM.destinationRestriction destinationRestriction,
+      Se.Set BeamM.updatedAt now
+    ]
+    [Se.Is BeamM.id (Se.Eq (getId merchantId))]
 
 instance FromTType' BeamM.Merchant Merchant where
   fromTType' BeamM.MerchantT {..} = do

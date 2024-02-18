@@ -27,12 +27,13 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI')
+import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError, withFlowHandlerAPI')
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import "lib-dashboard" Storage.Queries.Merchant as SQM
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -44,6 +45,7 @@ type API =
            :<|> MapsServiceUsageConfigUpdateAPI
            :<|> SmsServiceConfigUpdateAPI
            :<|> SmsServiceUsageConfigUpdateAPI
+           :<|> CreateMerchantOperatingCityAPI
        )
 
 type MerchantUpdateAPI =
@@ -70,6 +72,10 @@ type SmsServiceUsageConfigUpdateAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
     :> Common.SmsServiceUsageConfigUpdateAPI
 
+type CreateMerchantOperatingCityAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
+    :> Common.CreateMerchantOperatingCityAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   merchantUpdate merchantId city
@@ -78,6 +84,7 @@ handler merchantId city =
     :<|> mapsServiceUsageConfigUpdate merchantId city
     :<|> smsServiceConfigUpdate merchantId city
     :<|> smsServiceUsageConfigUpdate merchantId city
+    :<|> createMerchantOperatingCity merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -163,3 +170,13 @@ smsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHa
   transaction <- buildTransaction Common.SmsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callRiderAppOperations checkedMerchantId opCity (.merchant.smsServiceUsageConfigUpdate) req
+
+createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
+createMerchantOperatingCity merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
+  -- update entry in dashboard
+  merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
+  unless (req.city `elem` merchant.supportedOperatingCities) $
+    SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
+  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) req
