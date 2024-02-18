@@ -70,6 +70,7 @@ import java.util.TimeZone;
 import javax.net.ssl.HttpsURLConnection;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
+import in.juspay.mobility.common.services.TLSSocketFactory;
 
 
 public class NotificationUtils {

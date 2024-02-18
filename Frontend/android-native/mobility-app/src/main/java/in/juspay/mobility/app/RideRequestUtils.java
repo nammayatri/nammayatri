@@ -20,7 +20,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -28,7 +27,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.View;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -62,6 +60,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
+import in.juspay.mobility.common.services.TLSSocketFactory;
 
 
 public class RideRequestUtils {

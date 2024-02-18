@@ -118,11 +118,14 @@ public class MobilityAppBridge extends HyperBridge {
 
     private MobilityRemoteConfigs remoteConfigs;
     CleverTapAPI clevertapDefaultInstance;
+
+    // Callbacks
     protected static String storeChatMessageCallBack = null;
     public static String storeCallBackOpenChatScreen = null;
     public static String storeDetectPhoneNumbersCallBack = null;
-    private String storeImageUploadCallBack = null;
-    private String storeUploadMultiPartCallBack = null;
+    private static String storeCustomerCallBack = null;
+    private static String storeDriverCallBack = null;
+
 
     // Permission request Code
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
@@ -138,49 +141,15 @@ public class MobilityAppBridge extends HyperBridge {
     protected HashMap<String, Trace> traceElements;
 
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
-    CallBack callBack = new CallBack() {
-        @Override
-        public void customerCallBack(String notificationType, String notificationData) {
-            Log.i(CALLBACK, "Not required");
-        }
-
-        @Override
-        public void driverCallBack(String notificationType, String notificationData) {
-            Log.i(CALLBACK, "Not required");
-        }
-
-        @Override
-        public void imageUploadCallBack(String encImage, String filename, String filePath) {
-            callImageUploadCallBack(encImage, filename, filePath);
-        }
-
-        @Override
-        public void chatCallBack(String message, String sentBy, String dateFormatted, String len) {
-            callChatMessageCallBack(message, sentBy, dateFormatted, len);
-        }
-
-        @Override
-        public void inAppCallBack(String inAppCallBack) {
-            callInAppNotificationCallBack(inAppCallBack);
-        }
-
-        @Override
-        public void bundleUpdatedCallBack(String event, JSONObject payload) {
-            String command = String.format("window[\"onEvent'\"]('%s','%s')", event, payload.toString());
-            bridgeComponents.getJsCallback().addJsToWebView(command);
-        }
-    };
+    private CallBack callBack;
 
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
-        remoteConfigs = new MobilityRemoteConfigs(false, false);
-        ChatService.registerCallback(callBack);
-        InAppNotification.registerCallback(callBack);
-        RemoteAssetsDownloader.registerCallback(callBack);
         traceElements = new HashMap<>();
-        Utils.registerCallback(callBack);
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
+        remoteConfigs = new MobilityRemoteConfigs(false, false);
+        registerCallBacks();
     }
 
     @JavascriptInterface
@@ -191,6 +160,42 @@ public class MobilityAppBridge extends HyperBridge {
             bridgeComponents.getActivity().finishAffinity(); // Finishes all activities.
             bridgeComponents.getContext().startActivity(intent);    // Start the launch activity
         }
+    }
+
+    public void registerCallBacks() {
+       
+            callBack = new CallBack() {
+            @Override
+            public void customerCallBack(String notificationType, String notificationData) {
+                callingStoreCallCustomer(notificationType,notificationData);
+            }
+
+            @Override
+            public void driverCallBack(String notificationType, String notificationData) {
+                callDriverNotificationCallBack(notificationType,notificationData);
+            }
+
+            @Override
+            public void chatCallBack(String message, String sentBy, String dateFormatted, String len) {
+                callChatMessageCallBack(message, sentBy, dateFormatted, len);
+            }
+
+            @Override
+            public void inAppCallBack(String inAppCallBack) {
+                callInAppNotificationCallBack(inAppCallBack);
+            }
+
+            @Override
+            public void bundleUpdatedCallBack(String event, JSONObject payload) {
+                String command = String.format("window[\"onEvent'\"]('%s','%s')", event, payload.toString());
+                bridgeComponents.getJsCallback().addJsToWebView(command);
+            }
+        };
+        NotificationUtils.registerCallback(callBack);
+        ChatService.registerCallback(callBack);
+        InAppNotification.registerCallback(callBack);
+        RemoteAssetsDownloader.registerCallback(callBack);
+        OverlaySheetService.registerCallback(callBack);
     }
 
     @Deprecated
@@ -206,11 +211,11 @@ public class MobilityAppBridge extends HyperBridge {
 
     @Override
     public void reset() {
+        NotificationUtils.deRegisterCallback(callBack);
         ChatService.deRegisterCallback(callBack);
         InAppNotification.deRegisterCallBack(callBack);
         RemoteAssetsDownloader.deRegisterCallback(callBack);
-        Utils.deRegisterCallback(callBack);
-        storeImageUploadCallBack = null;
+        OverlaySheetService.deRegisterCallback(callBack);
     }
 
     // region Store And Trigger CallBack
@@ -229,6 +234,45 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
+    @JavascriptInterface
+    public void storeCallBackCustomer(String callback) {
+        storeCustomerCallBack = callback;
+    }
+
+    public void callingStoreCallCustomer(String notificationType, String notificationData) {
+        if (storeCustomerCallBack != null) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                    storeCustomerCallBack, notificationType, notificationData.replace("'",""));
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+        }
+    }
+
+    @JavascriptInterface
+    public void removeChatMessageCallback() {
+        storeChatMessageCallBack = null;
+    }
+
+    public void callInAppNotificationCallBack(String onTapAction) {
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback(\"%s\");", onTapAction);
+        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+    }
+
+    @JavascriptInterface
+    public void storeCallBackForNotification(String callback) {
+        storeDriverCallBack = callback;
+    }
+
+    public void callDriverNotificationCallBack(String notificationType, String notificationData) {
+        if (storeDriverCallBack != null) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                    storeDriverCallBack, notificationType, notificationData.replace("'",""));
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+        }
+    }
+    // endregion
+
+
+    // region Firebase and PlayStore Utils
     @JavascriptInterface
     public void extractReferrerUrl(){
         InstallReferrerClient referrerClient;
@@ -269,38 +313,6 @@ public class MobilityAppBridge extends HyperBridge {
                 Log.i(REFERRER, "referrer service disconnected");
             }
         });
-    }
-
-    @JavascriptInterface
-    public void removeChatMessageCallback() {
-        storeChatMessageCallBack = null;
-    }
-
-    public void callInAppNotificationCallBack(String onTapAction) {
-        String javascript = String.format(Locale.ENGLISH, "window.callUICallback(\"%s\");", onTapAction);
-        bridgeComponents.getJsCallback().addJsToWebView(javascript);
-    }
-
-    @JavascriptInterface
-    public void storeCallBackImageUpload(String callback) {
-        storeImageUploadCallBack = callback;
-    }
-
-    public void callImageUploadCallBack(String stringImage, String imageName, String imagePath) {
-        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
-                storeImageUploadCallBack, stringImage, imageName, imagePath);
-        bridgeComponents.getJsCallback().addJsToWebView(javascript);
-    }
-
-    @JavascriptInterface
-    public void storeCallBackUploadMultiPartData(String callback){
-        storeUploadMultiPartCallBack = callback;
-    }
-
-    public void callUploadMultiPartCallBack(String fileType, String fileId) {
-        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                storeUploadMultiPartCallBack, fileType, fileId);
-        bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
     // endregion
 
@@ -1018,89 +1030,7 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(intent);
     }
 
-    @JavascriptInterface
-    public void clearFocus(String id) {
-        if (bridgeComponents.getActivity() != null) {
-            ExecutorManager.runOnMainThread(() -> bridgeComponents.getActivity().findViewById(Integer.parseInt(id)).clearFocus());
-        }
-    }
 
-    @JavascriptInterface
-    public void uploadMultiPartData(String filePath, String uploadUrl, String fileType) {
-        try {
-            String boundary = UUID.randomUUID().toString();
-
-            URL url = new URL(uploadUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setDoOutput(true);
-            connection.setUseCaches(false);
-            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-            String token = KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(),"REGISTERATION_TOKEN", "__failed" );
-            connection.setRequestProperty("token", token);
-
-            File file = new File(filePath);
-            String fileName = file.getName();
-            DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
-
-            outputStream.writeBytes("--" + boundary + "\r\n");
-            outputStream.writeBytes(("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + "\r\n"));
-            if (fileType.equals("Image"))
-                outputStream.writeBytes("Content-Type: image/jpeg\r\n");
-            else if (fileType.equals("Audio"))
-                outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
-            outputStream.writeBytes("\r\n");
-
-            FileInputStream fileInputStream = new FileInputStream(file);
-            int bytesAvailable = fileInputStream.available();
-            int maxBufferSize = 1024 * 1024;
-            int bufferSize = Math.min(bytesAvailable, maxBufferSize);
-
-            byte[] buffer = new byte[bufferSize];
-            int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-            while (bytesRead > 0) {
-                outputStream.write(buffer, 0, bufferSize);
-                bytesAvailable = fileInputStream.available();
-                bufferSize = Math.min(bytesAvailable, maxBufferSize);
-                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-            }
-            outputStream.writeBytes("\r\n");
-            outputStream.writeBytes("--" + boundary + "\r\n");
-
-            outputStream.writeBytes("Content-Disposition: form-data; name=\"fileType\"" + "\r\n");
-            outputStream.writeBytes("Content-Type: application/json" + "\r\n");
-            outputStream.writeBytes("\r\n");
-            outputStream.writeBytes(fileType);
-            outputStream.writeBytes("\r\n");
-            outputStream.writeBytes("--" + boundary + "\r\n" + "--");
-
-            int responseCode = connection.getResponseCode();
-            String res = "";
-            if (responseCode == 200) {
-                StringBuilder s_buffer = new StringBuilder();
-                InputStream is = new BufferedInputStream(connection.getInputStream());
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
-                String inputLine;
-                while ((inputLine = bufferedReader.readLine()) != null) {
-                    s_buffer.append(inputLine);
-                }
-                res = s_buffer.toString();
-                JSONObject jsonObject;
-                try {
-                    jsonObject = new JSONObject(res);
-                    res = jsonObject.getString("fileId");
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                Toast.makeText(bridgeComponents.getContext(), "Unable to upload image", Toast.LENGTH_SHORT).show();
-            }
-            callUploadMultiPartCallBack(fileType, res);
-        }catch(Exception e){
-            Log.e("UPLOAD_MULTI_PART_DATA" , "error in Upload file: "+e);
-        }
-    }
-    
     public void askRequestedPermissions(String[] requests) {
         PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, null);
     }
