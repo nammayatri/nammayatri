@@ -98,10 +98,8 @@ import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
-import in.juspay.mobility.app.OverlaySheetService;
 import in.juspay.mobility.app.SliderComponent;
 import in.juspay.mobility.app.TranslatorMLKit;
-import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
 import in.juspay.mobility.common.Utils;
 import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
@@ -218,8 +216,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 Constraints constraints = new Constraints.Builder()
                         .setRequiresDeviceIdle(true)
                         .build();
-                PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 15, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(R.string.location_update)).setConstraints(constraints).build();
-                mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
+                PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 15, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update)).setConstraints(constraints).build();
+                mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
                 Log.i(LOCATION, "Start Location Polling");
             }
         });
@@ -230,7 +228,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
         bridgeComponents.getContext().stopService(locationUpdateService);
         WorkManager mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
-        mWorkManager.cancelAllWorkByTag(bridgeComponents.getContext().getString(R.string.location_update));
+        mWorkManager.cancelAllWorkByTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update));
         Log.i(LOCATION, "Stop Location Update Polling");
     }
 
