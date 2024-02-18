@@ -230,12 +230,3 @@ triggerExophoneEvent ExophoneEventData {..} = do
   let exophonePayload = Exophone {..}
   exoevent <- createEvent (getId <$> personId) (maybe "" getId merchantId) ExophoneData DYNAMIC_OFFER_DRIVER_APP triggeredBy (Just exophonePayload) Nothing Nothing
   triggerEvent exoevent
-
-triggerSDKEvent ::
-  ( EventStreamFlow m r
-  ) =>
-  SDKEventData ->
-  m ()
-triggerSDKEvent SDKEventData {..} = do
-  sdkEvent <- createEvent (getId <$> personId) (getId merchantId) SDKData DYNAMIC_OFFER_DRIVER_APP User (Just $ SDK payload) Nothing (Just $ getId merchantOperatingCityId)
-  triggerEvent sdkEvent

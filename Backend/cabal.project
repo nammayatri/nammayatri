@@ -17,6 +17,7 @@ packages:
   app/dashboard/CommonAPIs
   app/example-service
   app/special-zone
+  app/sdk-event-pipeline
   app/mocks/rider-platform
   app/kafka-consumers
   app/mocks/idfy
