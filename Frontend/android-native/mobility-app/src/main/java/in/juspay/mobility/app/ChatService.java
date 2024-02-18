@@ -56,6 +56,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
+import in.juspay.mobility.common.services.TLSSocketFactory;
 
 public class ChatService extends Service {
     private Context context;

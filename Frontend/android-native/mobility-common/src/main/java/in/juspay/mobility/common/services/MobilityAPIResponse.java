@@ -1,4 +1,4 @@
-package in.juspay.mobility.app.services;
+package in.juspay.mobility.common.services;
 
 public class MobilityAPIResponse {
 

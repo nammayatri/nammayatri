@@ -1,21 +1,50 @@
 package in.juspay.mobility.common;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
+import android.util.Base64;
+import android.util.Log;
+
+import androidx.annotation.Nullable;
+import androidx.core.content.FileProvider;
+
+import com.theartofdev.edmodo.cropper.CropImage;
 
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
 
 public class Utils {
+
+    private static final String UTILS = Utils.class.getSimpleName();
+
+    private static final ArrayList<UICallBacks> callBack = new ArrayList<>();
+
+    public static void registerCallback(UICallBacks notificationCallback) {
+        callBack.add(notificationCallback);
+    }
+
+    public static void deRegisterCallback(UICallBacks notificationCallback) {
+        callBack.remove(notificationCallback);
+    }
+
 
     public static void updateLocaleResource(String languageKey, Context context) {
         Locale locale;
@@ -105,6 +134,82 @@ public class Utils {
         drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
         drawable.draw(canvas);
         return bitmap;
+    }
+
+    public static void captureImage(@Nullable Intent data, Activity activity, Context context) {
+        try {
+            Uri imageUri;
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            if (data == null || data.getData() == null) { //Camera
+                File image = new File(context.getFilesDir(), "IMG_" + sharedPref.getString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
+                imageUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", image);
+            } else { // storage
+                imageUri = data.getData();
+            }
+            startCropImageActivity(imageUri, activity);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void startCropImageActivity(Uri imageUri, Activity activity) {
+        CropImage.activity(imageUri)
+                .setAllowFlipping(false)
+                .start(activity);
+    }
+
+    public static void encodeImageToBase64(@Nullable Intent data, Context context, @Nullable Uri imageData) {
+        try {
+            Uri fileUri;
+            if(imageData == null) {
+                CropImage.ActivityResult result = CropImage.getActivityResult(data);
+                fileUri = result.getUri();
+            }
+            else {
+                fileUri = imageData;
+            }
+            InputStream imageStream = context.getContentResolver().openInputStream(fileUri);
+            Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+            byte[] b;
+            String encImage;
+
+            selectedImage.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+            b = baos.toByteArray();
+            encImage = Base64.encodeToString(b, Base64.NO_WRAP);
+
+            Log.d(UTILS, "camera image size : " + (((encImage.length() / 4) * 3) / 1000));
+
+            if (((encImage.length() / 4) * 3) / 1000 > 400) {
+                int reduceQuality = 10;
+                selectedImage.compress(Bitmap.CompressFormat.JPEG, 100 - reduceQuality, baos);
+                b = baos.toByteArray();
+                encImage = Base64.encodeToString(b, Base64.NO_WRAP);
+                while (((encImage.length() / 4) * 3) / 1000 > 400) {
+                    if (reduceQuality >= 90) {
+                        break;
+                    }
+                    reduceQuality += 10;
+                    baos.reset();
+                    selectedImage.compress(Bitmap.CompressFormat.JPEG, 100 - reduceQuality, baos);
+                    b = baos.toByteArray();
+                    encImage = Base64.encodeToString(b, Base64.NO_WRAP);
+                }
+            }
+
+            Log.d(UTILS, "encoded image size camera : " + (((encImage.length() / 4) * 3) / 1000));
+            {
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                for (int i = 0; i < callBack.size(); i++) {
+                    if (fileUri != null) {
+                        callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp + ".jpg", fileUri.getPath());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 

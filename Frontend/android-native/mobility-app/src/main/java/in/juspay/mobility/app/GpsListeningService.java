@@ -33,8 +33,6 @@ import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkManager;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -42,6 +40,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
+
+import in.juspay.mobility.common.services.TLSSocketFactory;
 
 
 public class GpsListeningService extends Service {

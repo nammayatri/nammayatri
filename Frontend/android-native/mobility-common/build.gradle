@@ -38,7 +38,7 @@ dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
-    implementation project(':mobility-app')
+    api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
     implementation 'in.juspay:hyper:2.1.20-nammayatri.13'
     compileOnly 'in.juspay:hypersdk:2.1.14'
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
