@@ -179,6 +179,8 @@ castSosStatus = \case
   DSos.Pending -> Common.Pending
   DSos.Resolved -> Common.Resolved
   DSos.NotResolved -> Common.NotResolved
+  DSos.MockPending -> Common.MockPending
+  DSos.MockResolved -> Common.MockResolved
 
 castVehicleVariant :: VehVar.VehicleVariant -> Common.Variant
 castVehicleVariant = \case

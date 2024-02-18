@@ -59,7 +59,8 @@ data DConfirmReq = DConfirmReq
     fromAddress :: DL.LocationAddress,
     toAddress :: Maybe DL.LocationAddress,
     mbRiderName :: Maybe Text,
-    nightSafetyCheck :: Bool
+    nightSafetyCheck :: Bool,
+    enableFrequentLocationUpdates :: Bool
   }
 
 data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote
@@ -101,7 +102,7 @@ handler merchant req validatedQuote = do
     handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      (ride, _, vehicle) <- initializeRide merchant.id driver uBooking Nothing driverQuote.requestId.getId
+      (ride, _, vehicle) <- initializeRide merchant.id driver uBooking Nothing driverQuote.requestId.getId $ Just req.enableFrequentLocationUpdates
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId driverQuote.estimatedFare
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       return $ mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails

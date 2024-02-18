@@ -954,7 +954,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
       CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
       unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
       QST.updateStatus searchTry.id DST.COMPLETED
-      (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing booking.id.getId
+      (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing booking.id.getId Nothing
       driverFCMPulledList <- deactivateExistingQuotes merchantOpCityId merchantId driver.id searchTry.id quote.estimatedFare
       void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
       CS.markBookingAssignmentCompleted booking.id

@@ -57,6 +57,14 @@ $(mkBeamInstancesForEnum ''Gender)
 $(mkFromHttpInstanceForEnum ''Gender)
 
 --------------------------------------------------------------------------------------------------
+data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''RideShareOptions)
+
+$(mkFromHttpInstanceForEnum ''RideShareOptions)
+
+--------------------------------------------------------------------------------------------------
 
 data PersonE e = Person
   { id :: Id Person,
@@ -100,7 +108,7 @@ data PersonE e = Person
     clientVersion :: Maybe Version,
     shareEmergencyContacts :: Bool,
     nightSafetyChecks :: Bool,
-    shareTripWithEmergencyContacts :: Maybe Bool,
+    shareTripWithEmergencyContactOption :: Maybe RideShareOptions,
     hasCompletedMockSafetyDrill :: Maybe Bool,
     hasCompletedSafetySetup :: Bool,
     registrationLat :: Maybe Double,

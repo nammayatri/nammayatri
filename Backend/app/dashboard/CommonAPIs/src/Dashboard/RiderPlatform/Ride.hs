@@ -137,6 +137,8 @@ data SosStatus
   = NotResolved
   | Pending
   | Resolved
+  | MockPending
+  | MockResolved
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Location = Location

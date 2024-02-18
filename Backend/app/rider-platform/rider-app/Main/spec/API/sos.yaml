@@ -22,7 +22,11 @@ types:
     status: SosStatus
     comment: Maybe Text
 
+  MockSosReq:
+    onRide: Maybe Bool
 
+  MarkAsSafeReq:
+    isMock: Maybe Bool
 
 apis:
   # GET /sos/getDetails
@@ -60,6 +64,8 @@ apis:
       auth: TokenAuth
       params:
         sosId: Id Sos
+      request:
+        type: API.Types.UI.Sos.MarkAsSafeReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
@@ -67,5 +73,7 @@ apis:
   - POST:
       endpoint: /sos/createMockSos
       auth: TokenAuth
+      request:
+        type: API.Types.UI.Sos.MockSosReq
       response:
         type: Kernel.Types.APISuccess.APISuccess

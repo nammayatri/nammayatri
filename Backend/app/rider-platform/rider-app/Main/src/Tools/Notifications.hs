@@ -42,6 +42,7 @@ import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (count, runInReplica)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -50,6 +51,7 @@ import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
@@ -263,6 +265,7 @@ notifyOnRideCompleted booking ride = do
             "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
           ]
   updateFollowsRideCount personId
+  Redis.del $ CQSos.mockSosKey personId
   notifyPerson person.merchantId merchantOperatingCityId notificationData
   where
     updateFollowsRideCount personId = do
@@ -708,9 +711,11 @@ notifyRideStartToEmergencyContacts booking ride = do
   let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   riderConfig <- QRC.findByMerchantOperatingCityId rider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
-  if rider.shareTripWithEmergencyContacts == Just True && checkTimeConstraintForFollowRide riderConfig now
+  let shouldShare =
+        rider.shareTripWithEmergencyContactOption == Just ALWAYS_SHARE
+          || (rider.shareTripWithEmergencyContactOption == Just SHARE_WITH_TIME_CONSTRAINTS && checkTimeConstraintForFollowRide riderConfig now)
+  if shouldShare
     then do
-      unless (checkTimeConstraintForFollowRide riderConfig now) $ return ()
       let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
       emContacts <- QPDEN.findAllByPersonId booking.riderId
       decEmContacts <- decrypt `mapM` emContacts

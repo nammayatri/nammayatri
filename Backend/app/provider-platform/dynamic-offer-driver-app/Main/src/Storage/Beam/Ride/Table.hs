@@ -60,7 +60,8 @@ data RideT f = RideT
     uiDistanceCalculationWithoutAccuracy :: B.C f (Maybe Int),
     isFreeRide :: B.C f (Maybe Bool),
     driverGoHomeRequestId :: B.C f (Maybe Text),
-    safetyAlertTriggered :: B.C f Bool
+    safetyAlertTriggered :: B.C f Bool,
+    enableFrequentLocationUpdates :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

@@ -67,7 +67,7 @@ data PersonT f = PersonT
     referralCode :: B.C f (Maybe Text),
     referredAt :: B.C f (Maybe UTCTime),
     shareEmergencyContacts :: B.C f Bool,
-    shareTripWithEmergencyContacts :: B.C f (Maybe Bool),
+    shareTripWithEmergencyContactOption :: B.C f (Maybe Domain.RideShareOptions),
     hasCompletedMockSafetyDrill :: B.C f (Maybe Bool),
     nightSafetyChecks :: B.C f Bool,
     hasCompletedSafetySetup :: B.C f Bool,

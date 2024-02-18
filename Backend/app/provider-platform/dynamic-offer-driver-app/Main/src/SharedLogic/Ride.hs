@@ -62,8 +62,9 @@ initializeRide ::
   DBooking.Booking ->
   Maybe Text ->
   Text ->
+  Maybe Bool ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchantId driver booking mbOtpCode routeInfoId = do
+initializeRide merchantId driver booking mbOtpCode routeInfoId enableFrequentLocationUpdates = do
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp
@@ -78,7 +79,7 @@ initializeRide merchantId driver booking mbOtpCode routeInfoId = do
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
 
-  ride <- buildRide driver.id booking ghrId otpCode
+  ride <- buildRide driver.id booking ghrId otpCode enableFrequentLocationUpdates
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   rideDetails <- buildRideDetails ride driver vehicle
 
@@ -140,8 +141,8 @@ buildRideDetails ride driver vehicle = do
         fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
       }
 
-buildRide :: Id Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Flow DRide.Ride
-buildRide driverId booking ghrId otp = do
+buildRide :: Id Person -> DBooking.Booking -> Maybe (Id DGetHomeRequest.DriverGoHomeRequest) -> Text -> Maybe Bool -> Flow DRide.Ride
+buildRide driverId booking ghrId otp enableFrequentLocationUpdates = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
@@ -184,7 +185,8 @@ buildRide driverId booking ghrId otp = do
         uiDistanceCalculationWithoutAccuracy = Nothing,
         isFreeRide = Just ((getId driverId) `elem` transporterConfig.specialDrivers),
         driverGoHomeRequestId = ghrId,
-        safetyAlertTriggered = False
+        safetyAlertTriggered = False,
+        enableFrequentLocationUpdates = enableFrequentLocationUpdates
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
