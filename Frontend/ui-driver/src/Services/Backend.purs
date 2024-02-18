@@ -42,14 +42,14 @@ import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=), (<$>))
+import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=), (<$>), when)
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (DriverStatus)
 import Services.Config as SC
 import Services.EndPoints as EP
 import Engineering.Helpers.Events as Events
-import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore, setValueToLocalStore, setValueToLocalStore')
 import Storage (getValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
@@ -60,6 +60,12 @@ import Types.ModifyScreenState (modifyScreenState)
 import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
+import DecodeUtil
+import Data.Function.Uncurried (runFn2)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Engineering.Helpers.BackTrack (getState)
 import SessionCache
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
@@ -373,14 +379,35 @@ logOutBT payload = do
 --------------------------------- getDriverInfoBT ---------------------------------------------------------------------------------------------------------------------------------
 
 getDriverInfoBT :: GetDriverInfoReq -> FlowBT String GetDriverInfoResp
-getDriverInfoBT payload = do
-     headers <- getHeaders' "" true
-     withAPIResultBT ((EP.getDriverInfo "" )) identity errorHandler (lift $ lift $ callAPI headers payload)
-    where
-        errorHandler (ErrorPayload errorPayload) =  do
-            BackT $ pure GoBack
+getDriverInfoBT payload@(GetDriverInfoReq toss) = do 
+    let currHash = getValueToLocalStore UI_CONFIG_HASH
+    headers <- getHeaders' "" true
+    (GetDriverInfoResp resp) <- withAPIResultBT ((EP.getDriverInfo toss )) identity errorHandler (lift $ lift $ callAPI headers payload)
+    when (resp.frontendConfigHash /= (Just currHash)) $ do
+        _ <- pure $ spy "getUicfgs call" ""
+        cfgResp' <- lift $ lift $ getUiConfigs toss
+        case cfgResp' of 
+          Right (cfgResp) ->
+            case cfgResp of 
+              EmptyGetUiConfigResp _ -> do
+                _ <- pure $ spy "INFO " "Empty response from getUiConfigs driver so not updating city config."
+                pure unit
+              GetUiConfigResp cfg -> do
+                  _ <- pure $ spy "DEBUG : Response from driver getUiConfigs : " cfgResp
+                  setValueToLocalStore UI_CONFIGS (stringifyJSON cfg) -- NOTE:- When someone needs config check in window if not found check in localStore if found cache in window and and use it else if still not found call this function and check in window again.
+                  _ <- pure $ runFn2 setInWindow "UI_CONFIGS" (stringifyJSON cfg)
+                  setValueToLocalStore UI_CONFIG_HASH $ fromMaybe "" resp.frontendConfigHash
+          Left _ -> do
+              _ <- pure $ spy "DEBUG " "Error in fetching driver info and hence unable to update city config." 
+              pure unit
+    pure $ (GetDriverInfoResp resp)
+  where
+      errorHandler (ErrorPayload errorPayload) =  do
+          _ <- pure $ spy "Error in fetching driver info." ""
+          BackT $ pure GoBack
 
-getDriverInfoApi payload = do
+getDriverInfoApi toss = do
+     let currHash = getValueToLocalStore UI_CONFIG_HASH
      _ <-pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) before" (getValueToLocalStore REGISTERATION_TOKEN)
     --  _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) before effect" (liftEffect $ (getValueToLocalStoreNew REGISTERATION_TOKEN))
@@ -389,7 +416,29 @@ getDriverInfoApi payload = do
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)
     --  _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after effetct" (liftEffect $ (getValueToLocalStoreNew REGISTERATION_TOKEN))
-     withAPIResult (EP.getDriverInfo "") unwrapResponse $ callAPI headers (GetDriverInfoReq { })
+     resp' <- withAPIResult (EP.getDriverInfo toss) unwrapResponse $ callAPI headers (GetDriverInfoReq toss)
+     case resp' of
+        Right (GetDriverInfoResp resp) -> do
+          when (resp.frontendConfigHash /= (Just currHash)) $ do
+            cfgResp' <- getUiConfigs toss
+            case cfgResp' of 
+              Right (cfgResp) ->
+                case cfgResp of 
+                  EmptyGetUiConfigResp _ -> do
+                    _ <- pure $ spy "INFO " "Empty response from getUiConfigs driver so not updating city config."
+                    pure unit
+                  GetUiConfigResp cfg -> do
+                      _ <- pure $ spy "DEBUG : Response from getUiConfigs : " cfg
+                      setValueToLocalStore' UI_CONFIGS (stringifyJSON cfg) -- NOTE:- when someone needs config check in window if not found check in localStore if found cache in window and and use it else if still not found call this function and check in window again.
+                      _ <- pure $ runFn2 setInWindow "UI_CONFIGS" (stringifyJSON cfg)
+                      setValueToLocalStore' UI_CONFIG_HASH $ fromMaybe "" resp.frontendConfigHash
+              Left _ -> do
+                _ <- pure $ spy "DEBUG : Error in fetching Driver Ui Configs. Hence, unable to update city config." cfgResp'
+                pure unit
+        Left _ -> do
+          _ <- pure $ spy "DEBUG " "Error in fetching driver info. Hence, unable to update city config." 
+          pure unit
+     pure resp'
     where
         unwrapResponse (x) = x
 
@@ -1492,3 +1541,12 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
             tiers : tierArray,
             airConditioned : Nothing
         }
+
+------------------------------------------------------- CAC ----------------------------------------------------
+
+getUiConfigs :: Int ->  Flow GlobalState (Either ErrorResponse GetUiConfigResp)
+getUiConfigs toss = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getUiConfig toss) unwrapResponse $ callAPI headers (GetUiConfigReq toss)
+    where
+        unwrapResponse (x) = x

@@ -59,6 +59,12 @@ import ConfigProvider as CP
 import Locale.Utils
 import MerchantConfig.Types (GeoCodeConfig)
 import Debug
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
+import DecodeUtil
+import Data.Function.Uncurried (runFn2)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Engineering.Helpers.BackTrack (getState)
 import Effect.Uncurried (runEffectFn9)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import SessionCache
@@ -497,18 +503,40 @@ rideBookingListWithStatus limit offset status maybeClientId = do
 makeRideBookingListWithStatus :: String -> String -> String -> Maybe String -> RideBookingListReq
 makeRideBookingListWithStatus limit offset status maybeClientId = RideBookingListReq limit offset "false" (Just status) maybeClientId
 
-getProfileBT :: String -> FlowBT String GetProfileRes
-getProfileBT _  = do
+getProfileBT :: Int -> FlowBT String GetProfileRes
+getProfileBT toss  = do
+        let currHash = getValueToLocalStore UI_CONFIG_HASH
         headers <- getHeaders' "" true
-        withAPIResultBT (EP.profile "") identity errorHandler (lift $ lift $ callAPI headers (GetProfileReq))
+        (GetProfileRes resp) <- withAPIResultBT (EP.profile (Just toss)) identity errorHandler (lift $ lift $ callAPI headers (GetProfileReq toss))
+        if (resp.frontendConfigHash /= (Just currHash)) then do -- CACTODO: Make this when condition
+            _ <- pure $ printLog "debug here 2" (show $ resp.frontendConfigHash /= (Just currHash)) -- CACTODO: remove
+            _ <- pure $ spy "debug here" (show $ resp.frontendConfigHash /= (Just currHash)) -- CACTODO: remove
+            cfgResp' <- lift $ lift $ getUiConfigs toss
+            case cfgResp' of 
+              Right (cfgResp) ->
+                case cfgResp of 
+                  EmptyGetUiConfigResp _ -> do
+                    _ <- pure $ spy "INFO " "Empty response from getUiConfigs customer so not updating city config."
+                    pure unit
+                  GetUiConfigResp cfg -> do
+                      _ <- pure $ spy "DEBUG : Response from customer getUiConfigs : " cfgResp
+                      setValueToLocalStore UI_CONFIGS (stringifyJSON cfg) -- NOTE:- When someone needs config check in window if not found check in localStore if found cache in window and and use it else if still not found call this function and check in window again.
+                      _ <- pure $ runFn2 setInWindow "UI_CONFIGS" (stringifyJSON cfg)
+                      setValueToLocalStore UI_CONFIG_HASH $ fromMaybe "" resp.frontendConfigHash
+              Left _ -> do
+                  _ <- pure $ spy "DEBUG " "Error in fetching customer info and hence unable to update city config." 
+                  pure unit
+        else pure unit
+        pure $ (GetProfileRes resp)
     where
     errorHandler (errorPayload) =  do
+        _ <- pure $ spy "Error in fetching customer info." ""
         BackT $ pure GoBack
 
 -- updateProfileBT :: UpdateProfileReq -> FlowBT String UpdateProfileRes
 updateProfile (UpdateProfileReq payload) = do
         headers <- getHeaders "" false
-        withAPIResult (EP.profile "") unwrapResponse $ callAPI headers (UpdateProfileReq payload)
+        withAPIResult (EP.profile Nothing) unwrapResponse $ callAPI headers (UpdateProfileReq payload)
     where
         unwrapResponse (x) = x
 
@@ -1304,4 +1332,11 @@ pushSDKEvents = do
     events <- liftFlow $ Events.getEvents
     withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
     where
-        unwrapResponse x = x
+        unwrapResponse x = x------------------------------------------------------- CAC ----------------------------------------------------
+
+getUiConfigs :: Int ->  Flow GlobalState (Either ErrorResponse GetUiConfigResp)
+getUiConfigs toss = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getUiConfig toss) unwrapResponse $ callAPI headers (GetUiConfigReq toss)
+    where
+        unwrapResponse (x) = x

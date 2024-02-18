@@ -39,7 +39,7 @@ import Data.Array as DA
 import Data.Bifunctor.Join (Join)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1)
-import Data.Int (toNumber, pow, ceil)
+import Data.Int (toNumber, pow, ceil, fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Maybe as Mb
 import Data.Number (fromString) as Number
@@ -141,10 +141,11 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorActio
 
 getDriverInfoDataFromCache :: Maybe GetDriverInfoResp -> Flow GlobalState GetDriverInfoResp
 getDriverInfoDataFromCache resp = do
+  let toss = fromMaybe 49 $ fromString $ getValueToLocalStore CAC_TOSS
   case resp of 
     Just cacheResp -> pure cacheResp
     Nothing -> do
-      driverInfoResp <- Remote.getDriverInfoApi (GetDriverInfoReq {})
+      driverInfoResp <- Remote.getDriverInfoApi toss
       case driverInfoResp of
         Right latestResp -> pure latestResp
         Left _ -> pure dummyDriverInfo

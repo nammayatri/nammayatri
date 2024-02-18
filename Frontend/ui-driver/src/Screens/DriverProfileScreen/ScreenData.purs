@@ -210,6 +210,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , isGoHomeEnabled       : false
     , maskedDeviceToken     : Nothing
     , operatingCity         : Nothing
+    , frontendConfigHash    : Nothing 
     , isVehicleSupported    : Nothing
     , canSwitchToRental     : false
     , checkIfACWorking    : Nothing

@@ -48,6 +48,7 @@ to generate this file without the comments in this block.
   , "presto-dom"
   , "profunctor"
   , "profunctor-lenses"
+  , "random"
   , "refs"
   , "strings"
   , "tracker"

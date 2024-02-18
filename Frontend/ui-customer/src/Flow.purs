@@ -41,6 +41,7 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Newtype (unwrap)
 import Data.Number (fromString)
+import Data.Int as INT
 import Data.Ord (compare)
 import Data.String (Pattern(..), Replacement(..), drop, indexOf, split, toLower, trim, take, joinWith)
 import Data.String (length) as STR
@@ -48,6 +49,7 @@ import Data.String as DS
 import Data.String.Common (joinWith, split, toUpper, trim, replaceAll)
 import Debug (spy)
 import Effect (Effect)
+import Effect.Random as ER
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
@@ -210,6 +212,9 @@ baseAppFlow gPayload callInitUI = do
   when showSplashScreen $ toggleSplash true
   tokenValidity <- validateToken signatureAuthData
   lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  
+  when (getValueToLocalStore CAC_TOSS == "__failed") $ do
+      toss <- lift $ lift $ liftFlow $ ER.randomInt 1 100
+      void $ pure $ setValueToLocalStore CAC_TOSS (show toss)
   if tokenValidity 
     then handleDeepLinks (Just gPayload) false
     else validateAuthData $ signatureAuthData
@@ -311,8 +316,9 @@ currentFlowStatus = do
   where
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
+      let toss = fromMaybe 49 $ INT.fromString $  getValueToLocalStore CAC_TOSS
       liftFlowBT $ markPerformance "VERIFY_PROFILE"
-      response <- Remote.getProfileBT ""
+      response <- Remote.getProfileBT toss
       config <- getAppConfigFlowBT appConfig
       let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
       case appName of

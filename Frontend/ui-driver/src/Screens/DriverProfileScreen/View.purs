@@ -61,7 +61,8 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import Mobility.Prelude as MP
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
-import Presto.Core.Types.Language.Flow (doAff)
+import Data.Int (fromString)
+import Presto.Core.Types.Language.Flow (doAff, getState)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor, fillViewport)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
@@ -78,7 +79,7 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
-import Types.App (defaultGlobalState)
+import Types.App (defaultGlobalState, GlobalState(..))
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -99,7 +100,8 @@ screen initialState =
                     void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
                     EHU.toggleLoader true
                     summaryResponse <- Remote.driverProfileSummary ""
-                    profileResponse <- Remote.getDriverInfoApi (GetDriverInfoReq {})
+                    let toss = fromMaybe 49 $ fromString $ getValueToLocalStore CAC_TOSS
+                    profileResponse <- Remote.getDriverInfoApi toss
                     case summaryResponse, profileResponse of
                       Right summaryResp, Right profileResp -> do
                         liftFlow $ push $ DriverSummary summaryResp
