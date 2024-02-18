@@ -24,4 +24,4 @@ data Geometry = Geometry
     state :: IndianState,
     city :: City
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)

@@ -47,6 +47,7 @@ import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
 import qualified Domain.Types.FareProduct as DFareProduct
+import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.GoHomeConfig as DGoHomeConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DDIPC
@@ -95,6 +96,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
+import qualified Storage.Queries.Geometry as QGEO
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -786,7 +788,7 @@ updateFarePolicy _ _ farePolicyId req = do
           ..
         }
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
+createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 createMerchantOperatingCity merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   baseOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
@@ -847,6 +849,10 @@ createMerchantOperatingCity merchantShortId city req = do
   transporterConfig <- CQTC.findByMerchantOpCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Transporter Config not found")
   newTransporterConfig <- buildTransporterConfig newOperatingCity.id transporterConfig
 
+  -- geometry
+  geometry <- buildGeometry
+
+  QGEO.create geometry
   CQMOC.create newOperatingCity
   CQDIPC.create newIntelligentPoolConfig
   mapM_ CQDPC.create newDriverPoolConfigs
@@ -873,6 +879,16 @@ createMerchantOperatingCity merchantShortId city req = do
     updateGeoRestriction = \case
       Unrestricted -> Unrestricted
       Regions regions -> Regions $ regions <> [(show req.city)]
+
+    buildGeometry = do
+      id <- generateGUID
+      pure
+        DGEO.Geometry
+          { id,
+            region = show req.city,
+            state = req.state,
+            city = req.city
+          }
 
     buildMerchantOperatingCity merchantId baseCity = do
       id <- generateGUID

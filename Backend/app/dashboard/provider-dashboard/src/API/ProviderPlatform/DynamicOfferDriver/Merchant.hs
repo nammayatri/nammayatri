@@ -19,6 +19,7 @@ module API.ProviderPlatform.DynamicOfferDriver.Merchant
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
+import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -28,6 +29,7 @@ import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common (Meters, MonadFlow, fromMaybeM, withFlowHandlerAPI')
+import Kernel.Utils.Geometry (getGeomFromKML)
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
@@ -436,11 +438,12 @@ updateFarePolicy merchantShortId opCity apiTokenInfo farePolicyId req = withFlow
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFarePolicy) farePolicyId req
 
 createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
   -- update entry in dashboard
   merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
+  geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
   unless (req.city `elem` merchant.supportedOperatingCities) $
     SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
-  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) req
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}

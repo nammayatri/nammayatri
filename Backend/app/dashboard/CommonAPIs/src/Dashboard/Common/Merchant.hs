@@ -25,6 +25,7 @@ import Data.Aeson
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
+import qualified Data.Text as T
 import Kernel.External.Call.Types
 import Kernel.External.Encryption (encrypt)
 import qualified Kernel.External.Maps as Maps
@@ -35,6 +36,7 @@ import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
 import Kernel.External.Types (Language)
 import qualified Kernel.External.Verification as Verification
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -630,7 +632,52 @@ type CreateMerchantOperatingCityAPI =
     :> Post '[JSON] CreateMerchantOperatingCityRes
 
 data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
-  { city :: Context.City,
+  { file :: FilePath,
+    reqContentType :: Text,
+    city :: Context.City,
+    state :: Context.IndianState,
+    lat :: Double,
+    long :: Double,
+    primaryLanguage :: Maybe Language,
+    supportNumber :: Maybe Text,
+    enableForMerchant :: Bool,
+    exophone :: Maybe Text,
+    rcNumberPrefixList :: Maybe [Text]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp CreateMerchantOperatingCityReq where
+  fromMultipart form = do
+    CreateMerchantOperatingCityReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> fmap fdFileCType (lookupFile "file" form)
+      <*> fmap (read . T.unpack) (lookupInput "city" form)
+      <*> fmap (read . T.unpack) (lookupInput "state" form)
+      <*> fmap (read . T.unpack) (lookupInput "lat" form)
+      <*> fmap (read . T.unpack) (lookupInput "long" form)
+      <*> fmap (read . T.unpack) (lookupInput "primaryLanguage" form)
+      <*> fmap (read . T.unpack) (lookupInput "supportNumber" form)
+      <*> fmap (read . T.unpack) (lookupInput "enableForMerchant" form)
+      <*> fmap (read . T.unpack) (lookupInput "exophone" form)
+      <*> fmap (read . T.unpack) (lookupInput "rcNumberPrefixList" form)
+
+newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
+  { cityId :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type CreateMerchantOperatingCityAPIT =
+  "config"
+    :> "operatingCity"
+    :> "create"
+    :> ReqBody '[JSON] CreateMerchantOperatingCityReqT
+    :> Post '[JSON] CreateMerchantOperatingCityRes
+
+data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
+  { geom :: Text,
+    city :: Context.City,
     state :: Context.IndianState,
     lat :: Double,
     long :: Double,
@@ -645,9 +692,3 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
 
 instance HideSecrets CreateMerchantOperatingCityReq where
   hideSecrets = identity
-
-newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
-  { cityId :: Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -83,7 +83,7 @@ data MerchantAPIs = MerchantAPIs
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReq -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes
+    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes
   }
 
 data RidesAPIs = RidesAPIs

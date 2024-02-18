@@ -21,6 +21,7 @@ in
               coreutils
               bash
               self'.packages.nammayatri
+              gdal
             ];
             name = "beckn-root";
             pathsToLink = [
