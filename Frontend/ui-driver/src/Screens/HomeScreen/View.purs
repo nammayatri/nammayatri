@@ -78,6 +78,7 @@ import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..))
 import Services.Backend as Remote
+import Services.Events as Events
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
@@ -225,10 +226,12 @@ view push state =
       , weight 1.0
       , afterRender
         (\action -> do
-          _ <- push action
-          _ <- JB.setFCMToken push $ SetToken
-          _ <- JB.getCurrentPosition push CurrentLocation
-          _ <- JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap
+          void $ Events.endMeasuringDuration "onCreateToHomeScreenRenderDuration"
+          void $ Events.endMeasuringDuration "initAppToHomeScreenRenderDuration"
+          _ <- push action          
+          _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
+          _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
+          _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap
           pure unit
         ) (const AfterRender)
       , onBackPressed push (const BackPressed)
@@ -273,7 +276,6 @@ view push state =
   ]
   where 
     showPopups = (DA.any (_ == true ) [state.data.driverGotoState.gotoLocInRange, state.data.driverGotoState.goToInfo, state.data.driverGotoState.confirmGotoCancel, state.props.accountBlockedPopup])
-
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 blockerPopUpView push state = 

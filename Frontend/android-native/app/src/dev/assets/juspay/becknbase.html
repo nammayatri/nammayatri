@@ -23,6 +23,7 @@
     newScript.type = 'text/javascript';
     newScript.id = 'socket';
 	window.prevTimeStamp = Date.now();
+	window.assetDownloadDuration = Date.now();
     newScript.src = url + '/dist/index_bundle.js';
     headID.appendChild(newScript);
 

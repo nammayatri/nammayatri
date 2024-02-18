@@ -42,6 +42,7 @@ import Helpers.Utils as Utils
 import Effect.Exception (error)
 import Data.Function.Uncurried (runFn2)
 import Screens (ScreenName(..)) as ScreenNames
+import Services.Events as Events
 import Data.Array as DA
 import Effect.Uncurried (runEffectFn1)
 import Screens.Types as ST
@@ -50,6 +51,8 @@ import Storage (KeyStore(..), setValueToLocalStore)
 
 main :: Event -> Effect Unit
 main event = do
+  void $ Events.initMeasuringDuration "Flow.mainFlow"
+  void $ Events.initMeasuringDuration "mainToHomeScreenDuration"
   mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
     liftFlow $ setEventTimestamp "main_purs"
     _ <- runExceptT $ runBackT $ updateEventData event
