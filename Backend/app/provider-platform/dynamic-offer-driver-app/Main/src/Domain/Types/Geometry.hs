@@ -24,4 +24,4 @@ data Geometry = Geometry
     state :: Context.IndianState,
     region :: Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)

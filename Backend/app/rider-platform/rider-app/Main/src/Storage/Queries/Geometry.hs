@@ -28,6 +28,9 @@ import Kernel.Utils.Common
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
 
+create :: MonadFlow m => Geometry -> m ()
+create = createWithKV
+
 findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
   dbConf <- getMasterBeamConfig
