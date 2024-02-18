@@ -31,6 +31,7 @@ import EulerHS.Prelude hiding (id, null)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -202,13 +203,17 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
               estimatedDistance = distance
             }
 
-getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> m (Maybe DSos.SosStatus)
-getActiveSos mbRide = do
+getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
+getActiveSos mbRide personId = do
   case mbRide of
     Nothing -> return Nothing
     Just ride -> do
       sosDetails <- CQSos.findByRideId ride.id
-      return $ (.status) <$> sosDetails
+      case sosDetails of
+        Nothing -> do
+          mockSos :: Maybe DSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
+          return $ mockSos <&> (.status)
+        Just sos -> return $ Just sos.status
 
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
 buildBookingAPIEntity booking personId = do
@@ -219,7 +224,7 @@ buildBookingAPIEntity booking personId = do
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   let merchantOperatingCityId = booking.merchantOperatingCityId
-  mbSosStatus <- getActiveSos mbActiveRide
+  mbSosStatus <- getActiveSos mbActiveRide personId
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)

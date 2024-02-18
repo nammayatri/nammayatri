@@ -18,6 +18,7 @@ import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Person as Person
 import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -27,10 +28,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import Tools.Notifications
 
 data OnInitReq = OnInitReq
   { bookingId :: Id Booking,
@@ -63,7 +66,8 @@ data OnInitRes = OnInitRes
     merchant :: DM.Merchant,
     city :: Context.City,
     nightSafetyCheck :: Bool,
-    isValueAddNP :: Bool
+    isValueAddNP :: Bool,
+    enableFrequentLocationUpdates :: Bool
   }
   deriving (Generic, Show)
 
@@ -84,6 +88,8 @@ onInit req = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+  riderConfig <- CQRC.findByMerchantOperatingCityId decRider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing
@@ -109,6 +115,11 @@ onInit req = do
             transactionId = booking.transactionId,
             merchant = merchant,
             nightSafetyCheck = decRider.nightSafetyChecks,
+            enableFrequentLocationUpdates =
+              decRider.shareTripWithEmergencyContactOption == Just ALWAYS_SHARE
+                || ( decRider.shareTripWithEmergencyContactOption == Just SHARE_WITH_TIME_CONSTRAINTS
+                       && checkTimeConstraintForFollowRide riderConfig now
+                   ),
             ..
           }
   pure (onInitRes, booking)

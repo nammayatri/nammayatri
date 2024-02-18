@@ -306,16 +306,16 @@ updateEmergencyInfo ::
   MonadFlow m =>
   Id Person ->
   Maybe Bool ->
-  Maybe Bool ->
+  Maybe RideShareOptions ->
   Maybe Bool ->
   Maybe Bool ->
   m ()
-updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContacts nightSafetyChecks hasCompletedSafetySetup = do
+updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContactOption nightSafetyChecks hasCompletedSafetySetup = do
   now <- getCurrentTime
   updateWithKV
     ( [Se.Set BeamP.updatedAt now]
         <> [Se.Set BeamP.shareEmergencyContacts (fromJust shareEmergencyContacts) | isJust shareEmergencyContacts]
-        <> [Se.Set BeamP.shareTripWithEmergencyContacts shareTripWithEmergencyContacts | isJust shareEmergencyContacts]
+        <> [Se.Set BeamP.shareTripWithEmergencyContactOption shareTripWithEmergencyContactOption | isJust shareTripWithEmergencyContactOption]
         <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
         <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
     )
@@ -418,7 +418,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.clientVersion = versionToText <$> clientVersion,
         BeamP.shareEmergencyContacts = shareEmergencyContacts,
         BeamP.nightSafetyChecks = nightSafetyChecks,
-        BeamP.shareTripWithEmergencyContacts = shareTripWithEmergencyContacts,
+        BeamP.shareTripWithEmergencyContactOption = shareTripWithEmergencyContactOption,
         BeamP.hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill,
         BeamP.hasCompletedSafetySetup = hasCompletedSafetySetup,
         BeamP.registrationLat = registrationLat,
