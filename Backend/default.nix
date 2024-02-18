@@ -86,6 +86,7 @@
       packages = with pkgs; [
         redis # redis-cli is used in scripts.nix
         jq
+        gdal
       ];
       # cf. https://haskell.flake.page/devshell#composing-devshells
       inputsFrom = [

@@ -34,7 +34,7 @@ type API =
            :<|> Common.MapsServiceUsageConfigUpdateAPI
            :<|> Common.SmsServiceConfigUpdateAPI
            :<|> Common.SmsServiceUsageConfigUpdateAPI
-           :<|> Common.CreateMerchantOperatingCityAPI
+           :<|> Common.CreateMerchantOperatingCityAPIT
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -91,6 +91,6 @@ smsServiceUsageConfigUpdate merchantShortId city = withFlowHandlerAPI . DMerchan
 createMerchantOperatingCity ::
   ShortId DM.Merchant ->
   Context.City ->
-  Common.CreateMerchantOperatingCityReq ->
+  Common.CreateMerchantOperatingCityReqT ->
   FlowHandler Common.CreateMerchantOperatingCityRes
 createMerchantOperatingCity merchantShortId city = withFlowHandlerAPI . DMerchant.createMerchantOperatingCity merchantShortId city

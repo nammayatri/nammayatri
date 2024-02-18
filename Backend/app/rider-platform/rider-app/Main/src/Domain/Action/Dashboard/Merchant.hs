@@ -25,6 +25,7 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -51,6 +52,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.Queries.Geometry as QGEO
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -223,7 +225,7 @@ smsServiceUsageConfigUpdate merchantShortId city req = do
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchantOperatingCity.id)
   pure Success
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
+createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 createMerchantOperatingCity merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   baseOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
@@ -256,6 +258,10 @@ createMerchantOperatingCity merchantShortId city req = do
   riderConfig <- CQRC.findByMerchantOperatingCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Transporter Config not found")
   newRiderConfig <- buildRiderConfig newOperatingCity.id riderConfig
 
+  -- geometry
+  geometry <- buildGeometry
+
+  QGEO.create geometry
   CQMOC.create newOperatingCity
   mapM_ CQExophone.create newExphones
   mapM_ CQMM.create newMerchantMessages
@@ -275,6 +281,16 @@ createMerchantOperatingCity merchantShortId city req = do
     updateGeoRestriction = \case
       Unrestricted -> Unrestricted
       Regions regions -> Regions $ regions <> [(show req.city)]
+
+    buildGeometry = do
+      id <- generateGUID
+      pure
+        DGEO.Geometry
+          { id,
+            region = show req.city,
+            state = req.state,
+            city = req.city
+          }
 
     buildMerchantOperatingCity merchantId = do
       id <- generateGUID
