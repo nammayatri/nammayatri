@@ -36,7 +36,7 @@ import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
 import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
-import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse)
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import PaymentPage
 import Services.EndPoints as EP
@@ -3532,3 +3532,29 @@ instance standardDetectCityResp :: StandardEncode DetectCityResp where standardE
 instance showDetectCityResp :: Show DetectCityResp where show = genericShow
 instance decodeDetectCityResp :: Decode DetectCityResp where decode = defaultDecode
 instance encodeDetectCityResp  :: Encode DetectCityResp where encode = defaultEncode
+
+----------------------------- SDK Events -----------------------------------------------------
+newtype SDKEventsReq = SDKEventsReq {
+  event :: String
+}
+
+newtype SDKEventsResp = SDKEventsResp ApiSuccessResult
+
+instance makeSDKEventsReq :: RestEndpoint SDKEventsReq SDKEventsResp where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.pushSDKEvents "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericSDKEventsReq :: Generic SDKEventsReq _
+derive instance newtypeSDKEventsReq :: Newtype SDKEventsReq _
+instance standardEncodeSDKEventsReq :: StandardEncode SDKEventsReq where standardEncode (SDKEventsReq reqBody) = standardEncode reqBody
+instance showSDKEventsReq :: Show SDKEventsReq where show = genericShow
+instance decodeSDKEventsReq :: Decode SDKEventsReq where decode = defaultDecode
+instance encodeSDKEventsReq :: Encode SDKEventsReq where encode = defaultEncode
+
+derive instance genericSDKEventsResp :: Generic SDKEventsResp _
+derive instance newtypeSDKEventsResp :: Newtype SDKEventsResp _
+instance standardEncodeSDKEventsResp :: StandardEncode SDKEventsResp where standardEncode (SDKEventsResp resp) = standardEncode resp
+instance showSDKEventsResp :: Show SDKEventsResp where show = genericShow
+instance decodeSDKEventsResp :: Decode SDKEventsResp where decode = defaultDecode
+instance encodeSDKEventsResp :: Encode SDKEventsResp where encode = defaultEncode

@@ -28,11 +28,13 @@ import Data.String as DS
 import Data.Array as DA
 import Debug (spy)
 import Effect.Class (liftEffect)
+import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
 import Engineering.Helpers.Utils (toggleLoader)
 import Foreign.Generic (encode)
 import Foreign.NullOrUndefined (undefined)
 import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..))
+import Services.Events as Events
 import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
@@ -44,6 +46,7 @@ import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (DriverStatus)
 import Services.Config as SC
 import Services.EndPoints as EP
+import Services.Events as Events
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
@@ -87,9 +90,9 @@ getHeaders' dummy isGzipCompressionEnabled = do
 withAPIResult url f flow = do
     if (isInvalidUrl url) then pure $ Left customError
     else do
-        let start = getTime unit
-        resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
-        let end = getTime unit
+        let start = getTime unit        
+        resp <- Events.measureDurationFlow ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+        let end = getTime unit        
         _ <- pure $ printLog "withAPIResult url" url
         case resp of
             Right res -> void $ pure $ printLog "success resp" res
@@ -116,8 +119,8 @@ withAPIResult url f flow = do
 withAPIResultBT url f errorHandler flow = do
     if (isInvalidUrl url) then errorHandler customErrorBT
     else do
-        let start = getTime unit
-        resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+        let start = getTime unit        
+        resp <- Events.measureDurationFlowBT ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
         let end = getTime unit
         _ <- pure $ printLog "withAPIResultBT url" url
         case resp of
@@ -1165,7 +1168,7 @@ autoComplete searchVal lat lon language = do
 -----------------------------------------getPlaceName--------------------------------------------------
 placeName :: GetPlaceNameReq -> Flow GlobalState (Either ErrorResponse GetPlaceNameResp)
 placeName payload = do
-     headers <- getHeaders  "" false
+     headers <- getHeaders "" false
      withAPIResult (EP.getPlaceName "") unwrapResponse $ callAPI headers payload
     where
         unwrapResponse (x) = x 
@@ -1325,3 +1328,12 @@ detectCity lat lon = do
         lat : lat,
         lon : lon
     }
+
+------------------------------------------------------------------------- Push SDK Events -----------------------------------------------------------------------------
+pushSDKEvents :: Flow GlobalState (Either ErrorResponse SDKEventsResp)
+pushSDKEvents = do
+    headers <- getHeaders "" false
+    events <- liftFlow $ Events.getEvents
+    withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
+    where
+        unwrapResponse x = x

@@ -2,6 +2,12 @@ import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
 
+window.events = {};
+try {
+  if (typeof window.assetDownloadDuration === "number") {
+    window.events.assetDownloadDuration = Date.now() - window.assetDownloadDuration;
+  }
+} catch (err) {}
 const bundleLoadTime = Date.now();
 window.flowTimeStampObject = {};
 const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
@@ -11,24 +17,24 @@ if (window.JBridge.firebaseLogEventWithParams){
   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
     return blackListFunctions.indexOf(fnName) == -1
   }).forEach(fnName => {
-    window.JBridgeProxy = window.JBridgeProxy || {};
-    window.JBridgeProxy[fnName] = window.JBridge[fnName];
-    window.JBridge[fnName] = function () {
-      let params = Object.values(arguments).join(", ");
-      if (fnName === "callAPI") {
-        params = arguments[1].split("/").splice(6).join("/");
-      }
-      let shouldLog = true;
-      if (window.appConfig) {
+      window.JBridgeProxy = window.JBridgeProxy || {};
+      window.JBridgeProxy[fnName] = window.JBridge[fnName];
+      window.JBridge[fnName] = function () {
+        let params = Object.values(arguments).join(", ");
+        if (fnName === "callAPI") {
+          params = arguments[1].split("/").splice(6).join("/");
+        }
+        let shouldLog = true;
+        if (window.appConfig) {
         shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
-      }
-      if (shouldLog) {
+        }
+        if (shouldLog) {
         window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
-      }
-      const result = window.JBridgeProxy[fnName](...arguments);
-      return result;
-    };
-  });
+        }
+        const result = window.JBridgeProxy[fnName](...arguments);
+        return result;
+      };
+    });
 }
 
 function guid() {
@@ -68,7 +74,7 @@ setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 const isUndefined = function (val) {
   return (typeof val == "undefined");
 }
-   
+
 const logger = function()
 {
   let oldConsoleLog = null;
@@ -126,7 +132,7 @@ function callInitiateResult () {
   const payload = {
     event: "initiate_result"
     , service: "in.juspay.becknui"
-    , payload: { status: "SUCCESS" }
+    , payload: { action : "initiate", status: "SUCCESS" }
     , error: false
     , errorMessage: ""
     , errorCode: ""
@@ -188,21 +194,49 @@ window.onMerchantEvent = function (_event, payload) {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
-    if (clientPaylod.payload && clientPaylod.payload.hasOwnProperty('onCreateTimeStamp') && clientPaylod.payload.hasOwnProperty('initiateTimeStamp'))
-    {
-      const onCreateTimeStamp = clientPaylod.payload.onCreateTimeStamp;
-      const initiateTimeStamp = clientPaylod.payload.initiateTimeStamp;
-      window.flowTimeStampObject["onCreateToBundle"] = window.prevTimeStamp - onCreateTimeStamp;
-      window.flowTimeStampObject["nativeIntiateToBundle"] = window.prevTimeStamp - initiateTimeStamp;
-    }
-    window.flowTimeStampObject["bundleLoadTime"] = bundleLoadTime - window.prevTimeStamp;
-    window.flowTimeStampObject["bundleToInitiate"] = Date.now() - bundleLoadTime;
-    window.prevTimeStamp = Date.now();
+    try {
+      if (
+        clientPaylod.payload &&
+        clientPaylod.payload.hasOwnProperty("onCreateTimeStamp") &&
+        clientPaylod.payload.hasOwnProperty("initiateTimeStamp") &&
+        typeof window.events.onCreateToInitiateDuration === "undefined" &&
+        typeof window.events.initAppToInitiateDuration === "undefined"
+      ) {
+        const onCreateTimeStamp = clientPaylod.payload.onCreateTimeStamp;
+        const initiateTimeStamp = clientPaylod.payload.initiateTimeStamp;
+        window.flowTimeStampObject["onCreateToBundle"] = window.prevTimeStamp - onCreateTimeStamp;
+        window.flowTimeStampObject["nativeIntiateToBundle"] = window.prevTimeStamp - initiateTimeStamp;
+        window.events.onCreateToInitiateDuration =
+          new Date().getTime() - clientPaylod.payload.onCreateTimeStamp;
+        window.events.initAppToInitiateDuration =
+          new Date().getTime() - clientPaylod.payload.initiateTimeStamp;
+        window.events.onCreateToHomeScreenRenderDuration =
+          new Date(clientPaylod.payload.onCreateTimeStamp);
+        window.events.initAppToHomeScreenRenderDuration = 
+          new Date(clientPaylod.payload.initiateTimeStamp);
+      }
+      window.flowTimeStampObject["bundleLoadTime"] = bundleLoadTime - window.prevTimeStamp;
+      window.flowTimeStampObject["bundleToInitiate"] = Date.now() - bundleLoadTime;
+      window.prevTimeStamp = Date.now();
+    } catch (err) {}
     callInitiateResult();
   } else if (_event == "process") {
     window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
     const parsedPayload = JSON.parse(payload);
+    try {
+      if (
+        parsedPayload.payload &&
+        parsedPayload.payload.hasOwnProperty("initiateTimeStamp") &&
+        typeof window.events.initAppToProcessDuration === "undefined" &&
+        typeof window.events.onCreateToProcessDuration === "undefined"
+      ) {
+        window.events.onCreateToProcessDuration =
+          new Date().getTime() - parsedPayload.payload.onCreateTimeStamp;
+        window.events.initAppToProcessDuration =
+          new Date().getTime() - parsedPayload.payload.initiateTimeStamp;
+      }
+    } catch (err) {}
     if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "callDriverAlert" && parsedPayload.payload.id && parsedPayload.payload.popType) {
       // purescript.alertNotification(parsedPayload.payload.id)();
       console.log("alert notification called");

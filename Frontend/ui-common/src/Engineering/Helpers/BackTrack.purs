@@ -43,7 +43,7 @@ getState = lift $ lift $ Flow.getState
 -- getTime :: FlowBT String String
 -- getTime = lift $ lift $ Utils.getTime
 
-liftFlowBT :: forall val st. Effect val -> FlowBT String st val
+liftFlowBT :: forall e val st. Effect val -> FlowBT e st val
 liftFlowBT effVal = lift $ lift $ doAff do liftEffect (effVal)
 
 -- getCurrentLatLong :: FlowBT String JBridge.LocationLatLong

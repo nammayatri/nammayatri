@@ -116,6 +116,7 @@ import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
+import Services.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..))
@@ -130,6 +131,8 @@ import Data.Array as DA
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
+    liftFlowBT $ Events.endMeasuringDuration "Flow.mainFlow"
+    liftFlowBT $ Events.initMeasuringDuration "Flow.baseAppFlow"
     liftFlowBT $ setEventTimestamp "baseAppFlow"
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     -- checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
@@ -194,12 +197,15 @@ baseAppFlow baseFlow event = do
 
     initialFlow :: FlowBT String Unit
     initialFlow = do
+      liftFlowBT $ Events.endMeasuringDuration "Flow.baseAppFlow"
+      liftFlowBT $ Events.initMeasuringDuration "Flow.initialFlow"
       config <- getAppConfigFlowBT Constants.appConfig
       let regToken = getValueToLocalStore REGISTERATION_TOKEN
           driver_location = getValueToLocalStore DRIVER_LOCATION
           mbCity = find (\city' -> city'.cityName == driver_location) config.cityConfig
       maybe (pure unit) (\city -> setValueToLocalStore SHOW_SUBSCRIPTIONS (show city.showSubscriptions)) $ mbCity
       isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+      liftFlowBT $ Events.endMeasuringDuration "Flow.initialFlow"
       if isTokenValid regToken then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
@@ -240,7 +246,7 @@ chooseLanguageFlow = do
 checkRideAndInitiate :: Maybe Event -> FlowBT String Unit
 checkRideAndInitiate event = do
   (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
-  checkAndDownloadMLModel
+  Events.measureDurationFlowBT "External.checkAndDownloadMLModel" $ checkAndDownloadMLModel
   let activeRide = (not (null activeRideResponse.list))
   activeRide ?
     currentRideFlow (Just (GetRidesHistoryResp activeRideResponse)) 
@@ -1862,26 +1868,29 @@ onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
-  _ <- pure $ delay $ Milliseconds 1.0
-  _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
-  _ <- pure $ cleverTapSetLocation unit
-  if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer]) then currentRideFlow Nothing
-    else pure unit
-  (GlobalState globalState) <- getState
-  getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
-  when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
-  when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
-  updateBannerAndPopupFlags
-  liftFlowBT hideSplash
-  void $ lift $ lift $ toggleLoader false
-  when (globalState.globalProps.addTimestamp && globalState.homeScreen.props.tobeLogged) $ do
-    liftFlowBT $ setEventTimestamp "homeScreenFlow"
-    logData <- liftFlowBT $ getTimeStampObject unit
-    liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = false}})
-    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
-  liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED
+  Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
+    _ <- pure $ delay $ Milliseconds 1.0
+    _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
+    _ <- pure $ cleverTapSetLocation unit
+    if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer]) then currentRideFlow Nothing
+      else pure unit
+    (GlobalState globalState) <- getState
+    getDriverInfoResp <- getDriverInfoDataFromCache (GlobalState globalState) false
+    when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
+    when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
+    updateBannerAndPopupFlags
+    liftFlowBT hideSplash
+    void $ lift $ lift $ toggleLoader false
+    when (globalState.globalProps.addTimestamp && globalState.homeScreen.props.tobeLogged) $ do
+      liftFlowBT $ setEventTimestamp "homeScreenFlow"
+      logData <- liftFlowBT $ getTimeStampObject unit
+      liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = false}})
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
+    liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED  
+  liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration"
   action <- UI.homeScreen
+  _ <- lift $ lift $ fork $ Remote.pushSDKEvents
   case action of
     GO_TO_PROFILE_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_profile_click"

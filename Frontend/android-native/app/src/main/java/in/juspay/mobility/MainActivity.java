@@ -269,7 +269,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     @AddTrace(name = "onCreateTrace", enabled = true /* optional */)
     protected void onCreate(Bundle savedInstanceState) {
-
+        onCreateTimeStamp = System.currentTimeMillis();
         Vector<String> res = handleDeepLinkIfAvailable(getIntent());
         Vector<String> notificationDeepLinkVector = notificationTypeHasDL(getIntent());
         String viewParam = null, deepLinkJson =null;
@@ -283,7 +283,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         super.onCreate(savedInstanceState);
-        onCreateTimeStamp = System.currentTimeMillis();
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         context = getApplicationContext();
         boolean isMigrated = migrateLocalStore(context);

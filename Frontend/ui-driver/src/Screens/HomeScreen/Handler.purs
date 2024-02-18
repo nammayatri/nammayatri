@@ -23,7 +23,7 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Error, makeAff, nonCanceler)
-import Engineering.Helpers.BackTrack (getState)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Helpers.Utils (getCurrentLocation, LatLon(..))
 import Helpers.Utils (getDistanceBwCordinates, LatLon(..), getCurrentLocation)
 import JBridge (getCurrentPosition, getCurrentPositionWithTimeout)
@@ -32,6 +32,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Services.Events as Events
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Screens.Types (KeyboardModalType(..))
@@ -40,7 +41,8 @@ import Types.ModifyScreenState (modifyScreenState)
 import Debug
 
 homeScreen :: FlowBT String HOME_SCREENOUTPUT
-homeScreen = do
+homeScreen = do  
+  liftFlowBT $ Events.endMeasuringDuration "Flow.initialFlow"
   logField_ <- lift $ lift $ getLogFields
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen{data{logField = logField_}}
