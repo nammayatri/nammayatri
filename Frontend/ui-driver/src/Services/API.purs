@@ -541,7 +541,8 @@ newtype RidesInfo = RidesInfo
       payerVpa :: Maybe String,
       autoPayStatus :: Maybe String,
       driverGoHomeRequestId :: Maybe String,
-      isFreeRide :: Maybe Boolean
+      isFreeRide :: Maybe Boolean,
+      enableFrequentLocationUpdates :: Maybe Boolean
   }
 
 newtype LocationInfo = LocationInfo

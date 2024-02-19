@@ -160,7 +160,7 @@ testSafetyHeaderView push =
             $ [ textFromHtml $ "<u>" <> getString LEARN_MORE <> "</u>"
               , color Color.black900
               , gravity RIGHT
-              , margin $ MarginRight 16
+              , padding $ Padding 16 16 16 16
               , onClick push $ const LearnMoreClicked
               ]
             <> FontStyle.body2 TypoGraphy

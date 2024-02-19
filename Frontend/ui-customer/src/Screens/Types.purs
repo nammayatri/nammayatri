@@ -39,7 +39,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -55,6 +55,8 @@ type NewContacts = {
   number :: String,
   isSelected :: Boolean,
   enableForFollowing :: Boolean,
+  enableForShareRide:: Boolean,
+  onRide :: Boolean,
   priority :: Int
 }
 
@@ -767,7 +769,7 @@ type HomeScreenStateData =
   , rideHistoryTrip :: Maybe Trip
   , rentalsInfo :: Maybe RentalsInfo
   , bannerData :: BannerCarousalData
-  , contactList :: Array NewContacts
+  , contactList :: Maybe (Array NewContacts)
   , followers :: Maybe (Array Followers)
   }
 
@@ -940,8 +942,10 @@ type HomeScreenStateProps =
   , focussedBottomIcon :: BottomNavBarIcon
   , sosBannerType :: Maybe SosBannerType
   , showShareRide :: Boolean
-  , followsRide :: Boolean 
+  , followsRide :: Boolean
+  , isChatWithEMEnabled :: Boolean
   , referral :: ReferralStatusProp
+  , safetyAlertType :: Maybe SafetyAlertType
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -949,6 +953,12 @@ data BottomNavBarIcon = TICKETING | MOBILITY
 derive instance genericBottomNavBarIcon :: Generic BottomNavBarIcon _
 instance showBottomNavBarIcon :: Show BottomNavBarIcon where show = genericShow
 instance eqBottomNavBarIcon :: Eq BottomNavBarIcon where eq = genericEq
+
+data SafetyAlertType = DEVIATION | STATIONARY_VEHICLE
+
+derive instance genericSafetyAlertType :: Generic SafetyAlertType _
+instance showSafetyAlertType :: Show SafetyAlertType where show = genericShow
+instance eqSafetyAlertType :: Eq SafetyAlertType where eq = genericEq
 
 data City
   = Bangalore
@@ -1295,6 +1305,7 @@ type DriverInfoCard =
   , vehicleVariant :: String
   , sourceAddress :: Address
   , destinationAddress :: Address
+  , status :: String
   }
 
 type RatingCard =
@@ -2109,7 +2120,6 @@ type LocationInfo =
 data SafetySetupStage =  SetNightTimeSafetyAlert
                         | SetDefaultEmergencyContacts
                         | SetPersonalSafetySettings
-                        | SetShareTripWithContacts
 
 derive instance genericSafetySetupStage :: Generic SafetySetupStage _
 instance eqSafetySetupStage :: Eq SafetySetupStage where eq = genericEq
@@ -2124,7 +2134,8 @@ type NammaSafetyScreenData =  {
   shareToEmergencyContacts :: Boolean,
   nightSafetyChecks :: Boolean,
   hasCompletedMockSafetyDrill :: Boolean,
-  shareTripWithEmergencyContacts :: Boolean,
+  shareTripWithEmergencyContactOption :: RideShareOptions,
+  shareOptionCurrent :: RideShareOptions,
   hasCompletedSafetySetup :: Boolean,
   emergencyContactsList :: Array NewContacts,
   sosId :: String,
@@ -2135,11 +2146,11 @@ type NammaSafetyScreenData =  {
   currentLocation :: String,
   vehicleDetails :: String,
   videoList :: Array RC.SafetyVideoConfig,
-  sosType :: Maybe SosFlow
+  sosType :: Maybe SosFlow,
+  config :: AppConfig
  }
 
 type NammaSafetyScreenProps =  {
-  onRide :: Boolean,
   setupStage :: SafetySetupStage,
   recordingState :: RecordingState,
   confirmPopup :: Boolean,
@@ -2155,7 +2166,9 @@ type NammaSafetyScreenProps =  {
   educationViewIndex :: Maybe Int,
   showCallPolice :: Boolean,
   shouldCallAutomatically :: Boolean,
-  fromDeepLink :: Boolean
+  fromDeepLink :: Boolean,
+  showRideShareOptionsPopup :: Boolean,
+  showVideoView :: Boolean
 }
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 
@@ -2211,6 +2224,7 @@ type FollowRideScreenProps = {
 , currentSheetState :: BottomSheetState
 , isNotificationExpanded :: Boolean
 , startMapAnimation :: Boolean
+, isRideStarted :: Boolean
 }
 
 

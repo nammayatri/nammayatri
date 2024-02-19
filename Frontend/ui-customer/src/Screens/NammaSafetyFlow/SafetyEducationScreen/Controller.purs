@@ -40,6 +40,7 @@ import Types.App (defaultGlobalState)
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Types.EndPoint (updateSosVideo)
 import Debug
+import RemoteConfig as RC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -60,26 +61,30 @@ data Action
   | YoutubeVideoStatus String
   | SafetyHeaderAction Header.Action
   | ChangeEducationViewIndex Int
+  | ShowVideoView Boolean
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
 
 eval (BackPressed) state =
-  if isNothing state.props.educationViewIndex then do
+  if state.props.showVideoView then do
+    void $ pure $ releaseYoutubeView unit
+    continue state { props { showVideoView = false } }
+  else if isNothing state.props.educationViewIndex then do
     let newState = state { props { fromDeepLink = false } }
     case state.props.fromDeepLink of
       true -> exit $ GoToHomeScreen newState
       false -> exit $ GoBack newState
   else do
-    void $ pure $ releaseYoutubeView unit
     continue state { props { educationViewIndex = Nothing } }
 
 eval (ChangeEducationViewIndex index) state = do
   let
     newState = state { props { educationViewIndex = Just index } }
-
-    video = fromMaybe { videoId: "", title: "", coverImageUrl: "" } (state.data.videoList DA.!! index)
-  void $ pure $ switchYoutubeVideo video.videoId
+    video = fromMaybe { videoId: "", title: "", coverImageUrl: "", description : [] } (state.data.videoList DA.!! index)
+  if state.props.showVideoView then do
+    void $ pure $ switchYoutubeVideo video.videoId
+  else pure unit
   continue newState
 
 eval (YoutubeVideoStatus status) state = do
@@ -100,5 +105,7 @@ eval (YoutubeVideoStatus status) state = do
     Nothing -> continue state
   else
     continue state
+
+eval (ShowVideoView val) state = continue state { props { showVideoView = val } }
 
 eval _ state = continue state

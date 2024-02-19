@@ -284,7 +284,7 @@ notifisDetailStateTransformer selectedItem =
   , commentBtnActive: false
   , messageId: selectedItem.messageId
   , notificationNotSeen: selectedItem.notificationNotSeen
-  , imageUrl: getImageUrl $ selectedItem.mediaUrl
+  , imageUrl: getImageUrl selectedItem.mediaUrl ""
   , mediaType: selectedItem.mediaType
   , likeCount : selectedItem.likeCount
   , likeStatus : selectedItem.likeStatus
@@ -310,8 +310,8 @@ notificationListTransformer notificationArray =
             , comment: notificationItem.reply
             , imageUrl:
                 case media.fileType of
-                  VideoLink -> getImageUrl $ media.url
-                  PortraitVideoLink -> getImageUrl media.url
+                  VideoLink -> getImageUrl media.url ""
+                  PortraitVideoLink -> getImageUrl media.url ""
                   Video -> ""
                   ImageLink -> media.url
                   Image -> ""
@@ -332,7 +332,7 @@ propValueTransformer notificationArray =
       ( \(MessageAPIEntityResponse notificationItem) ->
           let
             (MediaFileApiResponse media) = (fromMaybe dummyMedia ((notificationItem.mediaFiles) Array.!! 0))
-            videoThumbnail = getImageUrl $ media.url
+            videoThumbnail = getImageUrl media.url ""
           in
             { mediaUrl: toPropValue $ media.url
             , description: toPropValue $ notificationCardDesc notificationItem.description

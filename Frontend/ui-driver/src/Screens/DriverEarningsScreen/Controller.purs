@@ -719,5 +719,6 @@ dummyRideHistoryItem = RidesInfo {
       payerVpa : Nothing,
       autoPayStatus : Nothing,
       driverGoHomeRequestId : Nothing,
-      isFreeRide : Nothing
+      isFreeRide : Nothing,
+      enableFrequentLocationUpdates : Nothing
   }

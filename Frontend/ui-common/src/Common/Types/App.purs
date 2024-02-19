@@ -447,7 +447,7 @@ type Paths = {
   , lng :: Number
 }
 
-data SosStatus = Pending | Resolved | NotResolved
+data SosStatus = Pending | Resolved | NotResolved | MockPending | MockResolved
 
 derive instance genericSosStatus :: Generic SosStatus _
 instance standardEncodeSosStatus :: StandardEncode SosStatus where standardEncode _ = standardEncode {}

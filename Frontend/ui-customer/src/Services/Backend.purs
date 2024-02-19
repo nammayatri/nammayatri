@@ -622,12 +622,14 @@ walkCoordinates (Snapped points) =
 
 postContactsReq :: (Array NewContacts) -> EmergContactsReq
 postContactsReq contacts = EmergContactsReq {
-  "defaultEmergencyNumbers" : map (\item -> ContactDetails {
-      "mobileNumber": item.number,
-      "name": item.name,
-      "mobileCountryCode": "+91",
-      "priority": Just item.priority,
-      "enableForFollowing": Just item.enableForFollowing
+  defaultEmergencyNumbers : map (\item -> ContactDetails {
+      mobileNumber: item.number,
+      name: item.name,
+      mobileCountryCode: "+91",
+      priority: Just item.priority,
+      enableForFollowing: Just item.enableForFollowing,
+      enableForShareRide: Just item.enableForShareRide,
+      onRide : Nothing
   }) contacts
 }
 
@@ -1115,10 +1117,11 @@ updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
     where
         unwrapResponse (x) = x
 
-markRideAsSafe :: String -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
-markRideAsSafe sosId= do
+markRideAsSafe :: String -> Boolean -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
+markRideAsSafe sosId isMock = do
         headers <- getHeaders "" false
-        withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId)
+        let reqBody = UpdateAsSafeReqBody{isMock : isMock}
+        withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId reqBody)
     where
         unwrapResponse (x) = x
 
@@ -1143,10 +1146,10 @@ makeAskSupportRequest bId isSafe description = AskSupportReq{
     "description" : description
 }
 
-createMockSos :: String -> Flow GlobalState (Either ErrorResponse CreateMockSosRes)
-createMockSos dummy = do
+createMockSos :: Boolean -> Boolean -> Flow GlobalState (Either ErrorResponse CreateMockSosRes)
+createMockSos onRide startDrill = do
         headers <- getHeaders "" false
-        withAPIResult (EP.createMockSos "") unwrapResponse $ callAPI headers (CreateMockSosReq "")
+        withAPIResult (EP.createMockSos "") unwrapResponse $ callAPI headers $ CreateMockSosReq {onRide : onRide, startDrill : startDrill}
     where
         unwrapResponse (x) = x
 

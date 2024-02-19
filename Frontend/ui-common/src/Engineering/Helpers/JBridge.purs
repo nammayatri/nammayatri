@@ -183,8 +183,8 @@ foreign import dateCallback :: forall action. Fn2 (action -> Effect Unit) action
 foreign import unregisterDateAndTime :: Effect Unit
 foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import sendMessage :: String -> Unit
-foreign import getSuggestionsfromLocal :: String -> Array String
-foreign import getSuggestionfromKey :: String -> String -> String
+foreign import getSuggestionsfromLocal :: String -> String -> Array String
+foreign import getSuggestionfromKey :: String -> String -> String -> String
 foreign import setYoutubePlayer :: forall action. Fn5 YoutubeData String String (action -> Effect Unit) (String -> action) Unit
 foreign import addMediaPlayer :: String -> String -> Boolean -> Effect Unit
 foreign import switchYoutubeVideo :: String -> Unit

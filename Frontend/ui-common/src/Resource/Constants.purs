@@ -7,3 +7,9 @@ zoomLevel = if (os == "IOS") then 19.0 else 17.0
 
 pickupZoomLevel :: Number
 pickupZoomLevel = 17.0
+
+chatSuggestion :: String
+chatSuggestion = "chat_suggestions"
+
+emChatSuggestion :: String
+emChatSuggestion = "emergency_chat_suggestions"

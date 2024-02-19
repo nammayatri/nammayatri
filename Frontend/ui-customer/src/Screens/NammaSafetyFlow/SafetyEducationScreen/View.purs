@@ -9,26 +9,28 @@
 module Screens.NammaSafetyFlow.SafetyEducationScreen.View where
 
 import Animation
+import Data.Array
 import Data.Maybe
+import Mobility.Prelude
 import Prelude
 import PrestoDOM
+import Screens.Types
 import Common.Types.App (LazyCheck(..))
-import Data.Array
 import Data.Function.Uncurried (runFn5)
 import Debug (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
+import Foreign (unsafeToForeign)
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Mobility.Prelude
 import PrestoDOM.Animation as PrestoAnim
 import RemoteConfig as RC
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
+import Screens.NammaSafetyFlow.Components.HelperViews as HV
 import Screens.NammaSafetyFlow.SafetyEducationScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 
@@ -50,7 +52,7 @@ screen initialState =
 view :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   screenAnimation
-    $ relativeLayout
+    $ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
@@ -58,25 +60,29 @@ view push state =
         , onBackPressed push $ const BackPressed
         , padding padding'
         ]
-        [ if isJust state.props.educationViewIndex then
-            videoView push state
-          else
-            linearLayout
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              , visibility $ boolToVisibility $ isNothing state.props.educationViewIndex
-              ]
-              [ Header.view (push <<< SafetyHeaderAction) headerConfig
-              , aboutNammaSafetyView state push
-              ]
+        [ Header.view (push <<< SafetyHeaderAction) headerConfig
+        ,  linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            [ if isJust state.props.educationViewIndex then
+                if state.props.showVideoView then
+                  videoView push state
+                else descriptionView push state
+              else aboutNammaSafetyView state push
+            ]
         ]
   where
-  background' = if isJust state.props.educationViewIndex then Color.black900 else Color.white900
+  background' = if isJust state.props.educationViewIndex && state.props.showVideoView then Color.black900 else Color.white900
 
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
-  headerConfig = (Header.config Language) { title = getString LEARN_ABOUT_NAMMA_SAFETY }
+  headerConfig = (Header.config Language) { title = if isJust state.props.educationViewIndex && not state.props.showVideoView
+                                                       then "" 
+                                                       else getString LEARN_ABOUT_NAMMA_SAFETY,
+                                            headerVisiblity = boolToVisibility $ not state.props.showVideoView
+                                          }
 
 aboutNammaSafetyView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 aboutNammaSafetyView state push =
@@ -84,6 +90,7 @@ aboutNammaSafetyView state push =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
+    , visibility $ boolToVisibility $ isNothing state.props.educationViewIndex
     ]
     [ linearLayout
         [ width MATCH_PARENT
@@ -203,12 +210,12 @@ videoView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , gradient $ Linear gradientAngle [ "#00D9D9D9", "#269F9F9F", Color.black ]
         ]
         [ linearLayout
-            [ height WRAP_CONTENT
+            [ height $ V 200
             , width MATCH_PARENT
-            , background Color.black900
+            , alignParentBottom "true,-1"
+            , gradient $ Linear gradientAngle [ Color.transparent, "#269F9F9F", Color.black ]
             ]
             []
         , linearLayout
@@ -216,7 +223,7 @@ videoView push state =
             , width MATCH_PARENT
             , alignParentBottom "true,-1"
             , gravity CENTER_VERTICAL
-            , margin $ Margin 16 16 16 16
+            , padding $ Padding 16 16 16 16
             ]
             [ linearLayout
                 [ height WRAP_CONTENT
@@ -236,25 +243,27 @@ videoView push state =
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 ]
-                [ arrowButtonView false 20 (index > 0) push $ ChangeEducationViewIndex (index - 1)
-                , arrowButtonView true 0 (index < length state.data.videoList - 1) push $ ChangeEducationViewIndex (index + 1)
+                [ arrowButtonView false 20 (index > 0) push false $ ChangeEducationViewIndex (index - 1)
+                , arrowButtonView true 0 (index < length state.data.videoList - 1) push false $ ChangeEducationViewIndex (index + 1)
                 ]
             ]
         ]
     ]
   where
   index = fromMaybe (-1) state.props.educationViewIndex
-  gradientAngle = if EHC.os == "IOS" then 270.0 else 180.0
-  viewConfig = fromMaybe { videoId: "", title: "", coverImageUrl: "" } (state.data.videoList !! index)
 
-arrowButtonView :: forall w. Boolean -> Int -> Boolean -> (Action -> Effect Unit) -> Action -> PrestoDOM (Effect Unit) w
-arrowButtonView isDirectionRight marginRight isActive push action =
+  gradientAngle = if EHC.os == "IOS" then 270.0 else 180.0
+
+  viewConfig = fromMaybe { videoId: "", title: "", coverImageUrl: "", description: [] } (state.data.videoList !! index)
+
+arrowButtonView :: forall w. Boolean -> Int -> Boolean -> (Action -> Effect Unit) -> Boolean -> Action -> PrestoDOM (Effect Unit) w
+arrowButtonView isDirectionRight marginRight isActive push isDarkTheme action =
   linearLayout
     ( [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity CENTER
       , padding $ Padding 12 12 12 12
-      , background Color.white900
+      , background background'
       , cornerRadius 21.0
       , margin $ MarginRight marginRight
       ]
@@ -265,17 +274,120 @@ arrowButtonView isDirectionRight marginRight isActive push action =
     )
     [ imageView
         [ imageWithFallback
-            $ fetchImage FF_ASSET
-                if isDirectionRight then
-                  "ny_ic_arrow_right_black"
-                else
-                  "ny_ic_arrow_left_black"
+            $ fetchImage FF_ASSET case isDirectionRight, isDarkTheme of
+                true, false -> "ny_ic_arrow_right_black"
+                true, true -> "ny_ic_arrow_yellow_filled_right"
+                false, false -> "ny_ic_arrow_left_black"
+                false, true -> "ny_ic_arrow_yellow_filled_left"
         , height $ V 18
         , width $ V 18
         ]
     ]
+  where
+  background' = if isDarkTheme then Color.black900 else Color.white900
 
 getSafePadding :: Padding
 getSafePadding =
   Padding 0 EHC.safeMarginTop 0
     (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
+
+descriptionView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+descriptionView push state =
+  relativeLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    ]
+    [ scrollView
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        ]
+        [ linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , orientation VERTICAL
+            , padding getSafePadding
+            ]
+            [ relativeLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , gravity CENTER_VERTICAL
+                , onClick push $ const $ ShowVideoView true
+                ]
+                [ imageView
+                    [ imageUrlWithFallback $ ListImageUrl videoCoverImage viewConfig.videoId
+                    , height $ V 250
+                    , width MATCH_PARENT
+                    ]
+                , linearLayout
+                    [ width MATCH_PARENT
+                    , height $ V 250
+                    , gravity CENTER
+                    ]
+                    [ imageView 
+                      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_play_btn"
+                      , height $ V 40
+                      , width $ V 40
+                      ]
+                    ]
+                ]
+            , linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                , padding $ Padding 16 16 16 16
+                ]
+                ( mapWithIndex
+                    ( \index (RC.DescriptionComponent item) ->
+                        let
+                          decodedFontStyle = fromMaybe FontStyle.Tags $ FontStyle.decodeFontStyle $ unsafeToForeign item.fontStyle
+                        in
+                          linearLayout
+                            [ width WRAP_CONTENT
+                            , height WRAP_CONTENT
+                            , gravity CENTER_VERTICAL
+                            ]
+                            [ textView
+                                $ [ text "•"
+                                  , visibility $ boolToVisibility item.isBullet
+                                  , margin $ Margin 0 item.marginTop 8 0
+                                  , width WRAP_CONTENT
+                                  , height WRAP_CONTENT
+                                  ] <> FontStyle.getFontStyle decodedFontStyle TypoGraphy
+                            , textView
+                                $ [ textFromHtml item.text
+                                  , width WRAP_CONTENT
+                                  , height WRAP_CONTENT
+                                  , color item.color
+                                  , gravity LEFT
+                                  , margin $ Margin item.marginLeft item.marginTop 0 0
+                                  , padding $ PaddingVertical 3 3
+                                  ]
+                                <> FontStyle.getFontStyle decodedFontStyle TypoGraphy
+                            ]
+                    )
+                    viewConfig.description
+                )
+            ]
+        ]
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , alignParentBottom "true,-1"
+        , gravity CENTER_VERTICAL
+        , padding $ Padding 16 16 16 16
+        ]
+        [ HV.layoutWithWeight
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            ]
+            [ arrowButtonView false 20 (index > 0) push true $ ChangeEducationViewIndex (index - 1)
+            , arrowButtonView true 0 (index < length state.data.videoList - 1) push true $ ChangeEducationViewIndex (index + 1)
+            ]
+        ]
+    ]
+  where
+  index = fromMaybe (-1) state.props.educationViewIndex
+  viewConfig = fromMaybe { videoId: "", title: "", coverImageUrl: "", description: [] } (state.data.videoList !! index)
+  videoCoverImage = EHC.getImageUrl "" viewConfig.videoId
+  _ = spy "viewConfig " viewConfig

@@ -43,11 +43,11 @@ initData =
       , chatCallbackInitiated: false
       , openChatScreen: false
       , sendMessageActive: false
-      , sheetState: Nothing
-      , currentSheetState: COLLAPSED
+      , sheetState: Just EXPANDED
+      , currentSheetState: HALF_EXPANDED
       , isNotificationExpanded: false
       , startMapAnimation: true
-      
+      , isRideStarted: false
       }
   }
 
@@ -196,4 +196,5 @@ mockDriverInfo =
   , vehicleVariant: ""
   , sourceAddress: dummyAddress
   , destinationAddress: dummyAddress
+  , status : ""
   }

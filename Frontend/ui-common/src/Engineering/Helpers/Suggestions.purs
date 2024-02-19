@@ -12,12 +12,13 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module Engineering.Helpers.Suggestions where
+module Engineering.Helpers.Suggestions (module ReExport, module Engineering.Helpers.Suggestions)where
 
 import Data.Array (filter, head, concatMap)
 import Prelude ((==))
 import Data.Maybe (Maybe(..), fromMaybe)
 import JBridge (getSuggestionfromKey, getSuggestionsfromLocal)
+import Common.Resources.Constants as ReExport
 
 suggestionsDefinitions ∷ String -> SuggestionDefinitions
 suggestionsDefinitions dummy =
@@ -247,10 +248,10 @@ type SuggestionDefinitions
       , value :: { en_us :: String, ta_in :: String, kn_in :: String, hi_in :: String, ml_in :: String, bn_in :: String }
       }
 
-getMessageFromKey :: String -> String -> String
-getMessageFromKey key language = do
+getMessageFromKey :: String -> String -> String -> String
+getMessageFromKey configKey key language = do
   let
-    decodedMessage = (getSuggestionfromKey key language)
+    decodedMessage = (getSuggestionfromKey configKey key language)
   if decodedMessage == "" then do
     let
       suggestions = (suggestionsDefinitions "")
@@ -269,10 +270,10 @@ getMessageFromKey key language = do
   else
     decodedMessage
 
-getSuggestionsfromKey :: String -> Array String
-getSuggestionsfromKey key = do
+getSuggestionsfromKey :: String -> String -> Array String
+getSuggestionsfromKey configKey key = do
   let
-    decodedSuggestions = getSuggestionsfromLocal key
+    decodedSuggestions = getSuggestionsfromLocal configKey key
   case (head decodedSuggestions) of
     Just value ->
       if value == "error" then do

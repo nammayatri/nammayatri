@@ -27,7 +27,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Types.App (GlobalState(..))
 import Data.Either (Either(..))
 import Services.API
-import Data.Array (null, head, length, (!!))
+import Data.Array (any, null, head, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag)
@@ -174,7 +174,7 @@ checkRideStatus rideAssigned = do
       else do
         updateLocalStage HomeScreen
     Left err -> updateLocalStage HomeScreen
-  if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
+  if not (any isLocalStageOn [RideAccepted, RideStarted]) then removeChatService "" else pure unit
   where 
     updateCity :: FlowStatusData -> FlowBT String Unit
     updateCity (FlowStatusData flowStatusData) = modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = getCityNameFromCode flowStatusData.source.city}})

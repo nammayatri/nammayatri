@@ -14,5 +14,7 @@ getContact contact = {
   , name : contact.name
   , number : contact.number
   , enableForFollowing: false
+  , enableForShareRide: false
+  , onRide: false
   , priority : 1
 }

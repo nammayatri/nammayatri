@@ -17,6 +17,7 @@ import Screens.NammaSafetyFlow.Components.HelperViews
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
+import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Components.PrimaryButton as PrimaryButton
 import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
@@ -46,8 +47,7 @@ import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.SafetySettingsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..), NewContacts, RecordingState(..), StepsHeaderModelState)
-import Screens.Types as ST
-import Services.API (GetSosDetailsRes(..))
+import Services.API (GetSosDetailsRes(..), RideShareOptions(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
@@ -82,17 +82,24 @@ screen initialState =
 view :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   screenAnimation
-    $ linearLayout
+    $ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
-        , orientation VERTICAL
-        , background Color.white900
-        , padding padding'
         , onBackPressed push $ const BackPressed
         ]
-        [ Header.view (push <<< SafetyHeaderAction) headerConfig
-        , dashboardView state push
-        , shimmerView state
+        [ linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , background Color.white900
+            , padding padding'
+            , onBackPressed push $ const BackPressed
+            ]
+            [ Header.view (push <<< SafetyHeaderAction) headerConfig
+            , dashboardView state push
+            , shimmerView state
+            ]
+        , if state.props.showRideShareOptionsPopup then PopupWithCheckbox.view (push <<< ShareTripOptionPopup) $ shareTripPopupConfig state else emptyTextView
         ]
   where
   padding' =
@@ -124,12 +131,10 @@ dashboardView state push =
             , background Color.greySmoke
             ]
             []
-        , nammaSafetyFeaturesView state push showFeatures
-        , userSettingsView state push $ not showFeatures
+        , nammaSafetyFeaturesView state push $ not state.data.hasCompletedSafetySetup
+        , userSettingsView state push state.data.hasCompletedSafetySetup
         ]
     ]
-  where
-  showFeatures = (not state.data.hasCompletedSafetySetup) && (not state.props.onRide)
 
 -- ---------------------------------- nammaSafetyFeaturesView -----------------------------------
 nammaSafetyFeaturesView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
@@ -198,7 +203,7 @@ featuresView state push =
             [ height $ V 1
             , width MATCH_PARENT
             , margin $ Margin 16 12 16 0
-            , background if state.props.onRide then Color.black700 else Color.white900
+            , background Color.grey900
             ]
             []
         , linearLayout
@@ -241,7 +246,6 @@ imageWithTextView text' isActive =
         <> FontStyle.tags TypoGraphy
     ]
 
-
 userSettingsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
 userSettingsView state push visibility' =
   PrestoAnim.animationSet
@@ -256,26 +260,9 @@ userSettingsView state push visibility' =
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , orientation VERTICAL
+            , padding $ PaddingTop 16
             ]
-            [ linearLayout
-                [ width MATCH_PARENT
-                , height WRAP_CONTENT
-                , orientation VERTICAL
-                , gravity LEFT
-                , padding $ Padding 16 16 16 16
-                ]
-                [ textView
-                    $ [ text $ getString EMERGENCY_ACTIONS
-                      , color Color.black900
-                      ]
-                    <> FontStyle.subHeading1 TypoGraphy
-                , textView
-                    $ [ text $ getString WHEN_YOU_START_EMERGENCY_SOS
-                      , color Color.black700
-                      ]
-                    <> FontStyle.body3 TypoGraphy
-                ]
-            , toggleSwitchViewLayout (ToggleSwitch SetDefaultEmergencyContacts) state.data.shareToEmergencyContacts (getString EMERGENCY_SHARING_WITH_CONTACTS) push true 16
+            [ toggleSwitchViewLayout (ToggleSwitch SetDefaultEmergencyContacts) state.data.shareToEmergencyContacts (getString EMERGENCY_SHARING_WITH_CONTACTS) push true 16
             , linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
@@ -308,18 +295,39 @@ userSettingsView state push visibility' =
             , separatorView Color.lightGreyShade $ Margin 16 16 16 16
             , toggleSwitchViewLayout (ToggleSwitch SetNightTimeSafetyAlert) state.data.nightSafetyChecks (getString NIGHT_TIME_SAFETY_CHECKS) push true 16
             , separatorView Color.lightGreyShade $ Margin 16 16 16 16
-            , toggleSwitchViewLayout (ToggleSwitch SetShareTripWithContacts) state.data.shareTripWithEmergencyContacts (getString RIDE_SHARE_AFTER_SIX_PM) push true 16
+            , linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                ]
+                [ textView
+                    $ [ text shareSettingsText
+                      , color Color.black800
+                      , padding $ Padding 16 16 0 16
+                      , weight 1.0
+                      ]
+                    <> FontStyle.body1 TypoGraphy
+                , textView
+                    $ [ text $ getString EDIT
+                      , color Color.blue900
+                      , margin $ MarginLeft 8
+                      , gravity CENTER
+                      , padding $ Padding 16 16 16 16
+                      , onClick push $ const ShowShareTripOptions
+                      ]
+                    <> FontStyle.body2 TypoGraphy
+                ]
             , textView
                 $ [ text $ getString $ WHO_CAN_TRACK_YOUR_RIDE "WHO_CAN_TRACK_YOUR_RIDE"
                   , color Color.black700
                   , margin $ Margin 16 16 16 16
-                  , visibility $ boolToVisibility $ not $ null state.data.emergencyContactsList
+                  , visibility $ boolToVisibility $ (not $ null state.data.emergencyContactsList) && state.data.shareTripWithEmergencyContactOption /= NEVER_SHARE
                   ]
                 <> FontStyle.body1 TypoGraphy
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
+                , visibility $ boolToVisibility $ (not $ null state.data.emergencyContactsList) && state.data.shareTripWithEmergencyContactOption /= NEVER_SHARE
                 ]
                 ( mapWithIndex
                     ( \index item ->
@@ -344,6 +352,11 @@ userSettingsView state push visibility' =
             ]
             [ PrimaryButton.view (push <<< StartTestDrill) (goToDrillButtonConfig state) ]
         ]
+  where
+  shareSettingsText = case state.data.shareTripWithEmergencyContactOption of
+    ALWAYS_SHARE -> getString ALWAYS_SHARE_DESC
+    SHARE_WITH_TIME_CONSTRAINTS -> getString NIGHT_RIDES_DESC
+    NEVER_SHARE -> getString NEVER_SHARE_DESC
 
 toggleSwitchViewLayout :: Action -> Boolean -> String -> (Action -> Effect Unit) -> Boolean -> Int -> forall w. PrestoDOM (Effect Unit) w
 toggleSwitchViewLayout action isActive text' push visibility' marginLeft =
@@ -381,7 +394,7 @@ toggleSwitchView isActive visibility' action push =
         ]
     ]
 
-shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+shimmerView :: forall w. NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
   relativeLayout
     [ width MATCH_PARENT

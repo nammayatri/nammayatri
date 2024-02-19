@@ -52,7 +52,7 @@ import Storage (KeyStore(..))
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
 import JBridge(fromMetersToKm, getLayoutBounds)
-import Engineering.Helpers.Suggestions (getMessageFromKey)
+import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Helpers.Utils (parseFloat)
 import Data.Int(toNumber, fromString)
 import MerchantConfig.Types (DriverInfoConfig)
@@ -667,6 +667,7 @@ distanceView push state =
        , singleLine true
        ] <> FontStyle.body7 TypoGraphy
      ]
+  , if state.props.isChatWithEMEnabled then chatButtonView push state else dummyView push
   ]
 
 brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> PrestoDOM (Effect Unit) w
@@ -777,28 +778,33 @@ contactView push state =
                 ] <> FontStyle.body7 TypoGraphy
               ]
           ]
-      , linearLayout
-        [ width MATCH_PARENT
-        , gravity RIGHT
-        , height WRAP_CONTENT
-        ][linearLayout
-          [ height $ V 40
-          , width $ V 64
-          , gravity CENTER
-          , cornerRadius if os == "IOS" then 20.0 else 32.0
-          , background state.data.config.driverInfoConfig.callBackground
-          , stroke state.data.config.driverInfoConfig.callButtonStroke
-          , onClick push $ const $ MessageDriver
-          , accessibilityHint "Chat and Call : Button"
-          , accessibility ENABLE
-          , rippleColor Color.rippleShade
-          ][ imageView
-              [ imageWithFallback  $ if feature.enableChat then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
-              , height $ V state.data.config.driverInfoConfig.callHeight
-              , width $ V state.data.config.driverInfoConfig.callWidth
-              ]
+      , chatButtonView push state
+    ]
+
+
+chatButtonView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+chatButtonView push state = 
+  linearLayout
+    [ width MATCH_PARENT
+    , gravity RIGHT
+    , height WRAP_CONTENT
+    ][linearLayout
+      [ height $ V 40
+      , width $ V 64
+      , gravity CENTER
+      , cornerRadius if os == "IOS" then 20.0 else 32.0
+      , background state.data.config.driverInfoConfig.callBackground
+      , stroke state.data.config.driverInfoConfig.callButtonStroke
+      , onClick push $ const $ MessageDriver
+      , accessibilityHint "Chat and Call : Button"
+      , accessibility ENABLE
+      , rippleColor Color.rippleShade
+      ][ imageView
+          [ imageWithFallback  $ if state.data.config.feature.enableChat then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
+          , height $ V state.data.config.driverInfoConfig.callHeight
+          , width $ V state.data.config.driverInfoConfig.callWidth
           ]
-       ]
+      ]
     ]
 
 

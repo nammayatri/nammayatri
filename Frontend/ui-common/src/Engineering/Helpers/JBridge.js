@@ -853,59 +853,63 @@ export const saveSuggestionDefs = function (key) {
   }
 }
 
-export const getSuggestionsfromLocal = function (key) {
-  try {
-    const suggestions = JSON.parse(JBridge.fetchRemoteConfigString("chat_suggestions"));
-    const keys = suggestions[key];
-    if (keys) {
-      return keys;
+export const getSuggestionsfromLocal = function (configKey) {
+  return function (key) {
+    try {
+      const suggestions = JSON.parse(JBridge.fetchRemoteConfigString(configKey));
+      const keys = suggestions[key];
+      if (keys) {
+        return keys;
+      }
+      return [];
+    } catch (error) {
+      console.error("Error in getSuggestionsfromKey " + error);
+      return ["error"];
     }
-    return [];
-  } catch (error) {
-    console.error("Error in getSuggestionsfromKey " + error);
-    return ["error"];
   }
 }
 
-export const getSuggestionfromKey = function (key) {
-  return function (language) {
-    try {
-      const suggestionDefs = JSON.parse(JBridge.fetchRemoteConfigString("chat_suggestions_defs"));
-      const val = suggestionDefs[key];
-      let suggestion = "";
-      if (val) {
-        switch (language) {
-          case "EN_US":
-            suggestion = val["en_us"];
-            break;
-          case "HI_IN":
-            suggestion = val["hi_in"];
-            break;
-          case "KN_IN":
-            suggestion = val["kn_in"];
-            break;
-          case "BN_IN":
-            suggestion = val["bn_in"];
-            break;
-          case "ML_IN":
-            suggestion = val["ml_in"];
-            break;
-          case "TA_IN":
-            suggestion = val["ta_in"];
-            break;
-          case "TE_IN": 
-            suggestion = val["te_in"];
-            break;
-          default:
-            suggestion = val["en_us"];
-            break;
-        }
-        return suggestion;
-      } else
-        return key;
-    } catch (error) {
-      console.error("Error in getSuggestionfromKey : " + error);
-      return "";
+export const getSuggestionfromKey = function (configKey) {
+  return function (key) {
+    return function (language) {
+      try {
+        const suggestionDefs = JSON.parse(JBridge.fetchRemoteConfigString(configKey + "_defs"));
+        const val = suggestionDefs[key];
+        let suggestion = "";
+        if (val) {
+          switch (language) {
+            case "EN_US":
+              suggestion = val["en_us"];
+              break;
+            case "HI_IN":
+              suggestion = val["hi_in"];
+              break;
+            case "KN_IN":
+              suggestion = val["kn_in"];
+              break;
+            case "BN_IN":
+              suggestion = val["bn_in"];
+              break;
+            case "ML_IN":
+              suggestion = val["ml_in"];
+              break;
+            case "TA_IN":
+              suggestion = val["ta_in"];
+              break;
+            case "TE_IN":
+              suggestion = val["te_in"];
+              break;
+            default:
+              suggestion = val["en_us"];
+              break;
+          }
+          return suggestion;
+        } else
+          return key;
+      } catch (error) {
+        console.error("Error in getSuggestionfromKey : " + error);
+        return "";
+      }
     }
   }
 };

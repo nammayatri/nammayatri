@@ -18,6 +18,7 @@ import Data.Maybe
 import Screens.Types
 import Engineering.Helpers.Commons as EHC
 import MerchantConfig.DefaultConfig as DC
+import Services.API as API
 import RemoteConfig as RC
 import Prelude ((==))
 
@@ -27,7 +28,8 @@ initData =
       { shareToEmergencyContacts: false
       , nightSafetyChecks: false
       , hasCompletedMockSafetyDrill : false
-      , shareTripWithEmergencyContacts : false
+      , shareTripWithEmergencyContactOption : API.NEVER_SHARE
+      , shareOptionCurrent : API.NEVER_SHARE
       , hasCompletedSafetySetup: false
       , sosId: ""
       , rideId: ""
@@ -39,16 +41,18 @@ initData =
           , name: ""
           , number: ""
           , enableForFollowing: false
+          , enableForShareRide: false
+          , onRide : false
           , priority : 1
           }
       , currentLocation : "Loading..."
       , vehicleDetails : "Loading..."
       , videoList : []
       , sosType : Nothing
+      , config : DC.config
       }
   , props:
-      { onRide: false
-      , setupStage: SetDefaultEmergencyContacts
+      { setupStage: SetDefaultEmergencyContacts
       , timerId: ""
       , timerValue: defaultTimerValue
       , recordingState: NOT_RECORDING
@@ -64,6 +68,8 @@ initData =
       , showCallPolice : false
       , shouldCallAutomatically : false
       , fromDeepLink : false
+      , showRideShareOptionsPopup : false
+      , showVideoView : false
       }
   }
 

@@ -8,11 +8,15 @@
 -}
 module Screens.NammaSafetyFlow.ActivateSafetyScreen.View where
 
-import Helpers.Utils (getLocationName)
 import Animation
+import Mobility.Prelude
 import Prelude
 import PrestoDOM
 import Screens.NammaSafetyFlow.ComponentConfig
+import Screens.NammaSafetyFlow.Components.ContactsList
+import Screens.NammaSafetyFlow.Components.HelperViews
+import Screens.Types
+import Timers
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
@@ -21,7 +25,7 @@ import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!), (..))
+import Data.Array (any, length, mapWithIndex, null, (!!), (..), elem)
 import Data.Function.Uncurried (runFn2)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
@@ -33,27 +37,23 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Helpers.Utils (getLocationName)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
-import Mobility.Prelude
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.NammaSafetyFlow.Components.ContactsList
 import Screens.EmergencyContactsScreen.View (getFirstChar, getLastChar)
-import Screens.NammaSafetyFlow.Components.HeaderView as Header
-import Screens.NammaSafetyFlow.Components.HelperViews
 import Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
-import Screens.Types
+import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.Types as ST
 import Services.API (GetSosDetailsRes(..), SosFlow(..), Sos(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
-import Timers
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -68,7 +68,7 @@ screen initialState =
                   lift $ lift $ doAff do liftEffect $ push $ UpdateEmergencySettings response
                   when (initialState.data.sosType /= Just Police)
                     $ do
-                        if initialState.data.sosId == "" then do
+                        if elem initialState.data.sosId ["", "mock-sos"] then do
                           (GetSosDetailsRes sosDetails) <- Remote.getSosDetails initialState.data.rideId
                           case sosDetails.sos of
                             Just sos -> do
@@ -441,11 +441,13 @@ otherActionsView state push =
           ]
         <> FontStyle.captions TypoGraphy
     , linearLayout
-        ([ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity CENTER_VERTICAL
-        , margin $ MarginTop 20
-        ] <> if state.props.showTestDrill then [] else [onClick push $ const ShowPoliceView])
+        ( [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER_VERTICAL
+          , margin $ MarginTop 20
+          ]
+            <> if state.props.showTestDrill then [] else [ onClick push $ const ShowPoliceView ]
+        )
         [ imageWithTextView configActionOne
         , layoutWithWeight
         , imageView
@@ -456,16 +458,45 @@ otherActionsView state push =
         ]
     , separatorView Color.black700 $ MarginVertical 16 16
     , linearLayout
-        ([ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity CENTER_VERTICAL
-        ] <> if state.props.showTestDrill then [] else [onClick push $ const ShowSafetyIssueView])
-        [ imageWithTextView configActionTwo
+        ( [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER_VERTICAL
+          ]
+            <> if state.props.showTestDrill then [] else [ onClick push $ const ShowSafetyIssueView ]
+        )
+        [ imageWithTextView
+            $ if state.data.config.feature.enableCustomerSupportForSafety then
+                configActionTwo'
+              else
+                configActionTwo
         , layoutWithWeight
         , imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_white"
             , height $ V 20
             , width $ V 20
+            ]
+        ]
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , visibility $ boolToVisibility $ not state.props.showTestDrill
+        ]
+        [ separatorView Color.black700 $ MarginVertical 16 16
+        , linearLayout
+            ( [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , gravity CENTER_VERTICAL
+              ]
+                <> if state.props.showTestDrill then [] else [ onClick push $ const GoToTestDrill ]
+            )
+            [ imageWithTextView configActionThree
+            , layoutWithWeight
+            , imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_white"
+                , height $ V 20
+                , width $ V 20
+                ]
             ]
         ]
     ]
@@ -490,6 +521,28 @@ otherActionsView state push =
     , useFullWidth: false
     , image: Just "ny_ic_issue_box"
     , visibility: true
+    }
+
+  configActionTwo' =
+    { text': getString CALL_CUSTOMER_SUPPORT
+    , isActive: true
+    , textColor: Color.white900
+    , useMargin: false
+    , usePadding: false
+    , useFullWidth: false
+    , image: Just "ny_ic_support_unfilled"
+    , visibility: true
+    }
+
+  configActionThree =
+    { text': getString START_TEST_DRILL
+    , isActive: true
+    , textColor: Color.white900
+    , useMargin: false
+    , usePadding: false
+    , useFullWidth: false
+    , image: Just "ny_ic_police"
+    , visibility: not state.props.showTestDrill
     }
 
 shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
@@ -657,17 +710,6 @@ measureView { text', showBullet, isCorrect, color', marginBottom, style, action 
           ]
         <> (FontStyle.getFontStyle style LanguageStyle)
     ]
-
-------------------- separator -------------------
-separatorView :: forall w. String -> Margin -> PrestoDOM (Effect Unit) w
-separatorView color' margin' =
-  linearLayout
-    [ height (V 1)
-    , width MATCH_PARENT
-    , margin margin'
-    , background color'
-    ]
-    []
 
 triggeringSosView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 triggeringSosView state push =

@@ -14,30 +14,32 @@
 -}
 module Screens.NammaSafetyFlow.SafetySettingsScreen.Controller where
 
+import JBridge
 import Log
 import Prelude
 import PrestoDOM
 import Screens.Types
 import Storage
 import Components.GenericHeader.Controller as GenericHeaderController
+import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
-import Helpers.Utils as HU
 import Foreign (unsafeToForeign)
-import JBridge
+import Helpers.Utils as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (delay)
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
+import Screens.NammaSafetyFlow.ComponentConfig (labelData)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
-import Services.API (ContactDetails(..), GetEmergencySettingsRes(..))
+import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), RideShareOptions(..))
 import Services.Config (getSupportNumber)
 import Types.App (defaultGlobalState)
 import Types.EndPoint (updateSosVideo)
@@ -81,6 +83,8 @@ data Action
   | GoToEducationView
   | StartTestDrill PrimaryButtonController.Action
   | ContactAction ContactCircle.Action
+  | ShowShareTripOptions
+  | ShareTripOptionPopup PopupWithCheckboxController.Action
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -93,8 +97,10 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             { number: item.mobileNumber
             , name: item.name
             , isSelected: true
-            , enableForFollowing: response.shareTripWithEmergencyContacts && fromMaybe false item.enableForFollowing
+            , enableForFollowing: fromMaybe false item.enableForFollowing
+            , enableForShareRide: fromMaybe false item.enableForShareRide
             , priority: fromMaybe 1 item.priority
+            , onRide : fromMaybe false item.onRide
             }
         )
         response.defaultEmergencyNumbers
@@ -109,11 +115,22 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
         , shareToEmergencyContacts = response.shareEmergencyContacts
         , nightSafetyChecks = response.nightSafetyChecks
         , hasCompletedMockSafetyDrill = response.hasCompletedMockSafetyDrill
-        , shareTripWithEmergencyContacts = response.shareTripWithEmergencyContacts
+        , shareTripWithEmergencyContactOption = shareTripOption response.shareTripWithEmergencyContactOption
+        , shareOptionCurrent = shareTripOption response.shareTripWithEmergencyContactOption
         , emergencyContactsList = getDefaultPriorityList contacts
         }
       , props { enableLocalPoliceSupport = response.enablePoliceSupport, localPoliceNumber = fromMaybe "" response.localPoliceNumber }
       }
+  where
+  shareTripOption val = case val of -- Handling Backward compatibility
+    Just option -> option
+    Nothing -> case response.shareTripWithEmergencyContacts of
+      Just shareTrip ->
+        if shareTrip then
+          SHARE_WITH_TIME_CONSTRAINTS
+        else
+          NEVER_SHARE
+      Nothing -> NEVER_SHARE
 
 eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
 
@@ -121,7 +138,6 @@ eval (SafetyHeaderAction (Header.LearnMoreClicked)) state = exit $ GoToEducation
 
 eval (ToggleSwitch stage) state = case stage of
   SetNightTimeSafetyAlert -> exit $ PostEmergencySettings state { data { nightSafetyChecks = not state.data.nightSafetyChecks } }
-  SetShareTripWithContacts -> exit $ PostEmergencySettings state { data { shareTripWithEmergencyContacts = not state.data.shareTripWithEmergencyContacts } }
   SetDefaultEmergencyContacts ->
     if DA.length state.data.emergencyContactsList /= 0 then
       exit $ PostEmergencySettings state { data { shareToEmergencyContacts = not state.data.shareToEmergencyContacts } }
@@ -162,7 +178,25 @@ eval (StartTestDrill PrimaryButtonController.OnClick) state =
             { confirmTestDrill = true
             , triggeringSos = false
             , showTestDrill = false
+            , showShimmer = true
             }
           }
+
+eval ShowShareTripOptions state = continue state { props { showRideShareOptionsPopup = true } }
+
+eval (ShareTripOptionPopup PopupWithCheckboxController.DismissPopup) state = continue state { props { showRideShareOptionsPopup = false } }
+
+eval (ShareTripOptionPopup (PopupWithCheckboxController.ClickPrimaryButton PrimaryButtonController.OnClick)) state =
+  exit
+    $ PostEmergencySettings
+        state
+          { data { shareTripWithEmergencyContactOption = state.data.shareOptionCurrent }
+          , props { showRideShareOptionsPopup = false }
+          }
+
+eval (ShareTripOptionPopup (PopupWithCheckboxController.ToggleSelect index)) state = 
+  case (labelData DA.!! index) of
+    Just option -> continue state { data { shareOptionCurrent = option.type } }
+    Nothing -> continue state
 
 eval _ state = continue state
