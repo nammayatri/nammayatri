@@ -13,11 +13,9 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Select (buildSelectReq, buildSelectReqV2) where
+module Beckn.ACL.Select (buildSelectReqV2) where
 
-import Beckn.ACL.Common (castVariant, mkLocation)
 import qualified Beckn.OnDemand.Utils.Common as UCommon
-import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
@@ -25,30 +23,15 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import qualified Data.Text as T
-import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Location as Location
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
-import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import Tools.Error
-
-buildSelectReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DSelect.DSelectRes ->
-  m (BecknReq Select.SelectMessage)
-buildSelectReq dSelectRes = do
-  let messageId = dSelectRes.estimate.bppEstimateId.getId
-  let transactionId = dSelectRes.searchRequest.id.getId
-  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
-  -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city dSelectRes.merchant.country dSelectRes.autoAssignEnabled
-  order <- buildOrder dSelectRes
-  pure $ BecknReq context $ Select.SelectMessage order
 
 buildSelectReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
@@ -61,60 +44,8 @@ buildSelectReqV2 dSelectRes = do
       messageId = dSelectRes.estimate.bppEstimateId.getId
       transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
-  -- TODO :: Add request city, after multiple city support on gateway.
   context <- ContextV2.buildContextV2 Context.SELECT Context.MOBILITY messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city dSelectRes.merchant.country
   pure $ Spec.SelectReq {selectReqContext = context, selectReqMessage = message}
-
-buildOrder :: (Monad m, Log m, MonadThrow m) => DSelect.DSelectRes -> m Select.Order
-buildOrder res = do
-  let start = mkLocation $ DSearch.makeSearchReqLoc' res.searchRequest.fromLocation
-  toLocation <- res.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
-  let end = mkLocation $ DSearch.makeSearchReqLoc' toLocation
-  let variant = castVariant res.variant
-  let item =
-        Select.OrderItem
-          { id = res.estimate.itemId,
-            price =
-              Select.Price
-                { currency = "INR",
-                  value = show res.estimate.estimatedFare.getMoney
-                },
-            tags = if isJust res.customerExtraFee then Just $ Select.TG [mkCustomerTipTags] else Nothing
-          }
-  return
-    Select.Order
-      { items = [item],
-        fulfillment =
-          Select.FulfillmentInfo
-            { start =
-                Select.StartInfo
-                  { location = start
-                  },
-              end =
-                Just $
-                  Select.StopInfo
-                    { location = end
-                    },
-              id = res.estimate.bppEstimateId.getId,
-              vehicle = Select.Vehicle {category = variant},
-              _type = "RIDE"
-            }
-      }
-  where
-    mkCustomerTipTags =
-      Select.TagGroup
-        { display = False,
-          code = "customer_tip_info",
-          name = "Customer Tip Info",
-          list =
-            [ Select.Tag
-                { display = (\_ -> Just False) =<< res.customerExtraFee,
-                  code = (\_ -> Just "customer_tip") =<< res.customerExtraFee,
-                  name = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
-                  value = (\charges -> Just $ show charges.getMoney) =<< res.customerExtraFee
-                }
-            ]
-        }
 
 buildSelectReqMessage :: DSelect.DSelectRes -> Location.Location -> Bool -> Spec.ConfirmReqMessage
 buildSelectReqMessage res endLoc isValueAddNP =
@@ -214,17 +145,20 @@ tfOrderItem res isValueAddNP =
       itemLocationIds = Nothing
       itemPaymentIds = Nothing
       itemId = Just res.estimate.itemId
-      itemTags = Just $ mkItemTags res isValueAddNP
+      itemTags =
+        if isValueAddNP
+          then Just $ mkItemTags res
+          else Nothing
       itemPrice = tfPrice res
    in Spec.Item
         { itemPrice = Just itemPrice,
           ..
         }
 
-mkItemTags :: DSelect.DSelectRes -> Bool -> [Spec.TagGroup]
-mkItemTags res isValueAddNP =
-  let itemTags = [mkAutoAssignEnabledTagGroup res | isValueAddNP]
-      itemTags' = if isJust res.customerExtraFee && isValueAddNP then mkCustomerTipTagGroup res : itemTags else itemTags
+mkItemTags :: DSelect.DSelectRes -> [Spec.TagGroup]
+mkItemTags res =
+  let itemTags = [mkAutoAssignEnabledTagGroup res]
+      itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
    in itemTags'
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup

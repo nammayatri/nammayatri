@@ -159,7 +159,7 @@ buildOnStatusReqV2 merchant booking req = do
       city = fromMaybe merchant.city booking.bapCity
       country = fromMaybe merchant.country booking.bapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  buildOnStatusReqV2' Context.STATUS Context.MOBILITY msgId bppId bppUri city country booking req
+  buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req
 
 buildOnStatusReqV2' ::
   (MonadFlow m, EncFlow m r) =>

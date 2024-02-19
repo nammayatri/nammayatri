@@ -19,6 +19,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Data.Fixed (Fixed (MkFixed))
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -28,21 +29,29 @@ import Tools.Error
 
 buildOnConfirmReqV2 ::
   ( HasFlowEnv m r '["_version" ::: Text],
-    MonadTime m
+    MonadFlow m
   ) =>
   Spec.OnConfirmReq ->
   Bool ->
   m (Maybe DOnConfirm.OnConfirmReq)
-buildOnConfirmReqV2 req isValueAddNP' = do
+buildOnConfirmReqV2 req isValueAddNP = do
   ContextV2.validateContext Context.ON_CONFIRM req.onConfirmReqContext
   currTime <- getCurrentTime
   handleErrorV2 req $ \message -> do
-    case parseData message isValueAddNP' currTime of
-      Right dReq -> return $ Just dReq
+    case parseData message currTime of
+      Right dReq -> do
+        case dReq of
+          DOnConfirm.BookingConfirmed _ | not isValueAddNP -> do
+            -- when its not a value-add-np ride flow, we need on_confirm to have DELIVERY fulfillmentType.
+            let fulfType = message.confirmReqMessageOrder.orderFulfillments >>= listToMaybe >>= (.fulfillmentType) >>= readMaybe . T.unpack
+            when (fulfType /= Just Enums.DELIVERY) $ do
+              throwError . InvalidBecknSchema $ "Invalid fulfillment type in on_confirm:-" <> show fulfType <> ",expected:-" <> show Enums.DELIVERY
+          _ -> pure ()
+        return $ Just dReq
       Left err -> throwError . InvalidBecknSchema $ "on_confirm error:-" <> show err
   where
-    parseData :: Spec.ConfirmReqMessage -> Bool -> UTCTime -> Either Text DOnConfirm.OnConfirmReq
-    parseData message isValueAddNP now = do
+    parseData :: Spec.ConfirmReqMessage -> UTCTime -> Either Text DOnConfirm.OnConfirmReq
+    parseData message now = do
       let order = message.confirmReqMessageOrder
       bppBookingIdText <- order.orderId & maybe (Left "Missing OrderId") Right
       let bppBookingId = Id bppBookingIdText
@@ -60,7 +69,7 @@ buildOnConfirmReqV2 req isValueAddNP' = do
               driverMobileCountryCode = Just "+91" -- TODO: check how to get countrycode via ONDC
               driverRating = Just $ toCentesimal 5 -- Default value for driver_rating for not-value-add-np.
               oneYearAgo = - (365 * 24 * 60 * 60)
-              driverRegisteredAt = Just $ addUTCTime oneYearAgo now
+              driverRegisteredAt = Just $ addUTCTime oneYearAgo now -- Default value for driver_registered_at for not-value-add-np.
               isDriverBirthDay = False
               isFreeRide = False
 
@@ -74,11 +83,7 @@ buildOnConfirmReqV2 req isValueAddNP' = do
           vehicleModel <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleModel) & maybe (Left "Missing fulfillment.vehicle.model in on_confirm") Right
 
           Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {..}
-        else do
-          -- when its not a value-add-np ride flow, we need on_confirm to have RIDE_ASSIGNED state.
-          if not isValueAddNP
-            then Left $ "Invalid fulfillment state descriptor code in on_confirm:-" <> show fulfState <> ",expected:-" <> show Enums.RIDE_ASSIGNED
-            else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {bppBookingId, specialZoneOtp = mbRideOtp}
+        else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {bppBookingId, specialZoneOtp = mbRideOtp}
 
 handleErrorV2 ::
   (MonadFlow m) =>
