@@ -1,6 +1,7 @@
 module Resources.Localizable.KN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getKN :: STR -> String
 getKN stringKey =
@@ -1235,3 +1236,5 @@ getKN stringKey =
         LOWEST_FEES_FROM -> "{} ರಿಂದ ಕಡಿಮೆ ಶುಲ್ಕ"
         ZERO_FEE_TILL -> "{} ರವರೆಗೆ ಶೂನ್ಯ ಶುಲ್ಕ"
         ZERO_COMMISION_UNLIMITED_RIDES -> "ಶೂನ್ಯ ಕಮಿಷನ್,ಅನಿಯಮಿತ ಸವಾರಿಗಳು"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "ಶುಭಾಶಯಗಳು!\n\nಶುಭಾಶಯಗಳು, ನೋಂದಾಯಿಸಲು ದಯವಿಟ್ಟು ನನ್ನ ರೆಫರಲ್ ಕೋಡ್ " <> code <> "ಅನ್ನು ಬಳಸಿ " <> name <> ".\n\nಅಪ್ಲಿಕೇಶನ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು QR ಕೋಡ್ ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ಅಥವಾ ಕೆಳಗಿನ ಲಿಂಕ್ ಅನ್ನು ಕ್ಲಿಕ್ ಮಾಡಿ. ಅಗತ್ಯವಿರುವ ನೋಂದಣಿ ಹಂತಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ ಮತ್ತು ನನ್ನ ರೆಫರಲ್ ಕೋಡ್ ಅನ್ನು ನಮೂದಿಸಿ. ಆನ್‌ಲೈನ್‌ಗೆ ಹೋಗಿ ಮತ್ತು ಗಳಿಸಲು ಪ್ರಾರಂಭಿಸಿ!\n\n"
+        DOWNLOAD_NOW -> "(ಈಗ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ) "

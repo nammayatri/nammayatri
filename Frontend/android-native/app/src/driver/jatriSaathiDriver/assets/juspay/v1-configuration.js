@@ -254,7 +254,8 @@ window.getMerchantConfig = function () {
     , "enableMockLocation" : false
     , "flowConfig" : {
       "chooseCity" : {
-        "runFlow" : false
+        "runFlow" : false,
+        "defCity" : "Kolkata"
       }
     }
     , "permissions" : {
@@ -276,5 +277,11 @@ window.getMerchantConfig = function () {
   , "waitTimeConfig" : {
     "enableWaitTime" : false
   }
+  , "cityConfig" : [
+    {
+      "cityName" : "Kolkata",
+      "languageKey" : "HI_IN",
+      "appName" : "यात्री साथी"
+    }]
   })
 }

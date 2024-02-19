@@ -1,6 +1,7 @@
 module Resources.Localizable.BN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getBN :: STR -> String
 getBN stringKey =
@@ -1235,3 +1236,5 @@ getBN stringKey =
         LOWEST_FEES_FROM -> "{} থেকে সর্বনিম্ন ফি"
         ZERO_FEE_TILL -> "{} অক্টোবর পর্যন্ত কোন ফি নেই"
         ZERO_COMMISION_UNLIMITED_RIDES -> "শূন্য কমিশন, অসীম চালনা"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "শুভেচ্ছা!\n\nঅনুগ্রহ করে রেজিস্টার করতে আমার রেফারেল কোড " <> code <> " ব্যবহার করুন " <> name <> ".\n\nঅ্যাপটি ডাউনলোড করতে QR কোড স্ক্যান করুন বা নিচের লিঙ্কে ক্লিক করুন। প্রয়োজনীয় রেজিস্ট্রেশন ধাপগুলি সম্পূর্ণ করুন এবং আমার রেফারেল কোড ইনপুট করুন। অনলাইন যান এবং উপার্জন শুরু করুন!\n\n"
+        DOWNLOAD_NOW -> "(এখনই ডাউনলোড করুন) "

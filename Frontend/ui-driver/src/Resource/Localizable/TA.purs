@@ -1,6 +1,7 @@
 module Resources.Localizable.TA where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getTA :: STR -> String
 getTA stringKey =
@@ -1235,3 +1236,5 @@ getTA stringKey =
         LOWEST_FEES_FROM -> "{} முதல் குறைந்த கட்டணம்"
         ZERO_FEE_TILL -> "{} வரை கட்டணமில்லை"
         ZERO_COMMISION_UNLIMITED_RIDES -> "வரம்பற்ற சவாரிகள், கமிஷன் இல்லை"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "வாழ்த்துக்கள்!\n\nவாழ்த்துக்கள், பதிவு செய்ய எனது பரிந்துரை குறியீட்டை " <> code <> "பயன்படுத்தவும்" <> name <> ".\n\nபயன்பாட்டைப் பதிவிறக்க, QR குறியீட்டை ஸ்கேன் செய்யவும் அல்லது கீழே உள்ள இணைப்பைக் கிளிக் செய்யவும். தேவையான பதிவு படிகளை முடித்து, எனது பரிந்துரை குறியீட்டை உள்ளிடவும். ஆன்லைனில் சென்று சம்பாதிக்கத் தொடங்குங்கள்!\n\n"
+        DOWNLOAD_NOW -> "(இப்போது பதிவிறக்கவும்) "

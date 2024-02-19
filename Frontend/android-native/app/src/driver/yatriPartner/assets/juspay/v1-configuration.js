@@ -122,7 +122,8 @@ window.getMerchantConfig = function () {
     }
     , "flowConfig" : {
       "chooseCity" : {
-        "runFlow" : false
+        "runFlow" : false,
+        "defCity" : "Kochi"
       }
     }
     , "permissions" : {
@@ -138,8 +139,14 @@ window.getMerchantConfig = function () {
           "showNew" : true
         }
     }
-  , "profile" : {
+   , "profile" : {
       "checkRCStatusForBookingOption" : false
     }
+   , "cityConfig" : [
+      {
+        "cityName" : "Kochi",
+        "languageKey" : "ML_IN",
+        "appName" : "യാത്രി"
+      }]
   })
 }

@@ -26,6 +26,11 @@ import Foreign (unsafeToForeign)
 import Data.Array (find)
 import Services.API
 import Effect.Uncurried (runEffectFn4)
+import Resources.Localizable.EN (getEN)
+import Language.Strings (getString, getStringFromConfigOrLocal, getStringFromLocal)
+import Language.Types (STR(..))
+import Locale.Utils
+import Helpers.Utils (getCityConfig)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -97,7 +102,8 @@ eval ShowQRCode state = do
 
 eval ShareOptions state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_share_referral_code_click"
-  let message = "👋 Hey,\n\nMy " <> state.data.config.appData.name <> " Referral Code is " <> (state.data.referralCode) <> ".\n\nScan the QR code and download " <> state.data.config.appData.name <> " app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
+      appLink = generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType state.data.config.appData.website
+      message = getReferralMessageText state appLink
   void $ pure $ shareImageMessage message (shareImageMessageConfig state)
   continue state
 
@@ -154,7 +160,16 @@ eval _ state = continue state
 shareImageMessageConfig :: DriverReferralScreenState -> ShareImageConfig
 shareImageMessageConfig state = {
   code : state.data.referralCode,
-  viewId : getNewIDWithTag "DriverReferralQRScreen",
+  viewId : getNewIDWithTag "ReferralQRCode",
   logoId : getNewIDWithTag "DriverReferralScreenLogo",
   isReferral : true
   }
+
+getReferralMessageText :: DriverReferralScreenState -> String -> String
+getReferralMessageText state appLink = 
+  let cityConfig = getCityConfig state.data.config.cityConfig $ (getValueToLocalStore DRIVER_LOCATION)
+      text = (getEN (PLEASE_USE_MY_REFERRAL_CODE state.data.referralCode state.data.config.appData.name))
+             <> (getStringFromLocal cityConfig.languageKey (PLEASE_USE_MY_REFERRAL_CODE state.data.referralCode cityConfig.appName))
+             <> (getEN DOWNLOAD_NOW <> (getStringFromLocal cityConfig.languageKey DOWNLOAD_NOW) <> appLink)
+  in
+    text

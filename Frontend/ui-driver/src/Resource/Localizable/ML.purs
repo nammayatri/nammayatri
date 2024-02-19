@@ -1,6 +1,7 @@
 module Resources.Localizable.ML where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getML :: STR -> String
 getML stringKey =
@@ -1235,3 +1236,5 @@ getML stringKey =
         LOWEST_FEES_FROM -> "Lowest Fees from {}"
         ZERO_FEE_TILL -> "ZERO Fee till Oct 1st 2024"
         ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "ആശംസകൾ!\n\nജിസ്റ്റർ ചെയ്യുന്നതിന് ദയവായി എൻ്റെ റഫറൽ കോഡ് " <> code <> " ഉപയോഗിക്കുക " <> name <> ".\n\nആപ്പ് ഡൗൺലോഡ് ചെയ്യാൻ QR കോഡ് സ്കാൻ ചെയ്യുക അല്ലെങ്കിൽ താഴെയുള്ള ലിങ്കിൽ ക്ലിക്ക് ചെയ്യുക. ആവശ്യമായ രജിസ്ട്രേഷൻ ഘട്ടങ്ങൾ പൂർത്തിയാക്കി എൻ്റെ റഫറൽ കോഡ് നൽകുക. ഓൺലൈനിൽ പോയി സമ്പാദിക്കാൻ തുടങ്ങൂ!\n\n"
+        DOWNLOAD_NOW -> "(ഇപ്പോൾ ഡൗൺലോഡ് ചെയ്യുക) "

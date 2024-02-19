@@ -203,7 +203,8 @@ baseAppFlow baseFlow event = do
       if isTokenValid regToken then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
-      else if not config.flowConfig.chooseCity.runFlow then
+      else if not config.flowConfig.chooseCity.runFlow then do
+        setValueToLocalNativeStore DRIVER_LOCATION config.flowConfig.chooseCity.defCity
         chooseLanguageFlow
       else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission then do
         chooseCityFlow

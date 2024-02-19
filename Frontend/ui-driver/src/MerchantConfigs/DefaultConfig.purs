@@ -137,7 +137,8 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : true,
-              registration : registrationConfig
+              registration : registrationConfig,
+              appName : "ನಮ್ಮ ಯಾತ್ರಿ"
             },
             {
               cityName : "Hyderabad",
@@ -152,7 +153,8 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
-              registration : registrationConfig
+              registration : registrationConfig,
+              appName : "నమ్మ యాత్రి"
             },
             {
               cityName : "Mysore",
@@ -167,7 +169,8 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
-              registration : registrationConfig
+              registration : registrationConfig,
+              appName : "ನಮ್ಮ ಯಾತ್ರಿ"
             },
             {
               cityName : "Delhi",
@@ -182,7 +185,8 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
-              registration : registrationConfig
+              registration : registrationConfig,
+              appName : "नम्मा यात्री"
             },
             {
               cityName : "Chennai",
@@ -197,7 +201,8 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : false,
               enableYatriCoins : false,
-              registration : registrationConfig
+              registration : registrationConfig,
+              appName : "நம்ம யாத்ரி"
             },
             {
               cityName : "Coimbatore",
@@ -212,7 +217,8 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
-              registration : registrationConfig
+              registration : registrationConfig,
+              appName : "நம்ம யாத்ரி"
             },
             {
               cityName : "Puducherry",
@@ -227,7 +233,8 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
-              registration : registrationConfig
+              registration : registrationConfig,
+              appName : "நம்ம யாத்ரி"
             },
             {
               cityName : "Gurugram",
@@ -242,7 +249,8 @@ config =
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : false,
-              registration : registrationConfig
+              registration : registrationConfig,
+              appName : "नम्मा यात्री"
             },
             {             
               cityName : "Noida",
@@ -257,7 +265,8 @@ config =
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : false,
-              registration : registrationConfig
+              registration : registrationConfig,
+              appName : "नम्मा यात्री"
             }--, For future use
             -- {
             --   cityName : "Madurai",

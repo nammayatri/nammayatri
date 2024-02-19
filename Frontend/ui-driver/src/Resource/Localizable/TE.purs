@@ -1,6 +1,7 @@
 module Resources.Localizable.TE where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getTE :: STR -> String
 getTE stringKey =
@@ -1235,3 +1236,5 @@ getTE stringKey =
         LOWEST_FEES_FROM -> "{} నుండి అత్యల్ప ఫీజు"
         ZERO_FEE_TILL -> "{} వరకు జీరో ఫీజు"
         ZERO_COMMISION_UNLIMITED_RIDES -> "జీరో కమీషన్, ఉన్లిమితెద్ రైడ్‌లు"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "శుభాకాంక్షలు!\n\nదయచేసి నమోదు చేసుకోవడానికి నా రిఫరల్ కోడ్ " <> code <> "ని ఉపయోగించండి " <> name <> ".\n\nయాప్‌ను డౌన్‌లోడ్ చేయడానికి QR కోడ్‌ని స్కాన్ చేయండి లేదా క్రింది లింక్‌పై క్లిక్ చేయండి. అవసరమైన నమోదు దశలను పూర్తి చేయండి మరియు నా రిఫరల్ కోడ్‌ను ఇన్‌పుట్ చేయండి. ఆన్‌లైన్‌కి వెళ్లి సంపాదించడం ప్రారంభించండి!\n\n"
+        DOWNLOAD_NOW -> "(ఇపుడు డౌన్లోడ్ చేసుకోండి) "

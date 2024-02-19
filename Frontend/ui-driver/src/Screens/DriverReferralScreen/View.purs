@@ -103,6 +103,7 @@ view push state =
                 [ if shouldShowReferral state then driverReferralCode push state else dummyView
                 , rideLeaderBoardView push state
                 ]
+            , appLogoView push state
             ]
         , bottomNavBarView push state
         ]
@@ -252,7 +253,7 @@ driverReferralCode push state =
                 ]
             ]
         ]
-    , linearLayout
+        , linearLayout
         [ width MATCH_PARENT
         , height $ V 1
         , background config.separatorColor
@@ -535,3 +536,16 @@ formatEligibleDrivers :: Int -> String
 formatEligibleDrivers value
   | value > 10000 = show (value `div` 1000) <> "K"
   | otherwise = show value
+
+appLogoView :: forall w . (Action -> Effect Unit) -> DriverReferralScreenState -> PrestoDOM (Effect Unit) w
+appLogoView push state = 
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    ][ imageView 
+        [ height $ V 0
+        , width $ V 0
+        , id $ getNewIDWithTag "DriverReferralScreenLogo"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_namma_yatri"
+        ]
+    ]

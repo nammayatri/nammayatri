@@ -1,6 +1,7 @@
 module Resources.Localizable.EN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
@@ -1235,4 +1236,6 @@ getEN stringKey =
         LOWEST_FEES_FROM -> "Lowest Fees from {}"
         ZERO_FEE_TILL -> "ZERO Fee till Oct 1st 2024"
         ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "Greetings!\n\nPlease use my Referral Code " <> code <> " to register on " <> name <> ".\n\nScan the QR code or click on the link below to download the app. Complete required registration steps and input my referral code. Go online and start earning!\n\n"
+        DOWNLOAD_NOW -> "Download Now "
         

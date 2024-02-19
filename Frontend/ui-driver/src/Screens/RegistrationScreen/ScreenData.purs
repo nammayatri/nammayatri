@@ -94,5 +94,6 @@ dummyCityConfig = {
                       callSupport : false,
                       supportWAN : "", 
                       whatsappSupport : false
-                    }
+                    },
+                    appName : "Namma Yatri"
                   }

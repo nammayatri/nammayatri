@@ -1,6 +1,7 @@
 module Resources.Localizable.HI where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getHI :: STR -> String
 getHI stringKey =
@@ -1235,3 +1236,5 @@ getHI stringKey =
         LOWEST_FEES_FROM -> "{} से सबसे कम फीस"
         ZERO_FEE_TILL -> "{} तक शून्य शुल्क"
         ZERO_COMMISION_UNLIMITED_RIDES -> "शून्य कमीशन और असीमित सवारी"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "नमस्कार!\n\nकृपया " <> name <> " पर पंजीकरण करने के लिए मेरे रेफरल कोड " <> code <> " का उपयोग करें।\n\nऐप डाउनलोड करने के लिए QR कोड को स्कैन करें या नीचे दिए गए लिंक पर क्लिक करें। आवश्यक पंजीकरण चरणों को पूरा करें और मेरा रेफरल कोड इनपुट करें। ऑनलाइन जाएं और कमाई शुरू करें!\n\n"
+        DOWNLOAD_NOW -> "(अभी डाउनलोड करें) "

@@ -616,7 +616,8 @@ getCityConfig cityConfig cityName = do
                             callSupport : false,
                             supportWAN : "", 
                             whatsappSupport : false
-                          }
+                          },
+                          appName : ""
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   

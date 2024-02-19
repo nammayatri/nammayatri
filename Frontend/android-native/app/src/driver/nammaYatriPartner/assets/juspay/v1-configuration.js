@@ -199,7 +199,8 @@ window.getMerchantConfig = function () {
             "supportWAN" : "918618963188",
             "callSupport" : true,
             "whatsappSupport" : true
-        }
+        },
+        "appName" : "ನಮ್ಮ ಯಾತ್ರಿ"
       },
       {
         "cityName" : "Hyderabad",
@@ -218,7 +219,8 @@ window.getMerchantConfig = function () {
             "supportWAN" : "919392636637",
             "callSupport" : true,
             "whatsappSupport" : true
-        }
+        },
+        "appName" : "నమ్మ యాత్రి"
       },
       {
         "cityName" : "Mysore",
@@ -237,7 +239,8 @@ window.getMerchantConfig = function () {
             "supportWAN" : "918618963188",
             "callSupport" : true,
             "whatsappSupport" : true
-        }
+        },
+        "appName" : "ನಮ್ಮ ಯಾತ್ರಿ"
       },
       {
         "cityName" : "Delhi",
@@ -256,7 +259,8 @@ window.getMerchantConfig = function () {
             "supportWAN" : "919625724848",
             "callSupport" : true,
             "whatsappSupport" : true
-        }
+        },
+        "appName" : "नम्मा यात्री"
       },
       {
         "cityName" : "Chennai",
@@ -275,7 +279,8 @@ window.getMerchantConfig = function () {
             "supportWAN" : "917483117936",
             "callSupport" : true,
             "whatsappSupport" : true
-        }
+        },
+        "appName" : "நம்ம யாத்ரி"
       },
       {
         "cityName" : "Coimbatore",
@@ -294,7 +299,8 @@ window.getMerchantConfig = function () {
             "supportWAN" : "",
             "callSupport" : true,
             "whatsappSupport" : false
-        }
+        },
+        "appName" : "நம்ம யாத்ரி"
       },
       {
         "cityName" : "Puducherry",
@@ -313,7 +319,8 @@ window.getMerchantConfig = function () {
           "supportWAN" : "917483117936",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "appName" : "நம்ம யாத்ரி"
       },
       {
         "cityName" : "Tumakuru",
@@ -332,7 +339,8 @@ window.getMerchantConfig = function () {
           "supportWAN" : "918618963188",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "appName" : "ನಮ್ಮ ಯಾತ್ರಿ"
       },
       {
         "cityName" : "Gurugram",
@@ -351,7 +359,8 @@ window.getMerchantConfig = function () {
           "supportWAN" : "919625724848",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "appName" : "नम्मा यात्री"
       },
       {
         "cityName" : "Noida",
@@ -370,7 +379,8 @@ window.getMerchantConfig = function () {
           "supportWAN" : "919625724848",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "appName" : "नम्मा यात्री"
       }
   ]
   , "dashboard" : {
