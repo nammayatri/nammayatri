@@ -314,7 +314,7 @@ mkStopsOUS booking ride rideOtp =
                         { authorizationToken = Just rideOtp,
                           authorizationType = Just $ show Enums.OTP
                         },
-                  stopTime = Just $ Spec.Time {timeTimestamp = ride.tripStartTime}
+                  stopTime = ride.tripStartTime <&> \tripStartTime' -> Spec.Time {timeTimestamp = Just tripStartTime'}
                 },
             ( \destination ->
                 Spec.Stop
@@ -331,11 +331,13 @@ mkStopsOUS booking ride rideOtp =
                           },
                     stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
-                    stopTime = Just $ Spec.Time {timeTimestamp = ride.tripEndTime}
+                    stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime'}
                   }
             )
               <$> mbDestination
           ]
+
+type IsValueAddNP = Bool
 
 -- common for on_update & on_status
 mkFulfillmentV2 ::
@@ -350,8 +352,9 @@ mkFulfillmentV2 ::
   Bool ->
   Bool ->
   Maybe Text ->
+  IsValueAddNP ->
   m Spec.Fulfillment
-mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent = do
+mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP = do
   mbDInfo <- driverInfo
   let rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
@@ -373,11 +376,11 @@ mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDr
                     Spec.Person
                       { personId = Nothing,
                         personImage =
-                          Just $
+                          mbImage <&> \mbImage' ->
                             Spec.Image
                               { imageHeight = Nothing,
                                 imageSizeType = Nothing,
-                                imageUrl = mbImage,
+                                imageUrl = Just mbImage',
                                 imageWidth = Nothing
                               },
                         personName = mbDInfo >>= Just . (.name),
@@ -421,7 +424,7 @@ mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDr
         DriverInfo
           { mobileNumber = dPhoneNum,
             name = dName,
-            tags = dTags
+            tags = if isValueAddNP then dTags else Nothing
           }
 
 mkDriverDetailsTags :: SP.Person -> Bool -> Bool -> Maybe [Spec.TagGroup]
@@ -507,100 +510,103 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
               tagValue = Just $ show isFreeRide
             }
 
-mkLocationTagGroupV2 :: Maybe Maps.LatLong -> [Spec.TagGroup]
-mkLocationTagGroupV2 location =
-  [ Spec.TagGroup
-      { tagGroupDisplay = Just False,
-        tagGroupDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tags.CURRENT_LOCATION,
-                descriptorName = Just "Current Location",
-                descriptorShortDesc = Nothing
-              },
-        tagGroupList =
-          Just
-            [ Spec.Tag
-                { tagDisplay = Just False,
-                  tagDescriptor =
-                    Just $
-                      Spec.Descriptor
-                        { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LAT,
-                          descriptorName = Just "Current Location Lat",
-                          descriptorShortDesc = Nothing
-                        },
-                  tagValue = Just . show . (.lat) =<< location
+mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
+mkLocationTagGroupV2 location' =
+  location' <&> \location ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.CURRENT_LOCATION,
+                  descriptorName = Just "Current Location",
+                  descriptorShortDesc = Nothing
                 },
-              Spec.Tag
-                { tagDisplay = Just False,
-                  tagDescriptor =
-                    Just $
-                      Spec.Descriptor
-                        { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LON,
-                          descriptorName = Just "Current Location Lon",
-                          descriptorShortDesc = Nothing
-                        },
-                  tagValue = Just . show . (.lon) =<< location
-                }
-            ]
-      }
-  ]
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LAT,
+                            descriptorName = Just "Current Location Lat",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show location.lat
+                  },
+                Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.CURRENT_LOCATION_LON,
+                            descriptorName = Just "Current Location Lon",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show location.lon
+                  }
+              ]
+        }
+    ]
 
-mkArrivalTimeTagGroupV2 :: Maybe UTCTime -> [Spec.TagGroup]
-mkArrivalTimeTagGroupV2 arrivalTime =
-  [ Spec.TagGroup
-      { tagGroupDisplay = Just False,
-        tagGroupDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tags.DRIVER_ARRIVED_INFO,
-                descriptorName = Just "Driver Arrived Info",
-                descriptorShortDesc = Nothing
-              },
-        tagGroupList =
-          Just
-            [ Spec.Tag
-                { tagDisplay = Just False,
-                  tagDescriptor =
-                    Just $
-                      Spec.Descriptor
-                        { descriptorCode = Just $ show Tags.ARRIVAL_TIME,
-                          descriptorName = Just "Chargeable Distance",
-                          descriptorShortDesc = Nothing
-                        },
-                  tagValue = show <$> arrivalTime
-                }
-            ]
-      }
-  ]
+mkArrivalTimeTagGroupV2 :: Maybe UTCTime -> Maybe [Spec.TagGroup]
+mkArrivalTimeTagGroupV2 arrivalTime' =
+  arrivalTime' <&> \arrivalTime ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.DRIVER_ARRIVED_INFO,
+                  descriptorName = Just "Driver Arrived Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.ARRIVAL_TIME,
+                            descriptorName = Just "Arrival Time",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show arrivalTime
+                  }
+              ]
+        }
+    ]
 
-mkOdometerTagGroupV2 :: Maybe Centesimal -> [Spec.TagGroup]
-mkOdometerTagGroupV2 startOdometerReading =
-  [ Spec.TagGroup
-      { tagGroupDisplay = Just False,
-        tagGroupDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tags.RIDE_ODOMETER_DETAILS,
-                descriptorName = Just "Ride Odometer Details",
-                descriptorShortDesc = Nothing
-              },
-        tagGroupList =
-          Just
-            [ Spec.Tag
-                { tagDisplay = Just False,
-                  tagDescriptor =
-                    Just $
-                      Spec.Descriptor
-                        { descriptorCode = Just $ show Tags.START_ODOMETER_READING,
-                          descriptorName = Just "Start Odometer Reading",
-                          descriptorShortDesc = Nothing
-                        },
-                  tagValue = show <$> startOdometerReading
-                }
-            ]
-      }
-  ]
+mkOdometerTagGroupV2 :: Maybe Centesimal -> Maybe [Spec.TagGroup]
+mkOdometerTagGroupV2 startOdometerReading' =
+  startOdometerReading' <&> \startOdometerReading ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.RIDE_ODOMETER_DETAILS,
+                  descriptorName = Just "Ride Odometer Details",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.START_ODOMETER_READING,
+                            descriptorName = Just "Start Odometer Reading",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show startOdometerReading
+                  }
+              ]
+        }
+    ]
 
 buildAddressFromText :: MonadFlow m => Text -> m OS.Address
 buildAddressFromText fullAddress = do

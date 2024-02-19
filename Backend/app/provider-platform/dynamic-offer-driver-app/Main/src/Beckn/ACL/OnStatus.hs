@@ -215,10 +215,10 @@ tfOrder (DStatus.RideCompletedReq req) = Common.tfCompleteReqToOrder req
 tfOrder (DStatus.BookingCancelledReq req) = Common.tfCancelReqToOrder req
 tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) = do
   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
-  let Common.BookingDetails {driver, vehicle, booking, ride} = bookingDetails
+  let Common.BookingDetails {driver, vehicle, booking, ride, isValueAddNP} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing False False Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing isValueAddNP
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,

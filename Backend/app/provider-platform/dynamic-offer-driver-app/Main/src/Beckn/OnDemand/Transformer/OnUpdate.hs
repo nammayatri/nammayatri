@@ -77,7 +77,7 @@ buildOnUpdateReqOrderV2 = \case
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let previousCancellationReasonsTags = Utils.mkPreviousCancellationReasonsTags cancellationSource
-    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False (Just $ show Event.ESTIMATE_REPETITION) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False (Just $ show Event.ESTIMATE_REPETITION) isValueAddNP -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
         { orderId = Just booking.id.getId,
@@ -104,7 +104,7 @@ buildOnUpdateReqOrderV2 = \case
   OU.NewMessageBuildReq OU.DNewMessageReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let newMessageTags = Utils.mkNewMessageTags message
-    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing newMessageTags Nothing False False (Just $ show Event.NEW_MESSAGE) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing newMessageTags Nothing False False (Just $ show Event.NEW_MESSAGE) isValueAddNP -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,
@@ -121,7 +121,7 @@ buildOnUpdateReqOrderV2 = \case
   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let safetyAlertTags = Utils.mkSafetyAlertTags reason code
-    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False (Just $ show Event.SAFETY_ALERT) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False (Just $ show Event.SAFETY_ALERT) isValueAddNP -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,
@@ -137,7 +137,7 @@ buildOnUpdateReqOrderV2 = \case
         }
   OU.StopArrivedBuildReq OU.DStopArrivedBuildReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing Nothing Nothing False False (Just $ show Event.STOP_ARRIVED)
+    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing Nothing Nothing False False (Just $ show Event.STOP_ARRIVED) isValueAddNP
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,

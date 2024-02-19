@@ -43,6 +43,7 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.Beckn.Common as DCommon
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Person as QP
@@ -71,6 +72,7 @@ syncNewRide ride' booking' = do
 fetchBookingDetails :: DRide.Ride -> DB.Booking -> Flow DCommon.BookingDetails
 fetchBookingDetails ride booking = do
   driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
 
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   pure DCommon.BookingDetails {..}
