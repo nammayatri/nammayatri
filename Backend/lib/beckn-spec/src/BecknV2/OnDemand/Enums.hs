@@ -66,7 +66,11 @@ data PaymentStatus
   = -- ..fulfillments.payment.status
     PAID
   | NOT_PAID
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show PaymentStatus where
+  show PAID = "PAID"
+  show NOT_PAID = "NOT-PAID"
 
 data PaymentCollectedBy
   = -- ..fulfillments.payment.collected.by
@@ -80,7 +84,23 @@ data PaymentType
     PRE_ORDER
   | ON_FULFILLMENT
   | POST_FULFILLMENT
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Eq, Generic)
+
+instance Show PaymentType where
+  show PRE_ORDER = "PRE-ORDER"
+  show ON_FULFILLMENT = "ON-FULFILLMENT"
+  show POST_FULFILLMENT = "POST-FULFILLMENT"
+
+instance ToJSON PaymentType where
+  toJSON PRE_ORDER = String "PRE-ORDER"
+  toJSON ON_FULFILLMENT = String "ON-FULFILLMENT"
+  toJSON POST_FULFILLMENT = String "POST-FULFILLMENT"
+
+instance FromJSON PaymentType where
+  parseJSON (String "PRE-ORDER") = return PRE_ORDER
+  parseJSON (String "ON-FULFILLMENT") = return ON_FULFILLMENT
+  parseJSON (String "POST-FULFILLMENT") = return POST_FULFILLMENT
+  parseJSON _ = return ON_FULFILLMENT
 
 data OrderStatus
   = -- ..order.status
