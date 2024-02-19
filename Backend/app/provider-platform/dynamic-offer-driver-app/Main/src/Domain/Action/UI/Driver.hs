@@ -78,6 +78,7 @@ import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.Aeson as DA
+import qualified Data.Aeson.KeyMap as DAKM
 import Data.Digest.Pure.MD5 as MD5
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
@@ -117,12 +118,14 @@ import qualified Domain.Types.SearchTry as DST
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
 import qualified IssueManagement.Domain.Types.MediaFile as Domain
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
@@ -456,7 +459,9 @@ getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
-  frntndfgs <- getFrontendConfigs merchantOpCityId mbToss
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
+  frntndfgs <- if useCACConfig then getFrontendConfigs merchantOpCityId mbToss else return $ Just DAKM.empty
   let mbMd5Digest = (T.pack . show . MD5.md5 . DA.encode) <$> frntndfgs
   organization <-
     CQM.findById merchantId

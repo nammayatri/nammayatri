@@ -34,6 +34,7 @@ where
 
 import Control.Applicative ((<|>))
 import Data.Aeson as DA
+import qualified Data.Aeson.KeyMap as DAKM
 import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
@@ -43,8 +44,10 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.Person.PersonDisability as PersonDisability
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
@@ -165,7 +168,9 @@ getPersonDetails (personId, _) mbToss = do
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
   decPerson <- decrypt person
-  frntndfgs <- getFrontendConfigs person mbToss
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
+  frntndfgs <- if useCACConfig then getFrontendConfigs person mbToss else return $ Just DAKM.empty
   let mbMd5Digest = (T.pack . show . MD5.md5 . DA.encode) <$> frntndfgs
   return $ makeProfileRes decPerson tag mbMd5Digest
   where
