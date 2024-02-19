@@ -22,6 +22,7 @@ in
               bash
               self'.packages.nammayatri
               gdal
+              postgis
             ];
             name = "beckn-root";
             pathsToLink = [

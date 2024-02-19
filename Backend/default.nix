@@ -87,6 +87,7 @@
         redis # redis-cli is used in scripts.nix
         jq
         gdal
+        postgis
       ];
       # cf. https://haskell.flake.page/devshell#composing-devshells
       inputsFrom = [
