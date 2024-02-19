@@ -42,7 +42,7 @@ import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactList
-import Services.API (ContactDetails(..), GetEmergencySettingsRes(..))
+import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), RideShareOptions(..))
 import Services.Config (getSupportNumber)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Types.App (defaultGlobalState)
@@ -82,6 +82,47 @@ data Action
   | ContactListAction ContactList.Action
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
+
+eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
+  let
+    contacts =
+      map
+        ( \(ContactDetails item) ->
+            { number: item.mobileNumber
+            , name: item.name
+            , isSelected: true
+            , enableForFollowing: fromMaybe false item.enableForFollowing
+            , enableForShareRide: fromMaybe false item.enableForShareRide
+            , priority: fromMaybe 1 item.priority
+            , onRide : fromMaybe false item.onRide
+            }
+        )
+        response.defaultEmergencyNumbers
+  continue
+    state
+      { data
+        { hasCompletedSafetySetup = response.hasCompletedSafetySetup
+        , shareToEmergencyContacts = response.shareEmergencyContacts || (not $ DA.null contacts)
+        , nightSafetyChecks = response.nightSafetyChecks
+        , hasCompletedMockSafetyDrill = response.hasCompletedMockSafetyDrill
+        , shareTripWithEmergencyContactOption = shareTripOption response.shareTripWithEmergencyContactOption
+        , shareOptionCurrent = shareTripOption response.shareTripWithEmergencyContactOption
+        , emergencyContactsList = getDefaultPriorityList contacts
+        }
+      , props { enableLocalPoliceSupport = response.enablePoliceSupport, localPoliceNumber = fromMaybe "" response.localPoliceNumber }
+      }
+  where
+  shareTripOption val = case val of -- Handling Backward compatibility
+    Just option -> option
+    Nothing -> case response.shareTripWithEmergencyContacts of
+      Just shareTrip ->
+        if shareTrip then
+          SHARE_WITH_TIME_CONSTRAINTS
+        else
+          NEVER_SHARE
+      Nothing -> NEVER_SHARE
+
+
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
 
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ pure BackPressed ]

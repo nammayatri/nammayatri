@@ -19,6 +19,10 @@ import Language.Types (STR(..))
 import Styles.Colors as Color
 import PrestoDOM
 import Mobility.Prelude
+import Data.Array as DA
+import LocalStorage.Cache (getValueFromCache)
+import Storage
+import Engineering.Helpers.Suggestions
 
 primaryButtonConfig :: FollowRideScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -41,14 +45,12 @@ type SOSOverlayConfig
 getSosOverlayConfig :: FollowRideScreenState -> Common.SosStatus -> SOSOverlayConfig
 getSosOverlayConfig state status =
   let
-    isSOS = status == Common.Pending
-    isMockDrill = state.data.currentStage == MockFollowRide
+    isSOS = status == Common.Pending || status == Common.MockPending
     currentFollower = getCurrentFollower state.data.currentFollower
-
     name = getFollowerName currentFollower state
   in
-    { title: if isSOS then if isMockDrill then getString $ THIS_IS_A_TEST_MOCK_DRILL name else getString $ IS_IN_SOS_SITUATION name else getString $ MARKED_RIDE_SAFE name
-    , subTitle: if isMockDrill then getString THIS_IS_NOT_REAL_DRILL else if isSOS then getString $ STAY_CALM_KEEP_TRACKING name else getString YOU_WILL_BE_NOTIFIED
+    { title: if isSOS then if isMockDrill state then getString $ THIS_IS_A_TEST_MOCK_DRILL name else getString $ IS_IN_SOS_SITUATION name else getString $ MARKED_RIDE_SAFE name
+    , subTitle: if isMockDrill state then getString THIS_IS_NOT_REAL_DRILL else if isSOS then getString $ STAY_CALM_KEEP_TRACKING name else getString YOU_WILL_BE_NOTIFIED
     , color: if isSOS then Color.red900 else Color.green900
     }
 
@@ -60,7 +62,7 @@ genericHeaderConfig state =
 
     currentFollower = getCurrentFollower state.data.currentFollower
 
-    titleText = if isFollowingRide then getString $ FOLLOWING (getFollowerName currentFollower state) else getString CHOOSE_A_PERSON_TO_FOLLOW
+    titleText = if state.data.currentStage == PersonList then getString CHOOSE_A_PERSON_TO_FOLLOW else getString $ FOLLOWING (getFollowerName currentFollower state)
   in
     GenericHeader.config
       { height = WRAP_CONTENT
@@ -136,3 +138,17 @@ getPeekHeight _ =
     requiredPeekHeight = getDefaultPixelSize finalHeight
   in
     if requiredPeekHeight == 0 then 300 else requiredPeekHeight
+
+
+getChatSuggestions :: FollowRideScreenState -> Array String
+getChatSuggestions state = do 
+  let lastMessage = DA.last state.data.messages
+      canShowSuggestions = case lastMessage of 
+                            Just value -> (value.sentBy /= (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys))
+                            Nothing -> true
+  if (DA.null state.data.chatSuggestionsList) && canShowSuggestions && state.props.canSendSuggestion 
+    then do 
+      let hideInitial = not $ DA.null state.data.messages
+      if hideInitial 
+        then state.data.chatSuggestionsList 
+        else getSuggestionsfromKey emChatSuggestion "31e3bbf96e4b4208f1328f5b0da57d2e" else state.data.chatSuggestionsList

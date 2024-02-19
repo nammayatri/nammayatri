@@ -32,7 +32,7 @@ import Common.Styles.Colors as Color
 import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)
 import Engineering.Helpers.Commons (screenHeight, safeMarginTop, convertUTCtoISC)
-import Engineering.Helpers.Suggestions(getMessageFromKey)
+import Engineering.Helpers.Suggestions(getMessageFromKey, chatSuggestion)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude (boolToVisibility)
@@ -334,7 +334,7 @@ dummyTextView =
 
 quickMessageView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quickMessageView config message isLastItem push =
-  let value = getMessageFromKey message config.languageKey
+  let value = getMessageFromKey chatSuggestion message config.languageKey
   in
   linearLayout
   [ height WRAP_CONTENT
@@ -358,7 +358,7 @@ quickMessageView config message isLastItem push =
 chatComponentView :: forall w. Config -> (Action -> Effect Unit) -> ChatComponentConfig -> Maybe ChatComponentConfig -> Boolean -> String -> Int -> PrestoDOM (Effect Unit) w
 chatComponentView state push config nextConfig isLastItem userType index =
   let chatConfig = getChatConfig state config.sentBy isLastItem (hasTimeStamp config nextConfig) index
-      value = getMessageFromKey config.message state.languageKey
+      value = getMessageFromKey chatSuggestion config.message state.languageKey
   in 
   linearLayout[
     height MATCH_PARENT

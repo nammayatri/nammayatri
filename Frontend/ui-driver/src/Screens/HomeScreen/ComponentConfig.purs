@@ -42,7 +42,7 @@ import Data.Int as Int
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey, chatSuggestion)
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style (Style(..))
@@ -583,7 +583,7 @@ chatViewConfig state = let
     , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , vehicleNo = ""
-    , chatSuggestionsList = if showSuggestions state then if (state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverInitialAP" else getSuggestionsfromKey "driverInitialBP" else state.data.chatSuggestionsList
+    , chatSuggestionsList = if showSuggestions state then if (state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey chatSuggestion "driverInitialAP" else getSuggestionsfromKey chatSuggestion "driverInitialBP" else state.data.chatSuggestionsList
     , hint = (getString MESSAGE)
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)

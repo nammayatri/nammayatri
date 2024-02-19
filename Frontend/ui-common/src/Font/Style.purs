@@ -27,7 +27,7 @@ import Foreign.Generic (class Decode, class Encode)
 import Foreign.Generic.EnumEncoding (decodeEnum)
 import Halogen.VDom.DOM.Prop (Prop)
 import Prelude (class Eq, class Show, Unit, identity, unit, ($), (/=), (==), (<>), (<<<))
-import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode)
 import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Types (FontStyle, FontType(..))
@@ -396,6 +396,9 @@ data Style = Body1
   | Title0
   | Title1
 
+derive instance genericStyle :: Generic Style _
+instance decodeStyle :: Decode Style where decode = defaultDecode
+
 getFontStyle :: Style -> LazyCheck -> forall properties. (Array (Prop properties))
 getFontStyle style styleType = case style of
   Body1 -> body1 styleType
@@ -441,3 +444,7 @@ getKannadaFont :: LazyCheck -> String
 getKannadaFont _ = 
   let config = (getAppConfig appConfig).fontConfig
   in config.kannada
+
+
+decodeFontStyle :: Foreign -> Maybe Style
+decodeFontStyle = hush <<< runExcept <<< defaultEnumDecode

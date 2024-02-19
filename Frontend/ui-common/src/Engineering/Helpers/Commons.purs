@@ -90,7 +90,7 @@ foreign import getFormattedDate :: Fn1 String String
 foreign import formatCurrencyWithCommas :: String -> String
 foreign import camelCaseToSentenceCase :: String -> String
 foreign import getVideoID :: String -> String
-foreign import getImageUrl :: String -> String
+foreign import getImageUrl :: String -> String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
 foreign import getDayName :: String -> String

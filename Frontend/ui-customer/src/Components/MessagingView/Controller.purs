@@ -18,6 +18,7 @@ module Components.MessagingView.Controller where
 import MerchantConfig.Types
 import MerchantConfig.DefaultConfig as DC
 import PrestoDOM (BottomSheetState(..))
+import Common.Resources.Constants (chatSuggestion)
 
 data Action = SendMessage
             | SendSuggestion String
@@ -42,6 +43,7 @@ type Config =
   , peekHeight :: Int
   , otp :: String
   , feature :: Feature
+  , suggestionKey :: String
   }
 
 type Feature = 
@@ -54,7 +56,7 @@ type Feature =
 
 type UserConfig =
   { userName :: String
-  , appType :: String
+  , receiver :: String
   }
 
 type ChatComponent = {
@@ -69,7 +71,7 @@ config :: Config
 config = 
   { userConfig : 
     { userName : ""
-    , appType : ""
+    , receiver : ""
     }
   , feature : 
     { sendMessageActive : false
@@ -91,6 +93,7 @@ config =
   , config : DC.config
   , peekHeight : 0
   , otp : ""
+  , suggestionKey : chatSuggestion
   }
 
 

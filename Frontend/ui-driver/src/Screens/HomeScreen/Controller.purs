@@ -51,7 +51,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
-import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
+import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion)
 import Engineering.Helpers.Utils (saveObject)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -711,7 +711,7 @@ eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                         let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length allMessages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
-                        let suggestions = getDriverSuggestions state $ getSuggestionsfromKey value.message
+                        let suggestions = getDriverSuggestions state $ getSuggestionsfromKey chatSuggestion value.message
                         updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions }, props {unReadMessages = unReadMessages, canSendSuggestion = true}}
       Nothing -> continue state {props {canSendSuggestion = true}}
 
@@ -738,11 +738,11 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
   else
     continue state
 
-eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
+eval (ChatViewActionController (ChatView.SendSuggestion suggestions)) state = do
   if state.props.canSendSuggestion then do
-    let message = if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant Common.FunctionCall)) then (getMessageFromKey chatSuggestion "EN_US") else chatSuggestion
+    let message = if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant Common.FunctionCall)) then (getMessageFromKey chatSuggestion suggestions "EN_US") else suggestions
     _ <- pure $ sendMessage message
-    let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
+    let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") suggestions)))
     continue state{data {chatSuggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
@@ -1173,7 +1173,8 @@ activeRideDetail state (RidesInfo ride) =
               Just _ -> Just ST.OTHER_DISABILITY
               Nothing -> if isSafetyRide && (isNothing ride.specialLocationTag) 
                           then Just ST.SAFETY 
-                          else Nothing
+                          else Nothing,
+  enableFrequentLocationUpdates : fromMaybe false ride.enableFrequentLocationUpdates
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList
@@ -1263,7 +1264,7 @@ getPeekHeight state =
   
 getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
 getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of
-                                  true -> if (state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverDefaultAP" else getSuggestionsfromKey "driverDefaultBP"
+                                  true -> if (state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey chatSuggestion "driverDefaultAP" else getSuggestionsfromKey chatSuggestion "driverDefaultBP"
                                   false -> suggestions
 
 getPreviousVersion :: Merchant -> String

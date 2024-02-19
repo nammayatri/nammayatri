@@ -101,7 +101,10 @@ eval (CallContact contactIndex) state = do
   case state.data.emergencyContactsList DA.!! contactIndex of
     Just item -> void $ pure $ showDialer item.number true
     Nothing -> pure unit
-  exit $ UpdateAction state "Called Emergency Contact"
+  if state.props.showTestDrill then
+    continue state
+  else
+    exit $ UpdateAction state "Called Emergency Contact"
 
 eval ShowPoliceView state = continue state { props { showCallPolice = true } }
 

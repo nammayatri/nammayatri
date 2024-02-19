@@ -56,7 +56,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex, updateAt)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
@@ -70,11 +70,11 @@ import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
-import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
+import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -93,7 +93,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -126,7 +126,8 @@ import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-
+import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
+import LocalStorage.Cache (getValueFromCache)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -925,14 +926,15 @@ data Action = NoAction
             | SafetyBannerAction Banner.Action
             | SafetyAlertAction PopUpModal.Action
             | ContactAction ContactCircle.Action
-            | ShowShareRide
             | NotifyRideShare PrimaryButtonController.Action
             | ToggleShare Int
-            | DismissShareRide
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
             | PopUpModalReferralAction PopUpModal.Action
             | UpdateBookingDetails RideBookingRes
+            | UpdateContacts (Array NewContacts)
+            | UpdateChatWithEM Boolean
+            | ShareRideAction PopupWithCheckboxController.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -1105,7 +1107,7 @@ eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
   if stage == "REALLOCATED" then
     exit $ NotificationHandler "REALLOCATE_PRODUCT" state
-  else if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
+  else if (stage == "INPROGRESS") && (not $ state.props.isChatWithEMEnabled || isLocalStageOn RideStarted) then
     exit $ NotificationHandler "TRIP_STARTED" state
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "TRIP_FINISHED" state
@@ -1187,15 +1189,18 @@ eval (UpdateMessages message sender timeStamp size) state = do
 eval LoadMessages state = do
   let allMessages = getChatMessages FunctionCall
   case (last allMessages) of
-      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} else
-                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = [], lastMessage = value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
+      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} 
                       else do
-                        let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                            unReadMessages = if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (readMessages < (length allMessages) && state.props.currentStage /= ChatWithDriver)
-                            suggestions = getSuggestionsfromKey value.message
-                            isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
-                            showNotification = isChatNotificationDismissed && unReadMessages
-                        updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
+                        let currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer" 
+                        if value.sentBy == currentUser then updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = [], lastMessage = value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
+                        else do
+                          let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
+                              unReadMessages = if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (readMessages < (length allMessages) && state.props.currentStage /= ChatWithDriver)
+                              suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
+                              suggestions = getSuggestionsfromKey suggestionKey value.message
+                              isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
+                              showNotification = isChatNotificationDismissed && unReadMessages
+                          updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
       Nothing -> continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
@@ -1303,8 +1308,8 @@ eval RemoveNotification state = do
 
 eval NotificationAnimationEnd state = do
   let isExpanded = state.props.showChatNotification && state.props.chatcallbackInitiated
-      areMessagesEmpty = (length (getChatMessages FunctionCall) == 0)
-      showNotification = (areMessagesEmpty || state.props.showChatNotification) && state.props.currentStage == RideAccepted && not state.props.isChatNotificationDismissed
+      areMessagesEmpty =  (length $ getChatMessages FunctionCall) == 0 && (not state.props.isChatWithEMEnabled)
+      showNotification = (areMessagesEmpty || state.props.showChatNotification) && ((state.props.currentStage == RideAccepted) || state.props.isChatWithEMEnabled) && not state.props.isChatNotificationDismissed
   continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification, removeNotification = not showNotification, enableChatWidget = (isExpanded || areMessagesEmpty) && not state.props.isChatNotificationDismissed}}
 
 eval MessageViewAnimationEnd state = do
@@ -1417,8 +1422,9 @@ eval BackPressed state = do
     ChatWithDriver -> do
                         if state.props.showCallPopUp then continue state {props{showCallPopUp = false}}
                          else do
-                            _ <- pure $ updateLocalStage RideAccepted
-                            continue state {props {currentStage = RideAccepted}}
+                            let lastStage = if state.props.isChatWithEMEnabled then RideStarted else RideAccepted
+                            _ <- pure $ updateLocalStage lastStage
+                            continue state {props {currentStage = lastStage}}
     RideRating ->     do
                       _ <- pure $ updateLocalStage RideCompleted
                       continue state {props {currentStage = RideCompleted}}
@@ -1737,9 +1743,11 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
         _ <- (logEventWithTwoParams state.data.logField "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
         pure NoAction
     ]
-eval (DriverArrivedAction driverArrivalTime) state = do
-  _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
-  exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+eval (DriverArrivedAction driverArrivalTime) state =
+  if any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then do
+      _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
+      exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+    else continue state
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "TRIGGER_WAITING_ACTION"
@@ -1798,7 +1806,10 @@ eval OpenEmergencyHelp state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = continueWithCmd state [pure $ ShareRide]
+eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = 
+  if state.data.config.feature.shareWithEmergencyContacts 
+    then exit $ GoToShareRide state
+    else continueWithCmd state [pure ShareRide]
 
 eval ShareRide state = do
   continueWithCmd state
@@ -2276,7 +2287,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
 
 
 eval (GetQuotesList (SelectListRes resp)) state = do
-  case flowWithoutOffers WithoutOffers of
+  case spy "flowWithoutOffers" $ flowWithoutOffers WithoutOffers of
     true  -> do
       continueWithCmd state [pure $ ContinueWithoutOffers (SelectListRes resp)]
     false -> do
@@ -2573,23 +2584,36 @@ eval (BottomNavBarAction id) state = do
     
 eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
   void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_i_feel_safe"
-  exit $ SafetySupport state true
+  exit $ SafetySupport state{props{safetyAlertType = Nothing}} true
 
 eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
     void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_need_help"
     void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
-    exit $ GoToNammaSafety state true false
-
-eval ShowShareRide state = 
-  if state.data.config.feature.shareWithEmergencyContacts 
-    then exit $ GoToShareRide state
-    else continueWithCmd state [pure ShareRide]
+    exit $ GoToNammaSafety state{props{safetyAlertType = Nothing}} true false
 
 eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotifyRideShare state
 
-eval (ToggleShare index) state = continue state {data{contactList = mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) state.data.contactList}}
+eval (ToggleShare index) state = continue state {data{contactList = Just $ mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) (fromMaybe [] state.data.contactList)}}
 
-eval DismissShareRide state = continue state {props{showShareRide = false}}
+eval (UpdateContacts contacts) state = continue state {data{contactList = Just $ contacts}}
+eval (UpdateChatWithEM flag) state = continue state {props{isChatWithEMEnabled = flag}}
+eval (ShareRideAction PopupWithCheckboxController.DismissPopup) state = continue state {props{showShareRide = false}}
+
+eval (ShareRideAction (PopupWithCheckboxController.ClickPrimaryButton PrimaryButtonController.OnClick)) state = exit $ GoToNotifyRideShare state
+
+eval (ShareRideAction (PopupWithCheckboxController.ClickSecondaryButton)) state = continueWithCmd state [pure ShareRide]
+
+eval (ShareRideAction (PopupWithCheckboxController.ToggleSelect index)) state = do 
+  let contacts = fromMaybe [] state.data.contactList
+  case contacts !! index of 
+    Just contactToUpdate -> do
+      let updatedContactList = updateAt index contactToUpdate{isSelected = not contactToUpdate.isSelected} contacts
+      continue state {
+        data{
+          contactList = updatedContactList
+        }
+      }
+    Nothing -> continue state
 
 eval (UpdateBookingDetails (RideBookingRes response)) state = do
   let rideStatus = (fromMaybe dummyRideAPIEntity ((response.rideList) !! 0)) ^. _status

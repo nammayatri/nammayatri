@@ -474,11 +474,14 @@ export const getVideoID = function (url) {
 }
 
 export const getImageUrl = function (url) {
-  try {
-    const videoId = getVideoID(url);
-    return ("https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg");
-  }catch (e) {
-    console.log("error in getImageUrl " + e);
+  return function (videoId_) {
+    try {
+      console.log("url", url, videoId_);
+      const videoId = url == "" ? videoId_ : getVideoID(url);
+      return ("https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg");
+    }catch (e) {
+      console.log("error in getImageUrl " + e);
+    }
   }
 };
 

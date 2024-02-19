@@ -38,7 +38,7 @@ import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard)
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
-import Screens.Types(PermissionScreenStage(..), FollowRideScreenStage(..))
+import Screens.Types(PermissionScreenStage(..), FollowRideScreenStage(..), SafetyAlertType(..))
 import AssetsProvider (fetchAssets)
 import Timers
 import Effect.Uncurried
@@ -108,6 +108,8 @@ updateEventData event = do
       "CHAT_MESSAGE" -> do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ openChatScreen = true } })
       "REFERRER_URL" -> setValueToLocalStore REFERRER_URL event.data
+      "SAFETY_ALERT_DEVIATION" -> do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ safetyAlertType = Just DEVIATION } })
       _ -> pure unit  
 
 onNewIntent :: Event -> Effect Unit
@@ -147,5 +149,4 @@ onBundleUpdatedEvent description= do
 mockFollowRideEvent :: Event -> Effect Unit
 mockFollowRideEvent event = do
   void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-    modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{ data{ currentStage = MockFollowRide } })
-    Flow.followRideScreenFlow true
+    Flow.updateFollower true true $ Just event.type
