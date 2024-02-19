@@ -272,7 +272,7 @@ enjoyBenefitsView push state =
     , height MATCH_PARENT
     , gravity RIGHT
     , orientation VERTICAL
-    , margin $ Margin 116 10 10 0
+    , margin $ Margin 136 10 16 0
     ][  linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -1048,7 +1048,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
     ([ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ Padding 1 1 1 1
-    , margin if isMyPlan then Margin 16 13 16 0 else MarginVertical 13 16    
+    , margin cardMargin
     , cornerRadius 8.0 
    ] <> if isActivePlan then [gradient gradient'] else [])
    [ linearLayout
@@ -1143,9 +1143,12 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
       , padding $ Padding 8 5 8 5
       , cornerRadius 100.0
       ] <> FontStyle.tags TypoGraphy
-    ]
-   
-]
+    ] 
+  ]
+  where cardMargin = case isMyPlan, isIntroductory of
+                      true, _ -> Margin 16 13 16 0 
+                      false, true -> MarginVertical 13 16
+                      _, _ -> MarginVertical 6 6
   
   
 

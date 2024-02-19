@@ -1890,6 +1890,10 @@ export const startLottieProcess = function (configObj) {
     configObj.rawJson = lottieName;
     return JBridge.startLottieProcess(JSON.stringify(configObj));
   } catch (err) {
+    if(configObj.forceToUseRemote){
+      const cmd = `set_view=ctx->findViewById:i_${configObj.lottieId};get_view->setCacheComposition:b_false`; // Hotfix to remove caching
+      window.Android.runInUI(cmd, "");
+    }
     return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType);
   }
 }

@@ -205,7 +205,7 @@ joinPlanButtonConfig state = let
       , visibility = if state.props.joinPlanProps.isIntroductory then GONE else VISIBLE
       , id = "JoinPlanPrimaryButton"
       , enableLoader = (JB.getBtnLoader "JoinPlanPrimaryButton")
-      , margin = (MarginBottom 16)
+      , margin = MarginBottom 20
       }
   in primaryButtonConfig'
 
