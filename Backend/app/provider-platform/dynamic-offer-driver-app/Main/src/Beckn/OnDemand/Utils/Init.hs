@@ -9,7 +9,7 @@ import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (..))
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (decodeFromText, fromMaybeM)
 
 castVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.Variant
 castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVariant) of
@@ -21,9 +21,9 @@ castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVarian
   (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
   _ -> Nothing
 
-castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
-castPaymentType "ON_FULFILLMENT" = return DMPM.ON_FULFILLMENT
-castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"
+-- castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
+-- castPaymentType "ON-FULFILLMENT" = return DMPM.ON_FULFILLMENT
+-- castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
 castPaymentCollector "BAP" = return DMPM.BAP
@@ -46,6 +46,6 @@ mkPaymentMethodInfo :: MonadFlow m => Spec.Payment -> m (Maybe DMPM.PaymentMetho
 mkPaymentMethodInfo Spec.Payment {..} = do
   _params <- paymentParams & fromMaybeM (InvalidRequest "Payment Params not found")
   collectedBy <- paymentCollectedBy & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentCollector
-  pType <- paymentType & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentType
+  pType <- fmap (fromMaybe DMPM.ON_FULFILLMENT . decodeFromText) (paymentType & fromMaybeM (InvalidRequest "Payment Params not found"))
   paymentInstrument <- castPaymentInstrument _params
   return $ Just $ DMPM.PaymentMethodInfo {paymentType = pType, ..}

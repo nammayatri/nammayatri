@@ -94,7 +94,7 @@ mkPayment (Just DMPM.PaymentMethodInfo {..}) =
                 paymentParamsCurrency = Just "INR",
                 paymentParamsVirtualPaymentAddress = Nothing
               },
-        paymentStatus = Nothing,
+        paymentStatus = Just $ show Enums.NOT_PAID,
         paymentTags = Nothing
       }
 -- for backward compatibility
