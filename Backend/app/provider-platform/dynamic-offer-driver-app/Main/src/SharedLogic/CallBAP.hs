@@ -279,12 +279,12 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
   isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
-  let rideAssignedBuildReq = ACL.RideAssignedReq ACL.DRideAssignedReq {..}
+  let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
-  rideAssignedMsgV2 <- ACL.buildOnStatusReqV2 transporter booking rideAssignedBuildReq
+  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
-  void $ callOnStatusV2 rideAssignedMsgV2 retryConfig
+  void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
@@ -377,10 +377,10 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId) -- shrey00 : are these 2 lines needed?
   let bookingDetails = ACL.BookingDetails {..}
-      rideCompletedBuildReq = ACL.RideCompletedReq ACL.DRideCompletedReq {..}
+      rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  rideCompletedMsgV2 <- ACL.buildOnStatusReqV2 transporter booking rideCompletedBuildReq
-  void $ callOnStatusV2 rideCompletedMsgV2 retryConfig
+  rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking rideCompletedBuildReq
+  void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
