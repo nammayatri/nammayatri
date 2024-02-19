@@ -22,24 +22,10 @@ import Kernel.Prelude
 import Kernel.Types.Beckn.Domain (Domain (..))
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
-import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-
-data BlackListOrgType
-  = BAP
-  | BPP
-  | GATEWAY
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-
-$(mkBeamInstancesForEnum ''BlackListOrgType)
-
-$(mkFromHttpInstanceForEnum ''BlackListOrgType)
 
 data BlackListOrgD (s :: UsageSafety) = BlackListOrg
   { id :: Id BlackListOrg,
     subscriberId :: ShortId Subscriber,
-    _type :: BlackListOrgType,
     domain :: Domain
   }
   deriving (Generic)

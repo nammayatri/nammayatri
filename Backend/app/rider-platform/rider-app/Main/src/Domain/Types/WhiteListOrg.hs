@@ -22,24 +22,10 @@ import Kernel.Prelude
 import Kernel.Types.Beckn.Domain (Domain (..))
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
-import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-
-data WhiteListOrgType
-  = BAP
-  | BPP
-  | GATEWAY
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-
-$(mkBeamInstancesForEnum ''WhiteListOrgType)
-
-$(mkFromHttpInstanceForEnum ''WhiteListOrgType)
 
 data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
   { id :: Id WhiteListOrg,
     subscriberId :: ShortId Subscriber,
-    _type :: WhiteListOrgType,
     domain :: Domain
   }
   deriving (Generic)
