@@ -7,18 +7,11 @@
  *  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package in.juspay.mobility.app.services;
+package in.juspay.mobility.common.services;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.util.Log;
-import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-import org.json.JSONObject;
-
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -26,10 +19,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,14 +28,12 @@ import java.util.UUID;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import in.juspay.mobility.app.R;
-import in.juspay.mobility.app.TLSSocketFactory;
+import in.juspay.mobility.common.R;
 
 
 public class MobilityCallAPI {
 
     private static final String DEFAULT_API_METHOD = "POST";
-
 
     public static MobilityAPIResponse callAPI(String endpoint) {
         return callAPI(endpoint, null, null, DEFAULT_API_METHOD, true);
@@ -66,8 +55,6 @@ public class MobilityCallAPI {
         defaultResp.setResponseBody("");
         defaultResp.setStatusCode(-1);
         try {
-
-            URL url = new URL(endpoint);
 
             HttpURLConnection connection = (HttpURLConnection) (new URL(endpoint).openConnection());
             if (connection instanceof HttpsURLConnection)
@@ -100,13 +87,13 @@ public class MobilityCallAPI {
             MobilityAPIResponse response = new MobilityAPIResponse();
             response.setStatusCode(responseCode);
 
+            InputStream responseStream;
             if (responseCode >= 200 && responseCode < 300) {
-                InputStream responseStream = connection.getInputStream();
-                response.setResponseBody(apiResponseBuilder(responseStream));
+                responseStream = connection.getInputStream();
             } else {
-                InputStream responseStream = connection.getErrorStream();
-                response.setResponseBody(apiResponseBuilder(responseStream));
+                responseStream = connection.getErrorStream();
             }
+            response.setResponseBody(apiResponseBuilder(responseStream));
             return response;
         }catch (Exception e){
             return defaultResp;

@@ -16,6 +16,7 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Locale;
 
@@ -30,10 +31,10 @@ public class GeoCoderHelper {
         geocoder = new Geocoder(context, Locale.getDefault());
     }
 
-    public class GeoCoordinate {
+    public static class GeoCoordinate {
 
-        private double latitude;
-        private double longitude;
+        private final double latitude;
+        private final double longitude;
 
         public GeoCoordinate(double latitude, double longitude) {
             this.latitude = latitude;
@@ -52,7 +53,7 @@ public class GeoCoderHelper {
     public String getLocName(double latitude, double longitude) {
         try {
             List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
-            if ( geocoder.isPresent() && addresses != null && addresses.size() > 0) {
+            if ( Geocoder.isPresent() && addresses != null && addresses.size() > 0) {
                 Address address = addresses.get(0);
                 return address.getAddressLine(0);
             } else {
@@ -73,8 +74,8 @@ public class GeoCoderHelper {
                 double latitude = addresses.get(0).getLatitude();
                 double longitude = addresses.get(0).getLongitude();
                 int decimalPlaces = 7;
-                BigDecimal roundedValueLat = new BigDecimal(latitude).setScale(decimalPlaces, BigDecimal.ROUND_HALF_UP);
-                BigDecimal roundedValueLon = new BigDecimal(longitude).setScale(decimalPlaces, BigDecimal.ROUND_HALF_UP);
+                BigDecimal roundedValueLat = new BigDecimal(latitude).setScale(decimalPlaces, RoundingMode.HALF_UP);
+                BigDecimal roundedValueLon = new BigDecimal(longitude).setScale(decimalPlaces, RoundingMode.HALF_UP);
                 return new GeoCoordinate(roundedValueLat.doubleValue(), roundedValueLon.doubleValue());
             }
         } catch (IOException e) {

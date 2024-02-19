@@ -89,9 +89,9 @@ public class SoundVisualizerBarView extends View {
 
         TypedArray a = context.obtainStyledAttributes(attrs,
                 R.styleable.SoundVisualizerBarView, 0, 0);
-        playedStateColor = a.getColor(in.juspay.mobility.app.R.styleable.SoundVisualizerBarView_statePlayingColor,
+        playedStateColor = a.getColor(R.styleable.SoundVisualizerBarView_statePlayingColor,
                 ContextCompat.getColor(context, R.color.Black500));
-        nonPlayedStateColor = a.getColor(in.juspay.mobility.app.R.styleable.SoundVisualizerBarView_stateNonPlayingColor,
+        nonPlayedStateColor = a.getColor(R.styleable.SoundVisualizerBarView_stateNonPlayingColor,
                 ContextCompat.getColor(context, R.color.blue700));
 
         a.recycle();

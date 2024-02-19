@@ -75,8 +75,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import in.juspay.hypersdk.data.KeyValueStore;
-import in.juspay.mobility.app.services.MobilityAPIResponse;
-import in.juspay.mobility.app.services.MobilityCallAPI;
+import in.juspay.mobility.common.services.MobilityAPIResponse;
+import in.juspay.mobility.common.services.MobilityCallAPI;
 
 public class LocationUpdateService extends Service {
     private static final String LOG_TAG = "LocationServices";

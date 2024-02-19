@@ -12,7 +12,6 @@ package in.juspay.mobility.app;
 import static in.juspay.mobility.app.NotificationUtils.NO_VARIANT;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -84,11 +83,10 @@ import java.time.ZoneOffset;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import in.juspay.hyper.bridge.HBridge;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
-import in.juspay.mobility.app.TranslatorMLKit;
+import in.juspay.mobility.common.services.TLSSocketFactory;
 
 public class OverlaySheetService extends Service implements View.OnTouchListener {
 
