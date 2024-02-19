@@ -50,7 +50,7 @@ tfOrder uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP = do
   let orderCancellationTerms_ = Nothing
   let orderId_ = Nothing
   let orderPayments_ = Beckn.OnDemand.Utils.Init.mkPayment uiConfirm.paymentMethodInfo & Just
-  let orderProvider_ = Nothing
+  orderProvider_ <- tfProvider uiConfirm <&> Just
   let orderStatus_ = Nothing
   let orderQuote_ = Nothing
   orderBilling_ <- tfOrderBilling uiConfirm.riderPhone <&> Just
@@ -95,3 +95,14 @@ tfPrice uiConfirm = do
   let priceOfferedValue_ = Kernel.Utils.Text.encodeToText uiConfirm.booking.estimatedTotalFare.getMoney & Just
   let priceValue_ = Kernel.Utils.Text.encodeToText uiConfirm.booking.estimatedTotalFare.getMoney & Just
   pure $ BecknV2.OnDemand.Types.Price {priceComputedValue = priceComputedValue_, priceCurrency = priceCurrency_, priceMaximumValue = priceMaximumValue_, priceMinimumValue = priceMinimumValue_, priceOfferedValue = priceOfferedValue_, priceValue = priceValue_}
+
+tfProvider :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> m BecknV2.OnDemand.Types.Provider
+tfProvider uiConfirm = do
+  let providerId = Just uiConfirm.providerId
+      providerItems = Nothing
+      providerLocations = Nothing
+      providerPayments = Nothing
+      providerDescriptor = Nothing
+      providerFulfillments = Nothing
+
+  pure $ BecknV2.OnDemand.Types.Provider {..}
