@@ -16,7 +16,7 @@
 module Screens.RideSelectionScreen.Transformer where
 
 import Accessor (_computedPrice, _contents, _driverName, _estimatedDistance, _id, _otpCode, _rideRating, _toLocation, _vehicleNumber)
-import Common.Types.App (LazyCheck(..),RideType(..)) as RideType
+import Common.Types.App (LazyCheck(..))
 import Data.Array (filter, null, (!!))
 import Data.Lens ((^.))
 import Data.Maybe (fromMaybe, isJust)
@@ -29,13 +29,14 @@ import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||))
 import PrestoDOM.Types.Core (toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
 import Resources.Localizable.EN (getEN)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag, getFareProductType)
 import Screens.Types (Fares, IndividualRideCardState, ItemState, RideSelectionScreenState, Stage(..), ZoneType(..))
 import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..), RideBookingAPIDetails(..))
 import Storage (isLocalStageOn)
 import Data.Ord (abs)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import Screens.Types (FareProductType(..)) as FPT
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED"))) (map (\(RideBookingRes ride) -> 
@@ -64,7 +65,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     rideEndTimeUTC : toPropValue $ fromMaybe ride.createdAt ride.rideEndTime,
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
     zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
-    showRepeatRide : toPropValue if rideApiDetails.fareProductType == "RENTAL" then "gone" else "visible"
+    showRepeatRide : toPropValue if (getFareProductType $ rideApiDetails.fareProductType) == FPT.RENTAL then "gone" else "visible"
   })
   
    listRes)
@@ -81,7 +82,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
     specialTags = getSpecialTag ride.specialLocationTag
-    referenceString' = (if nightChargesVal && (getMerchant RideType.FunctionCall) /= YATRI then "1.5" <> getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT else "")
+    referenceString' = (if nightChargesVal && (getMerchant FunctionCall) /= YATRI then "1.5" <> getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT else "")
                         <> (if isHaveFare "DRIVER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO else "")
                         <> (if isHaveFare "WAITING_CHARGES" updatedFareList then "\n\n" <> getEN WAITING_CHARGE_DESCRIPTION else "")
                         <> (if isHaveFare "EARLY_END_RIDE_PENALTY" updatedFareList then "\n\n" <> getEN EARLY_END_RIDE_CHARGES_DESCRIPTION else "")
@@ -126,11 +127,8 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , isSrcServiceable: state.data.isSrcServiceable
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
   , merchantExoPhone : ride.merchantExoPhone
-  , showRepeatRide : if rideApiDetails.fareProductType == "RENTAL" then "gone" else "visible"
-  , rideType : case rideApiDetails.fareProductType of
-      "RENTAL" -> RideType.RENTAL_RIDE
-      "INTER_CITY" -> RideType.INTERCITY
-      _ -> RideType.NORMAL_RIDE
+  , showRepeatRide : if getFareProductType rideApiDetails.fareProductType == FPT.RENTAL then "gone" else "visible"
+  , rideType : getFareProductType rideApiDetails.fareProductType
   , estimatedDistance : fromMaybe 0 ride.estimatedDistance
   }) listRes)
 

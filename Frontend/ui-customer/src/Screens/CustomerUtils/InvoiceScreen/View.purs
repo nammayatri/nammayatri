@@ -15,7 +15,7 @@
 module Screens.InvoiceScreen.View where
 
 import Animation as Anim
-import Common.Types.App (LazyCheck(..),RideType(..)) as CTA
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
@@ -38,6 +38,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (isHaveFare)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
+import Screens.Types (FareProductType(..)) as FPT
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -138,7 +139,7 @@ amountBreakupView state =
                   , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
                   , accessibility ENABLE
                   , layoutGravity "bottom"
-                  ] <> FontStyle.paragraphText CTA.LanguageStyle
+                  ] <> FontStyle.paragraphText LanguageStyle
               , linearLayout
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
@@ -153,7 +154,7 @@ amountBreakupView state =
                       , height WRAP_CONTENT
                       , width WRAP_CONTENT
                       , lineHeight "18"
-                      ] <> FontStyle.body1 CTA.LanguageStyle
+                      ] <> FontStyle.body1 LanguageStyle
                   ]
               ]
         )
@@ -175,7 +176,7 @@ totalAmountView state =
         , accessibility ENABLE
         , color Color.black800
         , lineHeight "28"
-        ] <> FontStyle.h1 CTA.LanguageStyle
+        ] <> FontStyle.h1 LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , orientation HORIZONTAL
@@ -186,7 +187,7 @@ totalAmountView state =
         [ text state.data.totalAmount
         , color Color.black800
         , accessibility DISABLE
-        ] <> FontStyle.h1 CTA.LanguageStyle
+        ] <> FontStyle.h1 LanguageStyle
     ]
 
 --------------------------- RideDateAndTimeView --------------------
@@ -217,17 +218,17 @@ localTextView textValue colorValue =
     [ text textValue
     , color colorValue
     , width MATCH_PARENT
-    ] <> FontStyle.tags CTA.LanguageStyle
+    ] <> FontStyle.tags LanguageStyle
 
 getBaseFareForRentalOrInterCity :: String -> Int
 getBaseFareForRentalOrInterCity baseDistance =
   (fromMaybe 0 $ fromNumber =<< fromString =<< ((DS.split (DS.Pattern " ") baseDistance) DA.!! 0)) * 1000
 
-getFareText :: String -> String -> Int -> CTA.RideType -> String
+getFareText :: String -> String -> Int -> ST.FareProductType -> String
 getFareText fareType baseDistance estimatedDistance rideType = 
-    let baseDistance' = if rideType == CTA.RENTAL_RIDE then Constants.getKmMeter estimatedDistance else baseDistance
+    let baseDistance' = if rideType == FPT.RENTAL then Constants.getKmMeter estimatedDistance else baseDistance
         baseDistanceInMeters = getBaseFareForRentalOrInterCity baseDistance
-        distanceBasedCharges = if rideType == CTA.RENTAL_RIDE && (baseDistanceInMeters > estimatedDistance) then getString DIST_BASED_CHARGES <> " (" <> (Constants.getKmMeter $ (baseDistanceInMeters) - estimatedDistance ) <> ")" else getString DIST_BASED_CHARGES
+        distanceBasedCharges = if rideType == FPT.RENTAL && (baseDistanceInMeters > estimatedDistance) then getString DIST_BASED_CHARGES <> " (" <> (Constants.getKmMeter $ (baseDistanceInMeters) - estimatedDistance ) <> ")" else getString DIST_BASED_CHARGES
     in case fareType of
         "BASE_FARE" -> (getString BASE_FARES) <> if baseDistance' == "0 m" then "" else " (" <> baseDistance' <> ")"
         "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
