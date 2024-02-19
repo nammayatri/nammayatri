@@ -54,7 +54,6 @@ let eventType =
       | Quotes
       | Estimate
       | ExophoneData
-      | SDKData
       >
 
 let httpClientOptions = { timeoutMs = +2000 }
