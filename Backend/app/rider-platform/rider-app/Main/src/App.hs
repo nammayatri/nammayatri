@@ -69,7 +69,6 @@ createCAC appCfg = do
 runRiderApp :: (AppCfg -> AppCfg) -> IO ()
 runRiderApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "rider-app"
-  _ <- CC.forkOS $ createCAC appCfg
   Metrics.serve (appCfg.metricsPort)
   runRiderApp' appCfg
 
@@ -112,6 +111,11 @@ runRiderApp' appCfg = do
           try QMerchant.loadAllBaps
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
+        if kvConfigs.useCAC
+          then do
+             _ <- CC.forkOS $ createCAC appCfg
+            logInfo "Starting rider app using configs from CAC."
+          else logInfo "Starting rider app using configs from DB."
         -- Load FRFS BAPs
         frfsBap <-
           try QBecknConfig.findAll
