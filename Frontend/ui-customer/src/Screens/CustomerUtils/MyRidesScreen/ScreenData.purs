@@ -16,12 +16,11 @@
 module Screens.MyRidesScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
-import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState, ZoneType(..))
+import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState, ZoneType(..), FareProductType(..))
 import Services.API (BookingLocationAPIEntity(..))
 import ConfigProvider
 import Prelude ((<>))
 import Foreign.Object (empty)
-import Common.Types.App (RideType(..))
 
 initData :: MyRidesScreenState
 initData =
@@ -110,6 +109,6 @@ dummyIndividualCard = {
   , optionsVisibility : true
   , merchantExoPhone : ""
   , showRepeatRide : ""
-  , rideType : NORMAL_RIDE
+  , rideType : ONE_WAY
   , estimatedDistance : 0
 }
