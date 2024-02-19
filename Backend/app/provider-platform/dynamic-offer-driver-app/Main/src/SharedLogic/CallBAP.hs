@@ -257,6 +257,7 @@ sendRideAssignedUpdateToBAP ::
   DVeh.Vehicle ->
   m ()
 sendRideAssignedUpdateToBAP booking ride driver veh = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -343,6 +344,7 @@ sendRideStartedUpdateToBAP ::
   Maybe Maps.LatLong ->
   m ()
 sendRideStartedUpdateToBAP booking ride tripStartLocation = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -371,6 +373,7 @@ sendRideCompletedUpdateToBAP ::
   Maybe Maps.LatLong ->
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -463,6 +466,7 @@ sendDriverArrivalUpdateToBAP ::
   Maybe UTCTime ->
   m ()
 sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -489,8 +493,8 @@ sendStopArrivalUpdateToBAP ::
   DVeh.Vehicle ->
   m ()
 sendStopArrivalUpdateToBAP booking ride driver vehicle = do
-  isOnUs <- CValueAddNP.isValueAddNP booking.bapId
-  when isOnUs $ do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
     transporter <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
     let bookingDetails = ACL.BookingDetails {..}
         stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
@@ -512,8 +516,8 @@ sendNewMessageToBAP ::
   T.Text ->
   m ()
 sendNewMessageToBAP booking ride message = do
-  isOnUs <- CValueAddNP.isValueAddNP booking.bapId
-  when isOnUs $ do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
     transporter <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -542,8 +546,8 @@ sendSafetyAlertToBAP ::
   DVeh.Vehicle ->
   m ()
 sendSafetyAlertToBAP booking ride code reason driver vehicle = do
-  isOnUs <- CValueAddNP.isValueAddNP booking.bapId
-  when isOnUs $ do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
     transporter <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -571,12 +575,12 @@ sendEstimateRepetitionUpdateToBAP ::
   DVeh.Vehicle ->
   m ()
 sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource driver vehicle = do
-  isOnUs <- CValueAddNP.isValueAddNP booking.bapId
-  when isOnUs $ do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
     transporter <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    let bookingDetails = ACL.BookingDetails {ride, booking, driver, vehicle}
+    let bookingDetails = ACL.BookingDetails {ride, booking, driver, vehicle, isValueAddNP}
         estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
 
