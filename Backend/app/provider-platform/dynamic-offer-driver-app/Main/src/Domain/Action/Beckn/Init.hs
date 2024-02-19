@@ -59,7 +59,8 @@ data InitReq = InitReq
     bapCity :: Context.City,
     bapCountry :: Context.Country,
     maxEstimatedDistance :: Maybe HighPrecMeters,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    bppSubscriberId :: Maybe Text
   }
 
 data ValidatedInitQuote = ValidatedQuote DQ.Quote | ValidatedEstimate DDQ.DriverQuote DST.SearchTry
@@ -74,7 +75,8 @@ data InitRes = InitRes
     transporter :: DM.Merchant,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     driverName :: Maybe Text,
-    driverId :: Maybe Text
+    driverId :: Maybe Text,
+    bppSubscriberId :: Maybe Text
   }
 
 handler ::
@@ -115,6 +117,7 @@ handler merchantId req validatedReq = do
         return (booking, Nothing, Nothing)
 
   let paymentMethodInfo = req.paymentMethodInfo
+  let bppSubscriberId = req.bppSubscriberId
   pure InitRes {..}
   where
     buildBooking ::
