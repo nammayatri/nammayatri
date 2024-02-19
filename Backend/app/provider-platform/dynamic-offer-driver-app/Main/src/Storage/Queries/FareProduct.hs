@@ -36,13 +36,29 @@ import qualified Storage.Beam.FareProduct as BeamFP
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FareProduct -> m ()
 create = createWithKV
 
-findAllFareProductForVariants ::
+findAllBoundedFareProductForVariants ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
   Domain.Area ->
   m [Domain.FareProduct]
-findAllFareProductForVariants (Id merchantOpCityId) tripCategory area =
+findAllBoundedFareProductForVariants (Id merchantOpCityId) tripCategory area =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+          Se.Is BeamFP.area $ Se.Eq area,
+          Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
+          Se.Is BeamFP.timeBounds $ Se.Not $ Se.Eq Domain.Unbounded
+        ]
+    ]
+
+findAllUnboundedFareProductForVariants ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  TripCategory ->
+  Domain.Area ->
+  m [Domain.FareProduct]
+findAllUnboundedFareProductForVariants (Id merchantOpCityId) tripCategory area =
   findAllWithKV
     [ Se.And
         [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,

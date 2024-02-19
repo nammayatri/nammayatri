@@ -628,7 +628,7 @@ type CreateMerchantOperatingCityAPI =
   "config"
     :> "operatingCity"
     :> "create"
-    :> ReqBody '[JSON] CreateMerchantOperatingCityReq
+    :> MultipartForm Tmp CreateMerchantOperatingCityReq
     :> Post '[JSON] CreateMerchantOperatingCityRes
 
 data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq

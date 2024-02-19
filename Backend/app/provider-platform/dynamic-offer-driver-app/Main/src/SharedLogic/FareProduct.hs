@@ -9,10 +9,12 @@
 
 module SharedLogic.FareProduct where
 
+import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import Domain.Types.Vehicle.Variant (Variant (..))
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
@@ -83,7 +85,8 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong mToLocationLa
           }
 
     getDefaultFareProducts = do
-      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId tripCategory DFareProduct.Default
+      defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId tripCategory DFareProduct.Default
+      fareProducts <- mapM getBoundedOrDefaultFareProduct defFareProducts
       return $
         FareProducts
           { fareProducts,
@@ -94,7 +97,33 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong mToLocationLa
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
 
     getFareProducts area = do
-      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId tripCategory area
+      fareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId tripCategory area
       if null fareProducts && area /= DFareProduct.Default
-        then QFareProduct.findAllFareProductForVariants merchantOpCityId tripCategory DFareProduct.Default
-        else return fareProducts
+        then do
+          defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId tripCategory DFareProduct.Default
+          fareProducts' <- mapM getBoundedOrDefaultFareProduct defFareProducts
+          return fareProducts'
+        else do
+          fareProducts' <- mapM getBoundedOrDefaultFareProduct fareProducts
+          return fareProducts'
+
+    getBoundedOrDefaultFareProduct fareProduct = do
+      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId fareProduct.tripCategory fareProduct.vehicleVariant fareProduct.area
+      return $ fromMaybe fareProduct boundedFareProduct
+
+getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> Variant -> DFareProduct.Area -> m (Maybe DFareProduct.FareProduct)
+getBoundedFareProduct merchantOpCityId tripCategory vehVariant area = do
+  fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory vehVariant area
+  now <- utcTimeToDiffTime <$> getCurrentTime
+  return $
+    find
+      ( \fp ->
+          case fp.timeBounds of
+            DFareProduct.Bounded timeBounds -> isWithin now timeBounds
+            DFareProduct.Unbounded -> False
+      )
+      fareProducts
+  where
+    isWithin _ [] = False
+    isWithin currTime [(startTime, endTime)] = currTime > (timeOfDayToTime startTime) && currTime < (timeOfDayToTime endTime)
+    isWithin currTime ((startTime, endTime) : xs) = (currTime > (timeOfDayToTime startTime) && currTime < (timeOfDayToTime endTime)) || isWithin currTime xs
