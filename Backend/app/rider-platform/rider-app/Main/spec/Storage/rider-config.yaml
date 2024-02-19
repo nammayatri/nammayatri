@@ -19,6 +19,7 @@ RiderConfig:
     specialZoneRadius: Int
     appUrl: Text
     collectAutoCompleteData: Maybe Bool
+    distanceWeightage: Int
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -34,6 +35,7 @@ RiderConfig:
     safetyCheckEndTime: "21600"
     trackingShortUrlPattern: "'nammayatri.in/t/'"
     specialZoneRadius: "150"
+    distanceWeightage: "70"
 
   queries:
     findByMerchantOperatingCityId:

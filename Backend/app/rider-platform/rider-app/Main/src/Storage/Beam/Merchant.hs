@@ -61,7 +61,6 @@ data MerchantT f = MerchantT
     minimumDriverRatesCount :: B.C f Int,
     cipherText :: B.C f (Maybe Base64),
     signatureExpiry :: B.C f Int,
-    distanceWeightage :: B.C f Int,
     updatedAt :: B.C f UTCTime,
     scheduleRideBufferTime :: B.C f Seconds,
     createdAt :: B.C f UTCTime,

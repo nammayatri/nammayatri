@@ -46,7 +46,6 @@ data MerchantD (s :: UsageSafety) = Merchant
     signingPublicKey :: Base64,
     cipherText :: Maybe Base64,
     signatureExpiry :: Int,
-    distanceWeightage :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     isAvoidToll :: Bool,

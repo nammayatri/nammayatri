@@ -56,6 +56,7 @@ import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantState as QMMS
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
@@ -63,7 +64,6 @@ import qualified Storage.Queries.AutoCompleteData as QAutoCompleteData
 import qualified Storage.Queries.NextBillionData as QNB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonDisability as PD
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Event
@@ -298,9 +298,9 @@ search personId req bundleVersion clientVersion device = do
                 QNB.create routeData
               _ -> logInfo "MapsServiceConfig config not found for OSRM"
 
+        riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
         fork "Updating autocomplete data in search" $ do
           whenJust oneWayReq.sessionToken $ \token -> do
-            riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
             whenJust riderConfig $ \config -> do
               let toCollectData = fromMaybe False config.collectAutoCompleteData
               when toCollectData $ do
@@ -311,8 +311,9 @@ search personId req bundleVersion clientVersion device = do
                 whenJust dropRecord $ \record -> do
                   QAutoCompleteData.updateSearchRequestIdAndisLocationSelectedOnMapById (Just searchRequestId) oneWayReq.isDestinationManuallyMoved record.id
 
-        let durationWeightage = 100 - merchant.distanceWeightage
-            (shortestRouteInfo, shortestRouteIndex) = getEfficientRouteInfo routeResponse merchant.distanceWeightage durationWeightage
+        let distanceWeightage = maybe 70 (.distanceWeightage) riderConfig
+            durationWeightage = 100 - distanceWeightage
+            (shortestRouteInfo, shortestRouteIndex) = getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
             longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
             shortestRouteDistance = (.distance) =<< shortestRouteInfo
             shortestRouteDuration = (.duration) =<< shortestRouteInfo
