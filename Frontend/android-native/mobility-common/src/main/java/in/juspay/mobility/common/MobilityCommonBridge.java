@@ -2308,6 +2308,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     int lottieId = Integer.parseInt(jsonObject.getString("lottieId"));
                     float speed = Float.parseFloat(jsonObject.getString("speed"));
                     String rawJson = jsonObject.getString("rawJson");
+                    boolean forceToUseRemote = jsonObject.optBoolean("forceToUseRemote");
 
                     animationView = bridgeComponents.getActivity().findViewById(lottieId);
                     animationView.addAnimatorListener(new Animator.AnimatorListener() {
@@ -2329,6 +2330,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     });
                     if (rawJson.contains("http")) {
                             animationView.setAnimationFromUrl(rawJson);
+                            if (forceToUseRemote)
+                                animationView.setCacheComposition(false);
                     }else {
                             animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
                     }
