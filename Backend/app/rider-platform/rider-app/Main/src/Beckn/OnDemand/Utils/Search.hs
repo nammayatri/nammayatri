@@ -103,7 +103,7 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "multiple_routes",
+                    { descriptorCode = Just $ show Tag.MULTIPLE_ROUTES,
                       descriptorName = Just "Multiple Routes",
                       descriptorShortDesc = Nothing
                     },
