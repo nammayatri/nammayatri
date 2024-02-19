@@ -15,6 +15,7 @@
 
 module Domain.Types.Quote where
 
+import Control.Applicative
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.DriverOffer as DDriverOffer
@@ -76,6 +77,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     tripTerms :: [Text],
     quoteDetails :: QuoteAPIDetails,
     specialLocationTag :: Maybe Text,
+    agencyCompletedRidesCount :: Maybe Int,
     createdAt :: UTCTime,
     isValueAddNP :: Bool
   }
@@ -113,7 +115,11 @@ mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
   RentalDetails DRentalDetails.RentalDetails {..} -> RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity {..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
-  DriverOfferDetails DDriverOffer.DriverOffer {..} -> DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {..}
+  DriverOfferDetails DDriverOffer.DriverOffer {..} ->
+    let distanceToPickup' = distanceToPickup <|> (Just . HighPrecMeters $ toCentesimal 0)
+        durationToPickup' = durationToPickup <|> Just 0
+        rating' = rating <|> Just (toCentesimal 5)
+     in DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', durationToPickup = durationToPickup', rating = rating', ..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity {..}
 
@@ -121,14 +127,16 @@ mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEn
 mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =
   makeQuoteAPIEntity q bpp isValueAddNP : mkQAPIEntityList qRemaining bppRemaining remVNP
 mkQAPIEntityList [] [] [] = []
-mkQAPIEntityList _ _ _ = error "This should never happen as all the list are of same length"
+mkQAPIEntityList _ _ _ = [] -- This should never happen as all the list are of same length
 
 makeQuoteAPIEntity :: Quote -> DBppDetails.BppDetails -> Bool -> QuoteAPIEntity
 makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
-  QuoteAPIEntity
-    { agencyName = bppDetails.name,
-      agencyNumber = bppDetails.supportNumber,
-      tripTerms = maybe [] (.descriptions) tripTerms,
-      quoteDetails = mkQuoteAPIDetails quoteDetails,
-      ..
-    }
+  let agencyCompletedRidesCount = Just 0
+      providerNum = fromMaybe "+91" bppDetails.supportNumber
+   in QuoteAPIEntity
+        { agencyName = bppDetails.name,
+          agencyNumber = Just providerNum,
+          tripTerms = maybe [] (.descriptions) tripTerms,
+          quoteDetails = mkQuoteAPIDetails quoteDetails,
+          ..
+        }

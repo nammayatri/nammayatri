@@ -18,7 +18,6 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Data.Fixed (Fixed (MkFixed))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Kernel.Prelude
@@ -36,9 +35,8 @@ buildOnConfirmReqV2 ::
   m (Maybe DOnConfirm.OnConfirmReq)
 buildOnConfirmReqV2 req isValueAddNP = do
   ContextV2.validateContext Context.ON_CONFIRM req.onConfirmReqContext
-  currTime <- getCurrentTime
   handleErrorV2 req $ \message -> do
-    case parseData message currTime of
+    case parseData message of
       Right dReq -> do
         case dReq of
           DOnConfirm.BookingConfirmed _ | not isValueAddNP -> do
@@ -50,8 +48,8 @@ buildOnConfirmReqV2 req isValueAddNP = do
         return $ Just dReq
       Left err -> throwError . InvalidBecknSchema $ "on_confirm error:-" <> show err
   where
-    parseData :: Spec.ConfirmReqMessage -> UTCTime -> Either Text DOnConfirm.OnConfirmReq
-    parseData message now = do
+    parseData :: Spec.ConfirmReqMessage -> Either Text DOnConfirm.OnConfirmReq
+    parseData message = do
       let order = message.confirmReqMessageOrder
       bppBookingIdText <- order.orderId & maybe (Left "Missing OrderId") Right
       let bppBookingId = Id bppBookingIdText
@@ -67,9 +65,8 @@ buildOnConfirmReqV2 req isValueAddNP = do
         then do
           let driverImage = fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
               driverMobileCountryCode = Just "+91" -- TODO: check how to get countrycode via ONDC
-              driverRating = Just $ toCentesimal 5 -- Default value for driver_rating for not-value-add-np.
-              oneYearAgo = - (365 * 24 * 60 * 60)
-              driverRegisteredAt = Just $ addUTCTime oneYearAgo now -- Default value for driver_registered_at for not-value-add-np.
+              driverRating = Nothing
+              driverRegisteredAt = Nothing
               isDriverBirthDay = False
               isFreeRide = False
 
@@ -96,6 +93,3 @@ handleErrorV2 req action =
     Just err -> do
       logTagError "on_confirm req" $ "on_confirm error:-" <> show err
       pure Nothing
-
-toCentesimal :: Int -> Centesimal
-toCentesimal = Centesimal . MkFixed . toInteger
