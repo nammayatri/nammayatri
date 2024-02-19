@@ -93,7 +93,9 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             { number: item.mobileNumber
             , name: item.name
             , isSelected: true
-            , enableForFollowing: false
+            , enableForFollowing: fromMaybe false item.enableForFollowing
+            , enableForShareRide: fromMaybe false item.enableForShareRide
+            , isOnRide : fromMaybe false item.isOnRide
             , priority: fromMaybe 1 item.priority
             }
         )

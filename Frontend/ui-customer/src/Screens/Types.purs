@@ -55,6 +55,8 @@ type NewContacts = {
   number :: String,
   isSelected :: Boolean,
   enableForFollowing :: Boolean,
+  enableForShareRide:: Boolean,
+  isOnRide :: Boolean,
   priority :: Int
 }
 
@@ -764,7 +766,7 @@ type HomeScreenStateData =
   , rideHistoryTrip :: Maybe Trip
   , rentalsInfo :: Maybe RentalsInfo
   , bannerData :: BannerCarousalData
-  , contactList :: Array NewContacts
+  , contactList :: Maybe (Array NewContacts)
   , followers :: Maybe (Array Followers)
   }
 
@@ -937,7 +939,8 @@ type HomeScreenStateProps =
   , focussedBottomIcon :: BottomNavBarIcon
   , sosBannerType :: Maybe SosBannerType
   , showShareRide :: Boolean
-  , followsRide :: Boolean 
+  , followsRide :: Boolean
+  , isChatWithEMEnabled :: Boolean
   , referral :: ReferralStatusProp
   }
 

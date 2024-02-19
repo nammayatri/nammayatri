@@ -44,7 +44,7 @@ initData =
       , openChatScreen: false
       , sendMessageActive: false
       , sheetState: Nothing
-      , currentSheetState: COLLAPSED
+      , currentSheetState: HALF_EXPANDED
       , isNotificationExpanded: false
       , startMapAnimation: true
       

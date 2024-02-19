@@ -363,17 +363,9 @@ public class ChatService extends Service {
         createNotificationChannel();
         Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 10, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
-        String contentText;
-        if (merchantType.equals("DRIVER")) {
-            contentText = getString(R.string.you_can_now_chat_with_customer);
-        } else {
-            contentText = getString(R.string.you_can_now_chat_with_driver);
-        }
         NotificationCompat.Builder notification =
                 new NotificationCompat.Builder(this, "Message")
                         .setContentTitle(getString(R.string.chatting_is_enabled))
-                        .setContentText(contentText)
-                        .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap"))
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);

@@ -39,7 +39,7 @@ import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -56,6 +56,7 @@ import Control.Monad.Except.Trans (lift)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import ConfigProvider
 import Locale.Utils
+import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -108,7 +109,7 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
       in {  seconds : expiryTime
           , id : quoteEntity.id
           , timer : show expiryTime
-          , timeLeft : quoteDetails.durationToPickup/60
+          , timeLeft : (fromMaybe 0 quoteDetails.durationToPickup)/60
           , driverRating : fromMaybe 0.0 quoteDetails.rating
           , profile : ""
           , price :  show quoteEntity.estimatedTotalFare
@@ -612,3 +613,18 @@ fetchPickupCharges estimateFareBreakup =
     deadKmFare = find (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup
   in 
     maybe 0 (\fare -> fare ^. _price) deadKmFare
+
+
+
+getFormattedContacts :: FlowBT String (Array NewContacts)
+getFormattedContacts = do
+  (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
+  pure $ getDefaultPriorityList $ map (\(ContactDetails item) -> {
+      number: item.mobileNumber,
+      name: item.name,
+      isSelected: true,
+      enableForFollowing: fromMaybe false item.enableForFollowing,
+      enableForShareRide: fromMaybe false item.enableForShareRide,
+      isOnRide : fromMaybe false item.isOnRide,
+      priority: fromMaybe 1 item.priority
+    }) res.defaultEmergencyNumbers

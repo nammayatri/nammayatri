@@ -93,7 +93,7 @@ import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag, getTripFromRideHistory, getZoneType)
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag, getTripFromRideHistory, getZoneType, getFormattedContacts)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -940,6 +940,7 @@ homeScreenFlow = do
                                         void $ pure $ setSuggestionsMap updatedMap
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+                                      removeChatService ""
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
@@ -1424,7 +1425,9 @@ homeScreenFlow = do
           name: item.name,
           isSelected: true,
           priority :fromMaybe 1 item.priority,
-          enableForFollowing : fromMaybe false item.enableForFollowing
+          enableForFollowing : fromMaybe false item.enableForFollowing,
+          enableForShareRide : fromMaybe false item.enableForShareRide,
+          isOnRide : fromMaybe false item.isOnRide
         }) res.defaultEmergencyNumbers
       let newContacts = transformContactList contacts
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{emergencyContactData = newContacts}}})
@@ -1551,18 +1554,11 @@ homeScreenFlow = do
               
       homeScreenFlow
     GO_TO_SHARE_RIDE state -> do
-      (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
-      let contacts = getDefaultPriorityList $ map (\(ContactDetails item) -> {
-          number: item.mobileNumber,
-          name: item.name,
-          isSelected: true,
-          enableForFollowing: fromMaybe false item.enableForFollowing,
-          priority: fromMaybe 1 item.priority
-        }) res.defaultEmergencyNumbers
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{contactList = contacts}, props{showShareRide = true}})
+      contacts <- getFormattedContacts 
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{contactList = Just contacts}, props{showShareRide = true}})
       homeScreenFlow
     GO_TO_NOTIFY_RIDE_SHARE state -> do
-      let req = ShareRideReq { emergencyContactNumbers : map (\item -> item.number) $ filter (\item -> item.isSelected) state.data.contactList }
+      let req = ShareRideReq { emergencyContactNumbers : map (\item -> item.number) $ filter (\item -> item.isSelected) $ fromMaybe [] state.data.contactList }
       _ <- lift $ lift $ Remote.shareRide req
       _ <- pure $ toast $ getString STR.RIDE_SHARED_WITH_SELECTED_CONTACTS
       void $ pure $ cleverTapCustomEvent "ny_user_auto_share_ride"
@@ -2125,6 +2121,8 @@ emergencyScreenFlow = do
           name: item.name,
           isSelected: true,
           enableForFollowing: fromMaybe false item.enableForFollowing,
+          enableForShareRide: fromMaybe false item.enableForShareRide,
+          isOnRide: fromMaybe false item.isOnRide,
           priority: fromMaybe 1 item.priority
         }) res.defaultEmergencyNumbers
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{data{emergencyContactsList = contacts}})

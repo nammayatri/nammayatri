@@ -178,7 +178,7 @@ eval (ContactListClearText) state = continueWithCmd state { data { editedText = 
   ]
 
 eval (NewContactActionController (NewContactController.ContactSelected index)) state = do
-  let contact = getValidContact $ fromMaybe {isSelected : false , name : "" , number : "", enableForFollowing: false, priority : 0} (state.data.searchResult !! index)
+  let contact = getValidContact $ fromMaybe {isSelected : false , name : "" , number : "", enableForFollowing: false, enableForShareRide:false, isOnRide: false, priority : 0} (state.data.searchResult !! index)
   let item = (getValidContact contact){isSelected = not contact.isSelected}
   if (length state.data.selectedContacts) >= 3 && not contact.isSelected then do
     _ <- pure $ toast $ getString LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED
@@ -265,15 +265,6 @@ contactTransformerProp contact = {
   visibilitySelectedImage : toPropValue if contact.isSelected then "visible" else "gone",
   visibilityUnSelectedImage : toPropValue $ if contact.isSelected then "gone" else "visible"
 }
-
-contactListTransformer :: Array NewContacts -> Array NewContacts 
-contactListTransformer contactList = (map (\(contact)->{
-  name: contact.name,
-  number: contact.number,
-  isSelected: contact.isSelected,
-  enableForFollowing: false,
-  priority : contact.priority
-})(contactList))
 
 sliceContacts :: EmergencyContactsScreenState -> Array NewContacts
 sliceContacts config = do

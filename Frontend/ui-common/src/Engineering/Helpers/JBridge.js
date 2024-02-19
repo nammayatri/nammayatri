@@ -755,6 +755,7 @@ export const scrollOnResume = function (cb) {
 
 export const startChatListenerService = function () {
   if (JBridge.startChatListenerService) {
+    console.log ("startChatListenerService")
     JBridge.startChatListenerService();
   }
 }

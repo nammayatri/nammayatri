@@ -93,7 +93,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -932,6 +932,8 @@ data Action = NoAction
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
             | PopUpModalReferralAction PopUpModal.Action
+            | UpdateContacts (Array NewContacts)
+            | UpdateChatWithEM Boolean
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -1104,7 +1106,7 @@ eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
   if stage == "REALLOCATED" then
     exit $ NotificationHandler "REALLOCATE_PRODUCT" state
-  else if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
+  else if (stage == "INPROGRESS") && (not $ state.props.isChatWithEMEnabled || isLocalStageOn RideStarted) then
     exit $ NotificationHandler "TRIP_STARTED" state
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "TRIP_FINISHED" state
@@ -1303,7 +1305,7 @@ eval RemoveNotification state = do
 eval NotificationAnimationEnd state = do
   let isExpanded = state.props.showChatNotification && state.props.chatcallbackInitiated
       areMessagesEmpty = (length (getChatMessages FunctionCall) == 0)
-      showNotification = (areMessagesEmpty || state.props.showChatNotification) && state.props.currentStage == RideAccepted && not state.props.isChatNotificationDismissed
+      showNotification = (areMessagesEmpty || state.props.showChatNotification) && ((state.props.currentStage == RideAccepted) || state.props.isChatWithEMEnabled) && not state.props.isChatNotificationDismissed
   continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification, removeNotification = not showNotification, enableChatWidget = (isExpanded || areMessagesEmpty) && not state.props.isChatNotificationDismissed}}
 
 eval MessageViewAnimationEnd state = do
@@ -1416,8 +1418,9 @@ eval BackPressed state = do
     ChatWithDriver -> do
                         if state.props.showCallPopUp then continue state {props{showCallPopUp = false}}
                          else do
-                            _ <- pure $ updateLocalStage RideAccepted
-                            continue state {props {currentStage = RideAccepted}}
+                            let lastStage = if state.props.isChatWithEMEnabled then RideStarted else RideAccepted
+                            _ <- pure $ updateLocalStage lastStage
+                            continue state {props {currentStage = lastStage}}
     RideRating ->     do
                       _ <- pure $ updateLocalStage RideCompleted
                       continue state {props {currentStage = RideCompleted}}
@@ -1736,9 +1739,11 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
         _ <- (logEventWithTwoParams state.data.logField "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
         pure NoAction
     ]
-eval (DriverArrivedAction driverArrivalTime) state = do
-  _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
-  exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+eval (DriverArrivedAction driverArrivalTime) state =
+  if any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then do
+      _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
+      exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+    else continue state
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "TRIGGER_WAITING_ACTION"
@@ -1797,7 +1802,7 @@ eval OpenEmergencyHelp state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = continueWithCmd state [pure $ ShareRide]
+eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = continueWithCmd state [pure $ ShowShareRide]
 
 eval ShareRide state = do
   continueWithCmd state
@@ -2275,7 +2280,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
 
 
 eval (GetQuotesList (SelectListRes resp)) state = do
-  case flowWithoutOffers WithoutOffers of
+  case spy "flowWithoutOffers" $ flowWithoutOffers WithoutOffers of
     true  -> do
       continueWithCmd state [pure $ ContinueWithoutOffers (SelectListRes resp)]
     false -> do
@@ -2586,7 +2591,10 @@ eval ShowShareRide state =
 
 eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotifyRideShare state
 
-eval (ToggleShare index) state = continue state {data{contactList = mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) state.data.contactList}}
+eval (ToggleShare index) state = continue state {data{contactList = Just $ mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) (fromMaybe [] state.data.contactList)}}
+
+eval (UpdateContacts contacts) state = continue state {data{contactList = Just $ contacts}}
+eval (UpdateChatWithEM flag) state = continue state {props{isChatWithEMEnabled = flag}}
 
 eval DismissShareRide state = continue state {props{showShareRide = false}}
 

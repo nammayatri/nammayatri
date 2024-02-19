@@ -6,6 +6,7 @@ import Common.Types.App (ChatComponent)
 import MerchantConfig.Types (AppConfig)
 import Screens.Types (SearchResultType, Stage)
 import Components.ChatView.Controller (ChatComponentConfig)
+import Components.MessagingView.Controller 
 
 
 type MessageNotificationView a = {
@@ -28,4 +29,5 @@ type MessageNotificationView a = {
 , messages :: Array ChatComponentConfig
 , removeNotification :: Boolean
 , currentStage :: Stage
+, user :: UserConfig
 }

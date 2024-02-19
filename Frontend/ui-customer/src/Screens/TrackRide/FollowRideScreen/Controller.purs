@@ -90,16 +90,20 @@ data Action
   | UpdateMockSOSStatus SosStatus
   | PrimaryButtonAC PrimaryButton.Action
   | UpdateCurrentStage FollowRideScreenStage
+  | ResetSheetState
 
 eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState
 eval action state = case action of
   BackPressed -> do 
-    _ <- pure $ clearAudioPlayer ""
-    if state.data.currentStage == MockFollowRide 
-      then void $ pure $ removeSOSAlarmStatus "mock_drill"
-      else pure unit
-    let newState = state { data { emergencyAudioStatus = COMPLETED },props{ startMapAnimation = false} }
-    updateAndExit newState $ Exit newState
+    case state.data.currentStage of
+      ChatWithEM -> continue state{data{currentStage = FollowingRide}}
+      _ -> do
+        _ <- pure $ clearAudioPlayer ""
+        if state.data.currentStage == MockFollowRide 
+          then void $ pure $ removeSOSAlarmStatus "mock_drill"
+          else pure unit
+        let newState = state { data { emergencyAudioStatus = COMPLETED },props{ startMapAnimation = false} }
+        updateAndExit newState $ Exit newState
   UpdatePeekHeight -> continue state { data { counter = state.data.counter + 1 } }
   UpdateCurrentStage stage -> continue state{data{currentStage = stage}}
   NotificationListener notification -> 
@@ -162,7 +166,7 @@ eval action state = case action of
             , sosStatus = resp.sosStatus
             }
           }
-    if isNothing state.data.driverInfoCardState-- || state.data.sosStatus /= resp.sosStatus
+    if isNothing state.data.driverInfoCardState
       then exit $ RestartTracking newState
       else 
         if resp.status == "COMPLETED" 
@@ -176,7 +180,7 @@ eval action state = case action of
   GenericHeaderAC act -> continueWithCmd state [ pure BackPressed ]
   LoadMessages -> do
     let
-      allMessages = [] --getChatMessages FunctionCall
+      allMessages = getChatMessages FunctionCall
     case (last allMessages) of
       Just value ->
         if STR.null value.message then
@@ -213,17 +217,20 @@ eval action state = case action of
             pure MessageEmergencyContact
         ]
   MessageEmergencyContact -> do
-    -- if state.data.config.feature.enableChat then do -- Need this when we enable chat
-    --   if not state.props.chatCallbackInitiated then continue state else do
-    --     _ <- pure $ performHapticFeedback unit
-    --     _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
-    --     let allMessages = getChatMessages FunctionCall
-    --     continue state {data{messages = allMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} 
-    -- else 
-    continueWithCmd state
-      [ do
-          pure $ MessagingViewAC (MessagingView.Call)
-      ]
+    case state.data.currentFollower of
+        Nothing -> continue state
+        Just follower -> 
+          if state.data.config.feature.enableChat && follower.priority == 0 then do
+            if not state.props.chatCallbackInitiated then continue state else do
+              _ <- pure $ performHapticFeedback unit
+              _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
+              let allMessages = getChatMessages FunctionCall
+              continueWithCmd state {data{messages = allMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do pure $ ResetSheetState]
+          else 
+            continueWithCmd state
+              [ do
+                  pure $ MessagingViewAC (MessagingView.Call)
+              ]
   ScrollToBottom -> do
     _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
     continue state
@@ -281,7 +288,6 @@ eval action state = case action of
     MessagingView.SendSuggestion chatSuggestion ->
       if state.props.canSendSuggestion then do
         _ <- pure $ sendMessage chatSuggestion
-        -- void $ pure $ xlogChatSuggestion state chatSuggestion
         continue state { data { chatSuggestionsList = [] }, props { canSendSuggestion = false } }
       else
         continue state
@@ -290,6 +296,7 @@ eval action state = case action of
     case act of
       PrimaryButton.OnClick -> exit $ Exit state
       _ -> continue state
+  ResetSheetState -> continue state { props { sheetState = Nothing } }
   _ -> continue state
   
 updateMessagesWithCmd :: FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState

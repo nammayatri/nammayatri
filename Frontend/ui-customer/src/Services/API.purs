@@ -615,7 +615,7 @@ data OfferRes
   | Public {publicTransport :: PublicTransportQuote}
 
 newtype QuoteAPIEntity = QuoteAPIEntity {
-  agencyNumber :: String,
+  agencyNumber :: Maybe String,
   createdAt :: String,
   discount :: Maybe Int,
   estimatedTotalFare :: Int,
@@ -625,7 +625,7 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   estimatedFare :: Int,
   tripTerms :: Array String,
   id :: String,
-  agencyCompletedRidesCount :: Int
+  agencyCompletedRidesCount :: Maybe Int
 }
 
 newtype QuoteAPIDetails = QuoteAPIDetails {
@@ -652,8 +652,8 @@ newtype DriverOfferAPIEntity = DriverOfferAPIEntity
     rating :: Maybe Number
   , validTill :: String
   , driverName :: String
-  , distanceToPickup :: Number
-  , durationToPickup :: Int
+  , distanceToPickup :: Maybe Number
+  , durationToPickup :: Maybe Int
   }
 
 newtype MetroOffer = MetroOffer {
@@ -891,7 +891,7 @@ instance encodeConfirmRequest  :: Encode ConfirmRequest where encode = defaultEn
 data RideBookingReq = RideBookingReq String
 
 newtype RideBookingRes = RideBookingRes {
-  agencyNumber :: String,
+  agencyNumber :: Maybe String,
   status :: String,
   rideStartTime :: Maybe String,
   rideEndTime :: Maybe String,
@@ -1402,7 +1402,9 @@ newtype ContactDetails = ContactDetails {
   name :: String,
   mobileCountryCode :: String,
   priority :: Maybe Int,
-  enableForFollowing :: Maybe Boolean
+  enableForFollowing :: Maybe Boolean,
+  enableForShareRide :: Maybe Boolean,
+  isOnRide :: Maybe Boolean
 }
 
 newtype EmergContactsResp = EmergContactsResp {

@@ -24,14 +24,14 @@ import Data.Array (any, head, length, mapWithIndex, (!!))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn2)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap, safeMarginTopWithDefault, screenWidth, safeMarginBottomWithDefault, safeMarginTop)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer)
-import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer, makeNumber)
+import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig, startChatListenerService, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, clearChatMessages, getKeyInSharedPrefKeys, scrollOnResume)
 import Mobility.Prelude (boolToVisibility)
 import Prelude
 import PrestoDOM (PrestoDOM, Screen, BottomSheetState(..), onAnimationEnd, onBackPressed, onClick)
@@ -59,6 +59,10 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Components.PrimaryButton as PrimaryButton
 import Engineering.Helpers.RippleCircles (addAndUpdateRideSafeOverlay, addAndUpdateSOSRipples, addNavigateMarker, removeSOSRipples)
+import LocalStorage.Cache (getValueFromCache)
+import Storage
+import Components.MessagingView as MessagingView
+import Locale.Utils (getLanguageLocale, languageKey)
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput
 screen initialState globalState =
@@ -72,6 +76,17 @@ screen initialState globalState =
                 _ <- pure $ enableMyLocation false
                 tracking <- runEffectFn1 getValueFromIdMap "FollowsRide"
                 storeCallBackCustomer push NotificationListener "FollowRideScreen"
+                let currentFollower = getCurrentFollower initialState.data.currentFollower
+                when (currentFollower.priority == 0 && not initialState.props.chatCallbackInitiated) $ do
+                  case initialState.data.driverInfoCardState of
+                    Nothing -> pure unit
+                    Just ride -> do
+                      void $ clearChatMessages
+                      void $ storeCallBackMessageUpdated push ride.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages
+                      void $ storeCallBackOpenChatScreen push OpenChatScreen
+                      void $ startChatListenerService
+                      void $ pure $ scrollOnResume push ScrollToBottom
+                      push InitializeChat
                 when tracking.shouldPush $ void $ launchAff $ flowRunner globalState $ driverLocationTracking push UpdateStatus 5000.0 tracking.id "trip"
               MockFollowRide -> void $ launchAff $ flowRunner defaultGlobalState $ updateMockData push initialState
               _ -> pure unit
@@ -136,14 +151,14 @@ followingRideView push state =
           ]
           [ bottomSheetView push state ]
       , rideCompletedView push state
-      ]
-    <> if state.data.currentStage == RideCompletedStage then
-        []
-      else case state.data.sosStatus of
-        Just status -> case status of
-          Common.NotResolved -> [ genericHeaderView push state ]
-          _ -> [ sosOverlayView push (getSosOverlayConfig state status) ]
-        Nothing -> [ genericHeaderView push state ]
+      ] <> if state.data.currentStage == ChatWithEM then [messagingView push state] else []
+        <> if state.data.currentStage == RideCompletedStage then
+            []
+          else case state.data.sosStatus of
+            Just status -> case status of
+              Common.NotResolved -> [ genericHeaderView push state ]
+              _ -> [ sosOverlayView push (getSosOverlayConfig state status) ]
+            Nothing -> [ genericHeaderView push state ]
   where
   getPush =
     ( \action -> do
@@ -322,12 +337,11 @@ bottomSheetView push state =
         , width MATCH_PARENT
         ]
         [ bottomSheetLayout
-            [ height WRAP_CONTENT
+            ([ height WRAP_CONTENT
             , width MATCH_PARENT
             , peakHeight $ getPeekHeight state
             , enableShift false
-            , sheetState COLLAPSED
-            ]
+            ] <> maybe [] (\sheet -> [sheetState sheet]) state.props.sheetState)
             [ linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -387,6 +401,15 @@ bottomSheetView push state =
             ]
         ]
     ]
+
+messagingView :: forall w. (Action -> Effect Unit) -> FollowRideScreenState -> PrestoDOM (Effect Unit) w
+messagingView push state = 
+  relativeLayout
+  [ height $ MATCH_PARENT
+  , width $ MATCH_PARENT
+  , accessibility $ DISABLE
+  , visibility $ boolToVisibility $ state.data.currentStage == ChatWithEM
+  ][ MessagingView.view (push <<< MessagingViewAC) $ messagingViewConfig state ]
 
 sosOverlayView :: forall w. (Action -> Effect Unit) -> SOSOverlayConfig -> Layout w
 sosOverlayView push config =
@@ -550,11 +573,10 @@ headerView push state =
           , accessibility ENABLE
           , alpha $ if state.data.currentStage == MockFollowRide then 0.5 else 1.0
           , clickable $ state.data.currentStage /= MockFollowRide
-          -- , visibility $ boolToVisibility $ currentFollower.priority == 0 needed when chat is added
           , padding $ Padding 20 10 20 10
           ]
           [ imageView
-              [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_call"
+              [ imageWithFallback $ if state.data.config.feature.enableChat && (currentFollower.priority == 0) then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
               , height $ V 20
               , width $ V 20
               ]
@@ -869,3 +891,37 @@ updateMockData push state = defaultMockFlow
 
   getPoint :: GetDriverLocationResp -> Paths
   getPoint (GetDriverLocationResp resp) = { lat: resp ^. _lat, lng: resp ^. _lon }
+
+
+messagingViewConfig :: FollowRideScreenState -> MessagingView.Config
+messagingViewConfig state = let
+  config = MessagingView.config
+  driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
+  currentFollower = getCurrentFollower state.data.currentFollower
+  name = fromMaybe currentFollower.mobileNumber currentFollower.name
+  in MessagingView.config {
+    userConfig
+    { userName = name
+    , receiver = name
+    }
+  , feature 
+    { sendMessageActive = state.props.sendMessageActive
+    , canSendSuggestion = state.props.canSendSuggestion
+    , showAutoGeneratedText = false
+    , enableSuggestions = state.data.config.feature.enableSuggestions
+    , showVehicleDetails = false
+    }
+  , messages = state.data.messages
+  , messagesSize = state.data.messagesSize
+  , vehicleNo = makeNumber $ driverInfoCard.registrationNumber     
+  , chatSuggestionsList = []
+  , hint = (getString MESSAGE)
+  , languageKey = (getLanguageLocale languageKey)
+  , rideConfirmedAt = driverInfoCard.startedAt
+  , autoGeneratedText = ""
+  , driverRating = show $ driverInfoCard.rating
+  , fareAmount = show $ driverInfoCard.price
+  , config = state.data.config
+  , peekHeight = getPeekHeight state
+  , otp = driverInfoCard.otp
+  }

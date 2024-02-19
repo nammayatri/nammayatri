@@ -62,7 +62,8 @@ type DriverInfoCardProps =
     estimatedTime :: String,
     zoneType :: ZoneType,
     merchantCity :: City,
-    showBanner :: Boolean
+    showBanner :: Boolean,
+    isChatWithEMEnabled :: Boolean
   }
 
 type DriverInfoCardData =

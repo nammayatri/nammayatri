@@ -622,12 +622,14 @@ walkCoordinates (Snapped points) =
 
 postContactsReq :: (Array NewContacts) -> EmergContactsReq
 postContactsReq contacts = EmergContactsReq {
-  "defaultEmergencyNumbers" : map (\item -> ContactDetails {
-      "mobileNumber": item.number,
-      "name": item.name,
-      "mobileCountryCode": "+91",
-      "priority": Just item.priority,
-      "enableForFollowing": Just item.enableForFollowing
+  defaultEmergencyNumbers : map (\item -> ContactDetails {
+      mobileNumber: item.number,
+      name: item.name,
+      mobileCountryCode: "+91",
+      priority: Just item.priority,
+      enableForFollowing: Just item.enableForFollowing,
+      enableForShareRide: Just item.enableForShareRide,
+      isOnRide : Nothing
   }) contacts
 }
 

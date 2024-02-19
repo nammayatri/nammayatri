@@ -89,6 +89,8 @@ config =
       , number: ""
       , isSelected: false
       , enableForFollowing: false
+      , enableForShareRide: false
+      , isOnRide : false
       }
   , index: 0
   , enableCheckmark: true

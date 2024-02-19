@@ -54,7 +54,7 @@ type Feature =
 
 type UserConfig =
   { userName :: String
-  , appType :: String
+  , receiver :: String
   }
 
 type ChatComponent = {
@@ -69,7 +69,7 @@ config :: Config
 config = 
   { userConfig : 
     { userName : ""
-    , appType : ""
+    , receiver : ""
     }
   , feature : 
     { sendMessageActive : false

@@ -41,5 +41,7 @@ listItem1 = {
   number: "",
   isSelected: false,
   enableForFollowing: false,
+  enableForShareRide: false,
+  isOnRide: false,
   priority : 1
 }

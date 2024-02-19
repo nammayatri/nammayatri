@@ -20,6 +20,8 @@ initData = {
                               , name : ""
                               , number : ""
                               , enableForFollowing: false
+                              , enableForShareRide: false
+                              , isOnRide : false
                               , priority: 1
                               }
     , editedText : ""

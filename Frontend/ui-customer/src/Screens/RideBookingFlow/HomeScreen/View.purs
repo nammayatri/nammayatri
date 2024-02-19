@@ -22,6 +22,7 @@ import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
 import Components.Banner.Controller as BannerConfig
 import Components.ChooseVehicle as ChooseVehicle
 import Components.Banner.View as Banner
+import Components.Banner.View as Banner
 import Components.MessagingView as MessagingView
 import Components.ChooseYourRide as ChooseYourRide 
 import Components.DriverInfoCard as DriverInfoCard
@@ -70,7 +71,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -87,7 +88,7 @@ import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (transformSavedLocations)
+import Screens.HomeScreen.Transformer (transformSavedLocations, getFormattedContacts)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
@@ -97,7 +98,7 @@ import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
-import Types.App (GlobalState, defaultGlobalState)
+import Types.App (FlowBT, GlobalState, defaultGlobalState)
 import Halogen.VDom.DOM.Prop (Prop)
 import Data.String as DS
 import Data.Function.Uncurried (runFn1, runFn2)
@@ -122,6 +123,8 @@ import Components.BannerCarousel as BannerCarousel
 import Components.MessagingView.Common.Types
 import Components.MessagingView.Common.View
 import Data.FoldableWithIndex
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import LocalStorage.Cache (getValueFromCache)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -212,16 +215,7 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else pure unit
                 push LoadMessages
-                if(not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= QUOTES) then do
-                  _ <- clearChatMessages
-                  _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
-                  _ <- storeCallBackOpenChatScreen push OpenChatScreen
-                  _ <- startChatListenerService
-                  _ <- pure $ scrollOnResume push ScrollToBottom
-                  push InitializeChat
-                  pure unit
-                else
-                  pure unit
+                when (not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= QUOTES) $ startChatSerivces push initialState.data.driverInfoCardState.bppRideId
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 _ <- pure $ enableMyLocation false
@@ -232,7 +226,9 @@ screen initialState =
                   pure unit
                 else
                   pure unit
-                _ <- push RemoveChat
+                case spy "contactList ->" initialState.data.contactList of
+                  Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
+                  Just contacts -> validateAndStartChat contacts push initialState
                 pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
@@ -523,7 +519,7 @@ cancelSearchPopUp push state =
 
 messageWidgetView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messageWidgetView push state = 
-  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
+  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
   in 
   linearLayout
   [ height MATCH_PARENT
@@ -2276,7 +2272,9 @@ rideTrackingView push state =
     halfExpanded = (toNumber (getInfoCardPeekHeight state)) / if sheetHeight == 0.0 then 611.0 else sheetHeight
 
 getMessageNotificationViewConfig :: HomeScreenState -> MessageNotificationView Action
-getMessageNotificationViewConfig state = {
+getMessageNotificationViewConfig state =
+  let primaryContact = head $ filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0)) (fromMaybe [] state.data.contactList)
+  in {
     showChatNotification : state.props.showChatNotification
   , enableChatWidget : state.props.enableChatWidget
   , isNotificationExpanded :state.props.isNotificationExpanded
@@ -2292,10 +2290,21 @@ getMessageNotificationViewConfig state = {
   , sendQuickMessageAction : SendQuickMessage
   , timerCounter : state.data.triggerPatchCounter
   , messageExpiryAction : MessageExpiryTimer
-  , chatSuggestions : getChatSuggestions state
+  , chatSuggestions :  if state.props.isChatWithEMEnabled then [] else getChatSuggestions state
   , messages : state.data.messages
   , removeNotification : state.props.removeNotification
   , currentStage : state.props.currentStage
+  , user :{ userName : if state.props.isChatWithEMEnabled 
+                    then case primaryContact of
+                            Nothing -> state.data.driverInfoCardState.driverName
+                            Just contact -> contact.name
+                    else state.data.driverInfoCardState.driverName
+    , receiver : if state.props.isChatWithEMEnabled 
+                    then case primaryContact of
+                            Nothing -> "Driver"
+                            Just contact -> contact.name
+                    else "Driver"
+    }
 }
 
 separatorView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
@@ -4070,6 +4079,32 @@ computeListItem push = do
   bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousel)
   void $ liftFlow $ push (SetBannerItem bannerItem)
     
+updateEmergencyContacts :: (Action -> Effect Unit) -> HomeScreenState -> FlowBT String Unit
+updateEmergencyContacts push state = do
+  contacts <- getFormattedContacts
+  void $ liftFlowBT $ push (UpdateContacts contacts)
+  void $ liftFlowBT $ validateAndStartChat contacts push state
+
+validateAndStartChat :: Array NewContacts ->  (Action -> Effect Unit) -> HomeScreenState -> Effect Unit
+validateAndStartChat contacts push state = do
+  let filterContacts = filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0)) contacts
+  if (length filterContacts) == 0 
+    then push RemoveChat
+    else do
+      push $ UpdateChatWithEM true
+      if (not $ spy "chatcallbackInitiated ->" $ state.props.chatcallbackInitiated) then startChatSerivces push state.data.driverInfoCardState.rideId else pure unit
+
+
+startChatSerivces ::  (Action -> Effect Unit) -> String -> Effect Unit
+startChatSerivces push rideId = do
+  void $ clearChatMessages
+  void $ storeCallBackMessageUpdated push rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) UpdateMessages
+  void $ storeCallBackOpenChatScreen push OpenChatScreen
+  void $ startChatListenerService
+  void $ pure $ scrollOnResume push ScrollToBottom
+  push InitializeChat
+  pure unit
+
 safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 safetyAlertPopup push state =
   linearLayout
@@ -4135,7 +4170,7 @@ shareRidePopup push state =
             , orientation VERTICAL
             , margin $ MarginTop 16
             ]
-            (mapWithIndex (shareRideOptionView push state) state.data.contactList)
+            (mapWithIndex (shareRideOptionView push state) $ fromMaybe [] state.data.contactList)
         , PrimaryButton.view (push <<< NotifyRideShare) (shareRideButtonConfig state)
         , linearLayout
           [ height WRAP_CONTENT

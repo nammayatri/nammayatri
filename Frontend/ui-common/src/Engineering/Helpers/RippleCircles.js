@@ -13,7 +13,9 @@ export const addRippleCircle = function (config) {
 }
 export const animateRippleCircle = function (config) {
   if (JBridge.animateRippleCircle) {
-    JBridge.animateRippleCircle(JSON.stringify(config))
+    setTimeout(function () {
+      JBridge.animateRippleCircle(JSON.stringify(config));
+    }, 500);
   }
 }
 export const updateRippleCirclePosition = function (config) {

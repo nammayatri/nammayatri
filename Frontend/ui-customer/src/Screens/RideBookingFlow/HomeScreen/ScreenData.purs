@@ -149,7 +149,7 @@ initData = {
       , bannerScrollState: "0"
       , currentPage : 0
     } 
-    , contactList : []
+    , contactList : Nothing
     , followers : Nothing
     },
     props: {
@@ -294,6 +294,7 @@ initData = {
     , sosBannerType : Nothing
     , showShareRide : false
     , followsRide: false
+    , isChatWithEMEnabled: false
     , referral : {
         referralStatus : NO_REFERRAL,
         referralCode : Nothing
@@ -430,7 +431,7 @@ dummyAddress = {
 
 dummyQuoteAPIEntity :: QuoteAPIEntity
 dummyQuoteAPIEntity = QuoteAPIEntity {
-  agencyNumber : "",
+  agencyNumber : Nothing,
   createdAt : "",
   discount : Nothing,
   estimatedTotalFare : 0,
@@ -439,7 +440,7 @@ dummyQuoteAPIEntity = QuoteAPIEntity {
   estimatedFare : 0,
   tripTerms : [],
   id : "",
-  agencyCompletedRidesCount : 0,
+  agencyCompletedRidesCount : Nothing,
   quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity}
 }
 
@@ -450,8 +451,8 @@ dummyDriverOfferAPIEntity =
         { rating: Nothing
         , validTill: ""
         , driverName: ""
-        , distanceToPickup: 0.0
-        , durationToPickup: 0
+        , distanceToPickup: Nothing
+        , durationToPickup: Nothing
         }
 
 dummyLocationName :: PlaceName
@@ -486,7 +487,7 @@ dummyLocation = {
 dummyRideBooking :: RideBookingRes
 dummyRideBooking = RideBookingRes
   {
-  agencyNumber : "",
+  agencyNumber : Nothing,
   status : "",
   rideStartTime : Nothing,
   rideEndTime : Nothing,

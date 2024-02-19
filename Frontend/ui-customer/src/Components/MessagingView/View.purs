@@ -30,7 +30,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import JBridge (scrollToEnd, getLayoutBounds)
+import JBridge (scrollToEnd, getLayoutBounds, getKeyInSharedPrefKeys)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, negate, (+), (<=), discard, void, (>=), (<), when)
@@ -45,6 +45,8 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
+import Storage (KeyStore(..))
+import LocalStorage.Cache (getValueFromCache)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -150,7 +152,7 @@ headerNameView config push =
       , color Color.black800
       , ellipsize true
       , singleLine true
-      , margin $ MarginBottom 8
+      , margin $ MarginBottom if config.feature.showVehicleDetails then 8 else 0
       , accessibility DISABLE
       ] <> if lang == "HI_IN" then FontStyle.body15 TypoGraphy else FontStyle.tags TypoGraphy
     , textView $
@@ -159,7 +161,7 @@ headerNameView config push =
       , ellipsize true
       , singleLine true
       , accessibility DISABLE
-      , margin $ MarginBottom 8
+      , margin $ MarginBottom if config.feature.showVehicleDetails then 8 else 0
       ] <> if lang == "HI_IN" then FontStyle.tags TypoGraphy else FontStyle.body15 TypoGraphy
     ]
   ] <> if config.feature.showVehicleDetails then [vehicleAndOTPAndPriceView config] else []
@@ -293,7 +295,7 @@ chatView config push =
           , width MATCH_PARENT
           , orientation VERTICAL
           , padding (PaddingHorizontal 16 16)
-          ](mapWithIndex (\index item -> chatComponent config push item (index == (length config.messages - 1)) (config.userConfig.appType) index) (config.messages))
+          ](mapWithIndex (\index item -> chatComponent config push item (index == (length config.messages - 1)) (config.userConfig.receiver) index) (config.messages))
       ]
     ]
   ]
@@ -419,13 +421,13 @@ quickMessageView config message idx push =
      ] <> FontStyle.tags TypoGraphy
   ]
 chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent -> Boolean -> String -> Int -> PrestoDOM (Effect Unit) w
-chatComponent state push config isLastItem userType index =
+chatComponent state push config isLastItem receiver index =
   let message = getMessageFromKey config.message state.languageKey
       chatConfig = getChatConfig state config.sentBy isLastItem index
       enableFlexBox = not $ (os == "IOS" || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "")))
   in
   PrestoAnim.animationSet
-    [ if state.userConfig.appType == config.sentBy then
+    [ if config.sentBy == (getCurrentUser FunctionCall) then
          translateInXForwardAnim $ isLastItem
       else
           translateInXBackwardAnim $ isLastItem
@@ -434,7 +436,7 @@ chatComponent state push config isLastItem userType index =
   [height WRAP_CONTENT
   , width MATCH_PARENT
   , accessibility ENABLE
-  , accessibilityHint $ (if config.sentBy == "Customer" then "You Sent : " else "Driver Sent : ") <> getMessageFromKey config.message "EN_US"
+  , accessibilityHint $ (if config.sentBy == getCurrentUser FunctionCall then "You Sent : " else receiver <> " Sent : ") <> getMessageFromKey config.message "EN_US"
   , margin chatConfig.margin
   , gravity chatConfig.gravity
   , orientation VERTICAL
@@ -473,7 +475,7 @@ chatComponent state push config isLastItem userType index =
 
 getChatConfig :: Config -> String -> Boolean -> Int -> {margin :: Margin, gravity :: Gravity, background :: String, cornerRadii :: Corners, textColor :: String, timeStampColor :: String}
 getChatConfig state sentBy isLastItem index =
-  if state.userConfig.appType == sentBy then
+  if (getCurrentUser FunctionCall) == sentBy then
     {
       margin : (Margin ((screenWidth unit)/5) 8 0 if isLastItem then 8 else 0),
       gravity : RIGHT,
@@ -513,3 +515,6 @@ getChatFooterHeight config =
 
 splitString :: String -> String
 splitString str = (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") str)
+
+getCurrentUser :: LazyCheck -> String
+getCurrentUser _ = getValueFromCache (show CUSTOMER_ID) (getKeyInSharedPrefKeys)

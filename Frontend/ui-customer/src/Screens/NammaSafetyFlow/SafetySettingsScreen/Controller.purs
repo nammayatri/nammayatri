@@ -94,7 +94,9 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             , name: item.name
             , isSelected: true
             , enableForFollowing: response.shareTripWithEmergencyContacts && fromMaybe false item.enableForFollowing
+            , enableForShareRide: fromMaybe false item.enableForShareRide
             , priority: fromMaybe 1 item.priority
+            , isOnRide : fromMaybe false item.isOnRide
             }
         )
         response.defaultEmergencyNumbers

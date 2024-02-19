@@ -94,6 +94,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Locale.Utils
 import Components.MessagingView.Common.Types
+import Components.MessagingView.View
 
 
 
@@ -114,7 +115,7 @@ messageNotificationView push state =
   , accessibility $ if state.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
   , accessibilityHint $ "Quick Chat : Widget"
   , onAnimationEnd push $ const state.messageViewAnimationEnd
-  , visibility $ boolToVisibility $ (((any (_ == state.currentStage)) [ RideAccepted, ChatWithDriver]) && state.currentSearchResultType /= QUOTES && state.config.feature.enableChat) && state.config.feature.enableSuggestions && not state.removeNotification
+  , visibility $ boolToVisibility $ (((any (_ == state.currentStage)) [ RideAccepted, ChatWithDriver, RideStarted]) && state.currentSearchResultType /= QUOTES && state.config.feature.enableChat) && state.config.feature.enableSuggestions && not state.removeNotification
   , cornerRadius 20.0
   ][linearLayout 
     [ height $ WRAP_CONTENT
@@ -197,7 +198,7 @@ messageView push state message=
   , clickable true
   , onClick push $ const $ state.messageReceiverAction
   , accessibility ENABLE
-  , accessibilityHint $ (if message.sentBy == "Customer" then "You Sent : " else "Message From Driver : ") <> getMessageFromKey message.message "EN_US"
+  , accessibilityHint $ (if message.sentBy == getCurrentUser FunctionCall then "You Sent : " else "Message From " <> state.user.receiver  <> " : ") <> getMessageFromKey message.message "EN_US"
   ][ imageView
      [ height $ V 32
      , width $ V 32
@@ -214,7 +215,7 @@ messageView push state message=
       ][ textView $ 
         [ width $ WRAP_CONTENT
         , height $ WRAP_CONTENT
-        , text $ (if message.sentBy == "Driver" then getString MESSAGE_FROM_DRIVER else getString YOU_SENT) <> ":"
+        , text $ (if message.sentBy == getCurrentUser FunctionCall then getString YOU_SENT else if message.sentBy == "Driver" then getString MESSAGE_FROM_DRIVER else "Message from " <> state.user.userName ) <> ":"
         , color Color.black700
         , maxLines 1
         , ellipsize true
