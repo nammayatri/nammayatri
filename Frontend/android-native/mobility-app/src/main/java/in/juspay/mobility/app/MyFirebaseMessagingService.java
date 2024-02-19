@@ -133,10 +133,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 for (Map.Entry<String, String> entry : remoteMessage.getData().entrySet()) {
                     extras.putString(entry.getKey(), entry.getValue());
                 }
-                CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(this);
-                if (cleverTapAPI != null) {
-                    cleverTapAPI.pushNotificationViewedEvent(extras);
-                }
 
                 NotificationInfo info = CleverTapAPI.getNotificationInfo(extras);
                 if (info.fromCleverTap) {
