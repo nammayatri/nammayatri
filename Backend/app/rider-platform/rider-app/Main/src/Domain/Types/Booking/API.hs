@@ -135,11 +135,12 @@ makeBookingAPIEntity ::
   BookingAPIEntity
 makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
+      providerNum = fromMaybe "+91" bppDetails.supportNumber
   BookingAPIEntity
     { id = booking.id,
       status = booking.status,
       agencyName = bppDetails.name,
-      agencyNumber = bppDetails.supportNumber,
+      agencyNumber = Just providerNum,
       estimatedFare = booking.estimatedFare,
       discount = booking.discount,
       estimatedTotalFare = booking.estimatedTotalFare,
