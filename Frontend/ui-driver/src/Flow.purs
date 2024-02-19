@@ -132,7 +132,7 @@ baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
     liftFlowBT $ setEventTimestamp "baseAppFlow"
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
-    checkVersion versionCode
+    -- checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
     updateNightSafetyPopup
