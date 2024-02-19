@@ -43,7 +43,6 @@ instance FromTType' BeamBLO.WhiteListOrg WhiteListOrg where
         WhiteListOrg
           { id = Id id,
             subscriberId = ShortId subscriberId,
-            _type = orgType,
             domain = domain
           }
 
@@ -52,6 +51,5 @@ instance ToTType' BeamBLO.WhiteListOrg WhiteListOrg where
     BeamBLO.WhiteListOrgT
       { BeamBLO.id = getId id,
         BeamBLO.subscriberId = getShortId subscriberId,
-        BeamBLO.orgType = _type,
         BeamBLO.domain = domain
       }

@@ -17,7 +17,6 @@
 module Storage.Beam.WhiteListOrg where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.WhiteListOrg as Domain
 import Kernel.Prelude
 import Kernel.Types.Beckn.Domain (Domain)
 import Tools.Beam.UtilsTH
@@ -25,7 +24,6 @@ import Tools.Beam.UtilsTH
 data WhiteListOrgT f = WhiteListOrgT
   { id :: B.C f Text,
     subscriberId :: B.C f Text,
-    orgType :: B.C f Domain.WhiteListOrgType,
     domain :: B.C f Domain
   }
   deriving (Generic, B.Beamable)
@@ -40,4 +38,4 @@ type WhiteListOrg = WhiteListOrgT Identity
 
 $(enableKVPG ''WhiteListOrgT ['id] [['subscriberId]])
 
-$(mkTableInstancesWithTModifier ''WhiteListOrgT "white_list_org" [("orgType", "type")])
+$(mkTableInstancesWithTModifier ''WhiteListOrgT "white_list_org" [("subscriberId", "subscriber_id")])
