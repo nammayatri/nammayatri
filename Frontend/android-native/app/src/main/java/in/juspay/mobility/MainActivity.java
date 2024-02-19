@@ -380,6 +380,7 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(context);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CleverTapAPI.createNotificationChannel(context,clientId,"Promotion","Notifications Related to promotion",NotificationManager.IMPORTANCE_MAX, "4_promotional",true);
+            CleverTapAPI.createNotificationChannel(context,"nammayatriHindi","nammayatriHindi","notification",NotificationManager.IMPORTANCE_MAX,true,"clevertap_custom_notification.mp3");
         }else{
             CleverTapAPI.createNotificationChannel(context,clientId,"Promotion","Notifications Related to promotion",NotificationManager.IMPORTANCE_MAX,true);
         }
