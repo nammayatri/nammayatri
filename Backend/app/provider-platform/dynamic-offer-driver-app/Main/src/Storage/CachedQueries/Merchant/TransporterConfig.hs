@@ -104,9 +104,6 @@ findByMerchantOpCityId id mPersonId = do
     then findByMerchantOpCityIdCAC id mPersonId
     else getTransporterConfigFromDB id
 
--- findByMerchantOpCityIdDB :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
--- findByMerchantOpCityIdDB (Id merchantOperatingCityId) = Queries.findByMerchantOpCityId (Id merchantOperatingCityId)
-
 findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person) -> m (Maybe TransporterConfig)
 findByMerchantOpCityIdCAC id (Just personId) = do
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"

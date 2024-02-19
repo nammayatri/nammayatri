@@ -42,7 +42,7 @@ import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.App
 import Kernel.Utils.Common
-import Kernel.Utils.Dhall
+import Kernel.Utils.Dhall hiding (maybe)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.HTTP.Client as Http
@@ -74,10 +74,6 @@ createCAC appCfg = do
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
-  setEnv "CAC_HOST" appCfg.cacConfig.host
-  setEnv "CAC_INTERVAL" (show appCfg.cacConfig.interval)
-  _ <- CC.forkIO $ createCAC appCfg
-
   Metrics.serve (appCfg.metricsPort)
   runDynamicOfferDriverApp' appCfg
 
@@ -116,6 +112,13 @@ runDynamicOfferDriverApp' appCfg = do
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
+        if kvConfigs.useCAC
+          then do
+             setEnv "CAC_HOST" appCfg.cacConfig.host
+             setEnv "CAC_INTERVAL" (show appCfg.cacConfig.interval)
+             _ <- CC.forkIO $ createCAC appCfg
+            logInfo "Starting App using configs from CAC."
+          else logInfo "Starting App using configs from DB."
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
