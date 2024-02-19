@@ -191,9 +191,9 @@ autpPayBannerCarousel state action =
         title = bannerConfig.title,
         titleColor = bannerConfig.titleColor,
         actionText = bannerConfig.actionText,
-        actionTextColor = Color.white900,
-        actionTextBackgroundColour = Color.black900,
-        actionIconUrl = (HU.getAssetLink FunctionCall) <> "ny_ic_money_filled.png",
+        actionTextColor = actionTextColor_,
+        actionTextBackgroundColour = actionTextBackgroundColour_,
+        actionIconUrl = actionIconUrl_,
         actionIconVisibility = true,
         imageUrl = bannerConfig.imageUrl,
         isBanner = bannerConfig.isBanner,
@@ -205,7 +205,24 @@ autpPayBannerCarousel state action =
         "type" = BannerCarousel.AutoPay,
         imagePadding = bannerConfig.imagePadding
   }
+  where
+    actionIconUrl_ = (HU.getAssetLink FunctionCall) <> case state.props.autoPayBanner of
+                            DUE_LIMIT_WARNING_BANNER -> "ny_ic_money_filled_red.png"
+                            CLEAR_DUES_BANNER -> "ny_ic_money_filled.png"
+                            LOW_DUES_BANNER -> "ny_ic_money_filled_black.png"
+                            _ -> "ny_ic_arrow_right_green.png"
 
+    actionTextBackgroundColour_ = case state.props.autoPayBanner of
+          DUE_LIMIT_WARNING_BANNER -> Color.red
+          CLEAR_DUES_BANNER -> Color.black900
+          LOW_DUES_BANNER -> Color.yellow900
+          _ -> Color.white900
+
+    actionTextColor_ = case state.props.autoPayBanner of
+          DUE_LIMIT_WARNING_BANNER -> Color.white900
+          CLEAR_DUES_BANNER -> Color.white900
+          LOW_DUES_BANNER -> Color.black900
+          _ -> Color.green600
 
 accessbilityBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)
 accessbilityBannerConfig _ action = 

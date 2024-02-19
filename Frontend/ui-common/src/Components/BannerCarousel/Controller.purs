@@ -91,7 +91,7 @@ config action = {
     imageHeight : (V 105),
     imageWidth : (V 118),
     isBanner : true,
-    actionTextStyle : ParagraphText,
+    actionTextStyle : if os == "IOS" then ParagraphText else Body6,
     titleStyle : Body4,
     showActionArrow : true,
     alertText : "",
