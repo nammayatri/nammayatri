@@ -507,7 +507,6 @@ dummyLocation = {
 dummyRideBooking :: RideBookingRes
 dummyRideBooking = RideBookingRes
   {
-  agencyNumber : "",
   status : "",
   rideStartTime : Nothing,
   rideEndTime : Nothing,
