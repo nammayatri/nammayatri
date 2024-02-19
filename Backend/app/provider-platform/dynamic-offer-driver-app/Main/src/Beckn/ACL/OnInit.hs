@@ -155,14 +155,14 @@ tfOrder res =
       orderPayments = tfPayments res,
       orderProvider = tfProvider res,
       orderQuote = tfQuotation res,
-      orderStatus = Just "NEW"
+      orderStatus = Nothing
     }
 
 tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
   Just
     [ Spec.Fulfillment
-        { fulfillmentAgent = tfAgent res,
+        { fulfillmentAgent = Nothing,
           fulfillmentCustomer = Nothing,
           fulfillmentId = Just res.booking.quoteId,
           fulfillmentState = Nothing,
@@ -191,7 +191,7 @@ tfItemDescriptor :: DInit.InitRes -> Maybe Spec.Descriptor
 tfItemDescriptor res =
   Just
     Spec.Descriptor
-      { descriptorCode = Nothing,
+      { descriptorCode = Just "RIDE", -- TODO : maybe make Enum for it?
         descriptorShortDesc = Just $ Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant,
         descriptorName = Nothing
       }
@@ -217,7 +217,7 @@ tfPayments res = do
         { paymentCollectedBy = Just $ show Enums.SELLER,
           paymentId = Nothing,
           paymentParams = mkParams paymentMethodInfo,
-          paymentStatus = Nothing,
+          paymentStatus = Just $ show Enums.NOT_PAID,
           paymentTags = Nothing,
           paymentType = Just $ maybe (show Enums.ON_FULFILLMENT) (Utils.castDPaymentType . (.paymentType)) paymentMethodInfo
         }
@@ -235,12 +235,12 @@ tfPayments res = do
 
 tfProvider :: DInit.InitRes -> Maybe Spec.Provider
 tfProvider res = do
-  driverId <- res.driverId
+  let providerId = res.bppSubscriberId
   return $
     Spec.Provider
       { providerDescriptor = Nothing,
         providerFulfillments = Nothing,
-        providerId = Just driverId,
+        providerId = providerId,
         providerItems = Nothing,
         providerLocations = Nothing,
         providerPayments = Nothing
@@ -339,20 +339,4 @@ tfVehicle res = do
         vehicleMake = Nothing,
         vehicleModel = Nothing,
         vehicleRegistration = Nothing
-      }
-
-tfAgent :: DInit.InitRes -> Maybe Spec.Agent
-tfAgent res = do
-  driverName <- res.driverName
-  return $
-    Spec.Agent
-      { agentContact = Nothing,
-        agentPerson =
-          Just
-            Spec.Person
-              { personId = Nothing,
-                personImage = Nothing,
-                personName = Just driverName,
-                personTags = Nothing
-              }
       }
