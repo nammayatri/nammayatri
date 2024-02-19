@@ -134,7 +134,7 @@ window.getMerchantConfig = function () {
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "நம்ம யாத்ரி மண்டலத்திற்கான OTP காலாவதியானது, மீண்டும் முன்பதிவு செய்ய முயற்சிக்கவும்",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "உங்கள் சிக்கலை விவரிக்கவும். நம்ம யாத்ரி 24 மணி நேரத்திற்குள் அதைத் தீர்க்க முயற்சிக்கும்.",
       "CALL_SUPPORT_DESCRIPTION" : "நம்ம யாத்ரி ஆதரவிற்கு அழைப்பை மேற்கொள்ள உள்ளீர்கள். தொடர விரும்புகிறீர்களா?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "சிக்கல் தீர்ந்துவிட்டது என்று நம்புகிறோம், ஏதேனும் கேள்விகளுக்கு தயங்காமல் எங்களுக்கு nammayatri.support@juspay.in இல் எழுதவும்."
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "சிக்கல் தீர்ந்துவிட்டது என்று நம்புகிறோம், ஏதேனும் கேள்விகளுக்கு தயங்காமல் எங்களுக்கு support@nammayatri.in இல் எழுதவும்."
     },
     "languageList": [{
       "name": "English",
