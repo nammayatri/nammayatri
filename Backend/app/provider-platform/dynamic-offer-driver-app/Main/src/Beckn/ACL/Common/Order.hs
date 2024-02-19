@@ -228,9 +228,9 @@ mkRideCompletedPayment paymentMethodInfo paymentUrl = do
 
 tfAssignedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideAssignedReq -> m Spec.Order
 tfAssignedReqToOrder Common.DRideAssignedReq {..} = do
-  let Common.BookingDetails {driver, vehicle, ride, booking} = bookingDetails
-  let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing isDriverBirthDay isFreeRide (Just $ show EventEnum.RIDE_ASSIGNED)
+  let Common.BookingDetails {driver, vehicle, ride, booking, isValueAddNP} = bookingDetails
+  let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing isDriverBirthDay isFreeRide (Just $ show EventEnum.RIDE_ASSIGNED) isValueAddNP
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -247,11 +247,11 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} = do
 
 tfStartReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideStartedReq -> m Spec.Order
 tfStartReqToOrder Common.DRideStartedReq {..} = do
-  let Common.BookingDetails {driver, vehicle, ride, booking} = bookingDetails
-  let personTag = Utils.mkLocationTagGroupV2 tripStartLocation -- why are we sending trip start and end location in personTags?
-      odometerTag = Utils.mkOdometerTagGroupV2 ((.value) <$> ride.startOdometerReading)
-  let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> Just odometerTag) (Just personTag) False False (Just $ show EventEnum.RIDE_STARTED)
+  let Common.BookingDetails {driver, vehicle, ride, booking, isValueAddNP} = bookingDetails
+  let personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripStartLocation else Nothing
+      odometerTag = if isValueAddNP then Utils.mkOdometerTagGroupV2 ((.value) <$> ride.startOdometerReading) else Nothing
+  let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> odometerTag) personTag False False (Just $ show EventEnum.RIDE_STARTED) isValueAddNP
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -268,11 +268,11 @@ tfStartReqToOrder Common.DRideStartedReq {..} = do
 
 tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideCompletedReq -> m Spec.Order
 tfCompleteReqToOrder Common.DRideCompletedReq {..} = do
-  let Common.BookingDetails {driver, vehicle, ride, booking} = bookingDetails
-  let personTag = Utils.mkLocationTagGroupV2 tripEndLocation
-  let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-  distanceTagGroup <- UtilsOU.mkDistanceTagGroup ride
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> distanceTagGroup) (Just personTag) False False (Just $ show EventEnum.RIDE_ENDED)
+  let Common.BookingDetails {driver, vehicle, ride, booking, isValueAddNP} = bookingDetails
+  let personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripEndLocation else Nothing
+  let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+  distanceTagGroup <- if isValueAddNP then UtilsOU.mkDistanceTagGroup ride else return Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> distanceTagGroup) personTag False False (Just $ show EventEnum.RIDE_ENDED) isValueAddNP
   quote <- UtilsOU.mkRideCompletedQuote ride fareParams
   pure
     Spec.Order
@@ -291,10 +291,10 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} = do
 tfCancelReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DBookingCancelledReq -> m Spec.Order
 tfCancelReqToOrder Common.DBookingCancelledReq {..} = do
   fulfillment <- forM bookingDetails $ \bookingDetails' -> do
-    let Common.BookingDetails {driver, vehicle, ride} = bookingDetails'
+    let Common.BookingDetails {driver, vehicle, ride, isValueAddNP} = bookingDetails'
     let image = Nothing
-    let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-    Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing False False (Just $ show EventEnum.RIDE_CANCELLED)
+    let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+    Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False (Just $ show EventEnum.RIDE_CANCELLED) isValueAddNP
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -316,8 +316,8 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} = do
 tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DDriverArrivedReq -> m Spec.Order
 tfArrivedReqToOrder Common.DDriverArrivedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  let driverArrivedInfoTags = Utils.mkArrivalTimeTagGroupV2 arrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just driverArrivedInfoTags) Nothing False False (Just $ show EventEnum.RIDE_ARRIVED_PICKUP)
+  let driverArrivedInfoTags = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 arrivalTime else Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing driverArrivedInfoTags Nothing False False (Just $ show EventEnum.RIDE_ARRIVED_PICKUP) isValueAddNP
   pure $
     Spec.Order
       { orderId = Just $ booking.id.getId,

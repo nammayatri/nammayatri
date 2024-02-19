@@ -28,7 +28,8 @@ data BookingDetails = BookingDetails
   { ride :: DRide.Ride,
     booking :: DRB.Booking,
     driver :: SP.Person,
-    vehicle :: SVeh.Vehicle
+    vehicle :: SVeh.Vehicle,
+    isValueAddNP :: Bool
   }
 
 data DRideAssignedReq = DRideAssignedReq
