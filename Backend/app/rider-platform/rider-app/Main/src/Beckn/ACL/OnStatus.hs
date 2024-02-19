@@ -66,7 +66,7 @@ buildOnStatusReqV2 req = do
               startedReq <- Common.parseRideStartedEvent order messageId
               return $ DOnStatus.RideStartedDetails startedReq
             _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
-        "COMPLETED" -> do
+        "COMPLETE" -> do
           case eventType of
             "RIDE_ENDED" -> do
               completedReq <- Common.parseRideCompletedEvent order messageId

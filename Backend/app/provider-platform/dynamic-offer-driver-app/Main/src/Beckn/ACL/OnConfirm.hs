@@ -24,7 +24,7 @@ import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Text
-bookingStatusCode (DConfirm.DriverQuote _ _) = Nothing
+bookingStatusCode (DConfirm.DriverQuote _ _) = Nothing -- TODO: refactor it like so case match is not needed
 bookingStatusCode (DConfirm.StaticQuote _) = Just "NEW"
 bookingStatusCode (DConfirm.RideOtpQuote _) = Just "NEW"
 
@@ -53,14 +53,13 @@ tfOrder res = do
         orderStatus = Just "ACTIVE"
       }
 
--- Note: res.rideInfo will have value only in case of normal ride flow.
 tfFulfillments :: MonadFlow m => DConfirm.DConfirmResp -> m (Maybe [Spec.Fulfillment])
 tfFulfillments res = do
   let stops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode
   return $
     Just
       [ Spec.Fulfillment
-          { fulfillmentAgent = tfAgent res,
+          { fulfillmentAgent = Nothing,
             fulfillmentCustomer = tfCustomer res,
             fulfillmentId = Just res.booking.quoteId,
             fulfillmentState = mkFulfillmentState res.quoteType,
@@ -189,22 +188,6 @@ tfVehicle res = do
         vehicleMake = Nothing,
         vehicleModel = Nothing,
         vehicleRegistration = Nothing
-      }
-
-tfAgent :: DConfirm.DConfirmResp -> Maybe Spec.Agent
-tfAgent res = do
-  rideInfo <- res.rideInfo
-  return $
-    Spec.Agent
-      { agentContact = Nothing,
-        agentPerson =
-          Just
-            Spec.Person
-              { personId = Nothing,
-                personImage = Nothing,
-                personName = Just rideInfo.driver.firstName,
-                personTags = Nothing
-              }
       }
 
 tfCustomer :: DConfirm.DConfirmResp -> Maybe Spec.Customer
