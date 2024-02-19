@@ -939,4 +939,6 @@ getFR stringKey =
         LETS_ENSURE_SAFE_RIDE -> "Assurons un trajet sûr et sécurisé"
         CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "La sécurité des clients est<br>notre responsabilité. Assurons-nous<br>une conduite sûre et heureuse"
         OUR_SAFETY_PARTNER -> "Notre partenaire de sécurité"
+        ABOUT_TEXT -> " est une plateforme ouverte pour mettre en relation chauffeurs et passagers. L'application permet aux conducteurs de trouver facilement des passagers avec les tarifs souhaités proposés. Pas de commission basée sur le trajet, payez simplement un petit montant sous forme d'abonnement mensuel"
+        WELCOME_TEXT -> "Bienvenue chez le partenaire {}"
         _ -> ""
