@@ -115,8 +115,11 @@ checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold ni
   let updatedRoutesInfo = map checkRouteForDeviation routes
   logInfo $ "Updated routes info for rideId: " <> getId rideId <> " is: " <> show updatedRoutesInfo
   setExp (multipleRouteKey $ getId rideId) updatedRoutesInfo 14400
+
+  --This is to be done:
   fork "Performing safety check" $
     when (safetyCheckEnabled && all (\route -> RI.safetyDeviation $ RI.deviationInfo route) updatedRoutesInfo) $ performSafetyCheck rideId
+
   return $ all (\route -> RI.deviation $ RI.deviationInfo route) updatedRoutesInfo
   where
     checkRouteForDeviation :: RI.RouteAndDeviationInfo -> RI.RouteAndDeviationInfo
@@ -209,6 +212,13 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       ( \driverId estimatedDistance -> do
           mRide <- QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
           getTravelledDistance (mRide <&> fst) estimatedDistance
+      )
+      ( \driverId batchWaypoints -> do
+          mRide <-
+            QRide.getInProgressOrNewRideIdAndStatusByDriverId
+              driverId
+              (mRide <&> fst)
+              estimatedDistance
       )
       snapToRoad'
   where
