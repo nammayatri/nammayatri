@@ -4,6 +4,7 @@ CREATE TABLE atlas_driver_offer_bpp.driver_fee(
     `driver_id` Nullable (String),
     `status` Nullable (String),
     `num_rides` Nullable(Int64),
+    `special_zone_amount` Nullable(Float64),
     `platform_fee` Nullable(Float64),
     `cgst` Nullable(Float64),
     `sgst` Nullable(Float64),

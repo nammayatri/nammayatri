@@ -35,6 +35,7 @@ data DriverFeeT f = DriverFeeT
     platformFee :: C f (Maybe Centesimal), -- is it correct?
     cgst :: C f (Maybe Centesimal), -- is it correct?
     sgst :: C f (Maybe Centesimal), -- is it correct?
+    specialZoneAmount :: C f (Maybe Centesimal),
     govtCharges :: C f (Maybe Int),
     collectedAt :: C f CH.DateTime, -- DateTime on clickhouse side
     collectedBy :: C f (Maybe (Id DVolunteer.Volunteer))
@@ -54,6 +55,7 @@ driverFeeTTable =
       platformFee = "platform_fee",
       cgst = "cgst",
       sgst = "sgst",
+      specialZoneAmount = "special_zone_amount",
       govtCharges = "govt_charges",
       collectedAt = "collected_at",
       collectedBy = "collected_by"
@@ -68,6 +70,7 @@ data DriverFeeAggregated = DriverFeeAggregated
     numRidesAgg :: Maybe Int,
     numDrivers :: Int,
     totalAmount :: Maybe Centesimal,
+    specialZoneAmt :: Maybe Centesimal,
     date :: Maybe Time.Day,
     hour :: Maybe Int
   }
@@ -94,8 +97,9 @@ findAllByStatus merchantId statuses mbFrom mbTo = do
                       CH.+. CH.unsafeCoerceNum @(Maybe Int) @(Maybe Centesimal) driverFee.govtCharges
             let numRides = CH.sum_ driverFee.numRides
             let numDrivers = CH.count_ (CH.distinct driverFee.driverId)
+            let specialZoneAmount = CH.sum_ driverFee.specialZoneAmount
             CH.groupBy driverFee.status $ \status -> do
-              (status, numRides, numDrivers, totalAmount)
+              (status, numRides, numDrivers, totalAmount, specialZoneAmount)
         )
         $ CH.filter_
           ( \driverFee _ ->
@@ -132,12 +136,13 @@ findAllByDate merchantId statuses mbFrom mbTo dayBasis mbCollBy = do
                       CH.+. CH.unsafeCoerceNum @(Maybe Int) @(Maybe Centesimal) driverFee.govtCharges
             let numRides = CH.sum_ driverFee.numRides
             let numDrivers = CH.count_ (CH.distinct driverFee.driverId)
+            let specialZoneAmount = CH.sum_ driverFee.specialZoneAmount
             let date' = CH.toDate driverFee.collectedAt
             let hour' = if dayBasis then CH.valColumn 0 else CH.toHour driverFee.collectedAt
             CH.groupBy (date', hour') $ \(date, hour) -> do
-              (totalAmount, numRides, numDrivers, date, hour)
+              (totalAmount, specialZoneAmount, numRides, numDrivers, date, hour)
         )
-        $ CH.orderBy_ (\_ (_, _, _, date, hour) -> CH.asc (date, hour)) $
+        $ CH.orderBy_ (\_ (_, _, _, _, date, hour) -> CH.asc (date, hour)) $
           CH.filter_
             ( \driverFee _ ->
                 driverFee.merchantId CH.==. merchantId
@@ -149,8 +154,8 @@ findAllByDate merchantId statuses mbFrom mbTo dayBasis mbCollBy = do
             $ CH.all_ @CH.ATLAS_DRIVER_OFFER_BPP driverFeeTTable
   pure $ mkDriverFeeByDate <$> driverFeeTuple
 
-mkDriverFeeByStatus :: (Maybe Common.DriverFeeStatus, Maybe Int, Int, Maybe Centesimal) -> DriverFeeAggregated
-mkDriverFeeByStatus (statusAgg, numRidesAgg, numDrivers, totalAmount) = DriverFeeAggregated {date = Nothing, hour = Nothing, ..}
+mkDriverFeeByStatus :: (Maybe Common.DriverFeeStatus, Maybe Int, Int, Maybe Centesimal, Maybe Centesimal) -> DriverFeeAggregated
+mkDriverFeeByStatus (statusAgg, numRidesAgg, numDrivers, totalAmount, specialZoneAmt) = DriverFeeAggregated {date = Nothing, hour = Nothing, ..}
 
-mkDriverFeeByDate :: (Maybe Centesimal, Maybe Int, Int, Time.Day, Int) -> DriverFeeAggregated
-mkDriverFeeByDate (totalAmount, numRidesAgg, numDrivers, date, hour) = DriverFeeAggregated {statusAgg = Nothing, date = Just date, hour = Just hour, ..}
+mkDriverFeeByDate :: (Maybe Centesimal, Maybe Centesimal, Maybe Int, Int, Time.Day, Int) -> DriverFeeAggregated
+mkDriverFeeByDate (totalAmount, specialZoneAmt, numRidesAgg, numDrivers, date, hour) = DriverFeeAggregated {statusAgg = Nothing, date = Just date, hour = Just hour, ..}
