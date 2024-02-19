@@ -960,7 +960,6 @@ data RideBookingReq = RideBookingReq String
 
 newtype RideBookingRes = RideBookingRes {
   agencyName :: String,
-  agencyNumber :: String,
   bookingDetails :: RideBookingAPIDetails ,
   createdAt :: String,
   discount :: Maybe Int,
