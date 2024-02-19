@@ -36,7 +36,7 @@ data FulfillmentType
     RIDE_OTP
   | RENTAL
   | INTER_CITY
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
 
 data StopType
   = -- ..fulfillments.stops.type

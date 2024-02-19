@@ -121,7 +121,7 @@ onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
 
 validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
 validateRequest (BookingConfirmed BookingConfirmedInfo {..}) = do
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
+  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
   return $ ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}
 validateRequest (RideAssigned RideAssignedInfo {..}) = do
   let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
