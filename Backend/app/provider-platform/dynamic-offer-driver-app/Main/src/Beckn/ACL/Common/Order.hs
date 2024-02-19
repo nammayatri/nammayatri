@@ -36,7 +36,7 @@ import qualified Beckn.Types.Core.Taxi.Common.FulfillmentInfo as RideFulfillment
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Quote
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
+import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareParameters as DFParams
@@ -230,11 +230,11 @@ tfAssignedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideAssignedReq ->
 tfAssignedReqToOrder Common.DRideAssignedReq {..} = do
   let Common.BookingDetails {driver, vehicle, ride, booking} = bookingDetails
   let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing isDriverBirthDay isFreeRide (Just $ show Event.RIDE_ASSIGNED)
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing isDriverBirthDay isFreeRide (Just $ show EventEnum.RIDE_ASSIGNED)
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
-        orderStatus = Just "ACTIVE",
+        orderStatus = Just $ show EventEnum.ACTIVE,
         orderFulfillments = Just [fulfillment],
         orderBilling = Nothing,
         orderCancellation = Nothing,
@@ -251,11 +251,11 @@ tfStartReqToOrder Common.DRideStartedReq {..} = do
   let personTag = Utils.mkLocationTagGroupV2 tripStartLocation -- why are we sending trip start and end location in personTags?
       odometerTag = Utils.mkOdometerTagGroupV2 ((.value) <$> ride.startOdometerReading)
   let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> Just odometerTag) (Just personTag) False False (Just $ show Event.RIDE_STARTED)
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> Just odometerTag) (Just personTag) False False (Just $ show EventEnum.RIDE_STARTED)
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
-        orderStatus = Just "ACTIVE",
+        orderStatus = Just $ show EventEnum.ACTIVE,
         orderFulfillments = Just [fulfillment],
         orderBilling = Nothing,
         orderCancellation = Nothing,
@@ -272,12 +272,12 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} = do
   let personTag = Utils.mkLocationTagGroupV2 tripEndLocation
   let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
   distanceTagGroup <- UtilsOU.mkDistanceTagGroup ride
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> distanceTagGroup) (Just personTag) False False (Just $ show Event.RIDE_ENDED)
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just arrivalTimeTagGroup <> distanceTagGroup) (Just personTag) False False (Just $ show EventEnum.RIDE_ENDED)
   quote <- UtilsOU.mkRideCompletedQuote ride fareParams
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
-        orderStatus = Just "COMPLETE",
+        orderStatus = Just $ show EventEnum.COMPLETE,
         orderFulfillments = Just [fulfillment],
         orderPayments = Just $ UtilsOU.mkRideCompletedPayment paymentMethodInfo paymentUrl,
         orderQuote = Just quote,
@@ -294,11 +294,11 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} = do
     let Common.BookingDetails {driver, vehicle, ride} = bookingDetails'
     let image = Nothing
     let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-    Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing False False (Just $ show Event.RIDE_CANCELLED)
+    Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing False False (Just $ show EventEnum.RIDE_CANCELLED)
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
-        orderStatus = Just "CANCELLED",
+        orderStatus = Just $ show EventEnum.CANCELLED,
         orderFulfillments = Just $ maybeToList fulfillment,
         orderCancellation =
           Just $
@@ -317,7 +317,7 @@ tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DDriverArrivedReq ->
 tfArrivedReqToOrder Common.DDriverArrivedReq {..} = do
   let BookingDetails {..} = bookingDetails
   let driverArrivedInfoTags = Utils.mkArrivalTimeTagGroupV2 arrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just driverArrivedInfoTags) Nothing False False (Just $ show Event.RIDE_ARRIVED_PICKUP)
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just driverArrivedInfoTags) Nothing False False (Just $ show EventEnum.RIDE_ARRIVED_PICKUP)
   pure $
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -329,5 +329,5 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} = do
         orderPayments = Nothing,
         orderProvider = Nothing,
         orderQuote = Nothing,
-        orderStatus = Just "ACTIVE"
+        orderStatus = Just $ show EventEnum.ACTIVE
       }
