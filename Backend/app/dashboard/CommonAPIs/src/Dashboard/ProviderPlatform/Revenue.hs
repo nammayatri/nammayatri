@@ -49,12 +49,16 @@ data AllFees = AllFees
   { status :: DriverFeeStatus,
     numRides :: Int,
     numDrivers :: Int,
-    totalAmount :: Int
+    totalAmount :: Int,
+    specialZoneAmount :: Int,
+    openMarketAmount :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data CollectionListElem = CollectionListElem
   { totalAmount :: Int,
+    specialZoneAmount :: Int,
+    openMarketAmount :: Int,
     totalRides :: Int,
     numDrivers :: Int,
     date :: Day,
@@ -89,6 +93,7 @@ data DriverFee = DriverFee -- clickhouse specific
     numRides :: Maybe String,
     numDrivers :: Maybe String,
     totalAmount :: Maybe Centesimal,
+    specialZoneAmount :: Maybe Centesimal,
     date :: Maybe String,
     hour :: Maybe Int
   }

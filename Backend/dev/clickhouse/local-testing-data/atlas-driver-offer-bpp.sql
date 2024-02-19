@@ -9,6 +9,7 @@ INSERT INTO
         cgst,
         sgst,
         govt_charges,
+        special_zone_amount
         collected_at,
         collected_by
     )
@@ -23,6 +24,7 @@ VALUES
         '2.0',
         '1.5',
         6,
+        '2.0',
         '2024-01-22 07:02:42',
         '8b278f98-f9fb-4be6-a19f-175ffe2ac1fb'
     );

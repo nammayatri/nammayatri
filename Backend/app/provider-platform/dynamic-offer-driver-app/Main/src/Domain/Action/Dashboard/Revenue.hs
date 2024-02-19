@@ -52,9 +52,9 @@ getAllDriverFeeHistory merchantShortId opCity mbFrom mbTo = do
 
 getAllFeeFromDriverFee :: MonadFlow m => CHDriverFee.DriverFeeAggregated -> m Common.AllFees
 getAllFeeFromDriverFee CHDriverFee.DriverFeeAggregated {..} = do
-  case (statusAgg, numRidesAgg, totalAmount) of
-    (Just status, Just numRides, Just totalAmount_) -> do
-      pure $ Common.AllFees {status, numRides, numDrivers, totalAmount = round totalAmount_}
+  case (statusAgg, numRidesAgg, totalAmount, specialZoneAmt) of
+    (Just status, Just numRides, Just totalAmount_, Just specialZoneAmount_) -> do
+      pure $ Common.AllFees {status, numRides, numDrivers, totalAmount = round totalAmount_, specialZoneAmount = round specialZoneAmount_, openMarketAmount = round (totalAmount_ - specialZoneAmount_)}
     _ -> throwError $ InvalidRequest "Couldn't find driver fee"
 
 getCollectionHistory :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CollectionList
@@ -83,11 +83,13 @@ getCollectionHistory merchantShortId opCity volunteerId place mbFrom mbTo = do
 
 getCollectionListElem :: MonadFlow m => CHDriverFee.DriverFeeAggregated -> m Common.CollectionListElem
 getCollectionListElem CHDriverFee.DriverFeeAggregated {..} = do
-  case (totalAmount, numRidesAgg, date, hour) of
-    (Just totalAmount_, Just totalRides, Just date_, Just hour_) ->
+  case (totalAmount, specialZoneAmt, numRidesAgg, date, hour) of
+    (Just totalAmount_, Just specialZoneAmount_, Just totalRides, Just date_, Just hour_) ->
       pure $
         Common.CollectionListElem
           { totalAmount = round totalAmount_,
+            specialZoneAmount = round specialZoneAmount_,
+            openMarketAmount = round (totalAmount_ - specialZoneAmount_),
             date = date_,
             hour = hour_,
             ..
