@@ -40,7 +40,6 @@ instance FromTType' BeamBLO.BlackListOrg BlackListOrg where
         BlackListOrg
           { id = Id id,
             subscriberId = ShortId subscriberId,
-            _type = orgType,
             domain = domain
           }
 
@@ -49,6 +48,5 @@ instance ToTType' BeamBLO.BlackListOrg BlackListOrg where
     BeamBLO.BlackListOrgT
       { BeamBLO.id = getId id,
         BeamBLO.subscriberId = getShortId subscriberId,
-        BeamBLO.orgType = _type,
         BeamBLO.domain = domain
       }
