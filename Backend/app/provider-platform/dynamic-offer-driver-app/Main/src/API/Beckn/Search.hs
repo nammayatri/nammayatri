@@ -77,7 +77,7 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
           let callbackUrl = gateway.subscriber_url
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
-          isValueAddNP_ <- VNP.isValueAddNP dSearchRes.provider.subscriberId.getShortId
+          isValueAddNP_ <- VNP.isValueAddNP dSearchReq.bapId
           if (notNull dSearchRes.quotes && isValueAddNP_) || (null dSearchRes.quotes)
             then do
               onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country
