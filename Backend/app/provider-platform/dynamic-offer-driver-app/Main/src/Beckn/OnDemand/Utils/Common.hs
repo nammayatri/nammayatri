@@ -25,6 +25,7 @@ import qualified Data.Aeson as A
 import qualified Data.List as List
 import Data.Maybe
 import qualified Data.Text as T
+import Domain.Types.BecknConfig
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DCT
 import qualified Domain.Types.Location as DL
@@ -632,3 +633,34 @@ buildAddressFromText fullAddress = do
 
 replaceEmpty :: Maybe Text -> Maybe Text
 replaceEmpty string = if string == Just "" then Nothing else string
+
+mapVariantToVehicle :: Variant.Variant -> VehicleCategory
+mapVariantToVehicle variant = do
+  case variant of
+    Variant.SEDAN -> CAB
+    Variant.HATCHBACK -> CAB
+    Variant.TAXI -> CAB
+    Variant.SUV -> CAB
+    Variant.TAXI_PLUS -> CAB
+    Variant.AUTO_RICKSHAW -> AUTO_RICKSHAW
+
+tfCancellationFee :: Maybe Int -> Maybe Int -> Maybe Spec.Fee
+tfCancellationFee mbAmount mbFeePercent = do
+  let amount = fromMaybe 0 mbAmount
+      feePercent = fromMaybe 0 mbFeePercent
+  Just
+    Spec.Fee
+      { feeAmount = mkPrice amount,
+        feePercentage = Just $ encodeToText feePercent
+      }
+  where
+    mkPrice amount =
+      Just
+        Spec.Price
+          { priceComputedValue = Nothing,
+            priceCurrency = Just "INR",
+            priceMaximumValue = Nothing,
+            priceMinimumValue = Nothing,
+            priceOfferedValue = Nothing,
+            priceValue = Just $ encodeToText amount
+          }

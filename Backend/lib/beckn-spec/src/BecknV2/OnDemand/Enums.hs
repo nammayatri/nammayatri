@@ -15,8 +15,9 @@
 module BecknV2.OnDemand.Enums where
 
 import Data.Aeson
-import Data.Aeson.Types
+import Data.Aeson.Types (typeMismatch)
 import Kernel.Prelude
+import Kernel.Utils.JSON
 import Prelude (show)
 
 -- #################################################################
@@ -75,11 +76,10 @@ instance Show PaymentStatus where
 instance FromJSON PaymentStatus where
   parseJSON (String "PAID") = return PAID
   parseJSON (String "NOT-PAID") = return NOT_PAID
-  parseJSON _ = return NOT_PAID
+  parseJSON wrongVal = typeMismatch "Invalid PaymentStatus" wrongVal
 
 instance ToJSON PaymentStatus where
-  toJSON PAID = String "PAID"
-  toJSON NOT_PAID = String "NOT-PAID"
+  toJSON = genericToJSON constructorsWithHyphens
 
 data PaymentCollectedBy
   = -- ..fulfillments.payment.collected.by
@@ -101,15 +101,13 @@ instance Show PaymentType where
   show POST_FULFILLMENT = "POST-FULFILLMENT"
 
 instance ToJSON PaymentType where
-  toJSON PRE_ORDER = String "PRE-ORDER"
-  toJSON ON_FULFILLMENT = String "ON-FULFILLMENT"
-  toJSON POST_FULFILLMENT = String "POST-FULFILLMENT"
+  toJSON = genericToJSON constructorsWithHyphens
 
 instance FromJSON PaymentType where
   parseJSON (String "PRE-ORDER") = return PRE_ORDER
   parseJSON (String "ON-FULFILLMENT") = return ON_FULFILLMENT
   parseJSON (String "POST-FULFILLMENT") = return POST_FULFILLMENT
-  parseJSON _ = return ON_FULFILLMENT
+  parseJSON wrongVal = typeMismatch "Invalid PaymentType" wrongVal
 
 data OrderStatus
   = -- ..order.status
@@ -128,11 +126,7 @@ instance Show OrderStatus where
   show CANCELLED = "CANCELLED"
 
 instance ToJSON OrderStatus where
-  toJSON SOFT_CANCEL = String "SOFT-CANCEL"
-  toJSON CONFIRM_CANCEL = String "CONFIRM-CANCEL"
-  toJSON ACTIVE = String "ACTIVE"
-  toJSON COMPLETE = String "COMPLETE"
-  toJSON CANCELLED = String "CANCELLED"
+  toJSON = genericToJSON constructorsWithHyphens
 
 instance FromJSON OrderStatus where
   parseJSON (String "SOFT-CANCEL") = return SOFT_CANCEL
@@ -140,7 +134,7 @@ instance FromJSON OrderStatus where
   parseJSON (String "ACTIVE") = return ACTIVE
   parseJSON (String "COMPLETE") = return COMPLETE
   parseJSON (String "CANCELLED") = return CANCELLED
-  parseJSON _ = return ACTIVE
+  parseJSON wrongVal = typeMismatch "Invalid OrderStatus" wrongVal
 
 data QuoteBreakupTitle
   = -- ..quote.breakup.title
