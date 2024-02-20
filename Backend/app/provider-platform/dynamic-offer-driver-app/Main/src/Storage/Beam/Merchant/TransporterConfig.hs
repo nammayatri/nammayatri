@@ -84,6 +84,7 @@ data TransporterConfigT f = TransporterConfigT
     canDowngradeToTaxi :: B.C f Bool,
     canSuvDowngradeToTaxi :: B.C f Bool,
     canSwitchToRental :: B.C f Bool,
+    canSwitchToIntercity :: B.C f (Maybe Bool),
     aadhaarImageResizeConfig :: B.C f (Maybe A.Value),
     enableFaceVerification :: B.C f Bool,
     specialZoneBookingOtpExpiry :: B.C f Int,

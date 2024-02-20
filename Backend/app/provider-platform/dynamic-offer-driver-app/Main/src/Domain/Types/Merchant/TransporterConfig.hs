@@ -112,6 +112,7 @@ data TransporterConfigD u = TransporterConfig
     canDowngradeToTaxi :: Bool,
     canSuvDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
+    canSwitchToIntercity :: Bool,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
     languagesToBeTranslated :: [Language],

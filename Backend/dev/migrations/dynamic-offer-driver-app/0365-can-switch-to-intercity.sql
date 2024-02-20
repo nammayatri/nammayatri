@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_intercity boolean;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN can_switch_to_intercity boolean default true;
