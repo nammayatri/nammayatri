@@ -170,7 +170,7 @@ customError =  { code : 400
 --------------------------------- triggerOTPBT---------------------------------------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    -- _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
+    _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
     headers <- getHeaders' "" false
     withAPIResultBT (EP.triggerOTP "") identity errorHandler (lift $ lift $ callAPI headers payload)
     where
@@ -1340,3 +1340,55 @@ pushSDKEvents = do
     withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
     where
         unwrapResponse x = x
+-------------------------------------------------------------------------- List all lms modules --------------------------------------------------------------------------
+
+getAllLmsModules :: String -> Flow GlobalState (Either ErrorResponse LmsGetModuleRes)
+getAllLmsModules language = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getAllLmsModules language) unwrapResponse $ callAPI headers (GetAllModuleReq language)
+  where
+    unwrapResponse x = x
+
+getAllLmsVideos :: String -> String -> Flow GlobalState (Either ErrorResponse LmsGetVideosRes)
+getAllLmsVideos moduleId language = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getAllLmsVideos moduleId language) unwrapResponse $ callAPI headers (GetAllVideosReq moduleId language)
+  where
+    unwrapResponse x = x
+
+getAllLmsQuestions :: String -> String -> Flow GlobalState (Either ErrorResponse LmsGetQuizRes)
+getAllLmsQuestions moduleId language = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getAllLmsQuestions moduleId language) unwrapResponse $ callAPI headers (GetAllQuestionsReq moduleId language)
+  where
+    unwrapResponse x = x
+
+markVideoAsStarted :: StartVideoUpdateAPIReq -> Flow GlobalState (Either ErrorResponse StartVideoUpdateRes)
+markVideoAsStarted req = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.markVideoAsStarted "") unwrapResponse $ callAPI headers req
+  where
+    unwrapResponse x = x
+
+markVideoAsCompleted :: CompletedVideoUpdateAPIReq -> Flow GlobalState (Either ErrorResponse CompletedVideoUpdateRes)
+markVideoAsCompleted req = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.markVideoAsCompleted "") unwrapResponse $ callAPI headers req
+  where
+    unwrapResponse x = x
+
+confirmQuestion :: QuestionConfirmReq -> Flow GlobalState (Either ErrorResponse QuestionConfirmRes)
+confirmQuestion req = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.confirmQuestion "") unwrapResponse $ callAPI headers req
+  where
+    unwrapResponse x = x
+
+------------------------------------ api for reels -----------------------------------------------------------------------------------
+
+getReelsVideo :: String -> String -> Flow GlobalState (Either ErrorResponse ReelsResp)
+getReelsVideo reelsKey language = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getReelsData reelsKey language) unwrapResponse $ callAPI headers (GetAllReelsVideosReq reelsKey language)
+  where
+    unwrapResponse x = x

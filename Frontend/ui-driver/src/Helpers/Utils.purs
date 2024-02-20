@@ -202,18 +202,18 @@ otpRule =
   group : Nothing
 }
 
--- startOtpReciever :: forall action. (String -> action) -> (action -> Effect Unit) -> Effect (Effect Unit)
--- startOtpReciever action push = do
---   fiber <- launchAff $ do
---     otpListener <- traverse Readers.getOtpListener $ fromArray [ Readers.smsRetriever ]
---     _ <- traverse identity $ (otpListener <#> _.setOtpRules) <*> Just [otpRule]
---     message <- traverse identity $ (otpListener <#> _.getNextOtp)
---     case message of
---       Just (Readers.Otp val _ _) -> liftEffect $ push $ action val
---       _ -> pure unit
---     void $ initiateSMSRetriever
---     liftEffect $ startOtpReciever action push
---   pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
+startOtpReciever :: forall action. (String -> action) -> (action -> Effect Unit) -> Effect (Effect Unit)
+startOtpReciever action push = do
+  fiber <- launchAff $ do
+    otpListener <- traverse Readers.getOtpListener $ fromArray [ Readers.smsRetriever ]
+    _ <- traverse identity $ (otpListener <#> _.setOtpRules) <*> Just [otpRule]
+    message <- traverse identity $ (otpListener <#> _.getNextOtp)
+    case message of
+      Just (Readers.Otp val _ _) -> liftEffect $ push $ action val
+      _ -> pure unit
+    void $ initiateSMSRetriever
+    liftEffect $ startOtpReciever action push
+  pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
 
 -- -- type Locations = {
 -- --     paths :: Array Paths
@@ -657,3 +657,32 @@ generateReferralLink source medium term content campaign driverReferralType doma
       <> "%26utm_content%3D" <> content 
       <> "%26utm_campaign%3D" <> campaign 
       <> "%26anid%3Dadmob&id=" <> packageId
+
+getLanguageTwoLetters :: Maybe String ->  String
+getLanguageTwoLetters mbLanguage = 
+  let language = fromMaybe (getLanguageLocale languageKey) mbLanguage
+  in 
+  case language of
+    "HI_IN" -> "hi"
+    "KN_IN" -> "kn"
+    "TA_IN" -> "ta"
+    "TE_IN" -> "te"
+    "FR_FR" -> "fr"
+    "ML_IN" -> "ml"
+    "BN_IN" -> "bn"
+    _       -> "en"
+
+
+generateLanguageList :: Array String -> Array MCT.Language
+generateLanguageList languages = map getLanguage languages
+  where 
+   getLanguage lang = case lang of
+      "HINDI" -> {name : "हिंदी", value: "HI_IN", subtitle: "Hindi"}
+      "KANNADA" -> {name : "ಕನ್ನಡ", value: "KN_IN", subtitle: "Kannada"}
+      "TAMIL" -> {name :"தமிழ்", value : "TA_IN", subtitle : "Tamil"}
+      "TELUGU" -> {name:"తెలుగు", value:"TE_IN", subtitle: "Telugu"}
+      "FRENCH" -> {name:"Français", value:"FR_FR", subtitle: "French"}
+      "MALAYALAM" -> {name:"മലയാളം", value:"ML_IN", subtitle: "Malayalam"}
+      "BENGALI" -> {name:"বাংলা", value:"BN_IN", subtitle: "Bengali"}
+      "ENGLISH" -> {name : "English", value: "EN_US", subtitle: "English"}
+      _ -> {name : "English", value: "EN_US", subtitle: "English"}

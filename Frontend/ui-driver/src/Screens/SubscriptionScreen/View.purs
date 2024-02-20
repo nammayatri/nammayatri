@@ -70,7 +70,7 @@ import Screens as ScreenNames
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getAllFareFromArray, getPlanPrice)
 import Screens.Types (AutoPayStatus(..), DueItem, GlobalProps, KioskLocation(..), MyPlanData, OfferBanner, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), GetDriverInfoReq(..), LastPaymentType(..))
+import Services.API (ReelsResp, FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), GetDriverInfoReq(..), LastPaymentType(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
@@ -537,7 +537,7 @@ carouselView push state =
   let paymentPending = isPaymentPending state
   in
   linearLayout
-  [ width $ WRAP_CONTENT
+  [ width $ MATCH_PARENT
   , height $ WRAP_CONTENT
   , padding $ PaddingVertical 24 24
   , background $ Color.white900
@@ -566,15 +566,15 @@ carouselSmallCardView push state reelInfo index isFirst =
   ][  imageView
       [ width $ V 196
       , height $ V 73
-      , imageWithFallback $ "," <> reelInfo.carouselSmallImageUrl
+      , imageWithFallback $ "," <> fromMaybe "" reelInfo.carouselSmallImageUrl
       ]
     , linearLayout
       [ width $ V 196
       , height $ V 73
       , gravity CENTER_VERTICAL
       ][  textView $ 
-          [ textFromHtml reelInfo.carouselTextString
-          , color reelInfo.carouselTextColor
+          [ textFromHtml $ fromMaybe "" reelInfo.carouselTextString
+          , color $ fromMaybe Color.white900 reelInfo.carouselTextColor
           , height $ WRAP_CONTENT
           , width $ WRAP_CONTENT
           , margin $ MarginLeft 12
@@ -604,14 +604,14 @@ carouselBigCardView push state reelInfo index isFirst =
   ][  imageView
       [ width $ V 196
       , height $ V 196
-      , imageWithFallback $ "," <> reelInfo.carouselBigImageUrl
+      , imageWithFallback $ "," <> (fromMaybe "" reelInfo.carouselBigImageUrl)
       ]
     , relativeLayout
       [ width $ V 196
       , height $ V 196
       ][  textView $ 
-          [ textFromHtml reelInfo.carouselTextString
-          , color reelInfo.carouselTextColor
+          [ textFromHtml $ fromMaybe "" reelInfo.carouselTextString
+          , color $ fromMaybe Color.white900 reelInfo.carouselTextColor
           , height $ WRAP_CONTENT
           , width $ WRAP_CONTENT
           , margin $ Margin 12 20 12 12

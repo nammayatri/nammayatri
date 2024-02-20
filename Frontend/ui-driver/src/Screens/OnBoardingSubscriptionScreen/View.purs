@@ -168,7 +168,7 @@ youtubeView push state reelDataItem =
   ][ imageView
      [ width $ V imageSize
      , height $ V imageSize
-     , imageWithFallback $ "," <> reelDataItem.carouselBigImageUrl
+     , imageWithFallback $ "," <> fromMaybe "" reelDataItem.carouselBigImageUrl
      ]
   ,  linearLayout
      [ width $ V imageSize

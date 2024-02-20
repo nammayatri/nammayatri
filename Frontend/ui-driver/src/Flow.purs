@@ -113,13 +113,13 @@ import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..))
 import Services.API as API
-import Services.Accessor (_lat, _lon, _id, _orderId)
+import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..))
+import Types.App (LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
@@ -127,7 +127,8 @@ import Timers (clearTimerWithId)
 import RemoteConfig as RC
 import Locale.Utils
 import Data.Array as DA
-
+import Screens.Benefits.LmsQuizScreen.Transformer (transformQuizRespToQuestions)
+import Screens.OnBoardingSubscriptionScreen.Transformer (transformReelsRespToReelsData)
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
@@ -436,6 +437,7 @@ handleDeepLinksFlow event activeRideResp = do
               updateAvailableAppsAndGoToSubs
             "lang" -> do
               liftFlowBT hideSplash 
+              modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
               selectLanguageFlow
             "contest" -> do
               liftFlowBT hideSplash
@@ -975,6 +977,7 @@ driverProfileFlow = do
     ABOUT_US_SCREEN -> aboutUsFlow
     SELECT_LANGUAGE_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_language_select" 
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
       selectLanguageFlow
     ON_BOARDING_FLOW -> onBoardingFlow
     GO_TO_LOGOUT -> logoutFlow
@@ -1376,12 +1379,20 @@ goToLocationFlow = do
 selectLanguageFlow :: FlowBT String Unit
 selectLanguageFlow = do
   let selectLang = getLanguageLocale languageKey
-  modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ selectedLanguage = if (selectLang == "__failed") then "EN_US" else selectLang}})
+  modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ selectedLanguage = if selectLangState.props.onlyGetTheSelectedLanguage then selectLangState.props.selectedLanguage else if (selectLang == "__failed") then "EN_US" else selectLang}})
   action <- UI.selectLanguageScreen
   case action of
     CHANGE_LANGUAGE -> do
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
       driverProfileFlow
+    LANGUAGE_CONFIRMED state -> do
+      setValueToLocalStore LMS_SELECTED_LANGUAGE_CACHE state.props.selectedLanguage
+      case state.props.selectLanguageForScreen of 
+        "LMS_QUIZ_SCREEN" -> modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { props {selectedLanguage = state.props.selectedLanguage, showShimmer = true}})
+        "LMS_VIDEO_SCREEN" -> modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {selectedLanguage = state.props.selectedLanguage, showShimmer = true}})
+        _ -> pure unit
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
+      pure unit
 
 bookingOptionsFlow :: FlowBT String Unit
 bookingOptionsFlow = do
@@ -1846,8 +1857,11 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
 onBoardingSubscriptionScreenFlow :: Int -> FlowBT String Unit
 onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
   setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
-  let res = RC.reelsData "reels_data_onboarding"
-  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{data {reelsData = res }, props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
+  respBT <- lift $ lift $ Remote.getReelsVideo "reels_data_onboarding" $ HU.getLanguageTwoLetters $ Just $ getLanguageLocale languageKey
+  let reelsData = case respBT of
+                    Left err -> API.ReelsResp {reels : []}
+                    Right resp -> resp
+  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{data { reelsData = transformReelsRespToReelsData reelsData}, props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
   action <- UI.onBoardingSubscriptionScreen
   case action of 
     REGISTERATION_ONBOARDING state -> do
@@ -2527,9 +2541,14 @@ ackScreenFlow = do
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   liftFlowBT $ runEffectFn1 initiatePP unit
-  let res = RC.reelsData "reels_data"
-      hello = spy "aa gaya data" res
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data {reelsData = res }, props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN"}})
+
+  reelsResp <- lift $ lift $ Remote.getReelsVideo "reels_data" $ HU.getLanguageTwoLetters $ Just (getLanguageLocale languageKey)
+  let reelsRespData = case reelsResp of
+                        Left err -> API.ReelsResp {reels : []}
+                        Right resp -> resp
+
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data {reelsData = transformReelsRespToReelsData reelsRespData }, props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN"}})
+
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of
@@ -3133,21 +3152,26 @@ welcomeScreenFlow = do
   case welcomeScreen of
     GoToMobileNumberScreen -> loginFlow
 
-driverReferralScreenFlow :: FlowBT String Unit
-driverReferralScreenFlow = do
+benefitsScreenFlow :: FlowBT String Unit
+benefitsScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
-  void $ lift $ lift $ liftFlow $ logEvent logField_ "driverReferralScreenFlow"
+  _ <- lift $ lift $ liftFlow $ logEvent logField_ "benefitsScreenFlow"
   let referralCode = getValueToLocalStore REFERRAL_CODE
-  modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> driverReferralScreen { data {referralCode = referralCode}})
-  driverReferralScreen <- UI.driverReferralScreen
-  case driverReferralScreen of
+  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { data {referralCode = referralCode}})
+  benefitsScreen <- UI.benefitsScreen
+  case benefitsScreen of
     DRIVER_REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
     DRIVER_REFERRAL_SCREEN_NAV HomeScreenNav -> homeScreenFlow
     DRIVER_REFERRAL_SCREEN_NAV GoToRideHistory -> myRidesScreenFlow
     DRIVER_REFERRAL_SCREEN_NAV GoToAlerts -> notificationFlow
     DRIVER_REFERRAL_SCREEN_NAV (GoToEarningsScreen _) -> driverEarningsFlow
-    DRIVER_REFERRAL_SCREEN_NAV _ -> driverReferralScreenFlow
+    DRIVER_REFERRAL_SCREEN_NAV _ -> benefitsScreenFlow
     DRIVER_CONTEST_SCREEN -> referralScreenFlow
+    GO_TO_LMS_VIDEO_SCREEN state -> do
+      let cachedSelectedLanguage = (getValueToLocalStore LMS_SELECTED_LANGUAGE_CACHE)
+      let selectedLanguage = if (cachedSelectedLanguage == "__failed" || cachedSelectedLanguage == "null" || cachedSelectedLanguage == "") then getLanguageLocale languageKey else cachedSelectedLanguage
+      modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {selectedLanguage = selectedLanguage, selectedModule = state.props.selectedModule}})
+      lmsVideoScreenFlow
 
 referralFlow :: FlowBT String Unit
 referralFlow = do
@@ -3156,8 +3180,159 @@ referralFlow = do
       referralType = case (cityConfig.showDriverReferral || appConfig.enableDriverReferral), (cityConfig.showCustomerReferral || appConfig.enableCustomerReferral) of
                       false, true -> ST.CUSTOMER
                       _, _ -> ST.DRIVER
-  modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> driverReferralScreen { props {driverReferralType = referralType}})
-  driverReferralScreenFlow
+  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { props {driverReferralType = referralType}})
+  benefitsScreenFlow
+
+lmsVideoScreenFlow :: FlowBT String Unit
+lmsVideoScreenFlow = do
+  modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {showShimmer = true}})
+  lmsVideoScreenAction <- UI.lmsVideoScreen
+  case lmsVideoScreenAction of
+    GO_TO_QUIZ_SCREEN state-> do
+      case state.props.selectedModule of
+        Nothing -> pure unit
+        Just selModule -> do
+          res <- lift $ lift $ Remote.getAllLmsQuestions (selModule ^. _moduleId) $ HU.getLanguageTwoLetters $ Just state.props.selectedLanguage
+          case res of
+            Right resp -> do
+                let (API.LmsGetQuizRes extractedData ) = resp
+                modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { data  {questions = transformQuizRespToQuestions resp}, 
+                                                                                              props { selectedLanguage = state.props.selectedLanguage,
+                                                                                                      selectedTranslatedModule = Just $ extractedData.selectedModuleInfo,
+                                                                                                      currentQuestionIndex = 0,
+                                                                                                      currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing, selectedMultipleOptions : []}
+                                                                                                    }
+                                                                                            }
+                                                            )
+            Left err -> do
+                pure $ toast $ getString UNABLE_TO_LOAD_QUIZ_PLEASE_TRY_AGAIN
+                lmsVideoScreenFlow
+      modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {isFetchingQuiz = false}})
+      lmsQuizFlow
+    REFRESH_LMS_VIDEO_SCREEN state -> lmsVideoScreenFlow
+    GO_TO_BENEFITS_SCREEN -> do
+      modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { props {showShimmer = true}, data {moduleList = {completed : [], remaining : []}}})
+      benefitsScreenFlow
+    SELECT_LANGUAGE_FOR_VIDEOS state -> do
+      let genLanguageList = case state.props.selectedModule of
+                              Nothing -> state.data.config.languageList
+                              Just selModule ->  HU.generateLanguageList $ selModule ^. _languagesAvailableForVideos
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ data { languageList = genLanguageList},
+                                                                                              props{ selectedLanguage = state.props.selectedLanguage,
+                                                                                                     onlyGetTheSelectedLanguage = true,
+                                                                                                     selectLanguageForScreen = "LMS_VIDEO_SCREEN" 
+                                                                                                    }
+                                                                                            }
+                                                        )
+      selectLanguageFlow
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
+      lmsVideoScreenFlow
+
+lmsQuizFlow :: FlowBT String Unit
+lmsQuizFlow = do
+  quizScreenAction <- UI.lmsQuizScreen
+  modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen {props {showShimmer = false}})
+  case quizScreenAction of
+    GO_TO_NEXT_QUESTION state -> goToQuizNextQuestionFlow state
+    CONFIRM_QUESTION state -> confirmQuestionFlow state
+    RETRY_QUESTION state -> lmsQuizFlow
+    RETAKE_QUIZ_SO state -> retakeQuizFlow state
+    SELECT_LANGUAGE_FOR_QUESTION state -> do
+      let genLanguageList = case state.props.selectedTranslatedModule of
+                              Nothing -> state.data.config.languageList
+                              Just selModule ->  HU.generateLanguageList $ selModule ^. _languagesAvailableForVideos
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ data {languageList = genLanguageList},
+                                                                                              props{  selectedLanguage = state.props.selectedLanguage,
+                                                                                                      onlyGetTheSelectedLanguage = true,
+                                                                                                      selectLanguageForScreen = "LMS_QUIZ_SCREEN"
+                                                                                                    }
+                                                                                             }
+                                                        )
+      selectLanguageFlow
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
+      modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { props {languageUpdated = true}})
+      lmsQuizFlow
+    GO_TO_LMS_VIDEOS_SCREEN_FROM_QUIZ state -> do
+       modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {selectedLanguage = state.props.selectedLanguage}})
+       lmsVideoScreenFlow
+    GO_TO_BENEFITS_SCREEN_FROM_QUIZ _ -> benefitsScreenFlow
+  lmsQuizFlow
+
+goToQuizNextQuestionFlow :: ST.LmsQuizScreenState -> FlowBT String Unit
+goToQuizNextQuestionFlow state = do
+  let updatedQuestions = mapWithIndex (\index question -> 
+      if (index ==  state.props.currentQuestionIndex + 1) 
+        then question {questionStatusDuringQuiz = ST.QUESTION_ATTEMPTING}
+      else if (index == state.props.currentQuestionIndex && question.questionStatusDuringQuiz == ST.QUESTION_ATTEMPTING) 
+        then
+            let updatedStatus = case question.previousHistory of
+                                  Nothing -> ST.QUESTION_INCORRECT
+                                  Just (API.LmsQuizHistory history) -> if history.status == API.CORRECT then ST.QUESTION_CORRECT else ST.QUESTION_INCORRECT
+            in question {questionStatusDuringQuiz = updatedStatus}
+      else question ) state.data.questions
+  modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { data {questions = updatedQuestions}, 
+      props {currentQuestionIndex = state.props.currentQuestionIndex + 1, currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing, selectedMultipleOptions : []}}})
+  pure $ toggleBtnLoader "QuizPrimaryButton_NEXT_QUESTION" false
+  lmsQuizFlow
+
+retakeQuizFlow :: ST.LmsQuizScreenState -> FlowBT String Unit
+retakeQuizFlow state =
+  case state.props.selectedTranslatedModule of
+    Nothing -> pure unit
+    Just selModule -> do
+      res <- lift $ lift $ Remote.getAllLmsQuestions (selModule ^. _moduleId) (HU.getLanguageTwoLetters $ Just (getLanguageLocale languageKey))
+      case res of
+        Right resp -> do
+            let (API.LmsGetQuizRes extractedResp) = resp
+            modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { data {questions = transformQuizRespToQuestions resp}, 
+                                                                                          props { isRetryEnabled = false,
+                                                                                                  showShimmer = false,
+                                                                                                  selectedTranslatedModule = Just $ extractedResp.selectedModuleInfo,
+                                                                                                  currentQuestionIndex = 0,
+                                                                                                  currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing,
+                                                                                                  selectedMultipleOptions : []}}
+                                                        })
+            lmsQuizFlow
+        Left err -> do
+          pure $ toast $ getString SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
+          lmsVideoScreenFlow
+
+confirmQuestionFlow :: ST.LmsQuizScreenState -> FlowBT String Unit
+confirmQuestionFlow state = 
+  let moduleId = maybe "" (\selModule -> selModule ^. _moduleId) state.props.selectedTranslatedModule
+  in 
+  case (state.data.questions !! state.props.currentQuestionIndex) of
+    Nothing -> do
+      modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen {props {isConfirming = false, isConfirmed = true}})
+      lmsQuizFlow
+    Just questionInfo -> do
+      let req = case questionInfo.options of
+                  API.SingleSelect _ -> case state.props.currentQuestionSelectedOptionsData.selectedSingleOption of
+                                          Nothing -> generateQuestionConfirmReq questionInfo.questionId moduleId questionInfo.language $ API.SingleSelectedOption ""
+                                          Just option -> generateQuestionConfirmReq  questionInfo.questionId moduleId questionInfo.language $ API.SingleSelectedOption option.optionId
+                  API.MultiSelect _ -> generateQuestionConfirmReq questionInfo.questionId moduleId  questionInfo.language $ API.MultiSelectedOption getMultipleSelectedOptions
+      resp <- lift $ lift $ Remote.confirmQuestion req
+      case resp of
+        Right (API.QuestionConfirmRes resp) -> do
+          let updatedQuestions = map (\eQuestion -> if eQuestion.questionId == questionInfo.questionId 
+                                                    then eQuestion {validationRes = Just (API.QuestionConfirmRes resp), questionStatusDuringQuiz = if resp.validation == API.CORRECT_ANSWER then ST.QUESTION_CORRECT else ST.QUESTION_INCORRECT}
+                                                    else eQuestion
+                                      ) state.data.questions
+          modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen {data {questions = updatedQuestions}, props {isConfirming = false, isConfirmed = true}})
+          lmsQuizFlow
+        Left err -> do
+          modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen {props {isConfirming = false, isConfirmed = true}})
+          lmsQuizFlow
+  where
+    generateQuestionConfirmReq :: String -> String -> String -> API.SelectedOption ->  API.QuestionConfirmReq
+    generateQuestionConfirmReq questionId moduleId language selectedOption = API.QuestionConfirmReq { 
+      questionId : questionId
+    , moduleId : moduleId
+    , language : language
+    , selectedOption : selectedOption
+    }
+
+    getMultipleSelectedOptions = (map (\eOption -> eOption.optionId) state.props.currentQuestionSelectedOptionsData.selectedMultipleOptions)
 
 driverEarningsFlow :: FlowBT String Unit
 driverEarningsFlow = do 

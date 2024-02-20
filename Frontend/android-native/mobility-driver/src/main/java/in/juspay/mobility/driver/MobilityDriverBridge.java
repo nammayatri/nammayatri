@@ -103,6 +103,7 @@ import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.common.MobilityCommonBridge;
 import in.juspay.mobility.common.Utils;
 import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
+import in.juspay.mobility.app.R;
 
 public class MobilityDriverBridge extends MobilityCommonBridge {
 
@@ -679,9 +680,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         if (activity != null) {
             activity.runOnUiThread(() -> {
                 if (isCameraPermissionGranted()) {
-                    View profilePictureLayout = LayoutInflater.from(context).inflate(R.layout.validate_documents_preview, null, false);
-                    previewView = profilePictureLayout.findViewById(R.id.previewView);
-                    bCapture = profilePictureLayout.findViewById(R.id.bCapture);
+                    View profilePictureLayout = LayoutInflater.from(context).inflate(in.juspay.mobility.driver.R.layout.validate_documents_preview, null, false);
+                    previewView = profilePictureLayout.findViewById(in.juspay.mobility.driver.R.id.previewView);
+                    bCapture = profilePictureLayout.findViewById(in.juspay.mobility.driver.R.id.bCapture);
                     bCapture.setOnClickListener(view -> capturePhoto());
                     ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(context);
                     cameraProviderFuture.addListener(() -> {

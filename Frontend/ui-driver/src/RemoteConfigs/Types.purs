@@ -19,7 +19,8 @@ module RemoteConfig.Types (
   ) where
 
 import Prelude
-import Common.Types.App(ReelButtonConfig(..), ReelItem(..)) as Reexport
+import Data.Maybe(Maybe(..))
+import Common.Types.App(ReelButtonConfig(..), ReelItem(..), ReelVideoThresholdConfig(..)) as Reexport
 
 type RCSubscription = {
     max_dues_limit :: Number,
