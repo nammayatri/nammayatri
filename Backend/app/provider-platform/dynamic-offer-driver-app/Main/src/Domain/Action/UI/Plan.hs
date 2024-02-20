@@ -22,7 +22,6 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Domain.Action.UI.Driver (calcExecutionTime, getPlanDataFromDriverFee, planMaxRides)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -795,3 +794,31 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
             }
     )
     driverFees
+
+planMaxRides :: Plan -> Maybe Int
+planMaxRides plan = do
+  case plan.planBaseAmount of
+    PERRIDE_BASE baseAmount -> Just $ round $ (plan.maxAmount) / baseAmount
+    _ -> Nothing
+
+getPlanDataFromDriverFee ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  DF.DriverFee ->
+  m (Maybe Plan)
+getPlanDataFromDriverFee driverFee = do
+  let (mbPlanId, mbPaymentMode, serviceName) = (driverFee.planId, driverFee.planMode, driverFee.serviceName)
+  case (mbPlanId, mbPaymentMode) of
+    (Just planId, _) -> do
+      let paymentMode = fromMaybe MANUAL mbPaymentMode
+      QPD.findByIdAndPaymentModeWithServiceName planId paymentMode serviceName
+    _ -> return Nothing
+
+calcExecutionTime :: TransporterConfig -> Maybe DF.AutopayPaymentStage -> UTCTime -> UTCTime
+calcExecutionTime transporterConfig' autopayPaymentStage scheduledAt = do
+  let notificationTimeDiff = transporterConfig'.driverAutoPayNotificationTime
+      executionTimeDiff = transporterConfig'.driverAutoPayExecutionTime
+  case autopayPaymentStage of
+    Just DF.NOTIFICATION_SCHEDULED -> addUTCTime (notificationTimeDiff + executionTimeDiff) scheduledAt
+    Just DF.NOTIFICATION_ATTEMPTING -> addUTCTime executionTimeDiff scheduledAt
+    Just DF.EXECUTION_SCHEDULED -> addUTCTime executionTimeDiff scheduledAt
+    _ -> scheduledAt
