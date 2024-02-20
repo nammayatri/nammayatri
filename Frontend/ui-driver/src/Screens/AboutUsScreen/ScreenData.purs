@@ -16,9 +16,11 @@
 module Screens.AboutUsScreen.ScreenData where
 
 import Screens.Types(AboutUsScreenState)
+import ConfigProvider (getAppConfig, appConfig)
 
 initData :: AboutUsScreenState
 initData = {
+  appConfig : getAppConfig appConfig,
   data:  { 
     versionNumber : ""
   },

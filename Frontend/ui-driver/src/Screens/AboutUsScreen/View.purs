@@ -161,7 +161,7 @@ footerView state =
 applicationInformationLayout :: ST.AboutUsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 applicationInformationLayout state push =
   let config = getAppConfig appConfig
-      appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+      appName = fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   in
   linearLayout
     [ width MATCH_PARENT
