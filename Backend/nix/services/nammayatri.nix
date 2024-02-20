@@ -295,9 +295,7 @@ in
       services.clickhouse."clickhouse-db" = {
         enable = true;
         port = 9000;
-        extraConfig = ''
-          http_port: 8123
-        '';
+        extraConfig.http_port = 8123;
         initialDatabases = [
           {
             name = "atlas_kafka";
