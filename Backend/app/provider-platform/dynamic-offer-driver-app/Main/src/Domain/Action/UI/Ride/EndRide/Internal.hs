@@ -426,21 +426,22 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
         case isDfCaclculationJobScheduled of
           ----- marker ---
           Nothing -> do
-            createJobIn @_ @'CalculateDriverFees dfCalculationJobTs maxShards $
-              CalculateDriverFeesJobData
-                { merchantId = merchantId,
-                  merchantOperatingCityId = Just merchantOpCityId,
-                  startTime = driverFee.startTime,
-                  serviceName = Just (driverFee.serviceName),
-                  scheduleNotification = Just True,
-                  scheduleOverlay = Just True,
-                  scheduleManualPaymentLink = Just True,
-                  scheduleDriverFeeCalc = Just True,
-                  createChildJobs = Just True,
-                  endTime = driverFee.endTime
-                }
-            setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId dfCalculationJobTs
-            setDriverFeeBillNumberKey merchantOpCityId 1 36000 (driverFee.serviceName)
+            whenWithLockRedis (mkLockKeyForDriverFeeCalculation driverFee.startTime driverFee.endTime merchantOpCityId) 60 $ do
+              createJobIn @_ @'CalculateDriverFees dfCalculationJobTs maxShards $
+                CalculateDriverFeesJobData
+                  { merchantId = merchantId,
+                    merchantOperatingCityId = Just merchantOpCityId,
+                    startTime = driverFee.startTime,
+                    serviceName = Just (driverFee.serviceName),
+                    scheduleNotification = Just True,
+                    scheduleOverlay = Just True,
+                    scheduleManualPaymentLink = Just True,
+                    scheduleDriverFeeCalc = Just True,
+                    createChildJobs = Just True,
+                    endTime = driverFee.endTime
+                  }
+              setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId dfCalculationJobTs
+              setDriverFeeBillNumberKey merchantOpCityId 1 36000 (driverFee.serviceName)
           _ -> pure ()
 
 mkDriverFee ::
@@ -559,3 +560,6 @@ getDriverFeeBillNumberKey merchantOpCityId serviceName = Hedis.get (mkDriverFeeB
 
 setDriverFeeBillNumberKey :: CacheFlow m r => Id MerchantOperatingCity -> Int -> NominalDiffTime -> ServiceNames -> m ()
 setDriverFeeBillNumberKey merchantOpCityId count expTime serviceName = Hedis.setExp (mkDriverFeeBillNumberKey merchantOpCityId serviceName) count (round expTime)
+
+mkLockKeyForDriverFeeCalculation :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> Text
+mkLockKeyForDriverFeeCalculation startTime endTime merchantOpCityId = "DriverFeeCalculation:Lock:MerchantId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
