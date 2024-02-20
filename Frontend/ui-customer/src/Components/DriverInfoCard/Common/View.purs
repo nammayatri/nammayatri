@@ -259,7 +259,8 @@ getVehicleImage variant vehicleDetail city = do
 sourceDestinationView :: forall action w.(action -> Effect Unit) -> TripDetails action -> PrestoDOM (Effect Unit) w
 sourceDestinationView push config = 
   let isNotRentalRide = (config.rideType /= RideType.RENTAL_RIDE)
-      bottomMargin = (if os == "IOS" && config.rideStarted then (safeMarginBottom + 36) else 12)
+      extraBottomMargin = if Array.any (_ == config.rideType) [RideType.RENTAL_RIDE , RideType.INTERCITY] then  ( if config.rideStarted then 24 else 0) else 0
+      bottomMargin = (if os == "IOS" && config.rideStarted then (safeMarginBottom + 36) else 12) + extraBottomMargin
   in 
     PrestoAnim.animationSet [ scaleYAnimWithDelay 100] $ 
       linearLayout

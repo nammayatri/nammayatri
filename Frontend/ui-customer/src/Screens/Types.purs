@@ -848,6 +848,7 @@ type DisabilityData = {
 type HomeScreenStateProps =
   {
     currentStage :: Stage
+  , stageBeforeChatScreen :: Stage
   , showCallPopUp :: Boolean
   , rideRequestFlow :: Boolean
   , isSearchLocation :: SearchLocationModelType

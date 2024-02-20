@@ -975,7 +975,7 @@ homeScreenFlow = do
                                           setValueToLocalStore SHARE_APP_COUNT (show ((INT.round $ (fromMaybe 0.0 (fromString (shareAppCount))))+1))
                                         else pure unit
                                         _ <- pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
-                                        let newState = homeScreenState{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false, cancelSearchCallDriver = false  }}
+                                        let newState = homeScreenState{data{route = Nothing},props{chatcallbackInitiated = false, isCancelRide = false,waitingTimeTimerIds = [], showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false, cancelSearchCallDriver = false  }}
                                             currTrip = {sourceLat : srcLat, 
                                                         sourceLong : srcLon, 
                                                         destLat : dstLat, 
@@ -1005,7 +1005,7 @@ homeScreenFlow = do
                 setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
               else 
                 pure unit
-
+              removeChatService ""
               let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
                   destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
 
@@ -3400,11 +3400,9 @@ rideScheduledFlow = do
       void $ Remote.cancelRideBT (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
       homeScreenFlow 
     RideScheduledScreenOutput.GoToHomeScreen state -> do 
-      -- when (state.data.bookingId == "") do 
       updateLocalStage HomeScreen
       modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
-      -- updateRideScheduledTime ""
-      homeScreenFlow
+      currentFlowStatus
     RideScheduledScreenOutput.GoToSearchLocationScreen updatedState -> do
       modifyScreenState $ RideScheduledScreenStateType (\_ -> updatedState)
       modifyScreenState

@@ -242,16 +242,26 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 -- _ <- pure $ enableMyLocation false
-                void $ pure $ spy "inside RideStarted" "Sdfjhgdfjkbk"
+                if(not initialState.props.chatcallbackInitiated && not initialState.props.isSpecialZone && initialState.data.rideType == RideType.RENTAL_RIDE) then do
+                  _ <- clearChatMessages
+                  _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
+                  _ <- storeCallBackOpenChatScreen push OpenChatScreen
+                  _ <- startChatListenerService
+                  _ <- pure $ scrollOnResume push ScrollToBottom
+                  push InitializeChat
+                  pure unit
+                else
+                  pure unit
+                void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  void $ pure $ spy "Inside RideStarted" (getValueToLocalStore TRACKING_ID)
                   _ <- launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
                   pure unit
                 else
                   pure unit
-                _ <- push RemoveChat
+                when (initialState.data.rideType /= RideType.RENTAL_RIDE) $ do
+                  void $ push RemoveChat
                 pure unit
                 if initialState.data.rideType == RideType.RENTAL_RIDE then 
                   void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ))/60) "1" "RideDurationTimer" push (RideDurationTimer)
@@ -543,8 +553,8 @@ cancelSearchPopUp push state =
 rideInfoView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideInfoView push state = 
   let isClickable = os == "IOS"
-      isWidgetVisible = (((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && (os == "ANDROID" || state.props.enableChatWidget)) || (state.props.currentStage == RideStarted && os == "IOS")
-      disableChatWidget = (not (os == "IOS" || state.props.enableChatWidget)) && (((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions
+      isWidgetVisible = ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE ))&& state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && (os == "ANDROID" || state.props.enableChatWidget)) || (state.props.currentStage == RideStarted && os == "IOS")
+      disableChatWidget = (not (os == "IOS" || state.props.enableChatWidget)) && ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE))) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions
   in 
   linearLayout
   [ height MATCH_PARENT
@@ -586,7 +596,7 @@ rideInfoView push state =
           ] $
           [ otpAndWaitView push state
           , endOTPView push state
-          ] <> if state.props.currentStage == RideStarted then [trackRideView push state] else []
+          ] <> if state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted then [trackRideView push state] else []
         , linearLayout[weight 1.0][]
         , linearLayout
           [ height $ MATCH_PARENT
@@ -608,7 +618,7 @@ rideInfoView push state =
      ]
   ]
   where disableSuggestions :: HomeScreenState -> Boolean
-        disableSuggestions state = state.data.currentSearchResultType == QUOTES || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
+        disableSuggestions state = (state.data.rideType == RideType.RENTAL_RIDE && state.props.currentStage == RideStarted) || state.data.currentSearchResultType == QUOTES || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
 
 messagingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messagingView push state = 
@@ -2328,7 +2338,7 @@ getMessageNotificationViewConfig state = {
   , isNotificationExpanded :state.props.isNotificationExpanded
   , currentSearchResultType : state.data.currentSearchResultType
   , config : state.data.config
-  , rideStarted : state.props.currentStage == RideStarted
+  , showNotificationBanner : (state.props.currentStage == RideStarted && state.data.rideType /= RideType.RENTAL_RIDE)
   , lastMessage : state.data.lastMessage
   , lastSentMessage : state.data.lastSentMessage
   , lastReceivedMessage : state.data.lastReceivedMessage
@@ -2569,7 +2579,7 @@ trackRideView push state =
     , padding $ PaddingHorizontal 12 12
     , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
     , rippleColor Color.rippleShade
-    , visibility $ boolToVisibility $ state.props.currentStage == RideStarted
+    , visibility $ boolToVisibility $ state.props.currentStage == RideStarted || (state.props.stageBeforeChatScreen == RideStarted && state.data.rideType == RideType.RENTAL_RIDE)
     , clickable true
     , onClick push $ const $ StartLocationTracking "GOOGLE_MAP"
     , gravity CENTER
@@ -2601,7 +2611,7 @@ otpAndWaitView push state =
   linearLayout
   [ height $ V 40
   , orientation HORIZONTAL
-  , visibility $ boolToVisibility $ any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]
+  , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] && (state.props.stageBeforeChatScreen /= RideStarted && state.data.rideType == RideType.RENTAL_RIDE))
   , clipChildren false
   , clickable true
   , gravity BOTTOM
@@ -3050,7 +3060,6 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           Right (GetDriverLocationResp resp) -> do
             -- (GlobalState currentState) <- getState Fget
             let
-              updatedState = spy "UpdatedState" (currentState.homeScreen)
               rideID = state.data.driverInfoCardState.rideId
               srcLat = (resp ^. _lat)
               srcLon = (resp ^. _lon)
@@ -4585,7 +4594,7 @@ endOTPView push state =
   , clickable true
   , accessibility DISABLE
   , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-  , visibility $ boolToVisibility $ any (_ == state.data.rideType) [RideType.RENTAL_RIDE, RideType.INTERCITY] && state.props.currentStage == RideStarted
+  , visibility $ boolToVisibility $ any (_ == state.data.rideType) [RideType.RENTAL_RIDE, RideType.INTERCITY] && ( state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted)
   , margin $ MarginRight 4
   ]
   [ textView $

@@ -14,7 +14,7 @@ type MessageNotificationView a = {
 , isNotificationExpanded :: Boolean
 , currentSearchResultType :: SearchResultType
 , config :: AppConfig
-, rideStarted ::Boolean
+, showNotificationBanner ::Boolean
 , lastMessage :: ChatComponent
 , lastReceivedMessage :: ChatComponent
 , lastSentMessage :: ChatComponent
