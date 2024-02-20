@@ -66,7 +66,9 @@ import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
 import Data.Maybe (Maybe(..))
 import MerchantConfig.Types (AppConfig(..))
-import Screens.DriverReferralScreen.ScreenData as DriverReferralScreenData
+import Screens.Benefits.BenefitsScreen.ScreenData as BenefitsScreenData
+import Screens.Benefits.LmsVideoScreen.ScreenData as LmsVideoScreenData
+import Screens.Benefits.LmsQuizScreen.ScreenData as LmsQuizScreenData
 import Common.Types.App (CategoryListType)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -115,7 +117,9 @@ newtype GlobalState = GlobalState {
   , chooseCityScreen :: ChooseCityScreenState
   , welcomeScreen :: WelcomeScreenState
   , driverEarningsScreen :: DriverEarningsScreenState
-  , driverReferralScreen :: DriverReferralScreenState
+  , benefitsScreen :: BenefitsScreenState
+  , lmsVideoScreen :: LmsVideoScreenState
+  , lmsQuizScreen :: LmsQuizScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -163,7 +167,9 @@ defaultGlobalState = GlobalState {
 , chooseCityScreen : ChooseCityScreenData.initData
 , welcomeScreen : WelcomeScreenData.initData
 , driverEarningsScreen : DriverEarningsScreenData.initData
-, driverReferralScreen : DriverReferralScreenData.initData
+, benefitsScreen : BenefitsScreenData.initData
+, lmsVideoScreen : LmsVideoScreenData.initData
+, lmsQuizScreen : LmsQuizScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -218,9 +224,10 @@ data ScreenType =
   | ChooseCityScreenStateType (ChooseCityScreenState -> ChooseCityScreenState)
   | WelcomeScreenStateType (WelcomeScreenState -> WelcomeScreenState)
   | DriverEarningsScreenStateType (DriverEarningsScreenState -> DriverEarningsScreenState)
-  | DriverReferralScreenStateType (DriverReferralScreenState -> DriverReferralScreenState)
+  | BenefitsScreenStateType (BenefitsScreenState -> BenefitsScreenState)
   | RegistrationScreenStateType (RegistrationScreenState -> RegistrationScreenState)
-  
+  | LmsVideoScreenStateType (LmsVideoScreenState -> LmsVideoScreenState)
+  | LmsQuizScreenStateType (LmsQuizScreenState -> LmsQuizScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -295,7 +302,7 @@ data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
 
 data VEHICLE_DETAILS_SCREEN_OUTPUT = UPDATE_VEHICLE_INFO VehicleDetailsScreenState
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_DRIVER_HOME_SCREEN
-data SELECT_LANGUAGE_SCREEN_OUTPUT = CHANGE_LANGUAGE
+data SELECT_LANGUAGE_SCREEN_OUTPUT = CHANGE_LANGUAGE | LANGUAGE_CONFIRMED SelectLanguageScreenState
 data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | REPORT_ISSUE_CHAT_SCREEN CategoryListType
                                     | RIDE_SELECTION_SCREEN CategoryListType
@@ -449,5 +456,16 @@ data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen
                                   | DETECT_CITY Number Number ChooseCityScreenState
 
 data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
-data DRIVER_REFERRAL_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
+data BENEFITS_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
                                    | DRIVER_CONTEST_SCREEN
+                                   | GO_TO_LMS_VIDEO_SCREEN BenefitsScreenState
+
+data LMS_VIDEO_SCREEN_OUTPUT = GO_TO_QUIZ_SCREEN LmsVideoScreenState | REFRESH_LMS_VIDEO_SCREEN LmsVideoScreenState | GO_TO_BENEFITS_SCREEN | SELECT_LANGUAGE_FOR_VIDEOS LmsVideoScreenState
+
+data LMS_QUIZ_SCREEN_OUTPUT = GO_TO_NEXT_QUESTION LmsQuizScreenState
+                            | CONFIRM_QUESTION LmsQuizScreenState
+                            | RETRY_QUESTION LmsQuizScreenState
+                            | RETAKE_QUIZ_SO LmsQuizScreenState
+                            | SELECT_LANGUAGE_FOR_QUESTION LmsQuizScreenState
+                            | GO_TO_LMS_VIDEOS_SCREEN_FROM_QUIZ LmsQuizScreenState
+                            | GO_TO_BENEFITS_SCREEN_FROM_QUIZ LmsQuizScreenState

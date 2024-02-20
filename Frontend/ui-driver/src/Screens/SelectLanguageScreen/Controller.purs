@@ -16,7 +16,7 @@
 module Screens.SelectLanguageScreen.Controller where
 
 import Prelude (class Show, pure, unit, (==), bind, ($), discard)
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, continue, exit, updateAndExit)
 import Screens.Types (SelectLanguageScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.SelectMenuButton as MenuButton
@@ -45,15 +45,17 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen SELECT_LANGUAGE_SCREEN)
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen SELECT_LANGUAGE_SCREEN) "primary_button" "no_action"
       
-data ScreenOutput = GoBack
+data ScreenOutput = GoBack | LanguageConfirmed SelectLanguageScreenState | GoToPreviousScreen
 data Action = BackPressed | MenuButtonAction MenuButton.Action | PrimaryButtonActionController PrimaryButtonController.Action | AfterRender   
 eval :: Action -> SelectLanguageScreenState -> Eval Action ScreenOutput SelectLanguageScreenState
-eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
-  let _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_driver_language_selection" "Language" state.props.selectedLanguage
-      _ = setLanguageLocale state.props.selectedLanguage
-  _ <- pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign state.props.selectedLanguage}]
-  exit GoBack
-eval BackPressed state = exit GoBack
-eval AfterRender state = continue state {props {selectedLanguage = if getLanguageLocale languageKey == "__failed" then "EN_US" else getLanguageLocale languageKey}}
+eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = 
+  if state.props.onlyGetTheSelectedLanguage then updateAndExit state $ LanguageConfirmed state
+  else  do
+        let _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_driver_language_selection" "Language" state.props.selectedLanguage
+            _ = setLanguageLocale state.props.selectedLanguage
+        _ <- pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign state.props.selectedLanguage}]
+        exit GoBack
+eval BackPressed state = exit $ if state.props.onlyGetTheSelectedLanguage then GoToPreviousScreen else GoBack
+eval AfterRender state = continue state {props {selectedLanguage = if state.props.onlyGetTheSelectedLanguage then state.props.selectedLanguage else  if getLanguageLocale languageKey == "__failed" then "EN_US" else getLanguageLocale languageKey}}
 eval (MenuButtonAction (MenuButton.OnSelection btnState)) state = continue state { props { selectedLanguage = btnState.text.value }}
 eval (PrimaryButtonActionController (PrimaryButtonController.NoAction)) state = continue state

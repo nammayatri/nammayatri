@@ -2290,10 +2290,11 @@ export const addCarouselWithVideoExists = function () {
 }
 
 export const addReels = function (reelsData, index, id, cb, action) {
-  const reelsJson = JSON.stringify(reelsData);
+  const reelsJson = reelsData
   if(JBridge.addReels){
-    const callback = callbackMapper.map(function(resp, currentReelInfo){
-      cb(action(resp)(currentReelInfo))();
+    const callback = callbackMapper.map(function(resp, stringData, currentReelInfo, clickedButtonInfo){
+      const parsedData = JSON.parse(JSON.stringify(currentReelInfo));
+      cb(action(resp)(stringData)(currentReelInfo)(clickedButtonInfo))();
     });
     return JBridge.addReels(reelsJson, index, id, callback);
   } else {

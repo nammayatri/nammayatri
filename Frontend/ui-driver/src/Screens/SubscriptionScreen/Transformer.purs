@@ -36,10 +36,13 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (SubscriptionConfig, GradientConfig)
 import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
-import Services.API (DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
+import Services.API (ReelVideoThresholdConfig, ReelsResp, DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Locale.Utils
 import RemoteConfig as RC
+import Services.API as API
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Data.Foldable (foldl)
 
 
 type PlanData = {
@@ -285,6 +288,7 @@ transformReelsPurescriptDataToNativeData reelsData = do
     , carouselTextColor : eachItem.carouselTextColor
     , bottomButtonConfig : eachItem.bottomButtonConfig
     , sideButtonConfig : eachItem.sideButtonConfig
+    , thresholdConfig : Nothing
     } ) reelsData
 
   { reelData : transformedData
@@ -298,5 +302,13 @@ transformReelsPurescriptDataToNativeData reelsData = do
       color : Color.white900,
       maxLines : 2
     }
+  , reelExtraConfig : Just {
+      bounceAnimationEnabled : Just true,
+      bounceAnimationCount : Just 2,
+      bounceAnimationDuration : Just 400,
+      progressBarColor : Just Color.white40Alpha,
+      progressBarVisible : Just true,
+      autoSwipeToNext : Just false,
+      seekEnabled : Just true
+    }
   }
-

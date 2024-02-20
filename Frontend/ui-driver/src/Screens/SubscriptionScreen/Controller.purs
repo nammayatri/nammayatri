@@ -26,12 +26,12 @@ import Engineering.Helpers.Utils (saveObject)
 import Foreign (unsafeToForeign)
 import Foreign.Generic (decodeJSON)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getDistanceBwCordinates, getFixedTwoDecimals)
-import JBridge (shareTextMessage, addReels, cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
+import JBridge (openUrlInApp, shareTextMessage, addReels, cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=), (||), (<>))
+import Prelude (void, class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=), (||), (<>))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -39,12 +39,16 @@ import Resource.Constants as Const
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (transformReelsPurescriptDataToNativeData, alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), LastPaymentType(..))
+import Services.API (ReelsResp, BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), LastPaymentType(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
 import PrestoDOM.Core (getPushFn)
 import Effect.Uncurried (runEffectFn5, runEffectFn1)
 import RemoteConfig (ReelItem(..))
+import Foreign (Foreign)
+import DecodeUtil(decodeForeignObject)
+import RemoteConfig as RC
+import Foreign.Generic (encodeJSON)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -97,7 +101,7 @@ data Action = BackPressed
             | TogglePlanDescription PlanCardConfig
             | EnableIntroductoryView
             | OpenReelsView Int
-            | GetCurrentPosition String String
+            | GetCurrentPosition String String Foreign Foreign
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
@@ -392,18 +396,32 @@ eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state =
 eval EnableIntroductoryView state = continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = [introductoryPlanConfig state.data.config.subscriptionConfig]}}}
 
 eval (OpenReelsView index) state = do
+  void $ pure $ setValueToLocalStore DISABLE_WIDGET "true"
   continueWithCmd state [ do
     push <-  getPushFn Mb.Nothing "SubscriptionScreen"
-    _ <- runEffectFn5 addReels (transformReelsPurescriptDataToNativeData state.data.reelsData) index (getNewIDWithTag "ReelsView") push $ GetCurrentPosition
+    _ <- runEffectFn5 addReels (encodeJSON (transformReelsPurescriptDataToNativeData state.data.reelsData)) index (getNewIDWithTag "ReelsView") push $ GetCurrentPosition
     pure NoAction
   ]
 
-eval (GetCurrentPosition label stringData) state = case label of
+eval (GetCurrentPosition label stringData reelItemData buttonData) state = case label of
   "CURRENT_POSITION" -> continue state
-  "ACTION" -> case stringData of
-                "CHOOSE_A_PLAN" -> continue state
+  "ACTION" -> 
+      let  currentButtonConfig = decodeForeignObject buttonData RC.defaultReelButtonConfig
+           shareMessageTitle = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareMessageTitle) currentButtonConfig
+           shareText = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareText) currentButtonConfig
+           shareLink = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareLink) currentButtonConfig
+      in   case stringData of
+                "CHOOSE_A_PLAN" -> do
+                    void $ pure $ setValueToLocalStore DISABLE_WIDGET "false"
+                    continue state
                 "SHARE" -> do 
-                  _ <- pure $ shareTextMessage "share message title" "This is sharing of the message"
+                  _ <- pure $ shareTextMessage (Mb.fromMaybe "" shareMessageTitle) (Mb.fromMaybe "" shareText)
+                  continue state
+                "OPEN_LINK" -> do
+                  _ <- pure $ openUrlInApp (Mb.fromMaybe "www.nammayatri.in" shareLink)
+                  continue state
+                "DESTROY_REEL" -> do
+                  void $ pure $ setValueToLocalStore DISABLE_WIDGET "false"
                   continue state
                 _ -> continue state
   _ -> continue state
