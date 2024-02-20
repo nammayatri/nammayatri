@@ -256,6 +256,7 @@ library
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
       Domain.Types.LeaderBoardConfig
+      Domain.Types.LmsEnumTypes
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Mandate
@@ -581,6 +582,7 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Translations
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal

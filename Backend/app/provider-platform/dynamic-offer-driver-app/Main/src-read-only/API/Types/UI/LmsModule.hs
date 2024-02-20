@@ -7,6 +7,7 @@ import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.DriverModuleCompletion
+import qualified Domain.Types.LmsEnumTypes
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.LmsModuleVideoInformation
 import qualified Domain.Types.LmsVideoTranslation
@@ -36,7 +37,8 @@ data LmsGetVideosRes = LmsGetVideosRes
   { completed :: [API.Types.UI.LmsModule.LmsVideoRes],
     pending :: [API.Types.UI.LmsModule.LmsVideoRes],
     quizEnabled :: Kernel.Prelude.Bool,
-    quizStatus :: API.Types.UI.LmsModule.LmsEntityCompletionStatus
+    quizStatus :: API.Types.UI.LmsModule.LmsEntityCompletionStatus,
+    selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -47,6 +49,7 @@ data LmsModuleRes = LmsModuleRes
     duration :: Kernel.Prelude.Int,
     languagesAvailableForQuiz :: [Kernel.External.Types.Language],
     languagesAvailableForVideos :: [Kernel.External.Types.Language],
+    moduleCompletionCriteria :: Domain.Types.LmsModule.ModuleCompletionCriteria,
     moduleCompletionStatus :: Domain.Types.DriverModuleCompletion.ModuleCompletionStatus,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     name :: Data.Text.Text,
@@ -61,10 +64,11 @@ data LmsModuleRes = LmsModuleRes
 data LmsQuestionRes = LmsQuestionRes
   { language :: Kernel.External.Types.Language,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
-    options :: Domain.Types.QuestionInformation.QuizOptions,
+    options :: API.Types.UI.LmsModule.QuizOptions,
     previousHistory :: Data.Maybe.Maybe API.Types.UI.LmsModule.LmsQuizHistory,
-    question :: Domain.Types.QuestionInformation.QuizQuestion,
-    questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping
+    question :: Domain.Types.LmsEnumTypes.QuizQuestion,
+    questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping,
+    selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -75,6 +79,22 @@ data LmsQuizHistory = LmsQuizHistory
   { attemptNumber :: Kernel.Prelude.Int,
     selectedOptions :: [Data.Text.Text],
     status :: API.Types.UI.LmsModule.LmsQuestionStatus
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data LmsTranslatedModuleInfoRes = LmsTranslatedModuleInfoRes
+  { category :: Domain.Types.LmsModule.LmsCategory,
+    description :: Data.Text.Text,
+    duration :: Kernel.Prelude.Int,
+    languagesAvailableForQuiz :: [Kernel.External.Types.Language],
+    languagesAvailableForVideos :: [Kernel.External.Types.Language],
+    moduleCompletionCriteria :: Domain.Types.LmsModule.ModuleCompletionCriteria,
+    moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
+    name :: Data.Text.Text,
+    noOfVideos :: Kernel.Prelude.Int,
+    rank :: Kernel.Prelude.Int,
+    thumbnailImage :: Data.Text.Text,
+    variant :: Data.Maybe.Maybe Domain.Types.Vehicle.Variant.Variant
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -102,6 +122,11 @@ data LmsVideoRes = LmsVideoRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data Options = Options
+  { options :: [Domain.Types.QuestionInformation.OptionEntity]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+
 data QuestionConfirmReq = QuestionConfirmReq
   { language :: Kernel.External.Types.Language,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
@@ -117,6 +142,9 @@ data QuestionConfirmRes = QuestionConfirmRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data QuestionValidation = CORRECT_ANSWER | INCORRECT_ANSWER
+  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data QuizOptions = SingleSelect API.Types.UI.LmsModule.Options | MultiSelect API.Types.UI.LmsModule.Options
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data SelectedOption = SingleSelectedOption Data.Text.Text | MultiSelectedOption [Data.Text.Text]

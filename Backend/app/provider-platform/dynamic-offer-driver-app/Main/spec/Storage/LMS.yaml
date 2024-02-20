@@ -8,6 +8,8 @@ imports:
   LmsBonus: Domain.Types.LmsModule
   Person: Domain.Types.Person
   Variant: Domain.Types.Vehicle.Variant
+  QuizQuestion: Domain.Types.LmsEnumTypes
+  Value: Data.Aeson
 
 LmsModule:
   tableName : lms_module
@@ -311,7 +313,20 @@ QuestionInformation:
     questionId : Id QuestionModuleMapping
     language: Language
     question: QuizQuestion
-    options: QuizOptions
+    questionType: QuizQuestionType
+    options: "[OptionEntity]"
+
+  sqlType:
+    options: "json"
+
+  beamType:
+    options: Value
+
+  fromTType:
+    options: getOptionsFromTable|M
+
+  toTType:
+    options: convertOptionsToTable
 
   constraints:
     questionId: PrimaryKey
@@ -320,13 +335,8 @@ QuestionInformation:
   excludedFields: [merchantId, merchantOperatingCityId]
 
   types:
-    QuizQuestion:
-      enum: "TextQuestion Text, ImageQuestion Text Text Int Int" # first int for width second for height
-    QuizOptions:
-      enum: "SingleSelect Options, MultiSelect Options"
-    Options:
-      options : "[OptionEntity]"
-      derive: "Read, Eq, Ord"
+    QuizQuestionType:
+      enum: "SingleSelect, MultiSelect"
     OptionEntity:
       option : SingleOption
       optionId : Id OptionEntity # this optionEntity Id will be same accross the translations for that particular option
@@ -334,7 +344,6 @@ QuestionInformation:
       derive: "Read, Eq, Ord"
     SingleOption:
       enum: "TextOption Text, SingleLineImage Text Int Int, TwoColumnImage Text Int Int, TwoColumnOption Text"
-
   queries:
     findByIdAndLanguage:
       kvFunction: findOneWithKV

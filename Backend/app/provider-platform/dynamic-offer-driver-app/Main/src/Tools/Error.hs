@@ -980,6 +980,7 @@ data LmsError
   | LmsQuestionNotFound Text Language
   | LmsQuestionNotFoundForModule Text Text
   | LmsCorrectOptionNotFound Text Language
+  | NotAbleToDecodeTheOptionsInLms
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''LmsError
@@ -995,6 +996,7 @@ instance IsBaseError LmsError where
     LmsQuestionNotFound questionId language -> Just $ "Lms Question not found with id : " <> questionId <> " with language : " <> show language
     LmsQuestionNotFoundForModule questionId moduleId -> Just $ "Lms Question not found with id : " <> questionId <> "for module with id : " <> moduleId
     LmsCorrectOptionNotFound questionId language -> Just $ "Correct Option not found for question : " <> questionId <> " and language :" <> show language
+    NotAbleToDecodeTheOptionsInLms -> Just $ "Not able to deocde the options in lms question information table"
 
 instance IsHTTPError LmsError where
   toErrorCode = \case
@@ -1007,6 +1009,7 @@ instance IsHTTPError LmsError where
     LmsQuestionNotFound _questionId _ -> "LMS_QUESTION_NOT_FOUND"
     LmsQuestionNotFoundForModule _ _ -> "LMS_QUESTION_NOT_FOUND_FOR_MODULE"
     LmsCorrectOptionNotFound _questionid _ -> "LMS_CORRECT_OPTION_NOT_FOUND"
+    NotAbleToDecodeTheOptionsInLms -> "NOT_ABLE_TO_DECODE_THE_OPTIONS_FIELD_IN_QUESTION_INFORMATION"
 
   toHttpCode _ = E400
 
