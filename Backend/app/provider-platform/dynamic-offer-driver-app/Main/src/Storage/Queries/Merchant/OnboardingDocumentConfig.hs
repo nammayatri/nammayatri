@@ -22,7 +22,6 @@ where
 
 import Data.Aeson (fromJSON)
 import qualified Data.Aeson as A
-import qualified Data.List
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.OnboardingDocumentConfig
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
@@ -42,12 +41,11 @@ findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is Be
 
 update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => OnboardingDocumentConfig -> m ()
 update config = do
-  let supportedClassJson = BeamODC.getConfigJSON config.supportedVehicleClasses
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamODC.checkExtraction (config.checkExtraction),
       Se.Set BeamODC.checkExpiry (config.checkExpiry),
-      Se.Set BeamODC.supportedVehicleClassesJSON $ toJSON supportedClassJson,
+      Se.Set BeamODC.supportedVehicleClassesJSON $ toJSON config.supportedVehicleClasses,
       Se.Set BeamODC.vehicleClassCheckType (config.vehicleClassCheckType),
       Se.Set BeamODC.rcNumberPrefix (config.rcNumberPrefix),
       Se.Set BeamODC.rcNumberPrefixList (config.rcNumberPrefixList),
@@ -58,10 +56,9 @@ update config = do
 
 updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
 updateSupportedVehicleClassesJSON merchantOperatingCityId supportedVehicleClasses = do
-  let supportedClassJson = BeamODC.getConfigJSON supportedVehicleClasses
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamODC.supportedVehicleClassesJSON $ toJSON supportedClassJson,
+    [ Se.Set BeamODC.supportedVehicleClassesJSON $ toJSON supportedVehicleClasses,
       Se.Set BeamODC.updatedAt now
     ]
     [ Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId merchantOperatingCityId,
@@ -70,10 +67,10 @@ updateSupportedVehicleClassesJSON merchantOperatingCityId supportedVehicleClasse
 
 instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig where
   fromTType' BeamODC.OnboardingDocumentConfigT {..} = do
-    supportedVehicleClasses' <- maybe (throwError $ InternalError "Unable to decode OnboardingDocumentConfigT.supportedVehicleClasses") return $ case documentType of
-      Domain.DL -> Domain.DLValidClasses <$> valueToMaybe supportedVehicleClassesJSON
-      Domain.RC -> Domain.RCValidClasses . sortOnCapcity <$> valueToVehicleClassMap supportedVehicleClassesJSON
-      _ -> Just $ Domain.RCValidClasses []
+    supportedVehicleClasses' <- case documentType of
+      Domain.DL -> Domain.DLValidClasses <$> valueToVehicleClassMap supportedVehicleClassesJSON
+      Domain.RC -> Domain.RCValidClasses <$> valueToVehicleClassMap supportedVehicleClassesJSON
+      _ -> return $ Domain.RCValidClasses []
     pure $
       Just
         OnboardingDocumentConfig
@@ -91,16 +88,9 @@ instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wh
             updatedAt = updatedAt
           }
     where
-      sortOnCapcity = Data.List.sortBy (\a b -> compare b.vehicleCapacity a.vehicleCapacity)
-      valueToMaybe :: A.Value -> Maybe [Text]
-      valueToMaybe value = case fromJSON value of
-        A.Error _ -> Nothing
-        A.Success a -> Just a
-
-      valueToVehicleClassMap :: A.Value -> Maybe [VehicleClassVariantMap]
       valueToVehicleClassMap value = case fromJSON value of
-        A.Error _ -> Nothing
-        A.Success a -> Just a
+        A.Error err -> throwError $ InternalError $ "Unable to decode OnboardingDocumentConfigT.supportedVehicleClassesJSON: " <> show err
+        A.Success a -> pure a
 
 instance ToTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig where
   toTType' OnboardingDocumentConfig {..} = do
