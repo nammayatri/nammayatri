@@ -698,8 +698,10 @@ optionsError =
       ]
 
 -- | A fee applied on a particular entity
-newtype Fee = Fee
-  { -- | Describes a numerical value in decimal form
+data Fee = Fee
+  { -- |
+    feeAmount :: Maybe Price,
+    -- | Describes a numerical value in decimal form
     feePercentage :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
@@ -718,7 +720,8 @@ optionsFee =
     }
   where
     table =
-      [ ("feePercentage", "percentage")
+      [ ("feeAmount", "amount"),
+        ("feePercentage", "percentage")
       ]
 
 -- | Describes how a an order will be rendered/fulfilled to the end-customer
