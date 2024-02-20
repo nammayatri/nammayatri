@@ -103,7 +103,7 @@ tfPayments :: DOnInit.OnInitRes -> Maybe [Spec.Payment]
 tfPayments res =
   Just
     [ Spec.Payment
-        { paymentCollectedBy = Just $ show Enums.BPP,
+        { paymentCollectedBy = Just $ show Enums.SELLER,
           paymentId = Nothing,
           paymentParams = mkParams,
           paymentStatus = Nothing,

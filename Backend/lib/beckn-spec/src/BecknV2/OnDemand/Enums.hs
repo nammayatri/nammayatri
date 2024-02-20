@@ -70,6 +70,7 @@ data PaymentCollectedBy
   = -- ..fulfillments.payment.collected.by
     BAP
   | BPP
+  | SELLER
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentType
