@@ -40,6 +40,6 @@ instance B.Table FleetDriverAssociationT where
 
 type FleetDriverAssociation = FleetDriverAssociationT Identity
 
-$(enableKVPG ''FleetDriverAssociationT ['id] [])
+$(enableKVPG ''FleetDriverAssociationT ['id] [['driverId], ['fleetOwnerId]])
 
 $(mkTableInstances ''FleetDriverAssociationT "fleet_driver_association")
