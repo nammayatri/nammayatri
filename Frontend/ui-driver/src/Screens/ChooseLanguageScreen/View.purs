@@ -84,7 +84,7 @@ view push state =
 ------------------------------ scrollableView ------------------------------
 scrollableView :: ST.ChooseLanguageScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 scrollableView state push = 
- let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+ let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
  in scrollView
   [ width MATCH_PARENT
   , weight 1.0

@@ -76,7 +76,7 @@ view push state =
   
 locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
 locationAccessPermissionView push state = 
-  let appName = fromMaybe " " $ runFn3 DU.getAnyFromWindow "appName" Nothing Just
+  let appName = fromMaybe state.appConfig.appData.name $ runFn3 DU.getAnyFromWindow "appName" Nothing Just
   in linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
