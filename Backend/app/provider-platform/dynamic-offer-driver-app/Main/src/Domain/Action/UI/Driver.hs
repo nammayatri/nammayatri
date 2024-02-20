@@ -64,11 +64,8 @@ module Domain.Action.UI.Driver
     updateMetaData,
     getDriverPaymentsHistoryV2,
     getHistoryEntryDetailsEntityV2,
-    calcExecutionTime,
     fetchDriverPhoto,
     getCity,
-    getPlanDataFromDriverFee,
-    planMaxRides,
     getDownloadInvoiceData,
     getDummyRideRequest,
   )
@@ -87,6 +84,7 @@ import qualified Data.Text as T
 import Data.Time (Day, fromGregorian)
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
+import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
@@ -169,7 +167,6 @@ import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
@@ -596,6 +593,7 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
 buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
   transporterConfig <- CQTC.findByMerchantOpCityId person.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  driverPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION person.id
   vehicleMB <- QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
@@ -637,9 +635,9 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
         canSwitchToRental = driverInfo.canSwitchToRental,
         mode = driverInfo.mode,
-        payerVpa = driverInfo.payerVpa,
+        payerVpa = driverPlan >>= (.payerVpa),
         blockStateModifier = driverInfo.blockStateModifier,
-        autoPayStatus = driverInfo.autoPayStatus,
+        autoPayStatus = driverPlan >>= (.autoPayStatus),
         clientVersion = person.clientVersion,
         bundleVersion = person.bundleVersion,
         gender = Just person.gender,
@@ -1439,7 +1437,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
       let executionTime =
             if dfee.status == DDF.CLEARED_BY_YATRI_COINS
               then autoInvoice.createdAt
-              else maybe now (calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt
+              else maybe now (DAPlan.calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt
        in return $
             Just
               AutoPayInvoiceHistory
@@ -1505,7 +1503,7 @@ getHistoryEntryDetailsEntityV2 (_, _, merchantOpCityId) invoiceShortId serviceNa
           then
             if ((.invoiceStatus) <$> listToMaybe allEntiresByInvoiceId) == Just INV.CLEARED_BY_YATRI_COINS
               then (.createdAt) <$> listToMaybe allEntiresByInvoiceId
-              else Just $ maybe now (calcExecutionTime transporterConfig mbAutoPayStage) mbStageUpdatedAt
+              else Just $ maybe now (DAPlan.calcExecutionTime transporterConfig mbAutoPayStage) mbStageUpdatedAt
           else Nothing
       feeType
         | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
@@ -1527,8 +1525,8 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
   mapM
     ( \driverFee -> do
         driverFeesInWindow <- QDF.findFeeInRangeAndDriverIdAndServiceName driverFee.startTime driverFee.endTime driverFee.driverId serviceName
-        mbPlan <- getPlanDataFromDriverFee driverFee
-        let maxRidesEligibleForCharge = planMaxRides =<< mbPlan
+        mbPlan <- DAPlan.getPlanDataFromDriverFee driverFee
+        let maxRidesEligibleForCharge = DAPlan.planMaxRides =<< mbPlan
         return
           DriverFeeInfoEntity
             { autoPayStage = driverFee.autopayPaymentStage,
@@ -1550,16 +1548,6 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
     )
     driverFees
 
-calcExecutionTime :: TransporterConfig -> Maybe DDF.AutopayPaymentStage -> UTCTime -> UTCTime
-calcExecutionTime transporterConfig' autopayPaymentStage scheduledAt = do
-  let notificationTimeDiff = transporterConfig'.driverAutoPayNotificationTime
-      executionTimeDiff = transporterConfig'.driverAutoPayExecutionTime
-  case autopayPaymentStage of
-    Just DDF.NOTIFICATION_SCHEDULED -> addUTCTime (notificationTimeDiff + executionTimeDiff) scheduledAt
-    Just DDF.NOTIFICATION_ATTEMPTING -> addUTCTime executionTimeDiff scheduledAt
-    Just DDF.EXECUTION_SCHEDULED -> addUTCTime executionTimeDiff scheduledAt
-    _ -> scheduledAt
-
 getCity :: (CacheFlow m r, EsqDBFlow m r) => GetCityReq -> m GetCityResp
 getCity req = do
   let latlng = LatLong {lat = req.lat, lon = req.lon}
@@ -1571,24 +1559,6 @@ getCity req = do
         (g : _) -> pure $ Just g
   let city = (.city) <$> geometry
   pure $ GetCityResp {city = show <$> city, status = APISuccess.Success}
-
-planMaxRides :: Plan -> Maybe Int
-planMaxRides plan = do
-  case plan.planBaseAmount of
-    PERRIDE_BASE baseAmount -> Just $ round $ (plan.maxAmount) / baseAmount
-    _ -> Nothing
-
-getPlanDataFromDriverFee ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
-  DDF.DriverFee ->
-  m (Maybe Plan)
-getPlanDataFromDriverFee driverFee = do
-  let (mbPlanId, mbPaymentMode, serviceName) = (driverFee.planId, driverFee.planMode, driverFee.serviceName)
-  case (mbPlanId, mbPaymentMode) of
-    (Just planId, _) -> do
-      let paymentMode = fromMaybe MANUAL mbPaymentMode
-      CQP.findByIdAndPaymentModeWithServiceName planId paymentMode serviceName
-    _ -> return Nothing
 
 data DriverFeeResp = DriverFeeResp
   { createdAt :: UTCTime, -- window start day
