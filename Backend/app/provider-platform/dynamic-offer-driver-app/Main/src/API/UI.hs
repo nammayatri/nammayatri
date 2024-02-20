@@ -19,6 +19,7 @@ module API.UI
 where
 
 import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -87,6 +88,7 @@ type API =
            :<|> RideSummary.API
            :<|> City.API
            :<|> LmsModule.API
+           :<|> SpecialLocation.API
        )
 
 handler :: FlowServer API
@@ -122,3 +124,4 @@ handler =
     :<|> RideSummary.handler
     :<|> City.handler
     :<|> LmsModule.handler
+    :<|> SpecialLocation.handler
