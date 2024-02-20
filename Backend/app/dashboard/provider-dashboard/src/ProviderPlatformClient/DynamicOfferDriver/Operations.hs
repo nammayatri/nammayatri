@@ -158,7 +158,9 @@ data MerchantAPIs = MerchantAPIs
     updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
     updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
     updateFarePolicy :: Id Common.FarePolicy -> Merchant.UpdateFarePolicyReq -> Euler.EulerClient APISuccess,
-    schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess
+    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
+    schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess,
+    updateOnboardingVehicleVariantMapping :: (LBS.ByteString, Common.UpdateOnboardingVehicleVariantMappingReq) -> Euler.EulerClient APISuccess
   }
 
 data MessageAPIs = MessageAPIs
@@ -330,7 +332,9 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> updateFPDriverExtraFee
       :<|> updateFPPerExtraKmRate
       :<|> updateFarePolicy
-      :<|> schedulerTrigger = merchantClient
+      :<|> createMerchantOperatingCity
+      :<|> schedulerTrigger
+      :<|> updateOnboardingVehicleVariantMapping = merchantClient
 
     uploadFile
       :<|> addLinkAsMedia

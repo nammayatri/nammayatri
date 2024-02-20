@@ -27,6 +27,7 @@ import Data.OpenApi hiding (description, name, password, url)
 import Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -529,7 +530,10 @@ data VehicleClassVariantMap = VehicleClassVariantMap
   { vehicleClass :: Text,
     vehicleCapacity :: Maybe Int,
     vehicleVariant :: Variant,
-    manufacturer :: Maybe Text
+    manufacturer :: Maybe Text,
+    manufacturerModel :: Maybe Text,
+    reviewRequired :: Maybe Bool,
+    bodyType :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -730,4 +734,30 @@ data JobName = BadDebtCalculationTrigger | DriverFeeCalculationTrigger
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets SchedulerTriggerReq where
+  hideSecrets = identity
+
+--
+-- Update Onboarding Vehicle Variant Mapping
+--
+type UpdateOnboardingVehicleVariantMappingAPI =
+  "updateOnboardingVehicleVariantMapping"
+    :> MultipartForm Tmp UpdateOnboardingVehicleVariantMappingReq
+    :> Post '[JSON] APISuccess
+
+newtype UpdateOnboardingVehicleVariantMappingReq = UpdateOnboardingVehicleVariantMappingReq
+  { file :: FilePath
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp UpdateOnboardingVehicleVariantMappingReq where
+  fromMultipart form = do
+    UpdateOnboardingVehicleVariantMappingReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpdateOnboardingVehicleVariantMappingReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance HideSecrets UpdateOnboardingVehicleVariantMappingReq where
   hideSecrets = identity

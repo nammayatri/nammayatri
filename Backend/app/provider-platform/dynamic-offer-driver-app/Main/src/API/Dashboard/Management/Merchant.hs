@@ -50,6 +50,7 @@ type API =
            :<|> Common.UpdateFPPerExtraKmRate
            :<|> Common.UpdateFarePolicy
            :<|> Common.SchedulerTriggerAPI
+           :<|> Common.UpdateOnboardingVehicleVariantMappingAPI
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -76,6 +77,7 @@ handler merchantId city =
     :<|> updateFPPerExtraKmRate merchantId city
     :<|> updateFarePolicy merchantId city
     :<|> schedulerTrigger merchantId city
+    :<|> updateOnboardingVehicleVariantMapping merchantId city
 
 merchantUpdate ::
   ShortId DM.Merchant ->
@@ -219,3 +221,9 @@ updateFPPerExtraKmRate merchantShortId opCity farePolicyId startDistance req = w
 
 updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> FlowHandler APISuccess
 updateFarePolicy merchantShortId opCity farePolicyId req = withFlowHandlerAPI $ DMerchant.updateFarePolicy merchantShortId opCity (cast farePolicyId) req
+
+createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> FlowHandler Common.CreateMerchantOperatingCityRes
+createMerchantOperatingCity merchantShortId opCity req = withFlowHandlerAPI $ DMerchant.createMerchantOperatingCity merchantShortId opCity req
+
+updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> FlowHandler APISuccess
+updateOnboardingVehicleVariantMapping merchantShortId opCity req = withFlowHandlerAPI $ DMerchant.updateOnboardingVehicleVariantMapping merchantShortId opCity req

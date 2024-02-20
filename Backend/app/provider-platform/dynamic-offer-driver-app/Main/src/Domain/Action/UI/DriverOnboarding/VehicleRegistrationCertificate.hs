@@ -411,7 +411,7 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwn
   let vehicleCategory = output.vehicle_category
   let vehicleCapacity = (readMaybe . T.unpack) =<< readFromJson =<< output.seating_capacity
   let manufacturer = (readMaybe . T.unpack) =<< output.manufacturer
-  let (verificationStatus, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass vehicleCategory now vehicleCapacity manufacturer
+  let (verificationStatus, reviewRequired, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass vehicleCategory now vehicleCapacity manufacturer output.bodyType output.manufacturerModel
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
@@ -425,7 +425,9 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwn
       vehicleCapacity,
       vehicleModel = updateModel =<< (output.manufacturer_model <|> output.m_y_manufacturing),
       vehicleColor = output.color <|> output.colour,
-      vehicleEnergyType = output.fuel_type,
+      manufacturerModel = output.manufacturerModel,
+      vehicleEnergyType = output.fuelType,
+      reviewRequired,
       insuranceValidity,
       verificationStatus,
       fleetOwnerId = mbFleetOwnerId,
@@ -439,38 +441,41 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwn
     readFromJson (A.Number val) = Just $ show val
     readFromJson _ = Nothing
 
-validateRCStatus :: Maybe Vehicle.Variant -> ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> Maybe Text -> UTCTime -> Maybe Int -> Maybe Text -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
-validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity cov vehicleCategory now capacity manufacturer = do
+validateRCStatus :: Maybe Vehicle.Variant -> ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> Maybe Text -> UTCTime -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> (Domain.VerificationStatus, Maybe Bool, Maybe Vehicle.Variant)
+validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity cov vehicleCategory now capacity manufacturer bodyType manufacturerModel = do
   case mbVariant of
-    Just variant -> (Domain.VALID, Just variant)
+    Just variant -> (Domain.VALID, Just False, Just variant)
     Nothing -> do
       case rcconfigs.supportedVehicleClasses of
-        ODC.RCValidClasses [] -> (Domain.INVALID, Nothing)
+        ODC.RCValidClasses [] -> (Domain.INVALID, Nothing, Nothing)
         ODC.RCValidClasses vehicleClassVariantMap -> do
           let validCOVsCheck = rcconfigs.vehicleClassCheckType
-          let (isCOVValid, variant) = maybe (False, Nothing) (isValidCOVRC vehicleCategory capacity manufacturer vehicleClassVariantMap validCOVsCheck) (cov <|> vehicleCategory)
+          let (isCOVValid, reviewRequired, variant) = maybe (False, Nothing, Nothing) (isValidCOVRC vehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck) (cov <|> vehicleCategory)
           let validInsurance = (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
-          if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Domain.VALID, variant) else (Domain.INVALID, variant)
-        _ -> (Domain.INVALID, Nothing)
+          if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Domain.VALID, reviewRequired, variant) else (Domain.INVALID, reviewRequired, variant)
+        _ -> (Domain.INVALID, Nothing, Nothing)
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do
   a_ <- a
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
-isValidCOVRC :: Maybe Text -> Maybe Int -> Maybe Text -> [ODC.VehicleClassVariantMap] -> ODC.VehicleClassCheckType -> Text -> (Bool, Maybe Vehicle.Variant)
-isValidCOVRC mVehicleCategory capacity manufacturer vehicleClassVariantMap validCOVsCheck cov = do
-  let vehicleClassVariant = DL.find checkIfMatch vehicleClassVariantMap
+isValidCOVRC :: Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [ODC.VehicleClassVariantMap] -> ODC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe Vehicle.Variant)
+isValidCOVRC mVehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck cov = do
+  let sortedVariantMap = sortMaybe vehicleClassVariantMap
+  let vehicleClassVariant = DL.find checkIfMatch sortedVariantMap
   case vehicleClassVariant of
-    Just obj -> (True, Just obj.vehicleVariant)
-    Nothing -> (False, Nothing)
+    Just obj -> (True, obj.reviewRequired, Just obj.vehicleVariant)
+    Nothing -> (False, Nothing, Nothing)
   where
     checkIfMatch obj = do
       let classMatched = classCheckFunction validCOVsCheck (T.toUpper obj.vehicleClass) (T.toUpper cov)
       let categoryMatched = maybe False (classCheckFunction validCOVsCheck (T.toUpper obj.vehicleClass) . T.toUpper) mVehicleCategory
       let capacityMatched = capacityCheckFunction obj.vehicleCapacity capacity
       let manufacturerMatched = manufacturerCheckFunction obj.manufacturer manufacturer
-      (classMatched || categoryMatched) && capacityMatched && manufacturerMatched
+      let manufacturerModelMatched = manufacturerModelCheckFunction obj.manufacturerModel manufacturerModel
+      let bodyTypeMatched = bodyTypeCheckFunction obj.bodyType bodyType
+      (classMatched || categoryMatched) && capacityMatched && manufacturerMatched && manufacturerModelMatched && bodyTypeMatched
 
 -- capacityCheckFunction validCapacity rcCapacity
 capacityCheckFunction :: Maybe Int -> Maybe Int -> Bool
@@ -484,6 +489,18 @@ manufacturerCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpp
 manufacturerCheckFunction Nothing (Just _) = True
 manufacturerCheckFunction Nothing Nothing = True
 manufacturerCheckFunction _ _ = False
+
+manufacturerModelCheckFunction :: Maybe Text -> Maybe Text -> Bool
+manufacturerModelCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
+manufacturerModelCheckFunction Nothing (Just _) = True
+manufacturerModelCheckFunction Nothing Nothing = True
+manufacturerModelCheckFunction _ _ = False
+
+bodyTypeCheckFunction :: Maybe Text -> Maybe Text -> Bool
+bodyTypeCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
+bodyTypeCheckFunction Nothing (Just _) = True
+bodyTypeCheckFunction Nothing Nothing = True
+bodyTypeCheckFunction _ _ = False
 
 classCheckFunction :: ODC.VehicleClassCheckType -> Text -> Text -> Bool
 classCheckFunction validCOVsCheck =
@@ -503,3 +520,19 @@ rcVerificationLockKey rcNumber = "VehicleRC::RCNumber-" <> rcNumber
 
 makeFleetOwnerKey :: Text -> Text
 makeFleetOwnerKey vehicleNo = "FleetOwnerId:PersonId-" <> vehicleNo
+
+compareMaybe :: Ord a => Maybe a -> Maybe a -> Ordering
+compareMaybe Nothing Nothing = EQ
+compareMaybe Nothing _ = GT
+compareMaybe _ Nothing = LT
+compareMaybe (Just x) (Just y) = compare x y
+
+compareVehicles :: ODC.VehicleClassVariantMap -> ODC.VehicleClassVariantMap -> Ordering
+compareVehicles a b =
+  compareMaybe a.vehicleCapacity b.vehicleCapacity
+    `mappend` compareMaybe a.manufacturer b.manufacturer
+    `mappend` compareMaybe a.manufacturerModel b.manufacturerModel
+
+-- Function to sort list of Maybe values
+sortMaybe :: [ODC.VehicleClassVariantMap] -> [ODC.VehicleClassVariantMap]
+sortMaybe = DL.sortBy compareVehicles

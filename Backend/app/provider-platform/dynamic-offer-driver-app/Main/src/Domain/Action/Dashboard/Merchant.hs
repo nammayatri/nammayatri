@@ -35,11 +35,18 @@ module Domain.Action.Dashboard.Merchant
     updateFPPerExtraKmRate,
     updateFarePolicy,
     schedulerTrigger,
+    updateOnboardingVehicleVariantMapping,
   )
 where
 
 import Control.Applicative
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import Data.Csv
+import qualified Data.Text as T
+import qualified Data.Vector as V
+import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
 import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
@@ -53,6 +60,7 @@ import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DODC
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
+import qualified EulerHS.Language as L
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
@@ -756,3 +764,67 @@ updateFarePolicy _ _ farePolicyId req = do
           nightShiftCharge = req.nightShiftCharge <|> nightShiftCharge,
           ..
         }
+
+data CSVRow = CSVRow
+  { vehicleClass :: Text,
+    vehicleCapacity :: Text,
+    vehicleVariant :: Text,
+    manufacturer :: Text,
+    manufacturerModel :: Text,
+    reviewRequired :: Text
+  }
+
+instance FromNamedRecord CSVRow where
+  parseNamedRecord r =
+    CSVRow
+      <$> r .: "vehicle_class"
+      <*> r .: "vehicle_capacity"
+      <*> r .: "vehicle_variant"
+      <*> r .: "manufacturer"
+      <*> r .: "manufacturer_model"
+      <*> r .: "review_required"
+
+updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
+updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  logTagInfo "Updating onboarding vehicle variant mapping for merchant: " (show merchant.id <> " and city: " <> show opCity)
+  configs <- readCsv req.file
+  logTagInfo "Read file: " (show configs)
+  CQODC.updateSupportedVehicleClassesJSON merchantOpCity.id (DODC.RCValidClasses configs)
+  logTagInfo "Read file Done" ""
+  CQODC.clearCache merchantOpCity.id
+  return Success
+  where
+    readCsv csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> V.imapM makeConfig v >>= (pure . V.toList)
+
+    makeConfig :: Int -> CSVRow -> Flow DODC.VehicleClassVariantMap
+    makeConfig idx row = do
+      let cleanField = replaceEmpty . T.toLower . T.strip
+          replaceEmpty = \case
+            "" -> Nothing
+            "no constraint" -> Nothing
+            "no_constraint" -> Nothing
+            x -> Just x
+      let mapToBool = \case
+            "yes" -> True
+            "no" -> False
+            "true" -> True
+            "false" -> False
+            _ -> False
+      vehicleVariant <- readMaybe (T.unpack row.vehicleVariant) & fromMaybeM (InvalidRequest $ "Invalid vehicle variant: " <> show row.vehicleVariant <> " at row: " <> show idx)
+      vehicleClass <- cleanField row.vehicleClass & fromMaybeM (InvalidRequest $ "Vehicle class cannot be empty or without constraint: " <> show row.vehicleClass <> " at row: " <> show idx)
+      return $
+        DODC.VehicleClassVariantMap
+          { vehicleClass,
+            vehicleCapacity = cleanField row.vehicleCapacity >>= readMaybe . T.unpack,
+            vehicleVariant,
+            manufacturer = cleanField row.manufacturer,
+            manufacturerModel = cleanField row.manufacturerModel,
+            reviewRequired = cleanField row.reviewRequired <&> (mapToBool . T.toLower),
+            bodyType = Nothing
+          }

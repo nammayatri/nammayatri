@@ -205,6 +205,9 @@ data UserActionType
   | DRIVER_COIN_BULK_UPLOAD
   | DRIVER_COIN_HISTORY
   | REMOVE_EXPIRED_HOTSPOTS
+  | GET_OPERATING_CITY
+  | CREATE_MERCHANT_OPERATING_CITY
+  | UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
