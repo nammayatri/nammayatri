@@ -51,21 +51,21 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.collectedBy $ collectedBy,
-      Se.Set Beam.domain $ domain,
-      Se.Set Beam.gatewayUrl $ Kernel.Prelude.showBaseUrl $ gatewayUrl,
-      Se.Set Beam.paymentParamsJson $ paymentParamsJson,
-      Se.Set Beam.registryUrl $ Kernel.Prelude.showBaseUrl $ registryUrl,
-      Se.Set Beam.settlementType $ settlementType,
-      Se.Set Beam.staticTermsUrl $ (Kernel.Prelude.fmap showBaseUrl) $ staticTermsUrl,
-      Se.Set Beam.subscriberId $ subscriberId,
-      Se.Set Beam.subscriberUrl $ Kernel.Prelude.showBaseUrl $ subscriberUrl,
-      Se.Set Beam.uniqueKeyId $ uniqueKeyId,
-      Se.Set Beam.vehicleCategory $ vehicleCategory,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ _now
+    [ Se.Set Beam.collectedBy collectedBy,
+      Se.Set Beam.domain domain,
+      Se.Set Beam.gatewayUrl $ Kernel.Prelude.showBaseUrl gatewayUrl,
+      Se.Set Beam.paymentParamsJson paymentParamsJson,
+      Se.Set Beam.registryUrl $ Kernel.Prelude.showBaseUrl registryUrl,
+      Se.Set Beam.settlementType settlementType,
+      Se.Set Beam.staticTermsUrl $ (Kernel.Prelude.fmap showBaseUrl) staticTermsUrl,
+      Se.Set Beam.subscriberId subscriberId,
+      Se.Set Beam.subscriberUrl $ Kernel.Prelude.showBaseUrl subscriberUrl,
+      Se.Set Beam.uniqueKeyId uniqueKeyId,
+      Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
@@ -105,12 +105,12 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
     Beam.BecknConfigT
       { Beam.collectedBy = collectedBy,
         Beam.domain = domain,
-        Beam.gatewayUrl = Kernel.Prelude.showBaseUrl (gatewayUrl),
+        Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.paymentParamsJson = paymentParamsJson,
         Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
         Beam.settlementType = settlementType,
-        Beam.staticTermsUrl = (Kernel.Prelude.fmap showBaseUrl) (staticTermsUrl),
+        Beam.staticTermsUrl = (Kernel.Prelude.fmap showBaseUrl) staticTermsUrl,
         Beam.subscriberId = subscriberId,
         Beam.subscriberUrl = Kernel.Prelude.showBaseUrl subscriberUrl,
         Beam.uniqueKeyId = uniqueKeyId,
