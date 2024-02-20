@@ -56,7 +56,8 @@ initData = {
     spLocTagVisibility : false,
     specialZoneLayoutBackground : "",
     specialZoneImage : "",
-    specialZoneText : ""
+    specialZoneText : "",
+    specialZonePickup : false
   },
   offsetValue: 0,
   loaderButtonVisibility: false,

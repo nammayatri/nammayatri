@@ -70,6 +70,9 @@ white200 = "#99FFFFFF"
 yellow900 :: Color
 yellow900 = "#FCC32C"
 
+yellow600 :: Color
+yellow600 = "#FCF6E7"
+
 shadowGray :: Color
 shadowGray = "#D1D5DB"
 -- Theme Colors

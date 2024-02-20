@@ -1237,3 +1237,10 @@ getKN stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "ಶೂನ್ಯ ಕಮಿಷನ್,ಅನಿಯಮಿತ ಸವಾರಿಗಳು"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "ನಾವು ಪ್ರಸ್ತುತ ನಿಮ್ಮ ನಗರದಲ್ಲಿ ಆಟೋರಿಕ್ಷಾಗಳೊಂದಿಗೆ ಮಾತ್ರ ಲೈವ್ ಮಾಡುತ್ತಿದ್ದೇವೆ"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "ಹೆಚ್ಚಿನ ನವೀಕರಣಗಳಿಗಾಗಿ ಟ್ಯೂನ್ ಮಾಡಿ"
+        SPECIAL_PICKUP_ZONE_DETECTED_NEARBY -> "ಸಮೀಪದಲ್ಲಿ ವಿಶೇಷ ಪಿಕಪ್ ಜೋನ್ ಪತ್ತೆಯಾಗಿದೆ!"
+        ZONE_PICKUP -> "ಪಿಕಪ್ ಜೋನ್"
+        SPECIAL_PICKUP_ZONE_RIDE -> "ವಿಶೇಷ ಪಿಕಪ್ ಜೋನ್ ಸವಾರಿ"
+        SPECIAL_PICKUP_ZONE -> "ವಿಶೇಷ ಪಿಕಪ್ ಜೋನ್"
+        SPECIAL_PICKUP_ZONE_POPUP_INFO -> "ವಿಶೇಷ ಜೋನ್ ನಲ್ಲಿ, ನೀವು ಹತ್ತಿರದ ಗ್ರಾಹಕರಿಂದ ಆದ್ಯತೆಯ ರೈಡ್ ವಿನಂತಿಗಳನ್ನು ಪಡೆಯುತ್ತೀರಿ!”"
+        INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> "ವಿಶೇಷ ಪಿಕಪ್ ವಲಯದಲ್ಲಿ ಆದ್ಯತೆಯ ರೈಡ್ ವಿನಂತಿಗಳನ್ನು ಪಡೆಯಿರಿ"
+        

@@ -366,6 +366,8 @@ data Action = NoAction
             | CustomerSafetyPopupAC PopUpModal.Action
             | UpdateLastLoc Number Number Boolean
             | VehicleNotSupportedAC PopUpModal.Action
+            | SpecialZonePopup
+            | SpecialZoneCardAC RequestInfoCard.Action
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -445,6 +447,8 @@ eval AddNewLocation state = exit $ ExitGotoLocation state true
 
 eval AfterRender state = continue state { props { mapRendered = true}}
 
+eval SpecialZonePopup state = continue state{ props{ specialZonePopup = true}}
+
 eval BackPressed state = do
   if state.props.showGenericAccessibilityPopUp then do 
     _ <- pure $ pauseYoutubeVideo unit
@@ -476,6 +480,7 @@ eval BackPressed state = do
   else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
   else if state.props.accountBlockedPopup then continue state {props {accountBlockedPopup = false}}
   else if state.props.vehicleNSPopup then continue state { props { vehicleNSPopup = false}}
+  else if state.props.specialZonePopup then continue state { props { specialZonePopup = false}}
   else do
     _ <- pure $ minimizeApp ""
     continue state
@@ -984,6 +989,8 @@ eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state 
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
+eval (SpecialZoneCardAC _ ) state = continue state { props { specialZonePopup = false} }
+
 eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
 eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
@@ -1159,9 +1166,9 @@ activeRideDetail state (RidesInfo ride) =
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
   requestedVehicleVariant : ride.requestedVehicleVariant,
   waitTimerId : state.data.activeRide.waitTimerId,
-  specialLocationTag : if isJust ride.disabilityTag then Just "Accessibility"
-                        else if isJust ride.driverGoHomeRequestId then Just "GOTO" 
-                        else if isJust ride.specialLocationTag then ride.specialLocationTag
+  specialLocationTag :  if isJust ride.disabilityTag then Just "Accessibility"
+                        else if (checkSpecialPickupZone ride.specialLocationTag) then Just "SpecialZonePickup"
+                        else if isJust ride.driverGoHomeRequestId then Just "GOTO"
                         else if isSafetyRide then Just "Safety"
                         else ride.specialLocationTag, --  "None_SureMetro_PriorityDrop",--"GOTO",
   disabilityTag : case ride.disabilityTag of

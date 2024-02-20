@@ -119,6 +119,7 @@ public class WidgetService extends Service {
             // Fetch TextView for fare and distanceToPickup
             TextView fareTextView = widgetView.findViewById(R.id.ride_fare);
             TextView distanceTextView = widgetView.findViewById(R.id.distance_to_pickup);
+            ImageView dotView = widgetView.findViewById(R.id.dot_view);
 
             // Get Current Time in UTC
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en"));
@@ -142,6 +143,8 @@ public class WidgetService extends Service {
                 // Fetch data from entity_payload
                 int fare = entity_payload.getInt("baseFare");
                 int distanceToPickup = entity_payload.getInt("distanceToPickup");
+                boolean specialZonePickup = entity_payload.optBoolean("specialZonePickup", false); // need to handle this according to 150 m case
+
                 String searchRequestValidTill = entity_payload.getString("searchRequestValidTill");
 
 
@@ -154,6 +157,7 @@ public class WidgetService extends Service {
                 // Update text for fare and distanceToPickup
                 SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 String fareText = sharedPref.getString("CURRENCY", "₹") + fare;
+                fareText = specialZonePickup ? getString(R.string.you_are_near_a_special_pickup_zone) : fareText;
                 fareTextView.setText(fareText);
                 String distanceText;
                 if (distanceToPickup > 1000) {
@@ -167,6 +171,14 @@ public class WidgetService extends Service {
                 if (silentRideRequest != null){
                     // Add silentRideRequest view
                     silentRideRequest.setVisibility(View.VISIBLE);
+
+                    if (specialZonePickup){
+                        dotView.setVisibility(View.GONE);
+                        distanceTextView.setVisibility(View.GONE);
+                    }else {
+                        dotView.setVisibility(View.VISIBLE);
+                        distanceTextView.setVisibility(View.VISIBLE);
+                    }
 
                     // Start Slide-in animation
                     silentRideRequest.setTranslationX(-1500);

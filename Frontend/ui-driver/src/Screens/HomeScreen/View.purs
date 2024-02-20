@@ -249,6 +249,7 @@ view push state =
       , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
+      , if state.props.specialZonePopup then specialZonePopup push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
       , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
@@ -350,6 +351,7 @@ driverMapsHeaderView push state =
                 , offlineNavigationLinks push state
               ] <> getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
                 <> [gotoRecenterAndSupport state push]
+                <> [specialPickupZone push state]
             , linearLayout
               [ width MATCH_PARENT
               , height MATCH_PARENT
@@ -364,6 +366,46 @@ driverMapsHeaderView push state =
   where
     getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
 
+specialPickupZone :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+specialPickupZone push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 12 12 16 12
+    , margin $ Margin 20 13 20 15
+    , cornerRadius 8.0
+    , stroke $ "1," <> Color.yellow900
+    , background Color.yellow600
+    , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) 
+    , orientation HORIZONTAL
+    ]
+    [ imageView
+      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_police_special_zone"
+      , height $ V 32
+      , width $ V 30
+      , margin $ MarginRight 10
+      ]  
+    , linearLayout 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , gravity CENTER_VERTICAL
+      ] [ textView
+          $ [ text $ getString SPECIAL_PICKUP_ZONE_DETECTED_NEARBY
+                --, TODO : change text according to 150 meter flag 
+            , color Color.black800
+            ]
+          <> FontStyle.tags TypoGraphy
+        , textView
+          $ [ text $ getString LEARN_MORE
+            , color Color.blue800
+            , onClick push $ const SpecialZonePopup
+            ]
+          <> FontStyle.tags TypoGraphy
+      ]
+    ]
+
 bannersCarousal :: forall w. ListItem -> Boolean -> HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bannersCarousal view bottomMargin state push =
   linearLayout
@@ -371,7 +413,6 @@ bannersCarousal view bottomMargin state push =
   , width MATCH_PARENT
   , margin if bottomMargin then MarginVertical 12 12 else MarginTop 12
   ][CarouselHolder.carouselView push $ getCarouselConfig view state]
-
 
 getCarouselConfig ∷ forall a. ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
 getCarouselConfig view state = {
@@ -1708,6 +1749,15 @@ requestInfoCardView push state =
         , width MATCH_PARENT
         ]
         [ RequestInfoCard.view (push <<< RequestInfoCardAction) (requestInfoCardConfig FunctionCall) ]
+
+specialZonePopup :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+specialZonePopup push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ]
+    $ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        ]
+        [ RequestInfoCard.view (push <<< SpecialZoneCardAC) (specialZonePopupConfig state) ]
 
 gotoRequestPopupView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 gotoRequestPopupView push state = 
