@@ -264,24 +264,29 @@ notifyOnRideCompleted booking ride = do
             driverName,
             "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
           ]
-  updateFollowsRideCount personId
+  disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId
   notifyPerson person.merchantId merchantOperatingCityId notificationData
   where
-    updateFollowsRideCount personId = do
-      void $ QPDEN.updateShareRideForAll personId $ Just False
-      emContacts <- QPDEN.findAllByPersonId personId
-      let followingContacts = filter (.enableForFollowing) emContacts
-      mapM_
-        ( \contact -> maybe (pure ()) updateFollowRideCount contact.contactPersonId
-        )
-        followingContacts
-      where
-        updateFollowRideCount emPersonId = do
-          count <- CQFollowRide.decrementFollowRideCount emPersonId
-          when (count <= 0) $ do
-            CQFollowRide.clearFollowsRideCounter emPersonId
-            Person.updateFollowsRide emPersonId False
+
+disableFollowRide ::
+  ServiceFlow m r =>
+  Id Person ->
+  m ()
+disableFollowRide personId = do
+  void $ QPDEN.updateShareRideForAll personId $ Just False
+  emContacts <- QPDEN.findAllByPersonId personId
+  let followingContacts = filter (.enableForFollowing) emContacts
+  mapM_
+    ( \contact -> maybe (pure ()) updateFollowRideCount contact.contactPersonId
+    )
+    followingContacts
+  where
+    updateFollowRideCount emPersonId = do
+      count <- CQFollowRide.decrementFollowRideCount emPersonId
+      when (count <= 0) $ do
+        CQFollowRide.clearFollowsRideCounter emPersonId
+        Person.updateFollowsRide emPersonId False
 
 notifyOnExpiration ::
   ServiceFlow m r =>
@@ -372,6 +377,9 @@ notifyOnBookingCancelled booking cancellationSource bppDetails = do
     SBCR.ByUser -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT_USER merchantOperatingCityId
     _ -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT merchantOperatingCityId
   notificationSound <- getNotificationSound tag notificationSoundFromConfig
+  fork "Disabling share ride" $ do
+    disableFollowRide person.id
+    Redis.del $ CQSos.mockSosKey person.id
   notifyPerson person.merchantId merchantOperatingCityId (notificationData bppDetails.name person notificationSound)
   where
     notificationData orgName person notificationSound =

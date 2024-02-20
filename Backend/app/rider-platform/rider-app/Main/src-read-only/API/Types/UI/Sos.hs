@@ -22,7 +22,8 @@ data MarkAsSafeReq = MarkAsSafeReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data MockSosReq = MockSosReq
-  { onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  { onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    startDrill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
