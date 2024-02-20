@@ -1158,7 +1158,7 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
 
 eval OnResumeCallback state =
   if(state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.props.emergencyHelpModelState.waitingDialerCallback then 
-    continue state {props {emergencyHelpModelState {showCallSuccessfulPopUp = true}}}
+    continue state {props {emergencyHelpModelState {showCallSuccessfulPopUp = true}, rideDurationTimer = unsafePerformEffect $ compareUTCDate (getCurrentUTC "") state.data.driverInfoCardState.rentalData.startTimeUTC}}
   else 
     case getValueToLocalNativeStore LOCAL_STAGE of
       "FindingQuotes" -> do

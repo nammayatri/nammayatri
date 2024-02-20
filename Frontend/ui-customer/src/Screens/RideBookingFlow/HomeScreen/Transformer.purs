@@ -169,9 +169,9 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
                          else
                             fromMaybe "" vehicleVariant
       , rentalData : dummyRentalBookingConfig{
-          baseDistance = fromMaybe 0 resp.estimatedDistance
-        , baseDuration = fromMaybe 0 resp.estimatedDuration
-        
+          baseDistance = (fromMaybe 20000 resp.estimatedDistance)/1000
+        , baseDuration = (fromMaybe 7200 resp.estimatedDuration)/3600
+        , startTimeUTC = fromMaybe "" resp.rideStartTime
         }
         }
 
