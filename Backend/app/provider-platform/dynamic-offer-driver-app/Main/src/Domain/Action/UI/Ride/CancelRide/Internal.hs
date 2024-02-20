@@ -55,6 +55,7 @@ cancelRideImpl :: Id DRide.Ride -> SBCR.BookingCancellationReason -> Flow ()
 cancelRideImpl rideId bookingCReason = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   let merchantId = booking.providerId
   merchant <-
     CQM.findById merchantId
@@ -92,7 +93,10 @@ cancelRideImpl rideId bookingCReason = do
             DP.addDriverToSearchCancelledList searchReq.id ride.driverId
             result <- try @_ @SomeException (initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq driverQuote.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId isRepeatSearch)
             case result of
-              Right _ -> BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source driver vehicle
+              Right _ -> do
+                if isValueAddNP
+                  then BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source driver vehicle
+                  else cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
               Left _ -> cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
           else -- repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
             cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
