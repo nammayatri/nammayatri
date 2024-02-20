@@ -22,6 +22,7 @@ data Geometry = Geometry
   { id :: Id Geometry,
     region :: Text,
     state :: IndianState,
-    city :: City
+    city :: City,
+    geom :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)

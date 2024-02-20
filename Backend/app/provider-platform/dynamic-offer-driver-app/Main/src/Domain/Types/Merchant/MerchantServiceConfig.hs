@@ -129,7 +129,7 @@ data ServiceConfigD (s :: UsageSafety)
   | RentalPaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
-  deriving (Generic, Eq)
+  deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe
 
@@ -144,7 +144,7 @@ data MerchantServiceConfigD (s :: UsageSafety) = MerchantServiceConfig
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type MerchantServiceConfig = MerchantServiceConfigD 'Safe
 
