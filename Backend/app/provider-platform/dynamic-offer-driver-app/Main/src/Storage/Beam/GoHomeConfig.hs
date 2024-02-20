@@ -16,9 +16,6 @@
 
 module Storage.Beam.GoHomeConfig where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Internal as HM
-import qualified Data.Map.Strict as M
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
@@ -53,17 +50,6 @@ instance B.Table GoHomeConfigT where
   primaryKey = Id . merchantOperatingCityId
 
 type GoHomeConfig = GoHomeConfigT Identity
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-goHomeConfigToHSModifiers :: M.Map Text (A.Value -> A.Value)
-goHomeConfigToHSModifiers =
-  M.empty
-
-goHomeConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
-goHomeConfigToPSModifiers =
-  M.empty
 
 $(enableKVPG ''GoHomeConfigT ['merchantOperatingCityId] [])
 

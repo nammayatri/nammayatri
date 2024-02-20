@@ -16,9 +16,6 @@
 
 module Storage.Beam.Rating where
 
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Lazy as HM
-import qualified Data.Map as M
 import qualified Database.Beam as B
 import Kernel.Prelude
 import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
@@ -42,17 +39,6 @@ instance B.Table RatingT where
   primaryKey = Id . id
 
 type Rating = RatingT Identity
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-ratingToHSModifiers :: M.Map Text (A.Value -> A.Value)
-ratingToHSModifiers =
-  M.empty
-
-ratingToPSModifiers :: M.Map Text (A.Value -> A.Value)
-ratingToPSModifiers =
-  M.empty
 
 $(enableKVPG ''RatingT ['id] [['rideId]])
 

@@ -45,6 +45,6 @@ instance B.Table PurchaseHistoryT where
 
 type PurchaseHistory = PurchaseHistoryT Identity
 
-$(enableKVPG ''PurchaseHistoryT ['id] [])
+$(enableKVPG ''PurchaseHistoryT ['id] [['driverId]])
 
 $(mkTableInstances ''PurchaseHistoryT "coin_purchase_history" "atlas_driver_offer_bpp")
