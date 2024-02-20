@@ -130,7 +130,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
           case poolType of
             SkipPool -> do
               incrementBatchNum searchTry.id
-              prepareDriverPoolBatch' previousBatchesDrivers (batchNum + 1) False merchantOpCityId_
+              prepareDriverPoolBatch' previousBatchesDrivers (batchNum + 1) True merchantOpCityId_
             SpecialZoneQueuePool -> do
               (driversInQueue, _) <- splitDriverFromGateAndRest allDriversNotOnRide
               goHomeDriversInQueue <-
