@@ -214,7 +214,7 @@ tfPayments res = do
   let paymentMethodInfo = res.paymentMethodInfo
   Just
     [ Spec.Payment
-        { paymentCollectedBy = Just $ show Enums.BPP,
+        { paymentCollectedBy = Just $ show Enums.SELLER,
           paymentId = Nothing,
           paymentParams = mkParams paymentMethodInfo,
           paymentStatus = Nothing,
