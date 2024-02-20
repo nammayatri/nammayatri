@@ -17,7 +17,9 @@ import qualified Servant.Client.Core
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
-  { collectedBy :: B.C f Domain.Types.BecknConfig.PaymentCollectedBy,
+  { cancellationFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationFeePercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    collectedBy :: B.C f Domain.Types.BecknConfig.PaymentCollectedBy,
     domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,

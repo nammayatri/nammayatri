@@ -18,7 +18,9 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Data.List as L
 import qualified Domain.Action.Beckn.Confirm as DConfirm
+import Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
@@ -28,22 +30,23 @@ bookingStatusCode (DConfirm.DriverQuote _ _) = Nothing -- TODO: refactor it like
 bookingStatusCode (DConfirm.StaticQuote _) = Just "NEW"
 bookingStatusCode (DConfirm.RideOtpQuote _) = Just "NEW"
 
-buildOnConfirmMessageV2 :: MonadFlow m => DConfirm.DConfirmResp -> m Spec.ConfirmReqMessage
-buildOnConfirmMessageV2 res = do
-  order <- tfOrder res
+buildOnConfirmMessageV2 :: MonadFlow m => DConfirm.DConfirmResp -> DBC.BecknConfig -> m Spec.ConfirmReqMessage
+buildOnConfirmMessageV2 res becknConfig = do
+  order <- tfOrder res becknConfig
   return $
     Spec.ConfirmReqMessage
       { confirmReqMessageOrder = order
       }
 
-tfOrder :: MonadFlow m => DConfirm.DConfirmResp -> m Spec.Order
-tfOrder res = do
+tfOrder :: MonadFlow m => DConfirm.DConfirmResp -> DBC.BecknConfig -> m Spec.Order
+tfOrder res becknConfig = do
   fulfillments <- tfFulfillments res
+  cancellationTerms <- tfCancellationTerms becknConfig
   return $
     Spec.Order
       { orderBilling = Nothing,
         orderCancellation = Nothing,
-        orderCancellationTerms = Nothing,
+        orderCancellationTerms = Just cancellationTerms,
         orderFulfillments = fulfillments,
         orderId = Just res.booking.id.getId,
         orderItems = tfItems res,
@@ -209,3 +212,13 @@ tfCustomer res =
                 personTags = Nothing
               }
       }
+
+tfCancellationTerms :: MonadFlow m => DBC.BecknConfig -> m [Spec.CancellationTerm]
+tfCancellationTerms becknConfig =
+  pure $
+    L.singleton
+      Spec.CancellationTerm
+        { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
+          cancellationTermFulfillmentState = Nothing,
+          cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
+        }

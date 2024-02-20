@@ -16,147 +16,40 @@ module Beckn.ACL.OnInit where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils hiding (mkStops)
-import Beckn.Types.Core.Taxi.OnInit as OnInit
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Data.List as L
 import Domain.Action.Beckn.Init as DInit
+import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FareParameters as DFParams
-import qualified Domain.Types.Location as DL
 import Kernel.Prelude
-import Kernel.Utils.Common (encodeToText)
+import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 
-mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
-mkOnInitMessage res = do
-  let rb = res.booking
-      vehicleVariant = Common.castVariant res.booking.vehicleVariant
-      itemId = Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant
-      fareDecimalValue = fromIntegral rb.estimatedFare
-      currency = "INR"
-      breakup_ =
-        mkFareParamsBreakups (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
-          & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType rb.fareParams) -- TODO: Remove after roll out
-  OnInit.OnInitMessage
-    { order =
-        OnInit.Order
-          { id = res.booking.id.getId,
-            items =
-              [ OnInit.OrderItem
-                  { id = itemId,
-                    fulfillment_id = res.booking.quoteId,
-                    price =
-                      OnInit.Price
-                        { currency,
-                          value = fareDecimalValue
-                        },
-                    descriptor =
-                      OnInit.Descriptor
-                        { short_desc = Just itemId,
-                          code = Nothing
-                        }
-                  }
-              ],
-            fulfillment =
-              OnInit.FulfillmentInfo
-                { id = res.booking.quoteId,
-                  _type = Common.mkFulfillmentType res.booking.tripCategory,
-                  start =
-                    OnInit.StartInfo
-                      { location =
-                          OnInit.Location
-                            { gps =
-                                OnInit.Gps
-                                  { lat = res.booking.fromLocation.lat,
-                                    lon = res.booking.fromLocation.lon
-                                  },
-                              address = castAddress res.booking.fromLocation.address
-                            },
-                        authorization = Nothing
-                      },
-                  end =
-                    ( \toLocation ->
-                        OnInit.StopInfo
-                          { location =
-                              OnInit.Location
-                                { gps =
-                                    OnInit.Gps
-                                      { lat = toLocation.lat,
-                                        lon = toLocation.lon
-                                      },
-                                  address = castAddress toLocation.address
-                                }
-                          }
-                    )
-                      <$> res.booking.toLocation,
-                  vehicle =
-                    OnInit.Vehicle
-                      { category = vehicleVariant
-                      },
-                  agent =
-                    res.driverName >>= \driverName ->
-                      Just
-                        OnInit.Agent
-                          { name = driverName,
-                            rateable = True,
-                            tags = Nothing,
-                            phone = Nothing,
-                            image = Nothing
-                          }
-                },
-            state = OnInit.NEW,
-            quote =
-              OnInit.Quote
-                { price =
-                    OnInit.QuotePrice
-                      { currency,
-                        value = fareDecimalValue,
-                        offered_value = fareDecimalValue
-                      },
-                  breakup = Just breakup_
-                },
-            provider =
-              res.driverId >>= \dId ->
-                Just
-                  OnInit.Provider
-                    { id = dId
-                    },
-            payment =
-              OnInit.Payment
-                { params =
-                    OnInit.PaymentParams
-                      { collected_by = OnInit.BPP, --maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
-                        instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
-                        currency = currency,
-                        amount = Just fareDecimalValue
-                      },
-                  _type = maybe OnInit.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) res.paymentMethodInfo,
-                  uri = res.booking.paymentUrl
-                }
-          }
-    }
-  where
-    castAddress DL.LocationAddress {..} = OnInit.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
+mkOnInitMessageV2 :: MonadFlow m => DInit.InitRes -> DBC.BecknConfig -> m Spec.ConfirmReqMessage
+mkOnInitMessageV2 res becknConfig = do
+  order <- tfOrder res becknConfig
+  pure $
+    Spec.ConfirmReqMessage
+      { confirmReqMessageOrder = order
+      }
 
-mkOnInitMessageV2 :: DInit.InitRes -> Spec.ConfirmReqMessage
-mkOnInitMessageV2 res =
-  Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder res
-    }
-
-tfOrder :: DInit.InitRes -> Spec.Order
-tfOrder res =
-  Spec.Order
-    { orderBilling = Nothing,
-      orderCancellation = Nothing,
-      orderCancellationTerms = Nothing,
-      orderFulfillments = tfFulfillments res,
-      orderId = Just res.booking.id.getId,
-      orderItems = tfItems res,
-      orderPayments = tfPayments res,
-      orderProvider = tfProvider res,
-      orderQuote = tfQuotation res,
-      orderStatus = Nothing
-    }
+tfOrder :: MonadFlow m => DInit.InitRes -> DBC.BecknConfig -> m Spec.Order
+tfOrder res becknConfig = do
+  cancellationTerms <- tfCancellationTerms becknConfig
+  pure $
+    Spec.Order
+      { orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Just cancellationTerms,
+        orderFulfillments = tfFulfillments res,
+        orderId = Just res.booking.id.getId,
+        orderItems = tfItems res,
+        orderPayments = tfPayments res,
+        orderProvider = tfProvider res,
+        orderQuote = tfQuotation res,
+        orderStatus = Nothing
+      }
 
 tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
@@ -340,3 +233,13 @@ tfVehicle res = do
         vehicleModel = Nothing,
         vehicleRegistration = Nothing
       }
+
+tfCancellationTerms :: MonadFlow m => DBC.BecknConfig -> m [Spec.CancellationTerm]
+tfCancellationTerms becknConfig =
+  pure $
+    L.singleton
+      Spec.CancellationTerm
+        { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
+          cancellationTermFulfillmentState = Nothing,
+          cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
+        }
