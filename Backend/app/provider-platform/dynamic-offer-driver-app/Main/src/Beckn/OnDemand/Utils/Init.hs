@@ -21,10 +21,6 @@ castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVarian
   (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
   _ -> Nothing
 
--- castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
--- castPaymentType "ON-FULFILLMENT" = return DMPM.ON_FULFILLMENT
--- castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"
-
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
 castPaymentCollector "BAP" = return DMPM.BAP
 castPaymentCollector "BPP" = return DMPM.BPP
