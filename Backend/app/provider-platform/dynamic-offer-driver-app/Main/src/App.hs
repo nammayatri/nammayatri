@@ -114,9 +114,9 @@ runDynamicOfferDriverApp' appCfg = do
         L.setOption KBT.Tables kvConfigs
         if kvConfigs.useCAC
           then do
-             setEnv "CAC_HOST" appCfg.cacConfig.host
-             setEnv "CAC_INTERVAL" (show appCfg.cacConfig.interval)
-             _ <- CC.forkIO $ createCAC appCfg
+            liftIO $ setEnv "CAC_HOST" appCfg.cacConfig.host
+            liftIO $ setEnv "CAC_INTERVAL" (show appCfg.cacConfig.interval)
+            _ <- liftIO $ CC.forkIO $ createCAC appCfg
             logInfo "Starting App using configs from CAC."
           else logInfo "Starting App using configs from DB."
         allProviders <-
