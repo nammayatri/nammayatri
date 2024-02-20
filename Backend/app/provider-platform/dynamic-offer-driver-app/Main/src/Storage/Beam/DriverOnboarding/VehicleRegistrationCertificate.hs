@@ -39,6 +39,8 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleModel :: B.C f (Maybe Text),
     vehicleColor :: B.C f (Maybe Text),
     vehicleEnergyType :: B.C f (Maybe Text),
+    reviewRequired :: B.C f (Maybe Bool),
+    manufacturerModel :: B.C f (Maybe Text),
     verificationStatus :: B.C f Domain.VerificationStatus,
     failedRules :: B.C f [Text],
     fleetOwnerId :: B.C f (Maybe Text),

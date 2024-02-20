@@ -56,6 +56,18 @@ update config = do
     ]
     [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId config.merchantOperatingCityId, Se.Is BeamODC.documentType $ Se.Eq config.documentType]
 
+updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
+updateSupportedVehicleClassesJSON merchantOperatingCityId supportedVehicleClasses = do
+  let supportedClassJson = BeamODC.getConfigJSON supportedVehicleClasses
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamODC.supportedVehicleClassesJSON $ toJSON supportedClassJson,
+      Se.Set BeamODC.updatedAt now
+    ]
+    [ Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId merchantOperatingCityId,
+      Se.Is BeamODC.documentType $ Se.Eq RC
+    ]
+
 instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig where
   fromTType' BeamODC.OnboardingDocumentConfigT {..} = do
     supportedVehicleClasses' <- maybe (throwError $ InternalError "Unable to decode OnboardingDocumentConfigT.supportedVehicleClasses") return $ case documentType of

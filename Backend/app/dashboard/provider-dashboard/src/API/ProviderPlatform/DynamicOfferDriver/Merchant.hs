@@ -64,6 +64,7 @@ type API =
            :<|> UpdateFarePolicy
            :<|> CreateMerchantOperatingCityAPI
            :<|> SchedulerTriggerAPI
+           :<|> UpdateOnboardingVehicleVariantMapping
        )
 
 type MerchantUpdateAPI =
@@ -158,6 +159,10 @@ type SchedulerTriggerAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SCHEDULER_TRIGGER
     :> Common.SchedulerTriggerAPI
 
+type UpdateOnboardingVehicleVariantMapping =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+    :> Common.UpdateOnboardingVehicleVariantMappingAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   merchantUpdate merchantId city
@@ -183,6 +188,7 @@ handler merchantId city =
     :<|> updateFarePolicy merchantId city
     :<|> createMerchantOperatingCity merchantId city
     :<|> schedulerTrigger merchantId city
+    :<|> updateOnboardingVehicleVariantMapping merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -447,3 +453,12 @@ createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.Creat
   unless (req.city `elem` merchant.supportedOperatingCities) $
     SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
+
+updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateOnboardingVehicleVariantMappingReq -> FlowHandler APISuccess
+updateOnboardingVehicleVariantMapping merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpdateOnboardingVehicleVariantMappingEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.merchant.updateOnboardingVehicleVariantMapping)) req
+  where
+    addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
