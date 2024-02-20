@@ -16,7 +16,6 @@ module API.Beckn.Init (API, handler) where
 
 import qualified Beckn.ACL.Init as ACL
 import qualified Beckn.ACL.OnInit as ACL
-import qualified Beckn.Core as CallBAP
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
@@ -39,6 +38,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import Storage.Beam.SystemConfigs ()
+import Storage.Queries.BecknConfig as QBC
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -80,23 +80,18 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
         Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
           dInitRes <- DInit.handler transporterId dInitReq validatedRes
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
-          isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-          if isBecknSpecVersion2
-            then do
-              context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
-              void . handle (errHandler dInitRes.booking dInitRes.transporter) $
-                Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
-                  pure $
-                    Spec.OnInitReq
-                      { onInitReqContext = context,
-                        onInitReqError = Nothing,
-                        onInitReqMessage = Just $ ACL.mkOnInitMessageV2 dInitRes
-                      }
-            else do
-              context <- buildTaxiContext Context.ON_SELECT msgId txnId bapId bapUri bppId bppUri city country False
-              void . handle (errHandler dInitRes.booking dInitRes.transporter) $
-                CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV1 context context.bap_uri internalEndPointHashMap $
-                  pure $ ACL.mkOnInitMessage dInitRes
+          context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
+          void . handle (errHandler dInitRes.booking dInitRes.transporter) $
+            Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
+              let vehicleCategory = Utils.mapVariantToVehicle dInitRes.booking.vehicleVariant
+              becknConfig <- QBC.findByMerchantIdDomainAndVehicle (Just dInitRes.transporter.id) (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+              onInitMessage <- ACL.mkOnInitMessageV2 dInitRes becknConfig
+              pure $
+                Spec.OnInitReq
+                  { onInitReqContext = context,
+                    onInitReqError = Nothing,
+                    onInitReqMessage = Just onInitMessage
+                  }
     pure Ack
   where
     errHandler booking transporter exc

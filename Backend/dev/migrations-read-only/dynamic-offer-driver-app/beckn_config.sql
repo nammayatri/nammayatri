@@ -17,3 +17,9 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN merchant_operating_ci
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN cancellation_fee_percentage integer ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN cancellation_fee_amount integer ;
