@@ -21,7 +21,6 @@ import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 import Kernel.Prelude
-import Kernel.Utils.Common (encodeToText)
 import Tools.Beam.UtilsTH
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
@@ -48,10 +47,10 @@ instance B.Table OnboardingDocumentConfigT where
 
 type OnboardingDocumentConfig = OnboardingDocumentConfigT Identity
 
-getConfigJSON :: Domain.SupportedVehicleClasses -> Text
+getConfigJSON :: Domain.SupportedVehicleClasses -> A.Value
 getConfigJSON = \case
-  Domain.DLValidClasses cfg -> encodeToText cfg
-  Domain.RCValidClasses cfg -> encodeToText cfg
+  Domain.DLValidClasses cfg -> toJSON cfg
+  Domain.RCValidClasses cfg -> toJSON cfg
 
 $(enableKVPG ''OnboardingDocumentConfigT ['merchantOperatingCityId, 'documentType] [['merchantOperatingCityId]])
 
