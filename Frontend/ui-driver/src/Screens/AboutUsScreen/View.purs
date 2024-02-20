@@ -18,7 +18,8 @@ import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.ComplaintsModel as ComplaintsModel
 import Components.PopUpModal as PopUpModal
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..),fromMaybe)
+import Data.Function.Uncurried (runFn3)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -31,6 +32,7 @@ import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
+import DecodeUtil (getAnyFromWindow)
 import Styles.Colors as Color
 import ConfigProvider
 
@@ -159,6 +161,7 @@ footerView state =
 applicationInformationLayout :: ST.AboutUsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 applicationInformationLayout state push =
   let config = getAppConfig appConfig
+      appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
   in
   linearLayout
     [ width MATCH_PARENT
@@ -178,7 +181,7 @@ applicationInformationLayout state push =
     , textView
         $ [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , text $ getString $ ABOUT_TEXT "ABOUT_TEXT"
+          , text $ appName <> getString ABOUT_TEXT
           , color Color.black800
           , gravity LEFT
           , margin (MarginTop 20)

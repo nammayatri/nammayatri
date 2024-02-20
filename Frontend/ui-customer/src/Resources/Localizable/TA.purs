@@ -494,7 +494,7 @@ getTA stringKey =
     WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING -> "\nரத்துசெய்யும் முன் டிரைவரைச் சரிபார்க்க விரும்புகிறீர்களா?"
     DRIVER_IS_NEAR_YOUR_LOCATION -> "டிரைவர் உங்கள் இருப்பிடத்திற்கு அருகில் இருக்கிறார்."
     SOME_OTHER_REASON -> "வேறு சில காரணம்."
-    LOCATION_PERMISSION_SUBTITLE_NEW_USER _ -> "நம்ம யாத்ரிக்கு வரவேற்கிறோம்! \nசவாரிகளை முன்பதிவு செய்ய, உங்கள் சாதனத்தின் இருப்பிடம் தேவை."
+    LOCATION_PERMISSION_SUBTITLE_NEW_USER -> "{}-கு வரவேற்கிறோம்! \nசவாரிகளை முன்பதிவு செய்ய, உங்கள் சாதனத்தின் இருப்பிடம் தேவை."
     METRO_RIDE -> "மெட்ரோ சவாரி"
     GO_BACK_TEXT -> "திரும்பிச் செல்"
     DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST -> "டிரைவர் உங்கள் சிறப்புக் கோரிக்கையை விரும்பினார்."

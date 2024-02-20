@@ -418,8 +418,8 @@ data STR = LETS_GET_STARTED
         | FOR_UPDATES_SEE_ALERTS
         | SHARE_OPTIONS
         | ENTER_PASSWORD
-        | WELCOME_TEXT String
-        | ABOUT_TEXT String
+        | WELCOME_TEXT
+        | ABOUT_TEXT
         | YOUR_VEHICLE
         | BOOKING_OPTIONS
         | CONFIRM_AND_CHANGE
