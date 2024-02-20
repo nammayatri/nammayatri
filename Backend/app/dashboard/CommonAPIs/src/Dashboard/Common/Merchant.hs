@@ -66,6 +66,7 @@ data MerchantEndpoint
   | CreateMerchantOperatingCityEndpoint
   | UpdateFPPerExtraKmRate
   | SchedulerTriggerAPIEndpoint
+  | UpdateOnboardingVehicleVariantMappingEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "MerchantEndpoint"

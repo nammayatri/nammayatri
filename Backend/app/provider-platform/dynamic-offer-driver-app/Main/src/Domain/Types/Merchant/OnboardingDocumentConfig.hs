@@ -37,6 +37,8 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleCapacity :: Maybe Int,
     vehicleVariant :: Variant,
     manufacturer :: Maybe Text,
+    manufacturerModel :: Maybe Text,
+    reviewRequired :: Maybe Bool,
     bodyType :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, Show)

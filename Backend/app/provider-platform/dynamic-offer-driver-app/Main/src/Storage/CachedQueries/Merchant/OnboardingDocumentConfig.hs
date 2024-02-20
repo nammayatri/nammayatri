@@ -16,6 +16,7 @@
 module Storage.CachedQueries.Merchant.OnboardingDocumentConfig
   ( findAllByMerchantOpCityId,
     findByMerchantOpCityIdAndDocumentType,
+    updateSupportedVehicleClassesJSON,
     clearCache,
     create,
     update,
@@ -57,3 +58,6 @@ clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
 update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => OnboardingDocumentConfig -> m ()
 update = Queries.update
+
+updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
+updateSupportedVehicleClassesJSON = Queries.updateSupportedVehicleClassesJSON
