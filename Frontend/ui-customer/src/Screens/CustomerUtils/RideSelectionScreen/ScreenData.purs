@@ -15,11 +15,44 @@
 
 module Screens.RideSelectionScreen.ScreenData where
 
-import Data.Maybe (Maybe(..))
-import Screens.Types (AnimationState(..), RideSelectionScreenState, IndividualRideCardState, ZoneType(..))
+
 import Services.API (BookingLocationAPIEntity(..))
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
+import Common.Types.App 
+import Screens.Types
+import Data.Maybe
+
+-- ############################### Types ###############################
+type RideSelectionScreenState =
+  {
+    shimmerLoader :: AnimationState,
+    prestoListArrayItems :: Array ItemState,
+    itemsRides :: Array IndividualRideCardState,
+    props :: RideSelectionScreenProps,
+    data :: RideSelectionScreenData,
+    selectedCategory :: CategoryListType,
+    selectedItem :: Maybe IndividualRideCardState
+  }  
+
+type RideSelectionScreenData = {
+    offsetValue :: Int,
+    loadMoreText :: Boolean,
+    isSrcServiceable :: Boolean
+  }
+
+type RideSelectionScreenProps = {
+  loaderButtonVisibility :: Boolean,
+  loadMoreDisabled :: Boolean,
+  receivedResponse :: Boolean,
+  apiFailure :: Boolean,
+  fromNavBar :: Boolean,
+  optionsVisibility :: Boolean
+}
+
+
+
+-- ############################### Data ###############################
 
 initData :: RideSelectionScreenState
 initData =
@@ -36,8 +69,6 @@ initData =
   , data:
       { offsetValue: 0
       , loadMoreText: true
-      , config: DC.config
-      , logField : empty
       , isSrcServiceable : true
       }
   , prestoListArrayItems: []

@@ -27,12 +27,13 @@ import Language.Types (STR(..))
 import Prelude
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.RideSelectionScreen.Controller (getTitle)
-import Screens.Types as ST
 import Storage as Storage
 import Styles.Colors as Color
 import Data.Maybe 
+import Screens.RideSelectionScreen.ScreenData
+import MerchantConfig.DefaultConfig as DC
 
-apiErrorModalConfig :: ST.RideSelectionScreenState -> ErrorModal.Config 
+apiErrorModalConfig :: RideSelectionScreenState -> ErrorModal.Config 
 apiErrorModalConfig state = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
@@ -55,13 +56,13 @@ apiErrorModalConfig state = let
     , buttonConfig {
         text = getString NOTIFY_ME
       , margin = Margin 16 0 16 16
-      , background = state.data.config.primaryBackground
-      , color = state.data.config.primaryTextColor
+      , background = DC.config.primaryBackground
+      , color =  DC.config.primaryTextColor
       }
     }
   in errorModalConfig' 
 
-errorModalConfig :: ST.RideSelectionScreenState -> ErrorModal.Config 
+errorModalConfig :: RideSelectionScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
   config = ErrorModal.config 
   errorModalConfig' = config 
@@ -86,7 +87,7 @@ errorModalConfig state = let
     }
   in errorModalConfig' 
 
-genericHeaderConfig :: ST.RideSelectionScreenState -> GenericHeader.Config 
+genericHeaderConfig :: RideSelectionScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = GenericHeader.config
   genericHeaderConfig' = config 
@@ -110,7 +111,7 @@ genericHeaderConfig state = let
     }
   in genericHeaderConfig'
 
-cancelButtonConfig :: ST.RideSelectionScreenState -> PrimaryButton.Config
+cancelButtonConfig :: RideSelectionScreenState -> PrimaryButton.Config
 cancelButtonConfig _ = let
   config = PrimaryButton.config
   primaryButtonConfig' = config

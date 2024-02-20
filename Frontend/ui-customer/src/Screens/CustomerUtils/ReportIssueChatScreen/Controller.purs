@@ -47,13 +47,12 @@ import PrestoDOM.Utils (continue, continueWithCmd, exit)
 import Resources.Constants (maxImageUploadInIssueReporting)
 import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
 import Screens.InvoiceScreen.ScreenData as IS
-import Screens.Types (InvoiceScreenState, ReportIssueChatScreenEntryPoint(..))
-import Screens.Types (ReportIssueChatScreenEntryPoint(..))
-import Screens.Types (ReportIssueChatScreenState, InvoiceScreenData)
+import Screens.Types (InvoiceScreenState)
 import Types.EndPoint as EndPoint
 import PrestoDOM (updateWithCmdAndExit)
 import Timers
 import Effect.Uncurried 
+import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

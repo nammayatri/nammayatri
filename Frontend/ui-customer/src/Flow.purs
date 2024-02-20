@@ -70,7 +70,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*))
 import Mobility.Prelude (capitalize)
-import ModifyScreenState (modifyScreenState, updateRideDetails, updateRepeatRideDetails)
+import ModifyScreenState (modifyScreenState, updateRideDetails, updateRepeatRideDetails, FlowState(..))
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, otherwise, identity, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling(delay)
@@ -127,7 +127,7 @@ import Services.Config (getBaseUrl, getSupportNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Types.App
-import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), TICKET_BOOKING_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..), TICKET_BOOKING_SCREEN_OUTPUT(..),TICKET_INFO_SCREEN_OUTPUT(..),defaultGlobalState, RIDE_SELECTION_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..),  TICKETING_SCREEN_SCREEN_OUTPUT(..),METRO_TICKET_SCREEN_OUTPUT(..),METRO_TICKET_DETAILS_SCREEN_OUTPUT(..),METRO_MY_TICKETS_SCREEN_OUTPUT(..),METRO_MY_TICKETS_SCREEN_OUTPUT(..),METRO_TICKET_STATUS_SCREEN_OUTPUT(..))
+import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), TICKET_BOOKING_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..), TICKET_BOOKING_SCREEN_OUTPUT(..),TICKET_INFO_SCREEN_OUTPUT(..),defaultGlobalState,  TICKETING_SCREEN_SCREEN_OUTPUT(..),METRO_TICKET_SCREEN_OUTPUT(..),METRO_TICKET_DETAILS_SCREEN_OUTPUT(..),METRO_MY_TICKETS_SCREEN_OUTPUT(..),METRO_MY_TICKETS_SCREEN_OUTPUT(..),METRO_TICKET_STATUS_SCREEN_OUTPUT(..))
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
@@ -190,6 +190,7 @@ import SessionCache(getValueFromWindow, setValueInWindow)
 import LocalStorage.Cache (clearCache)
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldMap)
+import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
@@ -225,10 +226,10 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
     Just globalPayload ->
       case globalPayload ^. _payload ^._view_param of
         Just screen -> case screen of
-          "rides" -> hideSplashAndCallFlow $ myRidesScreenFlow true
+          "rides" -> hideSplashAndCallFlow myRidesScreenFlow 
           "abt" -> hideSplashAndCallFlow aboutUsScreenFlow
           "fvrts" -> hideSplashAndCallFlow savedLocationFlow
-          "help" -> hideSplashAndCallFlow helpAndSupportScreenFlow
+          "help" -> hideSplashAndCallFlow $ flowRouter HelpAndSupportScreenFlow
           "prof" -> hideSplashAndCallFlow myProfileScreenFlow
           "lang" -> hideSplashAndCallFlow selectLanguageScreenFlow
           "tkts" -> hideSplashAndCallFlow placeListFlow
@@ -559,11 +560,11 @@ homeScreenFlow = do
       searchLocationFlow
     CHECK_FLOW_STATUS -> currentFlowStatus
     GO_TO_MY_RIDES -> do
-      modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
-      myRidesScreenFlow true
+      modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}, props {fromNavBar = true}})
+      myRidesScreenFlow
     GO_TO_HELP -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
-      helpAndSupportScreenFlow
+      flowRouter HelpAndSupportScreenFlow
     CHANGE_LANGUAGE ->  selectLanguageScreenFlow
     GO_TO_ABOUT -> aboutUsScreenFlow
     GO_TO_MY_TICKETS -> do
@@ -1470,7 +1471,8 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{ data {ratingViewState { issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1} }, props {nightSafetyFlow = false}})
         homeScreenFlow
     RIDE_DETAILS_SCREEN state -> do
-      tripDetailsScreenFlow Home
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = Home}})
+      tripDetailsScreenFlow
     GO_TO_TICKET_BOOKING_FLOW state -> do 
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{props{currentStage = DescriptionStage, previousStage = DescriptionStage}})
       placeListFlow
@@ -1509,7 +1511,7 @@ homeScreenFlow = do
     GO_TO_METRO_BOOKING _ -> do
       modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
       metroTicketBookingFlow
-    GO_TO_HELP_AND_SUPPORT -> helpAndSupportScreenFlow
+    GO_TO_HELP_AND_SUPPORT -> flowRouter HelpAndSupportScreenFlow
     GO_TO_RENTALS_FLOW -> do 
       modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
       searchLocationFlow --rentalsScreenFlow
@@ -1571,14 +1573,14 @@ homeScreenFlow = do
     GO_TO_REPORT_SAFETY_ISSUE state -> do
       let language = fetchLanguage $ getLanguageLocale languageKey 
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0" "" ""
-      let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> optionObj.option }) getOptionsRes.options
+      let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
           chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
                                                         chatType : "IssueMessage", 
                                                         timestamp : (getCurrentUTC "")} )getOptionsRes.messages
       void $ pure $ cleverTapCustomEvent "ny_user_report_safety_issue_activated"
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ST.HomeScreenEntry, chats = chats', tripId = Just state.data.rideRatingState.rideId, categoryName = "Safety Related Issue", categoryId = "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = Nothing } } )
-      issueReportChatScreenFlow
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just state.data.rideRatingState.rideId, categoryName = "Safety Related Issue", categoryId = "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = Nothing } } )
+      flowRouter IssueReportChatScreenFlow
     GO_TO_MY_METRO_TICKETS -> do
       modifyScreenState $ MetroMyTicketsScreenStateType (\state -> state { props {entryPoint = ST.HomeScreenToMetroMyTickets}})
       metroMyTicketsFlow
@@ -1781,26 +1783,24 @@ getFinalAmount (RideBookingRes resp) =
         (RideAPIEntity ride) = (fromMaybe dummyRideAPIEntity (rideList !! 0))
     in INT.round $ fromMaybe 0.0 $ fromString (show (fromMaybe 0 ride.computedPrice))
 
-tripDetailsScreenFlow :: TripDetailsGoBackType ->  FlowBT String Unit
-tripDetailsScreenFlow fromMyRides = do
+tripDetailsScreenFlow ::  FlowBT String Unit
+tripDetailsScreenFlow = do
   (GlobalState globalState) <- getState
   logField_ <- lift $ lift $ getLogFields
   expiryTime <- pure $ getExpiryTime globalState.tripDetailsScreen.data.selectedItem.rideEndTimeUTC isForLostAndFound
-  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = fromMyRides, canConnectWithDriver = (expiryTime <= 86400)}}) -- expiryTime < 24hrs or 86400 seconds
+  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{ canConnectWithDriver = (expiryTime <= 86400)}}) -- expiryTime < 24hrs or 86400 seconds
   flow <- UI.tripDetailsScreen
   case flow of
-    GO_TO_HELPSCREEN -> helpAndSupportScreenFlow
-    GO_TO_RIDES -> do
-      (GlobalState newState) <- getState
-      myRidesScreenFlow newState.myRidesScreen.props.fromNavBar
+    GO_TO_HELPSCREEN -> flowRouter HelpAndSupportScreenFlow
+    GO_TO_RIDES -> myRidesScreenFlow 
     ON_SUBMIT state -> do
       liftFlowBT $ logEventWithParams logField_ "ny_user_issue_reported" "Description" (state.data.message)
-      let bookingId = if fromMyRides == Home then Just globalState.homeScreen.data.rideRatingState.bookingId else Just state.data.selectedItem.bookingId
+      let bookingId = if state.props.fromMyRides == Home then Just globalState.homeScreen.data.rideRatingState.bookingId else Just state.data.selectedItem.bookingId
           isNightSafety = Just $ globalState.homeScreen.props.nightSafetyFlow
       void $ Remote.sendIssueBT (Remote.makeSendIssueReq  Nothing bookingId state.data.message state.data.message isNightSafety)
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = true}})
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = true, fromMyRides = state.props.fromMyRides}})
       when globalState.homeScreen.props.nightSafetyFlow $ do modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {ratingViewState {issueFacedView = false, selectedYesNoButton = -1}}, props{nightSafetyFlow = false}})
-      tripDetailsScreenFlow state.props.fromMyRides
+      tripDetailsScreenFlow 
     GO_TO_INVOICE updatedState -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_invoice_clicked" $ [ { key : "Pickup", value : unsafeToForeign updatedState.data.selectedItem.source},
                                                                                                           { key : "Destination", value : unsafeToForeign updatedState.data.selectedItem.destination},
@@ -1824,7 +1824,8 @@ tripDetailsScreenFlow fromMyRides = do
       config <- getAppConfigFlowBT appConfig
       pure $ toast (getString STR.REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON)
       void $ Remote.sendIssueBT (Remote.makeSendIssueReq  (Just config.appData.supportMail) (Just updatedState.data.selectedItem.rideId) "LOSTANDFOUND" "LOST AND FOUND" $ Just false)
-      tripDetailsScreenFlow updatedState.props.fromMyRides
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = updatedState.props.fromMyRides}})
+      tripDetailsScreenFlow 
     GET_CATEGORIES_LIST updatedState -> do 
       let language = fetchLanguage $ getLanguageLocale languageKey
           categoryOrder = ["LOST_AND_FOUND", "DRIVER_RELATED", "RIDE_RELATED", "APP_RELATED"]
@@ -1832,12 +1833,12 @@ tripDetailsScreenFlow fromMyRides = do
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
       let unsortedCatagory = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
           categories' = sortBy compareByOrder unsortedCatagory
-      modifyScreenState $ TripDetailsScreenStateType (\helpAndSupportScreen -> updatedState { data {categories = categories' } } )
-      tripDetailsScreenFlow updatedState.props.fromMyRides
+      modifyScreenState $ TripDetailsScreenStateType (\helpAndSupportScreen -> updatedState { data {categories = categories' }, props { fromMyRides = updatedState.props.fromMyRides} } )
+      tripDetailsScreenFlow 
     GO_TO_ISSUE_CHAT_SCREEN updatedState selectedCategory -> do
       let language = fetchLanguage $ getLanguageLocale languageKey
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
-      let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> optionObj.option}) getOptionsRes.options
+      let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
           chats' = map (\(Message currMessage) -> Chat {
                       chatId : currMessage.id,
@@ -1846,8 +1847,8 @@ tripDetailsScreenFlow fromMyRides = do
                     }) getOptionsRes.messages
           categoryName = getTitle selectedCategory.categoryAction
           merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
-      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ST.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }})
-      issueReportChatScreenFlow
+      modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState { data { merchantExoPhone = merchantExoPhone',  selectedRide = Just updatedState.data.selectedItem, entryPoint = ReportIssueChatScreenData.TripDetailsScreenEntry, chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }})
+      flowRouter IssueReportChatScreenFlow
 
 
 invoiceScreenFlow :: FlowBT String Unit
@@ -1855,7 +1856,8 @@ invoiceScreenFlow = do
   flow <- UI.invoiceScreen
   (GlobalState newState) <- getState
   case flow of
-    InvoiceScreenOutput.GoBack -> tripDetailsScreenFlow newState.tripDetailsScreen.props.fromMyRides
+    InvoiceScreenOutput.GoBack -> do 
+      tripDetailsScreenFlow 
     InvoiceScreenOutput.GoToHome -> homeScreenFlow
   pure unit
 
@@ -1869,289 +1871,38 @@ contactUsScreenFlow = do
       homeScreenFlow
   pure unit
 
-helpAndSupportScreenFlow :: FlowBT String Unit
-helpAndSupportScreenFlow = do
-  (GlobalState globalState) <- getState
-  let helpAndSupportScreenState = globalState.helpAndSupportScreen
-  if null helpAndSupportScreenState.data.categories then do 
-    let language = fetchLanguage $ getLanguageLocale languageKey 
-    (GetCategoriesRes response) <- Remote.getCategoriesBT language
-    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
-    modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = categories' } } )
-  else pure unit
-  modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ST.HelpAndSupportScreenEntry }})
-  flow <- UI.helpAndSupportScreen
-  case flow of
-    GO_TO_HOME_FROM_HELP -> homeScreenFlow
-    GO_TO_SUPPORT_SCREEN bookingId'-> do
-      modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen {data{bookingId = bookingId'}})
-      contactUsScreenFlow
-    GO_TO_TRIP_DETAILS state -> do
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {tripId = state.data.tripId, vehicleVariant = state.data.vehicleVariant, 
-                                                                                                      selectedItem {status = state.data.status, faresList = state.data.faresList ,date = state.data.date, bookingId = state.data.bookingId,rideStartTime = state.data.rideStartTime, rideEndTime = state.data.rideEndTime, rideId = state.data.rideId, vehicleNumber = state.data.vehicleNumber,time = state.data.time,source = state.data.source,destination = state.data.destination,driverName = state.data.driverName,totalAmount = state.data.totalAmount, rating = state.data.rating, shortRideId = state.data.tripId, merchantExoPhone = state.data.merchantExoPhone},
-                                                                                                      date = state.data.date, time = state.data.time, source = state.data.source, destination = state.data.destination, driverName = state.data.driverName, totalAmount = state.data.totalAmount,rating = state.data.rating}})
-      tripDetailsScreenFlow HelpAndSupport
-    VIEW_RIDES -> do
-      modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen { data{offsetValue = 0}})
-      myRidesScreenFlow false
-    UPDATE_STATE updatedState -> do
-      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
-      helpAndSupportScreenFlow
-    DELETE_USER_ACCOUNT updatedState -> do
-      void $ Remote.sendIssueBT (Remote.makeSendIssueReq (Just updatedState.data.email) Nothing "Request To Delete Account" updatedState.data.description $ Just false)
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { props{showDeleteAccountView = true}, data {accountStatus = DEL_REQUESTED}})
-      helpAndSupportScreenFlow
-    RIDE_SELECTION_SCREEN selectedCategory -> do
-      modifyScreenState $ RideSelectionScreenStateType (\rideHistoryScreen -> rideHistoryScreen { data {offsetValue = 0}, selectedCategory = selectedCategory } )
-      rideSelectionScreenFlow
-    ISSUE_CHAT_SCREEN selectedCategory -> do      
-      let language = fetchLanguage $ getLanguageLocale languageKey
-      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
-      let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> optionObj.option}) getOptionsRes.options
-          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
-          chats' = map (\(Message currMessage) -> Chat {
-                      chatId : currMessage.id,
-                      chatType : "IssueMessage",
-                      timestamp : getCurrentUTC ""
-                    }) getOptionsRes.messages
-          categoryName = getTitle selectedCategory.categoryAction
-      modifyScreenState $ ReportIssueChatScreenStateType (\updatedState ->  updatedState { data { chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }})
-      issueReportChatScreenFlow
-    OPEN_OLD_ISSUE_CHAT_SCREEN selectedIssue -> do
-      let language =  fetchLanguage $ getLanguageLocale languageKey
-      (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language selectedIssue.issueReportId
-      let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> optionObj.option}) issueInfoRes.options
-          messages' = mapWithIndex (\_ (ChatDetail currMessage) -> 
-                        (makeChatComponent' (reportIssueMessageTransformer (fromMaybe "" currMessage.content)) (if currMessage.sender == "USER" then "Customer" else "Bot") currMessage.timestamp currMessage.chatType 0)
-                      )issueInfoRes.chats
-          categoryName = getTitle issueInfoRes.categoryLabel
-          showStillHaveIssue' = case (last issueInfoRes.chats) of
-                      Just (ChatDetail msg) -> (fromMaybe "" msg.label) == "AUTO_MARKED_RESOLVED"
-                      Nothing -> false 
-          isResolved' =  any (\x -> x == selectedIssue.status) ["CLOSED", "NOT_APPLICABLE"]
-      modifyScreenState $ ReportIssueChatScreenStateType 
-        (\_ -> ReportIssueChatScreenData.initData { 
-            data {
-              entryPoint = ST.OldChatEntry
-              , showStillHaveIssue = showStillHaveIssue'
-              , categoryId = issueInfoRes.categoryId
-              , categoryName = categoryName
-              , options = options'
-              , issueId = Just selectedIssue.issueReportId
-              , issueReportShortId = issueInfoRes.issueReportShortId
-              , chatConfig = ReportIssueChatScreenData.initData.data.chatConfig {
-                              messages = messages'
-                            } 
-              }
-          , props {
-              showSubmitComp = false
-            , isResolved = isResolved'
-            }
-          }
-        )
-      issueReportChatScreenFlow
 
-issueReportChatScreenFlow :: FlowBT String Unit
-issueReportChatScreenFlow = do
-  modifyScreenState $ ReportIssueChatScreenStateType (\state -> state { props {isKeyboardOpen = false}})
-  flow <- UI.reportIssueChatScreen
-  case flow of
-    SELECT_ISSUE_OPTION updatedState -> do
-      let selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption
-          selectedOptionLabel = fromMaybe "" $ map (\option -> option.label) updatedState.data.selectedOption
-          language = fetchLanguage $ getLanguageLocale languageKey
-          isResolved = selectedOptionLabel == "MARK_RESOLVED"
-      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId $ fromMaybe "" updatedState.data.issueId
-      when isResolved do
-        let updateIssueReqBody = UpdateIssueReqBody {status : "CLOSED"}
-        (UpdateIssueRes _) <- Remote.updateIssue (fromMaybe "" updatedState.data.issueId) language updateIssueReqBody
-        pure unit
-      let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj {option = (show (index + 1)) <> ". " <> optionObj.option}) getOptionsRes.options
-          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
-          chats' = [Chat { chatId : selectedOptionId, 
-                           chatType : "IssueOption", 
-                           timestamp : (getCurrentUTC "")}] <> 
-                  (map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
-                                                        chatType : "IssueMessage", 
-                                                        timestamp : getCurrentUTC ""}) getOptionsRes.messages)
-          showSubmitComp = any (\ (Message  message) -> (fromMaybe "" message.label) == "CREATE_TICKET") getOptionsRes.messages 
-          isEndFlow' = any (\ (Message  message) -> (fromMaybe "" message.label) == "END_FLOW") getOptionsRes.messages
-      when isEndFlow' $ do 
-        let postIssueReqBody = PostIssueReqBody {
-                                mediaFiles : []
-                              , categoryId : updatedState.data.categoryId 
-                              , optionId : Just selectedOptionId
-                              , description : ""
-                              , rideId : updatedState.data.tripId
-                              , chats : updatedState.data.chats <> chats'
-                              , createTicket : false
-                              }
-        (PostIssueRes postIssueRes) <- Remote.postIssueBT language postIssueReqBody 
-        pure unit 
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> 
-        updatedState { 
-          data {
-            chats = (updatedState.data.chats <> chats')
-          , options = getOptionsRes'
-          , chatConfig = updatedState.data.chatConfig{
-              messages = (updatedState.data.chatConfig.messages <> messages')
-            } 
-          }
-        , props {
-            isResolved = isResolved
-          , showSubmitComp = (not isResolved && showSubmitComp)
-          , isEndFlow = isEndFlow'
-          }
-        }
-      )
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> 
-        helpAndSupportScreen {
-          props {
-            needIssueListApiCall = true
-          }
-        }
-      )
-      issueReportChatScreenFlow
-    GO_TO_RIDE_SELECTION_SCREEN updatedState -> rideSelectionScreenFlow
-    SUBMIT_ISSUE updatedState -> do
-      let selectedOptionId = (map (\option -> option.issueOptionId) updatedState.data.selectedOption)
-          language = fetchLanguage $ getLanguageLocale languageKey
-          mediaFiles' = case updatedState.data.uploadedAudioId of
-                          Just audioId -> Arr.cons audioId updatedState.data.uploadedImagesIds
-                          _            -> updatedState.data.uploadedImagesIds
-          postIssueReqBody = PostIssueReqBody { mediaFiles  : mediaFiles', 
-                                                categoryId : updatedState.data.categoryId, 
-                                                optionId : selectedOptionId, 
-                                                description : trim updatedState.data.messageToBeSent, 
-                                                rideId : updatedState.data.tripId, 
-                                                chats : updatedState.data.chats,
-                                                createTicket : true
-                                                }
-      (PostIssueRes postIssueRes) <- Remote.postIssueBT language postIssueReqBody
-      void $ pure $ toast $ getString STR.YOUR_ISSUE_HAS_BEEN_REPORTED
-      (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language postIssueRes.issueReportId
-      void $ pure $ hideKeyboardOnNavigation true
-      let showDescription = STR.length (trim issueInfoRes.description) > 0
-          descMessages = if showDescription then snoc updatedState.data.chatConfig.messages (makeChatComponent' (reportIssueMessageTransformer issueInfoRes.description) "Customer" (getCurrentUTC "") "Text" 500) 
-                         else updatedState.data.chatConfig.messages
-          mediaMessages' = mapWithIndex (\index media -> makeChatComponent' media.url "Customer" (getCurrentUTC "") media._type ((index +  1) * 500)) issueInfoRes.mediaFiles
-          messages' = concat [descMessages, 
-                              mediaMessages', 
-                              mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 1 + index))) postIssueRes.messages]
-      modifyScreenState $ ReportIssueChatScreenStateType 
-        (\_ -> updatedState { 
-            data {
-              issueId = Just postIssueRes.issueReportId
-            , issueReportShortId = postIssueRes.issueReportShortId
-            , chatConfig { 
-                messages = messages'
-              }
-            , messageToBeSent = "" 
-            , uploadedAudioId = Nothing
-            , uploadedImagesIds = [] 
-            }
-          , props { 
-            showSubmitComp = false 
-            } 
-          }
-        )
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen {props {needIssueListApiCall = true}})
-      issueReportChatScreenFlow
-    CALL_DRIVER_MODAL updatedState -> do
-      let selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption
-      case updatedState.data.selectedRide of
-        Just ride -> do
-                      void $ pure $ spy "RIDE_ID" ride.rideId
-                      void $ pure $ spy "SHORT_ID" ride.shortRideId
-                      void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
-                      resp <- Remote.callDriverBT ride.rideId
-                      pure $ toast $ getString STR.REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON
+      
 
-                      let language = fetchLanguage $ getLanguageLocale languageKey
-                      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId (fromMaybe "" updatedState.data.issueId)
-                      let getOptionsRes' = mapWithIndex (\index (Option optObj) -> optObj{ option = (show (index + 1)) <> ". " <> optObj.option}) getOptionsRes.options
-                          messages' = mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages
-                          chats' = [Chat {chatId : selectedOptionId,chatType : "IssueOption",timestamp : (getCurrentUTC "")}] <> 
-                                    (map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
-                                                                          chatType : "IssueMessage",
-                                                                          timestamp : (getCurrentUTC "")}) getOptionsRes.messages)
-                      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {chats = (updatedState.data.chats <> chats'), options = getOptionsRes', chatConfig = updatedState.data.chatConfig{messages = (updatedState.data.chatConfig.messages <> messages')} }, props {showSubmitComp = ((null getOptionsRes'))}})
-                      issueReportChatScreenFlow
-        _           -> do
-                      pure $ toast $ getString STR.PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER
-                      (GlobalState globalState) <- getState
-                      if updatedState.data.entryPoint == ST.TripDetailsScreenEntry then tripDetailsScreenFlow globalState.tripDetailsScreen.props.fromMyRides
-                      else helpAndSupportScreenFlow
-    CALL_SUPPORT_MODAL updatedState -> do
-      let selectedOptionId = fromMaybe "" (map (\option -> option.issueOptionId) updatedState.data.selectedOption)
-      void $ pure $ showDialer (getSupportNumber "") false
-      let language = fetchLanguage $ getLanguageLocale languageKey
-      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId (fromMaybe "" updatedState.data.issueId)
-      let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj {option =  (show (index + 1)) <> ". " <> optionObj.option}) getOptionsRes.options
-          messages' = mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages
-          chats' = [Chat {chatId : selectedOptionId, 
-                          chatType : "IssueMessage",
-                          timestamp : (getCurrentUTC "")}] <> 
-                  (map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
-                                                        chatType : "IssueMessage", 
-                                                        timestamp : (getCurrentUTC "")}) getOptionsRes.messages)
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {chats = (updatedState.data.chats <> chats'), options = getOptionsRes', chatConfig = updatedState.data.chatConfig{messages = (updatedState.data.chatConfig.messages <> messages')} }, props {showSubmitComp = ((null getOptionsRes'))}})
-      issueReportChatScreenFlow
-    REOPEN_ISSUE updatedState -> do
-      let language = fetchLanguage $ getLanguageLocale languageKey
-          updateIssueReqBody = UpdateIssueReqBody {status : "REOPENED"}
-          selectedOptionId = fromMaybe "" (map (\option -> option.issueOptionId) updatedState.data.selectedOption)
-      (GetOptionsRes _) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId (fromMaybe "" updatedState.data.issueId)
-      (UpdateIssueRes updateIssueRes) <- Remote.updateIssue (fromMaybe "" updatedState.data.issueId) language updateIssueReqBody
-      let messages' = mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) updateIssueRes.messages
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {showStillHaveIssue = false, chatConfig = updatedState.data.chatConfig{messages = updatedState.data.chatConfig.messages<> messages'} }, props {isResolved = false}})
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen {props {needIssueListApiCall = true}})
-      issueReportChatScreenFlow
-    GO_TO_TRIP_DETAILS_SCREEN updatedState -> do 
-      (GlobalState globalState) <-  getState
-      let tripDetailsScreenState = globalState.tripDetailsScreen 
-      tripDetailsScreenFlow tripDetailsScreenState.props.fromMyRides
-    GO_TO_HELP_AND_SUPPORT_SCREEN updatedState -> helpAndSupportScreenFlow
-    GO_TO_SAFETY_SCREEN updatedState -> activateSafetyScreenFlow
-    GO_TO_HOME_SCREEN_FROM_ISSUE_CHAT updatedState -> homeScreenFlow
+flowRouter :: FlowState -> FlowBT String Unit
+flowRouter flowState = 
+  case flowState of 
+    HelpAndSupportScreenFlow -> do 
+      nextFlow <- UI.helpAndSupportScreen
+      flowRouter nextFlow
+    IssueReportChatScreenFlow -> do 
+      nextFlow <- UI.reportIssueChatScreen 
+      flowRouter nextFlow
+    RideSelectionScreenFlow -> do 
+      nextFlow <- UI.rideSelection
+      flowRouter nextFlow
+    HomeScreenFlow -> homeScreenFlow
+    ActivateSafetyScreenFlow -> activateSafetyScreenFlow
+    TripDetailsScreenFlow -> tripDetailsScreenFlow
+    ContactUsScreenFlow -> contactUsScreenFlow
+    MyRidesScreenFlow -> myRidesScreenFlow
 
-rideSelectionScreenFlow :: FlowBT String Unit
-rideSelectionScreenFlow = do
-  flow <- UI.rideSelection
-  case flow of
-    LOADER_RIDES_OUTPUT state -> do
-      modifyScreenState $ RideSelectionScreenStateType (\_ -> state{data{offsetValue = state.data.offsetValue + 8}})
-      rideSelectionScreenFlow
-    SELECT_RIDE state -> do
-      let language = fetchLanguage $ getLanguageLocale languageKey
-      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language state.selectedCategory.categoryId "" ""
-      let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> optionObj.option }) getOptionsRes.options
-          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
-          chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
-                                                        chatType : "IssueMessage", 
-                                                        timestamp : (getCurrentUTC "")} )getOptionsRes.messages
-          tripId' = case state.selectedItem of
-                      Just item -> Just item.rideId
-                      _         -> Nothing
-          merchantExoPhone' = case state.selectedItem of
-                      Just item -> Just item.merchantExoPhone
-                      _         -> Nothing
-          categoryName = getTitle state.selectedCategory.categoryAction
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ST.RideSelectionScreenEntry, chats = chats', tripId = tripId', merchantExoPhone = merchantExoPhone', categoryName = categoryName, categoryId = state.selectedCategory.categoryId, options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = state.selectedItem } } )
-      issueReportChatScreenFlow
-    REFRESH_RIDES state -> do
-      modifyScreenState $ RideSelectionScreenStateType (\_ -> state{data{offsetValue = 0}})
-      rideSelectionScreenFlow 
-    GOTO_HELP_AND_SUPPORT_SCREEN -> helpAndSupportScreenFlow
 
-myRidesScreenFlow :: Boolean ->  FlowBT String Unit
-myRidesScreenFlow fromNavBar = do
+myRidesScreenFlow :: FlowBT String Unit
+myRidesScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
   (GlobalState globalState) <- getState
-  modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen {props{fromNavBar = fromNavBar}, data{isSrcServiceable = globalState.homeScreen.props.isSrcServiceable}})
+  modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen { data{isSrcServiceable = globalState.homeScreen.props.isSrcServiceable}})
   flow <- UI.myRidesScreen
   case flow of
-    REFRESH state -> myRidesScreenFlow state.props.fromNavBar
+    REFRESH state -> do
+      modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> state{props{fromNavBar =  state.props.fromNavBar }})
+      myRidesScreenFlow
     TRIP_DETAILS state -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_my_rides_view_details" $ [ { key : "Pickup", value : unsafeToForeign state.data.selectedItem.source},
                                                                                                                   { key : "Destination", value : unsafeToForeign state.data.selectedItem.destination},
@@ -2160,16 +1911,16 @@ myRidesScreenFlow fromNavBar = do
                                                                                                                   { key : if state.data.selectedItem.status == "CANCELLED" then "Time" else "Ride completion timestamp",
                                                                                                                     value : unsafeToForeign $ if state.data.selectedItem.status == "CANCELLED" then state.data.selectedItem.time else state.data.selectedItem.rideEndTime},
                                                                                                                   { key : "Rating", value : (unsafeToForeign $ state.data.selectedItem.rating)}]
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetails -> tripDetails{data{vehicleVariant = state.data.selectedItem.vehicleVariant}})
-      tripDetailsScreenFlow MyRides
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetails -> tripDetails{data{vehicleVariant = state.data.selectedItem.vehicleVariant}, props{fromMyRides = MyRides}})
+      tripDetailsScreenFlow 
     LOADER_OUTPUT state -> do
-      modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> state{data{offsetValue = state.data.offsetValue + 8}})
-      myRidesScreenFlow state.props.fromNavBar
+      modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> state{data{offsetValue = state.data.offsetValue + 8}, props {fromNavBar = state.props.fromNavBar}})
+      myRidesScreenFlow 
     BOOK_RIDE -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {  data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
       homeScreenFlow
     GO_TO_NAV_BAR -> homeScreenFlow
-    GO_TO_HELP_SCREEN -> helpAndSupportScreenFlow
+    GO_TO_HELP_SCREEN -> flowRouter HelpAndSupportScreenFlow
     REPEAT_RIDE_FLOW state -> do
       let trip = getTripFromRideHistory state
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ rideHistoryTrip = Just trip, settingSideBar{opened = SettingSideBarController.CLOSED}}})
@@ -3946,14 +3697,14 @@ activateSafetyScreenFlow = do
     ActivateSafetyScreen.GoToIssueScreen state -> do
       let language = fetchLanguage $ getLanguageLocale languageKey 
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0" "" ""
-      let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> optionObj.option }) getOptionsRes.options
+      let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
           chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
                                                         chatType : "IssueMessage", 
                                                         timestamp : (getCurrentUTC "")} )getOptionsRes.messages
       void $ pure $ cleverTapCustomEvent "ny_user_report_safety_issue_activated"
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ST.SafetyScreen, chats = chats', tripId = Just state.data.rideId, categoryName = "Safety Related Issue", categoryId = "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = Nothing } } )
-      issueReportChatScreenFlow
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ReportIssueChatScreenData.SafetyScreen, chats = chats', tripId = Just state.data.rideId, categoryName = "Safety Related Issue", categoryId = "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = Nothing } } )
+      flowRouter IssueReportChatScreenFlow
     ActivateSafetyScreen.NotifyMockDrill state -> do
       _ <- lift $ lift $ Remote.createMockSos (not $ DS.null state.data.rideId) true
       activateSafetyScreenFlow

@@ -127,3 +127,13 @@ updateRepeatRideDetails state = do
     , followsRide = globalState.homeScreen.props.followsRide
     }
     })
+
+
+data FlowState = HelpAndSupportScreenFlow 
+               | IssueReportChatScreenFlow
+               | RideSelectionScreenFlow
+               | HomeScreenFlow
+               | ActivateSafetyScreenFlow
+               | TripDetailsScreenFlow
+               | ContactUsScreenFlow
+               | MyRidesScreenFlow

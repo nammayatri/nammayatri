@@ -59,8 +59,9 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
+import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
 
-screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
+screen :: HelpAndSupportScreenState -> Screen Action HelpAndSupportScreenState ScreenOutput
 screen initialState =
   {
     initialState
@@ -84,7 +85,7 @@ screen initialState =
       eval state action
   }
 
-view :: forall w . (Action -> Effect Unit) -> ST.HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
+view :: forall w . (Action -> Effect Unit) -> HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   Anim.screenAnimation $
  relativeLayout
@@ -152,7 +153,7 @@ view push state =
     <> (if state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL then [issueListModal push state] else [])
 
 ------------------------------- recentRide --------------------------
-recentRideView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+recentRideView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 recentRideView state push=
   linearLayout
   [ margin (Margin 16 16 16 16)
@@ -218,7 +219,7 @@ recentRideView state push=
     ]
 
 ------------------------------- dateAndTimeView --------------------------
-dateAndTimeView :: ST.HelpAndSupportScreenState -> forall w . PrestoDOM (Effect Unit) w
+dateAndTimeView :: HelpAndSupportScreenState -> forall w . PrestoDOM (Effect Unit) w
 dateAndTimeView state =
   linearLayout
   [ height WRAP_CONTENT
@@ -250,7 +251,7 @@ dateAndTimeView state =
     ]
 
 ------------------------------- driverRating --------------------------
-driverRatingView :: ST.HelpAndSupportScreenState -> forall w . PrestoDOM (Effect Unit) w
+driverRatingView :: HelpAndSupportScreenState -> forall w . PrestoDOM (Effect Unit) w
 driverRatingView state =
   linearLayout
   [ height WRAP_CONTENT
@@ -284,7 +285,7 @@ driverRatingView state =
     ]
 
 ------------------------------- allTopics --------------------------
-allTopicsView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> forall w . PrestoDOM (Effect Unit) w
+allTopicsView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> forall w . PrestoDOM (Effect Unit) w
 allTopicsView state push topicList =
   linearLayout
     [ height WRAP_CONTENT
@@ -347,7 +348,7 @@ allTopicsView state push topicList =
               ][]
           ]) topicList)
 
-deleteAccountView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+deleteAccountView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 deleteAccountView state push=
   linearLayout
   [ height MATCH_PARENT
@@ -388,7 +389,7 @@ deleteAccountView state push=
       ]
     ]
 
-editTextView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+editTextView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 editTextView state push =
   linearLayout[
     height MATCH_PARENT
@@ -442,7 +443,7 @@ editTextView state push =
     ]
   ]
 
-headingView :: ST.HelpAndSupportScreenState -> String -> forall w . PrestoDOM (Effect Unit) w
+headingView :: HelpAndSupportScreenState -> String -> forall w . PrestoDOM (Effect Unit) w
 headingView state title =
   textView $
     [ text title
@@ -454,7 +455,7 @@ headingView state title =
     , color Color.darkCharcoal
     ] <> FontStyle.body5 LanguageStyle
 
-getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.HelpAndSupportScreenState ->  Flow GlobalState Unit
+getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> HelpAndSupportScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
   void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   void $ EHU.toggleLoader true
@@ -469,7 +470,7 @@ dummyListResp :: forall t127.
   }
 dummyListResp = {list : []}
 
-apiFailureView :: forall w. ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit ) w
+apiFailureView :: forall w. HelpAndSupportScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit ) w
 apiFailureView state push=
   linearLayout
   [ height MATCH_PARENT
@@ -479,11 +480,11 @@ apiFailureView state push=
   , visibility if state.props.apiFailure then VISIBLE else GONE
   ][  ErrorModal.view (push <<< APIFailureActionController) (apiErrorModalConfig state)]
 -------------------------------------------- issueListModal ------------------------------------------
-issueListModal :: forall w . (Action -> Effect Unit) -> ST.HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
+issueListModal :: forall w . (Action -> Effect Unit) -> HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
 issueListModal push state =
   IssueList.view (push <<< IssueScreenModal) (issueListState state)
 
-issueListState :: ST.HelpAndSupportScreenState -> IssueList.IssueListFlowState
+issueListState :: HelpAndSupportScreenState -> IssueList.IssueListFlowState
 issueListState state = let
       config' = IssueList.config
       inAppModalConfig' = config'{

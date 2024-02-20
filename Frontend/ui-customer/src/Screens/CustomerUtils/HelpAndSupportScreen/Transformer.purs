@@ -34,7 +34,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter, fetchVehicleVariant)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
-import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..), IssueInfo, IssueModalType(..))
+import Screens.Types ( DeleteStatus(..), IssueInfo, IssueModalType(..))
 import Services.API (IssueReportCustomerListItem(..), RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Data.String 
@@ -46,6 +46,7 @@ import Language.Strings( getString)
 import Components.IssueList as IssueList
 import Data.Function.Uncurried (runFn2)
 import Locale.Utils
+import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
 
 reportIssueMessageTransformer :: String -> String 
 reportIssueMessageTransformer message = 

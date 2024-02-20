@@ -15,13 +15,15 @@
 
 module Screens.HelpAndSupportScreen.ScreenData where
 
-import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
-import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Screens.Types (DeleteStatus(..), IssueModalType(..))
+import Screens.Types
+import Common.Types.App 
 import MerchantConfig.DefaultConfig as DC
 import ConfigProvider
 import Data.Maybe(Maybe(..))
 import Foreign.Object (empty)
+import MerchantConfig.Types (AppConfig)
+import Foreign (Foreign)
+import Foreign.Object (Object)
 
 initData :: HelpAndSupportScreenState
 initData = {
@@ -64,3 +66,52 @@ initData = {
   }
 
 }
+
+-- ################################################  Types   ################################################
+
+type HelpAndSupportScreenState =
+  {
+    data :: HelpAndSupportScreenData,
+    props :: HelpAndSuportScreenProps
+  }
+
+type HelpAndSupportScreenData =
+  {
+    date :: String,
+    time :: String,
+    rating :: Int,
+    source :: String,
+    destination :: String,
+    driverName :: String,
+    totalAmount :: String,
+    isNull :: Boolean,
+    faresList :: Array FareComponent,
+    status :: String,
+    rideStartTime :: String,
+    rideEndTime :: String,
+    rideId :: String,
+    vehicleNumber :: String,
+    tripId :: String,
+    bookingId :: String,
+    email :: String,
+    description :: String,
+    accountStatus :: DeleteStatus ,
+    config :: AppConfig,
+    vehicleVariant :: Maybe VehicleVariant,
+    issueList :: Array IssueInfo,
+    ongoingIssueList :: Array IssueInfo,
+    resolvedIssueList :: Array IssueInfo,
+    issueListType :: IssueModalType,
+    categories :: Array CategoryListType,
+    merchantExoPhone :: String,
+    logField :: Object Foreign
+  }
+
+type HelpAndSuportScreenProps =
+  {
+    apiFailure :: Boolean
+  , isCallConfirmation :: Boolean
+  , showDeleteAccountView :: Boolean
+  , btnActive :: Boolean
+  , needIssueListApiCall :: Boolean
+  }

@@ -49,8 +49,9 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Debug (spy)
+import Screens.RideSelectionScreen.ScreenData 
 
-screen :: ST.RideSelectionScreenState -> PrestoList.ListItem -> Screen Action ST.RideSelectionScreenState ScreenOutput
+screen :: RideSelectionScreenState -> PrestoList.ListItem -> Screen Action RideSelectionScreenState ScreenOutput
 screen initialState listItemm =
   {
     initialState : initialState {
@@ -71,7 +72,7 @@ screen initialState listItemm =
       eval state action
   }
 
-view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideSelectionScreenState -> PrestoDOM (Effect Unit) w
+view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> RideSelectionScreenState -> PrestoDOM (Effect Unit) w
 view listItemm push state =
   Anim.screenAnimation $ linearLayout
   [ height MATCH_PARENT
@@ -110,7 +111,7 @@ view listItemm push state =
       ][]
     , PrimaryButton.view (push <<< DontKnowRide) (cancelButtonConfig state)]
 
-loadButtonView :: forall w. ST.RideSelectionScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+loadButtonView :: forall w. RideSelectionScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 loadButtonView state push =
   linearLayout
   [ height WRAP_CONTENT
@@ -143,7 +144,7 @@ loadButtonView state push =
       ] <> FontStyle.body1 LanguageStyle
     ]]
 
-ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideSelectionScreenState -> PrestoDOM (Effect Unit) w
+ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> RideSelectionScreenState -> PrestoDOM (Effect Unit) w
 ridesView listItemm push state =
   swipeRefreshLayout
   ([height MATCH_PARENT
@@ -242,7 +243,7 @@ shimmerData i = {
   zoneVisibility : toPropValue "gone"
 }
 
-getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.RideSelectionScreenState ->  Flow GlobalState Unit
+getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> RideSelectionScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
   rideBookingListResponse <- Remote.rideBookingList "8" (show state.data.offsetValue) "false"
   case rideBookingListResponse of
