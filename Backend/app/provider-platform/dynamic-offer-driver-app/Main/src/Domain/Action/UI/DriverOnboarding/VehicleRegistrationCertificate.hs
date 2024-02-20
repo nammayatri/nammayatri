@@ -406,12 +406,11 @@ createRC ::
   UTCTime ->
   Domain.VehicleRegistrationCertificate
 createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwnerId modelNamesHashMap edl expiry = do
-  let insuranceValidity = convertTextToUTC output.insurance_validity
-  let vehicleClass = output.vehicle_class
-  let vehicleCategory = output.vehicle_category
-  let vehicleCapacity = (readMaybe . T.unpack) =<< readFromJson =<< output.seating_capacity
-  let manufacturer = (readMaybe . T.unpack) =<< output.manufacturer
-  let (verificationStatus, reviewRequired, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass vehicleCategory now vehicleCapacity manufacturer output.bodyType output.manufacturerModel
+  let insuranceValidity = convertTextToUTC output.insuranceValidity
+  let vehicleClass = output.vehicleClass
+  let vehicleCategory = output.vehicleCategory
+  let vehicleCapacity = (readMaybe . T.unpack) =<< readFromJson =<< output.seatingCapacity
+  let (verificationStatus, reviewRequired, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass vehicleCategory now vehicleCapacity output.manufacturer output.bodyType output.manufacturerModel
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
