@@ -150,7 +150,7 @@ window.onMerchantEvent = function (_event, globalPayload) {
   console.log(globalPayload);
   window.__payload = JSON.parse(globalPayload);
   const clientPaylod = window.__payload.payload;
-  const appName = clientPaylod.payload.appName;
+  const appName = clientPaylod.appName;
   window.appName = appName;
   if (_event == "initiate") {
     let clientId = clientPaylod.clientId;
