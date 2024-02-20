@@ -126,6 +126,9 @@ import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
+import Services.API as API
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Data.Either (Either(..))
 
 
 instance showAction :: Show Action where
@@ -932,6 +935,9 @@ data Action = NoAction
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
             | PopUpModalReferralAction PopUpModal.Action
+            | CheckTTL Int String String 
+            | ShowEstimatesShimmer
+            | UpdateEstimates
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -2589,6 +2595,32 @@ eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotify
 eval (ToggleShare index) state = continue state {data{contactList = mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) state.data.contactList}}
 
 eval DismissShareRide state = continue state {props{showShareRide = false}}
+
+eval (CheckTTL seconds status timerID) state = 
+  if true then continue state -- ttlValid
+  else do
+    continueWithCmd state
+          [ do
+              void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
+                $ do
+                    push <- liftFlowBT $ getPushFn Nothing "HomeScreen"
+                    resp <- lift $ lift $ Remote.getQuotes state.props.searchId
+                    case resp of
+                            Right response -> do
+                              let (GetQuotesRes resp) = response
+                              if not (null resp.quotes) || not (null resp.estimates) then
+                                liftFlowBT $ push $ GetEstimates response
+                              else
+                                -- void $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
+                                liftFlowBT $ push $ BackPressed
+                              pure unit 
+                            Left err -> do
+                                      -- void $ toast "Error occured"
+                                      liftFlowBT $ push $ BackPressed
+                                      pure unit
+                    pure unit
+              pure ShowEstimatesShimmer
+          ]
 
 eval _ state = continue state
 
