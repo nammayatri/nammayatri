@@ -69,7 +69,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -1483,6 +1483,8 @@ topLeftIconView state push =
 ----------- estimatedFareView ----------------
 estimatedFareView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 estimatedFareView push state =
+  let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
+  in
   linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
@@ -1506,18 +1508,18 @@ estimatedFareView push state =
       , orientation HORIZONTAL
       , gravity CENTER
       , padding (PaddingVertical 4 4)
-      , visibility if state.props.zoneType.priorityTag == METRO then VISIBLE else GONE
+      , visibility if state.props.zoneType.priorityTag /= NOZONE then VISIBLE else GONE
       ] [ imageView
           [ width (V 15)
           , height (V 15)
           , margin (MarginRight 6)
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_metro_white"
+          , imageWithFallback $ fetchImage FF_ASSET tagConfig.icon
           ]
         , textView
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , textSize FontSize.a_14
-          , text (getString METRO_RIDE)
+          , text tagConfig.text
           , color Color.white900
           ]
         ]
@@ -2039,6 +2041,7 @@ locationTrackingData lazyCheck =
 confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmPickUpLocationView push state =
   let zonePadding = if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
+      tagConfig = specialZoneTagConfig state.props.confirmLocationCategory
   in
   linearLayout
     [ orientation VERTICAL
@@ -2059,7 +2062,7 @@ confirmPickUpLocationView push state =
         , orientation VERTICAL
         , stroke $ "1," <> Color.grey900
         , cornerRadii $ Corners 24.0 true true false false
-        , background Color.blue800
+        , background tagConfig.backgroundColor
         ]
         [ linearLayout
             [ width MATCH_PARENT
@@ -2068,22 +2071,19 @@ confirmPickUpLocationView push state =
             , gravity CENTER
             , padding (Padding zonePadding 4 zonePadding 4)
             , cornerRadii $ Corners 24.0 true true false false
-            , visibility if state.props.confirmLocationCategory /= "" then VISIBLE else GONE
+            , visibility if state.props.confirmLocationCategory /= NOZONE then VISIBLE else GONE
             ] [ imageView
                 [ width (V 20)
                 , height (V 20)
                 , margin (MarginRight 6)
-                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_zone_walk"
+                , imageWithFallback $ fetchImage FF_ASSET tagConfig.icon
                 ]
               , textView
-                [ width if os == "IOS" && state.props.confirmLocationCategory == "SureBlockedAreaForAutos" then (V 230) else WRAP_CONTENT
+                [ width if os == "IOS" && state.props.confirmLocationCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
                 , height WRAP_CONTENT
                 , gravity CENTER
                 , textSize FontSize.a_14
-                , text if state.props.confirmLocationCategory == "SureBlockedAreaForAutos" then
-                        (getString GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED)
-                       else
-                        (getString GO_TO_SELECTED_PICKUP_SPOT)
+                , text tagConfig.text
                 , color Color.white900
                 ]
               ]

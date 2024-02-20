@@ -451,6 +451,7 @@ type LocateOnMapConfig = {
   , markerCallback :: String
   , specialZoneMarkerConfig :: SpecialZoneMarkerConfig
   , navigateToNearestGate :: Boolean
+  , locationName :: String
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -465,14 +466,16 @@ locateOnMapConfig = {
   , markerCallbackForTags : []
   , markerCallback : ""
   , specialZoneMarkerConfig : {
-        showLabelActionImage : false
+        showLabel : false
+      , showLabelActionImage : false
+      , labelImage : "ny_ic_city_police"
       , labelActionImage : ""
       , theme : "LIGHT"
       , spotIcon : "ny_ic_zone_pickup_marker_green"
       , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green"
-      , showLabel : false
       }
   , navigateToNearestGate : true
+  , locationName : ""
 }
 
 type SpecialZoneMarkerConfig = {
@@ -482,6 +485,7 @@ type SpecialZoneMarkerConfig = {
   , spotIcon :: String
   , selectedSpotIcon :: String
   , showLabel :: Boolean
+  , labelImage :: String
 }
 
 type MapRouteConfig = {

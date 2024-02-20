@@ -709,7 +709,7 @@ homeScreenFlow = do
         let pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
         setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
         let geoJson = transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", findingQuotesProgress = 0.0 }})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else NOZONE, findingQuotesProgress = 0.0, locateOnMapProps{ locationName = Just srcSpecialLocation.locationName }}})
         when (addToRecents) $ do
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
@@ -1109,6 +1109,7 @@ homeScreenFlow = do
                         { isSrcServiceable = true
                         , showlocUnserviceablePopUp = false
                         , city = cityName
+                        , locateOnMapProps{ locationName = Just srcSpecialLocation.locationName }
                         }
                     }
                 )
@@ -1153,6 +1154,7 @@ homeScreenFlow = do
             , isSrcServiceable = sourceServiceabilityResp.serviceable
             , showlocUnserviceablePopUp = not sourceServiceabilityResp.serviceable
             , city = cityName
+            , locateOnMapProps{ locationName = Just srcSpecialLocation.locationName }
             }
           }
         )
@@ -1193,9 +1195,9 @@ homeScreenFlow = do
           gateAddress = (fromMaybe HomeScreenData.dummyLocation ((filter( \ (item) -> (item.place == state.props.defaultPickUpPoint)) pickUpPoints) !! 0))
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       if (fromMaybe "" sourceServiceabilityResp.geoJson) /= "" && (fromMaybe "" sourceServiceabilityResp.geoJson) /= state.data.polygonCoordinates && pickUpPoints /= state.data.nearByPickUpPoints then do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , confirmLocationCategory = srcSpecialLocation.category}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = geoJson, nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , confirmLocationCategory = getZoneType srcSpecialLocation.category, locateOnMapProps{ locationName = Just srcSpecialLocation.locationName }}})
         _ <- pure $ removeAllPolylines ""
-        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybe "" sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybe "" sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = srcSpecialLocation.locationName }
         homeScreenFlow
       else do
         let cachedLat = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
@@ -1213,7 +1215,7 @@ homeScreenFlow = do
                 destinationLong = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lon else state.props.destinationLong,
                 sourceLat = if state.props.isSource == Just true then lat else state.props.sourceLat,
                 sourceLong = if state.props.isSource == Just true then lon else state.props.sourceLong,
-                confirmLocationCategory = srcSpecialLocation.category
+                confirmLocationCategory = getZoneType srcSpecialLocation.category
                 }
               })
         (GlobalState globalState) <- getState
@@ -1269,10 +1271,10 @@ homeScreenFlow = do
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
       if (fromMaybe "" sourceServiceabilityResp.geoJson) /= "" && (fromMaybe "" sourceServiceabilityResp.geoJson) /= state.data.polygonCoordinates && pickUpPoints /= state.data.nearByPickUpPoints then do
         let geoJson = transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city, isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , confirmLocationCategory = srcSpecialLocation.category}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{polygonCoordinates = geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city, isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing , confirmLocationCategory = getZoneType srcSpecialLocation.category, locateOnMapProps{ locationName = Just srcSpecialLocation.locationName }}})
         _ <- pure $ removeAllPolylines ""
         let geoJson = spy "debug zone transformGeoJsonFeature" (transformGeoJsonFeature sourceServiceabilityResp.geoJson srcSpecialLocation.gatesInfo)
-        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = srcSpecialLocation.locationName }
         homeScreenFlow
       else do
         let distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
@@ -1282,7 +1284,7 @@ homeScreenFlow = do
             props {
               sourceLat = lat ,
               sourceLong = lon,
-              confirmLocationCategory = srcSpecialLocation.category,
+              confirmLocationCategory = getZoneType srcSpecialLocation.category,
               city = cityName
               }
             })
@@ -1499,6 +1501,7 @@ homeScreenFlow = do
             homeScreen
               { props
                   { sourceSelectedOnMap = false
+                  , locateOnMapProps{ locationName = Just srcSpecialLocation.locationName }
                   }
               , data
                   { polygonCoordinates = geoJson
@@ -1665,7 +1668,7 @@ rideSearchFlow flowType = do
       case finalState.props.sourceSelectedOnMap of
         false -> do
           pure $ removeAllPolylines ""
-          liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+          liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" finalState.props.locateOnMapProps.locationName}
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress}}})
           _ <- pure $ updateLocalStage ConfirmingLocation
           void $ lift $ lift $ toggleLoader false
@@ -2397,11 +2400,11 @@ addNewAddressScreenFlow input = do
                                                                                                              }
                                                                                                       , props{ isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing
                                                                                                              , isServiceable = isServiceable
-                                           
+                                                                                                            --  , locateOnMapProps{ locationName = Just srcSpecialLocation.locationName }
                                                                                                              }
                                                                                                       })
         _ <- pure $ removeAllPolylines ""
-        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybe "" sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "AddAddressPin"}
+        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybe "" sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "AddAddressPin", locationName = srcSpecialLocation.locationName}
         addNewAddressScreenFlow ""
       else do
         PlaceName address <- getPlaceName lat lon gateAddress
@@ -3527,7 +3530,7 @@ searchLocationFlow = do
         let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing lat lon , metroInfo : Nothing, stationCode : ""}
         modifyScreenState 
           $ SearchLocationScreenStateType 
-              (\ slsState -> slsState { data  {latLonOnMap = updatedAddress, confirmLocCategory = ""} }) 
+              (\ slsState -> slsState { data  {latLonOnMap = updatedAddress, confirmLocCategory = NOZONE} }) 
       searchLocationFlow
 
     specialLocFlow :: String -> Array Location -> String -> Number -> Number -> FlowBT String Unit
@@ -3538,7 +3541,7 @@ searchLocationFlow = do
                   { data {
                       specialZoneCoordinates = geoJson ,
                       nearByGates = pickUpPoints ,
-                      confirmLocCategory = category
+                      confirmLocCategory = getZoneType category
                   }
                   })
       void $ pure $ removeAllPolylines "" 
@@ -3713,7 +3716,7 @@ predictionClickedFlow prediction state = do
         modifyScreenState 
           $ SearchLocationScreenStateType 
               (\slsScreen -> slsScreen{ props {searchLocStage = ConfirmLocationStage}
-                              , data { srcLoc = sourceLoc, destLoc = destinationLoc, latLonOnMap = updatedState, confirmLocCategory = specialLocCategory }
+                              , data { srcLoc = sourceLoc, destLoc = destinationLoc, latLonOnMap = updatedState, confirmLocCategory = getZoneType specialLocCategory }
                               })
         void $ lift $ lift $ toggleLoader false
         updateCachedLocation prediction placeLat placeLon state locServiceable

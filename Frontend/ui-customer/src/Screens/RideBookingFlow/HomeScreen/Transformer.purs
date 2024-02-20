@@ -580,18 +580,19 @@ getSpecialTag specialTag =
   case specialTag of
     Just tag ->
       let zones = split (Pattern "_") tag
-          sourceTag = getZoneType $ zones DA.!! 0
-          destinationTag = getZoneType $ zones DA.!! 1
+          sourceTag = getZoneType $ fromMaybe "" (zones DA.!! 0)
+          destinationTag = getZoneType $ fromMaybe "" (zones DA.!! 1)
           priorityTag = if zones DA.!! 2 == Just "PriorityPickup" then sourceTag else destinationTag
       in { sourceTag : sourceTag, destinationTag : destinationTag, priorityTag : priorityTag}
     Nothing -> dummyZoneType
 
-getZoneType :: Maybe String -> ZoneType
+getZoneType :: String -> ZoneType
 getZoneType tag =
   case tag of
-    Just "SureMetro" -> METRO
-    Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
-    _                -> NOZONE
+    "SureMetro" -> METRO
+    "SureBlockedAreaForAutos" -> AUTO_BLOCKED
+    "SureShoppingMall" -> SPECIAL_PICKUP
+    _ -> NOZONE
 
 getTripFromRideHistory :: MyRidesScreenState -> Trip
 getTripFromRideHistory state = {

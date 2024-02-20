@@ -74,13 +74,13 @@ import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing,
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<), (#))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
-import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..))
+import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location, MetroStationsList)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
 import Services.API (Prediction, SavedReqLocationAPIEntity(..))
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Function.Uncurried
@@ -189,6 +189,20 @@ data TimeUnit
   = HOUR
   | MINUTE
   | SECOND
+
+type SpecialZoneTagConfig = {
+    icon :: String
+  , text :: String
+  , infoPopUpConfig :: Maybe SpecialZoneInfoPopUp
+  , backgroundColor :: String
+}
+
+type SpecialZoneInfoPopUp = {
+    title :: String
+  , primaryText :: String
+  , secondaryText :: String
+  , primaryButtonText :: String
+}
 
 convertUTCToISTAnd12HourFormat :: String -> Maybe String
 convertUTCToISTAnd12HourFormat inputTime = do
@@ -755,3 +769,31 @@ getDefaultPixelSize size =
   in if os == "IOS" 
     then size
     else ceil $ (toNumber size / pixels) * androidDensity
+
+specialZoneTagConfig :: ZoneType -> SpecialZoneTagConfig
+specialZoneTagConfig zoneType =
+  case zoneType of
+    SPECIAL_PICKUP -> 
+      { icon : "ny_ic_zone_walk"
+      , text : if isLocalStageOn ConfirmingLocation then "Special Pickup Zone" else "Special Pickup Zone Ride"
+      , infoPopUpConfig : Nothing
+      , backgroundColor : Color.green900
+      }
+    AUTO_BLOCKED -> 
+      { icon : "ny_ic_zone_walk"
+      , text : getString GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED
+      , infoPopUpConfig : Nothing
+      , backgroundColor : Color.blue800
+      }
+    METRO ->
+      { icon : "ny_ic_metro_white"
+      , text : getString METRO_RIDE
+      , infoPopUpConfig : Nothing
+      , backgroundColor : Color.blue800
+      }
+    _ ->
+      { icon : "ny_ic_zone_walk"
+      , text : getString GO_TO_SELECTED_PICKUP_SPOT
+      , infoPopUpConfig : Nothing
+      , backgroundColor : Color.blue800
+      }

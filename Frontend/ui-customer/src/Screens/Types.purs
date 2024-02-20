@@ -901,7 +901,7 @@ type HomeScreenStateProps =
   , findingRidesAgain :: Boolean
   , routeEndPoints :: Maybe RouteEndPoints
   , findingQuotesProgress :: Number
-  , confirmLocationCategory :: String
+  , confirmLocationCategory :: ZoneType
   , zoneTimerExpired :: Boolean
   , canSendSuggestion :: Boolean
   , sheetState :: Maybe BottomSheetState
@@ -939,6 +939,7 @@ type HomeScreenStateProps =
   , showShareRide :: Boolean
   , followsRide :: Boolean 
   , referral :: ReferralStatusProp
+  , locateOnMapProps :: LocateOnMapProps
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -2037,7 +2038,7 @@ type SearchLocationScreenData =
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
-    confirmLocCategory :: String,
+    confirmLocCategory :: ZoneType,
     metroStations :: Array Station,
     updatedMetroStations :: Array Station
   }
@@ -2306,4 +2307,8 @@ type MetroTicketStatusScreenData = {
 type MetroTicketStatusScreenProps = {
   showShimmer :: Boolean
 , paymentStatus :: PP.PaymentStatus
+}
+
+type LocateOnMapProps = {
+    locationName :: Maybe String
 }

@@ -244,7 +244,7 @@ initData = {
     , findingRidesAgain : false
     , routeEndPoints : Nothing
     , findingQuotesProgress : 0.0
-    , confirmLocationCategory : ""
+    , confirmLocationCategory : NOZONE
     , canSendSuggestion : true
     , sheetState : Nothing
     , currentSheetState : COLLAPSED
@@ -298,6 +298,7 @@ initData = {
         referralStatus : NO_REFERRAL,
         referralCode : Nothing
       }
+    , locateOnMapProps : { locationName : Nothing }
     }
 }
 

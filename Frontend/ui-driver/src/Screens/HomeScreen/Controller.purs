@@ -1353,8 +1353,11 @@ testDefaultLocateOnMapConfig = {
       , theme : "DARK"
       , spotIcon : "ny_ic_zone_pickup_marker_green"
       , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green" 
+      , showLabel : false
+      , labelImage : ""
     }
   , navigateToNearestGate : false
+  , locationName : ""
 }
 
 testDefaultGate :: JB.Location

@@ -5,6 +5,7 @@ import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import ConfigProvider
 import MerchantConfig.Types
+import Screens.Types (ZoneType(..))
 
 data Action
   = NoAction
@@ -25,6 +26,7 @@ type Config
     , showPreferences :: Boolean
     , bookingPreferenceEnabled :: Boolean
     , flowWithoutOffers :: Boolean
+    , zoneType :: ZoneType
     }
 
 config :: Config
@@ -38,4 +40,5 @@ config =
   , showPreferences : false
   , bookingPreferenceEnabled : false
   , flowWithoutOffers : false
+  , zoneType : NOZONE
   }

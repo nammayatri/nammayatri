@@ -663,6 +663,9 @@ public class MobilityCommonBridge extends HyperBridge {
             JSONObject specialZoneMarkerConfig = payload.optJSONObject("specialZoneMarkerConfig");
             String spotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("spotIcon", "ny_ic_zone_pickup_marker_yellow") : "ny_ic_zone_pickup_marker_yellow";
             String selectedSpotIcon = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("selectedSpotIcon", "ny_ic_selected_zone_pickup_marker_yellow") : "ny_ic_selected_zone_pickup_marker_yellow";
+            String labelImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("labelImage", "") : "";
+            String locationName = payload.optString("locationName", "");
+            System.out.println("debug locationName : " + locationName);
             boolean navigateToNearestGate = payload.optBoolean("navigateToNearestGate", false);
 
             List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
@@ -791,12 +794,14 @@ public class MobilityCommonBridge extends HyperBridge {
                                                         MarkerConfig markerConfig = new MarkerConfig();
 
                                                         GeoJsonFeature gateGeoJsonFeature = locateOnMapManager.getGateFeature(zoneName);
-                                                        if (gateGeoJsonFeature != null)
-                                                            markerConfig.locationName(zoneName, zoneName);
-                                                        else
-                                                            markerConfig.locationName(zoneName);
+                                                        markerConfig.locationName(zoneName, locationName);
+                                                        System.out.println("debug locationName 2: " + locationName);
+//                                                        if (gateGeoJsonFeature != null)
+//                                                            markerConfig.locationName(zoneName, zoneName);
+//                                                        else
+//                                                            markerConfig.locationName(zoneName);
                                                         System.out.println("debug zone gateGeoJsonFeature : " + gateGeoJsonFeature);
-                                                        Bitmap bitmap = getMarkerBitmapFromView("ny_ic_city_police", true, null, "ny_ic_city_police", MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
+                                                        Bitmap bitmap = getMarkerBitmapFromView(null, true, null, labelImage, MarkerType.SPECIAL_ZONE_MARKER, markerConfig);
                                                         labelView.setImageBitmap(bitmap);
                                                         labelView.setVisibility(View.VISIBLE);
                                                     }
@@ -2309,7 +2314,7 @@ public class MobilityCommonBridge extends HyperBridge {
         try {
             System.out.println("debug setMarkerlabelImage : " + labelImageName);
             Context context = bridgeComponents.getContext();
-            if (labelImageName != null) {
+            if (labelImageName != null && !labelImageName.equals("")) {
                 ImageView labelImage = customMarkerView.findViewById(R.id.zone_image);
                 labelImage.setVisibility(View.VISIBLE);
                 int imageID = context.getResources().getIdentifier(labelImageName, "drawable", bridgeComponents.getContext().getPackageName());
@@ -2341,7 +2346,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 primaryTextView.setTextColor(Color.parseColor(textColor));
             }
             if (!secondaryText.equals("")) {
-                String secondaryLabelText = primaryText.length() > labelTextSize ? primaryText.substring(0, labelTextSize - 3) + "..." : primaryText;
+                String secondaryLabelText = secondaryText.length() > labelTextSize ? secondaryText.substring(0, labelTextSize - 3) + "..." : secondaryText;
                 secondaryTextView.setText(secondaryLabelText);
                 secondaryTextView.setImportantForAccessibility(TextView.IMPORTANT_FOR_ACCESSIBILITY_YES);
                 secondaryTextView.setContentDescription(secondaryLabelText);

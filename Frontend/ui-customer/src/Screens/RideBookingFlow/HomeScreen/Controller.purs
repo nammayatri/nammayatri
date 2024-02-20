@@ -2019,7 +2019,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
       lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ removeAllPolylines ""
-  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.locationName}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
   when (state.data.destination == "") $ do
@@ -2923,6 +2923,7 @@ estimatesListFlow estimates state = do
       , props
         { currentStage = SettingPrice
         , estimateId = estimatesInfo.defaultQuote.id
+        , zoneType = estimatesInfo.zoneType
         }
       }
   else do
@@ -3080,8 +3081,10 @@ testDefaultLocateOnMapConfig = {
       , spotIcon : "ny_ic_zone_pickup_marker_green"
       , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green"
       , showLabel : false
+      , labelImage : ""
     }
   , navigateToNearestGate : true
+  , locationName : ""
 }
 
 testDefaultGate :: JB.Location

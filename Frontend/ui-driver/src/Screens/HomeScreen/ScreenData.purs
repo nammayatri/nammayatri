@@ -208,7 +208,7 @@ initData = {
         isStatsModelExpanded : false,
         tobeLogged : false,
         currentGeoHash : "",
-        expandedMap : true
+        expandedMap : false
     }
 }
 
