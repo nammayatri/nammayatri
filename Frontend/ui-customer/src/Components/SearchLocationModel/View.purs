@@ -150,7 +150,7 @@ searchLottieLoader push state =
       , margin (MarginTop ((screenHeight unit)/ 7 - (if os == "IOS" then 140 else 90)))
       , gravity CENTER
       , id (getNewIDWithTag "searchLoader")
-      , visibility if state.showLoader then VISIBLE else GONE
+      , visibility if state.showLoader then VISIBLE else KEEP_GONE
       , afterRender (\action -> do
         void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
         push action
@@ -308,7 +308,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , background Color.grey900
         , background if state.isSrcServiceable then Color.grey900 else Color.textDanger
-        , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else KEEP_GONE
         ]
         []
     , linearLayout
@@ -381,7 +381,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isDestServiceable then Color.grey900 else Color.textDanger
-        , visibility if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else KEEP_GONE
         ]
         []
     ]
