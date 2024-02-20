@@ -48,7 +48,7 @@ buildConfirmReqV2 req isValueAddNP = do
       vehVariant = fulfillment.fulfillmentVehicle >>= (.vehicleVariant)
   vehicleVariant <- Utils.parseVehicleVariant vehCategory vehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show vehCategory <> ", variant:-" <> show vehVariant)
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag isValueAddNP
-      enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag isValueAddNP
+      enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
   return $
     DConfirm.DConfirmReq
@@ -62,9 +62,9 @@ getNightSafetyCheckTag isValueAddNP = maybe isValueAddNP getTagValue
       let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.NIGHT_SAFETY_CHECK (Just tagGroups)
        in fromMaybe isValueAddNP (readMaybe . T.unpack =<< tagValue)
 
-getEnableFrequentLocationUpdatesTag :: Bool -> Maybe [Spec.TagGroup] -> Bool
-getEnableFrequentLocationUpdatesTag isValueAddNP = maybe isValueAddNP getTagValue
+getEnableFrequentLocationUpdatesTag :: Maybe [Spec.TagGroup] -> Bool
+getEnableFrequentLocationUpdatesTag = maybe False getTagValue
   where
     getTagValue tagGroups =
       let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.ENABLE_FREQUENT_LOCATION_UPDATES (Just tagGroups)
-       in fromMaybe isValueAddNP (readMaybe . T.unpack =<< tagValue)
+       in fromMaybe False (readMaybe . T.unpack =<< tagValue)
