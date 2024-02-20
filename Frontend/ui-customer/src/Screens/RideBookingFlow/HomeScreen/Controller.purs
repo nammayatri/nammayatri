@@ -711,7 +711,7 @@ instance loggableAction :: Loggable Action where
   --         ChooseVehicleController.OnSelect arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnSelect"
 
 data ScreenOutput = LogoutUser
-                  | Cancel HomeScreenState
+                  | Reload HomeScreenState
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
@@ -1115,14 +1115,10 @@ eval (IsMockLocation isMock) state = do
   continue state{props{isMockLocation = val}}
 
 eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
-  _ <- pure $ spy "updateCurrentStage" stage
-  void $ pure $ spy "Inside UpdateCurrentStage" resp
   let fareProductType = resp.bookingDetails ^._fareProductType
       stopLocation = if fareProductType == "RENTAL" then _stopLocation else _toLocation
       (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
       stopLocationDetails = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^._stopLocation)
-      _ = spy "estimatedDuration" resp.estimatedDuration
-      _ = spy "stopLocationDetails stopLocationDetails" stopLocationDetails
       otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
       (RideAPIEntity rideList) = (fromMaybe dummyRideAPIEntity (head resp.rideList))
       searchResultType = if (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing) then QUOTES 
@@ -1136,7 +1132,7 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
                                   startTimeUTC = fromMaybe "" resp.rideStartTime, 
                                   startOdometer = show $ fromMaybe 0.0 rideList.startOdometerReading,
                                   endOdometer = show $ fromMaybe 0.0 rideList.endOdometerReading,
-                                  baseDuration = spy "estimatedDuration ::: " ((fromMaybe 0 resp.estimatedDuration) / 3600), 
+                                  baseDuration = ((fromMaybe 0 resp.estimatedDuration) / 3600), 
                                   baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000 
                                 },
                                 destination =  decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))), 
@@ -1144,10 +1140,9 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
                               }
                         }
                       , props{stopLoc = Just {lat : stopLocationDetails^._lat, lng : stopLocationDetails^._lon, stopLocAddress : decodeAddress (Booking stopLocationDetails) }}}
-      _ = spy "newSattte" newState
   if stage == "REALLOCATED" then
     exit $ NotificationHandler "REALLOCATE_PRODUCT" newState
-  else if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
+  else if (stage == "INPROGRESS") && (not $ (isLocalStageOn RideStarted || (isLocalStageOn ChatWithDriver && state.props.stageBeforeChatScreen == RideStarted))) then
     updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "TRIP_FINISHED" newState
@@ -1312,7 +1307,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages FunctionCall
-      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
+      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, stageBeforeChatScreen = if state.props.currentStage /= ChatWithDriver then state.props.currentStage else state.props.stageBeforeChatScreen  , sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
   else continueWithCmd state[ do
         pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
       ]
@@ -1331,7 +1326,7 @@ eval RemoveNotification state = do
 eval NotificationAnimationEnd state = do
   let isExpanded = state.props.showChatNotification && state.props.chatcallbackInitiated
       areMessagesEmpty = (length (getChatMessages FunctionCall) == 0)
-      showNotification = (areMessagesEmpty || state.props.showChatNotification) && state.props.currentStage == RideAccepted && not state.props.isChatNotificationDismissed
+      showNotification = (areMessagesEmpty || state.props.showChatNotification) && (state.props.currentStage == RideAccepted || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE)) && not state.props.isChatNotificationDismissed
   continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification , removeNotification = not showNotification, enableChatWidget = (isExpanded || areMessagesEmpty) && not state.props.isChatNotificationDismissed}}
 
 eval MessageViewAnimationEnd state = do
@@ -1460,8 +1455,8 @@ eval BackPressed state = do
     ChatWithDriver -> do
                         if state.props.showCallPopUp then continue state {props{showCallPopUp = false}}
                          else do
-                            _ <- pure $ updateLocalStage RideAccepted
-                            continue state {props {currentStage = RideAccepted}}
+                            _ <- pure $ updateLocalStage state.props.stageBeforeChatScreen
+                            updateAndExit state {props {currentStage = state.props.stageBeforeChatScreen}} $ Reload state {props {currentStage = state.props.stageBeforeChatScreen}}
     RideRating ->     do
                       _ <- pure $ updateLocalStage RideCompleted
                       continue state {props {currentStage = RideCompleted}}
@@ -1801,7 +1796,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
     ]
 eval (DriverArrivedAction driverArrivalTime) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
-  exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+  exit $ Reload state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "TRIGGER_WAITING_ACTION"
@@ -2533,11 +2528,11 @@ eval ConfirmRentalRideAction state = do
 
 eval ChangeToRideAcceptedAction state = do
   void $ pure $ updateLocalStage RideAccepted
-  updateAndExit state{props{currentStage = LoadMap}} $ Cancel state{props{currentStage = RideAccepted}}
+  updateAndExit state{props{currentStage = LoadMap}} $ Reload state{props{currentStage = RideAccepted}}
 
 eval ChangeToRideStartedAction state = do
   void $ pure $ updateLocalStage RideStarted
-  updateAndExit state{props{currentStage = LoadMap}} $ Cancel state{props{currentStage = RideStarted}}
+  updateAndExit state{props{currentStage = LoadMap}} $ Reload state{props{currentStage = RideStarted}}
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do
@@ -3145,9 +3140,11 @@ getInfoCardPeekHeight :: HomeScreenState -> Int
 getInfoCardPeekHeight state = 
   let bottomSheetLayout = (runFn1 getLayoutBounds $ getNewIDWithTag (if state.data.currentSearchResultType == QUOTES && state.data.rideType == RideType.NORMAL_RIDE then "driverInfoViewSpecialZone" else "driverInfoView"))
       brandingBanner = runFn1 getLayoutBounds $ getNewIDWithTag "BrandingBanner"
+      fareEstimate = runFn1 getLayoutBounds $ getNewIDWithTag "PaymentMethodView"
+      fareEstimateViewPadding = 12
       pixels = runFn1 getPixels FunctionCall
       density = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
-      currentPeekHeight = bottomSheetLayout.height + if state.data.config.driverInfoConfig.footerVisibility then brandingBanner.height else 0
+      currentPeekHeight = bottomSheetLayout.height + if state.data.config.driverInfoConfig.footerVisibility then brandingBanner.height else 0 - if state.data.rideType == RideType.RENTAL_RIDE then (fareEstimate.height + fareEstimateViewPadding) else 0
       requiredPeekHeight = if os /= "IOS" then ceil (((toNumber currentPeekHeight) /pixels) * density) else currentPeekHeight
     in requiredPeekHeight
 

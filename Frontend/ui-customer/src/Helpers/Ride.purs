@@ -211,6 +211,7 @@ checkRideStatus rideAssigned = do
                                 , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
                                 , baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
                                 , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000
+                                , startTimeUTC = fromMaybe "" resp.rideStartTime
                                 }
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}
@@ -236,7 +237,8 @@ checkRideStatus rideAssigned = do
     Left err -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
       updateLocalStage HomeScreen
-  if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
+  (GlobalState state') <- getState
+  if not (isLocalStageOn RideAccepted || (isLocalStageOn RideStarted && state'.homeScreen.data.rideType == RideType.RENTAL_RIDE )) then removeChatService "" else pure unit
   where 
     updateCity :: FlowStatusData -> FlowBT String Unit
     updateCity (FlowStatusData flowStatusData) = modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = getCityNameFromCode flowStatusData.source.city}})

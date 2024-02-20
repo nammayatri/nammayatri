@@ -98,7 +98,7 @@ homeScreen = do
     NotificationHandler notification updatedState ->  do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification updatedState)
-    Cancel updatedState -> do
+    Reload updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
         App.BackT $ App.NoBack <$> (pure $ CANCEL)
     Retry updatedState -> do

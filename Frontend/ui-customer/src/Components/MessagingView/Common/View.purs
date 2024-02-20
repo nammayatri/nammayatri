@@ -117,9 +117,9 @@ messageNotificationView push state =
   , accessibility $ if state.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
   , accessibilityHint $ "Quick Chat : Widget"
   , onAnimationEnd push $ const state.messageViewAnimationEnd
-  , visibility $ if ((not state.rideStarted) && state.currentSearchResultType /= QUOTES && state.config.feature.enableChat) && state.config.feature.enableSuggestions 
+  , visibility $ if ((not state.showNotificationBanner) && state.currentSearchResultType /= QUOTES && state.config.feature.enableChat) && state.config.feature.enableSuggestions 
                   then VISIBLE 
-                  else if state.rideStarted && os == "IOS" 
+                  else if state.showNotificationBanner && os == "IOS" 
                     then INVISIBLE 
                     else GONE
   , cornerRadius 20.0

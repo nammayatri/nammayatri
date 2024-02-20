@@ -321,7 +321,9 @@ driverInfoView push state =
   ]
 
 distanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-distanceView push state = 
+distanceView push state = let 
+  feature = state.data.config.feature
+  in
   PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $ 
   linearLayout
   [ orientation HORIZONTAL
@@ -342,6 +344,29 @@ distanceView push state =
        , maxLines 2
        ] <> FontStyle.body7 TypoGraphy
      ]
+  , linearLayout
+    [ width MATCH_PARENT
+    , gravity RIGHT
+    , height WRAP_CONTENT
+    , visibility $ boolToVisibility $ state.props.rideType == RideType.RENTAL_RIDE
+    ][linearLayout
+      [ height $ V 40
+      , width $ V 64
+      , gravity CENTER
+      , cornerRadius if os == "IOS" then 20.0 else 32.0
+      , background state.data.config.driverInfoConfig.callBackground
+      , stroke state.data.config.driverInfoConfig.callButtonStroke
+      , onClick push $ const $ MessageDriver
+      , accessibilityHint "Chat and Call : Button"
+      , accessibility ENABLE
+      , rippleColor Color.rippleShade
+      ][ imageView
+          [ imageWithFallback  $ if feature.enableChat then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
+          , height $ V state.data.config.driverInfoConfig.callHeight
+          , width $ V state.data.config.driverInfoConfig.callWidth
+          ]
+      ]
+    ]
   ]
   where 
     getTitleText :: String
@@ -1015,7 +1040,7 @@ addStopView push state =
     linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , margin $ Margin 16 12 16 0
+    , margin $ MarginHorizontal 16 16
     , padding $ Padding 16 12 16 12
     , background Color.white900
     , orientation VERTICAL

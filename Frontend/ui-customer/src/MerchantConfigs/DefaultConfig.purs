@@ -223,7 +223,7 @@ config =
     forceLogReferrerUrl : true,
     enableSelfServe : true,
     enableAdditionalServices : false,
-    enableSafetyFlow : true, 
+    enableSafetyFlow : false, 
     shareWithEmergencyContacts: true
   }
 
