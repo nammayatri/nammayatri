@@ -61,7 +61,9 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.collectedBy collectedBy,
+    [ Se.Set Beam.cancellationFeeAmount cancellationFeeAmount,
+      Se.Set Beam.cancellationFeePercentage cancellationFeePercentage,
+      Se.Set Beam.collectedBy collectedBy,
       Se.Set Beam.domain domain,
       Se.Set Beam.gatewayUrl $ Kernel.Prelude.showBaseUrl gatewayUrl,
       Se.Set Beam.paymentParamsJson paymentParamsJson,
@@ -92,7 +94,9 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
     pure $
       Just
         Domain.Types.BecknConfig.BecknConfig
-          { collectedBy = collectedBy,
+          { cancellationFeeAmount = cancellationFeeAmount,
+            cancellationFeePercentage = cancellationFeePercentage,
+            collectedBy = collectedBy,
             domain = domain,
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
@@ -113,7 +117,9 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
 instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' Domain.Types.BecknConfig.BecknConfig {..} = do
     Beam.BecknConfigT
-      { Beam.collectedBy = collectedBy,
+      { Beam.cancellationFeeAmount = cancellationFeeAmount,
+        Beam.cancellationFeePercentage = cancellationFeePercentage,
+        Beam.collectedBy = collectedBy,
         Beam.domain = domain,
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.id = Kernel.Types.Id.getId id,
