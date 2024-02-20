@@ -241,26 +241,28 @@ notifyOnRideCompleted booking ride = do
             driverName,
             "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
           ]
-  updateFollowsRideCount personId
+  disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId
   notifyPerson person.merchantId merchantOperatingCityId notificationData
+
+disableFollowRide ::
+  ServiceFlow m r =>
+  Id Person ->
+  m ()
+disableFollowRide personId = do
+  void $ QPDEN.updateShareRideForAll personId $ Just False
+  emContacts <- QPDEN.findAllByPersonId personId
+  let followingContacts = filter (.enableForFollowing) emContacts
+  mapM_
+    ( \contact -> maybe (pure ()) updateFollowRideCount contact.contactPersonId
+    )
+    followingContacts
   where
-    updateFollowsRideCount personId = do
-      void $ QPDEN.updateShareRideForAll personId $ Just False
-      emContacts <- QPDEN.findAllByPersonId personId
-      let followingContacts = filter (.enableForFollowing) emContacts
-      mapM_
-        ( \contact -> case contact.contactPersonId of
-            Just id -> updateFollowRideCount id
-            Nothing -> return ()
-        )
-        followingContacts
-      where
-        updateFollowRideCount emPersonId = do
-          count <- CQFollowRide.decrementFollowRideCount emPersonId
-          when (count <= 0) $ do
-            CQFollowRide.clearFollowsRideCounter emPersonId
-            Person.updateFollowsRide emPersonId False
+    updateFollowRideCount emPersonId = do
+      count <- CQFollowRide.decrementFollowRideCount emPersonId
+      when (count <= 0) $ do
+        CQFollowRide.clearFollowsRideCounter emPersonId
+        Person.updateFollowsRide emPersonId False
 
 notifyOnExpiration ::
   ServiceFlow m r =>
@@ -338,6 +340,9 @@ notifyOnBookingCancelled ::
 notifyOnBookingCancelled booking cancellationSource = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  fork "Disabling share ride" $ do
+    disableFollowRide person.id
+    Redis.del $ CQSos.mockSosKey person.id
   notifyPerson person.merchantId merchantOperatingCityId (notificationData booking.providerName person)
   where
     notificationData orgName person =
@@ -588,7 +593,7 @@ notifySafetyAlert booking _ = do
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let notificationData =
         Notification.NotificationReq
-          { category = Notification.SAFETY_ALERT,
+          { category = Notification.SAFETY_ALERT_DEVIATION,
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,

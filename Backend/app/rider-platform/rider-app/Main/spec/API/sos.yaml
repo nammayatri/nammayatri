@@ -24,6 +24,7 @@ types:
 
   MockSosReq:
     onRide: Maybe Bool
+    startDrill: Maybe Bool
 
   MarkAsSafeReq:
     isMock: Maybe Bool
