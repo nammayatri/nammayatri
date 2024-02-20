@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root_container"
     android:layout_width="match_parent"
-    android:layout_height="93dp"
+    android:layout_height="90dp"
     android:orientation="vertical"
 
     android:layout_margin="16dp">
@@ -24,9 +24,8 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:orientation="horizontal"
-        >
+        android:layout_height="54dp"
+        android:orientation="horizontal">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -40,51 +39,51 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="54dp"
                     android:background="@drawable/silent_popup_background"
                     android:orientation="vertical"
                     android:visibility="gone"
-                    android:id="@+id/silent_ride_request_background"
-                    android:paddingStart="64dp">
+                    android:id="@+id/silent_ride_request_background">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:gravity="center">
 
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="$12000"
-                            android:gravity="end"
+                            android:text="$120"
+                            android:gravity="center"
                             android:textColor="#FFFFFF"
-                            android:textSize="20dp"
+                            android:layout_marginLeft="54dp"
+                            android:textSize="15dp"
                             android:id="@+id/ride_fare" />
 
                         <ImageView
                             android:layout_width="4dp"
                             android:layout_height="4dp"
+                            android:id="@+id/dot_view"
                             android:layout_marginHorizontal="6dp"
-                            android:src="@drawable/separator_silent_mode" />
+                            android:src="@drawable/separator_silent_mode"></ImageView>
 
                         <TextView
                             android:layout_width="100dp"
                             android:layout_height="wrap_content"
-                            android:singleLine="true"
                             android:text="900m pickup"
                             android:textSize="16dp"
                             android:textColor="#FFFFFF"
                             android:id="@+id/distance_to_pickup" />
 
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="80dp"
                             android:layout_height="wrap_content"
+                            android:gravity="end"
                             android:text="View now"
-                            android:textSize="18dp"
-                            android:singleLine="true"
-                            android:textColor="#FCC32C" />
+                            android:textSize="18sp"
+                            android:textColor="#FCC32C"></TextView>
                     </LinearLayout>
 
 
@@ -106,27 +105,21 @@
                     android:layout_marginHorizontal="25dp"
                     android:indeterminate="false" />
 
-                <com.google.android.material.imageview.ShapeableImageView
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:srcCompat="@drawable/ic_floating_widget"
-                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50"
-                    />
-
+                <ImageView
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:src="@drawable/ic_floating_widget"
+                    android:id="@+id/floating_logo" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:paddingVertical="5dp"
-                    android:layout_marginLeft="65dp"
+                    android:layout_marginLeft="55dp"
                     android:background="@drawable/bubble_message_shape_right"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:visibility="gone"
-                    android:layout_marginVertical="5dp"
                     android:id="@+id/message_view_right">
 
                     <TextView

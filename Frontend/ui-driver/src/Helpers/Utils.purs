@@ -24,6 +24,8 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null) as DA
 import Data.String (Pattern(..), split) as DS
+import Data.Array as DA
+import Data.String as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
@@ -56,7 +58,7 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not)
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
@@ -377,7 +379,7 @@ getRideLabelData maybeLabel = fromMaybe dummyLabelConfig (getRequiredTag maybeLa
 getRequiredTag :: Maybe String -> Maybe LabelConfig
 getRequiredTag maybeLabel  =
   case maybeLabel of
-    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO", "Safety"] then
+    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO", "Safety", "SpecialZonePickup"] then
                     DA.head (DA.filter (\item -> item.label == label) (rideLabelConfig FunctionCall))
                   else do
                     let arr = DS.split (DS.Pattern "_") label
@@ -429,6 +431,15 @@ rideLabelConfig _ = [
       imageUrl : "ny_pin_check_white,",
       cancelText : "GO_TO_CANCELLATION_TITLE",
       cancelConfirmImage : "ny_ic_gotodriver_zero,"
+    },
+    {
+      label : "SpecialZonePickup",
+      backgroundColor : Color.green900,
+      text : getString SPECIAL_PICKUP_ZONE_RIDE,
+      secondaryText : "",
+      imageUrl : "ic_sp_zone,",
+      cancelText : "ZONE_CANCEL_TEXT_DROP",
+      cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
     }
 ]
 
@@ -861,3 +872,10 @@ findSpecialPickupZone lat lon =
 --   , name : "place2"
 --   , point : SA.LatLong{ lat : 3.0, lon : 4.0 }
 -- }
+checkSpecialPickupZone :: Maybe String -> Boolean
+checkSpecialPickupZone maybeLabel = 
+  case maybeLabel of
+    Just label -> let arr = DS.split (DS.Pattern "_") label
+                      specialPickupZone = fromMaybe "" (arr DA.!! 3)
+                  in not $ DS.null specialPickupZone 
+    Nothing    -> false

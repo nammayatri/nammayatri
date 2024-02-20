@@ -54,5 +54,7 @@
     <string name="safety_deviation_alert">നിനക്ക് കാണാനും ഞങ്ങള്‍ നിനക്ക് വേറെ റൂട്ടില്‍ പോയത് കണ്ടു. നിനക്ക് നിനക്ക് ആപേക്ഷികമായി അനുഭവപ്പെടുന്നുണ്ടോ?</string>
     <string name="everything_okay">എല്ലാം ശരിയാണോ?</string>
     <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">ഞങ്ങൾ കണ്ടുവരുന്നു, നിങ്ങളുടെ ഡ്രൈവർ ചെലവില്ലാത്തതായിരിക്കുന്നു. നിങ്ങൾക്ക് സുരക്ഷിതമായ യാത്ര അനുഭവപ്പെടുന്നുണ്ടോ?</string>
+    <string name="zone_pickup_extra">വലയ പിക്കപ്പ് അതിരുകൾ</string>
+    <string name="you_are_near_a_special_pickup_zone">നിങ്ങൾ ഒരു പ്രത്യേക \n പിക്കപ്പ് വലയത്തിൽ ഉള്ളുകൾ</string>
 
 </resources>

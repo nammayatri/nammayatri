@@ -137,6 +137,12 @@ public class NotificationUtils {
                 try {
                     JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());
                     JSONObject addressDrop = new JSONObject(entity_payload.get("toLocation").toString());
+                    String[] specialZoneSplit = entity_payload.optString("specialLocationTag", "None").split("_");
+                    boolean isSpecialPickupZone = false;
+                    // Checking if the last element of 'specialZoneSplit' is "PickupZone" for specialPickupZone check
+                    if(specialZoneSplit.length > 0) {
+                        isSpecialPickupZone = "PickupZone".equals(specialZoneSplit[specialZoneSplit.length - 1]);
+                    }
                     sheetData.putString("searchRequestId", entity_payload.getString("searchRequestId"));
                     sheetData.putString("searchRequestValidTill", entity_payload.getString("searchRequestValidTill"));
                     sheetData.putInt("baseFare", entity_payload.getInt("baseFare"));
@@ -160,6 +166,8 @@ public class NotificationUtils {
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
+                    sheetData.putInt("specialZoneExtraTip", entity_payload.optInt("specialZoneExtraTip", 0)); 
+                    sheetData.putBoolean("specialZonePickup", isSpecialPickupZone); 
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);

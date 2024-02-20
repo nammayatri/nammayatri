@@ -39,7 +39,7 @@ import Components.StatsModel as StatsModel
 import Data.Array as DA
 import Data.Int (fromString)
 import Data.Int as Int
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
@@ -711,6 +711,31 @@ mapRouteConfig srcIcon destIcon isAnim animConfig= {
   , polylineAnimationConfig : animConfig
 }
 
+
+specialZonePopupConfig :: ST.HomeScreenState -> RequestInfoCard.Config
+specialZonePopupConfig state = let
+  config = RequestInfoCard.config
+  specialZonePopupConf' = config{
+    title {
+      text = getString SPECIAL_PICKUP_ZONE 
+    }
+  , primaryText {
+      text = getString SPECIAL_PICKUP_ZONE_POPUP_INFO
+    }
+  , secondaryText {
+      visibility = GONE
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_sp_pickup_zone_map",
+      height = V 122,
+      width = V 116
+    }
+  , buttonConfig {
+      text = getString GOT_IT
+    }
+  }
+  in specialZonePopupConf'
+
 requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
 requestInfoCardConfig _ = let
   config = RequestInfoCard.config
@@ -1152,6 +1177,8 @@ getRideCompletedConfig state = let
   payerVpa = state.data.endRideData.payerVpa
   bannerConfig = autopayBannerConfig state false
   disability = state.data.endRideData.disability /= Nothing
+  specialZonePickup = isNothing $ state.data.endRideData.specialZonePickup
+  topPillConfig = constructTopPillConfig disability specialZonePickup
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
   viewOrderConfig = [ {condition : autoPayBanner == DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
                       {condition : autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= "", elementView :  RideCompletedCard.QR_VIEW },
@@ -1190,12 +1217,7 @@ getRideCompletedConfig state = let
         fontStyle = Body1,
         visible = if state.props.isFreeRide then VISIBLE else GONE
       },
-      topPill{
-        visible = disability,
-        text = getString PURPLE_RIDE,
-        textColor = Color.white900,
-        background = Color.blueMagenta
-    },
+      topPill = topPillConfig,
       bottomText = getString RIDE_DETAILS
     },
     driverBottomCard {
@@ -1257,6 +1279,38 @@ getRideCompletedConfig state = let
     }
   }
   in config'
+
+type TopPillConfig = {
+  visible :: Boolean,
+  text :: String,
+  textColor :: String,
+  background :: String,
+  icon :: Maybe String
+}
+
+constructTopPillConfig :: Boolean -> Boolean -> TopPillConfig
+constructTopPillConfig disability specialZonePickup
+  | disability = {
+      visible: true,
+      text: getString PURPLE_RIDE,
+      textColor: Color.white900,
+      background: Color.blueMagenta,
+      icon : Nothing
+    }
+  | specialZonePickup = {
+      visible: true,
+      text: "Zone pickup",
+      textColor: Color.white900,
+      background: Color.green900,
+      icon : Just "ic_sp_zone"
+    }
+  | otherwise = {
+      visible: false,
+      text: "",
+      textColor: Color.white900,
+      background: Color.blueMagenta,
+      icon : Nothing
+    }
 
 getRatingCardConfig :: ST.HomeScreenState -> RatingCard.RatingCardConfig
 getRatingCardConfig state = RatingCard.ratingCardConfig {
@@ -1363,8 +1417,6 @@ gotoKnowMoreConfig state = PopUpModal.config {
       visibility = false
     }
   }
-
-
 -------------------------------------------------DriverRequestPopuop------------------------------------------
 
 gotoRequestPopupConfig :: ST.HomeScreenState -> PopUpModal.Config

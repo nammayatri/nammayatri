@@ -31,6 +31,7 @@ import Mobility.Prelude
 import ConfigProvider
 import Mobility.Prelude (boolToVisibility)
 import Engineering.Helpers.Commons as EHC
+import Data.Maybe
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -107,8 +108,14 @@ topPillView config push =
   , gravity CENTER
   , padding $ Padding 16 6 16 10
   , cornerRadius 22.0
-  ][
-    textView $ [
+  ][imageView
+    [ width $ V 12
+    , height $ V 12
+    , margin $ Margin 0 2 6 0
+    , visibility $ boolToVisibility (isNothing $ config.topCard.topPill.icon)
+    , imageWithFallback $ fetchImage FF_COMMON_ASSET $ fromMaybe "" config.topCard.topPill.icon
+    ]
+  ,  textView $ [
       text config.topCard.topPill.text
     , color config.topCard.topPill.textColor 
     ] <> FontStyle.body1 TypoGraphy

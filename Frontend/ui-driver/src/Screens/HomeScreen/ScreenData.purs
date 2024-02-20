@@ -126,7 +126,8 @@ initData = {
           rating : 0,
           feedback : "",
           disability : Nothing,
-          payerVpa : ""
+          payerVpa : "",
+          specialZonePickup : Nothing
         },
         driverGotoState : {
           gotoCount : 0,
@@ -211,7 +212,8 @@ initData = {
         safetyAudioAutoPlay : false,
         vehicleNSPopup : false,
         currentGeoHash : "",
-        expandedMap : false
+        expandedMap : false,
+        specialZonePopup : false
     }
 }
 

@@ -59,12 +59,13 @@
                             android:gravity="end"
                             android:textColor="#FFFFFF"
                             android:layout_marginLeft="54dp"
-                            android:textSize="20dp"
+                            android:textSize="10dp"
                             android:id="@+id/ride_fare" />
 
                         <ImageView
                             android:layout_width="4dp"
                             android:layout_height="4dp"
+                            android:id="@+id/dot_view"
                             android:layout_marginHorizontal="6dp"
                             android:src="@drawable/separator_silent_mode"></ImageView>
 

@@ -1533,7 +1533,8 @@ myRidesScreenFlow = do
       spLocTagVisibility = selectedCard.spLocTagVisibility,
       specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
       specialZoneImage = selectedCard.specialZoneImage,
-      specialZoneText = selectedCard.specialZoneText
+      specialZoneText = selectedCard.specialZoneText,
+      specialZonePickup = selectedCard.specialZonePickup
       }})
 
       tripDetailsScreenFlow
@@ -2064,7 +2065,8 @@ homeScreenFlow = do
               spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag),
               specialZoneLayoutBackground = specialZoneConfig.backgroundColor,
               specialZoneImage = specialZoneConfig.imageUrl,
-              specialZoneText = specialZoneConfig.text
+              specialZoneText = specialZoneConfig.text,
+              specialZonePickup = HU.checkSpecialPickupZone response.specialLocationTag
             }})
           let payerVpa = fromMaybe "" response.payerVpa
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
@@ -3250,6 +3252,7 @@ driverEarningsFlow = do
       specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
       specialZoneImage = selectedCard.specialZoneImage,
       specialZoneText = selectedCard.specialZoneText,
+      specialZonePickup = selectedCard.specialZonePickup,
       goBackTo = ST.Earning
       }})
       tripDetailsScreenFlow

@@ -39,7 +39,7 @@ import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, co
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (initializeCalendar, saveObject, getCurrentDay)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (isYesterday, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag)
+import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag)
 import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types
@@ -494,7 +494,8 @@ rideHistoryItemTransformer (RidesInfo ride) =
     spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag) /= Nothing,
     specialZoneLayoutBackground : specialLocationConfig.backgroundColor,
     specialZoneImage : specialLocationConfig.imageUrl,
-    specialZoneText : specialLocationConfig.text
+    specialZoneText : specialLocationConfig.text,
+    specialZonePickup : checkSpecialPickupZone ride.specialLocationTag
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -534,6 +535,7 @@ getTagImages (RidesInfo ride) =
       , {condition: isJust ride.disabilityTag, tag: "ny_ic_disability_tag"}
       , {condition: isJust ride.specialLocationTag && isJust tag, tag: "ny_ic_star"}
       , {condition: isJust ride.driverGoHomeRequestId, tag: "ny_ic_goto_home_tag"}
+      , {condition: checkSpecialPickupZone ride.specialLocationTag, tag: "ny_ic_sp_zone_green"}
       ]
   in
     DA.concatMap (\{condition, tag} -> if condition then [tag] else []) conditionsAndTags
