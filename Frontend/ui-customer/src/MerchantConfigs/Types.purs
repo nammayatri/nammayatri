@@ -240,7 +240,8 @@ type Features = {
   enableSafetyFlow :: Boolean,
   shareWithEmergencyContacts :: Boolean,
   enableAutoReferral :: Boolean,
-  enableRepeatTripBackfilling :: Boolean
+  enableRepeatTripBackfilling :: Boolean,
+  enableCustomerSupportForSafety :: Boolean
   }
 
 type RideCompletedCardConfig = {

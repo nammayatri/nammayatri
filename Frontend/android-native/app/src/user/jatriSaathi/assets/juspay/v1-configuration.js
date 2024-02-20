@@ -40,7 +40,14 @@ window.getMerchantConfig = function () {
       "MOST_LOVED_APP",
       "REPORT_ISSUE_CHAT_PLACEHOLDER",
       "CALL_SUPPORT_DESCRIPTION",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED"
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED",
+      "WHO_CAN_TRACK_YOUR_RIDE",
+      "ALERT_SAFETY_TEAM",
+      "RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL",
+      "SAFETY_TEAM_WILL_BE_ALERTED",
+      "SHARE_RIDE_DESCRIPTION",
+      "PLEASE_STAY_CALM_TEAM_ALERTED",
+      "INDICATION_TO_EMERGENCY_CONTACTS"
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
@@ -149,8 +156,14 @@ window.getMerchantConfig = function () {
       "GO_TO_ZONE" : "Go to Yatri Sathi Zone",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
       "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Yatri Sathi Support. Do you want to proceed?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at support@nammayatri.in for any queries."
-
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at support@nammayatri.in for any queries.",
+      "WHO_CAN_TRACK_YOUR_RIDE" : "Who can follow your ride on Yatri Sathi App",
+      "ALERT_SAFETY_TEAM" : "Alert Yatri Sathi Safety Team",
+      "RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL" : "We recommend emergency contacts to install Yatri Sathi for an enhanced tracking experience",
+      "SAFETY_TEAM_WILL_BE_ALERTED" : "Upon SOS  Yatri Sathi safety team will be notified",
+      "SHARE_RIDE_DESCRIPTION" : "On choosing this, Yatri Sathi will send app push notification to the emergency contacts",
+      "PLEASE_STAY_CALM_TEAM_ALERTED" : "Please stay calm, Yatri Sathi safety team is alerted!",
+      "INDICATION_TO_EMERGENCY_CONTACTS" : "Yatri Sathi will indicate to your emergency contacts that this is a test drill, ensuring a stress-free experience."
     },
     "hindiStrings": {
       "ABOUT_APP_DESCRIPTION": "यात्री साथी सवारियों को चालकों से जोड़ने का एक खुला मंच है। ऐप राइडर्स के लिए मीटर रेट के साथ राइड बुक करना सुविधाजनक बनाता है इसलिए न्यूनतम किराया।",
@@ -181,8 +194,14 @@ window.getMerchantConfig = function () {
       "GO_TO_ZONE" : "यात्री साथी जोन पर जाएं" ,
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपने मामले का वर्णन करें। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेंगे।",
       "CALL_SUPPORT_DESCRIPTION" : "आप यात्री साथी सहायता को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "हमें उम्मीद है कि समस्या हल हो गई है, किसी भी प्रश्न के लिए बेझिझक हमें yatrisathi.support@wb.gov.in पर लिखें।"
-      
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "हमें उम्मीद है कि समस्या हल हो गई है, किसी भी प्रश्न के लिए बेझिझक हमें yatrisathi.support@wb.gov.in पर लिखें।",
+      "WHO_CAN_TRACK_YOUR_RIDE": "कौन आपकी राइड को यात्री साथी ऐप पर ट्रैक कर सकता है",
+      "ALERT_SAFETY_TEAM": "यात्री साथी सुरक्षा टीम को चेतावनी दें",
+      "RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL": "हम जरूरी संपर्कों को बढ़िया ट्रैकिंग अनुभव के लिए यात्री साथी इंस्टॉल करने की सिफारिश करते हैं",
+      "SAFETY_TEAM_WILL_BE_ALERTED": "SOS के अनुसार यात्री साथी सुरक्षा टीम को सूचित किया जाएगा",
+      "SHARE_RIDE_DESCRIPTION": "इसे चुनने पर, यात्री साथी अप्लिकेशन पुश सूचना आपात संपर्कों को भेजेगा",
+      "PLEASE_STAY_CALM_TEAM_ALERTED": "कृपया शांत रहें, यात्री साथी सुरक्षा टीम को चेतावनी दी गई है!",
+      "INDICATION_TO_EMERGENCY_CONTACTS": "यात्री साथी आपके आपात संपर्कों को सूचित करेगा कि यह एक टेस्ट ड्रिल है, जो एक तनावमुक्त अनुभव सुनिश्चित करेगा"
     },
     "bengaliStrings": {
       "ABOUT_APP_DESCRIPTION": "যাত্রী সাথী হল চালকদের সাথে রাইডারদের সংযোগ করার জন্য একটি উন্মুক্ত প্ল্যাটফর্ম। অ্যাপটি রাইডারদের জন্য মিটার রেট সহ একটি রাইড বুক করা সুবিধাজনক করে তোলে তাই ন্যূনতম ভাড়া।",
@@ -213,8 +232,14 @@ window.getMerchantConfig = function () {
       "GO_TO_ZONE" : "যাত্রী সাথী জোনে যান",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা. যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবে।",
       "CALL_SUPPORT_DESCRIPTION" : "আপনি যাত্রী সাথী সমর্থনে একটি কল করতে চলেছেন৷ আপনি কি এগিয়ে যেতে চান?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "আমরা আশা করি সমস্যাটি সমাধান হয়ে গেছে, যেকোনো প্রশ্নের জন্য yatrisathi.support@wb.gov.in-এ আমাদের কাছে নির্দ্বিধায় লিখুন।"
-
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "আমরা আশা করি সমস্যাটি সমাধান হয়ে গেছে, যেকোনো প্রশ্নের জন্য yatrisathi.support@wb.gov.in-এ আমাদের কাছে নির্দ্বিধায় লিখুন।",
+      "WHO_CAN_TRACK_YOUR_RIDE": "কে যাত্রী সাথী অ্যাপ দ্বারা আপনার রাইড অনুসরণ করতে পারে",
+      "ALERT_SAFETY_TEAM": "সতর্কতা যাত্রী সাথী সুরক্ষা দলে",
+      "RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL": "আমরা অনুমোদন করি জরুরি যোগাযোগের মুখ্যত্ব বৃদ্ধি করতে যাত্রী সাথী ইনস্টল করা",
+      "SAFETY_TEAM_WILL_BE_ALERTED": "SOS অনুসারে যাত্রী সাথী সুরক্ষা দলে জানানো হবে",
+      "SHARE_RIDE_DESCRIPTION": "এইটা চয়ন করার সময়, যাত্রী সাথী অ্যাপ পুশ বিজ্ঞপ্তি পাঠাবে অতি জরুরি যোগাযোগের সাথে",
+      "PLEASE_STAY_CALM_TEAM_ALERTED": "অনুগ্রহ করে শান্ত থাকুন, যাত্রী সাথী সুরক্ষা দলটি সতর্ক করা হয়েছে!",
+      "INDICATION_TO_EMERGENCY_CONTACTS": "যাত্রী সাথী আপনার জরুরি যোগাযোগের সংকেত দেবে যে এটি একটি টেস্ট ড্রিল, যাত্রা অভিজ্ঞতার মন্তব্যে নিরাপদ অনুভূতি নিশ্চিত করা হয়"
     },
     "languageList": [{
       "name": "English",
@@ -316,7 +341,8 @@ window.getMerchantConfig = function () {
       "enableZooTicketBookingFlow" : true,
       "enableShareRide" : false,
       "enableAdditionalServices" : true,
-      "enableSafetyFlow" : false
+      "enableSafetyFlow" : false,
+      "enableCustomerSupportForSafety" : true 
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,

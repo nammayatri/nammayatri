@@ -122,6 +122,7 @@ import Components.BannerCarousel as BannerCarousel
 import Components.MessagingView.Common.Types
 import Components.MessagingView.Common.View
 import Data.FoldableWithIndex
+import Components.PopupWithCheckbox.View as PopupWithCheckbox
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -404,8 +405,8 @@ view push state =
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
             , if state.data.waitTimeInfo && state.props.currentStage == RideAccepted then waitTimeInfoPopUp push state else emptyTextView state
-            , if showSafetyAlertPopup then safetyAlertPopup push state else  emptyTextView state
-            , if state.props.showShareRide then shareRidePopup push state else emptyTextView state
+            , if isJust state.props.safetyAlertType && state.props.currentStage == RideStarted then safetyAlertPopup push state else  emptyTextView state
+            , if state.props.showShareRide then PopupWithCheckbox.view (push <<< ShareRideAction) (shareRideConfig state) else emptyTextView state
             , if state.props.referral.referralStatus /= NO_REFERRAL then referralPopUp push state else emptyTextView state 
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
@@ -427,8 +428,6 @@ view push state =
                     else [])
         ]
   ]
-  where
-    showSafetyAlertPopup = Arr.notElem (getValueToLocalNativeStore SAFETY_ALERT_TYPE) ["__failed", "false", "(null)"]
 
 bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBarView push state = let 
@@ -4076,89 +4075,6 @@ safetyAlertPopup push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ][PopUpModal.view (push <<< SafetyAlertAction) (safetyAlertConfig state)]
-
-
-shareRidePopup :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-shareRidePopup push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , background Color.blackLessTrans
-    , gravity CENTER_VERTICAL
-    , onClick push $ const DismissShareRide
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , margin $ MarginHorizontal 16 16
-        , background Color.white900
-        , cornerRadius 16.0
-        , clickable true
-        ]
-        [ linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER_VERTICAL
-            , padding $ Padding 16 24 16 16
-            , background Color.blue600
-        , cornerRadius 16.0
-            ]
-            [ textView
-                $ [ text $ getString SHARE_RIDE
-                  , color Color.black900
-                  , weight 1.0
-                  ]
-                <> FontStyle.h1 TypoGraphy
-            , imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_close"
-                , height $ V 20
-                , width $ V 20
-                , onClick push $ const DismissShareRide
-                ]
-            ]
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , gravity CENTER_VERTICAL
-            , padding $ Padding 16 16 16 16
-            ]
-            [ textView
-                $ [ text $ getString $ SHARE_RIDE_DESCRIPTION "SHARE_RIDE_DESCRIPTION"
-                  , color Color.black700
-                  ]
-                <> FontStyle.body1 TypoGraphy
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , margin $ MarginTop 16
-            ]
-            (mapWithIndex (shareRideOptionView push state) state.data.contactList)
-        , PrimaryButton.view (push <<< NotifyRideShare) (shareRideButtonConfig state)
-        , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , margin $ Margin 16 12 16 16
-          , gravity CENTER
-          , onClick push $ const ShareRide
-          ][
-            imageView
-              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share"
-              , height $ V 20
-              , width $ V 20
-              , margin $ MarginRight 7
-              ]
-           , textView
-              [ text $ getString SHARE_LINK
-              , color Color.black700
-              , width WRAP_CONTENT              
-              ]
-          ]
-        ]
-        ]
-    ]
 
 shareRideOptionView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> Int -> NewContacts -> PrestoDOM (Effect Unit) w
 shareRideOptionView push state index contact =

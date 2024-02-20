@@ -58,7 +58,7 @@ window.getMerchantConfig = function () {
       "EARNED_ON_APP" : "NY पर अर्जित मूल्य",
       "TRAVELLED_ON_APP" : "नम्मा यात्री पर तय की गई दूरी",
       "GUARANTEED_FIXED_PRICE" : "अप्रैल 1, 2025 तक निश्चित मूल्य गारंटी",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "नम्मा यात्री योजनाओं के लिए तैयार हो जाइए!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "नम्मा यात्री योजनाओं\nके लिए तैयार हो जाइए!"
     },
     "kannadaStrings": {
       "WELCOME_TEXT": "Welcome to the Namma Yatri Driver",
@@ -71,7 +71,7 @@ window.getMerchantConfig = function () {
       "EARNED_ON_APP" : "NY ನಲ್ಲಿ ಗಳಿಸಿದ ಬೆಲೆ",
       "TRAVELLED_ON_APP" : "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಪ್ರಯಾಣಿಸಿದೆ",
       "GUARANTEED_FIXED_PRICE" : "ಅಪ್ರೈಲ್ 1, 2025 ವರೆಗೆ ಖಚಿತ ಬೆಲೆಯ ಗ್ಯಾರಂಟಿ",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "ನಮ್ಮ ಯಾತ್ರಿ ಯೋಜನೆಗಳಿಗೆ ಸಿದ್ಧತೆ ಪಡೆಯಲು ಸಿದ್ಧವಾಗಿರಿ!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "ನಮ್ಮ ಯಾತ್ರಿ ಯೋಜನೆಗಳಿಗೆ\nಸಿದ್ಧತೆ ಪಡೆಯಲು ಸಿದ್ಧವಾಗಿರಿ!"
     },
     "tamilStrings": {
       "WELCOME_TEXT": "Welcome to the Namma Yatri Driver",
@@ -84,7 +84,7 @@ window.getMerchantConfig = function () {
       "EARNED_ON_APP" : "NY இல் பெறப்பட்ட விலை",
       "TRAVELLED_ON_APP" : "நம்ம யாத்ரியில் நடந்த தூரம்",
       "GUARANTEED_FIXED_PRICE" : "ஏப்ரல் 1, 2025 வரை உத்தரவாதமான நிலையான விலை",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி திட்டங்களுக்கு தயாராகுங்கள்!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி\nதிட்டங்களுக்கு தயாராகுங்கள்!"
     },
     "teluguStrings": {
       "WELCOME_TEXT": "నమ్మ యాత్రి డ్రైవర్‌కు స్వాగతం",
@@ -97,7 +97,7 @@ window.getMerchantConfig = function () {
       "EARNED_ON_APP" : "యొక్క ఆర్జి",
       "TRAVELLED_ON_APP" : "నమ్మ యాత్రిలో పయణించినది",
       "GUARANTEED_FIXED_PRICE" : "ఏప్రిల్ 1, 2025 వరకు స్థిర ధరకు హామీ ఇవ్వబడుతుంది",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "నమ్మ యాత్రి ప్రణాళికల కోసం సిద్ధంగా ఉండండి!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "నమ్మ యాత్రి ప్రణాళికల\nకోసం సిద్ధంగా ఉండండి!"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"

@@ -95,7 +95,7 @@ eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideSc
 eval action state = case action of
   BackPressed -> do 
     _ <- pure $ clearAudioPlayer ""
-    if state.data.currentStage == MockFollowRide 
+    if isMockDrill state
       then void $ pure $ removeSOSAlarmStatus "mock_drill"
       else pure unit
     let newState = state { data { emergencyAudioStatus = COMPLETED },props{ startMapAnimation = false} }
@@ -160,6 +160,9 @@ eval action state = case action of
             { driverInfoCardState = Just driverInfoCardState
             , zoneType = getSpecialTag resp.specialLocationTag
             , sosStatus = resp.sosStatus
+            }
+          , props
+            { isRideStarted = resp.status == "INPROGRESS"
             }
           }
     if isNothing state.data.driverInfoCardState-- || state.data.sosStatus /= resp.sosStatus
@@ -320,7 +323,7 @@ startAudioPlayerCmd state = do
         ]
 canStartAudioPlayer :: FollowRideScreenState -> Boolean
 canStartAudioPlayer state = 
-  let defaultFollower = if state.data.currentStage == MockFollowRide then mockFollower else dummyFollower
+  let defaultFollower = if isMockDrill state then mockFollower else dummyFollower
       currentFollower = fromMaybe defaultFollower state.data.currentFollower
       status = state.data.emergencyAudioStatus
   in (status == STOPPED && checkCurrentFollower currentFollower) || (status == RESTARTED)
@@ -336,4 +339,5 @@ checkCurrentFollower follower = do
       in true
 
 
-  
+isMockDrill :: FollowRideScreenState -> Boolean
+isMockDrill state = state.data.currentStage == MockFollowRide || elem state.data.sosStatus [Just MockPending, Just MockResolved]

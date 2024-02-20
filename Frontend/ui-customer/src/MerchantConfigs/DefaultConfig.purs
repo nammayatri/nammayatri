@@ -226,7 +226,8 @@ config =
     enableAdditionalServices : false,
     enableSafetyFlow : true, 
     shareWithEmergencyContacts: true,
-    enableAutoReferral : true
+    enableAutoReferral : true,
+    enableCustomerSupportForSafety : false
   }
 
   , rideCompletedCardConfig : {

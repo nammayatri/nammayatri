@@ -1167,7 +1167,8 @@ activeRideDetail state (RidesInfo ride) =
               Just _ -> Just ST.OTHER_DISABILITY
               Nothing -> if isSafetyRide && (isNothing ride.specialLocationTag) 
                           then Just ST.SAFETY 
-                          else Nothing
+                          else Nothing,
+  enableFrequentLocationUpdates : fromMaybe false ride.enableFrequentLocationUpdates
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList

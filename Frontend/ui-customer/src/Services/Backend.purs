@@ -1115,10 +1115,11 @@ updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
     where
         unwrapResponse (x) = x
 
-markRideAsSafe :: String -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
-markRideAsSafe sosId= do
+markRideAsSafe :: String -> Boolean -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
+markRideAsSafe sosId isMock = do
         headers <- getHeaders "" false
-        withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId)
+        let reqBody = UpdateAsSafeReqBody{isMock : isMock}
+        withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId reqBody)
     where
         unwrapResponse (x) = x
 
@@ -1143,10 +1144,10 @@ makeAskSupportRequest bId isSafe description = AskSupportReq{
     "description" : description
 }
 
-createMockSos :: String -> Flow GlobalState (Either ErrorResponse CreateMockSosRes)
-createMockSos dummy = do
+createMockSos :: Boolean -> Flow GlobalState (Either ErrorResponse CreateMockSosRes)
+createMockSos onRide = do
         headers <- getHeaders "" false
-        withAPIResult (EP.createMockSos "") unwrapResponse $ callAPI headers (CreateMockSosReq "")
+        withAPIResult (EP.createMockSos "") unwrapResponse $ callAPI headers $ CreateMockSosReq {onRide : onRide}
     where
         unwrapResponse (x) = x
 

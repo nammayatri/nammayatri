@@ -47,7 +47,7 @@ initData =
       , currentSheetState: COLLAPSED
       , isNotificationExpanded: false
       , startMapAnimation: true
-      
+      , isRideStarted: false
       }
   }
 

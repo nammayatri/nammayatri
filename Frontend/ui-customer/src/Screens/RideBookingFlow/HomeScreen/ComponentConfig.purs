@@ -83,6 +83,7 @@ import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
 import Locale.Utils
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
+import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController 
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -1874,7 +1875,7 @@ safetyAlertConfig state =
   let
     config' = PopUpModal.config
 
-    alertData = getSafetyAlertData $ getValueToLocalStore SAFETY_ALERT_TYPE
+    alertData = getSafetyAlertData state.props.safetyAlertType
 
     popUpConfig' =
       config'
@@ -1918,10 +1919,26 @@ safetyAlertConfig state =
   in
     popUpConfig'
 
-getSafetyAlertData :: String -> { text :: String, image :: String }
-getSafetyAlertData reason
-  | reason == "deviation" = { text: getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE, image: "ny_ic_safety_alert_deroute" }
-  | otherwise = { text: getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED, image: "ny_ic_safety_alert_stationary" }
+getSafetyAlertData :: Maybe ST.SafetyAlertType -> { text :: String, image :: String }
+getSafetyAlertData safetyAlertType = case safetyAlertType of
+  Just ST.DEVIATION ->  { text: getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE, image: "ny_ic_safety_alert_deroute" }
+  Just ST.STATIONARY_VEHICLE -> { text: getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED, image: "ny_ic_safety_alert_stationary" }
+  _ -> { text: "", image: "" }
+
+shareRideConfig :: ST.HomeScreenState -> PopupWithCheckboxController.Config
+shareRideConfig state = let
+  config = PopupWithCheckboxController.config
+  shareRideConfig' = config{
+    title = getString SHARE_RIDE,
+    description = getString $ SHARE_RIDE_DESCRIPTION "SHARE_RIDE_DESCRIPTION",
+    secondaryButtonText = getString SHARE_LINK,
+    secondaryButtonImage = fetchImage FF_ASSET "ny_ic_share",
+    secondaryButtonVisibliity = true, 
+    contactList = state.data.contactList,
+    primaryButtonConfig = shareRideButtonConfig state
+  }
+  in shareRideConfig'
+
 
 shareRideButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 shareRideButtonConfig state =

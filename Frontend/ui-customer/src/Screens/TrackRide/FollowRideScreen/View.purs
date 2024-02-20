@@ -38,7 +38,7 @@ import PrestoDOM (PrestoDOM, Screen, BottomSheetState(..), onAnimationEnd, onBac
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout, frameLayout, imageView, linearLayout, relativeLayout, scrollView, textView)
 import PrestoDOM.Properties (alignParentBottom, accessibility, alpha, background, clickable, color, cornerRadii, cornerRadius, enableShift, gradient, gravity, height, id, imageWithFallback, margin, orientation, padding, peakHeight, stroke, sheetState, text, visibility, weight, width)
 import PrestoDOM.Types.DomAttributes (Accessiblity(..), Corners(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..))
-import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval, isMockDrill)
 import Screens.FollowRideScreen.ScreenData (mockDriverInfo, mockDriverLocation, mockRoute)
 import Screens.FollowRideScreen.Config (SOSOverlayConfig, genericHeaderConfig, getCurrentFollower, getDriverDetails, getFollowerName, getPeekHeight, getSosOverlayConfig, getTripDetails, primaryButtonConfig)
 import Services.API (GetDriverLocationResp(..), GetRouteResp(..), LatLong(..), RideBookingRes(..), Route(..), Snapped(..))
@@ -532,7 +532,10 @@ headerView push state =
       , gravity CENTER
       ]
       [ textView
-          $ [ text $ (getFollowerName currentFollower state) <> " " <> getString IS_ON_THE_WAY
+          $ [ text $ if state.props.isRideStarted then  
+                      (getFollowerName currentFollower state) <> " " <> getString IS_ON_THE_WAY
+                     else 
+                      getString $ YET_TO_START (getFollowerName currentFollower state)
             , height WRAP_CONTENT
             , color Color.black900
             ]
@@ -548,8 +551,8 @@ headerView push state =
           , background Color.green100
           , onClick push $ const $ MessageEmergencyContact
           , accessibility ENABLE
-          , alpha $ if state.data.currentStage == MockFollowRide then 0.5 else 1.0
-          , clickable $ state.data.currentStage /= MockFollowRide
+          , alpha $ if isMockDrill state then 0.5 else 1.0
+          , clickable $ not $ isMockDrill state
           -- , visibility $ boolToVisibility $ currentFollower.priority == 0 needed when chat is added
           , padding $ Padding 20 10 20 10
           ]
@@ -592,8 +595,8 @@ buttonView push state =
     , gravity CENTER
     , padding $ Padding 16 12 16 12
     , onClick push $ const CallPolice
-    , alpha $ if state.data.currentStage == MockFollowRide then 0.5 else 1.0
-    , clickable $ state.data.currentStage /= MockFollowRide
+    , alpha $ if isMockDrill state then 0.5 else 1.0
+    , clickable $ not $ isMockDrill state
     ]
     [ imageView
         [ width $ V 16

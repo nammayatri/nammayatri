@@ -1027,7 +1027,8 @@ type ActiveRide = {
   specialLocationTag :: Maybe String,
   requestedVehicleVariant :: Maybe String,
   disabilityTag :: Maybe DisabilityType,
-  waitTimeSeconds :: Int
+  waitTimeSeconds :: Int,
+  enableFrequentLocationUpdates :: Boolean
 }
 
 type HomeScreenProps =  {

@@ -1892,7 +1892,7 @@ instance decodeUserSosFlow :: Decode UserSosFlow where decode = defaultDecode
 instance encodeUserSosFlow :: Encode UserSosFlow where encode = defaultEncode
 
 
------------------------------------------------------------------------ userUpdateeSos api -------------------------------------------------------------------
+----------------------------------------------------------------------- userUpdateSos api -------------------------------------------------------------------
 
 data UserSosStatusReq = UserSosStatusReq String SosStatus
 
@@ -2748,14 +2748,15 @@ newtype GetEmergencySettingsRes = GetEmergencySettingsRes
     enablePoliceSupport :: Boolean,
     localPoliceNumber :: Maybe String,
     hasCompletedMockSafetyDrill :: Boolean,
-    shareTripWithEmergencyContacts :: Boolean
+    shareTripWithEmergencyContacts :: Maybe Boolean,
+    shareTripWithEmergencyContactOption :: Maybe RideShareOptions
   }
 
 
 newtype UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
   {
     shareEmergencyContacts :: Maybe Boolean,
-    shareTripWithEmergencyContacts :: Maybe Boolean,
+    shareTripWithEmergencyContactOption :: Maybe RideShareOptions,
     nightSafetyChecks :: Maybe Boolean,
     hasCompletedSafetySetup :: Maybe Boolean
   }
@@ -2766,15 +2767,26 @@ newtype UpdateEmergencySettingsRes = UpdateEmergencySettingsRes
     result :: String
   }
 
+data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE
+
+derive instance genericRideShareOptions :: Generic RideShareOptions _
+instance showRideShareOptions :: Show RideShareOptions where show = genericShow
+instance decodeRideShareOptions :: Decode RideShareOptions where decode = defaultEnumDecode
+instance encodeRideShareOptions :: Encode RideShareOptions where encode = defaultEnumEncode
+instance eqRideShareOptions :: Eq RideShareOptions where eq = genericEq
+instance standardEncodeRideShareOptions :: StandardEncode RideShareOptions
+  where
+    standardEncode _ = standardEncode {}
+
 instance makeGetEmergencySettingsReq :: RestEndpoint GetEmergencySettingsReq GetEmergencySettingsRes where
   makeRequest reqBody headers = defaultMakeRequest GET (EP.getEmergencySettings "") headers reqBody Nothing
   decodeResponse = decodeJSON
-  encodeRequest req = standardEncode req
+  encodeRequest req = encode req
 
 instance makeUpdateEmergencySettingsReq :: RestEndpoint UpdateEmergencySettingsReq UpdateEmergencySettingsRes where
   makeRequest reqBody headers = defaultMakeRequest PUT (EP.updateEmergencySettings "") headers reqBody Nothing
   decodeResponse = decodeJSON
-  encodeRequest req = standardEncode req
+  encodeRequest req = encode req
 
 derive instance genericGetEmergencySettingsRes :: Generic GetEmergencySettingsRes _
 derive instance newtypeGetEmergencySettingsRes :: Newtype GetEmergencySettingsRes _
@@ -2858,20 +2870,24 @@ instance showSos :: Show Sos where show = genericShow
 instance decodeSos :: Decode Sos where decode = defaultDecode
 instance encodeSos :: Encode Sos where encode = defaultEncode
 
-data UpdateAsSafeReq = UpdateAsSafeReq String
+data UpdateAsSafeReq = UpdateAsSafeReq String UpdateAsSafeReqBody
+
+newtype UpdateAsSafeReqBody = UpdateAsSafeReqBody {
+  isMock :: Boolean
+}
 
 newtype UpdateAsSafeRes = UpdateAsSafeRes {
-result :: String
+  result :: String
 }
 
 instance makeUpdateAsSafeReq  :: RestEndpoint UpdateAsSafeReq UpdateAsSafeRes where
- makeRequest reqBody@(UpdateAsSafeReq sosId) headers = defaultMakeRequest POST (EP.updateSafeRide sosId) headers reqBody Nothing
+ makeRequest reqBody@(UpdateAsSafeReq sosId req) headers = defaultMakeRequest POST (EP.updateSafeRide sosId) headers reqBody Nothing
  decodeResponse body = defaultDecodeResponse body
  encodeRequest req = standardEncode req
 
 derive instance genericUpdateAsSafeReq :: Generic UpdateAsSafeReq _
 instance showUpdateAsSafeReq :: Show UpdateAsSafeReq where show = genericShow
-instance standardEncodeUpdateAsSafeReq :: StandardEncode UpdateAsSafeReq where standardEncode (UpdateAsSafeReq  sosId ) = standardEncode {}
+instance standardEncodeUpdateAsSafeReq :: StandardEncode UpdateAsSafeReq where standardEncode (UpdateAsSafeReq _ req) = standardEncode req
 instance decodeUpdateAsSafeReq :: Decode UpdateAsSafeReq where decode = defaultDecode
 instance encodeUpdateAsSafeReq :: Encode UpdateAsSafeReq where encode = defaultEncode
 
@@ -2881,6 +2897,13 @@ instance standardEncodeUpdateAsSafeRes :: StandardEncode UpdateAsSafeRes where s
 instance showUpdateAsSafeRes :: Show UpdateAsSafeRes where show = genericShow
 instance decodeUpdateAsSafeRes :: Decode UpdateAsSafeRes where decode = defaultDecode
 instance encodeUpdateAsSafeRes :: Encode UpdateAsSafeRes where encode = defaultEncode
+
+derive instance genericUpdateAsSafeReqBody :: Generic UpdateAsSafeReqBody _
+derive instance newtypeUpdateAsSafeReqBody :: Newtype UpdateAsSafeReqBody _
+instance standardEncodeUpdateAsSafeReqBody :: StandardEncode UpdateAsSafeReqBody where standardEncode (UpdateAsSafeReqBody req) = standardEncode req
+instance showUpdateAsSafeReqBody :: Show UpdateAsSafeReqBody where show = genericShow
+instance decodeUpdateAsSafeReqBody :: Decode UpdateAsSafeReqBody where decode = defaultDecode
+instance encodeUpdateAsSafeReqBody :: Encode UpdateAsSafeReqBody where encode = defaultEncode
 
 newtype AskSupportRes = AskSupportRes {
     result :: String
@@ -2911,7 +2934,9 @@ instance showAskSupportReq :: Show AskSupportReq where show = genericShow
 instance decodeAskSupportReq :: Decode AskSupportReq where decode = defaultDecode
 instance encodeAskSupportReq :: Encode AskSupportReq where encode = defaultEncode
 
-data CreateMockSosReq = CreateMockSosReq String
+newtype CreateMockSosReq = CreateMockSosReq {
+  onRide :: Boolean
+}
 
 newtype CreateMockSosRes = CreateMockSosRes {
     result :: String
@@ -2924,7 +2949,8 @@ instance makeCreateMockSosReq  :: RestEndpoint CreateMockSosReq CreateMockSosRes
 
 derive instance genericCreateMockSosReq :: Generic CreateMockSosReq _
 instance showCreateMockSosReq :: Show CreateMockSosReq where show = genericShow
-instance standardEncodeCreateMockSosReq :: StandardEncode CreateMockSosReq where standardEncode _ = standardEncode {}
+derive instance newtypeCreateMockSosReq :: Newtype CreateMockSosReq _
+instance standardEncodeCreateMockSosReq :: StandardEncode CreateMockSosReq where standardEncode (CreateMockSosReq req) = standardEncode req
 instance decodeCreateMockSosReq :: Decode CreateMockSosReq where decode = defaultDecode
 instance encodeCreateMockSosReq :: Encode CreateMockSosReq where encode = defaultEncode
 

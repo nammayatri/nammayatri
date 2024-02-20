@@ -16,6 +16,7 @@ module Screens.NammaSafetyFlow.ComponentConfig where
 
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
+import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (any, null)
 import Engineering.Helpers.Commons as EHC
@@ -24,24 +25,22 @@ import Helpers.Utils as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
-import Prelude (($), (<>), (==), (>), (||), not)
+import Prelude (($), (<>), (==), (>), (||), not, map)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
+import Services.API (RideShareOptions(..))
 import Styles.Colors as Color
-import Debug
 
 startNSOnboardingButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 startNSOnboardingButtonConfig state =
   PrimaryButton.config
     { textConfig { text = getString START_SETUP }
-    , visibility = visibility'
+    , visibility = boolToVisibility $ not state.data.hasCompletedSafetySetup
     , margin = Margin 16 0 16 24
     , id = "ScreenStartOnboardingButton"
     , enableRipple = true
     }
-  where
-  visibility' = if state.data.hasCompletedSafetySetup || state.props.onRide then GONE else VISIBLE
 
 continueNextStepButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 continueNextStepButtonConfig state =
@@ -167,7 +166,6 @@ confirmPopUpModelConfig state =
       }
     }
 
-
 startTestDrillButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 startTestDrillButtonConfig state =
   PrimaryButton.config
@@ -181,3 +179,47 @@ startTestDrillButtonConfig state =
     , id = "SafetyScreenStartTestDrillButton"
     }
 
+shareTripPopupConfig :: NammaSafetyScreenState -> PopupWithCheckboxController.Config
+shareTripPopupConfig state =
+  PopupWithCheckboxController.config
+    { title = getString SHARE_TRIP_NOTIFICATONS
+    , secondaryButtonText = getString SAVE
+    , checkboxList = checkBoxData state
+    , primaryButtonConfig = shareTripPopupBtnConfig state
+    }
+
+shareTripPopupBtnConfig :: NammaSafetyScreenState -> PrimaryButton.Config
+shareTripPopupBtnConfig state =
+  PrimaryButton.config
+    { textConfig
+      { text = getString DONE
+      }
+    , margin = MarginVertical 20 20
+    , id = "SafetyScreenShareTripPopupButton"
+    , enableRipple = true
+    }
+
+checkBoxData :: NammaSafetyScreenState -> Array PopupWithCheckboxController.CheckBoxOption
+checkBoxData state =
+  map
+    ( \x ->
+        { label: x.label
+        , selected: x.type == state.data.shareOptionCurrent
+        }
+    )
+    labelData
+
+type Label = { label :: String, type :: RideShareOptions }
+
+labelData :: Array Label
+labelData =
+  [ { label: getString ALWAYS
+    , type: ALWAYS_SHARE
+    }
+  , { label: getString NIGHT_RIDES_SHARE
+    , type: SHARE_WITH_TIME_CONSTRAINTS
+    }
+  , { label: getString NEVER
+    , type: NEVER_SHARE
+    }
+  ]

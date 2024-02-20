@@ -1010,5 +1010,12 @@ getHI stringKey =
         ONE_WAY_STR -> "एक तरफा"
         SHARE_TICKET -> "टिकट साझा करें"
         ORIGIN -> "मूल"
-
-
+        ALWAYS -> "हमेशा"
+        ALWAYS_SHARE_DESC -> "सभी यात्राओं के लिए जरूरी संपर्क के लिए यात्रा सूचनाएँ भेजें।"
+        NIGHT_RIDES_SHARE -> "रात की यात्राएँ (9 बजे - 6 बजे)"
+        NIGHT_RIDES_DESC -> "रात की यात्राओं (9 बजे - 6 बजे) के लिए जरूरी संपर्क के लिए यात्रा सूचनाएँ भेजें"
+        NEVER -> "कभी नहीं"
+        NEVER_SHARE_DESC -> "जरूरी संपर्क के लिए कभी भी यात्रा सूचना न भेजें"
+        SHARE_TRIP_NOTIFICATONS -> "यात्रा सूचनाएँ साझा करें"
+        CALL_CUSTOMER_SUPPORT -> "ग्राहक सहायता को कॉल करें"
+        YET_TO_START name -> name <> " का सफर अभी तक शुरू नहीं हुआ है।"

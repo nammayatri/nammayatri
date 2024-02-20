@@ -60,8 +60,8 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes)
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (printLog)
@@ -1008,25 +1008,13 @@ homeScreenFlow = do
               | any (_ == notification) [ "FOLLOW_RIDE", "SHARE_RIDE", "SOS_RESOLVED" ] -> do
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { followers = Nothing } })
                 currentFlowStatus
-            "SOS_MOCK_DRILL" -> do
-              modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen { data { currentStage = MockFollowRide } })
-              followRideScreenFlow false
-            "SOS_TRIGGERED" -> do
-                resp <- lift $ lift $ Remote.getFollowRide ""
-                case resp of
-                  Right (FollowRideRes response) -> do
-                    modifyScreenState
-                      $ HomeScreenStateType
-                          ( \homescreen ->
-                              homescreen
-                                { data
-                                  { followers = Just $ map (\(Followers follower) -> follower) response
-                                  }
-                                }
-                          )
-                    updateFollower
-                  Left err -> do
-                    pure unit
+            "SOS_MOCK_DRILL" -> 
+              updateFollower true false true
+            "SOS_TRIGGERED" -> 
+              updateFollower true false false
+            "SAFETY_ALERT_DEVIATION" -> do
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetyAlertType = Just ST.DEVIATION } })
+              homeScreenFlow
             _                     -> homeScreenFlow
 
     LOGOUT -> do
@@ -1531,6 +1519,7 @@ homeScreenFlow = do
                   , data
                     { rideId = rideId
                     , vehicleDetails = currentState.homeScreen.data.driverInfoCardState.registrationNumber
+                    , config = state.data.config
                     }
                   }
             )
@@ -1559,7 +1548,11 @@ homeScreenFlow = do
           enableForFollowing: fromMaybe false item.enableForFollowing,
           priority: fromMaybe 1 item.priority
         }) res.defaultEmergencyNumbers
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{contactList = contacts}, props{showShareRide = true}})
+      if null contacts then do
+        void $ pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/journey/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+        void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
+      else do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{contactList = contacts}, props{showShareRide = true}})
       homeScreenFlow
     GO_TO_NOTIFY_RIDE_SHARE state -> do
       let req = ShareRideReq { emergencyContactNumbers : map (\item -> item.number) $ filter (\item -> item.isSelected) state.data.contactList }
@@ -1569,7 +1562,7 @@ homeScreenFlow = do
       pure $ toggleBtnLoader "" false
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{showShareRide = false}})
       homeScreenFlow
-    EXIT_TO_FOLLOW_RIDE -> updateFollower
+    EXIT_TO_FOLLOW_RIDE -> updateFollower false false false
     GO_TO_REPORT_SAFETY_ISSUE state -> do
       let language = fetchLanguage $ getLanguageLocale languageKey 
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0" "" ""
@@ -1587,15 +1580,39 @@ homeScreenFlow = do
       metroMyTicketsFlow
     _ -> homeScreenFlow
 
-updateFollower :: FlowBT String Unit
-updateFollower  = do
+updateFollower :: Boolean -> Boolean -> Boolean -> FlowBT String Unit
+updateFollower callFollowersApi callInitUi goTomockflow = do
   (GlobalState allState) <- getState
-  let followers = fromMaybe [] allState.homeScreen.data.followers
-      noOfFollowers = Arr.length followers
+  followers <- getFollowers allState
+  let noOfFollowers = Arr.length followers
   setValueToLocalStore TRACKING_DRIVER "False"
   setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-  modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{data{followers = followers, currentFollower = if noOfFollowers == 1 then Arr.head followers else followRideScreen.data.currentFollower, currentStage = if noOfFollowers > 1 then PersonList else FollowingRide}, props {city = allState.homeScreen.props.city}})
-  followRideScreenFlow false
+  let currentFollowerName = getMockFollowerName ""
+      currentFollower = Arr.find (\follower -> DS.contains (Pattern currentFollowerName) (fromMaybe "" follower.name) ) followers
+  modifyScreenState 
+    $ FollowRideScreenStateType 
+      (\followRideScreen -> 
+        followRideScreen{
+          data{
+            followers = followers, 
+            currentFollower = case noOfFollowers == 1, isJust currentFollower of 
+                                true, _ -> Arr.head followers 
+                                _, true -> currentFollower
+                                _, _    -> followRideScreen.data.currentFollower,
+            currentStage = if noOfFollowers > 1 && isNothing currentFollower then PersonList else FollowingRide},
+          props {city = allState.homeScreen.props.city}
+        })
+  followRideScreenFlow callInitUi
+  where
+    getFollowers allState = 
+      if callFollowersApi then do
+        resp <- lift $ lift $ Remote.getFollowRide ""
+        case resp of
+          Right (FollowRideRes response) -> 
+            pure $ map (\(Followers follower) -> follower) response
+          Left err -> pure $ fromMaybe [] allState.homeScreen.data.followers
+      else do
+        pure $ fromMaybe [] allState.homeScreen.data.followers
 
 followRideScreenFlow :: Boolean -> FlowBT String Unit
 followRideScreenFlow callInitUI = do
@@ -3799,7 +3816,8 @@ activateSafetyScreenFlow = do
           flowType = if isPoliceFlow then "Police" else "SafetyFlow"
       if state.props.showTestDrill
         then do
-          _ <- lift $ lift $ Remote.createMockSos ""
+          let _ = spy "CreateSos" state
+          _ <- lift $ lift $ Remote.createMockSos $ not $ DS.null state.data.rideId
           void $ pure $ cleverTapCustomEvent "ny_user_test_drill"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{sosBannerType = Nothing}})
           pure unit
@@ -3872,8 +3890,8 @@ sosActiveFlow = do
   flow <- UI.sosActiveScreen
   case flow of
     SosActiveScreen.UpdateAsSafe state -> do
-      when (not state.props.showTestDrill) $ do
-        _ <- lift $ lift $ Remote.markRideAsSafe state.data.sosId
+      when (not $ DS.null state.data.rideId) $ do
+        _ <- lift $ lift $ Remote.markRideAsSafe state.data.sosId state.props.showTestDrill
         void $ pure $ cleverTapCustomEventWithParams "ny_user_sos_marked_safe" "current_time" (getCurrentUTC "")
         pure unit
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
@@ -3905,14 +3923,18 @@ updateEmergencySettings state = do
     req =
       UpdateEmergencySettingsReq
         { shareEmergencyContacts: Just state.data.shareToEmergencyContacts
-        , shareTripWithEmergencyContacts: Just state.data.shareTripWithEmergencyContacts
+        , shareTripWithEmergencyContactOption: Just state.data.shareTripWithEmergencyContactOption
         , nightSafetyChecks: Just state.data.nightSafetyChecks
-        , hasCompletedSafetySetup: Just $ not state.props.onRide
+        , hasCompletedSafetySetup: Just true
         }
 
     wasSetupAlreadyDone = state.data.hasCompletedSafetySetup
   void $ lift $ lift $ Remote.updateEmergencySettings req
-  modifyScreenState $ NammaSafetyScreenStateType (\_ -> state { data { hasCompletedSafetySetup = not state.props.onRide } })
+  if not wasSetupAlreadyDone 
+    then do
+      pure $ toast $ getString STR.NAMMA_SAFETY_IS_SET_UP
+      void $ Remote.emergencyContactsBT $ Remote.postContactsReq $ map (\item -> item{enableForFollowing = true}) state.data.emergencyContactsList
+    else pure unit
   modifyScreenState
     $ HomeScreenStateType
         ( \homeScreen ->
@@ -3925,7 +3947,3 @@ updateEmergencySettings state = do
               , data { settingSideBar { hasCompletedSafetySetup = true } }
               }
         )
-  if not state.props.onRide && not wasSetupAlreadyDone then
-    pure $ toast $ getString STR.NAMMA_SAFETY_IS_SET_UP
-  else
-    pure unit

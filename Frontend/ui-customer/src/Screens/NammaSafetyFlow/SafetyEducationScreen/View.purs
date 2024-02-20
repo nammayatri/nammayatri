@@ -203,12 +203,12 @@ videoView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , gradient $ Linear gradientAngle [ "#00D9D9D9", "#269F9F9F", Color.black ]
         ]
         [ linearLayout
-            [ height WRAP_CONTENT
+            [ height $ V 200
             , width MATCH_PARENT
-            , background Color.black900
+            , alignParentBottom "true,-1"
+            , gradient $ Linear gradientAngle [ Color.transparent, "#269F9F9F", Color.black ]
             ]
             []
         , linearLayout
@@ -216,7 +216,7 @@ videoView push state =
             , width MATCH_PARENT
             , alignParentBottom "true,-1"
             , gravity CENTER_VERTICAL
-            , margin $ Margin 16 16 16 16
+            , padding $ Padding 16 16 16 16
             ]
             [ linearLayout
                 [ height WRAP_CONTENT

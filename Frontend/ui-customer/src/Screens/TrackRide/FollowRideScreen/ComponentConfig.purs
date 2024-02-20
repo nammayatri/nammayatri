@@ -19,6 +19,7 @@ import Language.Types (STR(..))
 import Styles.Colors as Color
 import PrestoDOM
 import Mobility.Prelude
+import Data.Array as DA
 
 primaryButtonConfig :: FollowRideScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -41,14 +42,12 @@ type SOSOverlayConfig
 getSosOverlayConfig :: FollowRideScreenState -> Common.SosStatus -> SOSOverlayConfig
 getSosOverlayConfig state status =
   let
-    isSOS = status == Common.Pending
-    isMockDrill = state.data.currentStage == MockFollowRide
+    isSOS = status == Common.Pending || status == Common.MockPending
     currentFollower = getCurrentFollower state.data.currentFollower
-
     name = getFollowerName currentFollower state
   in
-    { title: if isSOS then if isMockDrill then getString $ THIS_IS_A_TEST_MOCK_DRILL name else getString $ IS_IN_SOS_SITUATION name else getString $ MARKED_RIDE_SAFE name
-    , subTitle: if isMockDrill then getString THIS_IS_NOT_REAL_DRILL else if isSOS then getString $ STAY_CALM_KEEP_TRACKING name else getString YOU_WILL_BE_NOTIFIED
+    { title: if isSOS then if isMockDrill state then getString $ THIS_IS_A_TEST_MOCK_DRILL name else getString $ IS_IN_SOS_SITUATION name else getString $ MARKED_RIDE_SAFE name
+    , subTitle: if isMockDrill state then getString THIS_IS_NOT_REAL_DRILL else if isSOS then getString $ STAY_CALM_KEEP_TRACKING name else getString YOU_WILL_BE_NOTIFIED
     , color: if isSOS then Color.red900 else Color.green900
     }
 

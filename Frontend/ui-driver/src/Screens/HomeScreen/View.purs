@@ -182,7 +182,10 @@ screen initialState =
                                 _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON initialState.data.activeRide.dest_lon)
                                 _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
                                 _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
-                                _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
+                                _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY 
+                                        $ if initialState.data.activeRide.enableFrequentLocationUpdates
+                                          then "2000"
+                                          else "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- push RemoveChat
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps

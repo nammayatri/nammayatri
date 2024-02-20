@@ -56,7 +56,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex, updateAt)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
@@ -126,7 +126,7 @@ import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-
+import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -925,13 +925,12 @@ data Action = NoAction
             | SafetyBannerAction Banner.Action
             | SafetyAlertAction PopUpModal.Action
             | ContactAction ContactCircle.Action
-            | ShowShareRide
             | NotifyRideShare PrimaryButtonController.Action
             | ToggleShare Int
-            | DismissShareRide
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
             | PopUpModalReferralAction PopUpModal.Action
+            | ShareRideAction PopupWithCheckboxController.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -1797,7 +1796,10 @@ eval OpenEmergencyHelp state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = continueWithCmd state [pure $ ShareRide]
+eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = 
+  if state.data.config.feature.shareWithEmergencyContacts 
+    then exit $ GoToShareRide state
+    else continueWithCmd state [pure ShareRide]
 
 eval ShareRide state = do
   continueWithCmd state
@@ -2572,23 +2574,31 @@ eval (BottomNavBarAction id) state = do
     
 eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
   void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_i_feel_safe"
-  exit $ SafetySupport state true
+  exit $ SafetySupport state{props{safetyAlertType = Nothing}} true
 
 eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
     void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_need_help"
     void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
-    exit $ GoToNammaSafety state true false
-
-eval ShowShareRide state = 
-  if state.data.config.feature.shareWithEmergencyContacts 
-    then exit $ GoToShareRide state
-    else continueWithCmd state [pure ShareRide]
+    exit $ GoToNammaSafety state{props{safetyAlertType = Nothing}} true false
 
 eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotifyRideShare state
 
-eval (ToggleShare index) state = continue state {data{contactList = mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) state.data.contactList}}
+eval (ShareRideAction PopupWithCheckboxController.DismissPopup) state = continue state {props{showShareRide = false}}
 
-eval DismissShareRide state = continue state {props{showShareRide = false}}
+eval (ShareRideAction (PopupWithCheckboxController.ClickPrimaryButton PrimaryButtonController.OnClick)) state = exit $ GoToNotifyRideShare state
+
+eval (ShareRideAction (PopupWithCheckboxController.ClickSecondaryButton)) state = continueWithCmd state [pure ShareRide]
+
+eval (ShareRideAction (PopupWithCheckboxController.ToggleSelect index)) state = 
+  case state.data.contactList !! index of 
+    Just contactToUpdate -> do
+      let updatedContactList = updateAt index contactToUpdate{isSelected = not contactToUpdate.isSelected} state.data.contactList
+      continue state {
+        data{
+          contactList = fromMaybe state.data.contactList updatedContactList
+        }
+      }
+    Nothing -> continue state
 
 eval _ state = continue state
 

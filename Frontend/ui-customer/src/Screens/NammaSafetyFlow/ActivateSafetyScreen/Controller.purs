@@ -14,12 +14,15 @@
 -}
 module Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller where
 
+import Debug
+import JBridge
 import Log
 import Prelude
 import PrestoDOM
 import Screens.Types
 import Storage
 import Timers
+
 import Common.Types.App as CTA
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -28,8 +31,6 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils as HU
-import JBridge
-import Debug
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (delay)
@@ -39,7 +40,7 @@ import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
-import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), Sos(..), SosFlow(..))
+import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), Sos(..), SosFlow(..), RideShareOptions(..))
 import Services.Config (getSupportNumber)
 import Types.App (defaultGlobalState)
 import Types.EndPoint (updateSosVideo)
@@ -105,11 +106,22 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
         , shareToEmergencyContacts = response.shareEmergencyContacts
         , nightSafetyChecks = response.nightSafetyChecks
         , hasCompletedMockSafetyDrill = response.hasCompletedMockSafetyDrill
-        , shareTripWithEmergencyContacts = response.shareTripWithEmergencyContacts
+        , shareTripWithEmergencyContactOption = shareTripOption response.shareTripWithEmergencyContactOption
+        , shareOptionCurrent = shareTripOption response.shareTripWithEmergencyContactOption
         , emergencyContactsList = getDefaultPriorityList contacts
         }
       , props { enableLocalPoliceSupport = response.enablePoliceSupport, localPoliceNumber = fromMaybe "" response.localPoliceNumber }
       }
+  where
+  shareTripOption val = case val of -- Handling Backward compatibility
+    Just option -> option
+    Nothing -> case response.shareTripWithEmergencyContacts of
+      Just shareTrip ->
+        if shareTrip then
+          SHARE_WITH_TIME_CONSTRAINTS
+        else
+          NEVER_SHARE
+      Nothing -> NEVER_SHARE
 
 eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
 
@@ -123,10 +135,10 @@ eval (CancelSosTrigger PrimaryButtonController.OnClick) state = do
   _ <- pure $ clearTimerWithId state.props.timerId
   exit $ GoBack state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "" } }
 
-eval (BackPressed) state =
+eval BackPressed state =
   if state.props.showCallPolice then
     continue state { props { showCallPolice = false } }
-  else
+  else 
     exit $ GoBack state
 
 eval DisableShimmer state = continue state { props { showShimmer = false } }
@@ -178,14 +190,20 @@ eval GoToTestDrill state = do
         }
       }
 
-eval GoToActiveSos state = do
+eval GoToActiveSos state = 
   exit $ GoToSosScreen state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "" } }
 
 eval (UpdateSosId (Sos sos)) state = do
-  if sos.flow /= Police && sos.status /= CTA.Resolved then do
+  if sos.flow /= Police && DA.notElem sos.status [CTA.Resolved, CTA.MockResolved] then do
     let
       newState = state { data { sosId = sos.id, sosType = Just sos.flow } }
-    exit $ GoToSosScreen newState
+
+    if sos.status == CTA.MockPending && state.props.confirmTestDrill then do
+      exit $ GoToSosScreen newState{props{showTestDrill = true, confirmTestDrill = false}}
+    else if sos.status == CTA.MockPending && not state.props.confirmTestDrill then do
+      continue newState
+    else
+      exit $ GoToSosScreen newState
   else do
     continue state
 
