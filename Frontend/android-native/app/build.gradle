@@ -34,8 +34,8 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 33
-        versionCode 107
-        versionName "1.4.12"
+        versionCode 1
+        versionName "1.0.0"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -128,6 +128,18 @@ android {
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
+        myUser {
+            applicationId "in.mobility.manayatri"
+            buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
+        myDriver {
+            applicationId "in.mobility.manayatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
         ysUser {
             applicationId "in.juspay.jatrisaathi"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
@@ -164,16 +176,20 @@ android {
     }
     sourceSets {
         nyUser.setRoot('src/user/nammaYatri')
+        myUser.setRoot('src/user/manaYatri')
         nyDriver.setRoot('src/driver/nammaYatriPartner')
+        myDriver.setRoot('src/driver/manaYatriPartner')
         ysUser.setRoot('src/user/jatriSaathi')
         ysDriver.setRoot('src/driver/jatriSaathiDriver')
         yatriUser.setRoot('src/user/yatri')
         yatriDriver.setRoot('src/driver/yatriPartner')
         passCulturePartner.setRoot('src/driver/passCulturePartner')
         nyUser.res.srcDir('src/user/common/res')
+        myUser.res.srcDir('src/user/common/res')
         ysUser.res.srcDir('src/user/common/res')
         yatriUser.res.srcDir('src/user/common/res')
         nyDriver.res.srcDir('src/driver/common/res')
+        myDriver.res.srcDir('src/driver/common/res')
         ysDriver.res.srcDir('src/driver/common/res')
         yatriDriver.res.srcDir('src/driver/common/res')
         passCulturePartner.res.srcDir('src/driver/common/res')
@@ -222,10 +238,12 @@ dependencies {
     implementation project(path: ':mobility-app')
     compileOnly project(path: ':mobility-common')
     nyDriverImplementation project(path: ':mobility-driver')
+    myDriverImplementation project(path: ':mobility-driver')
     passCulturePartnerImplementation project(path: ':mobility-driver')
     ysDriverImplementation project(path: ':mobility-driver')
     yatriDriverImplementation project(path: ':mobility-driver')
     nyUserImplementation project(path: ':mobility-customer')
+    myUserImplementation project(path: ':mobility-customer')
     ysUserImplementation project(path: ':mobility-customer')
     yatriUserImplementation project(path: ':mobility-customer')
     implementation platform('com.google.firebase:firebase-bom:32.7.1')

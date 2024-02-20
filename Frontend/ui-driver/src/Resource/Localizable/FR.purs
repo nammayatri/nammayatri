@@ -943,4 +943,6 @@ getFR stringKey =
         LOWEST_FEES_FROM -> "Les frais les plus bas à partir de"
         ZERO_FEE_TILL -> "Frais zéro jusqu'au"
         ZERO_COMMISION_UNLIMITED_RIDES -> "Commission zéro sur des trajets illimités"
+        ABOUT_TEXT -> " est une plateforme ouverte pour mettre en relation chauffeurs et passagers. L'application permet aux conducteurs de trouver facilement des passagers avec les tarifs souhaités proposés. Pas de commission basée sur le trajet, payez simplement un petit montant sous forme d'abonnement mensuel"
+        WELCOME_TEXT -> "Bienvenue chez le partenaire {}"
         _ -> ""
