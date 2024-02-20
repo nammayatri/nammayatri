@@ -83,7 +83,7 @@ mkPayment (Just DMPM.PaymentMethodInfo {..}) =
   singleton $
     Spec.Payment
       { paymentId = Nothing,
-        paymentCollectedBy = Just $ show Enums.BPP,
+        paymentCollectedBy = Just $ show Enums.SELLER,
         paymentType = Just $ castDPaymentType paymentType,
         paymentParams =
           Just $
@@ -102,7 +102,7 @@ mkPayment Nothing =
   singleton
     Spec.Payment
       { paymentId = Nothing,
-        paymentCollectedBy = Just $ show Enums.BPP,
+        paymentCollectedBy = Just $ show Enums.SELLER,
         paymentType = Just $ show Enums.ON_FULFILLMENT,
         paymentParams =
           Just $
