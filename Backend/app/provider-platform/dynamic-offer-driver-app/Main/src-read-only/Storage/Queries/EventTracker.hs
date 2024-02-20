@@ -21,7 +21,7 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.EventTrack
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.EventTracker.EventTracker] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.EventTracker.EventTracker -> m (Maybe (Domain.Types.EventTracker.EventTracker))
 findById (Kernel.Types.Id.Id id) = do
@@ -39,20 +39,20 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.EventTracker.EventTracker -> m ()
 updateByPrimaryKey Domain.Types.EventTracker.EventTracker {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.entity $ entity,
-      Se.Set Beam.entityFieldName $ entityFieldName,
-      Se.Set Beam.entityPrimaryId $ entityPrimaryId,
-      Se.Set Beam.eventName $ eventName,
-      Se.Set Beam.fromState $ fromState,
-      Se.Set Beam.reason $ reason,
-      Se.Set Beam.subscriptionServiceName $ subscriptionServiceName,
-      Se.Set Beam.toState $ toState,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.entity entity,
+      Se.Set Beam.entityFieldName entityFieldName,
+      Se.Set Beam.entityPrimaryId entityPrimaryId,
+      Se.Set Beam.eventName eventName,
+      Se.Set Beam.fromState fromState,
+      Se.Set Beam.reason reason,
+      Se.Set Beam.subscriptionServiceName subscriptionServiceName,
+      Se.Set Beam.toState toState,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

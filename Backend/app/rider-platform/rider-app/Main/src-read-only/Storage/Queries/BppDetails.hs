@@ -25,8 +25,8 @@ findBySubscriberIdAndDomain :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ke
 findBySubscriberIdAndDomain subscriberId domain = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.subscriberId $ Se.Eq $ subscriberId,
-          Se.Is Beam.domain $ Se.Eq $ domain
+        [ Se.Is Beam.subscriberId $ Se.Eq subscriberId,
+          Se.Is Beam.domain $ Se.Eq domain
         ]
     ]
 
@@ -34,25 +34,25 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.BppDetails.BppDetails -> m ()
 updateByPrimaryKey Domain.Types.BppDetails.BppDetails {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.description $ description,
-      Se.Set Beam.domain $ domain,
-      Se.Set Beam.logoUrl $ logoUrl,
-      Se.Set Beam.name $ name,
-      Se.Set Beam.subscriberId $ subscriberId,
-      Se.Set Beam.supportNumber $ supportNumber,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.description description,
+      Se.Set Beam.domain domain,
+      Se.Set Beam.logoUrl logoUrl,
+      Se.Set Beam.name name,
+      Se.Set Beam.subscriberId subscriberId,
+      Se.Set Beam.supportNumber supportNumber,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

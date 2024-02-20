@@ -12,13 +12,6 @@
 
     namma-dsl = {
       url = "github:nammayatri/namma-dsl";
-      flake = false;
-      # inputs = {
-      #   # common.follows = "common";
-      #   # haskell-flake.follows = "haskell-flake";
-      #   # nixpkgs.follows = "nixpkgs";
-      #   # shared-kernel.follows = "shared-kernel";
-      # };
     };
 
     beckn-gateway = {
