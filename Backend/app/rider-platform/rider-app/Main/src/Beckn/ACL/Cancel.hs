@@ -15,12 +15,12 @@
 
 module Beckn.ACL.Cancel (buildCancelReqV2, buildCancelSearchReqV2) where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.Types.BookingCancellationReason as SBCR
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
@@ -43,7 +43,7 @@ buildCancelReqV2 res = do
 mkCancelMessageV2 :: DCancel.CancelRes -> Spec.CancelReqMessage
 mkCancelMessageV2 res =
   Spec.CancelReqMessage
-    { cancelReqMessageCancellationReasonId = castCancellatonSource res.cancellationSource, -- TODO::Beckn, not following v2 spec here.
+    { cancelReqMessageCancellationReasonId = Just (show Enums.CANCELLED_BY_CUSTOMER),
       cancelReqMessageOrderId = res.bppBookingId.getId,
       cancelReqMessageDescriptor =
         Just $
@@ -53,13 +53,6 @@ mkCancelMessageV2 res =
               descriptorShortDesc = Nothing
             }
     }
-  where
-    castCancellatonSource = \case
-      SBCR.ByUser -> Just "ByUser"
-      SBCR.ByDriver -> Just "ByDriver"
-      SBCR.ByMerchant -> Just "ByMerchant"
-      SBCR.ByAllocator -> Just "ByAllocator"
-      SBCR.ByApplication -> Just "ByApplication"
 
 buildCancelSearchReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -79,7 +72,7 @@ buildCancelSearchReqV2 res = do
 mkCancelSearchMessageV2 :: DCancel.CancelSearch -> Spec.CancelReqMessage
 mkCancelSearchMessageV2 res =
   Spec.CancelReqMessage
-    { cancelReqMessageCancellationReasonId = Just "ByUser", -- TODO::Beckn, not following v2 spec here.
+    { cancelReqMessageCancellationReasonId = Just (show Enums.CANCELLED_BY_CUSTOMER),
       cancelReqMessageOrderId = res.searchReqId.getId,
       cancelReqMessageDescriptor = Nothing
     }
