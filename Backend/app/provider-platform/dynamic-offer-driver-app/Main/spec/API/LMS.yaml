@@ -10,7 +10,7 @@ imports:
   LmsModuleVideoInformation: Domain.Types.LmsModuleVideoInformation
   Int: Kernel.Prelude
   QuestionModuleMapping: Domain.Types.QuestionModuleMapping
-  QuizQuestion: Domain.Types.QuestionInformation
+  QuizQuestion: Domain.Types.LmsEnumTypes
   QuizOptions: Domain.Types.QuestionInformation
   QuestionInformation: Domain.Types.QuestionInformation
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
@@ -18,6 +18,8 @@ imports:
   UTCTime: Kernel.Prelude
   APISuccess: Kernel.Types.APISuccess
   ReelButtonConfig: Domain.Types.LmsVideoTranslation
+  ModuleCompletionCriteria: Domain.Types.LmsModule
+  OptionEntity: Domain.Types.QuestionInformation
 
 module: LmsModule
 
@@ -39,17 +41,33 @@ types:
     moduleCompletionStatus : ModuleCompletionStatus
     completedAt :  Maybe UTCTime
     noOfVideosCompleted : Int
+    moduleCompletionCriteria : ModuleCompletionCriteria
     languagesAvailableForQuiz : "[Language]"
     languagesAvailableForVideos : "[Language]"
 
   LmsGetVideosRes:
     completed: "[LmsVideoRes]"
     pending : "[LmsVideoRes]"
+    selectedModuleInfo : LmsTranslatedModuleInfoRes
     quizEnabled : Bool
     quizStatus: LmsEntityCompletionStatus
 
   LmsEntityCompletionStatus:
     enum: "ENTITY_COMPLETED, ENTITY_INCOMPLETE"
+
+  LmsTranslatedModuleInfoRes:
+    moduleId : Id LmsModule
+    category : LmsCategory
+    duration : Int
+    noOfVideos : Int
+    rank : Int
+    variant : Maybe Variant
+    name : Text
+    description : Text
+    thumbnailImage : Text
+    moduleCompletionCriteria : ModuleCompletionCriteria
+    languagesAvailableForQuiz : "[Language]"
+    languagesAvailableForVideos : "[Language]"
 
   LmsVideoRes:
     videoId : Id LmsModuleVideoInformation
@@ -79,7 +97,15 @@ types:
     language: Language
     question: QuizQuestion
     options: QuizOptions
+    selectedModuleInfo : LmsTranslatedModuleInfoRes
     previousHistory: Maybe LmsQuizHistory
+
+  QuizOptions:
+    enum: "SingleSelect Options, MultiSelect Options"
+
+  Options:
+    options: "[OptionEntity]"
+    derive: "Eq, Show"
 
   LmsQuizHistory:
     attemptNumber: Int

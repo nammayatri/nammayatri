@@ -11,6 +11,7 @@ import Data.List (length)
 import Data.Maybe (Maybe (Nothing), listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.DriverModuleCompletion as DTDMC
+import qualified Domain.Types.LmsEnumTypes as DTQI
 import Domain.Types.LmsModule (LmsModule (LmsModule))
 import Domain.Types.LmsModule as LmsModule
 import qualified Domain.Types.LmsModule
@@ -21,7 +22,6 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.ModuleCompletionInformation as DTMCI
 import qualified Domain.Types.Person
-import Domain.Types.QuestionInformation (SingleOption (TextOption))
 import qualified Domain.Types.QuestionInformation as DTQI
 import qualified Domain.Types.QuestionModuleMapping as DTQMM
 import qualified Domain.Types.Vehicle.Variant
@@ -53,6 +53,18 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage mbLi
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   let language = fromMaybe ENGLISH mbLanguage
   modules <- mapM (generateModuleInfo language driver.id) =<< SQLM.getAllModules mbLimit mbOffset merchantOpCityId
+  now <- getCurrentTime
+  void $
+    SQQI.create $
+      DTQI.QuestionInformation
+        { language = ENGLISH,
+          options = [DTQI.OptionEntity {isCorrect = False, option = DTQI.TextOption "पर्पल राइड", optionId = "lkasdj;f"}],
+          question = DTQI.TextQuestion "Hell ow",
+          questionId = "dkafjds;ljf",
+          questionType = DTQI.SingleSelect,
+          createdAt = now,
+          updatedAt = now
+        }
   return $
     API.Types.UI.LmsModule.LmsGetModuleRes
       { completed = sortOn (.completedAt) $ filter (\eModule -> eModule.moduleCompletionStatus == DTDMC.MODULE_COMPLETED) modules,
@@ -87,6 +99,7 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
   moduleInfo <- SQLM.findById modId >>= fromMaybeM (LmsModuleNotFound modId.getId)
   mbModuleCompletionInfo <- SQDMC.findByDriverIdAndModuleId personId modId
   videos <- mapM (generateVideoRes merchantOperatingCity language mbModuleCompletionInfo) =<< SQLMVI.getAllVideos modId [ACTIVE]
+  selectedModuleInfo <- generateModuleInfoRes moduleInfo language
   return $
     API.Types.UI.LmsModule.LmsGetVideosRes
       { quizEnabled = case moduleInfo.moduleCompletionCriteria of
@@ -94,7 +107,8 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
           _ -> False,
         quizStatus = maybe API.Types.UI.LmsModule.ENTITY_INCOMPLETE (\modCompInfo -> if DTDMC.QUIZ `elem` modCompInfo.entitiesCompleted then API.Types.UI.LmsModule.ENTITY_COMPLETED else API.Types.UI.LmsModule.ENTITY_INCOMPLETE) mbModuleCompletionInfo,
         completed = sortOn (.completedAt) $ filter (\eVideo -> eVideo.videoCompletionStatus == API.Types.UI.LmsModule.ENTITY_COMPLETED) videos,
-        pending = sortOn (.rank) $ filter (\eVideo -> eVideo.videoCompletionStatus == API.Types.UI.LmsModule.ENTITY_INCOMPLETE) videos
+        pending = sortOn (.rank) $ filter (\eVideo -> eVideo.videoCompletionStatus == API.Types.UI.LmsModule.ENTITY_INCOMPLETE) videos,
+        selectedModuleInfo = selectedModuleInfo
       }
   where
     generateVideoRes merchantOperatingCity language mbModuleCompletionInfo video@LmsModuleVideoInformation {..} = do
@@ -136,13 +150,13 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
 getLmsListAllQuiz :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow [API.Types.UI.LmsModule.LmsQuestionRes]
 getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
-  _moduleInfo <- SQLM.findById modId >>= fromMaybeM (LmsModuleNotFound modId.getId)
+  moduleInfo <- SQLM.findById modId >>= fromMaybeM (LmsModuleNotFound modId.getId)
   merchantOperatingCity <- SCQMM.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   let language = fromMaybe ENGLISH mbLanguage
   mbModuleCompletionInfo <- SQDMC.findByDriverIdAndModuleId personId modId
-  mapM (generateQuizRes merchantOperatingCity modId language mbModuleCompletionInfo) =<< SQQMM.findAllWithModuleId modId
+  mapM (generateQuizRes merchantOperatingCity modId language moduleInfo mbModuleCompletionInfo) =<< SQQMM.findAllWithModuleId modId
   where
-    generateQuizRes merchantOperatingCity _modId language mbModuleCompletionInfo question@DTQMM.QuestionModuleMapping {..} = do
+    generateQuizRes merchantOperatingCity _modId language moduleInfo mbModuleCompletionInfo question@DTQMM.QuestionModuleMapping {..} = do
       questionInfo <-
         SQQI.findByIdAndLanguage question.questionId language >>= \case
           Nothing ->
@@ -151,11 +165,15 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
               Just translation -> return translation
           Just translation -> return translation
       mbLastQuizAttempt <- listToMaybe <$> maybe (pure []) (SQMCI.findByCompletionIdAndEntityAndEntityId (Just 1) Nothing DTMCI.QUIZ question.questionId.getId . (.completionId)) mbModuleCompletionInfo
+      selectedModuleInfo <- generateModuleInfoRes moduleInfo language
       return $
         API.Types.UI.LmsModule.LmsQuestionRes
           { question = (.question) questionInfo,
-            options = (.options) questionInfo,
+            options = case questionInfo.questionType of
+              DTQI.SingleSelect -> API.Types.UI.LmsModule.SingleSelect $ API.Types.UI.LmsModule.Options {options = (.options) questionInfo}
+              DTQI.MultiSelect -> API.Types.UI.LmsModule.MultiSelect $ API.Types.UI.LmsModule.Options {options = (.options) questionInfo},
             previousHistory = generatePreviousQuizHistory =<< mbLastQuizAttempt,
+            selectedModuleInfo = selectedModuleInfo,
             ..
           }
     generatePreviousQuizHistory questionAttempt =
@@ -242,16 +260,16 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, _merchantOpCityId) req = do
     case req.selectedOption of
       API.Types.UI.LmsModule.SingleSelectedOption optionId -> do
         correctOption <-
-          ( case questionInfo.options of
-              DTQI.SingleSelect quizOptions -> pure $ find (.isCorrect) quizOptions.options
+          ( case questionInfo.questionType of
+              DTQI.SingleSelect -> pure $ find (.isCorrect) questionInfo.options
               _ -> pure Nothing
             )
             >>= fromMaybeM (LmsCorrectOptionNotFound req.questionId.getId req.language)
         let validationResult = API.Types.UI.LmsModule.ValidationResult {id = optionId, isCorrect = optionId == correctOption.optionId.getId}
         return (API.Types.UI.LmsModule.SingleSelectedOptionValidation validationResult, optionId == correctOption.optionId.getId, [optionId])
       API.Types.UI.LmsModule.MultiSelectedOption optionIds -> do
-        let correctOptionList = case questionInfo.options of
-              DTQI.MultiSelect quizOptions -> map (.optionId.getId) $ filter (.isCorrect) quizOptions.options
+        let correctOptionList = case questionInfo.questionType of
+              DTQI.MultiSelect -> map (.optionId.getId) $ filter (.isCorrect) questionInfo.options
               _ -> []
         when (null correctOptionList) $ do throwError (LmsCorrectOptionNotFound req.questionId.getId req.language)
         let areAllCorrect = all (`elem` optionIds) correctOptionList
@@ -318,3 +336,18 @@ buildDriverModuleCompletion personId moduleId merchantId merchantOpCityId = do
           }
   void $ SQDMC.create driverModCompletion
   return driverModCompletion
+
+generateModuleInfoRes :: Domain.Types.LmsModule.LmsModule -> Language -> Environment.Flow API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
+generateModuleInfoRes moduleInfo@Domain.Types.LmsModule.LmsModule {..} language = do
+  translation <-
+    SQLT.getByModuleIdAndLanguage moduleInfo.id language >>= \case
+      Nothing -> SQLT.getByModuleIdAndLanguage moduleInfo.id ENGLISH >>= fromMaybeM (LmsModuleTranslationNotFound moduleInfo.id.getId language)
+      Just translation -> return translation
+  return $
+    API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
+      { description = (.description) translation,
+        name = (.name) translation,
+        thumbnailImage = (.thumbnailImage) translation,
+        moduleId = moduleInfo.id,
+        ..
+      }
