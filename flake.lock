@@ -3740,16 +3740,15 @@
     },
     "services-flake_2": {
       "locked": {
-        "lastModified": 1707322872,
-        "narHash": "sha256-QeP05m82Tt66G632xWO2PbGpAT5UKGlpn9sm06QUNXQ=",
-        "owner": "roman-bodavskiy",
+        "lastModified": 1708407362,
+        "narHash": "sha256-MtA8Q1XiJAeoUkjTH8jvYeW2JDG2M+amWHZLGZU1YBk=",
+        "owner": "juspay",
         "repo": "services-flake",
-        "rev": "53d9b67af72115912d8e696e248391f437a9015b",
+        "rev": "dafaeb048d0445ef87f3a29c114161168c095896",
         "type": "github"
       },
       "original": {
-        "owner": "roman-bodavskiy",
-        "ref": "clickhouse",
+        "owner": "juspay",
         "repo": "services-flake",
         "type": "github"
       }
