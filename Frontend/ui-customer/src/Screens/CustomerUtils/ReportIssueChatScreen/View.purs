@@ -52,10 +52,10 @@ import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, b
 import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Screen, Visibility(..))
 import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig, viewImageModelConfig, addImageModelConfig, recordAudioModelConfig, addAudioModelConfig, chatConfig)
 import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (ReportIssueChatScreenState)
 import Styles.Colors as Color
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
+import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState)
 
 screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =

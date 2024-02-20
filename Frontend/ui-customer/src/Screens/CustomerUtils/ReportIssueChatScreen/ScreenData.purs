@@ -18,11 +18,19 @@ module Screens.ReportIssueChatScreen.ScreenData where
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Screens.Types (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
 import Components.ChatView.Controller as ChatView
-import Common.Styles.Colors (black700, black800, blue600, blue800, blue900, green200, grey700, grey800, grey900, transparentGrey, white900) as Color
+import Common.Styles.Colors as Color
 import PrestoDOM (Visibility(..)) 
 import MerchantConfig.DefaultConfig as DC
+import Foreign.Class (class Decode, class Encode)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Components.ChatView.Controller (ChatComponentConfig, Config)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
+import Data.Show.Generic (genericShow)
+import Services.API (Chat)
+import Screens.Types (IndividualRideCardState)
+import MerchantConfig.Types (AppConfig)
 
 initData :: ReportIssueChatScreenState
 initData = {
@@ -115,4 +123,96 @@ addImagesState' = {
 addAudioState' = {
   audioFile: Nothing,
   stateChanged: false
+}
+
+
+type ReportIssueChatScreenState = {
+    data :: ReportIssueChatScreenData,
+    props :: ReportIssueChatScreenProps
+}
+
+type ReportIssueChatScreenData = {
+  tripId :: Maybe String,
+  categoryName :: String,
+  messageToBeSent :: String,
+  issueId :: Maybe String,
+  chatConfig :: Config,
+  selectedOption :: Maybe Option,
+  addedImages :: Array { image :: String, imageName :: String },
+  categoryId :: String,
+  recordAudioState :: RecordAudioState,
+  addImagesState :: AddImageState,
+  viewImageState :: ViewImageState,
+  recordedAudioUrl :: Maybe String,
+  addAudioState :: AddAudioState,
+  uploadedImagesIds :: Array String,
+  uploadedAudioId :: Maybe String,
+  options :: Array Option,
+  chats :: Array Chat,
+  showStillHaveIssue :: Boolean,
+  merchantExoPhone :: Maybe String,
+  selectedRide :: Maybe IndividualRideCardState,
+  entryPoint :: ReportIssueChatScreenEntryPoint,
+  config :: AppConfig,
+  issueReportShortId :: Maybe String
+}
+data ReportIssueChatScreenEntryPoint = TripDetailsScreenEntry | RideSelectionScreenEntry | HelpAndSupportScreenEntry | OldChatEntry | SafetyScreen | HomeScreenEntry
+derive instance genericReportIssueChatScreenEntryPoint :: Generic ReportIssueChatScreenEntryPoint _
+instance showReportIssueChatScreenEntryPoint :: Show ReportIssueChatScreenEntryPoint where show = genericShow
+instance eqReportIssueChatScreenEntryPoint :: Eq ReportIssueChatScreenEntryPoint where eq = genericEq
+instance encodeReportIssueChatScreenEntryPoint :: Encode ReportIssueChatScreenEntryPoint where encode = defaultEnumEncode
+instance decodeReportIssueChatScreenEntryPoint :: Decode ReportIssueChatScreenEntryPoint where decode = defaultEnumDecode
+
+type RecordAudioState = {
+  timer         :: String,
+  isRecording   :: Boolean,
+  isUploading   :: Boolean,
+  recordedFile  :: Maybe String,
+  recordingDone :: Boolean,
+  openAddAudioModel :: Boolean
+}
+
+type AddImageState = {
+  images :: Array Image,
+  stateChanged :: Boolean,
+  isLoading :: Boolean,
+  imageMediaIds :: Array String
+}
+
+type ViewImageState = {
+   image :: String,
+   imageName :: Maybe String
+}
+
+type AddAudioState = {
+  audioFile :: Maybe String,
+  stateChanged :: Boolean
+}
+
+type Image = {
+  image :: String, 
+  imageName :: String
+}
+
+type Option = { 
+  issueOptionId :: String
+, option :: String
+, label :: String
+}
+
+type ReportIssueChatScreenProps = {
+  showSubmitComp :: Boolean,
+  showImageModel :: Boolean,
+  showAudioModel :: Boolean,
+  showRecordModel :: Boolean,
+  showCallDriverModel :: Boolean,
+  showCallSupportModel :: Boolean,
+  showViewImageModel :: Boolean,
+  isPopupModelOpen :: Boolean,
+  isKeyboardOpen :: Boolean, 
+  timerId :: String, 
+  initalizedCallbacks :: Boolean,
+  isResolved :: Boolean,
+  isEndFlow :: Boolean,
+  showEndFlowMessage :: Boolean
 }

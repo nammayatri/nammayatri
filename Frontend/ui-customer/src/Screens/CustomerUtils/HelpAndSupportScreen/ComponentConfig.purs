@@ -37,9 +37,10 @@ import Components.PrimaryButton as PrimaryButton
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (validateEmail)
 import Screens.HelpAndSupportScreen.Transformer (isEmailPresent)
+import Screens.HelpAndSupportScreen.ScreenData
 import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 
-sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
+sourceToDestinationConfig :: HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let
   config = SourceToDestination.config
   sourceToDestinationConfig' = config
@@ -79,7 +80,7 @@ sourceToDestinationConfig state = let
     }
   in sourceToDestinationConfig'
 
-apiErrorModalConfig :: ST.HelpAndSupportScreenState -> ErrorModal.Config
+apiErrorModalConfig :: HelpAndSupportScreenState -> ErrorModal.Config
 apiErrorModalConfig state = let
   config = ErrorModal.config
   errorModalConfig' = config
@@ -108,7 +109,7 @@ apiErrorModalConfig state = let
     }
   in errorModalConfig'
 
-callConfirmationPopup :: ST.HelpAndSupportScreenState -> PopUpModal.Config
+callConfirmationPopup :: HelpAndSupportScreenState -> PopUpModal.Config
 callConfirmationPopup state = let
     config = PopUpModal.config
     popUpConfig' = config {
@@ -137,7 +138,7 @@ callConfirmationPopup state = let
     }
   in popUpConfig'
 
-genericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config 
+genericHeaderConfig :: HelpAndSupportScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
   btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
@@ -165,7 +166,7 @@ genericHeaderConfig state = let
     }
   in genericHeaderConfig'
 
-deleteGenericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config
+deleteGenericHeaderConfig :: HelpAndSupportScreenState -> GenericHeader.Config
 deleteGenericHeaderConfig state = let
   config = GenericHeader.config
   genericHeaderConfig' = config
@@ -188,7 +189,7 @@ deleteGenericHeaderConfig state = let
   in genericHeaderConfig'
 
 
-primaryEditTextConfigEmail :: ST.HelpAndSupportScreenState -> PrimaryEditText.Config
+primaryEditTextConfigEmail :: HelpAndSupportScreenState -> PrimaryEditText.Config
 primaryEditTextConfigEmail state = let
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
@@ -213,7 +214,7 @@ primaryEditTextConfigEmail state = let
       }
     in primaryEditTextConfig'
 
-primaryEditTextConfigDescription :: ST.HelpAndSupportScreenState -> PrimaryEditText.Config
+primaryEditTextConfigDescription :: HelpAndSupportScreenState -> PrimaryEditText.Config
 primaryEditTextConfigDescription state = let
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
@@ -241,7 +242,7 @@ primaryEditTextConfigDescription state = let
       }
     in primaryEditTextConfig'
 
-primaryButtonConfigSubmitRequest :: ST.HelpAndSupportScreenState -> PrimaryButton.Config
+primaryButtonConfigSubmitRequest :: HelpAndSupportScreenState -> PrimaryButton.Config
 primaryButtonConfigSubmitRequest state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
@@ -258,7 +259,7 @@ primaryButtonConfigSubmitRequest state = let
       }
   in primaryButtonConfig'
 
-requestDeletePopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config
+requestDeletePopUp :: HelpAndSupportScreenState -> PopUpModal.Config
 requestDeletePopUp state = let
     config = PopUpModal.config
     popUpConfig' = config {
@@ -277,7 +278,7 @@ requestDeletePopUp state = let
     }
   in popUpConfig'
 
-accountDeletedPopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config
+accountDeletedPopUp :: HelpAndSupportScreenState -> PopUpModal.Config
 accountDeletedPopUp state = let
     config = PopUpModal.config
     popUpConfig' = config {

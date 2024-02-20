@@ -40,12 +40,13 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getF
 import Resources.Localizable.EN (getEN)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
-import Screens.Types (AnimationState(..), Fares, IndividualRideCardState, ItemState, RideSelectionScreenState, Stage(..), ZoneType(..))
+import Screens.Types (AnimationState(..), Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
 import Data.Ord (abs)
 import ConfigProvider
 import Screens.RideSelectionScreen.Transformer (myRideListTransformer, myRideListTransformerProp, matchRidebyId)
+import Screens.RideSelectionScreen.ScreenData
 
 instance showAction :: Show Action where
   show _ = ""

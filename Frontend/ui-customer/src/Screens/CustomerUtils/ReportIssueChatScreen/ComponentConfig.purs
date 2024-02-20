@@ -32,8 +32,8 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM.Properties (singleLine)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
-import Screens.Types (ReportIssueChatScreenState)
 import Styles.Colors (black500, black700, black900, primaryButtonColor, white900) as Color
+import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState) 
 
 primaryEditTextConfig :: ReportIssueChatScreenState -> PrimaryEditText.Config
 primaryEditTextConfig _ = let

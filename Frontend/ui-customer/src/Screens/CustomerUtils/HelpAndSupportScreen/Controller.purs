@@ -39,7 +39,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter, fetchVehicleVariant)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
-import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..), IssueInfo, IssueModalType(..))
+import Screens.Types ( DeleteStatus(..), IssueInfo, IssueModalType(..))
 import Services.API (IssueReportCustomerListItem(..), RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
 import Services.Config (getSupportNumber)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
@@ -58,6 +58,7 @@ import Components.IssueList as IssueList
 import Data.Function.Uncurried (runFn2)
 import Locale.Utils
 import Screens.HelpAndSupportScreen.Transformer
+import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
 
 
 instance showAction :: Show Action where

@@ -20,45 +20,290 @@ import Types.App
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
-import ModifyScreenState (modifyScreenState)
-import Prelude (bind, pure, ($), (<$>), discard)
+import ModifyScreenState (modifyScreenState, FlowState(..))
+import Prelude
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.ReportIssueChatScreen.Controller (ScreenOutput(..))
 import Screens.ReportIssueChatScreen.View (screen)
-import Screens.ReportIssueChatScreen.ScreenData
+import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenEntryPoint(..), initData, ReportIssueChatScreenState)
+import Data.Maybe 
+import Data.String as DS
+import Data.Array as DA
+import Engineering.Helpers.Utils
+import Locale.Utils
+import Services.Backend as Remote
+import Services.API 
+import Components.ChatView.Controller 
+import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
+import Engineering.Helpers.Commons 
+import JBridge
+import Language.Strings
+import Language.Types
+import Services.Config
 
-reportIssueChatScreen :: FlowBT String REPORT_ISSUE_CHAT_SCREEN_OUTPUT
+reportIssueChatScreen :: FlowBT String FlowState
 reportIssueChatScreen = do
-    (GlobalState state) <- getState
-    act <- lift $ lift $ runScreen $ screen state.reportIssueChatScreen
-    case act of
-      SelectIssueOption updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
-        App.BackT $ App.NoBack <$> (pure $ SELECT_ISSUE_OPTION updatedState)
-      UploadIssue updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
-        App.BackT $ App.NoBack <$> (pure $ SUBMIT_ISSUE updatedState)
-      CallDriver updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
-        App.BackT $ App.NoBack <$> (pure $ CALL_DRIVER_MODAL updatedState)
-      CallSupport updatedState -> do
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState ) 
-        App.BackT $ App.NoBack <$> (pure $ CALL_SUPPORT_MODAL updatedState)
-      ReopenIssue updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
-        App.BackT $ App.NoBack <$> (pure $ REOPEN_ISSUE updatedState)
-      GoToRideSelectionScreen updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData)
-        App.BackT $  App.NoBack <$> (pure $ GO_TO_RIDE_SELECTION_SCREEN updatedState)
-      GotoTripDetailsScreen updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
-        App.BackT $ App.NoBack <$> (pure $ GO_TO_TRIP_DETAILS_SCREEN updatedState)
-      GoToHelpAndSupportScreen updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
-        App.BackT $ App.NoBack <$> (pure $ GO_TO_HELP_AND_SUPPORT_SCREEN updatedState)
-      GoToSafetyScreen updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
-        App.BackT $ App.NoBack <$> (pure $ GO_TO_SAFETY_SCREEN updatedState)
-      GoToHomeScreen updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
-        App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN_FROM_ISSUE_CHAT updatedState)
+  modifyScreenState $ ReportIssueChatScreenStateType (\state -> state { props {isKeyboardOpen = false}})
+  (GlobalState state) <- getState
+  act <- lift $ lift $ runScreen $ screen state.reportIssueChatScreen
+  case act of
+    SelectIssueOption updatedState -> selectIssueOptionHandler updatedState
+
+    UploadIssue updatedState -> uploadIssueHandler updatedState
+
+    CallDriver updatedState -> callDriverHandler updatedState
+      
+    CallSupport updatedState -> callSupportHandler updatedState
+      
+    ReopenIssue updatedState -> reOpenIssueHandler updatedState
+      
+    GoToRideSelectionScreen updatedState -> goToRideSelectionScreenHandler updatedState
+
+    GotoTripDetailsScreen updatedState -> gotoTripDetailsScreenHandler updatedState
+
+    GoToHelpAndSupportScreen updatedState -> goToHelpAndSupportScreenHandler updatedState
+
+    GoToSafetyScreen updatedState -> goToSafetyScreenHandler updatedState
+
+    GoToHomeScreen updatedState -> goToHomeScreenHandler updatedState
+
+
+
+selectIssueOptionHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+selectIssueOptionHandler updatedState = do 
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
+  let 
+    selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption
+    selectedOptionLabel = fromMaybe "" $ map (\option -> option.label) updatedState.data.selectedOption
+    language = fetchLanguage $ getLanguageLocale languageKey
+    isResolved = selectedOptionLabel == "MARK_RESOLVED"
+
+  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId $ fromMaybe "" updatedState.data.issueId
+
+  when isResolved do
+    let updateIssueReqBody = UpdateIssueReqBody {status : "CLOSED"}
+    (UpdateIssueRes _) <- Remote.updateIssue (fromMaybe "" updatedState.data.issueId) language updateIssueReqBody
+    pure unit
+
+  let 
+    getOptionsRes' = DA.mapWithIndex (
+      \index (Option optionObj) -> optionObj {
+        option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)
+      }
+    ) getOptionsRes.options
+
+    messages' = DA.mapWithIndex (
+      \index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))
+    ) getOptionsRes.messages
+
+    chats' = [
+      Chat {
+        chatId : selectedOptionId
+      , chatType : "IssueOption"
+      , timestamp : getCurrentUTC ""
+      }
+    ] <> (
+      map (
+        \(Message currMessage) -> Chat {
+          chatId : currMessage.id, 
+          chatType : "IssueMessage", 
+          timestamp : getCurrentUTC ""
+        }
+      ) getOptionsRes.messages
+    )
+
+    showSubmitComp = DA.any (\ (Message  message) -> (fromMaybe "" message.label) == "CREATE_TICKET") getOptionsRes.messages 
+    isEndFlow' = DA.any (\ (Message  message) -> (fromMaybe "" message.label) == "END_FLOW") getOptionsRes.messages
+
+  when isEndFlow' $ do 
+    let 
+      postIssueReqBody = PostIssueReqBody {
+        mediaFiles : []
+      , categoryId : updatedState.data.categoryId 
+      , optionId : Just selectedOptionId
+      , description : ""
+      , rideId : updatedState.data.tripId
+      , chats : updatedState.data.chats <> chats'
+      , createTicket : false
+      }
+    (PostIssueRes postIssueRes) <- Remote.postIssueBT language postIssueReqBody 
+    pure unit 
+
+  modifyScreenState $ ReportIssueChatScreenStateType (
+    \_ -> updatedState { 
+      data {
+        chats = (updatedState.data.chats <> chats')
+      , options = getOptionsRes'
+      , chatConfig = updatedState.data.chatConfig{
+          messages = (updatedState.data.chatConfig.messages <> messages')
+        } 
+      }
+    , props {
+        isResolved = isResolved
+      , showSubmitComp = (not isResolved && showSubmitComp)
+      , isEndFlow = isEndFlow'
+      }
+    }
+  )
+  modifyScreenState $ HelpAndSupportScreenStateType (
+    \helpAndSupportScreen -> helpAndSupportScreen {
+      props {
+        needIssueListApiCall = true
+      }
+    }
+  )
+  App.BackT $ App.NoBack <$> (pure $ IssueReportChatScreenFlow)
+
+
+
+uploadIssueHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+uploadIssueHandler updatedState = do
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
+
+  let 
+    selectedOptionId = map (\option -> option.issueOptionId) updatedState.data.selectedOption
+    language = fetchLanguage $ getLanguageLocale languageKey
+    mediaFiles' = case updatedState.data.uploadedAudioId of
+      Just audioId -> DA.cons audioId updatedState.data.uploadedImagesIds
+      _            -> updatedState.data.uploadedImagesIds
+    postIssueReqBody = PostIssueReqBody { 
+      mediaFiles  : mediaFiles', 
+      categoryId : updatedState.data.categoryId, 
+      optionId : selectedOptionId, 
+      description : DS.trim updatedState.data.messageToBeSent, 
+      rideId : updatedState.data.tripId,
+      chats : updatedState.data.chats,
+      createTicket : true
+    }
+
+  (PostIssueRes postIssueRes) <- Remote.postIssueBT language postIssueReqBody
+  void $ pure $ toast $ getString YOUR_ISSUE_HAS_BEEN_REPORTED
+  (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language postIssueRes.issueReportId
+  void $ pure $ hideKeyboardOnNavigation true
+  
+  let 
+    showDescription = DS.length (DS.trim issueInfoRes.description) > 0
+    descMessages = 
+      if showDescription then 
+        DA.snoc updatedState.data.chatConfig.messages (makeChatComponent' (reportIssueMessageTransformer issueInfoRes.description) "Customer" (getCurrentUTC "") "Text" 500) 
+      else
+        updatedState.data.chatConfig.messages
+
+    mediaMessages' = DA.mapWithIndex (\index media -> makeChatComponent' media.url "Customer" (getCurrentUTC "") media._type ((index +  1) * 500)) issueInfoRes.mediaFiles
+    messages' = DA.concat [
+      descMessages
+    , mediaMessages'
+    , DA.mapWithIndex (
+        \index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (DA.length mediaMessages' + 1 + index))
+      ) postIssueRes.messages
+    ]
+  modifyScreenState $ ReportIssueChatScreenStateType (
+    \_ -> updatedState { 
+      data {
+        issueId = Just postIssueRes.issueReportId
+      , issueReportShortId = postIssueRes.issueReportShortId
+      , chatConfig { 
+          messages = messages'
+        }
+      , messageToBeSent = "" 
+      , uploadedAudioId = Nothing
+      , uploadedImagesIds = [] 
+      }
+    , props { 
+        showSubmitComp = false 
+      } 
+    }
+  )
+  modifyScreenState $ HelpAndSupportScreenStateType (
+    \helpAndSupportScreen -> helpAndSupportScreen {
+      props {
+        needIssueListApiCall = true
+      }
+    }
+  )
+  App.BackT $ App.NoBack <$> (pure $ IssueReportChatScreenFlow)
+
+
+callDriverHandler :: ReportIssueChatScreenState -> FlowBT String FlowState  
+callDriverHandler updatedState = do
+  let selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption
+  case updatedState.data.selectedRide of
+    Just ride -> do
+      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      resp <- Remote.callDriverBT ride.rideId
+      pure $ toast $ getString REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON
+
+      let language = fetchLanguage $ getLanguageLocale languageKey
+      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId (fromMaybe "" updatedState.data.issueId)
+      let getOptionsRes' = DA.mapWithIndex (\index (Option optObj) -> optObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optObj.option)}) getOptionsRes.options
+          messages' = DA.mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages
+          chats' = [Chat {chatId : selectedOptionId,chatType : "IssueOption",timestamp : (getCurrentUTC "")}] <> 
+                    (map (\(Message currMessage) -> Chat {
+                      chatId : currMessage.id, 
+                      chatType : "IssueMessage",
+                      timestamp : (getCurrentUTC "")}) getOptionsRes.messages)
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {chats = (updatedState.data.chats <> chats'), options = getOptionsRes', chatConfig = updatedState.data.chatConfig{messages = (updatedState.data.chatConfig.messages <> messages')} }, props {showSubmitComp = ((DA.null getOptionsRes'))}})
+      App.BackT $ App.NoBack <$> (pure $ IssueReportChatScreenFlow)
+    _ -> do
+      pure $ toast $ getString PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER
+      (GlobalState globalState) <- getState
+      if updatedState.data.entryPoint == TripDetailsScreenEntry then do 
+        modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = globalState.tripDetailsScreen.props.fromMyRides}})
+        App.BackT $ App.NoBack <$> (pure $ TripDetailsScreenFlow)
+      else do 
+        App.BackT $ App.NoBack <$> (pure $ HelpAndSupportScreenFlow)
+
+
+callSupportHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+callSupportHandler updatedState = do
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
+  let selectedOptionId = fromMaybe "" (map (\option -> option.issueOptionId) updatedState.data.selectedOption)
+  void $ pure $ showDialer (getSupportNumber "") false
+  let language = fetchLanguage $ getLanguageLocale languageKey
+  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId (fromMaybe "" updatedState.data.issueId)
+  let getOptionsRes' = DA.mapWithIndex (\index (Option optionObj) -> optionObj {option =  (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
+      messages' = DA.mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages
+      chats' = [Chat {chatId : selectedOptionId, 
+                      chatType : "IssueMessage",
+                      timestamp : (getCurrentUTC "")}] <> 
+              (map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
+                                                    chatType : "IssueMessage", 
+                                                    timestamp : (getCurrentUTC "")}) getOptionsRes.messages)
+  modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {chats = (updatedState.data.chats <> chats'), options = getOptionsRes', chatConfig = updatedState.data.chatConfig{messages = (updatedState.data.chatConfig.messages <> messages')} }, props {showSubmitComp = ((DA.null getOptionsRes'))}})
+  App.BackT $ App.NoBack <$> (pure $ IssueReportChatScreenFlow)
+
+
+reOpenIssueHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+reOpenIssueHandler updatedState = do
+  let language = fetchLanguage $ getLanguageLocale languageKey
+  let updateIssueReqBody = UpdateIssueReqBody {status : "OPEN"}
+  (UpdateIssueRes _) <- Remote.updateIssue (fromMaybe "" updatedState.data.issueId) language updateIssueReqBody
+  pure unit
+  modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState {props {isResolved = false}})
+  App.BackT $ App.NoBack <$> (pure $ IssueReportChatScreenFlow)
+
+
+goToRideSelectionScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+goToRideSelectionScreenHandler updatedState = do
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData)
+  App.BackT $ App.NoBack <$> (pure $ RideSelectionScreenFlow)
+
+gotoTripDetailsScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+gotoTripDetailsScreenHandler updatedState = do
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
+  App.BackT $ App.NoBack <$> (pure $ TripDetailsScreenFlow)
+
+goToHelpAndSupportScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+goToHelpAndSupportScreenHandler updatedState = do
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
+  App.BackT $ App.NoBack <$> (pure $ HelpAndSupportScreenFlow)
+
+goToSafetyScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+goToSafetyScreenHandler updatedState = do
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
+  App.BackT $ App.NoBack <$> (pure $ ActivateSafetyScreenFlow)
+
+goToHomeScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+goToHomeScreenHandler updatedState = do
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
+  App.BackT $ App.NoBack <$> (pure $ HomeScreenFlow)
