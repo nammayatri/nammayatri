@@ -17,7 +17,6 @@ module Beckn.ACL.OnCancel
   )
 where
 
-import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -56,9 +55,9 @@ handleErrorV2 req action = do
 bookingCancelledEvent :: (MonadFlow m) => Spec.Order -> m DOnCancel.OnCancelReq
 bookingCancelledEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in BookingCancelled Event.")
-  cancellationSource <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "cancellationSource is not present in BookingCancelled Event.")
+  let cancellationSource = order.orderCancellation >>= (.cancellationCancelledBy)
   return $
     DOnCancel.BookingCancelledReq
       { bppBookingId = Id bppBookingId,
-        cancellationSource = Utils.castCancellationSourceV2 cancellationSource
+        cancellationSource = cancellationSource
       }
