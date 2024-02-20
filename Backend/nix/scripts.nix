@@ -42,6 +42,13 @@ _:
         category = "Backend";
         description = "Run run-generate to generate code.";
         exec = ''
+          skip_update=false
+          for arg in "$@"; do
+            if [[ "$arg" == "--skip-update" ]]; then
+              skip_update=true
+              break
+            fi
+          done
           current_commit_hash=$( ${pkgs.jq}/bin/jq -r '.nodes."namma-dsl".locked.rev' "''${FLAKE_ROOT}/flake.lock" || true)
           latest_commit_hash=$(curl -s "https://api.github.com/repos/nammayatri/namma-dsl/commits/main" | jq -r '.sha' || true)
           if [[ -z $latest_commit_hash ]];
@@ -49,7 +56,14 @@ _:
             echo -e "\033[33mNot able to get status of Namma-DSL"
           else
             if [[ "$current_commit_hash" != "$latest_commit_hash" ]]; then
-                echo -e "\033[33mWarning: Namma-DSL in not up to date !!\nCurrent commit hash: $current_commit_hash\nLatest commit hash: $latest_commit_hash"
+                echo -e "\033[33mNamma-DSL in not up to date !!\nCurrent commit hash: $current_commit_hash\nLatest commit hash: $latest_commit_hash"
+                if [[ $skip_update == false ]]; then
+                    echo -e "\033[33mUpdating Namma-DSL to latest commit";
+                    nix flake lock --update-input namma-dsl;
+                    echo -e "\033[32mNamma-DSL updated to latest commit\nPlease run nix develop again to use the updated version"
+                    echo -e "\033[00m";
+                    exit 0
+                fi
             else
                 echo -e "\033[32mNamma-DSL is up to date";
             fi

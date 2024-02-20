@@ -26,8 +26,8 @@ data EventTrackerT f = EventTrackerT
     reason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     subscriptionServiceName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toState :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
