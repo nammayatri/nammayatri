@@ -4,6 +4,8 @@
 
 module Storage.Queries.QuestionInformation where
 
+import qualified Data.Aeson
+import qualified Domain.Types.LmsEnumTypes
 import qualified Domain.Types.QuestionInformation
 import qualified Domain.Types.QuestionModuleMapping
 import Kernel.Beam.Functions
@@ -16,6 +18,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuestionInformation as Beam
+import Storage.Queries.Transformers.QuestionInformation
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.QuestionInformation.QuestionInformation -> m ()
 create = createWithKV
@@ -45,8 +48,9 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.QuestionInformation.QuestionInformation {..} = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.options options,
+    [ Se.Set Beam.options $ convertOptionsToTable options,
       Se.Set Beam.question question,
+      Se.Set Beam.questionType questionType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -58,13 +62,16 @@ updateByPrimaryKey Domain.Types.QuestionInformation.QuestionInformation {..} = d
 
 instance FromTType' Beam.QuestionInformation Domain.Types.QuestionInformation.QuestionInformation where
   fromTType' Beam.QuestionInformationT {..} = do
+    options' <- getOptionsFromTable options
+
     pure $
       Just
         Domain.Types.QuestionInformation.QuestionInformation
           { language = language,
-            options = options,
+            options = options',
             question = question,
             questionId = Kernel.Types.Id.Id questionId,
+            questionType = questionType,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -73,9 +80,10 @@ instance ToTType' Beam.QuestionInformation Domain.Types.QuestionInformation.Ques
   toTType' Domain.Types.QuestionInformation.QuestionInformation {..} = do
     Beam.QuestionInformationT
       { Beam.language = language,
-        Beam.options = options,
+        Beam.options = convertOptionsToTable options,
         Beam.question = question,
         Beam.questionId = Kernel.Types.Id.getId questionId,
+        Beam.questionType = questionType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
