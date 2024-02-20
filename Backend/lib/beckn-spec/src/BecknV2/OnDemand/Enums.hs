@@ -14,6 +14,8 @@
 
 module BecknV2.OnDemand.Enums where
 
+import Data.Aeson
+import Data.Aeson.Types
 import Kernel.Prelude
 import Prelude (show)
 
@@ -138,3 +140,26 @@ instance Show CancellationReasonCode where
   show NO_DRIVERS_AVAILABLE = "011"
   show COULD_NOT_FIND_CUSTOMER = "012"
   show RIDE_ACCEPTED_MISTAKENLY = "013"
+
+data CancelReqMessageCancellationReasonId
+  = CANCELLED_BY_CUSTOMER -- 001
+  | CANCELLED_BY_DRIVER -- 002
+  deriving (Eq, Generic)
+
+instance Show CancelReqMessageCancellationReasonId where
+  show CANCELLED_BY_CUSTOMER = "001"
+  show CANCELLED_BY_DRIVER = "002"
+
+instance FromJSON CancelReqMessageCancellationReasonId where
+  parseJSON (String "001") = return CANCELLED_BY_CUSTOMER
+  parseJSON (String "002") = return CANCELLED_BY_DRIVER
+  parseJSON wrongVal = typeMismatch "Invalid Cancellation Reason Id" wrongVal
+
+instance ToJSON CancelReqMessageCancellationReasonId where
+  toJSON CANCELLED_BY_CUSTOMER = String "001"
+  toJSON CANCELLED_BY_DRIVER = String "002"
+
+data CancellationSource
+  = CONSUMER
+  | PROVIDER
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)

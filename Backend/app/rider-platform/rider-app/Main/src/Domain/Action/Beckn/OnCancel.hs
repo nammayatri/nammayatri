@@ -20,7 +20,9 @@ module Domain.Action.Beckn.OnCancel
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as DMerchant
@@ -49,12 +51,12 @@ import qualified Tools.Notifications as Notify
 
 data OnCancelReq = BookingCancelledReq
   { bppBookingId :: Id SRB.BPPBooking,
-    cancellationSource :: SBCR.CancellationSource
+    cancellationSource :: Maybe Text
   }
 
 data ValidatedOnCancelReq = ValidatedBookingCancelledReq
   { bppBookingId :: Id SRB.BPPBooking,
-    cancellationSource :: SBCR.CancellationSource,
+    cancellationSource :: Maybe Text,
     booking :: SRB.Booking,
     mbRide :: Maybe SRide.Ride
   }
@@ -78,13 +80,15 @@ onCancel ::
   ValidatedOnCancelReq ->
   m ()
 onCancel ValidatedBookingCancelledReq {..} = do
-  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
-  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
+  let cancellationSource_ :: Maybe Enums.CancellationSource = readMaybe . T.unpack =<< cancellationSource
+  logTagInfo ("BookingId-" <> getId booking.id) ""
+  whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
-  case cancellationSource of
-    SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
-    SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
+  case cancellationSource_ of
+    Just Enums.CONSUMER -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
+    Just Enums.PROVIDER -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
     _ -> pure ()
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) (castCancellatonSource cancellationSource_) booking.merchantId
   fork "incrementing fraud counters" $ do
     let merchantOperatingCityId = booking.merchantOperatingCityId
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
@@ -99,12 +103,16 @@ onCancel ValidatedBookingCancelledReq {..} = do
   unless (booking.status == SRB.CANCELLED) $ void $ QRB.updateStatus booking.id SRB.CANCELLED
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == SRide.CANCELLED) $ void $ QRide.updateStatus ride.id SRide.CANCELLED
-  unless (cancellationSource == SBCR.ByUser) $
+  unless (cancellationSource_ == Just Enums.CONSUMER) $
     QBCR.upsert bookingCancellationReason
   QPFS.clearCache booking.riderId
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
-  Notify.notifyOnBookingCancelled booking cancellationSource bppDetails
+  Notify.notifyOnBookingCancelled booking (castCancellatonSource cancellationSource_) bppDetails
+  where
+    castCancellatonSource = \case
+      Just Enums.CONSUMER -> SBCR.ByUser
+      _ -> SBCR.ByDriver
 
 validateRequest ::
   ( CacheFlow m r,
