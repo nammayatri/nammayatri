@@ -823,6 +823,7 @@ type VehicleDetailsScreenProps =  {
 
 --------------------------------------------- AboutUsScreenState ---------------------------
 type AboutUsScreenState = {
+  appConfig :: AppConfig,
   data :: AboutUsScreenData,
   props :: AboutUsScreenProps
 }

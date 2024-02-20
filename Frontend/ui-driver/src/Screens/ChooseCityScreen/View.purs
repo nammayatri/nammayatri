@@ -259,7 +259,7 @@ radioButtonView state push visibility' =
 
 enableLocationPermission :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 enableLocationPermission state push = 
-  let appName = Mb.fromMaybe "" $ runFn3 DU.getAnyFromWindow "appName" Mb.Nothing Mb.Just
+  let appName = Mb.fromMaybe state.data.config.appData.name $ runFn3 DU.getAnyFromWindow "appName" Mb.Nothing Mb.Just
   in 
     linearLayout
     [ height WRAP_CONTENT
