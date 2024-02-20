@@ -15,29 +15,31 @@
 
 module Screens.ChooseLanguageScreen.View where
 
-import Common.Types.App (LazyCheck(..))
-import Screens.ChooseLanguageScreen.ComponentConfig (primaryButtonViewConfig, menuButtonConfig)
 import Animation as Anim
 import Animation.Config as AnimConfig
+import Common.Types.App (LazyCheck(..))
 import Components.PrimaryButton as PrimaryButton
 import Components.SelectMenuButton as MenuButton
 import Data.Array as DA
+import Data.Function.Uncurried (runFn3)
+import Data.Maybe (Maybe(..), fromMaybe)
+import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Effect.Uncurried (runEffectFn1)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import PaymentPage (consumeBP)
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
+import PaymentPage (consumeBP)
+import Prelude ((<>))
 import Prelude (Unit, const, pure, unit, discard, ($), (<<<), (==), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import PrestoDOM.Animation as PrestoAnim
+import Screens.ChooseLanguageScreen.ComponentConfig (primaryButtonViewConfig, menuButtonConfig)
 import Screens.ChooseLanguageScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
 
 screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
@@ -82,7 +84,8 @@ view push state =
 ------------------------------ scrollableView ------------------------------
 scrollableView :: ST.ChooseLanguageScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 scrollableView state push = 
- scrollView
+ let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+ in scrollView
   [ width MATCH_PARENT
   , weight 1.0
   ][ linearLayout
@@ -110,7 +113,7 @@ scrollableView state push =
             ] $ textView $
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , text $ getString $ WELCOME_TEXT "WELCOME_TEXT"
+                , text $ getVarString WELCOME_TEXT $ DA.singleton appName
                 , color Color.greyTextColor
                 , gravity CENTER_HORIZONTAL
                 , margin $ Margin 70 32 74 32

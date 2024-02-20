@@ -172,7 +172,9 @@ function checkForReferral(viewParam, eventType) {
 window.onMerchantEvent = function (_event, payload) {
   console.log(payload);
   const clientPaylod = JSON.parse(payload);
-  const clientId = clientPaylod.payload.clientId
+  const clientId = clientPaylod.payload.clientId;
+  const appName = clientPaylod.payload.appName;
+  window.appName = appName;
   if (_event == "initiate") {
     if (clientId == "yatriprovider") {
       window.merchantID = "YATRI"

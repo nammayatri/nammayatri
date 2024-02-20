@@ -477,7 +477,7 @@ getHI stringKey =
         WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING -> "\nक्या आप कैंसिल करने से पहले ड्राइवर से बात करना चाहेंगे?"
         DRIVER_IS_NEAR_YOUR_LOCATION -> "ड्राइवर आपकी लोकशन पर पहुँच चुका है।"
         SOME_OTHER_REASON -> "कोई और कारण।"
-        LOCATION_PERMISSION_SUBTITLE_NEW_USER _ -> "नम्मा यात्री में आपका स्वागत है! \nराइड बुक करना शुरू करने के लिए, हमें आपके डिवाइस की लोकेशन की आवश्यकता होती है।"
+        LOCATION_PERMISSION_SUBTITLE_NEW_USER -> "{} में आपका स्वागत है! \nराइड बुक करना शुरू करने के लिए, हमें आपके डिवाइस की लोकेशन की आवश्यकता होती है।"
         METRO_RIDE -> "मेट्रो की सवारी"
         GO_BACK_TEXT -> "पीछे जाएं"
         DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST -> "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और वह केवल "

@@ -476,7 +476,7 @@ getKN stringKey =
         WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING -> "\nರದ್ದುಗೊಳಿಸುವ ಮೊದಲು ನೀವು ಚಾಲಕನೊಂದಿಗೆ ಮಾತನಾಡಲು ಬಯಸುವಿರಾ?"
         DRIVER_IS_NEAR_YOUR_LOCATION -> "ಚಾಲಕ ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ತಲುಪಿದ್ದಾರೆ."
         SOME_OTHER_REASON -> "ಬೇರೆ ಯಾವುದೋ ಕಾರಣ."
-        LOCATION_PERMISSION_SUBTITLE_NEW_USER _ -> "ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸುಸ್ವಾಗತ! \nಬುಕಿಂಗ್ ರೈಡ್‌ಗಳನ್ನು ಪ್ರಾರಂಭಿಸಲು, ನಮಗೆ ನಿಮ್ಮ ಸಾಧನದ ಸ್ಥಳದ ಅಗತ್ಯವಿದೆ."
+        LOCATION_PERMISSION_SUBTITLE_NEW_USER -> "{} ಗೆ ಸುಸ್ವಾಗತ! \nಬುಕಿಂಗ್ ರೈಡ್‌ಗಳನ್ನು ಪ್ರಾರಂಭಿಸಲು, ನಮಗೆ ನಿಮ್ಮ ಸಾಧನದ ಸ್ಥಳದ ಅಗತ್ಯವಿದೆ."
         METRO_RIDE -> "ಮೆಟ್ರೋ ಸವಾರಿ"
         GO_BACK_TEXT -> "ಹಿಂದೆ ಹೋಗು"
         DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST -> "ಚಾಲಕ ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಯನ್ನು ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ಕೇವಲ "
