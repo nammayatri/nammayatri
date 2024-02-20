@@ -45,7 +45,7 @@ update config = do
   updateWithKV
     [ Se.Set BeamODC.checkExtraction (config.checkExtraction),
       Se.Set BeamODC.checkExpiry (config.checkExpiry),
-      Se.Set BeamODC.supportedVehicleClassesJSON $ toJSON config.supportedVehicleClasses,
+      Se.Set BeamODC.supportedVehicleClassesJSON $ BeamODC.getConfigJSON config.supportedVehicleClasses,
       Se.Set BeamODC.vehicleClassCheckType (config.vehicleClassCheckType),
       Se.Set BeamODC.rcNumberPrefix (config.rcNumberPrefix),
       Se.Set BeamODC.rcNumberPrefixList (config.rcNumberPrefixList),
@@ -58,7 +58,7 @@ updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r)
 updateSupportedVehicleClassesJSON merchantOperatingCityId supportedVehicleClasses = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamODC.supportedVehicleClassesJSON $ toJSON supportedVehicleClasses,
+    [ Se.Set BeamODC.supportedVehicleClassesJSON $ BeamODC.getConfigJSON supportedVehicleClasses,
       Se.Set BeamODC.updatedAt now
     ]
     [ Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId merchantOperatingCityId,
@@ -100,7 +100,7 @@ instance ToTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wher
         BeamODC.documentType = documentType,
         BeamODC.checkExtraction = checkExtraction,
         BeamODC.checkExpiry = checkExpiry,
-        BeamODC.supportedVehicleClassesJSON = toJSON supportedVehicleClasses,
+        BeamODC.supportedVehicleClassesJSON = BeamODC.getConfigJSON supportedVehicleClasses,
         BeamODC.vehicleClassCheckType = vehicleClassCheckType,
         BeamODC.rcNumberPrefix = rcNumberPrefix,
         BeamODC.rcNumberPrefixList = rcNumberPrefixList,
