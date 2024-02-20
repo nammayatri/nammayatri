@@ -62,12 +62,13 @@ data PersonDefaultEmergencyNumberAPIEntity = PersonDefaultEmergencyNumberAPIEnti
     contactPersonId :: Maybe (Id Person),
     merchantId :: Maybe (Id DM.Merchant),
     enableForFollowing :: Bool,
-    enableForShareRide :: Bool
+    enableForShareRide :: Bool,
+    onRide :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
-makePersonDefaultEmergencyNumberAPIEntity :: DecryptedPersonDefaultEmergencyNumber -> PersonDefaultEmergencyNumberAPIEntity
-makePersonDefaultEmergencyNumberAPIEntity PersonDefaultEmergencyNumber {..} =
+makePersonDefaultEmergencyNumberAPIEntity :: Bool -> DecryptedPersonDefaultEmergencyNumber -> PersonDefaultEmergencyNumberAPIEntity
+makePersonDefaultEmergencyNumberAPIEntity onRide PersonDefaultEmergencyNumber {..} =
   PersonDefaultEmergencyNumberAPIEntity
     { ..
     }

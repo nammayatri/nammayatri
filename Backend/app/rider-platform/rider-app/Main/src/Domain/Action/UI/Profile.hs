@@ -35,6 +35,7 @@ where
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
+import Domain.Types.Booking.Type as DBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
@@ -62,6 +63,7 @@ import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
@@ -264,7 +266,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
   decNew <- decrypt `mapM` newPersonDENList
   decOld <- decrypt `mapM` oldPersonDENList
   let oldList = (.mobileNumber) <$> decOld
-      newList = DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decNew
+      newList = DPDEN.makePersonDefaultEmergencyNumberAPIEntity False <$> decNew
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   message <-
@@ -283,7 +285,17 @@ getDefaultEmergencyNumbers :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m 
 getDefaultEmergencyNumbers (personId, _) = do
   personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   decPersonENList <- decrypt `mapM` personENList
-  return . GetProfileDefaultEmergencyNumbersResp $ DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList
+  emergencyContactsEntity <- mapM makeAPIEntityAndCheckOnRide decPersonENList
+  return $ GetProfileDefaultEmergencyNumbersResp emergencyContactsEntity
+  where
+    makeAPIEntityAndCheckOnRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => DPDEN.DecryptedPersonDefaultEmergencyNumber -> m DPDEN.PersonDefaultEmergencyNumberAPIEntity
+    makeAPIEntityAndCheckOnRide personEN = do
+      onRide <- case (personEN.contactPersonId, personEN.priority == 0) of
+        (Just id, True) -> do
+          activeBookings <- runInReplica $ QBooking.findByRiderIdAndStatus id DBooking.activeBookingStatus
+          return $ not $ null activeBookings
+        _ -> return False
+      return $ DPDEN.makePersonDefaultEmergencyNumberAPIEntity onRide personEN
 
 getUniquePersonByMobileNumber :: UpdateProfileDefaultEmergencyNumbersReq -> [PersonDefaultEmergencyNumber]
 getUniquePersonByMobileNumber req =
@@ -306,9 +318,10 @@ updateEmergencySettings personId req = do
   let safetySetupCompleted = guard (req.hasCompletedSafetySetup == Just True) >> Just True
       shareTripOptions = case req.shareTripWithEmergencyContactOption of
         Nothing ->
-          if fromMaybe False req.shareEmergencyContacts
-            then Just Person.ALWAYS_SHARE
-            else Just Person.NEVER_SHARE
+          case req.shareTripWithEmergencyContacts of
+            Just True -> Just Person.SHARE_WITH_TIME_CONSTRAINTS
+            Just False -> Just Person.NEVER_SHARE
+            Nothing -> Just Person.ALWAYS_SHARE
         _ -> req.shareTripWithEmergencyContactOption
   when (fromMaybe False req.shareEmergencyContacts && null personENList) do
     throwError (InvalidRequest "Add atleast one emergency contact.")
@@ -347,7 +360,7 @@ getEmergencySettings personId = do
         shareTripWithEmergencyContactOption = fromMaybe Person.NEVER_SHARE person.shareTripWithEmergencyContactOption,
         nightSafetyChecks = person.nightSafetyChecks,
         hasCompletedSafetySetup = person.hasCompletedSafetySetup,
-        defaultEmergencyNumbers = DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList,
+        defaultEmergencyNumbers = DPDEN.makePersonDefaultEmergencyNumberAPIEntity False <$> decPersonENList,
         enablePoliceSupport = riderConfig.enableLocalPoliceSupport,
         localPoliceNumber = riderConfig.localPoliceNumber,
         hasCompletedMockSafetyDrill = fromMaybe False person.hasCompletedMockSafetyDrill
