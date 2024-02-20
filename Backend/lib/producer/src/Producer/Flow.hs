@@ -17,13 +17,13 @@ import Environment
 import Kernel.Beam.Functions (createWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.CacheFlow
 import Kernel.Types.Error
 import Kernel.Types.Flow ()
 import Kernel.Types.Id
 import Kernel.Types.MonadGuid
 import Kernel.Utils.Common (Forkable (fork), GuidLike (generateGUID), Milliseconds (Milliseconds), MonadTime (getCurrentTime), fromMaybeM, getCurrentTimestamp, logDebug, logError, threadDelayMilliSec)
+import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.Time ()
 import Lib.Scheduler.JobStorageType.DB.Queries (getPendingStuckJobs)
 import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST hiding (Id)
@@ -55,34 +55,24 @@ runProducer = do
   Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
     someErr <-
       try @_ @SomeException $ do
-        begTime <- getCurrentTimestamp
-        producerTimestampKeyPrefix <- asks (.producerTimestampKey)
-        let producerTimestampKey = getShardedKey producerTimestampKeyPrefix myShardId
-        startTime <- getTime begTime producerTimestampKey
-        endTime <- getCurrentTimestamp
-        setName <- asks (.schedulerSetName)
-        let myShardSetKey = getShardedKey setName myShardId
-        currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore myShardSetKey startTime endTime
-        logDebug $ "Jobs taken out of sortedset : " <> show currentJobs
-        logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
-        Hedis.set producerTimestampKey endTime
-        result <- insertIntoStream currentJobs
-        logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
-        _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardSetKey startTime endTime
-        endTime <- getCurrentTimestamp
-        let diff = endTime - begTime
+        (_, diff) <- withTimeGeneric "producer" $ do
+          producerTimestampKeyPrefix <- asks (.producerTimestampKey)
+          let producerTimestampKey = getShardedKey producerTimestampKeyPrefix myShardId
+          startTime <- getTime producerTimestampKey
+          endTime <- getCurrentTimestamp
+          setName <- asks (.schedulerSetName)
+          let myShardSetKey = getShardedKey setName myShardId
+          currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScoreByCount myShardSetKey startTime endTime 0 10000 -- 10,000 limit is good enough for a poor pod
+          logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
+          result <- insertIntoStream currentJobs
+          Hedis.set producerTimestampKey endTime
+          logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
+          Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardSetKey startTime endTime
         waitTimeMilliSec <- asks (.waitTimeMilliSec)
-        fork "" $ addGenericLatency "producer" $ fromIntegral $ fromEnum diff
-        threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - diff) :: Int)
+        threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - fromIntegral diff) :: Int)
     case someErr of
       Left err -> logError $ show err
       Right _ -> pure ()
-
--- data ReviverHandler t = >
---   { getAllPendingJobs' :: Flow [AnyJob t],
---     restoreAnyJobInfoMain' :: StoredJobInfo -> Maybe (AnyJobInfo t)
---   }
--- TODO : This will be used to make it generic
 
 runReviver :: Flow ()
 runReviver = do
@@ -132,9 +122,9 @@ runReviver' = do
 
 insertIntoStream :: [B.ByteString] -> Flow ()
 insertIntoStream jobs = do
+  streamName <- asks (.streamName)
+  entryId <- asks (.entryId)
   forM_ jobs $ \job -> fork "putting into stream" $ do
-    streamName <- asks (.streamName)
-    entryId <- asks (.entryId)
     eqId <- generateGUID
     let eqIdByteString = TE.encodeUtf8 eqId
     let job_ = job
@@ -148,8 +138,9 @@ splitIntoBatches batchSize xs =
   let (batch, rest) = splitAt batchSize xs
    in batch : splitIntoBatches batchSize rest
 
-getTime :: (CacheFlow m r) => Double -> Text -> m Double
-getTime begTime producerTimestampKey = do
+getTime :: (CacheFlow m r) => Text -> m Double
+getTime producerTimestampKey = do
+  begTime <- getCurrentTimestamp
   Hedis.safeGet producerTimestampKey <&> \case
     Just lastTime -> lastTime
     Nothing -> begTime
