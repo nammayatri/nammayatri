@@ -444,15 +444,16 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
         case isDfCaclculationJobScheduled of
           ----- marker ---
           Nothing -> do
-            createJobIn @_ @'CalculateDriverFees dfCalculationJobTs maxShards $
-              CalculateDriverFeesJobData
-                { merchantId = merchantId,
-                  merchantOperatingCityId = Just merchantOpCityId,
-                  startTime = driverFee.startTime,
-                  endTime = driverFee.endTime
-                }
-            setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantId dfCalculationJobTs
-            setDriverFeeBillNumberKey merchantId 1 36000
+            whenWithLockRedis (mkLockKeyForDriverFeeCalculation driverFee.startTime driverFee.endTime merchantId) 60 $ do
+              createJobIn @_ @'CalculateDriverFees dfCalculationJobTs maxShards $
+                CalculateDriverFeesJobData
+                  { merchantId = merchantId,
+                    merchantOperatingCityId = Just merchantOpCityId,
+                    startTime = driverFee.startTime,
+                    endTime = driverFee.endTime
+                  }
+              setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantId dfCalculationJobTs
+              setDriverFeeBillNumberKey merchantId 1 36000
           _ -> pure ()
 
 mkDriverFee ::
@@ -573,3 +574,6 @@ getDriverFeeBillNumberKey merchantId = Hedis.get (mkDriverFeeBillNumberKey merch
 
 setDriverFeeBillNumberKey :: CacheFlow m r => Id Merchant -> Int -> NominalDiffTime -> m ()
 setDriverFeeBillNumberKey merchantId count expTime = Hedis.setExp (mkDriverFeeBillNumberKey merchantId) count (round expTime)
+
+mkLockKeyForDriverFeeCalculation :: UTCTime -> UTCTime -> Id Merchant -> Text
+mkLockKeyForDriverFeeCalculation startTime endTime merchantId = "DriverFeeCalculation:Lock:MerchantId:" <> merchantId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
