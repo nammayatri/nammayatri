@@ -66,11 +66,20 @@ data PaymentStatus
   = -- ..fulfillments.payment.status
     PAID
   | NOT_PAID
-  deriving (Eq, Generic, ToJSON, FromJSON)
+  deriving (Eq, Generic)
 
 instance Show PaymentStatus where
   show PAID = "PAID"
   show NOT_PAID = "NOT-PAID"
+
+instance FromJSON PaymentStatus where
+  parseJSON (String "PAID") = return PAID
+  parseJSON (String "NOT-PAID") = return NOT_PAID
+  parseJSON _ = return NOT_PAID
+
+instance ToJSON PaymentStatus where
+  toJSON PAID = String "PAID"
+  toJSON NOT_PAID = String "NOT-PAID"
 
 data PaymentCollectedBy
   = -- ..fulfillments.payment.collected.by
@@ -109,7 +118,29 @@ data OrderStatus
   | ACTIVE
   | COMPLETE
   | CANCELLED
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
+  deriving (Eq, Generic, Read)
+
+instance Show OrderStatus where
+  show SOFT_CANCEL = "SOFT-CANCEL"
+  show CONFIRM_CANCEL = "CONFIRM-CANCEL"
+  show ACTIVE = "ACTIVE"
+  show COMPLETE = "COMPLETE"
+  show CANCELLED = "CANCELLED"
+
+instance ToJSON OrderStatus where
+  toJSON SOFT_CANCEL = String "SOFT-CANCEL"
+  toJSON CONFIRM_CANCEL = String "CONFIRM-CANCEL"
+  toJSON ACTIVE = String "ACTIVE"
+  toJSON COMPLETE = String "COMPLETE"
+  toJSON CANCELLED = String "CANCELLED"
+
+instance FromJSON OrderStatus where
+  parseJSON (String "SOFT-CANCEL") = return SOFT_CANCEL
+  parseJSON (String "CONFIRM-CANCEL") = return CONFIRM_CANCEL
+  parseJSON (String "ACTIVE") = return ACTIVE
+  parseJSON (String "COMPLETE") = return COMPLETE
+  parseJSON (String "CANCELLED") = return CANCELLED
+  parseJSON _ = return ACTIVE
 
 data QuoteBreakupTitle
   = -- ..quote.breakup.title
