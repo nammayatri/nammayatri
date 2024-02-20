@@ -43,6 +43,6 @@ instance B.Table CoinsConfigT where
 
 type CoinsConfig = CoinsConfigT Identity
 
-$(enableKVPG ''CoinsConfigT ['id] [])
+$(enableKVPG ''CoinsConfigT ['id] [['merchantId]])
 
 $(mkTableInstances ''CoinsConfigT "coin_config" "atlas_driver_offer_bpp")

@@ -17,7 +17,7 @@
 
 module Storage.Beam.Coins.CoinHistory where
 
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins
 import qualified Database.Beam as B
 import qualified Domain.Types.Coins.CoinHistory as Domain
 import Kernel.Beam.Lib.UtilsTH
@@ -49,6 +49,6 @@ instance B.Table CoinHistoryT where
 
 type CoinHistory = CoinHistoryT Identity
 
-$(enableKVPG ''CoinHistoryT ['id] [])
+$(enableKVPG ''CoinHistoryT ['id] [['driverId]])
 
 $(mkTableInstances ''CoinHistoryT "coin_history" "atlas_driver_offer_bpp")

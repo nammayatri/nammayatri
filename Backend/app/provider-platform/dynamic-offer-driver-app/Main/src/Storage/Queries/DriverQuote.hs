@@ -45,7 +45,18 @@ setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.Searc
 setInactiveBySTId (Id searchTryId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
 
 findActiveQuoteByDriverIdAndVehVarAndEstimateId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DEstimate.Estimate -> Id Person -> VehVar.Variant -> UTCTime -> m (Maybe Domain.DriverQuote)
-findActiveQuoteByDriverIdAndVehVarAndEstimateId (Id estimateId) (Id driverId) vehicleVariant now = findAllWithKV [Se.And [Se.Is BeamDQ.estimateId $ Se.Eq estimateId, Se.Is BeamDQ.driverId $ Se.Eq driverId, Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.vehicleVariant $ Se.Eq vehicleVariant, Se.Is BeamDQ.validTill $ Se.GreaterThan $ T.utcToLocalTime T.utc now]] <&> listToMaybe
+findActiveQuoteByDriverIdAndVehVarAndEstimateId (Id estimateId) (Id driverId) vehicleVariant now =
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamDQ.estimateId $ Se.Eq estimateId,
+          Se.Is BeamDQ.driverId $ Se.Eq driverId,
+          Se.Is BeamDQ.status $ Se.Eq Domain.Active,
+          Se.Is BeamDQ.vehicleVariant $ Se.Eq vehicleVariant,
+          Se.Is BeamDQ.validTill $ Se.GreaterThan $ T.utcToLocalTime T.utc now
+        ]
+    ]
+    Nothing
+    <&> listToMaybe
 
 setInactiveBySRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DSR.SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.requestId $ Se.Eq searchReqId]
@@ -54,7 +65,14 @@ findActiveQuotesByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id 
 findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   now <- getCurrentTime
   let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
-  findAllWithKV [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.driverId $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime T.utc $ addUTCTime delayToAvoidRaces now)]]
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamDQ.status $ Se.Eq Domain.Active,
+          Se.Is BeamDQ.driverId $ Se.Eq driverId,
+          Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime T.utc $ addUTCTime delayToAvoidRaces now)
+        ]
+    ]
+    Nothing
 
 findDriverQuoteBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m (Maybe Domain.DriverQuote)
 findDriverQuoteBySTId (Id searchTryId) = findOneWithKV [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
@@ -63,10 +81,25 @@ deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> 
 deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamDQ.driverId (Se.Eq driverId)]
 
 findAllBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m [Domain.DriverQuote]
-findAllBySTId (Id searchTryId) = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId, Se.Is BeamDQ.status $ Se.Eq Domain.Active]]
+findAllBySTId (Id searchTryId) =
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId,
+          Se.Is BeamDQ.status $ Se.Eq Domain.Active
+        ]
+    ]
+    Nothing
 
 countAllBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m Int
-countAllBySTId searchTId = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId), Se.Is BeamDQ.status $ Se.Eq Domain.Active]] <&> length
+countAllBySTId searchTId =
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId),
+          Se.Is BeamDQ.status $ Se.Eq Domain.Active
+        ]
+    ]
+    Nothing
+    <&> length
 
 setInactiveAllDQByEstId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DEstimate.Estimate -> UTCTime -> m ()
 setInactiveAllDQByEstId (Id estimateId) now = updateWithKV [Se.Set BeamDQ.status Domain.Inactive, Se.Set BeamDQ.updatedAt (T.utcToLocalTime T.utc now)] [Se.And [Se.Is BeamDQ.estimateId $ Se.Eq estimateId, Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]
