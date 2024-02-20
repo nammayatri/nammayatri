@@ -413,8 +413,7 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwn
   let vehicleClass = output.vehicleClass
   let vehicleCategory = output.vehicleCategory
   let vehicleCapacity = (readMaybe . T.unpack) =<< readFromJson =<< output.seatingCapacity
-  let manufacturer = (readMaybe . T.unpack) =<< output.manufacturer
-  let (verificationStatus, reviewRequired, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass vehicleCategory now vehicleCapacity manufacturer output.bodyType output.manufacturerModel
+  let (verificationStatus, reviewRequired, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass vehicleCategory now vehicleCapacity output.manufacturer output.bodyType output.manufacturerModel
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
