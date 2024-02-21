@@ -23,6 +23,8 @@ import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
+import qualified Data.List as L
+import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.DriverQuote as DQ
@@ -37,6 +39,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import Tools.Error
@@ -64,7 +67,9 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
   customerPhoneNo <- decrypt riderDetails.mobileNumber
-  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..})
+  let vehicleCategory = BUtils.mapVariantToVehicle booking.vehicleVariant
+  becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) becknConfig
 
 buildOnCancelReq ::
   (MonadFlow m, EncFlow m r) =>
@@ -80,32 +85,33 @@ buildOnCancelReq ::
   DQ.DriverQuote ->
   Text ->
   OC.OnCancelBuildReq ->
+  DBC.BecknConfig ->
   m Spec.OnCancelReq
-buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) = do
+buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) becknConfig = do
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
   pure $
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
         onCancelReqContext = context,
-        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig
       }
 
-buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> Maybe Spec.ConfirmReqMessage
-buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo = do
+buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> DBC.BecknConfig -> Maybe Spec.ConfirmReqMessage
+buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig = do
   Just $
     Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo
+      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig
       }
 
-tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> Spec.Order
-tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo = do
+tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> DBC.BecknConfig -> Spec.Order
+tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig = do
   Spec.Order
     { orderId = Just booking.id.getId,
       orderStatus = Just cancelStatus,
       orderFulfillments = tfFulfillments booking driverQuote customerPhoneNo,
       orderCancellation = tfCancellation cancellationSource,
       orderBilling = Nothing,
-      orderCancellationTerms = Nothing,
+      orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
       orderItems = tfItems booking merchant,
       orderPayments = tfPayments booking,
       orderProvider = Nothing,
@@ -291,3 +297,12 @@ tfCancellation cancellationSource =
       SBCR.ByUser -> Just (show Enums.CONSUMER)
       SBCR.ByDriver -> Just (show Enums.PROVIDER)
       _ -> Just (show Enums.PROVIDER) -- if it is cancelled by any other source like by ByMerchant, ByAllocator or ByApplication then we are considering as ByProvider
+
+tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
+tfCancellationTerms becknConfig =
+  L.singleton
+    Spec.CancellationTerm
+      { cancellationTermCancellationFee = BUtils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
+        cancellationTermFulfillmentState = BUtils.tfFulfillmentState Enums.RIDE_CANCELLED,
+        cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
+      }
