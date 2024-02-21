@@ -2149,7 +2149,8 @@ type NammaSafetyScreenProps =  {
   educationViewIndex :: Maybe Int,
   showCallPolice :: Boolean,
   shouldCallAutomatically :: Boolean,
-  fromDeepLink :: Boolean
+  fromDeepLink :: Boolean,
+  isValueAddNP :: Boolean
 }
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 

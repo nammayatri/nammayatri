@@ -1010,3 +1010,8 @@ getBN stringKey =
         ONE_WAY_STR -> "একদিক"
         SHARE_TICKET -> "টিকেট শেয়ার করুন"
         ORIGIN -> "উৎপত্তি"
+        ADDITIONAL_FEATURES_ON merchantName -> merchantName <> " এ অতিরিক্ত বৈশিষ্ট্য"
+        NOTIFY_YOUR_EC -> ""
+        EC_CAN_RESPOND -> ""
+        QUICK_SUPPORT merchantName -> ""
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> ""
