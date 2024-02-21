@@ -25,7 +25,7 @@ import Tools.Auth
 type API =
   TokenAuth :> "lms" :> "listAllModules" :> QueryParam "language" (Kernel.External.Types.Language) :> QueryParam "limit" (Kernel.Prelude.Int) :> QueryParam "offset" (Kernel.Prelude.Int) :> QueryParam "variant" (Domain.Types.Vehicle.Variant.Variant) :> Get '[JSON] API.Types.UI.LmsModule.LmsGetModuleRes
     :<|> TokenAuth :> "lms" :> Capture "moduleId" (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule) :> "listAllVideos" :> QueryParam "language" (Kernel.External.Types.Language) :> Get '[JSON] API.Types.UI.LmsModule.LmsGetVideosRes
-    :<|> TokenAuth :> "lms" :> Capture "moduleId" (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule) :> "listAllQuiz" :> QueryParam "language" (Kernel.External.Types.Language) :> Get '[JSON] [API.Types.UI.LmsModule.LmsQuestionRes]
+    :<|> TokenAuth :> "lms" :> Capture "moduleId" (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule) :> "listAllQuiz" :> QueryParam "language" (Kernel.External.Types.Language) :> Get '[JSON] API.Types.UI.LmsModule.LmsGetQuizRes
     :<|> TokenAuth :> "lms" :> "markVideoAsStarted" :> ReqBody '[JSON] API.Types.UI.LmsModule.VideoUpdateAPIReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
     :<|> TokenAuth :> "lms" :> "markVideoAsCompleted" :> ReqBody '[JSON] API.Types.UI.LmsModule.VideoUpdateAPIReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
     :<|> TokenAuth :> "lms" :> "question" :> "confirm" :> ReqBody '[JSON] API.Types.UI.LmsModule.QuestionConfirmReq :> Post '[JSON] API.Types.UI.LmsModule.QuestionConfirmRes
@@ -45,7 +45,7 @@ getLmsListAllModules a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsM
 getLmsListAllVideos :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.FlowHandler API.Types.UI.LmsModule.LmsGetVideosRes
 getLmsListAllVideos a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllVideos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-getLmsListAllQuiz :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.FlowHandler [API.Types.UI.LmsModule.LmsQuestionRes]
+getLmsListAllQuiz :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.FlowHandler API.Types.UI.LmsModule.LmsGetQuizRes
 getLmsListAllQuiz a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllQuiz (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postLmsMarkVideoAsStarted :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> API.Types.UI.LmsModule.VideoUpdateAPIReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess

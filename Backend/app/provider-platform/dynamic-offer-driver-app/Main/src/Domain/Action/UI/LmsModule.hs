@@ -135,16 +135,22 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
     generateButtonConfigData :: [DTLVT.ReelRowButtonConfig] -> [[DTLVT.ReelButtonConfig]]
     generateButtonConfigData = foldl' (\acc eachRow -> acc <> [eachRow.row]) [[]]
 
-getLmsListAllQuiz :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow [API.Types.UI.LmsModule.LmsQuestionRes]
+getLmsListAllQuiz :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow API.Types.UI.LmsModule.LmsGetQuizRes
 getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   moduleInfo <- SQLM.findById modId >>= fromMaybeM (LmsModuleNotFound modId.getId)
   merchantOperatingCity <- SCQMM.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   let language = fromMaybe ENGLISH mbLanguage
   mbModuleCompletionInfo <- SQDMC.findByDriverIdAndModuleId personId modId
-  mapM (generateQuizRes merchantOperatingCity modId language moduleInfo mbModuleCompletionInfo) =<< SQQMM.findAllWithModuleId modId
+  questions <- mapM (generateQuizRes merchantOperatingCity modId language mbModuleCompletionInfo) =<< SQQMM.findAllWithModuleId modId
+  selectedModuleInfo <- generateModuleInfoRes moduleInfo language
+  return $
+    API.Types.UI.LmsModule.LmsGetQuizRes
+      { questions = questions,
+        selectedModuleInfo = selectedModuleInfo
+      }
   where
-    generateQuizRes merchantOperatingCity _modId language moduleInfo mbModuleCompletionInfo question@DTQMM.QuestionModuleMapping {..} = do
+    generateQuizRes merchantOperatingCity _modId language mbModuleCompletionInfo question@DTQMM.QuestionModuleMapping {..} = do
       questionInfo <-
         SQQI.findByIdAndLanguage question.questionId language >>= \case
           Nothing ->
@@ -153,7 +159,6 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
               Just translation -> return translation
           Just translation -> return translation
       mbLastQuizAttempt <- listToMaybe <$> maybe (pure []) (SQMCI.findByCompletionIdAndEntityAndEntityId (Just 1) Nothing DTMCI.QUIZ question.questionId.getId . (.completionId)) mbModuleCompletionInfo
-      selectedModuleInfo <- generateModuleInfoRes moduleInfo language
       return $
         API.Types.UI.LmsModule.LmsQuestionRes
           { question = (.question) questionInfo,
@@ -161,7 +166,6 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
               DTQI.SingleSelect -> API.Types.UI.LmsModule.SingleSelect $ API.Types.UI.LmsModule.Options {options = (.options) questionInfo}
               DTQI.MultiSelect -> API.Types.UI.LmsModule.MultiSelect $ API.Types.UI.LmsModule.Options {options = (.options) questionInfo},
             previousHistory = generatePreviousQuizHistory =<< mbLastQuizAttempt,
-            selectedModuleInfo = selectedModuleInfo,
             ..
           }
     generatePreviousQuizHistory questionAttempt =

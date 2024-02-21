@@ -91,13 +91,16 @@ types:
     sideButtonConfig : "[[ReelButtonConfig]]"
     bottomButtonConfig : "[[ReelButtonConfig]]"
 
+  LmsGetQuizRes:
+    questions: "[LmsQuestionRes]"
+    selectedModuleInfo: LmsTranslatedModuleInfoRes
+
   LmsQuestionRes:
     questionId : Id QuestionModuleMapping
     moduleId : Id LmsModule
     language: Language
     question: QuizQuestion
     options: QuizOptions
-    selectedModuleInfo : LmsTranslatedModuleInfoRes
     previousHistory: Maybe LmsQuizHistory
 
   QuizOptions:
@@ -174,7 +177,7 @@ apis:
       query:
         language: Language
       response:
-        type: "[API.Types.UI.LmsModule.LmsQuestionRes]"
+        type: "API.Types.UI.LmsModule.LmsGetQuizRes"
 
   - POST:
       endpoint: /lms/markVideoAsStarted
