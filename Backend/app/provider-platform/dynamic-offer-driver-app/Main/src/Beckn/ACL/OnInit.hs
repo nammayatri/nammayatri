@@ -26,30 +26,26 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 
-mkOnInitMessageV2 :: MonadFlow m => DInit.InitRes -> DBC.BecknConfig -> m Spec.ConfirmReqMessage
-mkOnInitMessageV2 res becknConfig = do
-  order <- tfOrder res becknConfig
-  pure $
-    Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = order
-      }
+mkOnInitMessageV2 :: DInit.InitRes -> DBC.BecknConfig -> Spec.ConfirmReqMessage
+mkOnInitMessageV2 res becknConfig =
+  Spec.ConfirmReqMessage
+    { confirmReqMessageOrder = tfOrder res becknConfig
+    }
 
-tfOrder :: MonadFlow m => DInit.InitRes -> DBC.BecknConfig -> m Spec.Order
-tfOrder res becknConfig = do
-  cancellationTerms <- tfCancellationTerms becknConfig
-  pure $
-    Spec.Order
-      { orderBilling = Nothing,
-        orderCancellation = Nothing,
-        orderCancellationTerms = Just cancellationTerms,
-        orderFulfillments = tfFulfillments res,
-        orderId = Just res.booking.id.getId,
-        orderItems = tfItems res,
-        orderPayments = tfPayments res,
-        orderProvider = tfProvider res,
-        orderQuote = tfQuotation res,
-        orderStatus = Nothing
-      }
+tfOrder :: DInit.InitRes -> DBC.BecknConfig -> Spec.Order
+tfOrder res becknConfig =
+  Spec.Order
+    { orderBilling = Nothing,
+      orderCancellation = Nothing,
+      orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
+      orderFulfillments = tfFulfillments res,
+      orderId = Just res.booking.id.getId,
+      orderItems = tfItems res,
+      orderPayments = tfPayments res,
+      orderProvider = tfProvider res,
+      orderQuote = tfQuotation res,
+      orderStatus = Nothing
+    }
 
 tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
@@ -234,12 +230,11 @@ tfVehicle res = do
         vehicleRegistration = Nothing
       }
 
-tfCancellationTerms :: MonadFlow m => DBC.BecknConfig -> m [Spec.CancellationTerm]
+tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
 tfCancellationTerms becknConfig =
-  pure $
-    L.singleton
-      Spec.CancellationTerm
-        { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
-          cancellationTermFulfillmentState = Nothing,
-          cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
-        }
+  L.singleton
+    Spec.CancellationTerm
+      { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
+        cancellationTermFulfillmentState = Nothing,
+        cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
+      }
