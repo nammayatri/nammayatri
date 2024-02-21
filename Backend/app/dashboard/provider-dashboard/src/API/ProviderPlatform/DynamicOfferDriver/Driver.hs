@@ -109,6 +109,7 @@ type API =
            :<|> ChangeOperatingCityAPI
            :<|> GetOperatingCityAPI
            :<|> PauseOrResumeServiceChargesAPI
+           :<|> UpdateRCInvalidStatusAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -347,6 +348,10 @@ type PauseOrResumeServiceChargesAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'TOGGLE_SERVICE_USAGE_CHARGE
     :> Common.PauseOrResumeServiceChargesAPI
 
+type UpdateRCInvalidStatusAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_RC_INVALID_STATUS
+    :> Common.UpdateRCInvalidStatusAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverDocuments merchantId city
@@ -408,6 +413,7 @@ handler merchantId city =
     :<|> changeOperatingCity merchantId city
     :<|> getOperatingCity merchantId city
     :<|> setServiceChargeEligibleFlagInDriverPlan merchantId city
+    :<|> updateRCInvalidStatus merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -845,3 +851,11 @@ setServiceChargeEligibleFlagInDriverPlan merchantShortId opCity apiTokenInfo dri
     transaction <- buildTransaction Common.PauseOrResumeServiceChargesEndPoint apiTokenInfo driverId (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.setServiceChargeEligibleFlagInDriverPlan) driverId req
+
+updateRCInvalidStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateRCInvalidStatusReq -> FlowHandler APISuccess
+updateRCInvalidStatus merchantShortId opCity apiTokenInfo driverId req =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    transaction <- buildTransaction Common.UpdateRCInvalidStatusEndPoint apiTokenInfo driverId (Just req)
+    T.withTransactionStoring transaction $
+      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updateRCInvalidStatus) driverId req

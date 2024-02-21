@@ -221,6 +221,7 @@ data UserActionType
   | GET_OPERATING_CITY
   | CREATE_MERCHANT_OPERATING_CITY
   | UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+  | UPDATE_RC_INVALID_STATUS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
