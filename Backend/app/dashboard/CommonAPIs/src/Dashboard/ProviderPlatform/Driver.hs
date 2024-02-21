@@ -68,6 +68,7 @@ data DriverEndpoint
   | SendDummyRideRequestToDriverViaDashboardEndPoint
   | ChangeOperatingCityEndpoint
   | PauseOrResumeServiceChargesEndPoint
+  | UpdateRCInvalidStatusEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
@@ -1130,3 +1131,21 @@ data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
 
 $(mkHttpInstancesForEnum ''ServiceNames)
 $(mkHttpInstancesForEnum ''ReasonForDisablingServiceCharge)
+
+-- change RC INVALID status  Api ------------------------
+-------------------------------------------
+
+type UpdateRCInvalidStatusAPI =
+  "updateRCInvalidStatus"
+    :> Capture "driverId" (Id Driver)
+    :> ReqBody '[JSON] UpdateRCInvalidStatusReq
+    :> Post '[JSON] APISuccess
+
+data UpdateRCInvalidStatusReq = UpdateRCInvalidStatusReq
+  { rcId :: Text,
+    vehicleVariant :: Variant
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets UpdateRCInvalidStatusReq where
+  hideSecrets = identity

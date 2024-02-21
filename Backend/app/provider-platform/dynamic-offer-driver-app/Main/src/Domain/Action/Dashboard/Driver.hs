@@ -69,6 +69,7 @@ module Domain.Action.Dashboard.Driver
     setServiceChargeEligibleFlagInDriverPlan,
     changeOperatingCity,
     getOperatingCity,
+    updateRCInvalidStatus,
   )
 where
 
@@ -1887,3 +1888,10 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just vehicleId) (Just timeStamp) mbReason Nothing (Just merchantMessage.containsUrlButton))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       _ -> pure ()
+
+updateRCInvalidStatus :: ShortId DM.Merchant -> Context.City -> Common.UpdateRCInvalidStatusReq -> Flow APISuccess
+updateRCInvalidStatus _ _ req = do
+  vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
+  let vehicleType = castVehicleVariant req.vehicleVariant
+  RCQuery.updateRCStatusAndVehicleVariant vehicleRC.id IV.VALID True vehicleType
+  pure Success
