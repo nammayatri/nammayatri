@@ -14,9 +14,11 @@
 
 module Domain.Action.Dashboard.Registration where
 
+import Data.List (groupBy, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DP
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.MerchantAccess as DMerchantAccess
 import Domain.Types.Person as DP
 import qualified Domain.Types.Person.Type as PT
@@ -24,6 +26,7 @@ import qualified Domain.Types.RegistrationToken as DR
 import Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -119,12 +122,20 @@ login ::
   LoginReq ->
   m LoginRes
 login LoginReq {..} = do
-  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  let city' = fromMaybe merchant.defaultOperatingCity city
-  merchantServerAccessCheck merchant
   email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
   person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
-  generateLoginRes person merchant otp city'
+  merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId person.id
+  (merchant', city') <- case merchantAccessList of
+    [] -> throwError (InvalidRequest "No access to any merchant")
+    merchantAccessList' -> do
+      let sortedMerchantAccessList = sortOn DAccess.merchantId merchantAccessList'
+      let groupedByMerchant = head $ groupBy ((==) `on` DAccess.merchantId) sortedMerchantAccessList
+      let merchantWithCityList = DP.AvailableCitiesForMerchant ((.merchantShortId) (head groupedByMerchant)) (map (.operatingCity) groupedByMerchant)
+      merchant <- QMerchant.findByShortId merchantWithCityList.merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantWithCityList.merchantShortId.getShortId)
+      let defaultCityPresent = elem merchant.defaultOperatingCity merchantWithCityList.operatingCity
+      let city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList.operatingCity
+      pure (merchant, city')
+  generateLoginRes person merchant' otp city'
 
 switchMerchant ::
   ( BeamFlow m r,
@@ -234,7 +245,6 @@ generateToken personId merchantId city = do
     Just regToken -> pure $ regToken.token
     Nothing -> do
       regToken <- buildRegistrationToken personId merchantId city
-      -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
       QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
       QR.create regToken
