@@ -653,25 +653,15 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
     CreateMerchantOperatingCityReq
       <$> fmap fdPayload (lookupFile "file" form)
       <*> fmap fdFileCType (lookupFile "file" form)
-      <*> parseInput "city" form
-      <*> parseInput "state" form
-      <*> parseInput "lat" form
-      <*> parseInput "long" form
-      <*> parseMaybeInput "primaryLanguage" form
-      <*> parseMaybeInput "supportNumber" form
-      <*> parseInput "enableForMerchant" form
-      <*> parseMaybeInput "exophone" form
-      <*> parseMaybeInput "rcNumberPrefixList" form
-
-parseInput :: Read b => Text -> MultipartData tag -> Either String b
-parseInput fieldName form = case lookupInput fieldName form of
-  Right val -> maybe (Left $ "Failed to parse " ++ T.unpack fieldName ++ " input") Right (readMaybe (T.unpack val))
-  Left err -> Left err
-
-parseMaybeInput :: Read b => Text -> MultipartData tag -> Either String (Maybe b)
-parseMaybeInput fieldName form = case lookupInput fieldName form of
-  Right val -> Right $ readMaybe (T.unpack val)
-  Left _ -> Right Nothing
+      <*> fmap (read . T.unpack) (lookupInput "city" form)
+      <*> fmap (read . T.unpack) (lookupInput "state" form)
+      <*> fmap (read . T.unpack) (lookupInput "lat" form)
+      <*> fmap (read . T.unpack) (lookupInput "long" form)
+      <*> fmap (read . T.unpack) (lookupInput "primaryLanguage" form)
+      <*> fmap (read . T.unpack) (lookupInput "supportNumber" form)
+      <*> fmap (read . T.unpack) (lookupInput "enableForMerchant" form)
+      <*> fmap (read . T.unpack) (lookupInput "exophone" form)
+      <*> fmap (read . T.unpack) (lookupInput "rcNumberPrefixList" form)
 
 newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
   { cityId :: Text

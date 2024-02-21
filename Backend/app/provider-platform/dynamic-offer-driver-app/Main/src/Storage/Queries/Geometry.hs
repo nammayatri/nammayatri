@@ -62,7 +62,6 @@ instance FromTType' BeamG.Geometry Geometry where
       Just
         Geometry
           { id = Id id,
-            geom = Nothing,
             ..
           }
 
@@ -70,6 +69,5 @@ instance ToTType' BeamG.Geometry Geometry where
   toTType' Geometry {..} = do
     BeamG.GeometryT
       { BeamG.id = getId id,
-        BeamG.geom = geom,
         ..
       }
