@@ -298,6 +298,7 @@ initData = {
         referralStatus : NO_REFERRAL,
         referralCode : Nothing
       }
+    , isValueAddNP : true
     }
 }
 

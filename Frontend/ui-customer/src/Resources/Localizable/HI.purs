@@ -1010,5 +1010,10 @@ getHI stringKey =
         ONE_WAY_STR -> "एक तरफा"
         SHARE_TICKET -> "टिकट साझा करें"
         ORIGIN -> "मूल"
+        ADDITIONAL_FEATURES_ON merchantName -> merchantName <> " पर अतिरिक्त सुविधाएं"
+        NOTIFY_YOUR_EC -> ""
+        EC_CAN_RESPOND -> ""
+        QUICK_SUPPORT merchantName -> ""
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> ""
 
 

@@ -70,6 +70,7 @@ data Action
   | NoAction
   | SafetyHeaderAction Header.Action
   | StartNammaSafetyOnboarding PrimaryButtonController.Action
+  | DialPolice
   | GoToNextStep PrimaryButtonController.Action
   | EditEmergencyContacts
   | SwitchToStage SafetySetupStage
@@ -130,6 +131,11 @@ eval (ToggleSwitch stage) state = case stage of
   _ -> continue state
 
 eval (StartNammaSafetyOnboarding PrimaryButtonController.OnClick) state = exit $ GoToSetupScreen state
+
+eval DialPolice state = do
+  void $ pure $ HU.performHapticFeedback unit
+  pure $ showDialer "112" false
+  continue state
 
 eval EditEmergencyContacts state = updateAndExit state $ GoToEmergencyContactScreen state
 

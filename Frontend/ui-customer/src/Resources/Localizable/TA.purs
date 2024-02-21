@@ -1026,3 +1026,8 @@ getTA stringKey =
     ONE_WAY_STR -> "ஒரு வழி"
     SHARE_TICKET -> "பகிர் டிக்கெட்"
     ORIGIN -> "தொடக்கம்"
+    ADDITIONAL_FEATURES_ON merchantName -> "மேலும் அம்சங்கள் " <> merchantName <> " மூலம்"
+    NOTIFY_YOUR_EC -> ""
+    EC_CAN_RESPOND -> ""
+    QUICK_SUPPORT merchantName -> ""
+    LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> ""

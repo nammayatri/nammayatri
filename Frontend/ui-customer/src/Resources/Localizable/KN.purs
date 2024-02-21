@@ -1013,3 +1013,8 @@ getKN stringKey =
         TERMS_AND_CONDITIONS_UPDATED -> "T&Cಗಳು ಮತ್ತು ಗೌಪ್ಯತೆ ನೀತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"
         SHARE_TICKET -> "ಟಿಕೆಟ್ ಹಂಚಿಕೊಳ್ಳಿ"
         ORIGIN -> "ಮೂಲ"
+        ADDITIONAL_FEATURES_ON merchantName -> merchantName <> "ನಲ್ಲಿ ಹೆಚ್ಚಿನ ವೈಶಿಷ್ಟ್ಯಗಳು"
+        NOTIFY_YOUR_EC -> ""
+        EC_CAN_RESPOND -> ""
+        QUICK_SUPPORT merchantName -> ""
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> ""

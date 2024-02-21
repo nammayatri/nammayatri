@@ -284,6 +284,7 @@
       "ny_ic_intercity" : true,
       "ny_ic_invoice_logo" : true,
       "ny_ic_invoice_sheet_icon" : true,
+"ny_ic_value_add" : true,
       "ny_ic_issue_box" : true,
       "ny_ic_jetty" : true,
       "ny_ic_launcher" : true,

@@ -64,6 +64,7 @@ initData =
       , showCallPolice : false
       , shouldCallAutomatically : false
       , fromDeepLink : false
+      , isValueAddNP : false
       }
   }
 
