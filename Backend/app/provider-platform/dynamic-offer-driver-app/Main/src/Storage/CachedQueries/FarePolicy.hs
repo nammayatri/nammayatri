@@ -57,17 +57,13 @@ findFarePolicyFromCAC id toss = do
             Just a -> fromMaybe 10 (readMaybe a)
             Nothing -> 10
       logError $ Text.pack "error in fetching the context value " <> Text.pack err
-      config <- KSQS.findById' $ Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)
-      case config of
-        Just c -> do
-          logDebug $ "config value from db for tenant" <> show c
-          status <- liftIO $ CM.createClientFromConfig (fromMaybe "driver_offer_bpp_v2" tenant) interval (Text.unpack c.configValue) (fromMaybe "http://localhost:8080" host)
-          case status of
-            0 -> do
-              logDebug $ "client created for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
-              findFarePolicyFromCAC id toss
-            _ -> error $ "error in creating the client for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant <> " retrying again"
-        Nothing -> error $ "error in fetching the config value from db for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
+      c <- KSQS.findById' $ Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)
+      status <- liftIO $ CM.createClientFromConfig (fromMaybe "driver_offer_bpp_v2" tenant) interval (Text.unpack c.configValue) (fromMaybe "http://localhost:8080" host)
+      case status of
+        0 -> do
+          logDebug $ "client created for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
+          findFarePolicyFromCAC id toss
+        _ -> error $ "error in creating the client for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant <> " retrying again"
     Right contextValue' -> do
       logDebug $ "the fetched context value is for farePolicy " <> show contextValue'
       buildFPType contextValue' (getId id)

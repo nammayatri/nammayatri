@@ -118,6 +118,7 @@ dependencies:
   - JuicyPixels-extra
   - base64-bytestring
   - pureMD5
+  - lens-aeson
 
 ghc-options:
   - -fwrite-ide-info
