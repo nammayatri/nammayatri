@@ -163,3 +163,5 @@ instance FromJSON (DriverPoolConfigD 'Unsafe)
 instance FromJSON (DriverPoolConfigD 'Safe)
 
 instance ToJSON (DriverPoolConfigD 'Unsafe)
+
+instance ToJSON (DriverPoolConfigD 'Safe)

@@ -177,6 +177,10 @@ type TransporterConfig = TransporterConfigD 'Safe
 
 instance FromJSON (TransporterConfigD 'Unsafe)
 
+instance FromJSON (TransporterConfigD 'Safe)
+
+instance ToJSON (TransporterConfigD 'Safe)
+
 instance ToJSON (TransporterConfigD 'Unsafe)
 
 replaceSingleQuotes :: Text -> Text
