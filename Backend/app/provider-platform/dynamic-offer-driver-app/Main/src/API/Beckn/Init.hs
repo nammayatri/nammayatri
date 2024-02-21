@@ -38,7 +38,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import Storage.Beam.SystemConfigs ()
-import Storage.Queries.BecknConfig as QBC
+import qualified Storage.CachedQueries.BecknConfig as QBC
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -84,7 +84,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
           void . handle (errHandler dInitRes.booking dInitRes.transporter) $
             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
               let vehicleCategory = Utils.mapVariantToVehicle dInitRes.booking.vehicleVariant
-              becknConfig <- QBC.findByMerchantIdDomainAndVehicle (Just dInitRes.transporter.id) (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+              becknConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
               let onInitMessage = ACL.mkOnInitMessageV2 dInitRes becknConfig
               pure $
                 Spec.OnInitReq
