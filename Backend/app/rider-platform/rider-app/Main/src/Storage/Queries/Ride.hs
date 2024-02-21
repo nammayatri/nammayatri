@@ -135,11 +135,11 @@ findLatestCompletedRide riderId = do
   booking <- findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId] (Se.Desc BeamB.createdAt) Nothing Nothing
   findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-updateDriverArrival :: MonadFlow m => Id Ride -> m ()
-updateDriverArrival rideId = do
+updateDriverArrival :: MonadFlow m => Id Ride -> Maybe UTCTime -> m ()
+updateDriverArrival rideId arrivalTime = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamR.driverArrivalTime (Just now),
+    [ Se.Set BeamR.driverArrivalTime arrivalTime,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
