@@ -932,6 +932,7 @@ data Action = NoAction
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
             | PopUpModalReferralAction PopUpModal.Action
+            | UpdateBookingDetails RideBookingRes
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -2590,6 +2591,20 @@ eval (ToggleShare index) state = continue state {data{contactList = mapWithIndex
 
 eval DismissShareRide state = continue state {props{showShareRide = false}}
 
+eval (UpdateBookingDetails (RideBookingRes response)) state = do
+  let rideStatus = (fromMaybe dummyRideAPIEntity ((response.rideList) !! 0)) ^. _status
+      newState = state{ props { currentStage =
+                      case rideStatus of
+                        "NEW" -> RideAccepted
+                        "INPROGRESS" -> RideStarted
+                        "COMPLETED" -> RideCompleted
+                        "CANCELLED" -> HomeScreen
+                        _ -> RideAccepted
+                    , bookingId = response.id
+                    }, data { 
+                      driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)}}
+  continue newState
+
 eval _ state = continue state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
@@ -2963,6 +2978,7 @@ normalRideFlow  (RideBookingRes response) state = do
               "CANCELLED" -> HomeScreen
               _ -> RideAccepted
           , isSearchLocation = NoView
+          , bookingId = response.id
           }
         , data
           { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)
@@ -2977,6 +2993,7 @@ specialZoneRideFlow  (RideBookingRes response) state = do
         { props
           { currentStage = RideAccepted
           , isSearchLocation = NoView
+          , bookingId = response.id
           }
         , data
           { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)

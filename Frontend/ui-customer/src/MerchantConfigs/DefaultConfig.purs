@@ -334,6 +334,9 @@ config =
         }
       ]
   , bannerCarousel : defaultBannerCarousel
+  , driverLocationPolling : {
+    retryExpFactor : 3
+  }
 }
 
 defaultCityConfig :: CityConfig
