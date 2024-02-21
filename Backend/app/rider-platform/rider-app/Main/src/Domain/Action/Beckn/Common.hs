@@ -351,10 +351,9 @@ driverArrivedReqHandler DriverArrivedReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:-" <> bppRideId.getId)
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
 
-  now <- getCurrentTime
   unless (isJust ride.driverArrivalTime) $ do
-    _ <- QRide.updateDriverArrival ride.id
-    void $ QPFS.updateStatus booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = Just now}
+    void $ QRide.updateDriverArrival ride.id arrivalTime
+    void $ QPFS.updateStatus booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = arrivalTime}
   where
     isValidRideStatus status = status == DRide.NEW
 
