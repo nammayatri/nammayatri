@@ -16,7 +16,7 @@ module Domain.Action.UI.DriverCoin where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins hiding (CoinStatus)
 import Data.OpenApi hiding (title)
-import Data.Time (UTCTime (utctDay))
+import Data.Time (UTCTime (UTCTime, utctDay))
 import Domain.Types.Coins.CoinHistory
 import Domain.Types.Coins.PurchaseHistory
 import qualified Domain.Types.Merchant as DM
@@ -59,6 +59,7 @@ data CoinTransactionRes = CoinTransactionRes
     coinsEarnedPreviousDay :: Int,
     expiringCoins :: Int,
     expiringDays :: Int,
+    coinsExpiredOnThatDay :: Int,
     coinTransactionHistory :: [CoinTransactionHistoryItem]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -105,6 +106,8 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
   lastDayHistory <- B.runInReplica $ CHistory.getCoinsEarnedLastDay driverId dateInIst timeDiffFromUtc
   let coinsEarnedPreviousDay_ = sum $ map (.coins) lastDayHistory
       coinTransactionHistory = map toTransactionHistoryItem coinSummary
+      todayStart = UTCTime (utctDay dateInIst) 0
+      coinsExpiredOnThatDay = sumExpiredCoinsOnThatDate coinSummary dateInIst todayStart
   coinsExpiring <- B.runInReplica $ CHistory.getExpiringCoinsInXDay driverId transporterConfig.coinExpireTime timeDiffFromUtc
   let totalExpiringCoins = sum $ map (\coinHistory -> coinHistory.coins - coinHistory.coinsUsed) coinsExpiring
       expiringDays_ = fromIntegral (nominalDiffTimeToSeconds transporterConfig.coinExpireTime) `div` 86400
@@ -118,7 +121,8 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
         coinsEarnedPreviousDay = coinsEarnedPreviousDay_,
         coinTransactionHistory = coinTransactionHistory,
         expiringCoins = totalExpiringCoins,
-        expiringDays = expiringDays_
+        expiringDays = expiringDays_,
+        coinsExpiredOnThatDay = coinsExpiredOnThatDay
       }
   where
     toTransactionHistoryItem :: CoinHistory -> CoinTransactionHistoryItem
@@ -129,6 +133,16 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
           createdAt = historyItem.createdAt,
           bulkUploadTitle = historyItem.bulkUploadTitle
         }
+
+sumExpiredCoinsOnThatDate :: [CoinHistory] -> UTCTime -> UTCTime -> Int
+sumExpiredCoinsOnThatDate coinHistories time todayStart = do
+  sum $ map (.coins) $ filter isExpirationOnThatDate coinHistories
+  where
+    isExpirationOnThatDate :: CoinHistory -> Bool
+    isExpirationOnThatDate historyItem =
+      case expirationAt historyItem of
+        Just expiration -> expiration >= todayStart && expiration < time
+        Nothing -> False
 
 getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Flow CoinsUsageRes
 getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset = do
