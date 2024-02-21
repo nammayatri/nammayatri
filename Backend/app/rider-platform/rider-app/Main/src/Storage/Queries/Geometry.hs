@@ -43,7 +43,6 @@ instance FromTType' BeamG.Geometry Geometry where
       Just
         Geometry
           { id = Id id,
-            geom = Nothing,
             ..
           }
 
@@ -53,6 +52,5 @@ instance ToTType' BeamG.Geometry Geometry where
       { BeamG.id = getId id,
         BeamG.region = region,
         BeamG.state = state,
-        BeamG.city = city,
-        BeamG.geom = geom
+        BeamG.city = city
       }

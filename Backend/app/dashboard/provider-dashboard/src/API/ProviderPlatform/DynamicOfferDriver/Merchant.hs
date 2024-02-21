@@ -28,7 +28,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common (Meters, MonadFlow, fromMaybeM, withFlowHandlerAPI')
 import Kernel.Utils.Geometry (getGeomFromKML)
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
@@ -446,7 +446,6 @@ updateFarePolicy merchantShortId opCity apiTokenInfo farePolicyId req = withFlow
 createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
 createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  logInfo $ "CreateMerchantOperatingCityReq : " <> show req
   transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
   -- update entry in dashboard
   merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
