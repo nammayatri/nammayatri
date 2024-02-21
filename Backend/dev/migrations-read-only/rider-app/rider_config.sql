@@ -20,3 +20,8 @@ ALTER TABLE atlas_app.rider_config ADD PRIMARY KEY ( merchant_operating_city_id)
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN collect_auto_complete_data boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN collect_mmi_route_data boolean ;

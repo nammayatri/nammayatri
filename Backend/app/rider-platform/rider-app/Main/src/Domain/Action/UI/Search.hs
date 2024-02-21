@@ -42,6 +42,8 @@ import Kernel.External.Encryption
 import Kernel.External.Maps
 import qualified Kernel.External.Maps as MapsK
 import qualified Kernel.External.Maps.Interface as MapsRoutes
+import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
+import qualified Kernel.External.Maps.NextBillion.Types as NBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Beckn.Context (City)
@@ -259,47 +261,52 @@ search personId req bundleVersion clientVersion device = do
                 }
         routeResponse <- Maps.getRoutes person.id person.merchantId (Just merchantOperatingCity.id) request
 
-        shouldCollectRouteData <- asks (.collectRouteData)
-        when shouldCollectRouteData $
-          fork "calling MMI and OSRM directions api" $ do
-            mmiConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
-            case mmiConfigs.serviceConfig of
+        riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
+
+        fork "calling mmi directions api" $ do
+          whenJust riderConfig $ \config -> do
+            let collectMMIData = fromMaybe False config.collectMMIRouteData
+            when collectMMIData $ do
+              mmiConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
+              case mmiConfigs.serviceConfig of
+                DMSC.MapsServiceConfig mapsCfg -> do
+                  routeResp <- MapsRoutes.getRoutes True mapsCfg request
+                  logInfo $ "MMI route response: " <> show routeResp
+                  let routeData =
+                        DNB.NextBillionData
+                          { mapsProvider = Just $ show MapsK.MMI,
+                            routes = map show routeResp,
+                            searchRequestId = searchRequestId,
+                            merchantId = Just merchant.id,
+                            merchantOperatingCityId = Just merchantOperatingCity.id,
+                            createdAt = now,
+                            updatedAt = now
+                          }
+                  QNB.create routeData
+                _ -> logInfo "MapsServiceConfig config not found for MMI"
+
+        fork "calling next billion directions api" $ do
+          shouldCollectRouteData <- asks (.collectRouteData)
+          when shouldCollectRouteData $ do
+            nextBillionConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
+            case nextBillionConfigs.serviceConfig of
               DMSC.MapsServiceConfig mapsCfg -> do
-                routeResp <- MapsRoutes.getRoutes True mapsCfg request
-                logInfo $ "MMI route response: " <> show routeResp
-                let routeData =
-                      DNB.NextBillionData
-                        { mapsProvider = Just $ show MapsK.MMI,
-                          routes = map show routeResp,
-                          searchRequestId = searchRequestId,
-                          merchantId = Just merchant.id,
-                          merchantOperatingCityId = Just merchantOperatingCity.id,
-                          createdAt = now,
-                          updatedAt = now
-                        }
-                QNB.create routeData
-              _ -> logInfo "MapsServiceConfig config not found for MMI"
-            osrmConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.OSRM) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "OSRM")
-            case osrmConfigs.serviceConfig of
-              DMSC.MapsServiceConfig mapsCfg -> do
-                routeResp <- MapsRoutes.getRoutes True mapsCfg request
-                logInfo $ "OSRM route response: " <> show routeResp
-                let routeData =
-                      DNB.NextBillionData
-                        { mapsProvider = Just $ show MapsK.OSRM,
-                          routes = map show routeResp,
-                          searchRequestId = searchRequestId,
-                          merchantId = Just merchant.id,
-                          merchantOperatingCityId = Just merchantOperatingCity.id,
-                          createdAt = now,
-                          updatedAt = now
-                        }
-                QNB.create routeData
-              _ -> logInfo "MapsServiceConfig config not found for OSRM"
+                case mapsCfg of
+                  MapsK.NextBillionConfig msc -> do
+                    let nbFastestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "fastest") Nothing
+                    let nbShortestReq = NBT.GetRoutesRequest request.waypoints (Just True) (Just 3) (Just "shortest") (Just "flexible")
+                    nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbFastestReq
+                    nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbShortestReq
+                    logInfo $ "NextBillion route responses: " <> show nbFastestRouteResponse <> "\n" <> show nbShortestRouteResponse
+                    let fastRouteData = DNB.NextBillionData (Just "NB_Fastest") (map show nbFastestRouteResponse) searchRequestId (Just merchant.id) (Just merchantOperatingCity.id) now now
+                    let shortRouteData = DNB.NextBillionData (Just "NB_Shortest") (map show nbShortestRouteResponse) searchRequestId (Just merchant.id) (Just merchantOperatingCity.id) now now
+                    QNB.create fastRouteData
+                    QNB.create shortRouteData
+                  _ -> logInfo "No NextBillion config"
+              _ -> logInfo "NextBillion route not found"
 
         fork "Updating autocomplete data in search" $ do
           whenJust oneWayReq.sessionToken $ \token -> do
-            riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
             whenJust riderConfig $ \config -> do
               let toCollectData = fromMaybe False config.collectAutoCompleteData
               when toCollectData $ do

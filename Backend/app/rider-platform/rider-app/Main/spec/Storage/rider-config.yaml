@@ -18,6 +18,7 @@ RiderConfig:
     trackingShortUrlPattern: Text
     appUrl: Text
     collectAutoCompleteData: Maybe Bool
+    collectMMIRouteData: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey

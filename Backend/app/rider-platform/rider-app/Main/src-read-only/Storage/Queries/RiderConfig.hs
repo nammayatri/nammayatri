@@ -44,6 +44,7 @@ updateByPrimaryKey Domain.Types.RiderConfig.RiderConfig {..} = do
   updateWithKV
     [ Se.Set Beam.appUrl $ appUrl,
       Se.Set Beam.collectAutoCompleteData $ collectAutoCompleteData,
+      Se.Set Beam.collectMMIRouteData $ collectMMIRouteData,
       Se.Set Beam.enableEmergencyContactAddedMessage $ enableEmergencyContactAddedMessage,
       Se.Set Beam.enableLocalPoliceSupport $ enableLocalPoliceSupport,
       Se.Set Beam.enableSupportForSafety $ enableSupportForSafety,
@@ -69,6 +70,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Domain.Types.RiderConfig.RiderConfig
           { appUrl = appUrl,
             collectAutoCompleteData = collectAutoCompleteData,
+            collectMMIRouteData = collectMMIRouteData,
             enableEmergencyContactAddedMessage = enableEmergencyContactAddedMessage,
             enableLocalPoliceSupport = enableLocalPoliceSupport,
             enableSupportForSafety = enableSupportForSafety,
@@ -89,6 +91,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
     Beam.RiderConfigT
       { Beam.appUrl = appUrl,
         Beam.collectAutoCompleteData = collectAutoCompleteData,
+        Beam.collectMMIRouteData = collectMMIRouteData,
         Beam.enableEmergencyContactAddedMessage = enableEmergencyContactAddedMessage,
         Beam.enableLocalPoliceSupport = enableLocalPoliceSupport,
         Beam.enableSupportForSafety = enableSupportForSafety,
