@@ -419,7 +419,7 @@ eval UpdateAlternateNumber state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
-  if(time_diff <= 600) then do
+  if(time_diff <= 600 && time_diff > 0) then do
     pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
     continue state
   else
@@ -444,7 +444,7 @@ eval EditNumberText state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
-  if(time_diff <= 600) then do
+  if(time_diff <= 600 && time_diff > 0) then do
    pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
    continue state
   else
