@@ -16,10 +16,13 @@ module Beckn.ACL.OnConfirm (buildOnConfirmMessageV2) where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified BecknV2.OnDemand.Enums as Enums
+import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Confirm as DConfirm
+import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
 import Kernel.Utils.Common
@@ -30,48 +33,45 @@ bookingStatusCode (DConfirm.DriverQuote _ _) = Nothing -- TODO: refactor it like
 bookingStatusCode (DConfirm.StaticQuote _) = Just "NEW"
 bookingStatusCode (DConfirm.RideOtpQuote _) = Just "NEW"
 
-buildOnConfirmMessageV2 :: MonadFlow m => DConfirm.DConfirmResp -> DBC.BecknConfig -> m Spec.ConfirmReqMessage
+buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Spec.ConfirmReqMessage
 buildOnConfirmMessageV2 res becknConfig = do
-  order <- tfOrder res becknConfig
-  return $
-    Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = order
-      }
+  let order = tfOrder res becknConfig
+  Spec.ConfirmReqMessage
+    { confirmReqMessageOrder = order
+    }
 
-tfOrder :: MonadFlow m => DConfirm.DConfirmResp -> DBC.BecknConfig -> m Spec.Order
-tfOrder res becknConfig = do
-  fulfillments <- tfFulfillments res
-  cancellationTerms <- tfCancellationTerms becknConfig
-  return $
-    Spec.Order
-      { orderBilling = Nothing,
-        orderCancellation = Nothing,
-        orderCancellationTerms = Just cancellationTerms,
-        orderFulfillments = fulfillments,
-        orderId = Just res.booking.id.getId,
-        orderItems = tfItems res,
-        orderPayments = tfPayments res,
-        orderProvider = Nothing,
-        orderQuote = tfQuotation res,
-        orderStatus = Just "ACTIVE"
-      }
+tfOrder :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Spec.Order
+tfOrder res bppConfig = do
+  let fulfillments = tfFulfillments res
+      payments = tfPayments res bppConfig
+  Spec.Order
+    { orderBilling = Nothing,
+      orderCancellation = Nothing,
+      orderCancellationTerms = Just $ tfCancellationTerms bppConfig,
+      orderFulfillments = fulfillments,
+      orderId = Just res.booking.id.getId,
+      orderItems = tfItems res,
+      orderPayments = payments,
+      orderProvider = Nothing,
+      orderQuote = tfQuotation res,
+      orderStatus = Just "ACTIVE"
+    }
 
-tfFulfillments :: MonadFlow m => DConfirm.DConfirmResp -> m (Maybe [Spec.Fulfillment])
+tfFulfillments :: DConfirm.DConfirmResp -> Maybe [Spec.Fulfillment]
 tfFulfillments res = do
   let stops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode
-  return $
-    Just
-      [ Spec.Fulfillment
-          { fulfillmentAgent = Nothing,
-            fulfillmentCustomer = tfCustomer res,
-            fulfillmentId = Just res.booking.quoteId,
-            fulfillmentState = mkFulfillmentState res.quoteType,
-            fulfillmentStops = stops,
-            fulfillmentTags = Nothing,
-            fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
-            fulfillmentVehicle = tfVehicle res
-          }
-      ]
+  Just
+    [ Spec.Fulfillment
+        { fulfillmentAgent = Nothing,
+          fulfillmentCustomer = tfCustomer res,
+          fulfillmentId = Just res.booking.quoteId,
+          fulfillmentState = mkFulfillmentState res.quoteType,
+          fulfillmentStops = stops,
+          fulfillmentTags = Nothing,
+          fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
+          fulfillmentVehicle = tfVehicle res
+        }
+    ]
   where
     mkFulfillmentState quoteType = do
       fulfilState <- bookingStatusCode quoteType
@@ -113,28 +113,11 @@ tfItemPrice res =
       }
 
 -- TODO: Discuss payment info transmission with ONDC
-tfPayments :: DConfirm.DConfirmResp -> Maybe [Spec.Payment]
-tfPayments res =
-  Just
-    [ Spec.Payment
-        { paymentCollectedBy = Just $ show Enums.BPP,
-          paymentId = Nothing,
-          paymentParams = mkParams,
-          paymentStatus = Nothing,
-          paymentTags = Nothing,
-          paymentType = Just $ show Enums.ON_FULFILLMENT
-        }
-    ]
-  where
-    mkParams =
-      Just
-        Spec.PaymentParams
-          { paymentParamsAmount = Just $ encodeToText res.booking.estimatedFare,
-            paymentParamsBankAccountNumber = Nothing,
-            paymentParamsBankCode = Nothing,
-            paymentParamsCurrency = Just "INR",
-            paymentParamsVirtualPaymentAddress = Nothing
-          }
+tfPayments :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Maybe [Spec.Payment]
+tfPayments res bppConfig = do
+  let amount = fromIntegral (res.booking.estimatedFare.getMoney)
+  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
+  Just $ L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfQuotation :: DConfirm.DConfirmResp -> Maybe Spec.Quotation
 tfQuotation res =
@@ -213,12 +196,11 @@ tfCustomer res =
               }
       }
 
-tfCancellationTerms :: MonadFlow m => DBC.BecknConfig -> m [Spec.CancellationTerm]
+tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
 tfCancellationTerms becknConfig =
-  pure $
-    L.singleton
-      Spec.CancellationTerm
-        { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
-          cancellationTermFulfillmentState = Nothing,
-          cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
-        }
+  L.singleton
+    Spec.CancellationTerm
+      { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
+        cancellationTermFulfillmentState = Nothing,
+        cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
+      }

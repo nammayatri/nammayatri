@@ -24,7 +24,9 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType 
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import qualified Data.List as List
+import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.Merchant as DM
 import qualified Domain.Types.OnUpdate as OU
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -32,7 +34,7 @@ import Kernel.Utils.Common
 import SharedLogic.Beckn.Common
 
 buildOnUpdateReqV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Context.Action ->
   Context.Domain ->
   Text ->
@@ -42,10 +44,12 @@ buildOnUpdateReqV2 ::
   Context.Country ->
   DRB.Booking ->
   OU.OnUpdateBuildReq ->
+  DBC.BecknConfig ->
+  DM.Merchant ->
   m Spec.OnUpdateReq
-buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req = do
+buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req bppConfig merchant = do
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-  message <- mkOnUpdateMessageV2 req
+  message <- mkOnUpdateMessageV2 req bppConfig merchant
   pure $
     Spec.OnUpdateReq
       { onUpdateReqError = Nothing,
@@ -54,24 +58,28 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country b
       }
 
 mkOnUpdateMessageV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   OU.OnUpdateBuildReq ->
+  DBC.BecknConfig ->
+  DM.Merchant ->
   m (Maybe Spec.ConfirmReqMessage)
-mkOnUpdateMessageV2 req = do
-  order <- buildOnUpdateReqOrderV2 req
+mkOnUpdateMessageV2 req bppConfig merchant = do
+  order <- buildOnUpdateReqOrderV2 req bppConfig merchant
   pure . Just $
     Spec.ConfirmReqMessage
       { confirmReqMessageOrder = order
       }
 
 buildOnUpdateReqOrderV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   OU.OnUpdateBuildReq ->
+  DBC.BecknConfig ->
+  DM.Merchant ->
   m Spec.Order
-buildOnUpdateReqOrderV2 = \case
+buildOnUpdateReqOrderV2 req' bppConfig merchant = case req' of
   OU.RideAssignedBuildReq req -> Common.tfAssignedReqToOrder req
   OU.RideStartedBuildReq req -> Common.tfStartReqToOrder req
-  OU.RideCompletedBuildReq req -> Common.tfCompleteReqToOrder req
+  OU.RideCompletedBuildReq req -> Common.tfCompleteReqToOrder req bppConfig merchant
   OU.BookingCancelledBuildReq req -> Common.tfCancelReqToOrder req
   OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do

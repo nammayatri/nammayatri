@@ -16,6 +16,7 @@
 module Beckn.ACL.Init (buildInitReqV2) where
 
 import qualified Beckn.OnDemand.Transformer.Init as TF
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
@@ -23,16 +24,19 @@ import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as VNP
 
 buildInitReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   SConfirm.DConfirmRes ->
   m Spec.InitReq
 buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   let (fulfillmentType, mbBppFullfillmentId) = case res.quoteDetails of
         SConfirm.ConfirmOneWayDetails -> (show Enums.DELIVERY, Nothing)
         SConfirm.ConfirmRentalDetails quoteId -> (show Enums.RENTAL, Just quoteId)
@@ -42,4 +46,4 @@ buildInitReqV2 res = do
   let action = Context.INIT
   let domain = Context.MOBILITY
   isValueAddNP <- VNP.isValueAddNP res.providerId
-  TF.buildInitReq res bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP
+  TF.buildInitReq res bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig

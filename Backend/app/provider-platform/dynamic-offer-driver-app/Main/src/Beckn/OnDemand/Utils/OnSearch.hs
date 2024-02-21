@@ -17,15 +17,20 @@ module Beckn.OnDemand.Utils.OnSearch where
 import qualified BecknV2.OnDemand.Enums as Enums
 import BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import Control.Lens
 import qualified Data.Aeson as A
 import qualified Data.List as List
+import qualified Data.Text as T
 import Domain.Action.Beckn.Search
+import Domain.Types
+import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Common as DTC
 import Domain.Types.Estimate
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.FarePolicy as Policy
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, view, (^?))
@@ -217,3 +222,8 @@ mkRateCardTag pricing = do
             },
       tagGroupList = Just farePolicyBreakupsTags
     }
+
+mkPayment :: DM.Merchant -> DBC.BecknConfig -> [Spec.Payment]
+mkPayment merchant bppConfig = do
+  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
+  List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee

@@ -83,6 +83,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
@@ -393,7 +394,8 @@ sendBookingCancelledUpdateToBAP ::
     CacheFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r
   ) =>
   DRB.Booking ->
   DM.Merchant ->
@@ -423,7 +425,8 @@ sendDriverOffer ::
 sendDriverOffer transporter searchReq searchTry driverQuote = do
   logDebug $ "on_select ttl request driver: " <> show driverQuote.validTill
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
-  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP)
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapVariantToVehicle driverQuote.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>

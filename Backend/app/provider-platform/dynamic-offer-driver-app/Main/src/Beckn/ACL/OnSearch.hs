@@ -17,12 +17,16 @@ module Beckn.ACL.OnSearch where
 import qualified Beckn.OnDemand.Transformer.OnSearch as TOnSearch
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Search as DSearch
+import Domain.Types.BecknConfig
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
+import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BecknConfig as QBC
 
 mkOnSearchRequest ::
-  (MonadFlow m) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   DSearch.DSearchRes ->
   Context.Action ->
   Context.Domain ->
@@ -35,4 +39,6 @@ mkOnSearchRequest ::
   Context.City ->
   Context.Country ->
   m Spec.OnSearchReq
-mkOnSearchRequest = TOnSearch.buildOnSearchRideReq
+mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapId bapUri bppId bppUri city country = do
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle provider.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
+  TOnSearch.buildOnSearchRideReq bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country
