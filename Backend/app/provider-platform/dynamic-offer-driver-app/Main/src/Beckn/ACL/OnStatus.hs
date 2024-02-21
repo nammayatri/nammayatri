@@ -36,14 +36,17 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideSt
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import Domain.Types.Beckn.Status as DStatus
+import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Beckn.Common as Common
+import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildOnStatusMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
@@ -147,7 +150,8 @@ buildOnStatusReqV2 ::
   ( MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CacheFlow m r
   ) =>
   DM.Merchant ->
   DRB.Booking ->
@@ -159,7 +163,8 @@ buildOnStatusReqV2 merchant booking req = do
       city = fromMaybe merchant.city booking.bapCity
       country = fromMaybe merchant.country booking.bapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req merchant bppConfig
 
 buildOnStatusReqV2' ::
   (MonadFlow m, EncFlow m r) =>
@@ -172,10 +177,12 @@ buildOnStatusReqV2' ::
   Context.Country ->
   DRB.Booking ->
   DStatus.OnStatusBuildReq ->
+  DM.Merchant ->
+  DBC.BecknConfig ->
   m Spec.OnStatusReq
-buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req = do
+buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req merchant bppConfig = do
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-  message <- mkOnStatusMessageV2 req
+  message <- mkOnStatusMessageV2 req merchant bppConfig
   pure $
     Spec.OnStatusReq
       { onStatusReqError = Nothing,
@@ -186,16 +193,18 @@ buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country 
 mkOnStatusMessageV2 ::
   (MonadFlow m, EncFlow m r) =>
   DStatus.OnStatusBuildReq ->
+  DM.Merchant ->
+  DBC.BecknConfig ->
   m (Maybe Spec.ConfirmReqMessage)
-mkOnStatusMessageV2 res = do
-  order <- tfOrder res
+mkOnStatusMessageV2 res merchant bppConfig = do
+  order <- tfOrder res bppConfig merchant
   pure . Just $
     Spec.ConfirmReqMessage
       { confirmReqMessageOrder = order
       }
 
-tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> m Spec.Order
-tfOrder (DStatus.NewBookingBuildReq {bookingId}) =
+tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> DBC.BecknConfig -> DM.Merchant -> m Spec.Order
+tfOrder (DStatus.NewBookingBuildReq {bookingId}) _ _ =
   pure
     Spec.Order
       { orderId = Just bookingId.getId,
@@ -209,11 +218,11 @@ tfOrder (DStatus.NewBookingBuildReq {bookingId}) =
         orderProvider = Nothing,
         orderQuote = Nothing
       }
-tfOrder (DStatus.RideAssignedReq req) = Common.tfAssignedReqToOrder req
-tfOrder (DStatus.RideStartedReq req) = Common.tfStartReqToOrder req
-tfOrder (DStatus.RideCompletedReq req) = Common.tfCompleteReqToOrder req
-tfOrder (DStatus.BookingCancelledReq req) = Common.tfCancelReqToOrder req
-tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) = do
+tfOrder (DStatus.RideAssignedReq req) _ _ = Common.tfAssignedReqToOrder req
+tfOrder (DStatus.RideStartedReq req) _ _ = Common.tfStartReqToOrder req
+tfOrder (DStatus.RideCompletedReq req) bppConfig merchant = Common.tfCompleteReqToOrder req bppConfig merchant
+tfOrder (DStatus.BookingCancelledReq req) _ _ = Common.tfCancelReqToOrder req
+tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) _ _ = do
   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
   let Common.BookingDetails {driver, vehicle, booking, ride, isValueAddNP} = bookingDetails
   let image = Nothing

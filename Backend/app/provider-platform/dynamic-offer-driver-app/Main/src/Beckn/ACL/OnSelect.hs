@@ -18,15 +18,17 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
 import qualified Data.Text as T
-import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
+import Domain.Types
+import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
-import Kernel.Utils.Common (encodeToText)
+import Kernel.Utils.Common
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
 
 data DOnSelectReq = DOnSelectReq
@@ -47,17 +49,20 @@ data TransporterInfo = TransporterInfo
 
 mkOnSelectMessageV2 ::
   Bool ->
+  DBC.BecknConfig ->
+  DM.Merchant ->
   DOnSelectReq ->
   Spec.OnSelectReqMessage
-mkOnSelectMessageV2 isValueAddNP req@DOnSelectReq {..} = do
+mkOnSelectMessageV2 isValueAddNP bppConfig merchant req@DOnSelectReq {..} = do
   let fulfillments = [mkFulfillmentV2 req driverQuote isValueAddNP]
+  let paymentV2 = mkPaymentV2 bppConfig merchant
   Spec.OnSelectReqMessage $
     Just
       Spec.Order
         { orderFulfillments = Just fulfillments,
           orderItems = Just $ map (\fulf -> mkItemV2 fulf driverQuote transporterInfo isValueAddNP) fulfillments,
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
-          orderPayments = Just [mkPaymentV2],
+          orderPayments = Just [paymentV2],
           orderProvider = Nothing,
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -79,26 +84,10 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
       fulfillmentTags = Nothing
     }
 
-mkPaymentV2 :: Spec.Payment
-mkPaymentV2 =
-  Spec.Payment
-    { paymentParams = Just mkPaymentParamsV2,
-      paymentType = Just $ show Enums.ON_FULFILLMENT,
-      paymentCollectedBy = Just $ show Enums.BPP,
-      paymentId = Nothing,
-      paymentStatus = Nothing,
-      paymentTags = Nothing
-    }
-
-mkPaymentParamsV2 :: Spec.PaymentParams
-mkPaymentParamsV2 =
-  Spec.PaymentParams
-    { paymentParamsCurrency = Just "INR",
-      paymentParamsAmount = Nothing,
-      paymentParamsBankAccountNumber = Nothing,
-      paymentParamsBankCode = Nothing,
-      paymentParamsVirtualPaymentAddress = Nothing
-    }
+mkPaymentV2 :: DBC.BecknConfig -> DM.Merchant -> Spec.Payment
+mkPaymentV2 bppConfig merchant = do
+  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
+  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkVehicleV2 :: DQuote.DriverQuote -> Spec.Vehicle
 mkVehicleV2 quote =

@@ -18,8 +18,11 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils hiding (mkStops)
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
+import qualified Data.Text as T
 import Domain.Action.Beckn.Init as DInit
+import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FareParameters as DFParams
 import Kernel.Prelude
@@ -41,7 +44,7 @@ tfOrder res becknConfig =
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
       orderItems = tfItems res,
-      orderPayments = tfPayments res,
+      orderPayments = tfPayments res becknConfig,
       orderProvider = tfProvider res,
       orderQuote = tfQuotation res,
       orderStatus = Nothing
@@ -98,29 +101,11 @@ tfItemPrice res =
       }
 
 -- TODO: Discuss payment info transmission with ONDC
-tfPayments :: DInit.InitRes -> Maybe [Spec.Payment]
-tfPayments res = do
-  let paymentMethodInfo = res.paymentMethodInfo
-  Just
-    [ Spec.Payment
-        { paymentCollectedBy = Just $ show Enums.BPP,
-          paymentId = Nothing,
-          paymentParams = mkParams paymentMethodInfo,
-          paymentStatus = Just $ show Enums.NOT_PAID,
-          paymentTags = Nothing,
-          paymentType = Just $ maybe (show Enums.ON_FULFILLMENT) (Utils.castDPaymentType . (.paymentType)) paymentMethodInfo
-        }
-    ]
-  where
-    mkParams _paymentMethodInfo =
-      Just
-        Spec.PaymentParams
-          { paymentParamsAmount = Just $ encodeToText res.booking.estimatedFare,
-            paymentParamsBankAccountNumber = Nothing,
-            paymentParamsBankCode = Nothing,
-            paymentParamsCurrency = Just "INR",
-            paymentParamsVirtualPaymentAddress = Nothing
-          }
+tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
+tfPayments res bppConfig = do
+  let amount = fromIntegral (res.booking.estimatedFare.getMoney)
+  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
+  Just $ L.singleton $ mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfProvider :: DInit.InitRes -> Maybe Spec.Provider
 tfProvider res = do

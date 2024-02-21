@@ -23,6 +23,7 @@ import qualified Data.Aeson as A
 import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
+import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationAddress as DLoc
@@ -284,3 +285,13 @@ maskBillingNumber billingNumber = do
       T.take startingDigitLen billingNumber
         <> T.replicate (T.length billingNumber - totalDigitLen) "*"
         <> T.drop (T.length billingNumber - trailingDigitLen) billingNumber
+
+mapVariantToVehicle :: VehVar.VehicleVariant -> VehicleCategory
+mapVariantToVehicle variant = do
+  case variant of
+    VehVar.SEDAN -> CAB
+    VehVar.HATCHBACK -> CAB
+    VehVar.TAXI -> CAB
+    VehVar.SUV -> CAB
+    VehVar.TAXI_PLUS -> CAB
+    VehVar.AUTO_RICKSHAW -> AUTO_RICKSHAW

@@ -21,9 +21,14 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as List
+import qualified Data.Text as T
+import Domain.Types
+import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParameters as DFParams
+import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, (%~))
@@ -127,26 +132,10 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CUSTOMER_CANCELLATION_DUES)
                    ]
 
-mkRideCompletedPayment :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> [Spec.Payment]
-mkRideCompletedPayment paymentMethodInfo _paymentUrl = do
-  let currency = "INR"
-  List.singleton $
-    Spec.Payment
-      { paymentCollectedBy = Just $ showPaymentCollectedBy paymentMethodInfo,
-        paymentParams =
-          Just $
-            Spec.PaymentParams
-              { paymentParamsCurrency = Just currency,
-                paymentParamsAmount = Nothing,
-                paymentParamsBankAccountNumber = Nothing,
-                paymentParamsBankCode = Nothing,
-                paymentParamsVirtualPaymentAddress = Nothing
-              },
-        paymentType = Just $ mkRideCompletedPaymentType paymentMethodInfo,
-        paymentId = Nothing,
-        paymentStatus = Nothing,
-        paymentTags = Nothing
-      }
+mkRideCompletedPayment :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> Spec.Payment
+mkRideCompletedPayment _paymentMethodInfo _paymentUrl merchant bppConfig = do
+  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
+  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkDistanceTagGroup :: MonadFlow m => DRide.Ride -> m (Maybe [Spec.TagGroup])
 mkDistanceTagGroup ride = do

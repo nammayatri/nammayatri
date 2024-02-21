@@ -18,13 +18,18 @@ import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import qualified Data.Aeson as A
 import Data.List (singleton)
+import qualified Data.Text as T
+import Domain.Types
+import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Location as Location
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import EulerHS.Prelude hiding (id, state)
+import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
-import Kernel.Types.Common (HighPrecMeters)
+import Kernel.Utils.Common
 
 mkStops :: Location.Location -> Maybe Location.Location -> Maybe Text -> Maybe [Spec.Stop]
 mkStops origin mDestination mStartOtp =
@@ -78,44 +83,10 @@ mkStops origin mDestination mStartOtp =
               <$> mDestination
           ]
 
-mkPayment :: Maybe DMPM.PaymentMethodInfo -> [Spec.Payment]
-mkPayment (Just DMPM.PaymentMethodInfo {..}) =
-  singleton $
-    Spec.Payment
-      { paymentId = Nothing,
-        paymentCollectedBy = Just $ show Enums.BPP,
-        paymentType = Just $ castDPaymentType paymentType,
-        paymentParams =
-          Just $
-            Spec.PaymentParams
-              { paymentParamsAmount = Nothing,
-                paymentParamsBankAccountNumber = Nothing,
-                paymentParamsBankCode = Nothing,
-                paymentParamsCurrency = Just "INR",
-                paymentParamsVirtualPaymentAddress = Nothing
-              },
-        paymentStatus = Just $ show Enums.NOT_PAID,
-        paymentTags = Nothing
-      }
--- for backward compatibility
-mkPayment Nothing =
-  singleton
-    Spec.Payment
-      { paymentId = Nothing,
-        paymentCollectedBy = Just $ show Enums.BPP,
-        paymentType = Just $ show Enums.ON_FULFILLMENT,
-        paymentParams =
-          Just $
-            Spec.PaymentParams
-              { paymentParamsAmount = Nothing,
-                paymentParamsBankAccountNumber = Nothing,
-                paymentParamsBankCode = Nothing,
-                paymentParamsCurrency = Just "INR",
-                paymentParamsVirtualPaymentAddress = Nothing
-              },
-        paymentStatus = Nothing,
-        paymentTags = Nothing
-      }
+mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> Context.City -> [Spec.Payment]
+mkPayment _ bapConfig city = do
+  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
+  singleton $ OUP.mkPayment (show city) (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT

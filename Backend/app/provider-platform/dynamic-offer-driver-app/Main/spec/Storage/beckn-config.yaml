@@ -23,6 +23,8 @@ BecknConfig:
     staticTermsUrl: Maybe BaseUrl
     cancellationFeeAmount: Maybe Int
     cancellationFeePercentage: Maybe Int
+    buyerFinderFee : Maybe Text
+    settlementWindow : Maybe Text
 
   types:
     VehicleCategory:

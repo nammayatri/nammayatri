@@ -20,4 +20,4 @@ data BknPaymentParams = BknPaymentParams
     bankCode :: Maybe Text,
     vpa :: Maybe Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read)

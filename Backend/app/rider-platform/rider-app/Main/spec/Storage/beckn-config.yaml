@@ -21,6 +21,8 @@ BecknConfig:
     vehicleCategory: VehicleCategory
     collectedBy: PaymentCollectedBy
     staticTermsUrl: Maybe BaseUrl
+    buyerFinderFee : Maybe Text
+    settlementWindow : Maybe Text
 
   types:
     VehicleCategory:
@@ -34,8 +36,12 @@ BecknConfig:
     collectedBy: "'BPP'"
 
   queries:
-    findByMerchantIdAndDomain:
+    findByMerchantIdDomainAndVehicle:
       kvFunction: findOneWithKV
+      where:
+        and: [merchantId, domain, vehicleCategory]
+    findByMerchantIdAndDomain:
+      kvFunction: findAllWithKV
       where:
         and: [merchantId, domain]
     findById:
