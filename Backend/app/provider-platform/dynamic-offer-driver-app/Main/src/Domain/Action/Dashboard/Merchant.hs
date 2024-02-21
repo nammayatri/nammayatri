@@ -46,7 +46,6 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import qualified Data.Text as T
 import qualified Data.Vector as V
-import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
 import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
