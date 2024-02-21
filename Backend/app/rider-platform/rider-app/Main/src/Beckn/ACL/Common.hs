@@ -184,9 +184,6 @@ parseRideAssignedEvent order msgId = do
 parseRideStartedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.RideStartedReq
 parseRideStartedEvent order msgId = do
   bookingDetails <- parseBookingDetails order msgId
-  stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideStarted Event.")
-  start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideStarted Event.")
-  let rideStartTime = start.stopTime >>= (.timeTimestamp)
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
   let startOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_ODOMETER_DETAILS Tag.START_ODOMETER_READING tagGroups

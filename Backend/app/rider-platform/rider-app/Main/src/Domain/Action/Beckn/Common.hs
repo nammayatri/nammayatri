@@ -78,7 +78,6 @@ data RideStartedReq = RideStartedReq
     tripStartLocation :: Maybe LatLong,
     endOtp_ :: Maybe Text,
     startOdometerReading :: Maybe Centesimal,
-    rideStartTime :: Maybe UTCTime,
     driverArrivalTime :: Maybe UTCTime
   }
 
@@ -216,14 +215,14 @@ rideStartedReqHandler RideStartedReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
-
+  now <- getCurrentTime
   fork "ride start geohash frequencyUpdater" $ do
     case tripStartLocation of
       Just location -> frequencyUpdator booking.merchantId location Nothing TripStart
       Nothing -> return ()
   let updRideForStartReq =
         ride{status = DRide.INPROGRESS,
-             rideStartTime,
+             rideStartTime = Just now,
              rideEndTime = Nothing,
              endOtp = endOtp_,
              driverArrivalTime,
