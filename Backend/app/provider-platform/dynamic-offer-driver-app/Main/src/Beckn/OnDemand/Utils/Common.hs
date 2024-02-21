@@ -664,3 +664,16 @@ tfCancellationFee mbAmount mbFeePercent = do
             priceOfferedValue = Nothing,
             priceValue = Just $ encodeToText amount
           }
+
+tfFulfillmentState :: Enums.FulfillmentState -> Maybe Spec.FulfillmentState
+tfFulfillmentState state =
+  Just $
+    Spec.FulfillmentState
+      { fulfillmentStateDescriptor =
+          Just $
+            Spec.Descriptor
+              { descriptorCode = Just $ show state,
+                descriptorName = Nothing,
+                descriptorShortDesc = Nothing
+              }
+      }
