@@ -3,7 +3,7 @@
 
 module Domain.Types.SDKEvents where
 
-import Data.Text
+import Data.Aeson
 import Kernel.Prelude
 
 data SDKEventsReq = SDKEventsReq

@@ -42,9 +42,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.AutoCompleteData as QAutoCompleteData
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import Tools.Error
 import qualified Tools.Maps as Maps
 
