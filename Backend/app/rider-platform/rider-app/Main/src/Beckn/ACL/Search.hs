@@ -22,17 +22,21 @@ import qualified Beckn.OnDemand.Transformer.Search as Search
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.UI.Search as DSearch
+import Domain.Types.BecknConfig
 import EulerHS.Prelude hiding (state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildSearchReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
   DSearch.SearchRes ->
   m Spec.SearchReq
 buildSearchReqV2 DSearch.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found") -- get Vehicle Variatnt here
   Search.buildBecknSearchReqV2
     Context.SEARCH
     Context.MOBILITY
@@ -51,5 +55,6 @@ buildSearchReqV2 DSearch.SearchRes {..} = do
     isReallocationEnabled
     startTime
     multipleRoutes
+    bapConfig
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)

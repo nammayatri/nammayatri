@@ -42,8 +42,10 @@ import Domain.Types.OnUpdate as Reexport
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildOnUpdateMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
@@ -205,7 +207,8 @@ buildOnUpdateMessageV2 ::
   ( MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CacheFlow m r
   ) =>
   DM.Merchant ->
   DRB.Booking ->
@@ -217,4 +220,5 @@ buildOnUpdateMessageV2 merchant booking req = do
       city = fromMaybe merchant.city booking.bapCity
       country = fromMaybe merchant.country booking.bapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  TFOU.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country booking req
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (BUtils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  TFOU.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country booking req bppConfig merchant
