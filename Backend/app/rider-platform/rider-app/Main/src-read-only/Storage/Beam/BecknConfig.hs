@@ -17,13 +17,15 @@ import qualified Servant.Client.Core
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
-  { collectedBy :: B.C f Domain.Types.BecknConfig.PaymentCollectedBy,
+  { buyerFinderFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    collectedBy :: B.C f Domain.Types.BecknConfig.PaymentCollectedBy,
     domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registryUrl :: B.C f Kernel.Prelude.Text,
     settlementType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    settlementWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     staticTermsUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     subscriberId :: B.C f Kernel.Prelude.Text,
     subscriberUrl :: B.C f Kernel.Prelude.Text,

@@ -20,17 +20,23 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import Control.Lens ((%~))
+import qualified Data.List as DL
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
+import Domain.Types
+import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id, state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
+import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildConfirmReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
   DOnInit.OnInitRes ->
   m Spec.ConfirmReq
 buildConfirmReqV2 res = do
@@ -38,18 +44,18 @@ buildConfirmReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country
-
-  let message = mkConfirmMessageV2 res
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  let message = mkConfirmMessageV2 res bapConfig
   pure $ Spec.ConfirmReq context message
 
-mkConfirmMessageV2 :: DOnInit.OnInitRes -> Spec.ConfirmReqMessage
-mkConfirmMessageV2 res = do
+mkConfirmMessageV2 :: DOnInit.OnInitRes -> DBC.BecknConfig -> Spec.ConfirmReqMessage
+mkConfirmMessageV2 res bapConfig = do
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder res
+    { confirmReqMessageOrder = tfOrder res bapConfig
     }
 
-tfOrder :: DOnInit.OnInitRes -> Spec.Order
-tfOrder res =
+tfOrder :: DOnInit.OnInitRes -> DBC.BecknConfig -> Spec.Order
+tfOrder res bapConfig = do
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
@@ -57,7 +63,7 @@ tfOrder res =
       orderFulfillments = tfFulfillments res,
       orderId = Just res.bppBookingId.getId,
       orderItems = tfItems res,
-      orderPayments = tfPayments res,
+      orderPayments = tfPayments res bapConfig,
       orderProvider = Nothing,
       orderQuote = tfQuotation res,
       orderStatus = Nothing
@@ -99,28 +105,11 @@ tfItems res =
     ]
 
 -- TODO: Discuss payment info transmission with ONDC
-tfPayments :: DOnInit.OnInitRes -> Maybe [Spec.Payment]
-tfPayments res =
-  Just
-    [ Spec.Payment
-        { paymentCollectedBy = Just $ show Enums.BPP,
-          paymentId = Nothing,
-          paymentParams = mkParams,
-          paymentStatus = Nothing,
-          paymentTags = Nothing,
-          paymentType = Just $ show Enums.ON_FULFILLMENT
-        }
-    ]
-  where
-    mkParams =
-      Just $
-        Spec.PaymentParams
-          { paymentParamsAmount = Just $ encodeToText res.estimatedTotalFare,
-            paymentParamsBankAccountNumber = Nothing,
-            paymentParamsBankCode = Nothing,
-            paymentParamsCurrency = Just "INR",
-            paymentParamsVirtualPaymentAddress = Nothing
-          }
+tfPayments :: DOnInit.OnInitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
+tfPayments res bapConfig = do
+  let amount = fromIntegral (res.estimatedTotalFare.getMoney)
+  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
+  Just $ DL.singleton $ OUP.mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID (Just amount) Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
 tfQuotation res =

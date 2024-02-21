@@ -38,8 +38,10 @@ import qualified Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Quote
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
+import Domain.Types.BecknConfig
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareParameters as DFParams
+import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
@@ -266,20 +268,21 @@ tfStartReqToOrder Common.DRideStartedReq {..} = do
         orderQuote = Nothing
       }
 
-tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideCompletedReq -> m Spec.Order
-tfCompleteReqToOrder Common.DRideCompletedReq {..} = do
+tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideCompletedReq -> BecknConfig -> Merchant -> m Spec.Order
+tfCompleteReqToOrder Common.DRideCompletedReq {..} bppConfig merchant = do
   let Common.BookingDetails {driver, vehicle, ride, booking, isValueAddNP} = bookingDetails
   let personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripEndLocation else Nothing
   let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
   distanceTagGroup <- if isValueAddNP then UtilsOU.mkDistanceTagGroup ride else return Nothing
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> distanceTagGroup) personTag False False (Just $ show EventEnum.RIDE_ENDED) isValueAddNP
   quote <- UtilsOU.mkRideCompletedQuote ride fareParams
-  pure
+  let payment = UtilsOU.mkRideCompletedPayment paymentMethodInfo paymentUrl merchant bppConfig
+  pure $
     Spec.Order
       { orderId = Just $ booking.id.getId,
         orderStatus = Just $ show EventEnum.COMPLETE,
         orderFulfillments = Just [fulfillment],
-        orderPayments = Just $ UtilsOU.mkRideCompletedPayment paymentMethodInfo paymentUrl,
+        orderPayments = Just [payment],
         orderQuote = Just quote,
         orderBilling = Nothing,
         orderCancellation = Nothing,
