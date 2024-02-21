@@ -85,7 +85,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
               let vehicleCategory = Utils.mapVariantToVehicle dInitRes.booking.vehicleVariant
               becknConfig <- QBC.findByMerchantIdDomainAndVehicle (Just dInitRes.transporter.id) (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-              onInitMessage <- ACL.mkOnInitMessageV2 dInitRes becknConfig
+              let onInitMessage = ACL.mkOnInitMessageV2 dInitRes becknConfig
               pure $
                 Spec.OnInitReq
                   { onInitReqContext = context,
