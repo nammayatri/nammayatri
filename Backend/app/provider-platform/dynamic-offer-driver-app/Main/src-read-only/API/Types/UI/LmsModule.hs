@@ -33,6 +33,12 @@ data LmsGetModuleRes = LmsGetModuleRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data LmsGetQuizRes = LmsGetQuizRes
+  { questions :: [API.Types.UI.LmsModule.LmsQuestionRes],
+    selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data LmsGetVideosRes = LmsGetVideosRes
   { completed :: [API.Types.UI.LmsModule.LmsVideoRes],
     pending :: [API.Types.UI.LmsModule.LmsVideoRes],
@@ -67,8 +73,7 @@ data LmsQuestionRes = LmsQuestionRes
     options :: API.Types.UI.LmsModule.QuizOptions,
     previousHistory :: Data.Maybe.Maybe API.Types.UI.LmsModule.LmsQuizHistory,
     question :: Domain.Types.LmsEnumTypes.QuizQuestion,
-    questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping,
-    selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
+    questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
