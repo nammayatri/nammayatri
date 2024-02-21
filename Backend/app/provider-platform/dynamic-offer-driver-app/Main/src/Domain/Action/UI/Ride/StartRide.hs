@@ -167,14 +167,14 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
             driverLocations <- LF.driversLocation [driverId]
             listToMaybe driverLocations & fromMaybeM LocationNotFound
           pure (getCoordinates driverLocation, dashboardReq.odometer)
-
+  now <- getCurrentTime
   updatedRide <-
     if DTC.isEndOtpRequired booking.tripCategory
       then do
         endOtp <- Just <$> generateOTPCode
         QRide.updateEndRideOtp ride.id endOtp
-        return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer}
-      else pure ride
+        return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now}
+      else pure ride {DRide.tripStartTime = Just now}
 
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
