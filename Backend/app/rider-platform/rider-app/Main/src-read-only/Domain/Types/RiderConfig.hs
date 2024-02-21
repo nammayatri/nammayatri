@@ -14,6 +14,7 @@ import qualified Tools.Beam.UtilsTH
 data RiderConfig = RiderConfig
   { appUrl :: Kernel.Prelude.Text,
     collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    collectMMIRouteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     distanceWeightage :: Kernel.Prelude.Int,
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
