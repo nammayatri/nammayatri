@@ -66,6 +66,7 @@ module Domain.Action.Dashboard.Driver
     MediaChannel (..),
     VolunteerTransactionStorageReq (..),
     changeOperatingCity,
+    updateRCInvalidStatus,
   )
 where
 
@@ -1659,3 +1660,10 @@ getLimitAccordingToChannel config channel =
     ALERT -> config.alert
 
 --------------------------------------------------------------------------------------------------
+
+updateRCInvalidStatus :: ShortId DM.Merchant -> Context.City -> Common.UpdateRCInvalidStatusReq -> Flow APISuccess
+updateRCInvalidStatus _ _ req = do
+  vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
+  let vehicleType = castVehicleVariant req.vehicleVariant
+  RCQuery.updateRCStatusAndVehicleVariant vehicleRC.id IV.VALID True vehicleType
+  pure Success

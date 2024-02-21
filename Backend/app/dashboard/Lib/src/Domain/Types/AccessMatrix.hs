@@ -206,6 +206,7 @@ data UserActionType
   | DRIVER_COIN_HISTORY
   | REMOVE_EXPIRED_HOTSPOTS
   | UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+  | UPDATE_RC_INVALID_STATUS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

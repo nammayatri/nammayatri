@@ -99,7 +99,8 @@ data DriverCommonAPIs = DriverCommonAPIs
     deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
     sendDummyRideRequestToDriverViaDashboard :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    changeOperatingCity :: Id Driver.Driver -> Driver.ChangeOperatingCityReq -> Euler.EulerClient APISuccess
+    changeOperatingCity :: Id Driver.Driver -> Driver.ChangeOperatingCityReq -> Euler.EulerClient APISuccess,
+    updateRCInvalidStatus :: Id Common.Driver -> Driver.UpdateRCInvalidStatusReq -> Euler.EulerClient APISuccess
   }
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
@@ -280,7 +281,8 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> deleteRC
       :<|> clearOnRideStuckDrivers
       :<|> sendDummyRideRequestToDriverViaDashboard
-      :<|> changeOperatingCity = driverCommonClient
+      :<|> changeOperatingCity
+      :<|> updateRCInvalidStatus = driverCommonClient
 
     updateReferralLinkPassword
       :<|> linkDriverReferralCode = referralClient

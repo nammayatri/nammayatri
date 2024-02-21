@@ -15,8 +15,10 @@
 
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
+import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Vehicle as Vehicle
+import qualified Domain.Types.Vehicle.Variant as DVeh
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -74,6 +76,15 @@ findByRCIdAndFleetOwnerId (Id rcId) fleetOwnerId =
           Se.Is BeamVRC.fleetOwnerId $ Se.Eq $ Just fleetOwnerId
         ]
     ]
+
+updateRCStatusAndVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> IV.VerificationStatus -> Bool -> DVeh.Variant -> m ()
+updateRCStatusAndVehicleVariant (Id rcId) status reviewRequired vehicleType =
+  updateOneWithKV
+    [ Se.Set BeamVRC.verificationStatus status,
+      Se.Set BeamVRC.reviewRequired (Just reviewRequired),
+      Se.Set BeamVRC.vehicleVariant (Just vehicleType)
+    ]
+    [Se.Is BeamVRC.id $ Se.Eq rcId]
 
 updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> m ()
 updateVehicleVariant (Id vehicleRegistrationCertificateId) variant = do

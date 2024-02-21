@@ -63,6 +63,7 @@ data DriverEndpoint
   | SendMessageToDriverViaDashboardEndPoint
   | SendDummyRideRequestToDriverViaDashboardEndPoint
   | ChangeOperatingCityEndpoint
+  | UpdateRCInvalidStatusEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
@@ -1030,4 +1031,22 @@ newtype ChangeOperatingCityReq = ChangeOperatingCityReq
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance HideSecrets ChangeOperatingCityReq where
+  hideSecrets = identity
+
+-- change RC INVALID status  Api ------------------------
+-------------------------------------------
+
+type UpdateRCInvalidStatusAPI =
+  "updateRCInvalidStatus"
+    :> Capture "driverId" (Id Driver)
+    :> ReqBody '[JSON] UpdateRCInvalidStatusReq
+    :> Post '[JSON] APISuccess
+
+data UpdateRCInvalidStatusReq = UpdateRCInvalidStatusReq
+  { rcId :: Text,
+    vehicleVariant :: Variant
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets UpdateRCInvalidStatusReq where
   hideSecrets = identity
