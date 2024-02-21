@@ -87,15 +87,20 @@ eval (MapReady _ _ _) state = do
 eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = updateAndExit state{props{locUnserviceable = false, isSpecialZone = false}} $ HomeScreen state
 
 eval (MenuButtonAC (MenuButtonController.OnClick config)) state = do 
-  continueWithCmd state{data{defaultGate = config.id}} [do
-      let focusedIndex = DA.findIndex (\item -> item.place == config.id) state.data.nearByGates
-      case focusedIndex of
-        MB.Just index -> do
-          _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          pure unit
-        MB.Nothing -> pure unit
-      _ <- animateCamera config.lat config.lng 25.0 "NO_ZOOM"
-      pure NoAction
+  let 
+    updatedState = state { data { defaultGate = config.id } }
+    focusedIndex = DA.findIndex (\item -> item.place == config.id) state.data.nearByGates
+
+  continueWithCmd updatedState 
+    [ do
+        case focusedIndex of
+          MB.Just index -> do
+            void $ pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
+            pure unit
+          MB.Nothing -> pure unit
+
+        void $ animateCamera config.lat config.lng 25.0 "NO_ZOOM"
+        pure NoAction
     ]
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =  
@@ -121,13 +126,30 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
 
 eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do 
   void $ pure $ hideKeyboardOnNavigation true
-  MB.maybe (continue state) (\currTextField -> predictionClicked currTextField ) state.props.focussedTextField
+  MB.maybe (continue state) (\currTextField -> predictionClicked currTextField) state.props.focussedTextField
   where 
+    predictionClicked :: SearchLocationTextField -> Eval Action ScreenOutput SearchLocationScreenState
     predictionClicked currTextField = do 
-      let updatedLoc = {placeId : item.placeId, address : item.description, lat : item.lat, lon : item.lon, city : AnyCity, addressComponents : LocationListItemController.dummyAddress}
-          newState = if currTextField == SearchLocPickup then 
-                      state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false , canSelectFromFav = true}} 
-                      else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false, canSelectFromFav = true} }
+      let 
+        updatedLoc = 
+          { placeId : item.placeId
+          , address : item.description
+          , lat : item.lat
+          , lon : item.lon
+          , city : AnyCity
+          , addressComponents : LocationListItemController.dummyAddress
+          }
+        newState = 
+          if currTextField == SearchLocPickup then 
+            state 
+              { data { srcLoc = MB.Just updatedLoc }
+              , props { isAutoComplete = false , canSelectFromFav = true}
+              } 
+          else 
+            state 
+              { data { destLoc = MB.Just updatedLoc}
+              , props {isAutoComplete = false, canSelectFromFav = true}
+              }
       pure $ setText (getNewIDWithTag (show currTextField)) $ item.description
       updateAndExit newState $ PredictionClicked item newState
 
@@ -147,50 +169,52 @@ eval (FavouriteLocationModelAC (FavouriteLocModelController.FavouriteLocationAC 
     pure (LocationListItemAC [] (LocationListItemController.OnClick item))
     ]
 
-eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag) ) state = do 
+eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag)) state = do 
   case tag of 
-    "ADD_HOME" ->  if DA.length savedLoc >= 20 then 
-      continue state 
-      else exit $ AddFavLoc state "HOME_TAG"
-    "ADD_WORK" -> if DA.length savedLoc >= 20 then 
-      continue state 
-      else exit $ AddFavLoc state "WORK_TAG"
-    "HOME" -> do 
-      let homeLoc = MB.fromMaybe LocationListItemController.locationListStateObj $ getSavedLocationByTag savedLoc HOME_TAG
-      continueWithCmd state [ do 
-        pure (LocationListItemAC savedLoc (LocationListItemController.OnClick homeLoc))
-      ]
-    "WORK" -> do 
-      let workLoc = MB.fromMaybe LocationListItemController.locationListStateObj $ getSavedLocationByTag savedLoc WORK_TAG
-      continueWithCmd state [ do 
-        pure (LocationListItemAC savedLoc (LocationListItemController.OnClick workLoc))
-      ]
+    "ADD_HOME" -> handleAddLocation "HOME_TAG"
+    "ADD_WORK" -> handleAddLocation "WORK_TAG"
+    "HOME" -> handleLocationClick HOME_TAG
+    "WORK" -> handleLocationClick WORK_TAG
     _ -> do 
       void $ pure $ hideKeyboardOnNavigation true
       continue state{ props {searchLocStage = AllFavouritesStage}}
 
-eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText hasFocus)) state = do
-  if (state.props.searchLocStage == PredictionsStage || state.props.searchLocStage == LocateOnMapStage) then do
-    let {srcLocation , destLocation} = mkSrcAndDestLoc textField
-        setTextTo = (case textField of 
-                      "SearchLocPickup" -> srcLocation
-                      "SearchLocDrop" ->  destLocation
-                      _ -> "")
-    case textField of 
-      "SearchLocPickup" -> pure $ setText (getNewIDWithTag "SearchLocDrop") $ destLocation
-      "SearchLocDrop" -> pure $ setText (getNewIDWithTag "SearchLocPickup") $ srcLocation
-      _ -> pure unit
+  where 
+    handleAddLocation :: String -> Eval Action ScreenOutput SearchLocationScreenState
+    handleAddLocation locationTag = 
+      if DA.length savedLoc >= 20 then 
+        continue state 
+      else 
+        exit $ AddFavLoc state locationTag
 
-    let canClear = STR.length setTextTo > 2
-    let {pickUpLoc , dropLoc} =( case textField of 
-                                  "SearchLocPickup" -> { pickUpLoc : state.props.textFieldText.pickUpLoc, dropLoc : ""}
-                                  "SearchLocDrop" -> { pickUpLoc : "", dropLoc : state.props.textFieldText.dropLoc}
-                                  _ -> {pickUpLoc : "", dropLoc : "" })
-    let sortedCachedLoc = fetchSortedCachedSearches state globalProps textField
-    let _ = spy "sortedCachedLoc" sortedCachedLoc
-    continue state{ props{textFieldText {pickUpLoc = pickUpLoc , dropLoc = dropLoc}, focussedTextField = mkTextFieldTag textField , canClearText = canClear}
-                  , data {locationList = sortedCachedLoc}}
-    else continue state
+    handleLocationClick :: CardType -> Eval Action ScreenOutput SearchLocationScreenState
+    handleLocationClick locationTag = do 
+      let loc = MB.fromMaybe LocationListItemController.locationListStateObj $ getSavedLocationByTag savedLoc locationTag
+      continueWithCmd state [ do 
+        pure (LocationListItemAC savedLoc (LocationListItemController.OnClick loc))
+      ]
+
+eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText hasFocus)) state = do
+  if (DA.any (_ == state.props.searchLocStage) [PredictionsStage, LocateOnMapStage]) then do
+    let 
+      setTextTo = case textField of 
+        "SearchLocPickup" -> getAddress state.data.srcLoc
+        "SearchLocDrop" -> getAddress state.data.destLoc
+        _ -> ""
+        
+      canClear = STR.length setTextTo > 2
+      sortedCachedLoc = fetchSortedCachedSearches state globalProps textField
+
+    continue state
+      { props
+          { focussedTextField = mkTextFieldTag textField 
+          , canClearText = canClear
+          }
+      , data 
+          { locationList = sortedCachedLoc }
+      }
+  else 
+    continue state
 
   where
     mkTextFieldTag :: String -> MB.Maybe SearchLocationTextField
@@ -200,11 +224,9 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
         "SearchLocDrop" -> MB.Just SearchLocDrop
         _ -> MB.Nothing
 
-    mkSrcAndDestLoc :: String -> {srcLocation :: String, destLocation :: String}
-    mkSrcAndDestLoc textField = 
-      { srcLocation : MB.maybe "" (\srcLoc -> srcLoc.address) state.data.srcLoc
-      , destLocation : MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc}
-    
+    getAddress :: MB.Maybe LocationInfo -> String
+    getAddress location = MB.maybe "" (\loc -> loc.address) location
+
 eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do 
   let _ = spy "Inside AutoCompleteCallBack" "ABCD" 
   if state.props.isAutoComplete then -- so that selecting from favourites doesn't trigger autocomplete

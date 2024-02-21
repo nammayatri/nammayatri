@@ -753,26 +753,26 @@ placeClosedToday mbPlaceInfo dateOfVisit = case mbPlaceInfo of
 
 individualServiceBHView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketServiceData -> PrestoDOM (Effect Unit) w
 individualServiceBHView push state service =
-  let mbSelectedCategory = (find (\elem -> elem.isSelected) service.serviceCategories)
-  in
-  PrestoAnim.animationSet 
-    [ if EHC.os == "ANDROID" then ( Anim.translateInYAnim translateYAnimConfig { duration = 300 , fromY = 10 , toY = 0}) else( Anim.fadeIn true) ]
-  $ 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  ] $ [
-  ] <> (  if DA.length service.serviceCategories > 1 then (maybe [] (\selServiceCat -> [multipleServiceCategory push state service.id service.selectedBHId service.serviceCategories selServiceCat]) mbSelectedCategory)
-          else maybe [] (\selServiceCat -> if (shouldDisplayIncDscView selServiceCat.validOpDay service.selectedBHId)
-                                            then (map (incrementDecrementView push state service.id selServiceCat.categoryId) selServiceCat.peopleCategories)
-                                            else []
-                        ) mbSelectedCategory
-       )
-    <> ( maybe [] (\selServiceCat -> [timeSlotView push state service.id selServiceCat.categoryId service.selectedBHId (getSlots selServiceCat.validOpDay)]) mbSelectedCategory)
+  let mbSelectedCategory = find (\elem -> elem.isSelected) service.serviceCategories
+  in PrestoAnim.animationSet 
+       [ if EHC.os == "ANDROID" 
+         then Anim.translateInYAnim translateYAnimConfig { duration = 300 , fromY = 10 , toY = 0} 
+         else Anim.fadeIn true
+       ]
+       $ linearLayout
+           [ height WRAP_CONTENT
+           , width MATCH_PARENT
+           , orientation VERTICAL
+           ] 
+           $ [] <> if DA.length service.serviceCategories > 1 
+                   then maybe [] (\selServiceCat -> [multipleServiceCategory push state service.id service.selectedBHId service.serviceCategories selServiceCat]) mbSelectedCategory
+                   else maybe [] (\selServiceCat -> if shouldDisplayIncDscView selServiceCat.validOpDay service.selectedBHId
+                                                   then map (incrementDecrementView push state service.id selServiceCat.categoryId) selServiceCat.peopleCategories
+                                                   else []
+                                  ) mbSelectedCategory
+                   <> maybe [] (\selServiceCat -> [timeSlotView push state service.id selServiceCat.categoryId service.selectedBHId (getSlots selServiceCat.validOpDay)]) mbSelectedCategory
   where
     getSlots mbOpDay = maybe [] (\opDayElem -> opDayElem.slot) mbOpDay
-
 
 multipleServiceCategory :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> Maybe String -> Array ST.ServiceCategory -> ST.ServiceCategory -> PrestoDOM (Effect Unit) w
 multipleServiceCategory push state serviceId selectedBHId categories selectedCategory =

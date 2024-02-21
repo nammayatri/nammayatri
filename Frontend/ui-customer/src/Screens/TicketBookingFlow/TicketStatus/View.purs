@@ -53,10 +53,9 @@ import PaymentPage (consumeBP)
 import Engineering.Helpers.Commons as EHC
 import Data.Ord (comparing)
 import Data.Function.Uncurried (runFn3)
-import Mobility.Prelude (groupAdjacent)
+import Mobility.Prelude (groupAdjacent, boolToVisibility)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -65,8 +64,8 @@ screen initialState =
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
-        let _ = spy "ZooTicketBookingFlow TicketStatus action " action
-        let _ = spy "ZooTicketBookingFlow TicketStatus state " state
+        let _ = spy "TicketStatus action " action
+        let _ = spy "TicketStatus state " state
         eval action state
   }
   where
@@ -301,11 +300,13 @@ bookingStatusBody state push paymentStatus =
 
 bookingConfirmationActions :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingConfirmationActions state push paymentStatus = 
+  let isBookingConfirmationStage = state.props.currentStage == ST.BookingConfirmationStage
+  in 
   linearLayout[
     height MATCH_PARENT
   , width MATCH_PARENT
   , background Color.transparent
-  , visibility if (state.props.currentStage == ST.BookingConfirmationStage) then VISIBLE else GONE
+  , visibility $ boolToVisibility $ isBookingConfirmationStage
   , gravity BOTTOM
   ][
   linearLayout
@@ -316,7 +317,7 @@ bookingConfirmationActions state push paymentStatus =
   , padding $ PaddingBottom 20
   , alignParentBottom "true,-1"
   , background Color.white900
-  , visibility if (state.props.currentStage == ST.BookingConfirmationStage) then VISIBLE else GONE
+  , visibility $ boolToVisibility $ isBookingConfirmationStage
   ][ linearLayout
       [ width MATCH_PARENT
       , height $ V 1

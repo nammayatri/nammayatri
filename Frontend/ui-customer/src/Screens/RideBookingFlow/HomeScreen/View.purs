@@ -4574,7 +4574,7 @@ endOTPView push state =
   [ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , accessibilityHint $ "O T P : " <> (DS.replaceAll (DS.Pattern "") (DS.Replacement " ")  state.data.driverInfoCardState.otp) -- TODO :: Add endOTP during API Integration
+    , accessibilityHint $ "O T P : " <> (DS.replaceAll (DS.Pattern "") (DS.Replacement " ")  state.data.driverInfoCardState.otp) 
     , accessibility ENABLE
     , text $ getString END_OTP
     , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
@@ -4606,7 +4606,7 @@ endOTPView push state =
     ]
     [ PrestoAnim.animationSet [translateInXAnim $ endOTPAnimConfig state]
       $ textView $ 
-      [ text $ state.data.driverInfoCardState.otp -- TODO-codex :: Add endOTP during API Integration
+      [ text $ state.data.driverInfoCardState.otp 
       , color Color.black900
       , cornerRadius if os == "IOS" then 12.0 else 16.0
       , padding $ Padding 8 4 8 6
