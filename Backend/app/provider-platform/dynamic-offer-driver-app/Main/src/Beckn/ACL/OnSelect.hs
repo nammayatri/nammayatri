@@ -84,7 +84,7 @@ mkPaymentV2 =
   Spec.Payment
     { paymentParams = Just mkPaymentParamsV2,
       paymentType = Just $ show Enums.ON_FULFILLMENT,
-      paymentCollectedBy = Just $ show Enums.SELLER,
+      paymentCollectedBy = Just $ show Enums.BPP,
       paymentId = Nothing,
       paymentStatus = Nothing,
       paymentTags = Nothing
