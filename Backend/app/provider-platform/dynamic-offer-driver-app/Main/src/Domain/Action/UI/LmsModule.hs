@@ -53,18 +53,6 @@ getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage mbLi
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   let language = fromMaybe ENGLISH mbLanguage
   modules <- mapM (generateModuleInfo language driver.id) =<< SQLM.getAllModules mbLimit mbOffset merchantOpCityId
-  now <- getCurrentTime
-  void $
-    SQQI.create $
-      DTQI.QuestionInformation
-        { language = ENGLISH,
-          options = [DTQI.OptionEntity {isCorrect = False, option = DTQI.TextOption "पर्पल राइड", optionId = "lkasdj;f"}],
-          question = DTQI.TextQuestion "Hell ow",
-          questionId = "dkafjds;ljf",
-          questionType = DTQI.SingleSelect,
-          createdAt = now,
-          updatedAt = now
-        }
   return $
     API.Types.UI.LmsModule.LmsGetModuleRes
       { completed = sortOn (.completedAt) $ filter (\eModule -> eModule.moduleCompletionStatus == DTDMC.MODULE_COMPLETED) modules,
