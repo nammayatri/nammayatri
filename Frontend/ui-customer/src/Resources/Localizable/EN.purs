@@ -1,7 +1,7 @@
 module Resources.Localizable.EN where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
@@ -1008,3 +1008,8 @@ getEN stringKey =
         ONE_WAY_STR -> "One Way"
         SHARE_TICKET -> "Share Ticket"
         ORIGIN -> "Origin"
+        ADDITIONAL_FEATURES_ON merchantName -> "Additional features on " <> merchantName
+        NOTIFY_YOUR_EC -> "Notify your personal emergency contacts"
+        EC_CAN_RESPOND -> "Emergency Contacts can follow/ take emergency response actions"
+        QUICK_SUPPORT merchantName -> "Quick support from " <> merchantName <> " SOS support"
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "Learn about exclusive safety features on " <> merchantName

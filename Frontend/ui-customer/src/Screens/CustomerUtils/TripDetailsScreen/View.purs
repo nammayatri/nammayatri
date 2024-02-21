@@ -102,6 +102,7 @@ tripDetailsLayout state push =
           , margin $ MarginBottom 24
           ][ tripDetailsView state
            , separatorView
+           , providerDetailView state
            , tripIdView push state
            , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state)
            , ratingAndInvoiceView state push
@@ -122,6 +123,34 @@ tripDetailsLayout state push =
            ]
         ]]
 
+---------------------- providerDetail ---------------------------
+
+providerDetailView ::  forall w . ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w  
+providerDetailView state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ PaddingVertical  12 12
+  , orientation HORIZONTAL
+  , disableClickFeedback false
+  , visibility if state.props.isValueAddNP then VISIBLE else GONE
+  , margin $ MarginVertical 16 16
+  , background Color.grey900
+  , cornerRadius 32.0
+  , gravity CENTER_HORIZONTAL
+  ][  imageView
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_value_add"
+      , height $ V 20
+      , width $ V 20
+      , margin $ MarginRight 8
+      ]
+    , textView $
+      [ text $ "Ride fulfilled by:" <> state.data.npName
+      , accessibilityHint $ "Ride fulfilled by:" <> state.data.npName <> ": Button"
+      , accessibility ENABLE
+      , color Color.black800
+      ] <> FontStyle.body1 LanguageStyle
+  ]
 ---------------------- tripIdView ---------------------------
 tripIdView :: forall w . (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 tripIdView push state =

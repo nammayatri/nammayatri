@@ -281,7 +281,8 @@ type TripDetailsScreenData =
     tripId :: String,
     config :: AppConfig,
     vehicleVariant :: Maybe VehicleVariant,
-    categories :: Array CategoryListType
+    categories :: Array CategoryListType,
+    npName :: String
     -- bookingId :: String
   }
 
@@ -294,7 +295,8 @@ type TripDetailsScreenProps =
     showConfirmationPopUp :: Boolean,
     canConnectWithDriver :: Boolean,
     triggerUIUpdate :: Boolean,
-    showIssueOptions :: Boolean
+    showIssueOptions :: Boolean,
+    isValueAddNP :: Boolean
   }
 
 data TripDetailsGoBackType = Home | MyRides | HelpAndSupport
@@ -938,7 +940,8 @@ type HomeScreenStateProps =
   , sosBannerType :: Maybe SosBannerType
   , showShareRide :: Boolean
   , followsRide :: Boolean 
-  , referral :: ReferralStatusProp
+  , referral :: ReferralStatusProp  
+  , isValueAddNP :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -2149,7 +2152,8 @@ type NammaSafetyScreenProps =  {
   educationViewIndex :: Maybe Int,
   showCallPolice :: Boolean,
   shouldCallAutomatically :: Boolean,
-  fromDeepLink :: Boolean
+  fromDeepLink :: Boolean,
+  isValueAddNP :: Boolean
 }
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 

@@ -36,7 +36,8 @@ initData = {
       selectedItem : dummyIndividualCard,
       vehicleVariant : Nothing,
       config : getAppConfig appConfig,
-      categories : []
+      categories : [],
+      npName : "ABC"
   },
   props: {
     reportIssue : false,
@@ -46,7 +47,8 @@ initData = {
     showConfirmationPopUp : false,
     canConnectWithDriver : true,
     triggerUIUpdate : true,
-    showIssueOptions : true
+    showIssueOptions : true,
+    isValueAddNP : true
   }
 }
 

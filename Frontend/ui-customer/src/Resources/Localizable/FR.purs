@@ -1012,3 +1012,8 @@ getFR stringKey =
         ONE_WAY_STR -> "Aller simple"
         SHARE_TICKET -> "Partager le billet"
         ORIGIN -> "Origine"
+        ADDITIONAL_FEATURES_ON merchantName -> "Fonctionnalités supplémentaires sur " <> merchantName
+        NOTIFY_YOUR_EC -> ""
+        EC_CAN_RESPOND -> ""
+        QUICK_SUPPORT merchantName -> ""
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "" 

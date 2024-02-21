@@ -1151,17 +1151,20 @@ eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state =
 
 eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
   void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-  continue
-    state
-      { props { currentStage = RideRating }
-      , data
-        { rideRatingState 
-            { rating = index
-            , feedbackList = state.data.rideRatingState.feedbackList
-            }
-          , ratingViewState { selectedRating = index }
+  let isValueAddNP = state.props.isValueAddNP
+  if isValueAddNP then continue state { data { rideRatingState { rating = index }, ratingViewState { selectedRating = index }}}
+  else
+    continue
+      state
+        { props { currentStage = RideRating }
+        , data
+          { rideRatingState 
+              { rating = index
+              , feedbackList = state.data.rideRatingState.feedbackList
+              }
+            , ratingViewState { selectedRating = index }
+          }
         }
-      }
 
 eval ( RideCompletedAC (RideCompletedCard.IssueReportIndex index)) state =
   case index of
