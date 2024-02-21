@@ -895,8 +895,7 @@ createMerchantOperatingCity merchantShortId city req = do
           { id,
             region = show req.city,
             state = req.state,
-            city = req.city,
-            geom = Just req.geom
+            city = req.city
           }
 
     buildMerchantOperatingCity merchantId baseCity = do
