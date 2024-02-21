@@ -323,41 +323,46 @@ placeDetailsBT (PlaceDetailsReq id) = do
 ------------------------------------------------------------------------ RideSearchBT Function ----------------------------------------------------------------------------------------
 rideSearchBT :: SearchReq -> FlowBT String SearchRes
 rideSearchBT payload = do
-        headers <- getHeaders' "" true
-        withAPIResultBT (EP.searchReq "") identity errorHandler (lift $ lift $ callAPI headers payload)
+    headers <- getHeaders' "" true
+    withAPIResultBT (EP.searchReq "") identity handleError (lift $ lift $ callAPI headers payload)
     where
-      errorHandler errorPayload = do
-            if errorPayload.code == 400 then
-                pure $ toast (getString RIDE_NOT_SERVICEABLE)
-              else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+        handleError :: ErrorResponse -> FlowBT String SearchRes
+        handleError errorPayload = do
+            let message = if errorPayload.code == 400 
+                            then getString RIDE_NOT_SERVICEABLE 
+                            else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+            pure $ toast message
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
-            _ <- pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
+            void $ pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
             BackT $ pure GoBack
 
 
 makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime=
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime =
     let appConfig = CP.getAppConfig CP.appConfig
-    in  SearchReq { "contents" : OneWaySearchRequest (
-                                        OneWaySearchReq{
-                                                  "startTime" : Just startTime,
-                                                  "destination" : SearchReqLocation {
-                                                           "gps" : LatLong {
-                                                               "lat" : dlat ,
-                                                               "lon" : dlong
-                                                               },
-                                                           "address" : (LocationAddress desAdd)
-                                                  },
-                                                  "origin" : SearchReqLocation {
-                                                   "gps" : LatLong {
-                                                               "lat" : slat ,
-                                                               "lon" : slong
-                                                   },"address" : (LocationAddress srcAdd)
-                                                  },
-                                                  "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
-                                                 }),
-                    "fareProductType" : "ONE_WAY"
-                   }
+    in  SearchReq 
+        { "contents" : OneWaySearchRequest 
+            ( OneWaySearchReq
+                { "startTime" : Just startTime
+                , "destination" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : dlat 
+                        , "lon" : dlong
+                        }
+                    , "address" : (LocationAddress desAdd)
+                    }
+                , "origin" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : slat 
+                        , "lon" : slong
+                        }
+                    , "address" : (LocationAddress srcAdd)
+                    }
+                , "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                }
+            )
+        , "fareProductType" : "ONE_WAY"
+        }
 
 
 ------------------------------------------------------------------------ GetQuotes Function -------------------------------------------------------------------------------------------
@@ -374,6 +379,7 @@ rideConfirm quoteId = do
     where
         unwrapResponse (x) = x
 
+addOrEditStop :: String -> StopReq -> Boolean -> Flow GlobalState (Either ErrorResponse StopRes)
 addOrEditStop bookingId req isEdit = do 
     headers <- getHeaders "" false
     withAPIResult (EP.addOrEditStop isEdit bookingId) unwrapResponse $ callAPI headers (StopRequest bookingId isEdit req)

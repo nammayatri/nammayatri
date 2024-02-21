@@ -65,8 +65,8 @@ screen initialState =
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
-        let _ = spy "ZooTicketBookingFlow TicketList action " action
-        let _ = spy "ZooTicketBookingFlow TicketList state " state
+        let _ = spy "TicketList action " action
+        let _ = spy "TicketList state " state
         eval action state
   }
   where
@@ -129,7 +129,7 @@ view push state =
           ] []
         , separatorView Color.greySmoke
         , scrollView
-            [ height WRAP_CONTENT --MATCH_PARENT
+            [ height WRAP_CONTENT
             , width MATCH_PARENT
             , background Color.white900
             , afterRender push $ const AfterRender

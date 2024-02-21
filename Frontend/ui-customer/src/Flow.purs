@@ -530,7 +530,7 @@ homeScreenFlow = do
       (GlobalState globalState) <- getState
       modifyScreenState 
         $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData{data{srcLoc = Just sourceLoc, currentLoc = currentLoc, destLoc = destLoc , locationList = globalState.globalProps.cachedSearches  }
-            , props{focussedTextField = if isSource then Just SearchLocPickup else Just SearchLocDrop , actionType = SearchLocationAction , areBothLocMandatory = true, textFieldText{ pickUpLoc = address}}})
+            , props{focussedTextField = if isSource then Just SearchLocPickup else Just SearchLocDrop , actionType = SearchLocationAction , areBothLocMandatory = true}})
       searchLocationFlow
     ADD_STOP state -> do 
       let _ = spy "ADD_STOP" state

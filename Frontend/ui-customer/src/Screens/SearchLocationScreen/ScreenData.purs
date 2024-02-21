@@ -42,10 +42,6 @@ initData = {
     locUnserviceable : false,
     isSpecialZone : false,
     isAutoComplete : false,
-    textFieldText : {
-      pickUpLoc : "",
-      dropLoc : ""
-    },
     pickUpSelectedOnMap : false
   },
   appConfig : getAppConfig appConfig

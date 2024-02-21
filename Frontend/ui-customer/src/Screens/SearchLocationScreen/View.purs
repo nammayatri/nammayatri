@@ -73,31 +73,43 @@ view globalProps push state =
     , width MATCH_PARENT
     , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     , background Color.white900
-    ][  PrestoAnim.animationSet
-          [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  $ 
-        relativeLayout
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          , onBackPressed push $ const BackpressAction
-          ][  mapViewLayout push state globalProps
+    ]
+    [ PrestoAnim.animationSet
+        [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  
+        $ relativeLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , onBackPressed push $ const BackpressAction
+            ]
+            [ mapViewLayout push state globalProps
             , markerView push state
             , if currentStageOn state PredictionsStage then searchLocationView push state globalProps else emptyTextView
             , if currentStageOn state PredictionsStage then locateOnMapFooterView push state else emptyTextView
             , popUpViews push state globalProps
             , if currentStageOn state LocateOnMapStage then locateOnMapView push state globalProps else emptyTextView
             , confirmLocationView push state
-          ]
-      ]
+            ]
+    ]
   where
-
     markerView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
-    markerView push state = let 
-      imageName = if currentStageOn state ConfirmLocationStage then "ny_ic_src_marker" else MB.maybe "" ( \ currField -> if currField == SearchLocPickup then "ny_ic_src_marker" else (if state.props.actionType == SearchLocationAction then "ny_ic_dest_marker" else "ny_ic_blue_marker")) state.props.focussedTextField 
-      labelText = if DS.length state.data.defaultGate > state.appConfig.mapConfig.labelTextSize then
-                                  (DS.take (state.appConfig.mapConfig.labelTextSize - 3) state.data.defaultGate) <> "..."
-                               else
-                                  state.data.defaultGate
-      labelVisibility = boolToInvisibility $ not $ DS.null labelText
+    markerView push state = 
+      let 
+        imageName = if currentStageOn state ConfirmLocationStage 
+                    then "ny_ic_src_marker" 
+                    else MB.maybe "" 
+                      (\currField -> 
+                        if currField == SearchLocPickup then 
+                          "ny_ic_src_marker" 
+                        else 
+                          if state.props.actionType == SearchLocationAction then 
+                            "ny_ic_dest_marker" 
+                          else 
+                            "ny_ic_blue_marker"
+                      ) state.props.focussedTextField 
+        labelText = if DS.length state.data.defaultGate > state.appConfig.mapConfig.labelTextSize 
+                    then (DS.take (state.appConfig.mapConfig.labelTextSize - 3) state.data.defaultGate) <> "..."
+                    else state.data.defaultGate
+        labelVisibility = boolToInvisibility $ not $ DS.null labelText
       in
       linearLayout
         [ height MATCH_PARENT
@@ -107,27 +119,29 @@ view globalProps push state =
         , background Color.transparent
         , padding $ PaddingBottom if os == "IOS" then 53 else 70
         , orientation VERTICAL
-        ][  textView $ 
-              [ text labelText
-              , background Color.black800
-              , color Color.white900
-              , cornerRadius 5.0
-              , padding (Padding 5 5 5 5)
-              , height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , margin (MarginBottom 5)
-              , visibility labelVisibility
-              , id $ getNewIDWithTag "LocateOnMapSLSPin"
-              ] <> FontStyle.body3 TypoGraphy
-          , imageView 
+        ]
+        [ textView $ 
+            [ text labelText
+            , background Color.black800
+            , color Color.white900
+            , cornerRadius 5.0
+            , padding (Padding 5 5 5 5)
+            , height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , margin (MarginBottom 5)
+            , visibility labelVisibility
+            , id $ getNewIDWithTag "LocateOnMapSLSPin"
+            ] <> FontStyle.body3 TypoGraphy
+        , imageView 
             [ width $ V 35
             , height $ V 35
             -- , accessibility DISABLE
             , imageWithFallback $ fetchImage FF_COMMON_ASSET $ imageName
             , visibility $ boolToVisibility $ DA.any (_ == state.props.searchLocStage) [LocateOnMapStage, ConfirmLocationStage]
             ]
-          ]
+        ]
 
+mapViewLayout :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps -> PrestoDOM (Effect Unit) w
 mapViewLayout push state globalProps = 
   PrestoAnim.animationSet [fadeInWithDelay 250 true] $
   relativeLayout
@@ -160,15 +174,27 @@ mapViewLayout push state globalProps =
       pure unit
 
 confirmLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
-confirmLocationView push state = let 
-  zonePadding = 0 --if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
-  viewVisibility = boolToVisibility $ currentStageOn state ConfirmLocationStage
-  headerText = if state.props.actionType == SearchLocationAction then (getString CONFIRM_PICKUP_LOCATION) else MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_STOP_LOCATION)) state.props.focussedTextField 
+confirmLocationView push state = 
+  let 
+    zonePadding = 0 
+    viewVisibility = boolToVisibility $ currentStageOn state ConfirmLocationStage
+    headerText = 
+      if state.props.actionType == SearchLocationAction then 
+        getString CONFIRM_PICKUP_LOCATION 
+      else 
+        MB.maybe "" 
+          (\currField -> 
+            if currField == SearchLocPickup then 
+              getString CONFIRM_PICKUP_LOCATION 
+            else 
+              getString CONFIRM_STOP_LOCATION
+          ) state.props.focussedTextField 
   in 
-  relativeLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    ][  backIconView push state 
+    relativeLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      ] 
+      [ backIconView push state 
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -176,8 +202,9 @@ confirmLocationView push state = let
           , orientation VERTICAL
           , background Color.transparent
           , alignParentBottom "true,-1"
-          ][  recenterButtonView push state
-            , linearLayout
+          ] 
+          [ recenterButtonView push state
+          , linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
@@ -193,13 +220,14 @@ confirmLocationView push state = let
                   , padding (Padding zonePadding 4 zonePadding 4)
                   , cornerRadii $ Corners 24.0 true true false false
                   , visibility $ boolToVisibility $ state.data.confirmLocCategory /= ""
-                  ] [ imageView
+                  ] 
+                  [ imageView
                       [ width (V 20)
                       , height (V 20)
                       , margin (MarginRight 6)
                       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_zone_walk"
                       ]
-                    , textView
+                  , textView
                       [ width if os == "IOS" && state.data.confirmLocCategory == "SureBlockedAreaForAutos" then (V 230) else WRAP_CONTENT
                       , height WRAP_CONTENT
                       , gravity CENTER
@@ -210,7 +238,7 @@ confirmLocationView push state = let
                               (getString GO_TO_SELECTED_PICKUP_SPOT)
                       , color Color.white900
                       ]
-                    ]
+                  ]
               , linearLayout
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
@@ -218,22 +246,21 @@ confirmLocationView push state = let
                   , padding $ Padding 16 16 16 24
                   , cornerRadii $ Corners 24.0 true true false false
                   , background Color.white900
-                  -- , accessibility DISABLE
-                  ] [ textView $
+                  ] 
+                  [ textView $
                       [ text headerText
                       , color Color.black800
-                      -- , accessibility DISABLE
                       , gravity CENTER_HORIZONTAL
                       , height WRAP_CONTENT
                       , width MATCH_PARENT
                       ] <> FontStyle.h1 TypoGraphy
-                    , currentLocationView push state
-                    , nearByPickUpPointsView push state
-                    , PrimaryButton.view (push <<< PrimaryButtonAC) (confirmLocBtnConfig state)
+                  , currentLocationView push state
+                  , nearByPickUpPointsView push state
+                  , PrimaryButton.view (push <<< PrimaryButtonAC) (confirmLocBtnConfig state)
                   ]
               ]
-            ]
-    ]
+          ]
+      ]
 
 backIconView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 backIconView push state = let
@@ -461,13 +488,28 @@ locateOnMapFooterView push state = let
         , background Color.grey900
         ][]
 
-footerArray state = if state.props.focussedTextField == MB.Just SearchLocPickup then 
-  [ {action : SetLocationOnMap, text : getString SELECT_ON_MAP, buttonType : "SetLocationOnMap", imageName : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"}
-  , {action : CurrentLocation , text : getString CURRENT_LOCATION, buttonType : "CurrentLocation", imageName : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png"}
-  ]
-  else [{action : SetLocationOnMap, text : getString SELECT_LOCATION_ON_MAP, buttonType : "SetLocationOnMap", imageName : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"}]
-  
-
+footerArray :: SearchLocationScreenState -> Array { action :: Action, text :: String, buttonType :: String, imageName :: String }
+footerArray state = 
+  if state.props.focussedTextField == MB.Just SearchLocPickup then 
+    [ { action : SetLocationOnMap
+      , text : getString SELECT_ON_MAP
+      , buttonType : "SetLocationOnMap"
+      , imageName : fetchImage FF_ASSET "ny_ic_locate_on_map"
+      }
+    , { action : CurrentLocation
+      , text : getString CURRENT_LOCATION
+      , buttonType : "CurrentLocation"
+      , imageName : fetchImage FF_ASSET "ny_ic_current_location"
+      }
+    ]
+  else 
+    [ { action : SetLocationOnMap
+      , text : getString SELECT_LOCATION_ON_MAP
+      , buttonType : "SetLocationOnMap"
+      , imageName : fetchImage FF_ASSET "ny_ic_locate_on_map" 
+      }
+    ]
+    
 searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 searchLocationView push state globalProps = let
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage  || currentStageOn state PredictionSelectedFromHome 

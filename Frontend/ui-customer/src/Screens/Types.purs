@@ -1958,10 +1958,6 @@ type SearchLocationScreenProps =
   , locUnserviceable :: Boolean
   , isSpecialZone :: Boolean
   , isAutoComplete :: Boolean
-  , textFieldText :: {
-      pickUpLoc :: String ,
-      dropLoc :: String
-      }
   , pickUpSelectedOnMap :: Boolean  }
 
 data SearchLocationActionType = AddingStopAction 
