@@ -94,7 +94,7 @@ tfIntent ::
 tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
   let intentTags_ = Nothing
   intentFulfillment_ <- tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes
-  intentPayment_ <- tfPayment (show Enums.SELLER)
+  intentPayment_ <- tfPayment (show Enums.BPP)
   let returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
   let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
