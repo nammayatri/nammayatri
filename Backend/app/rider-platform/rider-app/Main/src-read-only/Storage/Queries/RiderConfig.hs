@@ -44,6 +44,7 @@ updateByPrimaryKey Domain.Types.RiderConfig.RiderConfig {..} = do
   updateWithKV
     [ Se.Set Beam.appUrl appUrl,
       Se.Set Beam.collectAutoCompleteData collectAutoCompleteData,
+      Se.Set Beam.collectMMIRouteData collectMMIRouteData,
       Se.Set Beam.distanceWeightage distanceWeightage,
       Se.Set Beam.enableEmergencyContactAddedMessage enableEmergencyContactAddedMessage,
       Se.Set Beam.enableLocalPoliceSupport enableLocalPoliceSupport,
@@ -71,6 +72,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Domain.Types.RiderConfig.RiderConfig
           { appUrl = appUrl,
             collectAutoCompleteData = collectAutoCompleteData,
+            collectMMIRouteData = collectMMIRouteData,
             distanceWeightage = distanceWeightage,
             enableEmergencyContactAddedMessage = enableEmergencyContactAddedMessage,
             enableLocalPoliceSupport = enableLocalPoliceSupport,
@@ -93,6 +95,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
     Beam.RiderConfigT
       { Beam.appUrl = appUrl,
         Beam.collectAutoCompleteData = collectAutoCompleteData,
+        Beam.collectMMIRouteData = collectMMIRouteData,
         Beam.distanceWeightage = distanceWeightage,
         Beam.enableEmergencyContactAddedMessage = enableEmergencyContactAddedMessage,
         Beam.enableLocalPoliceSupport = enableLocalPoliceSupport,
