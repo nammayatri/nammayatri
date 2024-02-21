@@ -3,9 +3,9 @@
 
 module Domain.Action.SDKEvents where
 
+import qualified Data.Aeson as A
 import Domain.Types.SDKEvents
 import Environment
-import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer
 import Kernel.Types.APISuccess
@@ -15,15 +15,17 @@ import Servant
 import Tools.Auth
 
 postSdkEvents :: SDKEventsReq -> Flow APISuccess
-postSdkEvents SDKEventsReq {..} = do
+postSdkEvents req = do
   --   apiRateLimitOptions <- asks (.apiRateLimitOptions)
   --   checkSlidingWindowLimitWithOptions ("rate-limit:" <> personId) apiRateLimitOptions
   let clientType = DRIVER
-  case clientType of
-    RIDER -> do
-      riderSDKEventsKafkaTopic <- asks (.riderSDKEventsKafkaTopic)
-      produceMessage (riderSDKEventsKafkaTopic, Nothing) event
-    DRIVER -> do
-      driverSDKEventsKafkaTopic <- asks (.driverSDKEventsKafkaTopic)
-      produceMessage (driverSDKEventsKafkaTopic, Nothing) event
+      mbEvent :: Maybe A.Value = A.decode $ encodeUtf8 req.event
+  whenJust mbEvent $ \event -> do
+    case clientType of
+      RIDER -> do
+        riderSDKEventsKafkaTopic <- asks (.riderSDKEventsKafkaTopic)
+        produceMessage (riderSDKEventsKafkaTopic, Nothing) event
+      DRIVER -> do
+        driverSDKEventsKafkaTopic <- asks (.driverSDKEventsKafkaTopic)
+        produceMessage (driverSDKEventsKafkaTopic, Nothing) event
   return Success
