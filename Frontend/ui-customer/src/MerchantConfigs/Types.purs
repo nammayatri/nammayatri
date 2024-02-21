@@ -68,6 +68,7 @@ type AppConfigCustomer a =
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
   , cityConfig :: Array CityConfig
+  , driverLocationPolling :: DriverLocationPollingConfig
   | a
   }
 
@@ -369,4 +370,8 @@ type CityConfig = {
 type GeoCodeConfig = {
   radius :: Int,
   strictBounds :: Boolean
+}
+
+type DriverLocationPollingConfig = {
+  retryExpFactor :: Int
 }
