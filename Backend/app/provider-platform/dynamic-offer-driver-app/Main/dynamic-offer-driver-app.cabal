@@ -755,6 +755,7 @@ library
     , http-client
     , http-types
     , lens
+    , lens-aeson
     , location-updates
     , mobility-core
     , openapi3
@@ -873,6 +874,7 @@ executable dynamic-offer-driver-app-exe
     , http-client
     , http-types
     , lens
+    , lens-aeson
     , mobility-core
     , openapi3
     , persistent
