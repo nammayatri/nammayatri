@@ -176,7 +176,7 @@ handler ValidatedDSearchReq {..} sReq = do
       else return (Nothing, catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicies)
   (mbSpecialZoneId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneId, mbDefaultDriverExtra)
-  let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> Just $ allFarePoliciesProduct.specialLocationTag <> "_PickupZone") mbSpecialZoneId
+  let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneId
   searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area cancellationDues mbRiderId
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo searchReq.id
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
