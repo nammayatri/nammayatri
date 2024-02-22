@@ -44,7 +44,9 @@ tfOrder res becknConfig =
       orderPayments = tfPayments res,
       orderProvider = tfProvider res,
       orderQuote = tfQuotation res,
-      orderStatus = Nothing
+      orderStatus = Nothing,
+      orderCreatedAt = Just res.booking.createdAt,
+      orderUpdatedAt = Just res.booking.updatedAt
     }
 
 tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]

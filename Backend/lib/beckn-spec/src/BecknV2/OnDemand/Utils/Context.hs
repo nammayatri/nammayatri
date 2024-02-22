@@ -48,6 +48,7 @@ buildContextLocation city country = do
         locationAreaCode = Nothing,
         locationCity = Just specCity,
         locationCountry = Just specCountry,
+        locationUpdatedAt = Nothing,
         locationGps = Nothing,
         locationId = Nothing,
         locationState = Nothing

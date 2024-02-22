@@ -66,7 +66,8 @@ mkStops origin mbDestination = do
                       locationCountry = Nothing,
                       locationGps = A.decode $ A.encode originGps,
                       locationState = Nothing,
-                      locationId = Nothing
+                      locationId = Nothing,
+                      locationUpdatedAt = Nothing
                     },
               stopType = Just $ show Enums.START,
               stopAuthorization = Nothing,
@@ -83,7 +84,8 @@ mkStops origin mbDestination = do
                         locationCountry = Nothing,
                         locationGps = A.decode $ A.encode $ destinationGps destination,
                         locationState = Nothing,
-                        locationId = Nothing
+                        locationId = Nothing,
+                        locationUpdatedAt = Nothing
                       },
                 stopType = Just $ show Enums.END,
                 stopAuthorization = Nothing,
@@ -237,7 +239,8 @@ mkStops' origin mbDestination mAuthorization =
                           locationCountry = Just $ Spec.Country Nothing origin.address.country,
                           locationGps = A.decode $ A.encode originGps,
                           locationState = Just $ Spec.State origin.address.state,
-                          locationId = Nothing
+                          locationId = Nothing,
+                          locationUpdatedAt = Nothing
                         },
                   stopType = Just $ show Enums.START,
                   stopAuthorization = mAuthorization >>= mkAuthorization,
@@ -254,7 +257,8 @@ mkStops' origin mbDestination mAuthorization =
                             locationCountry = Just $ Spec.Country Nothing destination.address.country,
                             locationGps = A.decode $ A.encode $ destinationGps destination,
                             locationState = Just $ Spec.State destination.address.state,
-                            locationId = Nothing
+                            locationId = Nothing,
+                            locationUpdatedAt = Nothing
                           },
                     stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
@@ -306,7 +310,8 @@ mkStopsOUS booking ride rideOtp =
                           locationCountry = Just $ Spec.Country Nothing origin.address.country,
                           locationGps = A.decode $ A.encode originGps,
                           locationState = Just $ Spec.State origin.address.state,
-                          locationId = Nothing
+                          locationId = Nothing,
+                          locationUpdatedAt = Nothing
                         },
                   stopType = Just $ show Enums.START,
                   stopAuthorization =
@@ -315,7 +320,7 @@ mkStopsOUS booking ride rideOtp =
                         { authorizationToken = Just rideOtp,
                           authorizationType = Just $ show Enums.OTP
                         },
-                  stopTime = ride.tripStartTime <&> \tripStartTime' -> Spec.Time {timeTimestamp = Just tripStartTime'}
+                  stopTime = ride.tripStartTime <&> \tripStartTime' -> Spec.Time {timeTimestamp = Just tripStartTime', timeDuration = Nothing}
                 },
             ( \destination ->
                 Spec.Stop
@@ -328,11 +333,12 @@ mkStopsOUS booking ride rideOtp =
                             locationCountry = Just $ Spec.Country Nothing destination.address.country,
                             locationGps = A.decode $ A.encode $ destinationGps destination,
                             locationState = Just $ Spec.State destination.address.state,
-                            locationId = Nothing
+                            locationId = Nothing,
+                            locationUpdatedAt = Nothing
                           },
                     stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
-                    stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime'}
+                    stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing}
                   }
             )
               <$> mbDestination

@@ -109,7 +109,9 @@ tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPho
       orderItems = tfItems booking merchant,
       orderPayments = tfPayments booking,
       orderProvider = Nothing,
-      orderQuote = tfQuotation booking
+      orderQuote = tfQuotation booking,
+      orderCreatedAt = Just booking.createdAt,
+      orderUpdatedAt = Just booking.updatedAt
     }
 
 tfFulfillments :: DRB.Booking -> DQ.DriverQuote -> Text -> Maybe [Spec.Fulfillment]

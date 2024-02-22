@@ -35,6 +35,7 @@ mkOnTrackMessageV2 res =
     { onTrackReqMessageTracking =
         Spec.Tracking
           { trackingUrl = Just $ showBaseUrl res.url,
-            trackingStatus = if res.isRideCompleted then Just "INACTIVE" else Just "ACTIVE"
+            trackingStatus = if res.isRideCompleted then Just "INACTIVE" else Just "ACTIVE",
+            trackingLocation = Nothing
           }
     }

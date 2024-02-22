@@ -28,6 +28,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 
@@ -38,7 +39,8 @@ newtype DTrackReq = TrackReq
 data DTrackRes = TrackRes
   { url :: BaseUrl,
     transporter :: DM.Merchant,
-    isRideCompleted :: Bool
+    isRideCompleted :: Bool,
+    isValueAddNP :: Bool
   }
 
 track ::
@@ -52,6 +54,7 @@ track transporterId req = do
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   ride <- QRide.findOneByBookingId req.bookingId >>= fromMaybeM (RideDoesNotExist req.bookingId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   let isRideCompleted = ride.status == DRide.COMPLETED

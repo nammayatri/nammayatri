@@ -96,6 +96,7 @@ mkProviderLocation NearestDriverInfo {..} = do
           locationCountry = Nothing,
           locationGps = A.decode $ A.encode gps,
           locationId = Nothing,
+          locationUpdatedAt = Nothing,
           locationState = Nothing
         }
 

@@ -63,7 +63,9 @@ mkOnSelectMessageV2 isValueAddNP req@DOnSelectReq {..} = do
           orderCancellation = Nothing,
           orderCancellationTerms = Nothing,
           orderId = Nothing,
-          orderStatus = Nothing
+          orderStatus = Nothing,
+          orderCreatedAt = Nothing,
+          orderUpdatedAt = Nothing
         }
 
 mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillment

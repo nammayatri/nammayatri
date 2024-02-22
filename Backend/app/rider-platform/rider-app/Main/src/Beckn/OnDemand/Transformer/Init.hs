@@ -56,12 +56,12 @@ tfOrder uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP = do
   orderBilling_ <- tfOrderBilling uiConfirm.riderPhone <&> Just
   orderFulfillments_ <- Data.List.singleton <$> tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP <&> Just
   orderItems_ <- Data.List.singleton <$> tfOrderItems uiConfirm mbBppFullfillmentId <&> Just
-  pure $ BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_}
+  pure $ BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_, orderCreatedAt = Nothing, orderUpdatedAt = Nothing}
 
 tfOrderBilling :: (Kernel.Types.App.MonadFlow m) => Maybe Data.Text.Text -> m BecknV2.OnDemand.Types.Billing
 tfOrderBilling mbPhoneNumber = do
   let billingPhone_ = mbPhoneNumber <&> Utils.maskBillingNumber
-  pure $ BecknV2.OnDemand.Types.Billing {billingPhone = billingPhone_}
+  pure $ BecknV2.OnDemand.Types.Billing {billingPhone = billingPhone_, billingName = Nothing}
 
 tfOrderFulfillments :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> m BecknV2.OnDemand.Types.Fulfillment
 tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP = do

@@ -87,11 +87,12 @@ buildStatusReqV2 DStatusReq {..} = do
   pure $
     Spec.StatusReq
       { statusReqContext = context,
-        statusReqMessage = tfMessage bppBookingId.getId
+        statusReqMessage = tfMessage bppBookingId.getId booking.transactionId
       }
 
-tfMessage :: Text -> Spec.StatusReqMessage
-tfMessage bppBookingId =
+tfMessage :: Text -> Text -> Spec.StatusReqMessage
+tfMessage bppBookingId transactionId =
   Spec.StatusReqMessage
-    { statusReqMessageRefId = Just bppBookingId
+    { statusReqMessageRefId = Just transactionId,
+      statusReqMessageOrderId = Just bppBookingId
     }

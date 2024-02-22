@@ -242,7 +242,9 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} = do
         orderItems = Nothing,
         orderPayments = Nothing,
         orderProvider = Nothing,
-        orderQuote = Nothing
+        orderQuote = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
       }
 
 tfStartReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideStartedReq -> m Spec.Order
@@ -263,7 +265,9 @@ tfStartReqToOrder Common.DRideStartedReq {..} = do
         orderItems = Nothing,
         orderPayments = Nothing,
         orderProvider = Nothing,
-        orderQuote = Nothing
+        orderQuote = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
       }
 
 tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideCompletedReq -> m Spec.Order
@@ -285,7 +289,9 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} = do
         orderCancellation = Nothing,
         orderCancellationTerms = Nothing,
         orderItems = Nothing,
-        orderProvider = Nothing
+        orderProvider = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
       }
 
 tfCancelReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DBookingCancelledReq -> m Spec.Order
@@ -310,7 +316,9 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} = do
         orderItems = Nothing,
         orderPayments = Nothing,
         orderProvider = Nothing,
-        orderQuote = Nothing
+        orderQuote = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
       }
 
 tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DDriverArrivedReq -> m Spec.Order
@@ -329,5 +337,7 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} = do
         orderPayments = Nothing,
         orderProvider = Nothing,
         orderQuote = Nothing,
-        orderStatus = Just $ show EventEnum.ACTIVE
+        orderStatus = Just $ show EventEnum.ACTIVE,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
       }

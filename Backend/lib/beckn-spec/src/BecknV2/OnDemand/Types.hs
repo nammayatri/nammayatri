@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-unused-imports #-}
 
 module BecknV2.OnDemand.Types
@@ -234,8 +235,10 @@ optionsAuthorization =
       ]
 
 -- | Describes the billing details of an entity.&lt;br&gt;This has properties like name,organization,address,email,phone,time,tax_number, created_at,updated_at
-newtype Billing = Billing
-  { -- | Phone number of the billable entity
+data Billing = Billing
+  { -- | Name of the billable entity
+    billingName :: Maybe Text,
+    -- | Phone number of the billable entity
     billingPhone :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
@@ -254,7 +257,8 @@ optionsBilling =
     }
   where
     table =
-      [ ("billingPhone", "phone")
+      [ ("billingName", "name"),
+        ("billingPhone", "phone")
       ]
 
 -- |
@@ -941,7 +945,9 @@ data Location = Location
     -- |
     locationId :: Maybe Text,
     -- |
-    locationState :: Maybe State
+    locationState :: Maybe State,
+    -- |
+    locationUpdatedAt :: Maybe UTCTime
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -965,7 +971,8 @@ optionsLocation =
         ("locationCountry", "country"),
         ("locationGps", "gps"),
         ("locationId", "id"),
-        ("locationState", "state")
+        ("locationState", "state"),
+        ("locationUpdatedAt", "updated_at")
       ]
 
 -- |
@@ -1320,6 +1327,8 @@ data Order = Order
     orderCancellation :: Maybe Cancellation,
     -- | Cancellation terms of this item
     orderCancellationTerms :: Maybe [CancellationTerm],
+    -- | The date-time of creation of this order
+    orderCreatedAt :: Maybe UTCTime,
     -- | The fulfillments involved in completing this order
     orderFulfillments :: Maybe [Fulfillment],
     -- | Human-readable ID of the order. This is generated at the BPP layer. The BPP can either generate order id within its system or forward the order ID created at the provider level.
@@ -1333,7 +1342,9 @@ data Order = Order
     -- |
     orderQuote :: Maybe Quotation,
     -- | Status of the order. Allowed values can be defined by the network policy
-    orderStatus :: Maybe Text
+    orderStatus :: Maybe Text,
+    -- | The date-time of updated of this order
+    orderUpdatedAt :: Maybe UTCTime
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -1354,13 +1365,15 @@ optionsOrder =
       [ ("orderBilling", "billing"),
         ("orderCancellation", "cancellation"),
         ("orderCancellationTerms", "cancellation_terms"),
+        ("orderCreatedAt", "created_at"),
         ("orderFulfillments", "fulfillments"),
         ("orderId", "id"),
         ("orderItems", "items"),
         ("orderPayments", "payments"),
         ("orderProvider", "provider"),
         ("orderQuote", "quote"),
-        ("orderStatus", "status")
+        ("orderStatus", "status"),
+        ("orderUpdatedAt", "updated_at")
       ]
 
 -- | Describes the terms of settlement between the BAP and the BPP for a single transaction. When instantiated, this object contains &lt;ol&gt;&lt;li&gt;the amount that has to be settled,&lt;/li&gt;&lt;li&gt;The payment destination destination details&lt;/li&gt;&lt;li&gt;When the settlement should happen, and&lt;/li&gt;&lt;li&gt;A transaction reference ID&lt;/li&gt;&lt;/ol&gt;. During a transaction, the BPP reserves the right to decide the terms of payment. However, the BAP can send its terms to the BPP first. If the BPP does not agree to those terms, it must overwrite the terms and return them to the BAP. If overridden, the BAP must either agree to the terms sent by the BPP in order to preserve the provider&#39;s autonomy, or abort the transaction. In case of such disagreements, the BAP and the BPP can perform offline negotiations on the payment terms. Once an agreement is reached, the BAP and BPP can resume transactions.
@@ -1846,8 +1859,10 @@ optionsStatusReq =
 
 -- |
 -- |
-newtype StatusReqMessage = StatusReqMessage
+data StatusReqMessage = StatusReqMessage
   { -- |
+    statusReqMessageOrderId :: Maybe Text,
+    -- |
     statusReqMessageRefId :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
@@ -1866,7 +1881,8 @@ optionsStatusReqMessage =
     }
   where
     table =
-      [ ("statusReqMessageRefId", "ref_id")
+      [ ("statusReqMessageOrderId", "order_id"),
+        ("statusReqMessageRefId", "ref_id")
       ]
 
 -- | A logical point in space and time during the fulfillment of an order.
@@ -1963,8 +1979,10 @@ optionsTagGroup =
       ]
 
 -- | Describes time in its various forms. It can be a single point in time; duration; or a structured timetable of operations&lt;br&gt;This has properties like label, time stamp,duration,range, days, schedule
-newtype Time = Time
-  { -- |
+data Time = Time
+  { -- | Describes duration as per ISO8601 format
+    timeDuration :: Maybe Text,
+    -- |
     timeTimestamp :: Maybe UTCTime
   }
   deriving (Show, Eq, Generic, Data)
@@ -1983,7 +2001,8 @@ optionsTime =
     }
   where
     table =
-      [ ("timeTimestamp", "timestamp")
+      [ ("timeDuration", "duration"),
+        ("timeTimestamp", "timestamp")
       ]
 
 -- |
@@ -2040,7 +2059,9 @@ optionsTrackReqMessage =
 
 -- | Contains tracking information that can be used by the BAP to track the fulfillment of an order in real-time. which is useful for knowing the location of time sensitive deliveries.
 data Tracking = Tracking
-  { -- | This value indicates if the tracking is currently active or not. If this value is `active`, then the BAP can begin tracking the order. If this value is `inactive`, the tracking URL is considered to be expired and the BAP should stop tracking the order.
+  { -- |
+    trackingLocation :: Maybe Location,
+    -- | This value indicates if the tracking is currently active or not. If this value is `active`, then the BAP can begin tracking the order. If this value is `inactive`, the tracking URL is considered to be expired and the BAP should stop tracking the order.
     trackingStatus :: Maybe Text,
     -- | A URL to the tracking endpoint. This can be a link to a tracking webpage, a webhook URL created by the BAP where BPP can push the tracking data, or a GET url creaed by the BPP which the BAP can poll to get the tracking data. It can also be a websocket URL where the BPP can push real-time tracking data.
     trackingUrl :: Maybe Text
@@ -2061,8 +2082,9 @@ optionsTracking =
     }
   where
     table =
-      [ ("trackingStatus", "status"),
-        ("trackingUrl", "url")
+      [ ("trackingLocation", "location"),
+        ("trackingUrl", "url"),
+        ("trackingStatus", "status")
       ]
 
 -- | Describes a vehicle is a device that is designed or used to transport people or cargo over land, water, air, or through space.&lt;br&gt;This has properties like category, capacity, make, model, size,variant,color,energy_type,registration

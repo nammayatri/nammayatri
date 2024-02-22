@@ -53,7 +53,9 @@ tfOrder res becknConfig = do
         orderPayments = tfPayments res,
         orderProvider = Nothing,
         orderQuote = tfQuotation res,
-        orderStatus = Just "ACTIVE"
+        orderStatus = Just "ACTIVE",
+        orderCreatedAt = Just res.booking.createdAt,
+        orderUpdatedAt = Just res.booking.updatedAt
       }
 
 tfFulfillments :: MonadFlow m => DConfirm.DConfirmResp -> m (Maybe [Spec.Fulfillment])

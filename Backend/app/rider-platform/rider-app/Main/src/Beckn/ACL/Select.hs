@@ -66,6 +66,8 @@ tfOrder res endLoc isValueAddNP =
       startLoc = res.searchRequest.fromLocation
       orderItem = tfOrderItem res isValueAddNP
       orderFulfillment = tfFulfillment res startLoc endLoc
+      orderCreatedAt = Nothing
+      orderUpdatedAt = Nothing
    in Spec.Order
         { orderFulfillments = Just [orderFulfillment],
           orderItems = Just [orderItem],
@@ -103,7 +105,8 @@ mkStops origin destination =
                       locationCountry = Just $ Spec.Country Nothing origin.address.country,
                       locationGps = A.decode $ A.encode originGps,
                       locationState = Just $ Spec.State origin.address.state,
-                      locationId = Nothing
+                      locationId = Nothing,
+                      locationUpdatedAt = Nothing
                     },
               stopType = Just $ show Enums.START,
               stopAuthorization = Nothing,
@@ -119,7 +122,8 @@ mkStops origin destination =
                       locationCountry = Just $ Spec.Country Nothing destination.address.country,
                       locationGps = A.decode $ A.encode destinationGps,
                       locationState = Just $ Spec.State destination.address.state,
-                      locationId = Nothing
+                      locationId = Nothing,
+                      locationUpdatedAt = Nothing
                     },
               stopType = Just $ show Enums.END,
               stopAuthorization = Nothing,
