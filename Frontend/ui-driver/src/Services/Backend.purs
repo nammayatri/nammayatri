@@ -1337,3 +1337,12 @@ pushSDKEvents = do
     withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
     where
         unwrapResponse x = x
+----------------------------------------------------------------------- specialLocation list -------------------------------------------------------------------------------
+
+getSpecialLocationListBT ::  SpecialLocationFullReq -> FlowBT String SpecialLocationFullRes
+getSpecialLocationListBT req = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.specialLocationList "") identity errorHandler (lift $ lift $ callAPI headers req)
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack

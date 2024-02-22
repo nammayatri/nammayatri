@@ -73,7 +73,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, zoneLabelIcon)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -126,6 +126,7 @@ import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
+import JBridge as JB
 
 
 instance showAction :: Show Action where
@@ -933,6 +934,7 @@ data Action = NoAction
             | GoToFollowRide 
             | PopUpModalReferralAction PopUpModal.Action
             | UpdateBookingDetails RideBookingRes
+            | SpecialZoneInfoTag 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -1350,6 +1352,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) stat
     continue state { props { showCallPopUp = true } }
   else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
+eval (DriverInfoCardActionController (DriverInfoCardController.SpecialZoneInfoTag)) state = continue state{ props{ showSpecialZoneInfoPopup = true } }
+
 eval DirectSearch state =continue state{props{currentStage = SearchLocationModel}}
 
 eval BackPressed state = do
@@ -1446,6 +1450,7 @@ eval BackPressed state = do
                             _ <- pure $ pauseYoutubeVideo unit
                             continue state{props{showEducationalCarousel = false}}
                           else if state.data.waitTimeInfo then continue state { data {waitTimeInfo =false} }
+                          else if state.props.showSpecialZoneInfoPopup then continue state { props{ showSpecialZoneInfoPopup = false } }
                           else do
                               pure $ terminateApp state.props.currentStage true
                               continue state
@@ -2019,7 +2024,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
       lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ removeAllPolylines ""
-  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.locationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
   when (state.data.destination == "") $ do
@@ -2330,7 +2335,9 @@ eval (NotificationListener notificationType) state = do
     "DRIVER_QUOTE_INCOMING" -> continue state
     _ -> exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
 
-eval RecenterCurrentLocation state = recenterCurrentLocation state
+eval RecenterCurrentLocation state = do
+  -- let _ = unsafePerformEffect $ runEffectFn1 locateOnMap testLocateOnMapConfig
+  recenterCurrentLocation state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation state
 
@@ -2361,9 +2368,20 @@ eval (RateCardAction RateCard.GoToFareUpdate) state = continue state { data{rate
 
 eval (RateCardAction RateCard.GoToWaitingCharges) state = continue state { data{rateCard{currentRateCardType = WaitingCharges,onFirstPage = true}}}
 
-eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
+eval (RequestInfoCardAction RequestInfoCard.Close) state = 
+  if state.props.showSpecialZoneInfoPopup then
+    continue state{ props{ showSpecialZoneInfoPopup = false } }
+  else
+    continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
 
-eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = 
+  if state.props.showSpecialZoneInfoPopup then
+    continue state{ props{ showSpecialZoneInfoPopup = false } }
+  else
+    continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
+
+eval SpecialZoneInfoTag state = 
+  continue state{ props{ showSpecialZoneInfoPopup = true } }
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
@@ -2468,6 +2486,7 @@ eval UpdateSourceFromPastLocations state = do
   continue state{data{source = nearestLocation.locationDetails.placeName, sourceAddress = encodeAddress nearestLocation.locationDetails.placeName [] Nothing 0.0 0.0}}
 
 eval (UpdateLocAndLatLong lat lng) state = do
+  -- let _ = unsafePerformEffect $ runEffectFn1 locateOnMap testLocateOnMapConfig
   let slat = fromMaybe 0.0 (NUM.fromString lat)
       slng = fromMaybe 0.0 (NUM.fromString lng)
   continueWithCmd state{props{currentLocation { lat = slat, lng = slng } , sourceLat = slat, sourceLong = slng , locateOnMapLocation {sourceLat = slat, sourceLng = slng, source = state.data.source, sourceAddress = state.data.sourceAddress}}} [do
@@ -2523,7 +2542,9 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
 eval (ChooseYourRideAction ChooseYourRideController.NoAction) state =
   continue state{ props{ defaultPickUpPoint = "" } }
 
-eval MapReadyAction state = continueWithCmd state [ do
+eval MapReadyAction state = do
+  -- let _ = unsafePerformEffect $ runEffectFn1 locateOnMap testLocateOnMapConfig
+  continueWithCmd state [ do
       permissionConditionA <- isLocationPermissionEnabled unit
       permissionConditionB <- isLocationEnabled unit
       internetCondition <- isInternetAvailable unit
@@ -2936,6 +2957,7 @@ estimatesListFlow estimates state = do
       , props
         { currentStage = SettingPrice
         , estimateId = estimatesInfo.defaultQuote.id
+        , zoneType = estimatesInfo.zoneType
         }
       }
   else do
@@ -3065,3 +3087,79 @@ getPeekHeight state =
 
 logChatSuggestion :: HomeScreenState -> String -> Unit
 logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
+
+-- testGeoJson :: String
+-- -- testGeoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"stroke-color\":\"#2194FF\",\"stroke-width\":3,\"fill\":\"#0D2194FF\"},\"geometry\":{\"type\":\"MultiPolygon\",\"coordinates\":[[[[88.335300567,22.586964867],[88.33354078,22.589504829],[88.334265111,22.589824629],[88.335455875,22.587839029],[88.336291152,22.586932127],[88.337865806,22.586128744],[88.339684412,22.585515482],[88.342197572,22.584824925],[88.344021696,22.584254089],[88.344404931,22.584159517],[88.347338756,22.583036988],[88.346958136,22.581915884],[88.346377934,22.580811581],[88.345901299,22.579698022],[88.345469907,22.578648571],[88.34416784,22.575531891],[88.339551955,22.577894626],[88.338999938,22.578981088],[88.338741071,22.580560813],[88.338664823,22.581403289],[88.337718801,22.583128575],[88.337008875,22.584293219],[88.336115324,22.585805961],[88.335300567,22.586964867]]]]}}, {\"type\":\"Feature\",\"properties\":{\"name\":\"Pick Up Zone New Complex\",\"stroke-color\":\"#53BB6F\",\"stroke-width\":3,\"fill\":\"#3353BB6F\"},\"geometry\":{\"type\":\"MultiPolygon\",\"coordinates\":[[[[88.34124576606496,22.58425434295195],[88.34124576606496,22.58212857588947],[88.34339037500337,22.58212857588947],[88.34339037500337,22.58425434295195],[88.34124576606496,22.58425434295195]]]]}}, {\"type\":\"Feature\",\"properties\":{\"name\":\"Pick Up Zone Old Complex\",\"stroke-color\":\"#53BB6F\",\"stroke-width\":3,\"fill\":\"#3353BB6F\"},\"geometry\":{\"type\":\"MultiPolygon\",\"coordinates\":[[[[88.33922731059289,22.581051119783652],[88.33922731059289,22.57918739203197],[88.3414665346329,22.57918739203197],[88.3414665346329,22.581051119783652],[88.33922731059289,22.581051119783652]]]]}}]}"
+-- testGeoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[77.61907855324631,12.938575704209512],[77.61958085186257,12.938294985602468],[77.62026931709897,12.939513712873875],[77.61991103417085,12.939780736593036],[77.61907855324631,12.938575704209512]]],\"type\":\"Polygon\"},\"id\":0},{\"type\":\"Feature\",\"properties\":{\"name\":\"park_gate_1\"},\"geometry\":{\"coordinates\":[[[77.6191558299571,12.938609938164404],[77.61954923866404,12.938370300381607],[77.61989698386026,12.938989934748207],[77.61954572608528,12.939178221129112],[77.6191558299571,12.938609938164404]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"park_point_1\"},\"geometry\":{\"coordinates\":[77.61955626380751,12.939236418713278],\"type\":\"Point\"}}]}"
+-- --"{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[[77.62169214923057,12.942371885297348],[77.62190544485338,12.941706210794209],[77.62255491804086,12.941974816509628],[77.62215708575593,12.942610126267724],[77.62169214923057,12.942371885297348]]]],\"type\":\"MultiPolygon\"},\"id\":0},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[[77.6217592534947,12.942332178435294],[77.62188387565658,12.941991166401266],[77.62199891149822,12.94208225870267],[77.62185511669583,12.942362542498316],[77.6217592534947,12.942332178435294]]]],\"type\":\"MultiPolygon\"},\"id\":1},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[[77.6222050173796,12.942196707957578],[77.62237038140256,12.941830003017529],[77.62257648728394,12.941909416871766],[77.62233682928166,12.942294807276923],[77.6222050173796,12.942196707957578]]]],\"type\":\"MultiPolygon\"},\"id\":2}]}"
+
+-- testLocateOnMapConfig :: JB.LocateOnMapConfig
+-- testLocateOnMapConfig = 
+--   testDefaultLocateOnMapConfig
+--   { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[[77.62169214923057,12.942371885297348],[77.62190544485338,12.941706210794209],[77.62255491804086,12.941974816509628],[77.62215708575593,12.942610126267724],[77.62169214923057,12.942371885297348]]]],\"type\":\"MultiPolygon\"},\"id\":0},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[[77.6217592534947,12.942332178435294],[77.62188387565658,12.941991166401266],[77.62199891149822,12.94208225870267],[77.62185511669583,12.942362542498316],[77.6217592534947,12.942332178435294]]]],\"type\":\"MultiPolygon\"},\"id\":1},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[[77.6222050173796,12.942196707957578],[77.62237038140256,12.941830003017529],[77.62257648728394,12.941909416871766],[77.62233682928166,12.942294807276923],[77.6222050173796,12.942196707957578]]]],\"type\":\"MultiPolygon\"},\"id\":2}]}"
+--   , points = [ testDefaultGate{ lat = 12.941971, lng = 77.622205, place = "gate1" }
+--              , testDefaultGate{ lat = 12.942158, lng = 77.621966, place = "gate2" }
+--              ] 
+--   }
+
+-- testDefaultLocateOnMapConfig :: JB.LocateOnMapConfig
+-- testDefaultLocateOnMapConfig = {
+--     goToCurrentLocation : false
+--   , lat : 0.0
+--   , lon : 0.0
+--   , geoJson : ""
+--   , points : []
+--   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+--   , labelId : getNewIDWithTag "LocateOnMapPin"
+--   , markerCallbackForTags : []
+--   , markerCallback : "" 
+--   , specialZoneMarkerConfig : {
+--         showLabelActionImage : false
+--       , labelActionImage : "ny_ic_navigation_blue_frame"
+--       , theme : "DARK"
+--       , spotIcon : "ny_ic_zone_pickup_marker_green"
+--       , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green"
+--       , showLabel : false
+--       , labelImage : ""
+--       , showZoneLabel : false
+--     }
+--   , navigateToNearestGate : true
+--   , locationName : ""
+-- }
+
+-- testDefaultGate :: JB.Location
+-- testDefaultGate = {
+--   lat : 12.942158,
+--   lng : 77.621966,
+--   place : "gate2",
+--   address : Nothing,
+--   city : Nothing
+-- }
+
+
+-- testGeoJsons :: Array JB.LocateOnMapConfig
+-- testGeoJsons = [
+--   testDefaultLocateOnMapConfig
+--   { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[[77.62169214923057,12.942371885297348],[77.62190544485338,12.941706210794209],[77.62255491804086,12.941974816509628],[77.62215708575593,12.942610126267724],[77.62169214923057,12.942371885297348]]]],\"type\":\"MultiPolygon\"},\"id\":0},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[[77.6217592534947,12.942332178435294],[77.62188387565658,12.941991166401266],[77.62199891149822,12.94208225870267],[77.62185511669583,12.942362542498316],[77.6217592534947,12.942332178435294]]]],\"type\":\"MultiPolygon\"},\"id\":1},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[[77.6222050173796,12.942196707957578],[77.62237038140256,12.941830003017529],[77.62257648728394,12.941909416871766],[77.62233682928166,12.942294807276923],[77.6222050173796,12.942196707957578]]]],\"type\":\"MultiPolygon\"},\"id\":2}]}"
+--   , points =  [ testDefaultGate{ lat = 12.941971, lng = 77.622205, place = "gate1" }
+--               , testDefaultGate{ lat = 12.942158, lng = 77.621966, place = "gate2" }
+--               ]
+--   },
+--   testDefaultLocateOnMapConfig
+--   { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[77.61907855324631,12.938575704209512],[77.61958085186257,12.938294985602468],[77.62026931709897,12.939513712873875],[77.61991103417085,12.939780736593036],[77.61907855324631,12.938575704209512]]],\"type\":\"Polygon\"},\"id\":0},{\"type\":\"Feature\",\"properties\":{\"name\":\"park_gate_1\"},\"geometry\":{\"coordinates\":[[[77.6191558299571,12.938609938164404],[77.61954923866404,12.938370300381607],[77.61989698386026,12.938989934748207],[77.61954572608528,12.939178221129112],[77.6191558299571,12.938609938164404]]],\"type\":\"Polygon\"}}]}"
+--   , points =  [ testDefaultGate{ lat = 12.93920903161839, lng = 77.61953518834082, place = "park_gate_1" }
+--               ]
+--   },
+--   testDefaultLocateOnMapConfig
+--   { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[77.61752881823742,12.936089864192923],[77.61840802462649,12.935898099878699],[77.61847538317943,12.936069132923222],[77.61782484135676,12.936402560642108],[77.61757136048266,12.93630408721721],[77.61752881823742,12.936089864192923]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[77.61764580941013,12.936114050673126],[77.61789574509771,12.936038036014338],[77.6179914651479,12.93626089710591],[77.61770253240331,12.936331728884454],[77.61764580941013,12.936114050673126]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[77.61833712088549,12.936020759952441],[77.61833534829145,12.935879096200125],[77.61859591954021,12.935879096200125],[77.61859414694624,12.936013849527527],[77.61833712088549,12.936020759952441]]],\"type\":\"Polygon\"}}]}"
+--   , points =  [ testDefaultGate{ lat = 12.936345549716506, lng = 77.61792410659348, place = "gate_1" }
+--               , testDefaultGate{ lat = 12.936089864192923, lng = 77.61843638612231, place = "gate_2" }
+--               ]
+--   },
+--   testDefaultLocateOnMapConfig
+--   { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[77.61939837550148,12.945347517395206],[77.62041061767411,12.944620313685135],[77.62071139820523,12.94501210199357],[77.62069115336186,12.945138939804025],[77.62004042625148,12.945395433844197],[77.62007223957653,12.94567729512282],[77.61991317294883,12.945781583714975],[77.61974832208085,12.945806951204148],[77.61956901061097,12.94565474623272],[77.61939837550148,12.945347517395206]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[77.62002018140811,12.945567369262875],[77.62006356321496,12.945668839288928],[77.61975410632232,12.945804132594759],[77.619404159743,12.945361610470016],[77.61944464942962,12.945322149859308],[77.61980905661198,12.945744941783161],[77.62002018140811,12.945567369262875]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[77.62049448916878,12.94517558182605],[77.62064487943496,12.945068474361477],[77.6203412067826,12.944673867518333],[77.62040483343378,12.944620313685135],[77.62070850608507,12.945014920613048],[77.62068826124175,12.945138939804025],[77.62049448916878,12.94517558182605]]],\"type\":\"Polygon\"}}]}"
+--   , points =  [ testDefaultGate{ lat = 12.945324968475319, lng = 77.61947357063451, place = "gate1" }
+--               , testDefaultGate{ lat = 12.944716146853409, lng = 77.62032674617944, place = "gate2" }
+--               ]
+--   }
+-- ]

@@ -607,41 +607,14 @@ export const parseAddress = function (json) {
   return JSON.parse(json);
 };
 
-export const drawRoute = function (data) {
-  return function (style) {
-    return function (trackColor) {
-      return function (isActual) {
-        return function (sourceMarker) {
-          return function (destMarker) {
-            return function (polylineWidth) {
-              return function (type) {
-                return function (sourceName) {
-                  return function (destinationName) {
-                    return function (mapRouteConfig) {
-                      return function () {
-                        console.log("I AM HERE ------------------ IN DRAW ROUTE");
-
-                        try {
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));
-                        } catch (err) {
-                          /*
-                           * This Function is deprecated on 10 Jul- 2023
-                           * Remove this function once it is not begin used.
-                           */
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);
-                        }
-                      }
-                    };
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-};
+export const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfig, destMarkerConfig, polylineWidth, type, mapRouteConfig) {
+  console.log("I AM HERE ------------------ IN DRAW ROUTE");
+  try {
+    return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig));
+  } catch (err) {
+    console.log("error in draw route", err);
+  }
+}
 
 export const updateRouteMarker = function (data) {
   return function () {
@@ -974,6 +947,7 @@ export const saveAudioFile = function (source) {
 export const differenceBetweenTwoUTC = function (date1, date2) {
   const diffInSeconds = Math.round((new Date(date1) - new Date(date2)) / 1000);
   if (isNaN(diffInSeconds)){
+    console.log("debug alternate isNan");
     return 0;
   }
   return diffInSeconds;
@@ -1745,6 +1719,7 @@ export const showKeyboard = function (id) {
 
 export const locateOnMap = (configObj) => {
   try {
+    console.log("debug locateOnMap entry");
     if ( window.__OS == "IOS" || (window.__OS == "ANDROID" && methodArgumentCount("locateOnMap") == 1))
       return JBridge.locateOnMap(JSON.stringify(configObj));
     else
@@ -1759,6 +1734,7 @@ export const locateOnMap = (configObj) => {
 };
 
 export const exitLocateOnMap = function (str) {
+  console.log("debug locateOnMap exit");
   JBridge.exitLocateOnMap(str);
 }
 

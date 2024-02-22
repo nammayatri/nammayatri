@@ -209,7 +209,9 @@ initData = {
         isStatsModelExpanded : false,
         tobeLogged : false,
         safetyAudioAutoPlay : false,
-        vehicleNSPopup : false
+        vehicleNSPopup : false,
+        currentGeoHash : "",
+        expandedMap : false
     }
 }
 

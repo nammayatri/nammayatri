@@ -1429,7 +1429,8 @@ chooseYourRideConfig state = ChooseYourRide.config
     nearByDrivers = state.data.nearByDrivers,
     showPreferences = state.data.showPreferences,
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city /= Kochi,
-    flowWithoutOffers = state.props.flowWithoutOffers
+    flowWithoutOffers = state.props.flowWithoutOffers,
+    zoneType = state.props.zoneType.sourceTag
   }
 
 
@@ -1998,3 +1999,37 @@ referralPopUpConfig state =
         }
       }
   in popUpConfig'
+
+specialZoneInfoPopupConfig :: HU.SpecialZoneInfoPopUp -> RequestInfoCard.Config
+specialZoneInfoPopupConfig infoConfig = let
+  config = RequestInfoCard.config
+  specialZonePopupConfig = config{
+      title {
+        text = infoConfig.title
+      }
+    , primaryText {
+        text = infoConfig.primaryText,
+        padding = Padding 16 16 0 0,
+        textStyle = FontStyle.Body4,
+        color = Color.black700
+      }
+    , secondaryText {
+        text = infoConfig.secondaryText,
+        visibility = VISIBLE,
+        padding = PaddingLeft 16,
+        color = Color.black700,
+        textStyle = FontStyle.Body4,
+        width = (V $ JB.getWidthFromPercent 75)
+      }
+    , imageConfig {
+        imageUrl = fetchImage FF_ASSET infoConfig.icon,
+        height = V 130,
+        width = V 130,
+        padding = Padding 0 2 2 0
+      }
+    , buttonConfig {
+        text = infoConfig.primaryButtonText,
+        padding = PaddingVertical 16 20
+      }
+  }
+  in specialZonePopupConfig

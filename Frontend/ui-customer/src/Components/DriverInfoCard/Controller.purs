@@ -45,6 +45,7 @@ data Action = NoAction
             | BannerChanged String
             | BannerStateChanged String
             | BannerCarousel BannerCarousel.Action
+            | SpecialZoneInfoTag
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps

@@ -220,10 +220,6 @@ export const currentPosition = function (str) {
   }
 }
 
-export const toStringJSON = function (attr) {
-  return JSON.stringify(attr);
-};
-
 export const getTime = function (unit){
   return Date.now();
 }
@@ -261,6 +257,21 @@ export const storeCallBackTime = function (cb) {
         console.log("Error occurred in storeCallBackTime ------", error);
       }
     }
+  }
+}
+
+export const onMarkerClickCallbackMapper = function (cb) {
+  return function (action) {
+    try {
+      const callback = callbackMapper.map(function (tag, lat, lng) {
+        cb(action(tag)(lat)(lng))();
+      });
+      return callback;
+    }
+    catch (error){
+      console.log("Error occurred in onMarkerClickCallbackMapper ------", error);
+    }
+    return "";
   }
 }
 
@@ -510,4 +521,46 @@ export const renderSlider = function (cb) {
       window.JBridge.renderSlider(id, callback, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
     }
   }
+}
+
+export const stringifyGeoJson = function (geoJson) {
+  console.log("debug zone utils geoJson features", geoJson.features);
+  const features = geoJson.features;
+  // return JSON.stringify(geoJson);
+  for (let i=0; i<features.length; i++) {
+    const feature = features[i];
+    const properties = feature.properties;
+    for (const key in properties) {
+      if (properties[key]) {
+        console.log("debug zone utils", key);
+      }
+      console.log("debug zone utils key value",properties[key]);
+    }
+    feature.geometry = JSON.parse(feature.geometry);
+  }
+  geoJson.features = features;
+  return JSON.stringify(geoJson);
+}
+
+export const setSpecialLocationListImpl = function (map) {
+  const jsonString = JSON.stringify(map);
+  const unstring = JSON.parse(jsonString);
+  window.JBridge.setKeysInSharedPrefs("SPECIAL_LOCATION_LIST", jsonString);
+  return Array.from(unstring);
+}
+  
+export const getSpecialLocationListImpl = function (key){
+  const stringifiedMap=window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key); //  window.JBridge.getKeysInSharedPrefs(key);
+  if (stringifiedMap != "__failed" && stringifiedMap != "(null)") {
+    const unstring = JSON.parse(stringifiedMap);
+    return Array.from(unstring);
+  } 
+  console.log("err", stringifiedMap)
+  return stringifiedMap;
+}
+
+export const getGeoJsonImpl = function(stringGeoJson) {
+  const unstring = JSON.parse(stringGeoJson);
+  console.log("unstring", unstring);
+  return (unstring);
 }

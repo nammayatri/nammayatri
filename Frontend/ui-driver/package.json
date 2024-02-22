@@ -11,9 +11,9 @@
     "prod:android": "npm-run-all compile:purs \"bundle:android\"",
     "prod:ios": "npm-run-all compile:purs bundle:ios",
     "compileAndCreateJsa": "sh compileAndCreateJsa.sh",
-    "dev": "spago build --watch",
+    "dev": "spago build -w --purs-args '--purs=fastpurs'",
     "webpack-dev": "webpack-dev-server --env sandbox --mode development --config webpack.config.js --host",
-    "start": "npm-run-all -p dev webpack-dev",
+    "start": "concurrently \"npm:dev\" \"npm:webpack-dev\"",
     "clean": "sh cleanSpago.sh"
   },
   "author": "juspay",
@@ -40,7 +40,9 @@
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
-    "webpack-merge": "^5.8.0"
+    "webpack-merge": "^5.8.0",
+    "concurrently": "^6.2.0",
+    "hyper-purescript": "^0.0.19"
   },
   "dependencies": {
     "axios": ">=1.6.0",

@@ -53,6 +53,7 @@ import Foreign.Class (encode)
 import Effect.Aff (makeAff, nonCanceler, Fiber,  launchAff)
 import Prelude((<<<))
 import Effect.Class (liftEffect)
+import Common.Resources.Constants as Constant
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -114,7 +115,7 @@ foreign import renderBase64Image :: String -> String -> Boolean -> String -> Eff
 foreign import storeCallBackUploadMultiPartData :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
-foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
+foreign import drawRoute :: EffectFn9 Locations String String Boolean MarkerConfig MarkerConfig Int String MapRouteConfig (Effect Unit)
 foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
 foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
@@ -447,6 +448,12 @@ type LocateOnMapConfig = {
   , points :: (Array Location)
   , zoomLevel :: Number
   , labelId :: String
+  , markerCallbackForTags :: Array String
+  , markerCallback :: String
+  , specialZoneMarkerConfig :: SpecialZoneMarkerConfig
+  , navigateToNearestGate :: Boolean
+  , locationName :: String
+  , locateOnMapPadding :: LocateOnMapPadding
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -456,10 +463,66 @@ locateOnMapConfig = {
   , lon : 0.0
   , geoJson : ""
   , points : []
-  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+  , zoomLevel : Constant.zoomLevel
   , labelId : ""
+  , markerCallbackForTags : []
+  , markerCallback : ""
+  , specialZoneMarkerConfig : {
+        showLabel : false
+      , showLabelActionImage : false
+      , labelImage : ""
+      , labelActionImage : ""
+      , theme : "LIGHT"
+      , spotIcon : "ny_ic_zone_pickup_marker_green"
+      , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green"
+      , showZoneLabel : false
+      }
+  , navigateToNearestGate : true
+  , locationName : ""
+  , locateOnMapPadding : { left : 1.0, top : 1.0, right : 1.0, bottom : 1.0 }
 }
 
+type LocateOnMapPadding = {
+    left :: Number
+  , top :: Number
+  , right :: Number
+  , bottom :: Number
+}
+
+type SpecialZoneMarkerConfig = {
+    showLabelActionImage :: Boolean
+  , labelActionImage :: String
+  , theme :: String
+  , spotIcon :: String
+  , selectedSpotIcon :: String
+  , showLabel :: Boolean
+  , labelImage :: String
+  , showZoneLabel :: Boolean
+}
+
+type MarkerConfig = {
+    showPointer :: Boolean
+  , pointerIcon :: String
+  , primaryText :: String
+  , secondaryText :: String
+  , labelImage :: String
+  , labelActionImage :: String
+  , markerCallback :: String
+  , markerCallbackForTags :: Array String
+  , theme :: String
+}
+
+defaultMarkerConfig = {
+    showPointer : true
+  , pointerIcon : ""
+  , primaryText : ""
+  , secondaryText : ""
+  , labelImage : ""
+  , labelActionImage : ""
+  , markerCallback : ""
+  , markerCallbackForTags : []
+  , theme : "DARK"
+}
 
 type MapRouteConfig = {
     sourceSpecialTagIcon :: String

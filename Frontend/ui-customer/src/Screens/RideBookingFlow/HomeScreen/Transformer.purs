@@ -39,7 +39,7 @@ import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..), GateInfoFull(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -57,6 +57,9 @@ import Presto.Core.Types.Language.Flow (Flow(..), getLogFields)
 import ConfigProvider
 import Locale.Utils
 import Data.Either (Either(..))
+import Common.DefaultConfig as CC
+import Common.Types.Config as CCT
+import Engineering.Helpers.Utils (stringifyGeoJson)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -578,18 +581,19 @@ getSpecialTag specialTag =
   case specialTag of
     Just tag ->
       let zones = split (Pattern "_") tag
-          sourceTag = getZoneType $ zones DA.!! 0
-          destinationTag = getZoneType $ zones DA.!! 1
+          sourceTag = getZoneType $ fromMaybe "" (zones DA.!! 0)
+          destinationTag = getZoneType $ fromMaybe "" (zones DA.!! 1)
           priorityTag = if zones DA.!! 2 == Just "PriorityPickup" then sourceTag else destinationTag
       in { sourceTag : sourceTag, destinationTag : destinationTag, priorityTag : priorityTag}
     Nothing -> dummyZoneType
 
-getZoneType :: Maybe String -> ZoneType
+getZoneType :: String -> ZoneType
 getZoneType tag =
   case tag of
-    Just "SureMetro" -> METRO
-    Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
-    _                -> NOZONE
+    "SureMetro" -> METRO
+    "SureBlockedAreaForAutos" -> AUTO_BLOCKED
+    "SureShoppingMall" -> SPECIAL_PICKUP
+    _ -> NOZONE
 
 getTripFromRideHistory :: MyRidesScreenState -> Trip
 getTripFromRideHistory state = {
@@ -622,3 +626,28 @@ getActiveBooking = do
       Right (RideBookingListRes listResp) -> DA.head $ listResp.list
       Left _ -> Nothing
   
+-- gateInfoToGeoJsonFeature :: GatesInfo -> CCT.GeoJsonFeature
+-- gateInfoToGeoJsonFeature (Gates)
+
+transformGeoJsonFeature :: Maybe String -> Array GateInfoFull -> String
+transformGeoJsonFeature geoJson gateInfoFulls = 
+  case geoJson of
+    Just geoJson' -> stringifyGeoJson CC.defaultGeoJson { features = geoJsonFeatures }
+    Nothing       -> ""
+  where
+    geoJsonFeatures :: Array CCT.GeoJsonFeature
+    geoJsonFeatures = 
+      map (\(GateInfoFull gateInfoFull) -> 
+            CC.defaultGeoJsonFeature {
+                properties {
+                    name = gateInfoFull.name
+                  , id = gateInfoFull.id
+                  , defaultDriverExtra = fromMaybe 0 gateInfoFull.defaultDriverExtra
+                  , canQueueUpOnGate = fromMaybe false gateInfoFull.canQueueUpOnGate
+                }
+              , geometry = fromMaybe "" gateInfoFull.geoJson
+            }
+          ) gateInfoFulls
+      <> case geoJson of
+            Just geoJson' -> DA.singleton CC.defaultGeoJsonFeature{ geometry = geoJson' }
+            Nothing -> []

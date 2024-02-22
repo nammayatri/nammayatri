@@ -199,7 +199,7 @@ screen initialState =
                                 _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
-                                _ <- checkPermissionAndUpdateDriverMarker initialState
+                                _ <- checkPermissionAndUpdateDriverMarker initialState true
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 pure unit
@@ -306,6 +306,7 @@ driverMapsHeaderView push state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
+  -- , visibility if state.props.expandedMap then GONE else VISIBLE
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -324,11 +325,12 @@ driverMapsHeaderView push state =
           [ width MATCH_PARENT
           , height MATCH_PARENT
           ]$[  googleMap state
-            , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
+            , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment && not state.props.expandedMap) then offlineView push state else dummyTextView
             , linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
+              , visibility if state.props.expandedMap then GONE else VISIBLE
               ]$ [ linearLayout
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
@@ -356,6 +358,7 @@ driverMapsHeaderView push state =
               , orientation VERTICAL
               , background Color.transparent
               , gravity BOTTOM
+              , visibility if state.props.expandedMap then GONE else VISIBLE
               ] $ [addAadhaarOrOTPView state push] <> getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             ]
         ]

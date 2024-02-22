@@ -288,3 +288,6 @@ convertCoinToCash _ =  (getBaseUrl "") <> "/coins/convertCoinToCash"
 
 pushSDKEvents :: String -> String
 pushSDKEvents _ =  (getBaseUrl "") <> "/sdk/events"
+
+specialLocationList :: String -> String
+specialLocationList _ = (getBaseUrl "") <> "/specialLocation/list"

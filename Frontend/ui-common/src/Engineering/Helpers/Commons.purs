@@ -66,6 +66,8 @@ import Data.Number (pow, round)
 foreign import callAPI :: EffectFn7 String String String String Boolean Boolean String Unit
 foreign import callAPIWithOptions :: EffectFn8 String String String String Boolean Boolean String String Unit
 foreign import callbackMapper :: forall a. a -> String
+foreign import callbackMapper2 :: forall a. a -> String
+-- foreign import callbackMapper2 :: forall a. (String -> a) -> String
 foreign import atobImpl :: String -> String
 foreign import getWindowVariable :: forall a. String -> (a -> (Maybe a)) -> (Maybe a) -> Effect a
 foreign import setWindowVariableImpl :: forall a. String -> a -> Effect Unit
@@ -101,6 +103,7 @@ foreign import updateIdMap :: EffectFn1 String CarouselHolderData
 foreign import updatePushInIdMap :: Fn2 String Boolean Unit
 foreign import getValueFromIdMap :: EffectFn1 String CarouselHolderData
 foreign import getRandomID :: Int -> String
+foreign import toStringJSON :: forall a. a -> String
 
 foreign import isTrue :: forall a. a -> Boolean
 os :: String

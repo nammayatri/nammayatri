@@ -901,7 +901,7 @@ type HomeScreenStateProps =
   , findingRidesAgain :: Boolean
   , routeEndPoints :: Maybe RouteEndPoints
   , findingQuotesProgress :: Number
-  , confirmLocationCategory :: String
+  , confirmLocationCategory :: ZoneType
   , zoneTimerExpired :: Boolean
   , canSendSuggestion :: Boolean
   , sheetState :: Maybe BottomSheetState
@@ -939,6 +939,8 @@ type HomeScreenStateProps =
   , showShareRide :: Boolean
   , followsRide :: Boolean 
   , referral :: ReferralStatusProp
+  , locateOnMapProps :: LocateOnMapProps
+  , showSpecialZoneInfoPopup :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1609,6 +1611,7 @@ data ZoneType = METRO
               | RAILWAY
               | NOZONE
               | AUTO_BLOCKED
+              | SPECIAL_PICKUP
 
 derive instance genericZoneType :: Generic ZoneType _
 instance showZoneType :: Show ZoneType where show = genericShow
@@ -2039,7 +2042,7 @@ type SearchLocationScreenData =
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
-    confirmLocCategory :: String,
+    confirmLocCategory :: ZoneType,
     metroStations :: Array Station,
     updatedMetroStations :: Array Station
   }
@@ -2313,3 +2316,7 @@ type MetroTicketStatusScreenProps = {
 }
 
 data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicketsToMetroTicketStatus
+
+type LocateOnMapProps = {
+    locationName :: Maybe String
+}
