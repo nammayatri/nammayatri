@@ -56,7 +56,7 @@ import DecodeUtil (stringifyJSON)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2)
+import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2, runEffectFn9)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, setEventTimestamp, getTimeStampObject)
 import Engineering.Helpers.Commons as EHC
@@ -126,6 +126,8 @@ import Timers (clearTimerWithId)
 import RemoteConfig as RC
 import Locale.Utils
 import Data.Array as DA
+import Data.Map as DM
+import Effect.Unsafe (unsafePerformEffect)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -134,6 +136,14 @@ baseAppFlow baseFlow event = do
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
     checkTimeSettings
+    -- resp <- Remote.getSpecialLocationListBT API.SpecialLocationFullReq
+    -- _ <- pure $ spy "debug specialLocationList resp" resp
+
+    -- let transformedSpecialLocation = HU.transformSpecialLocationList resp
+    -- json <- pure $ HU.setSpecialLocationList transformedSpecialLocation
+    --     filteredKeys = DM.lookup "s01mtw0" transformedSpecialLocation
+    -- _ <- pure $ spy "debug transformedSpecialLocation transformedSpecialLocation" transformedSpecialLocation
+    -- _ <- pure $ spy "debug json" json
     cacheAppParameters versionCode baseFlow
     updateNightSafetyPopup
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
@@ -1940,13 +1950,15 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalNativeStore RIDE_ID id
           liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
-          void $ lift $ lift $ toggleLoader false
+          _ <- pure $ hideKeyboardOnNavigation true
+          _ <- pure $ JB.exitLocateOnMap ""
           _ <- updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
           _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
+          void $ lift $ lift $ toggleLoader false
           currentRideFlow Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -1968,9 +1980,10 @@ homeScreenFlow = do
           liftFlowBT $ logEvent logField_ "ny_driver_special_zone_ride_start"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
           _ <- pure $ hideKeyboardOnNavigation true
-          void $ lift $ lift $ toggleLoader false
+          _ <- pure $ JB.exitLocateOnMap ""
           void $ updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
+          void $ lift $ lift $ toggleLoader false
           currentRideFlow Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -2075,6 +2088,7 @@ homeScreenFlow = do
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
       void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
       _ <- pure $ removeAllPolylines ""
+      _ <- pure $ JB.exitLocateOnMap ""
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       void $ Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
@@ -2088,9 +2102,11 @@ homeScreenFlow = do
       homeScreenFlow
     FCM_NOTIFICATION notificationType state -> do
       _ <- pure $ removeAllPolylines ""
+      -- _ <- pure $ JB.exitLocateOnMap ""
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showGenericAccessibilityPopUp = false}})
       case notificationType of
         "CANCELLED_PRODUCT" -> do
+          _ <- pure $ JB.exitLocateOnMap ""
           _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
           _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
@@ -2101,9 +2117,10 @@ homeScreenFlow = do
           updateDriverDataToStates
           homeScreenFlow
         "DRIVER_ASSIGNMENT" -> do
+          -- _ <- pure $ JB.exitLocateOnMap ""
           let (GlobalState defGlobalState) = defaultGlobalState
           when (isJust defGlobalState.homeScreen.data.activeRide.disabilityTag) $ do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showAccessbilityPopup = true}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showAccessbilityPopup = true, currentGeoHash = ""}})
           currentRideFlow Nothing
         "RIDE_REQUESTED"    -> do
           _ <- updateStage $ HomeScreenStage RideRequested
@@ -2134,6 +2151,7 @@ homeScreenFlow = do
         Left _ -> pure unit
       homeScreenFlow
     UPDATE_ROUTE state -> do
+      _ <- pure $ JB.exitLocateOnMap ""
       let srcLat = if state.props.currentStage == RideAccepted then state.data.currentDriverLat else state.data.activeRide.src_lat
           srcLon = if state.props.currentStage == RideAccepted then state.data.currentDriverLon else state.data.activeRide.src_lon
           destLat = if state.props.currentStage == RideAccepted then state.data.activeRide.src_lat else state.data.activeRide.dest_lat
@@ -2141,37 +2159,57 @@ homeScreenFlow = do
           source = if state.props.currentStage == RideAccepted then "" else state.data.activeRide.source
           destination = if state.props.currentStage == RideAccepted then state.data.activeRide.source else state.data.activeRide.destination
           routeType = if state.props.currentStage == RideAccepted then "pickup" else "trip"
-      if state.props.showDottedRoute then do
+          srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = source }
+          destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_dest_marker", primaryText = destination }
+      if state.props.currentStage == RideAccepted then do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
+        let specialPickupZone = spy "debug zone UPDATE_ROUTE specialPickupZone" (HU.findSpecialPickupZone destLat destLon)
+        case specialPickupZone of
+          Just pickupZone -> do
+            _ <- pure $ removeAllPolylines ""
+            _ <- liftFlowBT $ showMarker "ny_ic_zone_pickup_marker_green" state.data.currentDriverLat state.data.currentDriverLon 100 0.5 0.5
+            let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = destLat
+                                                                                          , lon = destLon
+                                                                                          , geoJson = pickupZone.geoJson
+                                                                                          , points = pickupZone.gates
+                                                                                          , locationName = pickupZone.locationName
+                                                                                          , navigateToNearestGate = false
+                                                                                          , specialZoneMarkerConfig { showZoneLabel = true
+                                                                                                                    , labelImage = "ny_ic_city_police"
+                                                                                                                    , showLabelActionImage = true }
+                                                                                          , locateOnMapPadding = { left : 2.0, top : 2.0, right : 2.0, bottom : 4.0 } }
+            _ <- lift $ lift $ liftFlow $ JB.addMarker "ny_ic_zone_pickup_marker_green" 9.9 9.9 100 0.5 0.9
+            pure unit
+          Nothing -> pure unit
+      else if state.props.showDottedRoute then do
         let coors = (walkCoordinate srcLon srcLat destLon destLat)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
         _ <- pure $ removeAllPolylines ""
-        liftFlowBT $ drawRoute coors "DOT" "#323643" false "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-        homeScreenFlow
-        else if not null state.data.route then do
-          let shortRoute = (state.data.route !! 0)
-          case shortRoute of
-            Just (Route route) -> do
-              let coor = walkCoordinates route.points
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
-              pure $ removeMarker "ic_vehicle_side"
-              _ <- pure $ removeAllPolylines ""
-              liftFlowBT $ drawRoute coor "LineString" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-              pure unit
-            Nothing -> pure unit
-          homeScreenFlow
-          else do
-            GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
-            let shortRoute = (routeApiResponse !! 0)
-            case shortRoute of
-              Just (Route route) -> do
-                let coor = walkCoordinates route.points
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
-                pure $ removeMarker "ny_ic_auto"
-                _ <- pure $ removeAllPolylines ""
-                liftFlowBT $ drawRoute coor "ic_vehicle_side" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-                pure unit
-              Nothing -> pure unit
-            homeScreenFlow
+        void $ liftFlowBT $ runEffectFn9 drawRoute coors "DOT" "#323643" false srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+      else if not null state.data.route then do
+        let shortRoute = (state.data.route !! 0)
+        case shortRoute of
+          Just (Route route) -> do
+            let coor = walkCoordinates route.points
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
+            pure $ removeMarker "ic_vehicle_side"
+            _ <- pure $ removeAllPolylines ""
+            void $ liftFlowBT $ runEffectFn9 drawRoute coor "LineString" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            pure unit
+          Nothing -> pure unit
+      else do
+        GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
+        let shortRoute = (routeApiResponse !! 0)
+        case shortRoute of
+          Just (Route route) -> do
+            let coor = walkCoordinates route.points
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
+            pure $ removeMarker "ny_ic_auto"
+            _ <- pure $ removeAllPolylines ""
+            void $ liftFlowBT $ runEffectFn9 drawRoute coor "ic_vehicle_side" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            pure unit
+          Nothing -> pure unit
+      homeScreenFlow
     UPDATE_STAGE stage -> do
       _ <- updateStage $ HomeScreenStage stage
       homeScreenFlow
@@ -2259,6 +2297,12 @@ homeScreenFlow = do
       driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp, gotoPopupType = ST.NO_POPUP_VIEW})
       updateDriverDataToStates
+      homeScreenFlow
+    UPDATE_SPECIAL_LOCATION_LIST -> do
+      resp <- Remote.getSpecialLocationListBT API.SpecialLocationFullReq
+      _ <- pure $ spy "debug specialLocationList resp" resp
+      let transformedSpecialLocation = HU.transformSpecialLocationList resp
+      json <- pure $ HU.setSpecialLocationList transformedSpecialLocation
       homeScreenFlow
   homeScreenFlow
 

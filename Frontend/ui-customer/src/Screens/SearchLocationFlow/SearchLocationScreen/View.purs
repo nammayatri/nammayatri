@@ -174,6 +174,8 @@ confirmLocationView push state = let
               , stroke $ "1," <> Color.grey900
               , cornerRadii $ Corners 24.0 true true false false
               , background tagConfig.backgroundColor
+              , clickable $ MB.isJust tagConfig.infoPopUpConfig
+              , onClick push $ const $ SpecialZoneInfoTag
               ]
               [ linearLayout
                   [ width MATCH_PARENT

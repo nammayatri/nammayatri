@@ -3532,3 +3532,70 @@ instance standardDetectCityResp :: StandardEncode DetectCityResp where standardE
 instance showDetectCityResp :: Show DetectCityResp where show = genericShow
 instance decodeDetectCityResp :: Decode DetectCityResp where decode = defaultDecode
 instance encodeDetectCityResp  :: Encode DetectCityResp where encode = defaultEncode
+
+--------------------------------------------------------- specialLocation list --------------------------------------------------------------------------
+data SpecialLocationFullReq = SpecialLocationFullReq
+
+data SpecialLocationFullRes = SpecialLocationFullRes (Array SpecialLocationFull)
+
+newtype SpecialLocationFull = SpecialLocationFull
+  { locationName :: String
+  , category :: String
+  , merchantOperatingCityId :: Maybe String
+  , gatesInfo :: Array GateInfoFull
+  , gates :: Array GatesInfo
+  , geoJson :: Maybe String    
+  }
+
+newtype GatesInfo = GatesInfo {
+  name :: String,
+  point :: LatLong,
+  address :: Maybe String
+}
+
+newtype GateInfoFull = GateInfoFull {
+  address :: Maybe String,
+  canQueueUpOnGate :: Maybe Boolean,
+  defaultDriverExtra :: Maybe Int,
+  geoJson :: Maybe String,
+  name :: String,
+  point :: LatLong
+}
+
+instance makeSpecialLocationFullReq :: RestEndpoint SpecialLocationFullReq SpecialLocationFullRes where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.specialLocationList "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericSpecialLocationFullReq :: Generic SpecialLocationFullReq _
+instance standardEncodeSpecialLocationFullReq :: StandardEncode SpecialLocationFullReq where standardEncode (SpecialLocationFullReq) = standardEncode {}
+instance showSpecialLocationFullReq :: Show SpecialLocationFullReq where show = genericShow
+instance decodeSpecialLocationFullReq :: Decode SpecialLocationFullReq where decode = defaultDecode
+instance encodeSpecialLocationFullReq  :: Encode SpecialLocationFullReq where encode = defaultEncode
+
+derive instance genericSpecialLocationFullRes :: Generic SpecialLocationFullRes _
+instance standardEncodeSpecialLocationFullRes :: StandardEncode SpecialLocationFullRes where standardEncode (SpecialLocationFullRes res) = standardEncode res
+instance showSpecialLocationFullRes :: Show SpecialLocationFullRes where show = genericShow
+instance decodeSpecialLocationFullRes :: Decode SpecialLocationFullRes where decode = defaultDecode
+instance encodeSpecialLocationFullRes  :: Encode SpecialLocationFullRes where encode = defaultEncode
+
+derive instance genericSpecialLocationFull :: Generic SpecialLocationFull _
+derive instance newtypeSpecialLocationFull :: Newtype SpecialLocationFull _
+instance standardEncodeSpecialLocationFull :: StandardEncode SpecialLocationFull where standardEncode (SpecialLocationFull req) = standardEncode req
+instance showSpecialLocationFull :: Show SpecialLocationFull where show = genericShow
+instance decodeSpecialLocationFull :: Decode SpecialLocationFull where decode = defaultDecode
+instance encodeSpecialLocationFull :: Encode SpecialLocationFull where encode = defaultEncode
+
+derive instance genericGatesInfo :: Generic GatesInfo _
+derive instance newtypeGatesInfo:: Newtype GatesInfo _
+instance standardEncodeGatesInfo :: StandardEncode GatesInfo where standardEncode (GatesInfo req) = standardEncode req
+instance showGatesInfo :: Show GatesInfo where show = genericShow
+instance decodeGatesInfo :: Decode GatesInfo where decode = defaultDecode
+instance encodeGatesInfo :: Encode GatesInfo where encode = defaultEncode
+
+derive instance genericGateInfoFull :: Generic GateInfoFull _
+derive instance newtypeGateInfoFull:: Newtype GateInfoFull _
+instance standardEncodeGateInfoFull :: StandardEncode GateInfoFull where standardEncode (GateInfoFull req) = standardEncode req
+instance showGateInfoFull :: Show GateInfoFull where show = genericShow
+instance decodeGateInfoFull :: Decode GateInfoFull where decode = defaultDecode
+instance encodeGateInfoFull :: Encode GateInfoFull where encode = defaultEncode

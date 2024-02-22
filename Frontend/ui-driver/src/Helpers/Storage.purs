@@ -126,6 +126,7 @@ data KeyStore = USER_NAME
                 | T_AND_C_VERSION
                 | NIGHT_SAFETY_POP_UP
                 | REFERRER_URL
+                | SPECIAL_LOCATION_LIST
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

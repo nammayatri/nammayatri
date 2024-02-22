@@ -470,6 +470,9 @@
       "rounded_corner_background" : true,
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ny_ic_white_info" : true,
+      "ny_ic_location_pin_white" : true,
+      "ny_ic_sp_pickup_zone_map" : true
    }
 }

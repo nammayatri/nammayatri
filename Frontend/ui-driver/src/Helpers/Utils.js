@@ -522,3 +522,45 @@ export const renderSlider = function (cb) {
     }
   }
 }
+
+export const stringifyGeoJson = function (geoJson) {
+  console.log("debug zone utils geoJson features", geoJson.features);
+  const features = geoJson.features;
+  // return JSON.stringify(geoJson);
+  for (let i=0; i<features.length; i++) {
+    const feature = features[i];
+    const properties = feature.properties;
+    for (const key in properties) {
+      if (properties[key]) {
+        console.log("debug zone utils", key);
+      }
+      console.log("debug zone utils key value",properties[key]);
+    }
+    feature.geometry = JSON.parse(feature.geometry);
+  }
+  geoJson.features = features;
+  return JSON.stringify(geoJson);
+}
+
+export const setSpecialLocationListImpl = function (map) {
+  const jsonString = JSON.stringify(map);
+  const unstring = JSON.parse(jsonString);
+  window.JBridge.setKeysInSharedPrefs("SPECIAL_LOCATION_LIST", jsonString);
+  return Array.from(unstring);
+}
+  
+export const getSpecialLocationListImpl = function (key){
+  const stringifiedMap=window.JBridge.getKeysInSharedPref ? window.JBridge.getKeysInSharedPref(key) : window.JBridge.getKeysInSharedPrefs(key); //  window.JBridge.getKeysInSharedPrefs(key);
+  if (stringifiedMap != "__failed" && stringifiedMap != "(null)") {
+    const unstring = JSON.parse(stringifiedMap);
+    return Array.from(unstring);
+  } 
+  console.log("err", stringifiedMap)
+  return stringifiedMap;
+}
+
+export const getGeoJsonImpl = function(stringGeoJson) {
+  const unstring = JSON.parse(stringGeoJson);
+  console.log("unstring", unstring);
+  return (unstring);
+}

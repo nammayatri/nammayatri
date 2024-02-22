@@ -28,10 +28,10 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (runEffectFn1, runEffectFn9)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap, safeMarginTopWithDefault, screenWidth, safeMarginBottomWithDefault, safeMarginTop)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer)
-import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig)
+import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig, defaultMarkerConfig)
 import Mobility.Prelude (boolToVisibility)
 import Prelude
 import PrestoDOM (PrestoDOM, Screen, BottomSheetState(..), onAnimationEnd, onBackPressed, onClick)
@@ -715,8 +715,10 @@ driverLocationTracking push action duration id routeState = do
               newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
 
               point = { lat: srcLat, lng: srcLon }
+              srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
+              destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = ride.destination }
             addSosMarkers state.data.sosStatus point
-            liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ride.destination specialLocationTag
+            _ <- liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
             liftFlow $ animateCamera srcLat srcLon 17.0 "ZOOM"
             void $ delay $ Milliseconds duration
             void
@@ -855,17 +857,12 @@ updateMockData push state = defaultMockFlow
 
   drawDriverRoute :: DriverInfoCard -> Paths -> Maybe Route -> Flow GlobalState Unit
   drawDriverRoute ride srcPoint route = do
-    let
-      srcLat = srcPoint.lat
-
-      srcLon = srcPoint.lng
-
-      dstLat = ride.destinationLat
-
-      dstLon = ride.destinationLng
-    void $ runExceptT $ runBackT $ drawMapRoute srcLat srcLon dstLat dstLon (normalRoute "") "NORMAL" (getString SOS_LOCATION) (getString DROP) route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig) { autoZoom = false }
+    let markers = normalRoute ""
+        srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = getString SOS_LOCATION }
+        destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getString DROP }
+    void $ runExceptT $ runBackT $ drawMapRoute srcPoint.lat srcPoint.lng ride.destinationLat ride.destinationLng srcMarkerConfig destMarkerConfig "NORMAL" route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig) { autoZoom = false }
     liftFlow $ addAndUpdateSOSRipples srcPoint
-    liftFlow $ animateCamera srcLat srcLon 17.0 "ZOOM"
+    liftFlow $ animateCamera srcPoint.lat srcPoint.lng 17.0 "ZOOM"
 
   getPoint :: GetDriverLocationResp -> Paths
   getPoint (GetDriverLocationResp resp) = { lat: resp ^. _lat, lng: resp ^. _lon }

@@ -258,6 +258,8 @@ driverInfoView push state =
                 , orientation HORIZONTAL
                 , padding (PaddingVertical 6 6)
                 , visibility $ boolToVisibility $ state.props.zoneType /= NOZONE
+                , clickable $ isJust tagConfig.infoPopUpConfig
+                , onClick push $ const $ SpecialZoneInfoTag
                 ][imageView
                   [ width (V 15)
                   , height (V 15)
@@ -273,6 +275,13 @@ driverInfoView push state =
                   , accessibilityHint "Metro Ride"
                   , text tagConfig.text
                   , color Color.white900
+                  ]
+                , imageView
+                  [ width (V 18)
+                  , height (V 18)
+                  , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
+                  , margin (MarginLeft 6)
+                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_info"
                   ]
                 ]
               , linearLayout

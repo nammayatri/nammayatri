@@ -940,6 +940,7 @@ type HomeScreenStateProps =
   , followsRide :: Boolean 
   , referral :: ReferralStatusProp
   , locateOnMapProps :: LocateOnMapProps
+  , showSpecialZoneInfoPopup :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

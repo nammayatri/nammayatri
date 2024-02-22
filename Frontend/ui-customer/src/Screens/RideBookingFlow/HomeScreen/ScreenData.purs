@@ -299,6 +299,7 @@ initData = {
         referralCode : Nothing
       }
     , locateOnMapProps : { locationName : Nothing }
+    , showSpecialZoneInfoPopup : false
     }
 }
 

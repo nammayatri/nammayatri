@@ -361,6 +361,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GOTO_LOCATION_FLOW HomeScreenState Boolean
                           | REFRESH_GOTO HomeScreenState
                           | GO_TO_EARNINGS_SCREEN
+                          | UPDATE_SPECIAL_LOCATION_LIST
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

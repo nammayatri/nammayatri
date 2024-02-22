@@ -202,6 +202,7 @@ type SpecialZoneInfoPopUp = {
   , primaryText :: String
   , secondaryText :: String
   , primaryButtonText :: String
+  , icon :: String
 }
 
 convertUTCToISTAnd12HourFormat :: String -> Maybe String
@@ -774,9 +775,13 @@ specialZoneTagConfig :: ZoneType -> SpecialZoneTagConfig
 specialZoneTagConfig zoneType =
   case zoneType of
     SPECIAL_PICKUP -> 
-      { icon : "ny_ic_zone_walk"
+      { icon : "ny_ic_location_pin_white"
       , text : if isLocalStageOn ConfirmingLocation then "Special Pickup Zone" else "Special Pickup Zone Ride"
-      , infoPopUpConfig : Nothing
+      , infoPopUpConfig : Just $ { title : "Special Pickup Zone"
+                                 , primaryText : "We will try to connect you with a driver in the closest special pickup zone."
+                                 , secondaryText : "This provides you an instant pickup experience."
+                                 , primaryButtonText : getString GOT_IT
+                                 , icon : "ny_ic_sp_pickup_zone_map" }
       , backgroundColor : Color.green900
       }
     AUTO_BLOCKED -> 
@@ -797,3 +802,10 @@ specialZoneTagConfig zoneType =
       , infoPopUpConfig : Nothing
       , backgroundColor : Color.blue800
       }
+
+zoneLabelIcon :: ZoneType -> String
+zoneLabelIcon zoneType =
+  case zoneType of
+    SPECIAL_PICKUP -> "ny_ic_city_police"
+    METRO -> "ny_ic_metro_white"
+    _ -> ""

@@ -49,10 +49,10 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4, runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
-import Engineering.Helpers.Utils (saveObject, encodeGeohash)
+import Engineering.Helpers.Utils (saveObject, encodeGeohash, geohashNeighbours)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -265,6 +265,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
                     | EarningsScreen ST.HomeScreenState Boolean
+                    | UpdateSpecialLocationList ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -367,6 +368,7 @@ data Action = NoAction
             | CustomerSafetyPopupAC PopUpModal.Action
             | UpdateLastLoc Number Number Boolean
             | OnMarkerClickCallBack String String String
+            | UpdateSpecialLocation
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -506,7 +508,7 @@ eval (Notification notificationType) state = do
     void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "true"
     continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
   else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED]) then do
-      exit $ FcmNotification notificationType state
+      exit $ FcmNotification notificationType state{ props {currentGeoHash = ""} }
   else continue state
 
 eval CancelGoOffline state = do
@@ -516,8 +518,14 @@ eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = s
 
 eval (ShowMap key lat lon) state = continueWithCmd state [ do
   id <- checkPermissionAndUpdateDriverMarker state true
-  pure AfterRender
+  if (getValueToLocalStore SPECIAL_LOCATION_LIST == "__failed") then
+    pure UpdateSpecialLocation
+  else pure AfterRender
+  -- pure AfterRender
   ]
+
+eval UpdateSpecialLocation state = exit $ UpdateSpecialLocationList state
+
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
     "Rides" -> exit $ GoToRidesScreen state
@@ -843,19 +851,24 @@ eval (TimeUpdate time lat lng) state = do
   let driverLat = getLastKnownLocValue ST.LATITUDE lat
       driverLong = getLastKnownLocValue ST.LONGITUDE lng
       geoHash = spy "debug zone geoHash" (Uncurried.runFn3 encodeGeohash driverLat driverLong 7)
-      nearestZone = spy "debug zone findNearestZone" (findNearestZone geoHash)
+      geoHashNeighbours = spy "debug zone geoHash" ((geohashNeighbours geoHash) <> [geoHash])
+      -- nearestZone = findNearestSpecialZone driverLat driverLong
+      nearestZone = case state.props.currentStage of 
+                      ST.HomeScreen -> spy "debug zone findNearestSpecialZone" (findNearestSpecialZone driverLat driverLong)
+                      _ -> Nothing
       newState = state { data = state.data { currentDriverLat= driverLat,  currentDriverLon = driverLong, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
 
   void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show newState.data.activeRide.notifiedCustomer)
   void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
-  continueWithCmd newState{ props{ currentGeoHash = geoHash } } [ do
+  continueWithCmd newState{ props{ currentGeoHash = if isJust nearestZone then geoHash else "" } } [ do
     if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then
       case nearestZone of
         Just zone -> do
           if state.props.currentGeoHash /= geoHash then do
             void $ launchAff $ flowRunner defaultGlobalState $ do
               push <- liftFlow $ getPushFn Nothing "HomeScreen"
-              let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap zone.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"]}
+              _ <- pure $ JB.exitLocateOnMap ""
+              let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"], geoJson = zone.geoJson, points = zone.gates, locationName = zone.locationName, navigateToNearestGate = false, specialZoneMarkerConfig{ showZoneLabel = true, labelActionImage = "ny_ic_navigation_blue_frame", labelImage = "ny_ic_city_police", showLabelActionImage = true } }
               pure unit
             pure unit
           else pure unit
@@ -873,6 +886,10 @@ eval (TimeUpdate time lat lng) state = do
 
 eval (OnMarkerClickCallBack tag lat lon) state = do
   _ <- pure $ spy "debug zone OnMarkerClickCallBack lat" lat
+  case Number.fromString lat, Number.fromString lat of
+    Just lat', Just lon' -> 
+      void $ pure $ openNavigation 0.0 0.0 lat' lon' "WALK"
+    _, _ -> pure unit
   continue state
 
 eval (UpdateLastLoc lat lon val) state = do
@@ -1331,80 +1348,81 @@ checkTwoDriverHeartbeats locationArray pickupLoc thresholdDist state =
   
 ----------------------------------------------------------------------------------------  multipolygon ----------------------------------------------------------------------------------------------------
 
-findNearestZone :: String -> Maybe NearestZone
-findNearestZone _geoHash =
-  (Array.filter (\geoJson -> Array.length ( Array.filter (\geoHash -> geoHash == _geoHash) geoJson.geoHashes ) > 0 ) testGeoJsons) Array.!! 0
+-- findNearestZone :: String -> Maybe NearestZone
+-- findNearestZone _geoHash =
+--   (Array.filter (\geoJson -> Array.length ( Array.filter (\geoHash -> geoHash == _geoHash) geoJson.geoHashes ) > 0 ) testGeoJsons) Array.!! 0
 
 
-testDefaultLocateOnMapConfig :: JB.LocateOnMapConfig
-testDefaultLocateOnMapConfig = {
-    goToCurrentLocation : false
-  , lat : 0.0
-  , lon : 0.0
-  , geoJson : ""
-  , points : []
-  , zoomLevel : 17.0
-  , labelId : getNewIDWithTag "LocateOnMapPin"
-  , markerCallbackForTags : []
-  , markerCallback : "" 
-  , specialZoneMarkerConfig : {
-        showLabelActionImage : true
-      , labelActionImage : "ny_ic_navigation_blue_frame"
-      , theme : "DARK"
-      , spotIcon : "ny_ic_zone_pickup_marker_green"
-      , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green" 
-      , showLabel : false
-      , labelImage : ""
-    }
-  , navigateToNearestGate : false
-  , locationName : ""
-}
+-- testDefaultLocateOnMapConfig :: JB.LocateOnMapConfig
+-- testDefaultLocateOnMapConfig = {
+--     goToCurrentLocation : false
+--   , lat : 0.0
+--   , lon : 0.0
+--   , geoJson : ""
+--   , points : []
+--   , zoomLevel : 17.0
+--   , labelId : getNewIDWithTag "LocateOnMapPin"
+--   , markerCallbackForTags : []
+--   , markerCallback : "" 
+--   , specialZoneMarkerConfig : {
+--         showLabelActionImage : true
+--       , labelActionImage : "ny_ic_navigation_blue_frame"
+--       , theme : "DARK"
+--       , spotIcon : "ny_ic_zone_pickup_marker_green"
+--       , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green" 
+--       , showLabel : false
+--       , showZoneLabel : true
+--       , labelImage : ""
+--     }
+--   , navigateToNearestGate : false
+--   , locationName : ""
+-- }
 
-testDefaultGate :: JB.Location
-testDefaultGate = {
-  lat : 12.942158,
-  lng : 77.621966,
-  place : "gate2",
-  address : Nothing,
-  city : Nothing
-}
+-- testDefaultGate :: JB.Location
+-- testDefaultGate = {
+--   lat : 12.942158,
+--   lng : 77.621966,
+--   place : "gate2",
+--   address : Nothing,
+--   city : Nothing
+-- }
 
-testGeoJsons :: Array NearestZone
-testGeoJsons = [
-  { locateOnMapConfig : testDefaultLocateOnMapConfig
-                          { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[[77.62169214923057,12.942371885297348],[77.62190544485338,12.941706210794209],[77.62255491804086,12.941974816509628],[77.62215708575593,12.942610126267724],[77.62169214923057,12.942371885297348]]]],\"type\":\"MultiPolygon\"},\"id\":0},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[[77.6217592534947,12.942332178435294],[77.62188387565658,12.941991166401266],[77.62199891149822,12.94208225870267],[77.62185511669583,12.942362542498316],[77.6217592534947,12.942332178435294]]]],\"type\":\"MultiPolygon\"},\"id\":1},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[[77.6222050173796,12.942196707957578],[77.62237038140256,12.941830003017529],[77.62257648728394,12.941909416871766],[77.62233682928166,12.942294807276923],[77.6222050173796,12.942196707957578]]]],\"type\":\"MultiPolygon\"},\"id\":2}]}"
-                          , points =  [ testDefaultGate{ lat = 12.941971, lng = 77.622205, place = "gate1" }
-                                      , testDefaultGate{ lat = 12.942158, lng = 77.621966, place = "gate2" }
-                                      ]
-                          }
-  , geoHashes : ["tdr1wk4"]
-  },
-  { locateOnMapConfig : testDefaultLocateOnMapConfig
-                          { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[77.61907855324631,12.938575704209512],[77.61958085186257,12.938294985602468],[77.62026931709897,12.939513712873875],[77.61991103417085,12.939780736593036],[77.61907855324631,12.938575704209512]]],\"type\":\"Polygon\"},\"id\":0},{\"type\":\"Feature\",\"properties\":{\"name\":\"park_gate_1\"},\"geometry\":{\"coordinates\":[[[77.6191558299571,12.938609938164404],[77.61954923866404,12.938370300381607],[77.61989698386026,12.938989934748207],[77.61954572608528,12.939178221129112],[77.6191558299571,12.938609938164404]]],\"type\":\"Polygon\"}}]}"
-                          , points =  [ testDefaultGate{ lat = 12.93920903161839, lng = 77.61953518834082, place = "park_gate_1" }
-                                      ]
-                          }
-  , geoHashes : ["tdr1w78"]
-  },
-  { locateOnMapConfig : testDefaultLocateOnMapConfig
-                          { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[77.61752881823742,12.936089864192923],[77.61840802462649,12.935898099878699],[77.61847538317943,12.936069132923222],[77.61782484135676,12.936402560642108],[77.61757136048266,12.93630408721721],[77.61752881823742,12.936089864192923]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate_1\"},\"geometry\":{\"coordinates\":[[[77.61764580941013,12.936114050673126],[77.61789574509771,12.936038036014338],[77.6179914651479,12.93626089710591],[77.61770253240331,12.936331728884454],[77.61764580941013,12.936114050673126]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate_2\"},\"geometry\":{\"coordinates\":[[[77.61833712088549,12.936020759952441],[77.61833534829145,12.935879096200125],[77.61859591954021,12.935879096200125],[77.61859414694624,12.936013849527527],[77.61833712088549,12.936020759952441]]],\"type\":\"Polygon\"}}]}"
-                          , points =  [ testDefaultGate{ lat = 12.936345549716506, lng = 77.61792410659348, place = "gate_1" }
-                                      , testDefaultGate{ lat = 12.936089864192923, lng = 77.61843638612231, place = "gate_2" }
-                                      ]
-                          }
-  , geoHashes : ["tdr1w4z", "tdr1w6b"]
-  },
-  { locateOnMapConfig : testDefaultLocateOnMapConfig
-                          { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[77.61939837550148,12.945347517395206],[77.62041061767411,12.944620313685135],[77.62071139820523,12.94501210199357],[77.62069115336186,12.945138939804025],[77.62004042625148,12.945395433844197],[77.62007223957653,12.94567729512282],[77.61991317294883,12.945781583714975],[77.61974832208085,12.945806951204148],[77.61956901061097,12.94565474623272],[77.61939837550148,12.945347517395206]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[77.62002018140811,12.945567369262875],[77.62006356321496,12.945668839288928],[77.61975410632232,12.945804132594759],[77.619404159743,12.945361610470016],[77.61944464942962,12.945322149859308],[77.61980905661198,12.945744941783161],[77.62002018140811,12.945567369262875]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[77.62049448916878,12.94517558182605],[77.62064487943496,12.945068474361477],[77.6203412067826,12.944673867518333],[77.62040483343378,12.944620313685135],[77.62070850608507,12.945014920613048],[77.62068826124175,12.945138939804025],[77.62049448916878,12.94517558182605]]],\"type\":\"Polygon\"}}]}"
-                          , points =  [ testDefaultGate{ lat = 12.945324968475319, lng = 77.61947357063451, place = "gate1" }
-                                      , testDefaultGate{ lat = 12.944716146853409, lng = 77.62032674617944, place = "gate2" }
-                                      ]
-                          }
-  , geoHashes : ["tdr1wk8", "tdr1wk9"]
-  }
-]
+-- testGeoJsons :: Array NearestZone
+-- testGeoJsons = [
+--   { locateOnMapConfig : testDefaultLocateOnMapConfig
+--                           { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"name\":\"\"},\"geometry\":{\"coordinates\":[[[[77.62169214923057,12.942371885297348],[77.62190544485338,12.941706210794209],[77.62255491804086,12.941974816509628],[77.62215708575593,12.942610126267724],[77.62169214923057,12.942371885297348]]]],\"type\":\"MultiPolygon\"},\"id\":0},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[[77.6217592534947,12.942332178435294],[77.62188387565658,12.941991166401266],[77.62199891149822,12.94208225870267],[77.62185511669583,12.942362542498316],[77.6217592534947,12.942332178435294]]]],\"type\":\"MultiPolygon\"},\"id\":1},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[[77.6222050173796,12.942196707957578],[77.62237038140256,12.941830003017529],[77.62257648728394,12.941909416871766],[77.62233682928166,12.942294807276923],[77.6222050173796,12.942196707957578]]]],\"type\":\"MultiPolygon\"},\"id\":2}]}"
+--                           , points =  [ testDefaultGate{ lat = 12.941971, lng = 77.622205, place = "gate1" }
+--                                       , testDefaultGate{ lat = 12.942158, lng = 77.621966, place = "gate2" }
+--                                       ]
+--                           }
+--   , geoHashes : ["tdr1wk4"]
+--   },
+--   { locateOnMapConfig : testDefaultLocateOnMapConfig
+--                           { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"name\":\"\"},\"geometry\":{\"coordinates\":[[[77.61907855324631,12.938575704209512],[77.61958085186257,12.938294985602468],[77.62026931709897,12.939513712873875],[77.61991103417085,12.939780736593036],[77.61907855324631,12.938575704209512]]],\"type\":\"Polygon\"},\"id\":0},{\"type\":\"Feature\",\"properties\":{\"name\":\"park_gate_1\"},\"geometry\":{\"coordinates\":[[[77.6191558299571,12.938609938164404],[77.61954923866404,12.938370300381607],[77.61989698386026,12.938989934748207],[77.61954572608528,12.939178221129112],[77.6191558299571,12.938609938164404]]],\"type\":\"Polygon\"}}]}"
+--                           , points =  [ testDefaultGate{ lat = 12.93920903161839, lng = 77.61953518834082, place = "park_gate_1" }
+--                                       ]
+--                           }
+--   , geoHashes : ["tdr1w78"]
+--   },
+--   { locateOnMapConfig : testDefaultLocateOnMapConfig
+--                           { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"name\":\"\"},\"geometry\":{\"coordinates\":[[[77.61752881823742,12.936089864192923],[77.61840802462649,12.935898099878699],[77.61847538317943,12.936069132923222],[77.61782484135676,12.936402560642108],[77.61757136048266,12.93630408721721],[77.61752881823742,12.936089864192923]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate_1\"},\"geometry\":{\"coordinates\":[[[77.61764580941013,12.936114050673126],[77.61789574509771,12.936038036014338],[77.6179914651479,12.93626089710591],[77.61770253240331,12.936331728884454],[77.61764580941013,12.936114050673126]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate_2\"},\"geometry\":{\"coordinates\":[[[77.61833712088549,12.936020759952441],[77.61833534829145,12.935879096200125],[77.61859591954021,12.935879096200125],[77.61859414694624,12.936013849527527],[77.61833712088549,12.936020759952441]]],\"type\":\"Polygon\"}}]}"
+--                           , points =  [ testDefaultGate{ lat = 12.936345549716506, lng = 77.61792410659348, place = "gate_1" }
+--                                       , testDefaultGate{ lat = 12.936089864192923, lng = 77.61843638612231, place = "gate_2" }
+--                                       ]
+--                           }
+--   , geoHashes : ["tdr1w4z", "tdr1w6b"]
+--   },
+--   { locateOnMapConfig : testDefaultLocateOnMapConfig
+--                           { geoJson = "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"name\":\"\"},\"geometry\":{\"coordinates\":[[[77.61939837550148,12.945347517395206],[77.62041061767411,12.944620313685135],[77.62071139820523,12.94501210199357],[77.62069115336186,12.945138939804025],[77.62004042625148,12.945395433844197],[77.62007223957653,12.94567729512282],[77.61991317294883,12.945781583714975],[77.61974832208085,12.945806951204148],[77.61956901061097,12.94565474623272],[77.61939837550148,12.945347517395206]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[77.62002018140811,12.945567369262875],[77.62006356321496,12.945668839288928],[77.61975410632232,12.945804132594759],[77.619404159743,12.945361610470016],[77.61944464942962,12.945322149859308],[77.61980905661198,12.945744941783161],[77.62002018140811,12.945567369262875]]],\"type\":\"Polygon\"}},{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[77.62049448916878,12.94517558182605],[77.62064487943496,12.945068474361477],[77.6203412067826,12.944673867518333],[77.62040483343378,12.944620313685135],[77.62070850608507,12.945014920613048],[77.62068826124175,12.945138939804025],[77.62049448916878,12.94517558182605]]],\"type\":\"Polygon\"}}]}"
+--                           , points =  [ testDefaultGate{ lat = 12.945324968475319, lng = 77.61947357063451, place = "gate1" }
+--                                       , testDefaultGate{ lat = 12.944716146853409, lng = 77.62032674617944, place = "gate2" }
+--                                       ]
+--                           }
+--   , geoHashes : ["tdr1wk8", "tdr1wk9"]
+--   }
+-- ]
 
-type NearestZone = {
-  locateOnMapConfig :: JB.LocateOnMapConfig,
-  geoHashes :: Array String
-}
+-- type NearestZone = {
+--   locateOnMapConfig :: JB.LocateOnMapConfig,
+--   geoHashes :: Array String
+-- }

@@ -61,7 +61,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn2)
+import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (showAndHideLoader)
@@ -70,7 +70,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, defaultMarkerConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -415,7 +415,8 @@ view push state =
             , if state.data.waitTimeInfo && state.props.currentStage == RideAccepted then waitTimeInfoPopUp push state else emptyTextView state
             , if showSafetyAlertPopup then safetyAlertPopup push state else  emptyTextView state
             , if state.props.showShareRide then shareRidePopup push state else emptyTextView state
-            , if state.props.referral.referralStatus /= NO_REFERRAL then referralPopUp push state else emptyTextView state 
+            , if state.props.referral.referralStatus /= NO_REFERRAL then referralPopUp push state else emptyTextView state
+            , if state.props.showSpecialZoneInfoPopup then specialZoneInfoPopup push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -1509,6 +1510,8 @@ estimatedFareView push state =
       , gravity CENTER
       , padding (PaddingVertical 4 4)
       , visibility if state.props.zoneType.priorityTag /= NOZONE then VISIBLE else GONE
+      , clickable $ isJust tagConfig.infoPopUpConfig
+      , onClick push $ const $ SpecialZoneInfoTag
       ] [ imageView
           [ width (V 15)
           , height (V 15)
@@ -1521,6 +1524,13 @@ estimatedFareView push state =
           , textSize FontSize.a_14
           , text tagConfig.text
           , color Color.white900
+          ]
+        , imageView
+          [ width (V 18)
+          , height (V 18)
+          , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
+          , margin (MarginLeft 6)
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_info"
           ]
         ]
     , linearLayout
@@ -2072,9 +2082,11 @@ confirmPickUpLocationView push state =
             , padding (Padding zonePadding 4 zonePadding 4)
             , cornerRadii $ Corners 24.0 true true false false
             , visibility if state.props.confirmLocationCategory /= NOZONE then VISIBLE else GONE
+            , clickable $ isJust tagConfig.infoPopUpConfig
+            , onClick push $ const $ SpecialZoneInfoTag
             ] [ imageView
-                [ width (V 20)
-                , height (V 20)
+                [ width (V 15)
+                , height (V 15)
                 , margin (MarginRight 6)
                 , imageWithFallback $ fetchImage FF_ASSET tagConfig.icon
                 ]
@@ -2085,6 +2097,13 @@ confirmPickUpLocationView push state =
                 , textSize FontSize.a_14
                 , text tagConfig.text
                 , color Color.white900
+                ]
+              , imageView
+                [ width (V 18)
+                , height (V 18)
+                , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
+                , margin (MarginLeft 6)
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_info"
                 ]
               ]
         , linearLayout
@@ -3044,9 +3063,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                       specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
             if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
+                let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
+                    destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker }
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 _ <- pure $ removeAllPolylines ""
-                _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" specialLocationTag
+                _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
                 void $ delay $ Milliseconds duration
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
                 pure unit
@@ -3064,7 +3085,9 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                         else
                                           walkCoordinate srcLat srcLon dstLat dstLon
                             newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
-                        liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance (state.props.currentStage == RideStarted)) specialLocationTag
+                            srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
+                            destmarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = metersToKm routes.distance (state.props.currentStage == RideStarted) }
+                        _ <- liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destmarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
                         _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                         void $ delay $ Milliseconds duration
                         driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState
@@ -4504,3 +4527,15 @@ referralPopUp push state =
   , width MATCH_PARENT
   , background Color.blackLessTrans
   ][PopUpModal.view (push <<< PopUpModalReferralAction) (referralPopUpConfig state)]
+
+specialZoneInfoPopup :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+specialZoneInfoPopup push state =
+  let tagConfig = specialZoneTagConfig state.props.confirmLocationCategory
+  in case tagConfig.infoPopUpConfig of
+        Just infoPopUpConfig -> 
+          PrestoAnim.animationSet [ Anim.fadeIn true ]
+            $ linearLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (specialZoneInfoPopupConfig infoPopUpConfig) ]
+        Nothing -> emptyTextView state
