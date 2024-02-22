@@ -84,10 +84,6 @@ onCancel ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
-  case cancellationSource_ of
-    Just Enums.CONSUMER -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
-    Just Enums.PROVIDER -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
-    _ -> pure ()
   let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) (castCancellatonSource cancellationSource_) booking.merchantId
   fork "incrementing fraud counters" $ do
     let merchantOperatingCityId = booking.merchantOperatingCityId
@@ -95,9 +91,12 @@ onCancel ValidatedBookingCancelledReq {..} = do
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   case mbRide of
     Just ride -> do
+      case cancellationSource_ of
+        Just Enums.CONSUMER -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
+        Just Enums.PROVIDER -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
+        _ -> pure ()
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
-    Nothing -> do
-      logDebug "No ride found for the booking."
+    Nothing -> logDebug "No ride found for the booking."
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   unless (booking.status == SRB.CANCELLED) $ void $ QRB.updateStatus booking.id SRB.CANCELLED
