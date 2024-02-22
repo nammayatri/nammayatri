@@ -41,6 +41,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     manufacturerModel :: Maybe Text,
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
+    reviewedAt :: Maybe UTCTime,
     reviewRequired :: Maybe Bool,
     verificationStatus :: VerificationStatus,
     fleetOwnerId :: Maybe Text,
@@ -71,6 +72,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     reviewRequired :: Maybe Bool,
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
+    reviewedAt :: Maybe UTCTime,
     verificationStatus :: VerificationStatus,
     fleetOwnerId :: Maybe Text,
     createdAt :: UTCTime

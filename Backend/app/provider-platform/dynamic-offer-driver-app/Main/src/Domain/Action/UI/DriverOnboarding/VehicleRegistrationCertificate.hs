@@ -169,7 +169,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverRCReq 
     case mVehicleRC of
       Just vehicleRC -> do
         when (isJust mbVariant) $
-          RCQuery.updateVehicleVariant vehicleRC.id mbVariant -- update vehicleVariant of RC is passed hardcoded from dashboard
+          RCQuery.updateVehicleVariant vehicleRC.id mbVariant Nothing Nothing -- update vehicleVariant of RC is passed hardcoded from dashboard
         when (isNothing multipleRC) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
         mRCAssociation <- DAQuery.findLatestByRCIdAndDriverId vehicleRC.id person.id
         case mRCAssociation of
@@ -429,6 +429,7 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwn
       vehicleColor = output.color <|> output.colour,
       manufacturerModel = output.manufacturerModel,
       vehicleEnergyType = output.fuelType,
+      reviewedAt = Nothing,
       reviewRequired,
       insuranceValidity,
       verificationStatus,

@@ -70,6 +70,7 @@ module Domain.Action.Dashboard.Driver
     changeOperatingCity,
     getOperatingCity,
     updateRCInvalidStatus,
+    bulkReviewRCVariant,
   )
 where
 
@@ -1892,6 +1893,27 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
 updateRCInvalidStatus :: ShortId DM.Merchant -> Context.City -> Common.UpdateRCInvalidStatusReq -> Flow APISuccess
 updateRCInvalidStatus _ _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
-  let vehicleType = castVehicleVariant req.vehicleVariant
-  RCQuery.updateRCStatusAndVehicleVariant vehicleRC.id IV.VALID True vehicleType
+  let variant = castVehicleVariant req.vehicleVariant
+  RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing (Just True)
   pure Success
+
+bulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> Flow [Common.ReviewRCVariantRes]
+bulkReviewRCVariant _ _ req = do
+  mapM
+    ( \rcReq -> do
+        res <- try @_ @SomeException (processRCReq rcReq)
+        case res of
+          Left err -> pure $ Common.ReviewRCVariantRes rcReq.rcId (show err)
+          Right _ -> pure $ Common.ReviewRCVariantRes rcReq.rcId "Success"
+    )
+    req
+  where
+    processRCReq rcReq = do
+      vehicleRC <- RCQuery.findById (Id rcReq.rcId) >>= fromMaybeM (VehicleNotFound rcReq.rcId)
+      let mbVariant = castVehicleVariant <$> rcReq.vehicleVariant
+      rcNumber <- decrypt vehicleRC.certificateNumber
+      mVehicle <- QVehicle.findByRegistrationNo rcNumber
+      RCQuery.updateVehicleVariant vehicleRC.id mbVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
+      whenJust mVehicle $ \vehicle -> do
+        whenJust mbVariant $ \variant -> do
+          QVehicle.updateVehicleVariant vehicle.driverId variant
