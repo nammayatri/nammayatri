@@ -691,6 +691,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         canDowngradeToHatchback = info.canDowngradeToHatchback,
         canDowngradeToTaxi = info.canDowngradeToTaxi,
         canSwitchToRental = info.canSwitchToRental,
+        canSwitchToIntercity = info.canSwitchToIntercity,
         vehicleNumber = vehicle <&> (.registrationNo),
         driverLicenseDetails,
         vehicleRegistrationDetails,

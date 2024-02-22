@@ -57,7 +57,8 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     fromLocation :: a,
     toLocation :: a,
     merchantId :: Id DM.Merchant,
-    isRental :: Bool
+    isRental :: Bool,
+    isIntercity :: Bool
   }
 
 data GoHomeDriverPoolResult = GoHomeDriverPoolResult

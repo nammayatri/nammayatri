@@ -223,6 +223,7 @@ data DriverInformationRes = DriverInformationRes
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
+    canSwitchToIntercity :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -264,6 +265,7 @@ data DriverEntityRes = DriverEntityRes
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
+    canSwitchToIntercity :: Bool,
     payerVpa :: Maybe Text,
     mode :: Maybe DriverInfo.DriverMode,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
@@ -289,6 +291,7 @@ data UpdateDriverReq = UpdateDriverReq
     canDowngradeToHatchback :: Maybe Bool,
     canDowngradeToTaxi :: Maybe Bool,
     canSwitchToRental :: Maybe Bool,
+    canSwitchToIntercity :: Maybe Bool,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
     gender :: Maybe SP.Gender,
@@ -635,6 +638,7 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback,
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
         canSwitchToRental = driverInfo.canSwitchToRental,
+        canSwitchToIntercity = driverInfo.canSwitchToIntercity,
         mode = driverInfo.mode,
         payerVpa = driverPlan >>= (.payerVpa),
         blockStateModifier = driverInfo.blockStateModifier,
@@ -700,12 +704,13 @@ updateDriver (personId, _, merchantOpCityId) req = do
                    canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback,
                    canDowngradeToTaxi = fromMaybe driverInfo.canDowngradeToTaxi req.canDowngradeToTaxi,
                    canSwitchToRental = fromMaybe driverInfo.canSwitchToRental req.canSwitchToRental,
+                   canSwitchToIntercity = fromMaybe driverInfo.canSwitchToIntercity req.canSwitchToIntercity,
                    availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
                   }
 
   when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
   QPerson.updatePersonRec personId updPerson
-  QDriverInformation.updateDriverInformation person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi updDriverInfo.canSwitchToRental updDriverInfo.availableUpiApps
+  QDriverInformation.updateDriverInformation person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi updDriverInfo.canSwitchToRental updDriverInfo.canSwitchToIntercity updDriverInfo.availableUpiApps
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, updDriverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId

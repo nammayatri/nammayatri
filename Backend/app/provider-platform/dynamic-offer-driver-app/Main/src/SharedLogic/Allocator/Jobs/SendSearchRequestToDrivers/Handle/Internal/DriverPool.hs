@@ -145,7 +145,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
                               fromLocation = searchReq.fromLocation,
                               toLocation = toLoc, -- last or all ?
                               merchantId = searchReq.providerId,
-                              isRental = isRentalTrip searchTry.tripCategory
+                              isRental = isRentalTrip searchTry.tripCategory,
+                              isIntercity = isIntercityTrip searchTry.tripCategory
                             }
                     take driverPoolCfg.driverBatchSize <$> filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False) driversInQueue) goHomeReq merchantOpCityId_
                   _ -> pure []
@@ -290,7 +291,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
                         fromLocation = searchReq.fromLocation,
                         toLocation = toLoc, -- last or all ?
                         merchantId = searchReq.providerId,
-                        isRental = isRentalTrip searchTry.tripCategory
+                        isRental = isRentalTrip searchTry.tripCategory,
+                        isIntercity = isIntercityTrip searchTry.tripCategory
                       }
                   )
                   opCityId
@@ -302,7 +304,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
               merchantId = searchReq.providerId
           let pickupLoc = searchReq.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory)
+          calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory) (isIntercityTrip searchTry.tripCategory)
         calcDriverCurrentlyOnRidePool radiusStep transporterConfig merchantOpCityId = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
@@ -310,7 +312,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
               let vehicleVariant = searchTry.vehicleVariant
               let pickupLoc = searchReq.fromLocation
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId (Just $ radiusStep - 1) (isRentalTrip searchTry.tripCategory)
+              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId (Just $ radiusStep - 1) (isRentalTrip searchTry.tripCategory) (isIntercityTrip searchTry.tripCategory)
             else pure []
         fillBatch merchantOpCityId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)

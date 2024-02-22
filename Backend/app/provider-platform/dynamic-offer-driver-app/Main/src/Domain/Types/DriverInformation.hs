@@ -81,6 +81,7 @@ data DriverInformation = DriverInformation
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSwitchToRental :: Bool,
+    canSwitchToIntercity :: Bool,
     mode :: Maybe DriverMode,
     aadhaarVerified :: Bool,
     autoPayStatus :: Maybe DriverAutoPayStatus,
