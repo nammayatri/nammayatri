@@ -24,6 +24,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.BecknConfig
 import EulerHS.Prelude hiding (state, (%~))
+import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -31,12 +32,15 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildSearchReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearch.SearchRes ->
   m Spec.SearchReq
 buildSearchReqV2 DSearch.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW) -- get Vehicle Variant here
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW) -- get Vehicle Variatnt here
+  ttlInInt <- bapConfig.searchTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
   Search.buildBecknSearchReqV2
     Context.SEARCH
     Context.MOBILITY
@@ -56,5 +60,6 @@ buildSearchReqV2 DSearch.SearchRes {..} = do
     startTime
     multipleRoutes
     bapConfig
+    ttlToISO8601Duration
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)

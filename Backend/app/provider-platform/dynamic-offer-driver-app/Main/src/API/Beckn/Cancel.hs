@@ -83,7 +83,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
               { booking = booking,
                 cancellationSource = DBCR.ByUser
               }
-      context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
+      context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country Nothing
       let cancelStatus = readMaybe . T.unpack =<< cancelReq.cancelStatus
       case cancelStatus of
         Just Enums.CONFIRM_CANCEL -> do
