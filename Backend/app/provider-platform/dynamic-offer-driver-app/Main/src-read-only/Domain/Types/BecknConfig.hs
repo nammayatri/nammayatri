@@ -12,13 +12,17 @@ import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data BecknConfig = BecknConfig
-  { cancellationFeeAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cancellationFeeAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationFeePercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     collectedBy :: Domain.Types.BecknConfig.PaymentCollectedBy,
     domain :: Kernel.Prelude.Text,
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
+    onConfirmTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    onInitTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    onSearchTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    onSelectTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registryUrl :: Servant.Client.Core.BaseUrl,
     settlementType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

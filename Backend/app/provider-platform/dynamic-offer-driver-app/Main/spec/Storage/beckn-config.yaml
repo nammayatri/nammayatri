@@ -25,6 +25,10 @@ BecknConfig:
     cancellationFeePercentage: Maybe Int
     buyerFinderFee : Maybe Text
     settlementWindow : Maybe Text
+    onSearchTTLSec: Maybe Int
+    onSelectTTLSec: Maybe Int
+    onInitTTLSec: Maybe Int
+    onConfirmTTLSec: Maybe Int
 
   types:
     VehicleCategory:

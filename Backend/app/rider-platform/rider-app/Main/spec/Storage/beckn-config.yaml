@@ -23,6 +23,10 @@ BecknConfig:
     staticTermsUrl: Maybe BaseUrl
     buyerFinderFee : Maybe Text
     settlementWindow : Maybe Text
+    searchTTLSec: Maybe Int
+    selectTTLSec: Maybe Int
+    initTTLSec: Maybe Int
+    confirmTTLSec: Maybe Int
 
   types:
     VehicleCategory:
