@@ -42,7 +42,8 @@ initData = {
     locUnserviceable : false,
     isSpecialZone : false,
     isAutoComplete : false,
-    pickUpSelectedOnMap : false
+    pickUpSelectedOnMap : false,
+    allowSpecialZone : false
   },
   appConfig : getAppConfig appConfig
 }

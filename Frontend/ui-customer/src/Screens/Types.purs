@@ -1951,6 +1951,7 @@ type SearchLocationScreenProps =
   , focussedTextField :: Maybe SearchLocationTextField
   , actionType :: SearchLocationActionType
   , showSaveFavCard :: Boolean
+  , allowSpecialZone :: Boolean
   , areBothLocMandatory :: Boolean
   , canSelectFromFav :: Boolean
   , showLoader :: Boolean

@@ -86,3 +86,6 @@ dayToIndex day =
     "Sat" -> 5
     "Sun" -> 6
     _ -> 7
+
+defaultToZero :: Maybe Number -> Number 
+defaultToZero = fromMaybe 0.0
