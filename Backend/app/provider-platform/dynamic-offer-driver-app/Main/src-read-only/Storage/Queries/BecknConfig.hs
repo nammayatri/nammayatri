@@ -61,12 +61,16 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.cancellationFeeAmount cancellationFeeAmount,
+    [ Se.Set Beam.buyerFinderFee buyerFinderFee,
+      Se.Set Beam.cancellationFeeAmount cancellationFeeAmount,
       Se.Set Beam.cancellationFeePercentage cancellationFeePercentage,
-      Se.Set Beam.buyerFinderFee buyerFinderFee,
       Se.Set Beam.collectedBy collectedBy,
       Se.Set Beam.domain domain,
       Se.Set Beam.gatewayUrl $ Kernel.Prelude.showBaseUrl gatewayUrl,
+      Se.Set Beam.onConfirmTTLSec onConfirmTTLSec,
+      Se.Set Beam.onInitTTLSec onInitTTLSec,
+      Se.Set Beam.onSearchTTLSec onSearchTTLSec,
+      Se.Set Beam.onSelectTTLSec onSelectTTLSec,
       Se.Set Beam.paymentParamsJson paymentParamsJson,
       Se.Set Beam.registryUrl $ Kernel.Prelude.showBaseUrl registryUrl,
       Se.Set Beam.settlementType settlementType,
@@ -96,13 +100,17 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
     pure $
       Just
         Domain.Types.BecknConfig.BecknConfig
-          { cancellationFeeAmount = cancellationFeeAmount,
+          { buyerFinderFee = buyerFinderFee,
+            cancellationFeeAmount = cancellationFeeAmount,
             cancellationFeePercentage = cancellationFeePercentage,
-            buyerFinderFee = buyerFinderFee,
             collectedBy = collectedBy,
             domain = domain,
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
+            onConfirmTTLSec = onConfirmTTLSec,
+            onInitTTLSec = onInitTTLSec,
+            onSearchTTLSec = onSearchTTLSec,
+            onSelectTTLSec = onSelectTTLSec,
             paymentParamsJson = paymentParamsJson,
             registryUrl = registryUrl',
             settlementType = settlementType,
@@ -121,13 +129,17 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
 instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' Domain.Types.BecknConfig.BecknConfig {..} = do
     Beam.BecknConfigT
-      { Beam.cancellationFeeAmount = cancellationFeeAmount,
+      { Beam.buyerFinderFee = buyerFinderFee,
+        Beam.cancellationFeeAmount = cancellationFeeAmount,
         Beam.cancellationFeePercentage = cancellationFeePercentage,
-        Beam.buyerFinderFee = buyerFinderFee,
         Beam.collectedBy = collectedBy,
         Beam.domain = domain,
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.onConfirmTTLSec = onConfirmTTLSec,
+        Beam.onInitTTLSec = onInitTTLSec,
+        Beam.onSearchTTLSec = onSearchTTLSec,
+        Beam.onSelectTTLSec = onSelectTTLSec,
         Beam.paymentParamsJson = paymentParamsJson,
         Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
         Beam.settlementType = settlementType,

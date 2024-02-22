@@ -80,12 +80,15 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
         Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
           dInitRes <- DInit.handler transporterId dInitReq validatedRes
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
-          context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
+          let vehicleCategory = Utils.mapVariantToVehicle dInitRes.booking.vehicleVariant
+          bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+          ttlInInt <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl")
+          let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+              ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+          context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttlToISO8601Duration)
           void . handle (errHandler dInitRes.booking dInitRes.transporter) $
             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
-              let vehicleCategory = Utils.mapVariantToVehicle dInitRes.booking.vehicleVariant
-              becknConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-              let onInitMessage = ACL.mkOnInitMessageV2 dInitRes becknConfig
+              let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig
               pure $
                 Spec.OnInitReq
                   { onInitReqContext = context,
