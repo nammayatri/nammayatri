@@ -24,6 +24,7 @@ import qualified Domain.Types.ModuleCompletionInformation as DTMCI
 import qualified Domain.Types.Person
 import qualified Domain.Types.QuestionInformation as DTQI
 import qualified Domain.Types.QuestionModuleMapping as DTQMM
+import qualified Domain.Types.ReelsData as DTRD
 import qualified Domain.Types.Vehicle.Variant
 import qualified Environment
 import EulerHS.Prelude hiding (id, length)
@@ -132,7 +133,7 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
             ..
           }
 
-    generateButtonConfigData :: [DTLVT.ReelRowButtonConfig] -> [[DTLVT.ReelButtonConfig]]
+    generateButtonConfigData :: [DTRD.ReelRowButtonConfig] -> [[DTRD.ReelButtonConfig]]
     generateButtonConfigData = foldl' (\acc eachRow -> acc <> [eachRow.row]) [[]]
 
 getLmsListAllQuiz :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow API.Types.UI.LmsModule.LmsGetQuizRes

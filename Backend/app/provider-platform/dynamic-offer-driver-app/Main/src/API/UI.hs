@@ -19,6 +19,7 @@ module API.UI
 where
 
 import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
@@ -89,6 +90,7 @@ type API =
            :<|> City.API
            :<|> LmsModule.API
            :<|> SpecialLocation.API
+           :<|> Reels.API
        )
 
 handler :: FlowServer API
@@ -125,3 +127,4 @@ handler =
     :<|> City.handler
     :<|> LmsModule.handler
     :<|> SpecialLocation.handler
+    :<|> Reels.handler
