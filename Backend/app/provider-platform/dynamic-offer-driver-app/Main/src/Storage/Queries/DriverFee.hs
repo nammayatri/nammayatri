@@ -34,8 +34,7 @@ import Kernel.Types.Time
 import Kernel.Utils.Common (fork, fromMaybeM, getLocalCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Person as QP
 import Tools.Error
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFee -> m ()
@@ -353,6 +352,7 @@ findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merch
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+          Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
           Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just EXECUTION_SCHEDULED),
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
@@ -923,8 +923,8 @@ instance FromTType' BeamDF.DriverFee DriverFee where
   fromTType' BeamDF.DriverFeeT {..} = do
     merchantOperatingCityId' <- case merchantOperatingCityId of
       Nothing -> do
-        merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
-        opCity <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
+        person <- QP.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
+        let opCity = person.merchantOperatingCityId
         updateMerchantOperatingCityId (Id id) opCity
         return opCity
       Just mOpCityId -> return $ Id mOpCityId
