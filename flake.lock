@@ -1620,11 +1620,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1708440408,
-        "narHash": "sha256-EwJlUy0wvEFnEwjy/Uej8L93CPuE0g1Q8eGJcBknwoc=",
+        "lastModified": 1708523252,
+        "narHash": "sha256-PyOqvU9fKjLnkfUZJEzgP4r2kfIOKXJ7M7IzRtimx+g=",
         "owner": "piyushKumar-1",
         "repo": "haskell_cac_client",
-        "rev": "242b50c5c77795eecdb7aba32d615d8e295232b5",
+        "rev": "3dda7e55235d6e370c10a6aecbadbc799806f278",
         "type": "github"
       },
       "original": {

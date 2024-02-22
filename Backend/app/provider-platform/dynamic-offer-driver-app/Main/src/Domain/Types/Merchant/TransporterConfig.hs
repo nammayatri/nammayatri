@@ -31,6 +31,10 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Cac
+import qualified Data.Aeson.KeyMap as KM
+import qualified Client.Main as CM
+-- import qualified Data.Aeson.Key as DAK
 
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig
   { height :: Int,
@@ -242,6 +246,45 @@ valueToTextList val =
   case val of
     String text -> KP.map strip . splitOn "," $ text
     _ -> error $ "Not a string or array" <> (show val)
+
+getFCMConfig :: KM.KeyMap Value -> FCMConfig
+getFCMConfig v = 
+  let fcmUrl' = fromJSON <$> (KM.lookup (DAK.fromText (Text.pack "fcmUrl")) v)
+      fcmServiceAccount' = Success . valueToText <$> (KM.lookup (DAK.fromText (Text.pack "fcmServiceAccount")) v)
+      fcmTokenKeyPrefix' = Success . valueToText <$> (KM.lookup (DAK.fromText (Text.pack "fcmTokenKeyPrefix")) v)
+      result = [fcmServiceAccount', fcmTokenKeyPrefix']
+  in
+    case (KP.any isNothing result) || (isNothing fcmUrl') of
+      True -> 
+
+        error $ "FCM Config not found: " <> show ((KM.lookup (DAK.fromText (Text.pack "fcmUrl")) v))
+      False -> do
+        let fcmConfig = FCM.FCMConfig <$> (fromJust fcmUrl') <*> (fromJust fcmServiceAccount') <*> (fromJust fcmTokenKeyPrefix')
+        case fcmConfig of 
+          Error err -> error ("Couldn't parse bhai" <> show err)
+          Success fcmConfig' -> fcmConfig'
+  
+instance FromJSONCAC TransporterConfig where
+  fromJSONCAC CACValue {..} = 
+    case cacValue of
+      Object obj -> do
+        let newObject = KM.mapKeyVal (\key -> DAK.fromText (Text.replace "transporterConfig:" "" $ DAK.toText key))
+              (\val -> case val of
+                String s -> case ( (isInfixOf "{"  s) && (isInfixOf ":"  s)) of
+                  True -> case (CM.convertTextToObject ( Text.replace "'" "\"" s)) of 
+                    Left _ -> String s
+                    Right obj' -> Object obj'
+                  False -> String s
+                x -> x) obj
+            fcmConfig' = getFCMConfig newObject
+            newObject' = KP.foldr KM.delete newObject [DAK.fromText (Text.pack "fcmUrl"), DAK.fromText (Text.pack "fcmServiceAccount"), DAK.fromText (Text.pack "fcmTokenKeyPrefix")]
+            finalNewObject = KM.insert (DAK.fromText (Text.pack "fcmConfig")) (toJSON fcmConfig') newObject'
+        let res = fromJSON . toJSON $ finalNewObject
+        
+        case res of
+          Success res' -> res'
+          Error err -> error ("Couldn't parse bhai, maybe you are gay" <> show err)
+      _ -> error "This looks wrong bro"
 
 jsonToTransporterConfig :: Object -> Parser TransporterConfig
 jsonToTransporterConfig v =

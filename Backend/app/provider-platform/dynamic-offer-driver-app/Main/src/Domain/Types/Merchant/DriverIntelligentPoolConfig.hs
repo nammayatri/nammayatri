@@ -60,8 +60,10 @@ data DriverIntelligentPoolConfigD u = DriverIntelligentPoolConfig
 type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigD 'Safe
 
 instance FromJSON (DriverIntelligentPoolConfigD 'Unsafe)
+instance FromJSON (DriverIntelligentPoolConfigD 'Safe)
 
 instance ToJSON (DriverIntelligentPoolConfigD 'Unsafe)
+instance ToJSON (DriverIntelligentPoolConfigD 'Safe)
 
 data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance | RideFrequency
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
