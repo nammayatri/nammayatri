@@ -10,11 +10,11 @@ import qualified Domain.Types.DriverModuleCompletion
 import qualified Domain.Types.LmsEnumTypes
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.LmsModuleVideoInformation
-import qualified Domain.Types.LmsVideoTranslation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.QuestionInformation
 import qualified Domain.Types.QuestionModuleMapping
+import qualified Domain.Types.ReelsData
 import qualified Domain.Types.Vehicle.Variant
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -105,7 +105,7 @@ data LmsTranslatedModuleInfoRes = LmsTranslatedModuleInfoRes
 
 data LmsVideoRes = LmsVideoRes
   { attemptNumber :: Kernel.Prelude.Int,
-    bottomButtonConfig :: [[Domain.Types.LmsVideoTranslation.ReelButtonConfig]],
+    bottomButtonConfig :: [[Domain.Types.ReelsData.ReelButtonConfig]],
     completedAt :: Kernel.Prelude.UTCTime,
     completedThresholdInPercentage :: Data.Maybe.Maybe Kernel.Prelude.Int,
     completedWatchCount :: Kernel.Prelude.Int,
@@ -114,7 +114,7 @@ data LmsVideoRes = LmsVideoRes
     language :: Kernel.External.Types.Language,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     rank :: Kernel.Prelude.Int,
-    sideButtonConfig :: [[Domain.Types.LmsVideoTranslation.ReelButtonConfig]],
+    sideButtonConfig :: [[Domain.Types.ReelsData.ReelButtonConfig]],
     startThresholdInPercentage :: Data.Maybe.Maybe Kernel.Prelude.Int,
     thresholdEnabled :: Kernel.Prelude.Bool,
     thumbnailImage :: Data.Text.Text,

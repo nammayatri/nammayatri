@@ -4,8 +4,10 @@
 
 module Storage.Queries.LmsVideoTranslation where
 
+import qualified Data.Aeson
 import qualified Domain.Types.LmsModuleVideoInformation
 import qualified Domain.Types.LmsVideoTranslation
+import qualified Domain.Types.ReelsData
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
@@ -16,6 +18,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.LmsVideoTranslation as Beam
+import qualified Storage.Queries.Transformers.ReelsData
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ()
 create = createWithKV
@@ -80,12 +83,12 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..} = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bottomButtonConfig bottomButtonConfig,
+    [ Se.Set Beam.bottomButtonConfig $ Storage.Queries.Transformers.ReelsData.convertBottomButtonConfigToTable bottomButtonConfig,
       Se.Set Beam.completedThresholdInPercentage completedThresholdInPercentage,
       Se.Set Beam.completedWatchCount completedWatchCount,
       Se.Set Beam.description description,
       Se.Set Beam.duration duration,
-      Se.Set Beam.sideButtonConfig sideButtonConfig,
+      Se.Set Beam.sideButtonConfig $ Storage.Queries.Transformers.ReelsData.convertSideButtonConfigToTable sideButtonConfig,
       Se.Set Beam.startThresholdInPercentage startThresholdInPercentage,
       Se.Set Beam.thresholdEnabled thresholdEnabled,
       Se.Set Beam.thumbnailImage thumbnailImage,
@@ -107,13 +110,13 @@ instance FromTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.Lm
     pure $
       Just
         Domain.Types.LmsVideoTranslation.LmsVideoTranslation
-          { bottomButtonConfig = bottomButtonConfig,
+          { bottomButtonConfig = Storage.Queries.Transformers.ReelsData.getBottomButtonConfigFromTable bottomButtonConfig,
             completedThresholdInPercentage = completedThresholdInPercentage,
             completedWatchCount = completedWatchCount,
             description = description,
             duration = duration,
             language = language,
-            sideButtonConfig = sideButtonConfig,
+            sideButtonConfig = Storage.Queries.Transformers.ReelsData.getSideButtonConfigFromTable sideButtonConfig,
             startThresholdInPercentage = startThresholdInPercentage,
             thresholdEnabled = thresholdEnabled,
             thumbnailImage = thumbnailImage,
@@ -129,13 +132,13 @@ instance FromTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.Lm
 instance ToTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.LmsVideoTranslation where
   toTType' Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..} = do
     Beam.LmsVideoTranslationT
-      { Beam.bottomButtonConfig = bottomButtonConfig,
+      { Beam.bottomButtonConfig = Storage.Queries.Transformers.ReelsData.convertBottomButtonConfigToTable bottomButtonConfig,
         Beam.completedThresholdInPercentage = completedThresholdInPercentage,
         Beam.completedWatchCount = completedWatchCount,
         Beam.description = description,
         Beam.duration = duration,
         Beam.language = language,
-        Beam.sideButtonConfig = sideButtonConfig,
+        Beam.sideButtonConfig = Storage.Queries.Transformers.ReelsData.convertSideButtonConfigToTable sideButtonConfig,
         Beam.startThresholdInPercentage = startThresholdInPercentage,
         Beam.thresholdEnabled = thresholdEnabled,
         Beam.thumbnailImage = thumbnailImage,
