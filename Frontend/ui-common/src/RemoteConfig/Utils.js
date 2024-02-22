@@ -5,3 +5,11 @@ export const fetchRemoteConfigString = function (key) {
   }
   return "";
 }
+
+export const isWhiteListed = function (key) {
+  return function (arr) {
+    return arr.includes(key);
+  }
+}
+
+export const fetchRemoteConfig = fetchRemoteConfigString;

@@ -17,6 +17,7 @@ import Locale.Utils (getLanguageLocale, languageKey)
 import Data.String (null, take, toLower)
 import Prelude (not, show, ($), (&&), (<>), (==))
 import Locale.Utils (getLanguageLocale)
+import SessionCache (getValueFromWindow)
 import RemoteConfig as RC
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
@@ -41,7 +42,7 @@ getBannerConfigs state action =
       let location = toLower $ show city
           language = getLanguage $ getLanguageLocale languageKey
           configName = "customer_carousel_banner" <> language
-          datas = RC.carouselConfigData location configName "customer_carousel_banner_en"
+          datas = RC.carouselConfigData location configName "customer_carousel_banner_en" $ getValueFromWindow "CUSTOMER_ID"
       BannerCarousel.remoteConfigTransformer datas action
     getLanguage :: String -> String
     getLanguage lang = 
