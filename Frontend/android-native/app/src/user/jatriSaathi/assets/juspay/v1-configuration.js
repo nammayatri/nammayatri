@@ -12,8 +12,7 @@ function getAppLink(os) {
 }
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "StringKeys": ["ABOUT_APP_DESCRIPTION",
-      "WELCOME_TEXT",
+    "StringKeys": [
       "REQUEST_AUTO_RIDE",
       "CURRENTLY_WE_ARE_LIVE_IN_",
       "DRIVER_PICKUP_CHARGES",
@@ -121,8 +120,6 @@ window.getMerchantConfig = function () {
     "popupBackground" : "#FFFFFF",
     "profileEditGravity" : "center",
     "englishStrings": {
-      "ABOUT_APP_DESCRIPTION": "Yatri Sathi is an open platform to connect riders with drivers. The app makes it convenient for riders to book a ride with meter rate hence minimal fare.",
-      "WELCOME_TEXT": "Welcome to Yatri Sathi",
       "MOST_LOVED_APP" : "Amar Shohor, Amar Sofor",
       "REQUEST_AUTO_RIDE": "Request Ride",
       "CURRENTLY_WE_ARE_LIVE_IN_": "Currently we're live in Kolkata, you can enjoy our services there",
@@ -153,8 +150,6 @@ window.getMerchantConfig = function () {
 
     },
     "hindiStrings": {
-      "ABOUT_APP_DESCRIPTION": "यात्री साथी सवारियों को चालकों से जोड़ने का एक खुला मंच है। ऐप राइडर्स के लिए मीटर रेट के साथ राइड बुक करना सुविधाजनक बनाता है इसलिए न्यूनतम किराया।",
-      "WELCOME_TEXT": "स्वागत है साथी",
       "MOST_LOVED_APP" : "मेरा शहर, मेरी यात्रा",
       "REQUEST_AUTO_RIDE": "राइड का अनुरोध करें",
       "CURRENTLY_WE_ARE_LIVE_IN_": "वर्तमान में हम कोलकाता में रहते हैं, आप वहां हमारी सेवाओं का आनंद ले सकते हैं",
@@ -185,8 +180,6 @@ window.getMerchantConfig = function () {
       
     },
     "bengaliStrings": {
-      "ABOUT_APP_DESCRIPTION": "যাত্রী সাথী হল চালকদের সাথে রাইডারদের সংযোগ করার জন্য একটি উন্মুক্ত প্ল্যাটফর্ম। অ্যাপটি রাইডারদের জন্য মিটার রেট সহ একটি রাইড বুক করা সুবিধাজনক করে তোলে তাই ন্যূনতম ভাড়া।",
-      "WELCOME_TEXT": "স্বাগতম সাথী",
       "MOST_LOVED_APP" : "আমার শহর, আমার সফর",
       "REQUEST_AUTO_RIDE": "যাত্রার অনুরোধ করুন",
       "CURRENTLY_WE_ARE_LIVE_IN_": "বর্তমানে আমরা কলকাতায় থাকি, আপনি সেখানে আমাদের পরিষেবা উপভোগ করতে পারেন",

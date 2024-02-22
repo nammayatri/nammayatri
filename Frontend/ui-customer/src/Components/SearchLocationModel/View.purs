@@ -28,6 +28,8 @@ import Components.SeparatorView.View as SeparatorView
 import Data.Array (mapWithIndex, length, take, null)
 import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
@@ -37,7 +39,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName, getSearchType, getAssetsBaseUrl, fetchImage, FetchImageFrom(..))
 import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig, debounceFunction)
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
@@ -512,44 +514,45 @@ recenterButtonView push state =
 
 findPlacesIllustration :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 findPlacesIllustration push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , visibility if state.findPlaceIllustration then VISIBLE else GONE
-    , gravity CENTER_HORIZONTAL
-    , margin $ Margin 7 ((screenHeight unit)/7) 16 0
-    ]
-    [ imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_empty_suggestions"
-        , height $ V 99
-        , width $ V 133
-        , margin $ MarginBottom 12
-        ]
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , gravity CENTER
-        , margin $ MarginBottom 5
-        ]
-        [ textView $
-            [ text $ getString (WELCOME_TEXT "WELCOME_TEXT") <> "!"
-            , color Color.black700
-            , gravity CENTER
-            ] <> FontStyle.body4 LanguageStyle
-        ]
-    , linearLayout
-        [ width $ V (screenWidth unit - 40)
-        , height WRAP_CONTENT
-        , gravity CENTER
-        ]
-        [ textView $
-            [ text $ getString START_TYPING_TO_SEARCH_PLACES
-            , gravity CENTER
-            , color Color.black700
-            ] <> FontStyle.body3 LanguageStyle
-        ]
-    ]
+  let appName = fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in  linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , visibility if state.findPlaceIllustration then VISIBLE else GONE
+      , gravity CENTER_HORIZONTAL
+      , margin $ Margin 7 ((screenHeight unit)/7) 16 0
+      ]
+      [ imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_empty_suggestions"
+          , height $ V 99
+          , width $ V 133
+          , margin $ MarginBottom 12
+          ]
+      , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER
+          , margin $ MarginBottom 5
+          ]
+          [ textView $
+              [ text $ (getVarString WELCOME_TEXT [appName]) <> "!"
+              , color Color.black700
+              , gravity CENTER
+              ] <> FontStyle.body4 LanguageStyle
+          ]
+      , linearLayout
+          [ width $ V (screenWidth unit - 40)
+          , height WRAP_CONTENT
+          , gravity CENTER
+          ]
+          [ textView $
+              [ text $ getString START_TYPING_TO_SEARCH_PLACES
+              , gravity CENTER
+              , color Color.black700
+              ] <> FontStyle.body3 LanguageStyle
+          ]
+      ]
 
 bottomBtnsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bottomBtnsView state push =

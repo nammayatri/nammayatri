@@ -14,8 +14,8 @@ function getAppLink(os) {
 }
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "StringKeys": ["ABOUT_APP_DESCRIPTION",
-      "WELCOME_TEXT", "REQUEST_AUTO_RIDE",
+    "StringKeys": [
+      "REQUEST_AUTO_RIDE",
       "CURRENTLY_WE_ARE_LIVE_IN_",
       "DRIVER_PICKUP_CHARGES",
       "SUCCESSFUL_ONBOARD",
@@ -113,8 +113,6 @@ window.getMerchantConfig = function () {
     "red" : "#E55454",
     "popupBackground" : "#FFFFFF",
     "englishStrings": {
-      "ABOUT_APP_DESCRIPTION": "Yatri is an open platform to connect commuters with transport providers. The app makes it convenient for travellers to find available means of transport, and avail these options by connecting them with service providers ",
-      "WELCOME_TEXT": "Welcome to Yatri",
       "MOST_LOVED_APP" : "",
       "REQUEST_AUTO_RIDE": "Request Ride",
       "CURRENTLY_WE_ARE_LIVE_IN_": "Currently we're live in Kochi, you can enjoy our services there",
@@ -145,9 +143,7 @@ window.getMerchantConfig = function () {
       "PERSONAL_SAFETY_ACTION_2" : "Call Yatri support",
     },
     "malayalamStrings": {
-      "WELCOME_TEXT" : "യാത്രയിലേക്ക് സ്വാഗതം",
       "MOST_LOVED_APP" : "",
-      "ABOUT_APP_DESCRIPTION" : "യാത്രക്കാരെ ഡ്രൈവർമാരുമായി ബന്ധിപ്പിക്കുന്നതിനുള്ള ഒരു ഓപ്പൺ പ്ലാറ്റ്‌ഫോമാണ് നമ്മ യാത്രി. ഈ ആപ്പ് റൈഡർമാർക്ക് മീറ്റർ നിരക്കിൽ റൈഡുകൾ ബുക്ക് ചെയ്യാൻ സൗകര്യപ്രദമാക്കുന്നു, അതിനാൽ നിരക്ക് കുറഞ്ഞിരിക്കും.",
       "REQUEST_AUTO_RIDE" : "റൈഡ് അഭ്യർത്ഥിക്കുക",
       "CURRENTLY_WE_ARE_LIVE_IN_": "നിലവിൽ ഞങ്ങളുടെ സേവനം ബെംഗളൂരുവിലും മൈസുരുവിലും ആണ് ഉള്ളത്, നിങ്ങൾക്ക് അവിടെ ഞങ്ങളുടെ സേവനങ്ങൾ ആസ്വദിക്കാൻ കഴിയും",
       "DRIVER_PICKUP_CHARGES": "ഡ്രൈവർ പിക്കപ്പ് നിരക്കുകൾ",
