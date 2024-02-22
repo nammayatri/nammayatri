@@ -2712,7 +2712,9 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
         mbResp <- getActiveBooking
         case mbResp of
           Nothing -> pure unit
-          Just resp -> handleRideBookingResp resp
+          Just resp -> do
+            void $ liftFlow $ push $ UpdateBookingDetails resp
+            handleRideBookingResp resp
     if (state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
@@ -2797,7 +2799,6 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     getDuration factor counter = duration * (toNumber $ pow factor counter)
     handleRideBookingResp (RideBookingRes respBooking) = do
       let bookingStatus = respBooking.status
-      _ <- liftFlow $ push $ UpdateBookingDetails (RideBookingRes respBooking)
       void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.currentSearchResultType == QUOTES)}}}
       case bookingStatus of
         "REALLOCATED" -> do
