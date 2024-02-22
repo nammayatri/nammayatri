@@ -18,6 +18,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
+import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import Domain.Types.GoHomeConfig (GoHomeConfig)
@@ -43,6 +44,7 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.Estimate as QE
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -136,12 +138,13 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
 
     createNewSearchTry farePolicy customerCancellationDues = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id
+      now <- getCurrentTime
       fareParams <-
         calculateFareParameters
           CalculateFareParametersParams
             { farePolicy = farePolicy,
               actualDistance = searchReq.estimatedDistance,
-              rideTime = searchReq.startTime,
+              rideTime = now,
               waitingTime = Nothing,
               actualRideDuration = Nothing,
               avgSpeedOfVehicle = Nothing,
@@ -157,6 +160,10 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
             }
       let estimatedFare = fareSum fareParams
           pureEstimatedFare = pureFareSum fareParams
+      estimate <- QE.findBySearchReqId searchReq.id >>= fromMaybeM (EstimateDoesNotExist searchReq.id.getId)
+      let mbFareParamsOfEstimates = estimate.fareParams
+          areFareParamsEqual = maybe False (compareFareParameters fareParams) mbFareParamsOfEstimates
+      unless areFareParamsEqual $ throwError (InvalidRequest "FareParams mismatch")
       searchTry <- case mbLastSearchTry of
         Nothing -> do
           searchTry <- buildSearchTry merchant.id searchReq estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee messageId vehicleVariant
@@ -183,6 +190,18 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
           <> "; estimated base fare:"
           <> show estimatedFare
       return searchTry
+
+    compareFareParameters :: FareParameters -> FareParameters -> Bool
+    compareFareParameters fp1 fp2 =
+      (fp1.serviceCharge == fp2.serviceCharge)
+        && (fp1.govtCharges == fp2.govtCharges)
+        && (fp1.baseFare == fp2.baseFare)
+        && (fp1.waitingCharge == fp2.waitingCharge)
+        && (fp1.rideExtraTimeFare == fp2.rideExtraTimeFare)
+        && (fp1.nightShiftCharge == fp2.nightShiftCharge)
+        && (fp1.nightShiftRateIfApplies == fp2.nightShiftRateIfApplies)
+        && (fp1.fareParametersDetails == fp2.fareParametersDetails)
+        && (fp1.customerCancellationDues == fp2.customerCancellationDues)
 
 buildSearchTry ::
   ( MonadTime m,

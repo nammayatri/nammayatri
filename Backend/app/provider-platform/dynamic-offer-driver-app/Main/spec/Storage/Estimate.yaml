@@ -53,3 +53,7 @@ Estimate:
         kvFunction: findOneWithKV
         where:
           and: [id]
+      findBySearchReqId:
+        kvFunction: findOneWithKV
+        where: requestId
+

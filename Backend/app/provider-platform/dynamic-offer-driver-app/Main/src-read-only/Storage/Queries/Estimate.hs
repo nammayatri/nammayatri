@@ -40,6 +40,12 @@ findById (Kernel.Types.Id.Id id) = do
         ]
     ]
 
+findBySearchReqId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe (Domain.Types.Estimate.Estimate))
+findBySearchReqId (Kernel.Types.Id.Id requestId) = do
+  findOneWithKV
+    [ Se.Is Beam.requestId $ Se.Eq requestId
+    ]
+
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe (Domain.Types.Estimate.Estimate))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
