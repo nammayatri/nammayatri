@@ -103,7 +103,8 @@ data EstimateInfo = EstimateInfo
     nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong],
-    specialLocationTag :: Maybe Text
+    specialLocationTag :: Maybe Text,
+    validTill :: UTCTime
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -135,7 +136,8 @@ data QuoteInfo = QuoteInfo
     quoteDetails :: QuoteDetails,
     itemId :: Text,
     descriptions :: [Text],
-    specialLocationTag :: Maybe Text
+    specialLocationTag :: Maybe Text,
+    validTill :: UTCTime
   }
 
 data QuoteDetails
