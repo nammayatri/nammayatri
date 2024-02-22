@@ -16,13 +16,18 @@
 
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..))
 import DecodeUtil (decodeForeignObject, parseJSON)
 import Data.String (null)
 import Data.Maybe (Maybe(..))
-import Prelude (not)
+import Prelude (not, ($), (==))
+import Data.Maybe (fromMaybe)
+import Data.Array (elem, filter, uncons)
+import Data.Array as DA
 
 foreign import fetchRemoteConfigString :: String -> String
+foreign import fetchRemoteConfig :: forall a. String -> a
+foreign import isWhiteListed :: String -> Array String -> Boolean
 
 
 defaultRemoteConfig :: forall a. RemoteConfig (Array a)
@@ -44,13 +49,33 @@ defaultRemoteConfig ={
     config : Nothing
 }
 
-carouselConfigData :: String -> String -> String -> Array RCCarousel 
-carouselConfigData city configKey default = 
+carouselConfigData :: String -> String -> String -> String -> Array RCCarousel 
+carouselConfigData city configKey default userId = 
     let remoteConfig = fetchRemoteConfigString configKey
         parseVal = if not null remoteConfig then remoteConfig else fetchRemoteConfigString default
         decodedConfg = decodeForeignObject (parseJSON parseVal) defaultRemoteConfig
-    in getCityBasedConfig decodedConfg city
+    in filterWhiteListedConfigs userId $ getCityBasedConfig decodedConfg city
 
+fetchWhiteListedUser :: String -> Array String
+fetchWhiteListedUser configKey = fetchRemoteConfig configKey
+
+filterWhiteListedConfigs :: String -> Array RCCarousel -> Array RCCarousel
+filterWhiteListedConfigs userId configs =
+    let whiteListedConfigs = filter (\x -> validateConfig x) configs
+    in whiteListedConfigs
+    where
+        validateConfig :: RCCarousel -> Boolean
+        validateConfig (RCCarousel config) = 
+            let whiteListedUserListArray = fromMaybe [] config.whitelist 
+            in if DA.null whiteListedUserListArray then true else validateUser whiteListedUserListArray
+        
+        validateUser :: Array String -> Boolean
+        validateUser parameterList =
+            case uncons parameterList of
+                Just { head: x, tail: xs } ->
+                    let userList = fetchWhiteListedUser x
+                    in if isWhiteListed userId userList then true else validateUser xs -- TODO:: Need to check why it's not working within PS and replace with Map for optimisation
+                Nothing -> false    
 
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
 getCityBasedConfig config city = 
