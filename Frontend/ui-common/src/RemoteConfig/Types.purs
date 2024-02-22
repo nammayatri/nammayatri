@@ -53,7 +53,8 @@ newtype RCCarousel = RCCarousel {
     cta_background_color:: String,
     cta_text_color:: String,
     cta_corner_radius:: String,
-    cta_image_url:: String
+    cta_image_url:: String,
+    whitelist :: Maybe (Array String)
 }
 derive instance genericRCCarousel :: Generic RCCarousel _
 instance decodeRCCarousel :: Decode RCCarousel where decode = defaultDecode
