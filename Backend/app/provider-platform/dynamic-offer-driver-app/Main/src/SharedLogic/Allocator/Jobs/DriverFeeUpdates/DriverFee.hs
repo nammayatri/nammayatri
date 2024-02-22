@@ -525,7 +525,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
       Just dfCalcTime -> do
-        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache startTime' endTime' merchantOpCityId
+        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache startTime' endTime' merchantOpCityId serviceName
         let dfCalculationJobTs' = diffUTCTime (addUTCTime dfCalcTime endTime') now
         case isDfCaclculationJobScheduled of
           ----- marker ---
@@ -543,7 +543,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
                   scheduleDriverFeeCalc = Just True,
                   createChildJobs = Just True
                 }
-            setDriverFeeCalcJobCache startTime endTime' merchantOpCityId dfCalculationJobTs
+            setDriverFeeCalcJobCache startTime endTime' merchantOpCityId serviceName dfCalculationJobTs
             setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
             setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
           _ -> pure ()

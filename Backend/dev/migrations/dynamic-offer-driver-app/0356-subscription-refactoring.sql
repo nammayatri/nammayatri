@@ -70,12 +70,14 @@ from (select moc.id as mocId , mer.id as merId from atlas_driver_offer_bpp.merch
 where m.merId  = p.merchant_id;
 
 
-------- !!! with this change need to check offers in offers dashboard also fill the plan translation table accordingly !!! ------
+------- !!! IMPORTANT :-  run this post prod release and check for duplicate plans (with this change need to check offers in offers dashboard also fill the plan translation table accordingly) !!! ------
+------- !!! IMPORTANT :- don't run this in master !!! ---------------------------------------------------------------------------------------------------
 insert into atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage , sgst_percentage, max_mandate_amount, merchant_op_city_id, service_name, subscribed_flag_toggle_allowed, is_deprecated, eligible_for_coin_discount)
 SELECT md5(moc.id || moc.merchant_id || plan.id)::uuid , moc.merchant_id, plan.payment_mode, plan.frequency, plan.plan_base_amount, plan.name, plan.description, plan.max_amount, plan.registration_amount, plan.is_offer_applicable, plan.max_credit_limit, plan.free_ride_count, plan.plan_type, plan.cgst_percentage , plan.sgst_percentage, plan.max_mandate_amount, moc.id, plan.service_name, plan.subscribed_flag_toggle_allowed, plan.is_deprecated, plan.eligible_for_coin_discount
 FROM atlas_driver_offer_bpp.plan as plan, atlas_driver_offer_bpp.merchant_operating_city as moc
-where moc.merchant_short_id = 'NAMMA_YATRI_PARTNER' and not city = 'Banglore' and not plan.id = '25ade579-fd9c-4288-a015-337af085e66c';
-
+where moc.merchant_short_id = 'NAMMA_YATRI_PARTNER' and not city = 'Bangalore' and not plan.id = '25ade579-fd9c-4288-a015-337af085e66c';
+---------- !!!! IMPORTANT :- need to backfill the plan for the cities in driver plan table accordingly after plan creations ------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -------- alter in merchant service config / update with adequete prod/master creds-----
 INSERT INTO atlas_driver_offer_bpp.merchant_service_config (merchant_id, service_name, config_json)
