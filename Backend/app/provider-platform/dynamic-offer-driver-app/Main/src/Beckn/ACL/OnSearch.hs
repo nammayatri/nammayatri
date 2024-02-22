@@ -40,5 +40,5 @@ mkOnSearchRequest ::
   Context.Country ->
   m Spec.OnSearchReq
 mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapId bapUri bppId bppUri city country = do
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle provider.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle provider.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show provider.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW)
   TOnSearch.buildOnSearchRideReq bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country
