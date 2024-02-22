@@ -259,9 +259,6 @@ createMerchantOperatingCity merchantShortId city req = do
 
   -- exophone
   exophones <- CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId
-  whenJust (listToMaybe exophones) $ \exophone -> do
-    exophone' <- buildNewExophone newOperatingCity.id exophone
-    CQExophone.create exophone'
 
   QGEO.create geometry
   CQMOC.create newOperatingCity
@@ -270,6 +267,9 @@ createMerchantOperatingCity merchantShortId city req = do
   CQMSUC.create newMerchantServiceUsageConfig
   -- mapM_ CQMSC.create newMerchantServiceConfigs
   CQRC.create newRiderConfig
+  whenJust (listToMaybe exophones) $ \exophone -> do
+    exophone' <- buildNewExophone newOperatingCity.id exophone
+    CQExophone.create exophone'
 
   when req.enableForMerchant $ do
     let newOrigin = updateGeoRestriction merchant.geofencingConfig.origin
