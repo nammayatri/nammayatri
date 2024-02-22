@@ -23,14 +23,14 @@ import Common.Types.App (LazyCheck(..))
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Components.ComplaintsModel as ComplaintsModel
 import Components.GenericHeader as GenericHeader
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, accessibility, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width, accessibilityHint)
@@ -39,6 +39,8 @@ import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -92,37 +94,38 @@ view push state =
 --------------------------------------------------- topTextView -----------------------------------------------------
 topTextView :: (Action -> Effect Unit)  -> ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
 topTextView push state =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding (Padding 20 0 20 10)
-    ][  logoView state
-      , textView $
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , text (getString $ ABOUT_APP_DESCRIPTION "ABOUT_APP_DESCRIPTION")
-        , color Color.black800
-        , gravity LEFT
-        , lineHeight "22"
-        , margin (Margin 0 40 0 32)
-        ] <> FontStyle.body5 LanguageStyle
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
-        ][ ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})]
-      , linearLayout
-        [ gravity LEFT
-        , width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , visibility if state.appConfig.nyBrandingVisibility then GONE else VISIBLE
-        ][  softwareLicenseView state
-          , termsAndConditionsView state
-          , privacyPolicyView state
-          ]
-      ]
+  let appName = fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in  linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , padding (Padding 20 0 20 10)
+      ][  logoView state
+        , textView $
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , text $ getVarString ABOUT_APP_DESCRIPTION [appName]
+          , color Color.black800
+          , gravity LEFT
+          , lineHeight "22"
+          , margin (Margin 0 40 0 32)
+          ] <> FontStyle.body5 LanguageStyle
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
+          ][ ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})]
+        , linearLayout
+          [ gravity LEFT
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , visibility if state.appConfig.nyBrandingVisibility then GONE else VISIBLE
+          ][  softwareLicenseView state
+            , termsAndConditionsView state
+            , privacyPolicyView state
+            ]
+        ]
 
 --------------------------------------------------- logoView -----------------------------------------------------
 logoView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w

@@ -50,6 +50,8 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, length, mapWithIndex,take, (!!),head, filter, cons, null, tail)
 import Data.Array as Arr
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 import Data.Either (Either(..))
 import Data.Int (ceil, floor, fromNumber, fromString, toNumber, pow)
 import Data.Function.Uncurried (runFn1)
@@ -71,7 +73,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -1062,7 +1064,8 @@ bannersCarousal view state push =
 
 emptySuggestionsBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptySuggestionsBanner state push = 
-  linearLayout
+  let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 12.0
@@ -1093,7 +1096,7 @@ emptySuggestionsBanner state push =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity LEFT
-            , text $ getString $ WELCOME_TEXT "WELCOME_TEXT"
+            , text $ getVarString WELCOME_TEXT $ Arr.singleton appName
             , color Color.black800
             , padding $ PaddingBottom 2
             ] <> (FontStyle.body2 LanguageStyle)

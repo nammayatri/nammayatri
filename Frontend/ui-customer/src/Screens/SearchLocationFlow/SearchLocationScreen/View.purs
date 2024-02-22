@@ -47,16 +47,18 @@ import Types.App (defaultGlobalState)
 import Debug(spy)
 import Control.Monad.Free (runFree)
 import Helpers.Utils (fetchAndUpdateCurrentLocation)
-import Data.Maybe (isNothing, maybe, Maybe(..), isJust ) as MB
+import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe) as MB
 import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC
 import Data.String (length, null, take) as DS
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Components.LocationListItem.Controller 
 import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import PrestoDOM.Animation as PrestoAnim
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
@@ -436,8 +438,9 @@ locateOnMapFooterView push state = let
 
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
-searchLocationView push state globalProps = let
-  viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage 
+searchLocationView push state globalProps = 
+  let
+    viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage 
   in 
   linearLayout
     [ height MATCH_PARENT
@@ -458,13 +461,17 @@ searchLocationView push state globalProps = let
   where 
 
     findPlaceConfig :: SearchLocationScreenState -> InfoState
-    findPlaceConfig state = { descImg : "ny_ic_empty_suggestions"
+    findPlaceConfig state =
+      let appName = MB.fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" MB.Nothing MB.Just
+      in { 
+        descImg : "ny_ic_empty_suggestions"
       , viewVisibility : boolToVisibility $ 
-                            case state.props.actionType of 
-                                MetroStationSelectionAction -> DA.null state.data.updatedMetroStations
-                                _ -> DA.null state.data.locationList
-      , headerText : getString (WELCOME_TEXT "WELCOME_TEXT") <> "!"
-      , descText : getString START_TYPING_TO_SEARCH_PLACES}
+                          case state.props.actionType of 
+                              MetroStationSelectionAction -> DA.null state.data.updatedMetroStations
+                              _ -> DA.null state.data.locationList
+      , headerText : (getVarString WELCOME_TEXT [appName]) <> "!"
+      , descText : getString START_TYPING_TO_SEARCH_PLACES
+        }
 
     locUnserviceableConfig :: SearchLocationScreenState -> InfoState
     locUnserviceableConfig state = 
