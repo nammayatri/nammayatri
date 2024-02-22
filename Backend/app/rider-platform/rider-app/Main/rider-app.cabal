@@ -282,6 +282,8 @@ library
       Storage.Beam.FarePolicy.FareBreakup
       Storage.Beam.FeedbackForm
       Storage.Beam.Geometry
+      Storage.Beam.Geometry.Geometry
+      Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.HotSpotConfig
       Storage.Beam.Issue
       Storage.Beam.IssueManagement
