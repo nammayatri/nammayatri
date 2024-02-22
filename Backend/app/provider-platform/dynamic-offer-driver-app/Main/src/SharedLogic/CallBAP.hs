@@ -423,9 +423,9 @@ sendDriverOffer ::
   DDQ.DriverQuote ->
   m ()
 sendDriverOffer transporter searchReq searchTry driverQuote = do
-  logDebug $ "on_select ttl request driver: " <> show driverQuote.validTill
+  logDebug $ "on_select ttl request driver:-" <> show driverQuote.validTill
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapVariantToVehicle driverQuote.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapVariantToVehicle driverQuote.vehicleVariant) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapVariantToVehicle driverQuote.vehicleVariant))
   callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter)
   where
     buildOnSelectReq ::
