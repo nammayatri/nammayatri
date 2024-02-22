@@ -77,7 +77,7 @@ buildTrackReqV2 res = do
   Redis.setExp (key messageId) res.bppRideId 1800 --30 mins
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country
+  context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country Nothing
   pure $ Spec.TrackReq context $ mkTrackMessageV2 res
   where
     key messageId = "Track:bppRideId:" <> messageId

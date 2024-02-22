@@ -41,4 +41,7 @@ mkOnSearchRequest ::
   m Spec.OnSearchReq
 mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapId bapUri bppId bppUri city country = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle provider.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show provider.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW)
-  TOnSearch.buildOnSearchRideReq bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country
+  ttlInInt <- bppConfig.onSearchTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+  TOnSearch.buildOnSearchRideReq ttlToISO8601Duration bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country

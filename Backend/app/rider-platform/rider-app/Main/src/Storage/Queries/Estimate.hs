@@ -117,7 +117,8 @@ instance FromTType' BeamE.Estimate Estimate where
             driversLocation = driversLocation,
             specialLocationTag = specialLocationTag,
             updatedAt = updatedAt,
-            createdAt = createdAt
+            createdAt = createdAt,
+            validTill = validTill
           }
 
 instance ToTType' BeamE.Estimate Estimate where
@@ -153,5 +154,6 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.waitingChargePerMin = waitingCharges.waitingChargePerMin,
         BeamE.specialLocationTag = specialLocationTag,
         BeamE.updatedAt = updatedAt,
-        BeamE.createdAt = createdAt
+        BeamE.createdAt = createdAt,
+        BeamE.validTill = validTill
       }

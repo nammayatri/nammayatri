@@ -53,8 +53,8 @@ buildContextLocation city country = do
         locationState = Nothing
       }
 
-buildContextV2 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> m Spec.Context
-buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country = do
+buildContextV2 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> m Spec.Context
+buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country ttl = do
   now <- getCurrentTime <&> Just
   pure $
     Spec.Context
@@ -69,7 +69,7 @@ buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri c
         contextMessageId = UUID.fromText messageId,
         contextTimestamp = now,
         contextTransactionId = UUID.fromText =<< transactionId,
-        contextTtl = Nothing,
+        contextTtl = ttl,
         contextVersion = Just "2.0.0"
       }
 
