@@ -14,6 +14,30 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.Geometry (module Reexport) where
+module Storage.Beam.Geometry.GeometryGeom where
 
-import Storage.Beam.Geometry.Geometry as Reexport
+import qualified Database.Beam as B
+import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
+import Tools.Beam.UtilsTH
+
+data GeometryGeomT f = GeometryGeomT
+  { id :: B.C f Text,
+    city :: B.C f Context.City,
+    state :: B.C f Context.IndianState,
+    region :: B.C f Text,
+    geom :: B.C f (Maybe Text)
+  }
+  deriving (Generic, B.Beamable)
+
+instance B.Table GeometryGeomT where
+  data PrimaryKey GeometryGeomT f
+    = Id (B.C f Text)
+    deriving (Generic, B.Beamable)
+  primaryKey = Id . id
+
+type GeometryGeom = GeometryGeomT Identity
+
+$(enableKVPG ''GeometryGeomT ['id] [])
+
+$(mkTableInstances ''GeometryGeomT "geometry")

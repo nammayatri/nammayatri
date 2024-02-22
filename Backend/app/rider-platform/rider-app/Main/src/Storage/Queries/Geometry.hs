@@ -26,7 +26,8 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Storage.Beam.Common as BeamCommon
-import qualified Storage.Beam.Geometry as BeamG
+import qualified Storage.Beam.Geometry.Geometry as BeamG
+import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 
 create :: MonadFlow m => Geometry -> m ()
 create = createWithKV
@@ -43,14 +44,16 @@ instance FromTType' BeamG.Geometry Geometry where
       Just
         Geometry
           { id = Id id,
+            geom = Nothing,
             ..
           }
 
-instance ToTType' BeamG.Geometry Geometry where
+instance ToTType' BeamGeomG.GeometryGeom Geometry where
   toTType' Geometry {..} =
-    BeamG.GeometryT
-      { BeamG.id = getId id,
-        BeamG.region = region,
-        BeamG.state = state,
-        BeamG.city = city
+    BeamGeomG.GeometryGeomT
+      { BeamGeomG.id = getId id,
+        BeamGeomG.region = region,
+        BeamGeomG.state = state,
+        BeamGeomG.city = city,
+        BeamGeomG.geom = geom
       }

@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
+import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Geometry -> m ()
 create = createWithKV
@@ -62,12 +63,14 @@ instance FromTType' BeamG.Geometry Geometry where
       Just
         Geometry
           { id = Id id,
+            geom = Nothing,
             ..
           }
 
-instance ToTType' BeamG.Geometry Geometry where
+instance ToTType' BeamGeomG.GeometryGeom Geometry where
   toTType' Geometry {..} = do
-    BeamG.GeometryT
-      { BeamG.id = getId id,
+    BeamGeomG.GeometryGeomT
+      { BeamGeomG.id = getId id,
+        BeamGeomG.geom = geom,
         ..
       }
