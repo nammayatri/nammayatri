@@ -17,7 +17,7 @@ imports:
   ModuleCompletionStatus: Domain.Types.DriverModuleCompletion
   UTCTime: Kernel.Prelude
   APISuccess: Kernel.Types.APISuccess
-  ReelButtonConfig: Domain.Types.LmsVideoTranslation
+  ReelButtonConfig: Domain.Types.ReelsData
   ModuleCompletionCriteria: Domain.Types.LmsModule
   OptionEntity: Domain.Types.QuestionInformation
 

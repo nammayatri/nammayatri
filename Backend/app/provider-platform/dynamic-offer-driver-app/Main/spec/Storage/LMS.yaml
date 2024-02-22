@@ -10,6 +10,11 @@ imports:
   Variant: Domain.Types.Vehicle.Variant
   QuizQuestion: Domain.Types.LmsEnumTypes
   Value: Data.Aeson
+  ReelRowButtonConfig: Domain.Types.ReelsData
+  getSideButtonConfigFromTable: Storage.Queries.Transformers.ReelsData
+  getBottomButtonConfigFromTable: Storage.Queries.Transformers.ReelsData
+  convertBottomButtonConfigToTable: Storage.Queries.Transformers.ReelsData
+  convertSideButtonConfigToTable: Storage.Queries.Transformers.ReelsData
 
 LmsModule:
   tableName : lms_module
@@ -125,33 +130,6 @@ LmsVideoTranslation:
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
-  types:
-    ReelRowButtonConfig:
-      row: "[ReelButtonConfig]"
-      derive: "'ListInstance, Eq, Ord, Read"
-    ReelButtonConfig:
-      prefixImage : Maybe Text
-      suffixImage : Maybe Text
-      actions : Maybe [Text]
-      shareLink : Maybe Text
-      shareText : Maybe Text
-      buttonColor : Maybe Text
-      cornerRadius : Maybe Int
-      text : Maybe Text
-      textSize : Maybe Int
-      textColor : Maybe Text
-      prefixImageHeight : Maybe Int
-      prefixImageWidth : Maybe Int
-      suffixImageHeight : Maybe Int
-      suffixImageWidth : Maybe Int
-      activeIndex : Maybe Text
-      inActiveIndex : Maybe Text
-      activeIndexWidth : Maybe Int
-      activeIndexHeight : Maybe Int
-      inActiveIndexWidth : Maybe Int
-      inActiveIndexHeight : Maybe Int
-      derive: "'ListInstance, Eq, Ord, Read"
-
   default:
     completedWatchCount: "0"
     viewCount: "0"
@@ -160,8 +138,20 @@ LmsVideoTranslation:
     bottomButtonConfig: "'{}'"
 
   sqlType:
-    sideButtonConfig: "text[]"
-    bottomButtonConfig: "text[]"
+    sideButtonConfig: "json"
+    bottomButtonConfig: "json"
+
+  beamType:
+    sideButtonConfig: "Value"
+    bottomButtonConfig: "Value"
+
+  fromTType:
+    sideButtonConfig : getSideButtonConfigFromTable|I
+    bottomButtonConfig : getBottomButtonConfigFromTable|I
+
+  toTType:
+    sideButtonConfig : convertSideButtonConfigToTable|I
+    bottomButtonConfig : convertBottomButtonConfigToTable|I
 
   constraints:
     videoId : PrimaryKey

@@ -18,3 +18,9 @@ ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ADD COLUMN yt_video_id 
 ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ADD PRIMARY KEY ( language, video_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ALTER COLUMN side_button_config TYPE json;
+ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ALTER COLUMN bottom_button_config TYPE json;

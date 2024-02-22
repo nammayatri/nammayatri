@@ -186,6 +186,7 @@ library
       Domain.Action.UI.Performance
       Domain.Action.UI.Plan
       Domain.Action.UI.Rating
+      Domain.Action.UI.Reels
       Domain.Action.UI.Registration
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
@@ -483,6 +484,7 @@ library
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
+      Storage.CachedQueries.ReelsData
       Storage.CachedQueries.RegistryMapFallback
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.ValueAddNP
@@ -587,6 +589,7 @@ library
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
       Storage.Queries.Transformers.QuestionInformation
+      Storage.Queries.Transformers.ReelsData
       Storage.Queries.Translations
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
@@ -612,8 +615,10 @@ library
       Tools.Verification
       Tools.Whatsapp
       API.Action.UI.LmsModule
+      API.Action.UI.Reels
       API.Action.UI.SpecialLocation
       API.Types.UI.LmsModule
+      API.Types.UI.Reels
       Domain.Types.BecknConfig
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
@@ -628,6 +633,7 @@ library
       Domain.Types.ModuleCompletionInformation
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
+      Domain.Types.ReelsData
       Domain.Types.SubscriptionConfig
       Domain.Types.ValueAddNP
       Storage.Beam.BecknConfig
@@ -644,6 +650,7 @@ library
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
+      Storage.Beam.ReelsData
       Storage.Beam.SubscriptionConfig
       Storage.Beam.ValueAddNP
       Storage.Queries.BecknConfig
@@ -660,6 +667,7 @@ library
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
+      Storage.Queries.ReelsData
       Storage.Queries.SubscriptionConfig
       Storage.Queries.ValueAddNP
   other-modules:

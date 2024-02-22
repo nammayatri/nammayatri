@@ -5,9 +5,10 @@
 
 module Storage.Beam.LmsVideoTranslation where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import qualified Domain.Types.LmsModuleVideoInformation
-import qualified Domain.Types.LmsVideoTranslation
+import qualified Domain.Types.ReelsData
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
 import Kernel.Prelude
@@ -16,13 +17,13 @@ import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data LmsVideoTranslationT f = LmsVideoTranslationT
-  { bottomButtonConfig :: B.C f [Domain.Types.LmsVideoTranslation.ReelRowButtonConfig],
+  { bottomButtonConfig :: B.C f Data.Aeson.Value,
     completedThresholdInPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     completedWatchCount :: B.C f Kernel.Prelude.Int,
     description :: B.C f Kernel.Prelude.Text,
     duration :: B.C f Kernel.Prelude.Int,
     language :: B.C f Kernel.External.Types.Language,
-    sideButtonConfig :: B.C f [Domain.Types.LmsVideoTranslation.ReelRowButtonConfig],
+    sideButtonConfig :: B.C f Data.Aeson.Value,
     startThresholdInPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     thresholdEnabled :: B.C f Kernel.Prelude.Bool,
     thumbnailImage :: B.C f Kernel.Prelude.Text,
