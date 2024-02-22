@@ -1091,7 +1091,8 @@ type HomeScreenProps =  {
   vehicleNSPopup :: Boolean,
   currentGeoHash :: String,
   expandedMap :: Boolean,
-  specialZonePopup :: Boolean
+  specialZonePopup :: Boolean,
+  nearBySpecialZone :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER

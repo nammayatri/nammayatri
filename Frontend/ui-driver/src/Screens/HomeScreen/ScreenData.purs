@@ -213,7 +213,8 @@ initData = {
         vehicleNSPopup : false,
         currentGeoHash : "",
         expandedMap : false,
-        specialZonePopup : false
+        specialZonePopup : false,
+        nearBySpecialZone : false
     }
 }
 

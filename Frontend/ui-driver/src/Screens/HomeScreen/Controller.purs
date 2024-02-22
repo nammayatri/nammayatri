@@ -859,12 +859,12 @@ eval (TimeUpdate time lat lng) state = do
   let driverLat = getLastKnownLocValue ST.LATITUDE lat
       driverLong = getLastKnownLocValue ST.LONGITUDE lng
       geoHash = spy "debug zone geoHash" (Uncurried.runFn3 encodeGeohash driverLat driverLong 7)
-      geoHashNeighbours = spy "debug zone geoHash" ((geohashNeighbours geoHash) <> [geoHash])
+      -- geoHashNeighbours = spy "debug zone geoHash" ((geohashNeighbours geoHash) <> [geoHash])
       -- nearestZone = findNearestSpecialZone driverLat driverLong
       nearestZone = case state.props.currentStage of 
                       ST.HomeScreen -> spy "debug zone findNearestSpecialZone" (findNearestSpecialZone driverLat driverLong)
                       _ -> Nothing
-      newState = state { data = state.data { currentDriverLat= driverLat,  currentDriverLon = driverLong, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
+      newState = state { data{ currentDriverLat= driverLat,  currentDriverLon = driverLong, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a")}, props { nearBySpecialZone = isJust nearestZone }}
 
   void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show newState.data.activeRide.notifiedCustomer)
   void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")

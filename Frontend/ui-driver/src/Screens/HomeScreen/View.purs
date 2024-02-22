@@ -380,7 +380,7 @@ specialPickupZone push state =
     , cornerRadius 8.0
     , stroke $ "1," <> Color.yellow900
     , background Color.yellow600
-    , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) 
+    , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) && state.props.nearBySpecialZone
     , orientation HORIZONTAL
     ]
     [ imageView
