@@ -22,8 +22,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601ParseM)
-import Data.Time.LocalTime (CalendarDiffTime, ctTime)
 import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Kernel.Prelude
@@ -177,13 +175,3 @@ getDistanceToNearestDriverV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.DISTANCE_TO_NEAREST_DRIVER_METER tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceToPickup
-
--- Parse ISO8601 duration and return the number of seconds
-parseISO8601Duration :: Text -> Maybe NominalDiffTime
-parseISO8601Duration durationStr = do
-  (calenderDiffernceTime :: CalendarDiffTime) <- iso8601ParseM $ T.unpack durationStr
-  Just $ ctTime calenderDiffernceTime
-
--- Add the parsed duration to a given UTCTime
-addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
-addDurationToUTCTime time duration = addUTCTime duration time

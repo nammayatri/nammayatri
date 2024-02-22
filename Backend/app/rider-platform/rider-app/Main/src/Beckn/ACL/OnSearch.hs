@@ -21,6 +21,7 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
 import EulerHS.Prelude hiding (find, id, map, readMaybe, state, unpack)
+import Kernel.Prelude (fromJust)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common
@@ -36,6 +37,9 @@ buildOnSearchReqV2 ::
 buildOnSearchReqV2 req = do
   ContextUtils.validateContext Context.ON_SEARCH req.onSearchReqContext
   logOnSearchEventV2 req
+  onSearchTtl <- req.onSearchReqContext.contextTtl & fromMaybeM (InvalidRequest "Missing ttl")
+  timestamp <- req.onSearchReqContext.contextTimestamp & fromMaybeM (InvalidRequest "Missing timestamp")
+  let validTill = fromJust $ parseISO8601Duration onSearchTtl <&> addDurationToUTCTime timestamp
   case req.onSearchReqError of
     Nothing -> do
       -- generated function
@@ -45,7 +49,7 @@ buildOnSearchReqV2 req = do
       provider <- safeHead providers & fromMaybeM (InvalidRequest "Missing Provider")
       fulfillments <- provider.providerFulfillments & fromMaybeM (InvalidRequest "Missing Fulfillments")
       items <- provider.providerItems & fromMaybeM (InvalidRequest "Missing Items")
-      Just <$> TOnSearch.buildOnSearchReq req provider items fulfillments
+      Just <$> TOnSearch.buildOnSearchReq req provider items fulfillments validTill
     Just err -> do
       logTagError "on_search req" $ "on_search error: " <> show err
       pure Nothing

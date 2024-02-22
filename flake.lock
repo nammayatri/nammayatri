@@ -3770,17 +3770,14 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1708599782,
-        "narHash": "sha256-KnyAr4WfFH7rR3SePCbuMSnbH4I4UkDZ6QT+yAVdRMo=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "6e7aee4c8756883876298f7943ad5a879e842154",
-        "type": "github"
+        "lastModified": 1708515542,
+        "narHash": "sha256-b+3nP5NDHhuoY5mwzlN4jnJCSsmfkuWVKqwBAlOWsqU=",
+        "path": "/Users/chakradhar.k/Projects/shared-kernel",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/chakradhar.k/Projects/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

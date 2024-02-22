@@ -55,7 +55,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (timeDiffInSeconds)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)

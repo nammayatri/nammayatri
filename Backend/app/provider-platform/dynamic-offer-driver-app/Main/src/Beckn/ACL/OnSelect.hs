@@ -28,7 +28,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (formatTimeDifference)
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
 
 data DOnSelectReq = DOnSelectReq
