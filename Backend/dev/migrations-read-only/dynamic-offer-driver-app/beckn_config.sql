@@ -25,3 +25,10 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN cancellation_fee_percentage integer ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN cancellation_fee_amount integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_select_ttl_sec integer ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_search_ttl_sec integer ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_init_ttl_sec integer ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_confirm_ttl_sec integer ;

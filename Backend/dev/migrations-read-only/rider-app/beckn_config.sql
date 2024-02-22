@@ -32,3 +32,10 @@ ALTER TABLE atlas_app.beckn_config ADD COLUMN collected_by text NOT NULL default
 
 ALTER TABLE atlas_app.beckn_config ADD COLUMN settlement_window text ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN buyer_finder_fee text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.beckn_config ADD COLUMN select_ttl_sec integer ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN search_ttl_sec integer ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN init_ttl_sec integer ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN confirm_ttl_sec integer ;
