@@ -262,7 +262,7 @@ schedulerTrigger merchantShortId _ req = do
               when (serviceName == Plan.YATRI_RENTAL) $ do
                 SDF.setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
               createJobIn @_ @'CalculateDriverFees diffTimeS maxShards (jobData :: CalculateDriverFeesJobData)
-              setDriverFeeCalcJobCache jobData.startTime jobData.endTime merchantOpCityId diffTimeS
+              setDriverFeeCalcJobCache jobData.startTime jobData.endTime merchantOpCityId serviceName diffTimeS
               setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"

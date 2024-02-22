@@ -421,7 +421,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
       Just dfCalcTime -> do
-        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId
+        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName
         let dfCalculationJobTs = diffUTCTime (addUTCTime dfCalcTime driverFee.endTime) now
         case isDfCaclculationJobScheduled of
           ----- marker ---
@@ -440,7 +440,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
                     createChildJobs = Just True,
                     endTime = driverFee.endTime
                   }
-              setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId dfCalculationJobTs
+              setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName dfCalculationJobTs
               setDriverFeeBillNumberKey merchantOpCityId 1 36000 (driverFee.serviceName)
           _ -> pure ()
 
@@ -535,22 +535,22 @@ getPlan mbDriverPlan serviceName merchantOpCityId = do
         [pl] -> pure (Just pl)
         _ -> throwError $ InternalError "Multiple default plans found"
 
-getDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> m (Maybe Bool)
-getDriverFeeCalcJobCache startTime endTime merchantOpCityId = Hedis.get (mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId)
+getDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> ServiceNames -> m (Maybe Bool)
+getDriverFeeCalcJobCache startTime endTime merchantOpCityId serviceName = Hedis.get (mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId serviceName)
 
-mkDriverFeeCalcJobCacheKey :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> Text
-mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId = "DriverFeeCalculation:MerchantOpCityId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
+mkDriverFeeCalcJobCacheKey :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> ServiceNames -> Text
+mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId serviceName = "DriverFeeCalculation:MerchantOpCityId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime <> ":ServiceName:" <> show serviceName
 
-mkDriverFeeCalcJobFlagKey :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> Text
-mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId = "DriverFeeCalculationFlag:MerchantOpCityId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
+mkDriverFeeCalcJobFlagKey :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> ServiceNames -> Text
+mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId serviceName = "DriverFeeCalculationFlag:MerchantOpCityId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime <> ":ServiceName:" <> show serviceName
 
-getDriverFeeCalcJobFlagKey :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> m (Maybe Bool)
-getDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId = Hedis.get (mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId)
+getDriverFeeCalcJobFlagKey :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> ServiceNames -> m (Maybe Bool)
+getDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId serviceName = Hedis.get (mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId serviceName)
 
-setDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> NominalDiffTime -> m ()
-setDriverFeeCalcJobCache startTime endTime merchantOpCityId expTime = do
-  Hedis.setExp (mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId) True (round $ expTime + 86399)
-  Hedis.setExp (mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId) False (round $ expTime + 86399)
+setDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> ServiceNames -> NominalDiffTime -> m ()
+setDriverFeeCalcJobCache startTime endTime merchantOpCityId serviceName expTime = do
+  Hedis.setExp (mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId serviceName) True (round $ expTime + 86399)
+  Hedis.setExp (mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId serviceName) False (round $ expTime + 86399)
 
 mkDriverFeeBillNumberKey :: Id MerchantOperatingCity -> ServiceNames -> Text
 mkDriverFeeBillNumberKey merchantOpCityId service = "DriverFeeCalulation:BillNumber:Counter" <> merchantOpCityId.getId <> ":service:" <> show service
