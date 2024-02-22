@@ -69,6 +69,7 @@ data DriverEndpoint
   | ChangeOperatingCityEndpoint
   | PauseOrResumeServiceChargesEndPoint
   | UpdateRCInvalidStatusEndPoint
+  | BulkReviewRCVariantEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
@@ -555,6 +556,9 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     vehicleModel :: Maybe Text,
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
+    reviewRequired :: Maybe Bool,
+    reviewedAt :: Maybe UTCTime,
+    manufacturerModel :: Maybe Text,
     verificationStatus :: VerificationStatus,
     fleetOwnerId :: Maybe Text
     -- createdAt :: UTCTime, -- do we need it?
@@ -1148,4 +1152,25 @@ data UpdateRCInvalidStatusReq = UpdateRCInvalidStatusReq
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance HideSecrets UpdateRCInvalidStatusReq where
+  hideSecrets = identity
+
+type BulkReviewRCVariantAPI =
+  "bulkReviewRCVariant"
+    :> ReqBody '[JSON] [ReviewRCVariantReq]
+    :> Post '[JSON] [ReviewRCVariantRes]
+
+data ReviewRCVariantReq = ReviewRCVariantReq
+  { rcId :: Text,
+    vehicleVariant :: Maybe Variant,
+    markReviewed :: Maybe Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data ReviewRCVariantRes = ReviewRCVariantRes
+  { rcId :: Text,
+    status :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets [ReviewRCVariantReq] where
   hideSecrets = identity

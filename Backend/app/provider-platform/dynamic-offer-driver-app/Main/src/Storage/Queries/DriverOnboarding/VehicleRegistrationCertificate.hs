@@ -18,7 +18,6 @@ module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Vehicle as Vehicle
-import qualified Domain.Types.Vehicle.Variant as DVeh
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -48,6 +47,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.vehicleColor vehicleColor,
           Se.Set BeamVRC.vehicleEnergyType vehicleEnergyType,
           Se.Set BeamVRC.verificationStatus verificationStatus,
+          Se.Set BeamVRC.reviewedAt reviewedAt,
           Se.Set BeamVRC.failedRules failedRules,
           Se.Set BeamVRC.fleetOwnerId fleetOwnerId,
           Se.Set BeamVRC.updatedAt updatedAt
@@ -77,19 +77,16 @@ findByRCIdAndFleetOwnerId (Id rcId) fleetOwnerId =
         ]
     ]
 
-updateRCStatusAndVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> IV.VerificationStatus -> Bool -> DVeh.Variant -> m ()
-updateRCStatusAndVehicleVariant (Id rcId) status reviewRequired vehicleType =
+updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> Maybe Bool -> Maybe Bool -> m ()
+updateVehicleVariant (Id vehicleRegistrationCertificateId) variant reviewDone reviewRequired = do
+  now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamVRC.verificationStatus status,
-      Se.Set BeamVRC.reviewRequired (Just reviewRequired),
-      Se.Set BeamVRC.vehicleVariant (Just vehicleType)
-    ]
-    [Se.Is BeamVRC.id $ Se.Eq rcId]
-
-updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> m ()
-updateVehicleVariant (Id vehicleRegistrationCertificateId) variant = do
-  updateOneWithKV
-    [Se.Set BeamVRC.vehicleVariant variant]
+    ( [Se.Set BeamVRC.updatedAt now]
+        <> [Se.Set BeamVRC.reviewedAt (Just now) | isJust reviewDone]
+        <> [Se.Set BeamVRC.reviewRequired reviewRequired | isJust reviewRequired]
+        <> [Se.Set BeamVRC.vehicleVariant variant | isJust variant]
+        <> [Se.Set BeamVRC.verificationStatus IV.VALID | isJust variant]
+    )
     [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
 
 findByRCAndExpiry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
@@ -138,24 +135,7 @@ instance FromTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCe
           { id = Id id,
             documentImageId = Id documentImageId,
             certificateNumber = EncryptedHashed (Encrypted certificateNumberEncrypted) certificateNumberHash,
-            fitnessExpiry = fitnessExpiry,
-            permitExpiry = permitExpiry,
-            pucExpiry = pucExpiry,
-            insuranceValidity = insuranceValidity,
-            vehicleClass = vehicleClass,
-            vehicleVariant = vehicleVariant,
-            failedRules = failedRules,
-            vehicleManufacturer = vehicleManufacturer,
-            vehicleCapacity = vehicleCapacity,
-            vehicleModel = vehicleModel,
-            vehicleColor = vehicleColor,
-            manufacturerModel = manufacturerModel,
-            reviewRequired = reviewRequired,
-            vehicleEnergyType = vehicleEnergyType,
-            verificationStatus = verificationStatus,
-            fleetOwnerId = fleetOwnerId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            ..
           }
 
 instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCertificate where
@@ -180,6 +160,7 @@ instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCert
         BeamVRC.vehicleColor = vehicleColor,
         BeamVRC.vehicleEnergyType = vehicleEnergyType,
         BeamVRC.verificationStatus = verificationStatus,
+        BeamVRC.reviewedAt = reviewedAt,
         BeamVRC.fleetOwnerId = fleetOwnerId,
         BeamVRC.createdAt = createdAt,
         BeamVRC.updatedAt = updatedAt

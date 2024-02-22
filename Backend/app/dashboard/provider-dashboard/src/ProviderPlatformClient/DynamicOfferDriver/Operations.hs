@@ -103,7 +103,8 @@ data DriverCommonAPIs = DriverCommonAPIs
     changeOperatingCity :: Id Driver.Driver -> Driver.ChangeOperatingCityReq -> Euler.EulerClient APISuccess,
     getOperatingCity :: Maybe Text -> Maybe Text -> Maybe (Id Ride.Ride) -> Euler.EulerClient Driver.GetOperatingCityResp,
     setServiceChargeEligibleFlagInDriverPlan :: Id Common.Driver -> Driver.PauseOrResumeServiceChargesReq -> Euler.EulerClient APISuccess,
-    updateRCInvalidStatus :: Id Common.Driver -> Driver.UpdateRCInvalidStatusReq -> Euler.EulerClient APISuccess
+    updateRCInvalidStatus :: Id Common.Driver -> Driver.UpdateRCInvalidStatusReq -> Euler.EulerClient APISuccess,
+    bulkReviewRCVariant :: [Driver.ReviewRCVariantReq] -> Euler.EulerClient [Driver.ReviewRCVariantRes]
   }
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
@@ -302,7 +303,8 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> changeOperatingCity
       :<|> getOperatingCity
       :<|> setServiceChargeEligibleFlagInDriverPlan
-      :<|> updateRCInvalidStatus = driverCommonClient
+      :<|> updateRCInvalidStatus
+      :<|> bulkReviewRCVariant = driverCommonClient
 
     updateReferralLinkPassword
       :<|> linkDriverReferralCode = referralClient
