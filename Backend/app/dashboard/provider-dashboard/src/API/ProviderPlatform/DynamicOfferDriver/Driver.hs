@@ -101,6 +101,7 @@ type API =
            :<|> SendDummyRideRequestToDriverViaDashboardAPI
            :<|> ChangeOperatingCityAPI
            :<|> UpdateRCInvalidStatusAPI
+           :<|> BulkReviewRCVariantAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -311,6 +312,10 @@ type UpdateRCInvalidStatusAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_RC_INVALID_STATUS
     :> Common.UpdateRCInvalidStatusAPI
 
+type BulkReviewRCVariantAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'BULK_REVIEW_RC_VARIANT
+    :> Common.BulkReviewRCVariantAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverDocuments merchantId city
@@ -365,6 +370,7 @@ handler merchantId city =
     :<|> sendDummyRideRequestToDriverViaDashboard merchantId city
     :<|> changeOperatingCity merchantId city
     :<|> updateRCInvalidStatus merchantId city
+    :<|> bulkReviewRCVariant merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -372,11 +378,11 @@ buildTransaction ::
   ) =>
   Common.DriverEndpoint ->
   ApiTokenInfo ->
-  Id Common.Driver ->
+  Maybe (Id Common.Driver) ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.DriverAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) (Just driverId) Nothing
+  T.buildTransaction (DT.DriverAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) driverId Nothing
 
 buildManagementServerTransaction ::
   ( MonadFlow m,
@@ -423,21 +429,21 @@ driverActivity merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
 collectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 collectCash merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.CollectCashEndpoint apiTokenInfo driverId T.emptyRequest
+  transaction <- buildTransaction Common.CollectCashEndpoint apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.collectCash) driverId apiTokenInfo.personId.getId
 
 exemptCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 exemptCash merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.ExemptCashEndpoint apiTokenInfo driverId T.emptyRequest
+  transaction <- buildTransaction Common.ExemptCashEndpoint apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.exemptCash) driverId apiTokenInfo.personId.getId
 
 enableDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 enableDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.EnableDriverEndpoint apiTokenInfo driverId T.emptyRequest
+  transaction <- buildTransaction Common.EnableDriverEndpoint apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.enableDriver) driverId
 
@@ -514,7 +520,7 @@ deleteDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' 
 unlinkVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 unlinkVehicle merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.UnlinkVehicleEndpoint apiTokenInfo driverId T.emptyRequest
+  transaction <- buildTransaction Common.UnlinkVehicleEndpoint apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.unlinkVehicle) driverId
 
@@ -535,7 +541,7 @@ addVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driv
 addVehicle merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.AddVehicleEndpoint apiTokenInfo driverId $ Just req
+  transaction <- buildTransaction Common.AddVehicleEndpoint apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.addVehicle) driverId req
 
@@ -610,14 +616,14 @@ unlinkAadhaar merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI'
 endRCAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 endRCAssociation merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.EndRCAssociationEndpoint apiTokenInfo driverId T.emptyRequest
+  transaction <- buildTransaction Common.EndRCAssociationEndpoint apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.endRCAssociation) driverId
 
 setRCStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
 setRCStatus merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.SetRCStatusEndpoint apiTokenInfo driverId $ Just req
+  transaction <- buildTransaction Common.SetRCStatusEndpoint apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.setRCStatus) driverId req
 
@@ -714,7 +720,7 @@ changeOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Co
 changeOperatingCity merchantShortId opCity apiTokenInfo driverId req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.ChangeOperatingCityEndpoint apiTokenInfo driverId (Just req)
+    transaction <- buildTransaction Common.ChangeOperatingCityEndpoint apiTokenInfo (Just driverId) (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.changeOperatingCity) driverId req
 
@@ -722,6 +728,14 @@ updateRCInvalidStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id 
 updateRCInvalidStatus merchantShortId opCity apiTokenInfo driverId req =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.UpdateRCInvalidStatusEndPoint apiTokenInfo driverId (Just req)
+    transaction <- buildTransaction Common.UpdateRCInvalidStatusEndPoint apiTokenInfo (Just driverId) (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updateRCInvalidStatus) driverId req
+
+bulkReviewRCVariant :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> [Common.ReviewRCVariantReq] -> FlowHandler [Common.ReviewRCVariantRes]
+bulkReviewRCVariant merchantShortId opCity apiTokenInfo req =
+  withFlowHandlerAPI' $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    transaction <- buildTransaction Common.BulkReviewRCVariantEndPoint apiTokenInfo Nothing (Just req)
+    T.withTransactionStoring transaction $
+      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.bulkReviewRCVariant) req
