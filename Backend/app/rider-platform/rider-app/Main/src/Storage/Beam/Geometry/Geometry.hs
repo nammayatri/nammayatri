@@ -11,10 +11,32 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.Geometry
-  ( module Reexport,
-  )
-where
+module Storage.Beam.Geometry.Geometry where
 
-import Storage.Beam.Geometry.Geometry as Reexport
+import qualified Database.Beam as B
+import Kernel.Prelude
+import Kernel.Types.Beckn.Context (City, IndianState)
+import Tools.Beam.UtilsTH
+
+data GeometryT f = GeometryT
+  { id :: B.C f Text,
+    region :: B.C f Text,
+    state :: B.C f IndianState,
+    city :: B.C f City
+  }
+  deriving (Generic, B.Beamable)
+
+instance B.Table GeometryT where
+  data PrimaryKey GeometryT f
+    = Id (B.C f Text)
+    deriving (Generic, B.Beamable)
+  primaryKey = Id . id
+
+type Geometry = GeometryT Identity
+
+$(enableKVPG ''GeometryT ['id] [])
+
+$(mkTableInstances ''GeometryT "geometry")

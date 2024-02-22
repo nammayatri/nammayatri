@@ -406,6 +406,8 @@ library
       Storage.Beam.Feedback.FeedbackForm
       Storage.Beam.FleetDriverAssociation
       Storage.Beam.Geometry
+      Storage.Beam.Geometry.Geometry
+      Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.GoHomeConfig
       Storage.Beam.GovtDataRC
       Storage.Beam.Invoice

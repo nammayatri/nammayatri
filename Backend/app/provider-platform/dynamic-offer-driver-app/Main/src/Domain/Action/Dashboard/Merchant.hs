@@ -813,10 +813,6 @@ createMerchantOperatingCity merchantShortId city req = do
   driverPoolConfigs <- CQDPC.findAllByMerchantOpCityId baseOperatingCityId
   newDriverPoolConfigs <- mapM (buildPoolConfig newOperatingCity.id) driverPoolConfigs
 
-  -- exophones
-  exphones <- CQExophone.findAllByMerchantOpCityId baseOperatingCityId
-  newExphones <- mapM (buildNewExophone newOperatingCity.id) exphones
-
   -- fare products
   fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
   newFareProducts <- mapM (buildFareProduct newOperatingCity.id) fareProducts
@@ -860,11 +856,16 @@ createMerchantOperatingCity merchantShortId city req = do
   -- geometry
   geometry <- buildGeometry
 
+  -- call ride exophone
+  exophones <- CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId
+  whenJust (find (\exophone -> exophone.exophoneType == DExophone.CALL_RIDE) exophones) $ \exophone -> do
+    exophone' <- buildNewExophone newOperatingCity.id exophone
+    CQExophone.create exophone'
+
   QGEO.create geometry
   CQMOC.create newOperatingCity
   CQDIPC.create newIntelligentPoolConfig
   mapM_ CQDPC.create newDriverPoolConfigs
-  mapM_ CQExophone.create newExphones
   mapM_ CQFProduct.create newFareProducts
   CQGHC.create newGoHomeConfig
   mapM_ CQLBC.create newLeaderBoardConfigs
@@ -895,7 +896,8 @@ createMerchantOperatingCity merchantShortId city req = do
           { id,
             region = show req.city,
             state = req.state,
-            city = req.city
+            city = req.city,
+            geom = Just req.geom
           }
 
     buildMerchantOperatingCity merchantId baseCity = do
@@ -941,8 +943,8 @@ createMerchantOperatingCity merchantShortId city req = do
         DExophone.Exophone
           { id = newId,
             merchantOperatingCityId = newCityId,
-            primaryPhone = fromMaybe primaryPhone req.exophone,
-            backupPhone = fromMaybe backupPhone req.exophone,
+            primaryPhone = req.exophone,
+            backupPhone = req.exophone,
             isPrimaryDown = False,
             createdAt = now,
             updatedAt = now,

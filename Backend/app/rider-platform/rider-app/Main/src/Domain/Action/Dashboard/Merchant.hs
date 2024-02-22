@@ -234,10 +234,6 @@ createMerchantOperatingCity merchantShortId city req = do
   -- city
   newOperatingCity <- buildMerchantOperatingCity merchant.id
 
-  -- exophones
-  exphones <- CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId
-  newExphones <- mapM (buildNewExophone newOperatingCity.id) exphones
-
   -- merchant message
   merchantMessages <- CQMM.findAllByMerchantOpCityId baseOperatingCityId
   newMerchantMessages <- mapM (buildMerchantMessage newOperatingCity.id) merchantMessages
@@ -261,9 +257,14 @@ createMerchantOperatingCity merchantShortId city req = do
   -- geometry
   geometry <- buildGeometry
 
+  -- exophone
+  exophones <- CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId
+  whenJust (listToMaybe exophones) $ \exophone -> do
+    exophone' <- buildNewExophone newOperatingCity.id exophone
+    CQExophone.create exophone'
+
   QGEO.create geometry
   CQMOC.create newOperatingCity
-  mapM_ CQExophone.create newExphones
   mapM_ CQMM.create newMerchantMessages
   mapM_ CQMPM.create newMerchantPaymentMethods
   CQMSUC.create newMerchantServiceUsageConfig
@@ -289,7 +290,8 @@ createMerchantOperatingCity merchantShortId city req = do
           { id,
             region = show req.city,
             state = req.state,
-            city = req.city
+            city = req.city,
+            geom = Just req.geom
           }
 
     buildMerchantOperatingCity merchantId = do
@@ -315,8 +317,8 @@ createMerchantOperatingCity merchantShortId city req = do
         DExophone.Exophone
           { id = newId,
             merchantOperatingCityId = newCityId,
-            primaryPhone = fromMaybe primaryPhone req.exophone,
-            backupPhone = fromMaybe backupPhone req.exophone,
+            primaryPhone = req.exophone,
+            backupPhone = req.exophone,
             isPrimaryDown = False,
             createdAt = now,
             updatedAt = now,
