@@ -36,7 +36,7 @@ buildSearchReqV2 ::
   m Spec.SearchReq
 buildSearchReqV2 DSearch.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found") -- get Vehicle Variatnt here
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW) -- get Vehicle Variant here
   Search.buildBecknSearchReqV2
     Context.SEARCH
     Context.MOBILITY

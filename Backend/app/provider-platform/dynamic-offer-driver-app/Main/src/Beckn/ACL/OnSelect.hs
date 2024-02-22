@@ -224,8 +224,9 @@ mkQuoteV2 quote now = do
       quotationTtl = Just $ T.pack $ formatTimeDifference nominalDifferenceTime --------- todo
     }
   where
+    formatTimeDifference :: (Semigroup a, IsString a) => NominalDiffTime -> a
     formatTimeDifference duration =
-      let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
+      let secondsDiff = (round :: Double -> Int) . realToFrac $ nominalDiffTimeToSeconds duration
           (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)
           (minutes, seconds) = divMod remainingSeconds 60
        in "PT" <> show hours <> "H" <> show minutes <> "M" <> show seconds <> "S"

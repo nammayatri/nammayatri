@@ -21,7 +21,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import qualified Data.Aeson as A
 import Data.List (singleton)
-import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Location as Location
@@ -85,7 +84,7 @@ mkStops origin mDestination mStartOtp =
 
 mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> Context.City -> [Spec.Payment]
 mkPayment _ bapConfig city = do
-  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
+  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
   singleton $ OUP.mkPayment (show city) (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 castDPaymentType :: DMPM.PaymentType -> Text
