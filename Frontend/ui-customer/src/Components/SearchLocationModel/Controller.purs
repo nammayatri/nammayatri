@@ -20,12 +20,13 @@ import Components.LocationTagBar as LocationTagBarController
 import Components.PrimaryButton as PrimaryButton
 import Data.Maybe (Maybe(..))
 import Prelude (show)
-import PrestoDOM (Visibility(..))
+import Effect (Effect)
+import PrestoDOM (Visibility(..), Padding(..), Gravity(..), Prop)
 import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
+import Prelude
 import Foreign.Object (Object)
 import Foreign (Foreign)
 
@@ -45,6 +46,7 @@ data Action = GoBack
             | SavedAddressClicked LocationTagBarController.Action
             | UpdateCurrentLocation String String
             | RecenterCurrentLocation
+            | DateTimePickerButtonClicked
 
 type SearchLocationModelState = {
     isSearchLocation :: SearchLocationModelType
@@ -64,7 +66,21 @@ type SearchLocationModelState = {
   , showLoader :: Boolean
   , prevLocation :: String
   , currentLocationText :: String
+  , suffixButtonVisibility :: Visibility
+  , suffixButton :: ButtonLayoutConfig
+  , headerVisibility :: Boolean
+  , headerText :: String
 }
+
+type ButtonLayoutConfig = 
+  { text :: String
+  , fontStyle :: Array (Prop (Effect Unit))
+  , prefixImage :: String
+  , suffixImage :: String
+  , padding :: Padding
+  , gravity :: Gravity
+  }
+
 
 dummy_data :: Array LocationListItemState
 dummy_data = [

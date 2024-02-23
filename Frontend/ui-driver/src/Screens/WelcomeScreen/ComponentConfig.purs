@@ -14,7 +14,7 @@ carouselData state =
   , carouselData:
       map
         ( \item ->
-            { imageConfig: { image: item.image, height: item.imageHeight, width: 200, bgColor: "#FFFAED", cornerRadius: 8.0 }
+            { imageConfig: { image: item.image, height: item.imageHeight, width: 200, bgColor: "#FFFAED", cornerRadius: 8.0, isUrl : false }
             , backgroundColor: "#FFFAED"
             , youtubeConfig: dummyYoutubeData
             , gravity: item.gravity

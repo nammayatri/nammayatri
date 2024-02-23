@@ -34,7 +34,7 @@ import Font.Style as FontStyle
 import JBridge (getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit, when, void)
+import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit, when, void, map)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textView, visibility, weight, width, textSize, fontStyle, lineHeight)
 import PrestoDOM.Animation as PrestoAnim
@@ -50,6 +50,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Helpers.Utils as HU
 import Mobility.Prelude (boolToVisibility)
+import Debug(spy)
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
 screen initialState listItemm =
@@ -66,7 +67,11 @@ screen initialState listItemm =
                     pure $ pure unit
         )
   ]
-  , eval
+  , eval:
+      \action state -> do
+        let _ = spy "MyRidesScreen action " action
+        let _ = spy "MyRidesScreen state  " state
+        eval action state
   }
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.MyRidesScreenState -> PrestoDOM (Effect Unit) w
@@ -168,7 +173,7 @@ ridesView listItemm push state =
                     true -> GONE
         , PrestoList.listItem listItemm
         , background Color.white900
-        , PrestoList.listDataV2 $ (DA.filter (\item -> (item.status) == toPropValue("COMPLETED") || (item.status) == toPropValue("CANCELLED") || item.status == toPropValue("REALLOCATED")) state.prestoListArrayItems)
+        , PrestoList.listDataV2 $ (DA.filter (\item -> DA.any (_ == item.status) $ map (toPropValue) ["COMPLETED", "CANCELLED", "REALLOCATED", "CONFIRMED"]) state.prestoListArrayItems)
         ]
       , Tuple "NoRides"
         $ linearLayout
@@ -247,7 +252,10 @@ shimmerData i = {
   alpha : toPropValue "",
   zoneVisibility : toPropValue "gone",
   variantImage : toPropValue "",
-  vehicleImgVisibility : toPropValue ""
+  showVariantImage : toPropValue "",
+  showRepeatRide : toPropValue "visible",
+  isScheduled : toPropValue "gone",
+  showDestination : toPropValue "visible"
 }
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.MyRidesScreenState ->  Flow GlobalState Unit

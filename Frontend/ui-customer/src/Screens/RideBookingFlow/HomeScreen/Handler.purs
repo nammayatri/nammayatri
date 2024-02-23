@@ -29,6 +29,7 @@ import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..
 import Screens.Types (BottomNavBarIcon(..))
 import Screens.HomeScreen.Transformer(getTripDetailsState)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import Debug
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
@@ -43,9 +44,9 @@ homeScreen = do
     UpdatePickupName updatedState lat lng -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_PICKUP_NAME updatedState lat lng)
-    PastRides updatedState-> do
+    PastRides updatedState fromBanner-> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure GO_TO_MY_RIDES)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_RIDES fromBanner)
     GoToHelp updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_HELP)
@@ -101,9 +102,9 @@ homeScreen = do
     NotificationHandler notification updatedState ->  do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification updatedState)
-    Cancel updatedState -> do
+    RefreshHomeScreen updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-        App.BackT $ App.NoBack <$> (pure $ CANCEL)
+        App.BackT $ App.NoBack <$> (pure $ REFRESH_HOME_SCREEN)
     Retry updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
         App.BackT $ App.NoBack <$> (pure $ RETRY)
@@ -185,7 +186,9 @@ homeScreen = do
     ReAllocateRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REALLOCATE_RIDE updatedState)
-    GoToRentalsFlow -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RENTALS_FLOW)
+    GoToRentalsFlow updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RENTALS_FLOW updatedState)
     GoToScheduledRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_SCHEDULED_RIDES)
     Add_Stop updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
@@ -231,3 +234,14 @@ homeScreen = do
     GoToRideRelatedIssues updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_RELATED_ISSUES updatedState)
+    Go_To_Search_Location_Flow updatedState isSource-> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_SEARCH_LOCATION_SCREEN updatedState isSource)
+    RideSearchSO -> 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SEARCH_FLOW)
+    ConfirmRentalRideSO state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
+      App.BackT $ App.NoBack <$> (pure $ CONFIRM_RENTAL_RIDE)
+    StayInHomeScreenSO state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
+      App.BackT $ App.NoBack <$> (pure $ STAY_IN_HOME_SCREEN)

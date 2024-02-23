@@ -42,8 +42,8 @@ logout dummyString = (getBaseUrl "5") <> "/auth/logout"
 serviceability :: String -> String
 serviceability dummyString = (getBaseUrl "6") <> "/serviceability/ride"
 
-serviceabilityOrigin :: String -> String
-serviceabilityOrigin dummyString = (getBaseUrl "7") <> "/serviceability/origin"
+locServiceability :: String -> String
+locServiceability serviceabilityType = (getBaseUrl "7") <> "/serviceability/" <> serviceabilityType
 
 serviceabilityDest :: String -> String
 serviceabilityDest dummyString = (getBaseUrl "8") <> "/serviceability/destination"
@@ -267,3 +267,15 @@ getMetroBookingHardCancelStatus bookingId = (getBaseUrl "57") <> "/frfs/booking/
 
 pushSDKEvents :: String -> String
 pushSDKEvents _ =  (getBaseUrl "") <> "/sdk/events"
+
+addStop :: String -> String
+addStop rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> "/addStop"
+
+editStop :: String -> String
+editStop rideBookingId = (getBaseUrl "48") <> "/rideBooking/" <> rideBookingId <> "/editStop"
+
+rentalSearch :: String -> String
+rentalSearch dummy = (getBaseUrl "49") <> "/rental/search"
+
+addOrEditStop :: Boolean -> String -> String 
+addOrEditStop isEdit rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> if isEdit then "/editStop" else "/addStop" 

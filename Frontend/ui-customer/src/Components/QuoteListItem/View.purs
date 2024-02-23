@@ -47,6 +47,8 @@ import Engineering.Helpers.Commons (liftFlow)
 import Screens.Types (QuoteListItemState(..), City(..))
 import Locale.Utils
 import JBridge(getWidthFromPercent)
+import Data.String
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
