@@ -26,25 +26,52 @@ import qualified Data.Aeson as A
 import qualified Data.List as List
 import Data.Maybe
 import qualified Data.Text as T
+import Domain.Action.Beckn.Search
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DCT
+import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFParams
+import qualified Domain.Types.FareParameters as Params
+import qualified Domain.Types.FarePolicy as Policy
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
+import GHC.Float (double2Int)
 import Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy
 import Tools.Error
+
+data Pricing = Pricing
+  { pricingId :: Text,
+    pricingMaxFare :: Money,
+    pricingMinFare :: Money,
+    vehicleVariant :: Variant.Variant,
+    tripCategory :: DTC.TripCategory,
+    fareParams :: Maybe Params.FareParameters,
+    farePolicy :: Maybe Policy.FarePolicy,
+    estimatedDistance :: Maybe Meters,
+    specialLocationTag :: Maybe Text,
+    fulfillmentType :: Text,
+    distanceToNearestDriver :: Maybe Meters
+  }
+
+data RateCardBreakupItem = RateCardBreakupItem
+  { title :: Text,
+    value :: Text
+  }
 
 firstStop :: [Spec.Stop] -> Maybe Spec.Stop
 firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))
@@ -771,8 +798,8 @@ mkQuotationBreakup booking =
 
 type MerchantShortId = Text
 
-tfItems :: DBooking.Booking -> MerchantShortId -> Maybe [Spec.Item]
-tfItems booking shortId =
+tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Pricing -> Maybe [Spec.Item]
+tfItems booking shortId pricing =
   Just
     [ Spec.Item
         { itemDescriptor = tfItemDescriptor booking shortId,
@@ -781,7 +808,7 @@ tfItems booking shortId =
           itemLocationIds = Nothing,
           itemPaymentIds = Nothing,
           itemPrice = tfItemPrice booking,
-          itemTags = Nothing
+          itemTags = Just $ mkRateCardTag pricing
         }
     ]
 
@@ -805,3 +832,138 @@ tfItemDescriptor booking shortId =
         descriptorShortDesc = Just $ Common.mkItemId shortId booking.vehicleVariant,
         descriptorName = Nothing
       }
+
+convertEstimateToPricing :: (DEst.Estimate, Maybe NearestDriverInfo) -> Pricing
+convertEstimateToPricing (DEst.Estimate {..}, mbDriverLocations) =
+  Pricing
+    { pricingId = id.getId,
+      pricingMaxFare = maxFare,
+      pricingMinFare = minFare,
+      fulfillmentType = show Enums.DELIVERY,
+      distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
+      ..
+    }
+
+convertQuoteToPricing :: (DQuote.Quote, Maybe NearestDriverInfo) -> Pricing
+convertQuoteToPricing (DQuote.Quote {..}, mbDriverLocations) =
+  Pricing
+    { pricingId = id.getId,
+      pricingMaxFare = estimatedFare,
+      pricingMinFare = estimatedFare,
+      estimatedDistance = distance,
+      fareParams = Just fareParams,
+      fulfillmentType = mapToFulfillmentType tripCategory,
+      distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
+      ..
+    }
+  where
+    mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.RoundTrip DTC.RideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.Rental _) = show Enums.RENTAL
+    mapToFulfillmentType (DTC.InterCity _) = show Enums.INTER_CITY
+    mapToFulfillmentType _ = show Enums.RIDE_OTP -- backward compatibility
+
+convertBookingToPricing :: DBooking.Booking -> Pricing
+convertBookingToPricing DBooking.Booking {..} =
+  Pricing
+    { pricingId = id.getId,
+      pricingMaxFare = estimatedFare,
+      pricingMinFare = estimatedFare,
+      vehicleVariant = vehicleVariant,
+      tripCategory = tripCategory,
+      fareParams = Just fareParams,
+      farePolicy = Nothing,
+      fulfillmentType = show Enums.DELIVERY,
+      distanceToNearestDriver = Nothing,
+      ..
+    }
+
+mkGeneralInfoTag :: Pricing -> Spec.TagGroup
+mkGeneralInfoTag pricing =
+  let specialLocationTag = pricing.specialLocationTag
+   in Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.INFO,
+                  descriptorName = Just "Information",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just $
+              specialLocationTagSingleton specialLocationTag
+                ++ distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
+        }
+  where
+    specialLocationTagSingleton specialLocationTag
+      | isNothing specialLocationTag = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDisplay = Just True,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.SPECIAL_LOCATION_TAG,
+                      descriptorName = Just "Special Location Tag",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = specialLocationTag
+            }
+
+    distanceToNearestDriverTagSingleton Nothing = []
+    distanceToNearestDriverTagSingleton (Just distanceToNearestDriver) =
+      List.singleton $
+        Spec.Tag
+          { tagDisplay = Just False,
+            tagDescriptor =
+              Just
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
+                    descriptorName = Just "Distance To Nearest Driver Meter",
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just $ show . double2Int . realToFrac $ distanceToNearestDriver
+          }
+
+mkRateCardTag :: Maybe Pricing -> [Spec.TagGroup]
+mkRateCardTag mbPricing = do
+  case mbPricing of
+    Nothing -> []
+    Just pricing -> do
+      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups mkValue mkRateCardBreakupItem pricing.estimatedDistance) pricing.farePolicy
+          farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
+      List.singleton $
+        Spec.TagGroup
+          { tagGroupDisplay = Just False,
+            tagGroupDescriptor =
+              Just
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.FARE_POLICY,
+                    descriptorName = Just "Fare Policy",
+                    descriptorShortDesc = Nothing
+                  },
+            tagGroupList = Just farePolicyBreakupsTags
+          }
+
+mkValue :: Text -> Text
+mkValue a = a
+
+mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
+mkRateCardBreakupItem = RateCardBreakupItem
+
+buildRateCardTags :: RateCardBreakupItem -> Spec.Tag
+buildRateCardTags RateCardBreakupItem {..} = do
+  Spec.Tag
+    { tagDisplay = Just False,
+      tagDescriptor =
+        Just
+          Spec.Descriptor
+            { descriptorCode = Just title,
+              descriptorName = Just title,
+              descriptorShortDesc = Nothing
+            },
+      tagValue = Just value
+    }

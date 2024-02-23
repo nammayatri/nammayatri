@@ -61,12 +61,12 @@ tfCatalogProviders res bppConfig = do
       providerLocations_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkProviderLocations ((map snd res.estimates) <> (map snd res.quotes))
       providerPayments_ = Just $ mkPayment res.provider bppConfig
       providerDescriptor_ = tfCatalogDescriptor res
-      pricings = (map convertEstimateToPricing res.estimates) <> (map convertQuoteToPricing res.quotes)
+      pricings = (map Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.estimates) <> (map Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
-      providerItems_ = map (tfProviderItems res) pricings & Just
+      providerItems_ = Just $ map (tfProviderItems res) pricings
   BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_}
 
-tfItemPrice :: Pricing -> Maybe BecknV2.OnDemand.Types.Price
+tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
 tfItemPrice pricing = do
   let priceComputedValue_ = Nothing
       priceCurrency_ = Just "INR"
@@ -80,7 +80,7 @@ tfItemPrice pricing = do
     then Nothing
     else Just returnData
 
-tfProviderFulfillments :: Domain.Action.Beckn.Search.DSearchRes -> Pricing -> BecknV2.OnDemand.Types.Fulfillment
+tfProviderFulfillments :: Domain.Action.Beckn.Search.DSearchRes -> Beckn.OnDemand.Utils.Common.Pricing -> BecknV2.OnDemand.Types.Fulfillment
 tfProviderFulfillments res pricing = do
   let fulfillmentAgent_ = Nothing
       fulfillmentCustomer_ = Nothing
@@ -92,18 +92,18 @@ tfProviderFulfillments res pricing = do
       fulfillmentVehicle_ = tfVehicle pricing
   BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
 
-tfProviderItems :: Domain.Action.Beckn.Search.DSearchRes -> Pricing -> BecknV2.OnDemand.Types.Item
+tfProviderItems :: Domain.Action.Beckn.Search.DSearchRes -> Beckn.OnDemand.Utils.Common.Pricing -> BecknV2.OnDemand.Types.Item
 tfProviderItems res pricing = do
   let itemDescriptor_ = Nothing
       itemFulfillmentIds_ = Just [pricing.pricingId]
       itemId_ = Beckn.ACL.Common.mkItemId res.provider.shortId.getShortId pricing.vehicleVariant & Just
       itemLocationIds_ = Nothing
       itemPaymentIds_ = Nothing
-      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing & Just
+      itemTags_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing
       itemPrice_ = tfItemPrice pricing
   BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
-tfVehicle :: Pricing -> Maybe BecknV2.OnDemand.Types.Vehicle
+tfVehicle :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Vehicle
 tfVehicle pricing = do
   let (category, variant) = Beckn.OnDemand.Utils.Common.castVariant pricing.vehicleVariant
       vehicleCategory_ = Just category
