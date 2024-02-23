@@ -203,6 +203,7 @@ config =
       , enableBookingPreference: true
       , textColor: "#6D7280"
       , showInfoIcon : true 
+      , genericLoaderLottie : "ny_ic_generic_loader,https://assets.juspay.in/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
       }
   , customerTip : {
       auto : true,
@@ -329,6 +330,13 @@ config =
         , cityName : "Bangalore"
         , geoCodeConfig :
             { radius : 50000
+            , strictBounds : true
+            }
+        },
+        { cityCode : "std:033"
+        , cityName : "Kolkata"
+        , geoCodeConfig :
+            { radius : 700000
             , strictBounds : true
             }
         }

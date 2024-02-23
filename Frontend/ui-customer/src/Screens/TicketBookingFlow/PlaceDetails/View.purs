@@ -55,7 +55,7 @@ import PaymentPage (consumeBP)
 import Engineering.Helpers.Commons as EHC
 import Data.Ord (comparing)
 import Data.Function.Uncurried (runFn3)
-import Mobility.Prelude (groupAdjacent, sortAccToDayName)
+import Mobility.Prelude (groupAdjacent, sortAccToDayName, boolToVisibility)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 
@@ -67,8 +67,8 @@ screen initialState =
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
-        let _ = spy "ZooTicketBookingFlow action " action
-        let _ = spy "ZooTicketBookingFlow state " state
+        let _ = spy "ZooTicketBookingFlow PlaceDetails action " action
+        let _ = spy "ZooTicketBookingFlow PlaceDetails state " state
         eval action state
   }
   where
@@ -93,6 +93,7 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
+    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     , onBackPressed push $ const BackPressed
     ]
     [ shimmerView state
@@ -112,22 +113,25 @@ view push state =
           ] []
         , serviceClosedView 
         , separatorView Color.greySmoke
-        , scrollView
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , background Color.white900
-            , afterRender push $ const AfterRender
-            , fillViewport true
-            ]
-            [ linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                , orientation VERTICAL
-                ]
-                (mainView state push)
-            ]
-        ]
+        , linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          ][  scrollView
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , background Color.white900
+              , afterRender push $ const AfterRender
+              , fillViewport true
+              ]
+              [ linearLayout
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , gravity CENTER
+                  , orientation VERTICAL
+                  ]
+                  (mainView state push)
+            ] 
+        ]]
     , actionsView state push
     ]
   where
@@ -142,7 +146,7 @@ view push state =
   serviceClosedView = if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (placeClosed state.data.placeInfo) then (headerBannerView push state ("Booking closed currently. Opens after " <> getOpeningTiming state.data.placeInfo))
                       else if (state.props.currentStage == ST.ChooseTicketStage) && (allowFutureBooking state.data.servicesInfo) && (placeClosedToday state.data.placeInfo state.data.dateOfVisit) then (headerBannerView push state ("Services closed for today. Tickets are available next day onwards"))
                       else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (shouldHurry  state.data.placeInfo) then (headerBannerView push state ("Hurry! Booking closes at " <> getClosingTiming state.data.placeInfo))
-                      else linearLayout [][]
+                      else linearLayout [height $ V 0][]
 
   shouldHurry mbPlaceInfo =
     case mbPlaceInfo of
@@ -179,14 +183,14 @@ view push state =
   headerView state push =
     GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
 
-  mainView state push =
+  mainView state push = 
+    ([chooseTicketsView state push] <> 
     if (state.props.currentStage == ST.DescriptionStage) 
       then
         case state.data.placeInfo of
           Just placeInfo -> descriptionStateMainView state push placeInfo
           Nothing -> [ noDataView state push "No ticketing zones in this area" ]
-    else if (state.props.currentStage == ST.ChooseTicketStage) then [chooseTicketsView state push]
-    else []
+    else [])
 
   descriptionStateMainView state push placeInfo = 
     let (API.TicketPlaceResp place) = placeInfo
@@ -217,6 +221,8 @@ noDataView state push msg =
     [ textView $
       [ text msg
       , color Color.black900
+      , width $ MATCH_PARENT
+      , height WRAP_CONTENT
       ] <> FontStyle.h3 TypoGraphy 
     ]
 
@@ -260,10 +266,11 @@ generalActionButtons state push =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , gravity BOTTOM
+    , background Color.transparent
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , margin $ MarginBottom 16
+        , padding $ PaddingBottom 16
         , orientation VERTICAL
         , background Color.white900
         ]
@@ -313,6 +320,8 @@ termsAndConditionsView termsAndConditions isMarginTop =
       ][ textView $
          [ textFromHtml $ " &#8226;&ensp; " <> item
          , color Color.black700
+         , height WRAP_CONTENT
+         , width WRAP_CONTENT
          ] <> FontStyle.tags TypoGraphy
       ]
   ) termsAndConditions )
@@ -556,12 +565,13 @@ chooseTicketsView state push =
   let filteredServiceDatav2  = filterServiceDataAccordingToOpDay state.props.selectedOperationalDay state.data.servicesInfo
       filteresServiceCatData = map (\service -> service { serviceCategories = (getFilteredServiceCategories state service.expiry service.serviceCategories) } ) state.data.servicesInfo
   in
-  PrestoAnim.animationSet [Anim.fadeIn true]  $  
+  PrestoAnim.animationSet [Anim.fadeIn ( state.props.currentStage == ST.ChooseTicketStage)]  $  
   linearLayout[
     height MATCH_PARENT
-  , width MATCH_PARENT
+  , width $ V $ screenWidth unit
   , background Color.grey700
   , padding $ Padding 16 24 16 16
+  , visibility $ boolToVisibility $ state.props.currentStage == ST.ChooseTicketStage
   , orientation VERTICAL
   ] $ [ linearLayout
         [ width $ MATCH_PARENT
@@ -572,6 +582,8 @@ chooseTicketsView state push =
         ][  textView $ 
             [ text "Date of Trip"
             , color Color.black900
+            , height WRAP_CONTENT
+            , width MATCH_PARENT
             , margin $ MarginBottom 9
             ] <> FontStyle.subHeading1 TypoGraphy 
           , linearLayout
@@ -595,6 +607,8 @@ chooseTicketsView state push =
               , textView $ 
                 [ text $ if state.data.dateOfVisit == "" then "Select Date Of Visit" else (convertUTCtoISC state.data.dateOfVisit "dddFull, DD/MM/YY")
                 , color Color.black800
+                , width MATCH_PARENT
+                , height WRAP_CONTENT
                 ] <> FontStyle.h3 TypoGraphy
             ]
           , textView $
@@ -614,7 +628,8 @@ chooseTicketsView state push =
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , gravity BOTTOM
+        , margin $ MarginTop 20
+        -- , gravity BOTTOM
         , onClick push $ const ToggleTermsAndConditions
         ][  imageView
             [ height $ V 16
@@ -696,13 +711,13 @@ individualServiceView push state service =
              ] <> FontStyle.body1 TypoGraphy
           ,  if length service.serviceCategories == 1 then
                case service.serviceCategories DA.!! 0 of
-                 Nothing -> linearLayout [][]
+                 Nothing -> linearLayout [height $ V 0][]
                  Just val -> textView $
                               [ text $ val.categoryName
                               , color $ if bookingClosedForService then Color.greyDark else Color.black800
                               , visibility $ if val.categoryName == "all" then GONE else VISIBLE
                               ] <> FontStyle.body1 TypoGraphy
-             else linearLayout [][]
+             else linearLayout [height $ V 0][]
           ]
         -- , linearLayout
         --   [weight 1.0][]
@@ -713,7 +728,7 @@ individualServiceView push state service =
           , imageWithFallback $ fetchImage FF_COMMON_ASSET if (service.isExpanded && not bookingClosedForService) then "ny_ic_checked" else "ny_ic_unchecked" 
           ]
       ]
-  ] <> (if service.isExpanded && (not bookingClosedForService) then [individualSerivceBHView push state service] else [] )--[individualTicketBHView push state valBH service] else [])
+  ] <> (if service.isExpanded && (not bookingClosedForService) then [individualServiceBHView push state service] else [] )--[individualTicketBHView push state valBH service] else [])
   where
     isValid serviceCategories = foldl (\acc serviceCategory -> acc || isServiceCatValid state service.expiry serviceCategory.validOpDay ) false serviceCategories
 
@@ -736,28 +751,28 @@ placeClosedToday mbPlaceInfo dateOfVisit = case mbPlaceInfo of
       in
       (currentDate == dateOfVisit) && (maybe false (\closeTime -> currentTime > convertUTCTimeToISTTimeinHHMMSS closeTime) pInfo.closeTimings)
 
-individualSerivceBHView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketServiceData -> PrestoDOM (Effect Unit) w
-individualSerivceBHView push state service =
-  let mbSelectedCategory = (find (\elem -> elem.isSelected) service.serviceCategories)
-  in
-  PrestoAnim.animationSet [
-    Anim.translateInYAnim translateYAnimConfig { duration = 300 , fromY = -10 , toY = 0}
-  ] $ 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  ] $ [
-  ] <> (  if DA.length service.serviceCategories > 1 then (maybe [] (\selServiceCat -> [multipleServiceCategory push state service.id service.selectedBHId service.serviceCategories selServiceCat]) mbSelectedCategory)
-          else maybe [] (\selServiceCat -> if (shouldDisplayIncDscView selServiceCat.validOpDay service.selectedBHId)
-                                            then (map (incrementDecrementView push state service.id selServiceCat.categoryId) selServiceCat.peopleCategories)
-                                            else []
-                        ) mbSelectedCategory
-       )
-    <> ( maybe [] (\selServiceCat -> [timeSlotView push state service.id selServiceCat.categoryId service.selectedBHId (getSlots selServiceCat.validOpDay)]) mbSelectedCategory)
+individualServiceBHView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketServiceData -> PrestoDOM (Effect Unit) w
+individualServiceBHView push state service =
+  let mbSelectedCategory = find (\elem -> elem.isSelected) service.serviceCategories
+  in PrestoAnim.animationSet 
+       [ if EHC.os == "ANDROID" 
+         then Anim.translateInYAnim translateYAnimConfig { duration = 300 , fromY = 10 , toY = 0} 
+         else Anim.fadeIn true
+       ]
+       $ linearLayout
+           [ height WRAP_CONTENT
+           , width MATCH_PARENT
+           , orientation VERTICAL
+           ] 
+           $ [] <> if DA.length service.serviceCategories > 1 
+                   then maybe [] (\selServiceCat -> [multipleServiceCategory push state service.id service.selectedBHId service.serviceCategories selServiceCat]) mbSelectedCategory
+                   else maybe [] (\selServiceCat -> if shouldDisplayIncDscView selServiceCat.validOpDay service.selectedBHId
+                                                   then map (incrementDecrementView push state service.id selServiceCat.categoryId) selServiceCat.peopleCategories
+                                                   else []
+                                  ) mbSelectedCategory
+                   <> maybe [] (\selServiceCat -> [timeSlotView push state service.id selServiceCat.categoryId service.selectedBHId (getSlots selServiceCat.validOpDay)]) mbSelectedCategory
   where
     getSlots mbOpDay = maybe [] (\opDayElem -> opDayElem.slot) mbOpDay
-
 
 multipleServiceCategory :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> Maybe String -> Array ST.ServiceCategory -> ST.ServiceCategory -> PrestoDOM (Effect Unit) w
 multipleServiceCategory push state serviceId selectedBHId categories selectedCategory =
@@ -900,13 +915,15 @@ incrementDecrementView push state  serviceId serviceCatId pcCategory  =
       , padding $ Padding 4 4 4 4
       , cornerRadius 8.0
       , background Color.white900
+      , gravity CENTER_VERTICAL
       , stroke $ "1," <> Color.grey900
       ][  textView $
           [ background Color.grey700
           , text "-"
           , gravity CENTER
           , cornerRadius 4.0
-          , width WRAP_CONTENT
+          , width $ V 72
+          , height $ V 36
           , padding $ Padding 28 1 28 7
           , onClick push $ const (DecrementTicket serviceId serviceCatId pcCategory ticketLimit)
           , height WRAP_CONTENT
@@ -925,9 +942,9 @@ incrementDecrementView push state  serviceId serviceCatId pcCategory  =
           , color Color.yellow900
           , padding $ Padding 28 1 28 7
           , cornerRadius 4.0
+          , width $ V 72
+          , height $ V 36
           , onClick push $ const (IncrementTicket serviceId serviceCatId pcCategory ticketLimit)
-          , width WRAP_CONTENT
-          , height WRAP_CONTENT
           , gravity CENTER
           ] <> FontStyle.body10 TypoGraphy
       ]

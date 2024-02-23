@@ -125,7 +125,7 @@ refreshStatusButtonConfig state = PrimaryButton.config
       }
       , height = WRAP_CONTENT
       , gravity = CENTER
-      , cornerRadius = 32.0
+      , cornerRadius = 16.0
       , width = MATCH_PARENT
       , padding =  Padding 0 13 0 13
       , margin = Margin 16 16 16 0

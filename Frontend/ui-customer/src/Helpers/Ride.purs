@@ -30,9 +30,10 @@ import Services.API
 import Data.Array (null, head, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag, getFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Data.Lens ((^.))
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Accessor
 import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..), TipViewData(..))
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
@@ -44,6 +45,7 @@ import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Common.Types.App as Common
+import Screens.Types (FareProductType(..)) as FPT
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -56,28 +58,44 @@ checkRideStatus rideAssigned = do
         let state = state'.homeScreen
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
-            rideStatus = if status == "NEW" then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
-            fareProductType = ((resp.bookingDetails) ^. _fareProductType)
+            bookingStatus = resp.status
+            fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
+            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
-            isQuotes = (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing)
+            rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
+            dropLocation = if (fareProductType == FPT.RENTAL) then _stopLocation else _toLocation
+            stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
             newState = 
               state
                 { data
-                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) isQuotes
+                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE)
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
-                    , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
-                    , currentSearchResultType = if isQuotes then QUOTES else ESTIMATES},
+                    , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))
+                    , fareProductType = fareProductType
+                    , rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
+                        rideScheduledAtUTC : rideScheduledAt
+                      , bookingId : resp.id
+                      }))},
                   props
                     { currentStage = rideStatus
                     , rideRequestFlow = true
                     , bookingId = resp.id
                     , isPopUp = NoPopUp
+                    , stopLoc = maybe (Nothing) (\loc -> Just {
+                        lat : loc^._lat ,
+                        lng : loc^._lon,
+                        stopLocAddress : decodeAddress (Booking loc)
+                      }) stopLocationDetails
                     , zoneType = getSpecialTag resp.specialLocationTag
                   }
                 }
         setValueToLocalStore IS_SOS_ACTIVE $ show $ Just Common.Pending == resp.sosStatus
-        if rideStatus == HomeScreen then
+        if rideStatus == HomeScreen then do 
+          modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
+                        rideScheduledAtUTC : rideScheduledAt
+                      , bookingId : resp.id
+                      }))}})
           updateLocalStage HomeScreen
         else do
           when (not rideAssigned) $ do
@@ -95,7 +113,17 @@ checkRideStatus rideAssigned = do
               case otpCode of
                 Just otp' -> do
                   setValueToLocalStore TRACKING_ENABLED "True"
-                  modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true, isInApp = true}, data{driverInfoCardState{otp = otp'}}})
+                  modifyScreenState $ HomeScreenStateType (\homeScreen → 
+                    homeScreen
+                    { props
+                      { isSpecialZone = true
+                      , isInApp = true
+                      }
+                    , data
+                      { driverInfoCardState
+                        { otp = otp' }
+                      }
+                    })
                 Nothing -> pure unit
             Just (RideAPIEntity _) ->
               if isJust otpCode then do
@@ -127,6 +155,10 @@ checkRideStatus rideAssigned = do
             when (isNothing currRideListItem.rideRating) $ do
               when (length listResp.list > 0) $ do
                 let nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
+                    fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
+                    (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                    (RideBookingDetails contents) = bookingDetails.contents
+                    (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
                           , estimatedDistance = contents.estimatedDistance
@@ -139,7 +171,7 @@ checkRideStatus rideAssigned = do
                           , rideId = currRideListItem.id
                           , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
                           , source = decodeAddress (Booking resp.fromLocation)
-                          , destination = (decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation)))
+                          , destination = (decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^._toLocation))))
                           , vehicleNumber = (currRideListItem.vehicleNumber)
                           , status = (currRideListItem.status)
                           , shortRideId = currRideListItem.shortRideId
@@ -164,16 +196,31 @@ checkRideStatus rideAssigned = do
                           , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
                           , driverInfoCardState {
                             price = resp.estimatedTotalFare,
-                            rideId = currRideListItem.id
+                            rideId = currRideListItem.id,
+                            rentalData 
+                                { finalDuration = (fromMaybe 0 resp.duration) / (60)
+                                , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
+                                , baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
+                                , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000
+                                }
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}
+                          , fareProductType = fareProductType
                           }
                 })
                 updateLocalStage RideCompleted
-          Left err -> updateLocalStage HomeScreen
+              when (length listResp.list == 0) $ do 
+                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+                updateLocalStage HomeScreen
+          Left err -> do 
+            modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+            updateLocalStage HomeScreen
       else do
+        modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
         updateLocalStage HomeScreen
-    Left err -> updateLocalStage HomeScreen
+    Left err -> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+      updateLocalStage HomeScreen
   if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
   where 
     updateCity :: FlowStatusData -> FlowBT String Unit

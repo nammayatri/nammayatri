@@ -94,7 +94,7 @@ eval (ChangeTicketTab ticketType) state = do
         updatedState = ticketTypeUpdatedState { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId }}
     updateAndExit updatedState $ Refresh updatedState
   else do
-    let ticketCount = if ticketType == ST.ONE_WAY then state.data.ticketCount else 1
+    let ticketCount = if ticketType == ST.ONE_WAY_TRIP then state.data.ticketCount else 1
     continue state { data {ticketType = ticketType, ticketCount = ticketCount }, props {currentStage  = ST.MetroTicketSelection}}
 
 eval (SelectLocation loc ) state = updateAndExit state{props{currentStage  = ST.MetroTicketSelection}} $ SelectSrcDest loc state{props{currentStage  = ST.MetroTicketSelection}}
@@ -142,6 +142,6 @@ getquoteData state  metroQuote =
   where
     getTicketType :: String -> ST.TicketType
     getTicketType quoteType = case quoteType of 
-      "SingleJourney" -> ST.ONE_WAY
+      "SingleJourney" -> ST.ONE_WAY_TRIP
       "ReturnJourney" -> ST.ROUND_TRIP
-      _ -> ST.ONE_WAY
+      _ -> ST.ONE_WAY_TRIP
