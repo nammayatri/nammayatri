@@ -17,3 +17,9 @@ ALTER TABLE atlas_app.auto_complete_data ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.auto_complete_data ALTER COLUMN search_type SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.auto_complete_data DROP CONSTRAINT auto_complete_data_pkey;
+ALTER TABLE atlas_app.auto_complete_data ADD PRIMARY KEY ( id, session_token);

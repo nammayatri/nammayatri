@@ -20,6 +20,7 @@ AutoCompleteData:
 
   constraints:
     id: PrimaryKey
+    sessionToken: SecondaryKey
 
   queries:
     updateInputById:
