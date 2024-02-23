@@ -295,6 +295,7 @@ sourceAndDestination =
         , width MATCH_PARENT
         , gravity CENTER_VERTICAL
         , background Color.white900
+        , PrestoList.visibilityHolder "showDestination"
         ][  imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
             , height $ V 16

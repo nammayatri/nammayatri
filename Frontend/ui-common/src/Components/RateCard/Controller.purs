@@ -22,6 +22,8 @@ import Prelude (class Eq, class Show)
 import Common.Types.App (RateCardType(..), FareList(..))
 import Components.PrimaryButton as PrimaryButton
 import Data.Maybe(Maybe(..))
+import PrestoDOM (Length(..), Margin(..), Visibility(..))
+import Styles.Colors as Color
 
 data Action = Close 
               | BackPressed 
@@ -44,13 +46,26 @@ type Config = {
     title :: String,
     description :: String,
     buttonText :: Maybe String,
-    driverAdditions :: Array FareList,
-    primaryButtonText :: String,
+    applicableCharges :: String,
     fareList :: Array FareList,
     otherOptions :: Array FareList,
+    driverAdditions :: Array FareList,
     additionalStrings :: Array FareList,
-    fareInfoText :: String
+    driverAdditionsImage :: String,
+    primaryButtonConfig :: ButtonConfig
 }
+
+type ButtonConfig =
+  { margin :: Margin
+  , text :: String
+  , color :: String
+  , height :: Length
+  , cornerRadius :: Number
+  , background :: String
+  , visibility :: Visibility
+  , enableRipple :: Boolean
+  , rippleColor :: String
+  }
 
 config :: Config 
 config = {
@@ -63,10 +78,22 @@ config = {
     description : "",
     fareInfoDescription: [],
     buttonText : Nothing,
-    primaryButtonText : "",
     driverAdditions : [],
+    applicableCharges : "",
+    driverAdditionsImage : "",
     fareList : [],
     otherOptions : [],
     additionalStrings : [],
-    fareInfoText : ""
+    fareInfoText : "",
+    primaryButtonConfig : {
+      text: ""
+    , color : Color.yellow900
+    , margin : MarginVertical 20 10
+    , cornerRadius : 8.0
+    , background : Color.black900
+    , height : V 54
+    , visibility : GONE
+    , enableRipple : true
+    , rippleColor : Color.rippleShade
+    }
 }

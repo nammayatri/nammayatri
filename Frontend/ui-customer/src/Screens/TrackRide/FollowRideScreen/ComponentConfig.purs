@@ -94,7 +94,7 @@ getDriverDetails state =
   let
     ride = fromMaybe dummyDriverInfo state.data.driverInfoCardState
   in
-    { searchType: ESTIMATES
+    { fareProductType : ride.fareProductType
     , rating: ride.rating
     , driverName: ride.driverName
     , vehicleDetails: ride.vehicleDetails
@@ -122,6 +122,7 @@ getTripDetails state color =
     , onAnimationEnd: NoAction
     , backgroundColor: color
     , enablePaddingBottom : false
+    , fareProductType : ride.fareProductType
     }
 
 getCurrentFollower :: Maybe Followers -> Followers

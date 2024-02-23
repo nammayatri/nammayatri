@@ -15,7 +15,8 @@
 
 module Screens.RideSelectionScreen.ScreenData where
 
-
+import Data.Maybe (Maybe(..))
+import Screens.Types (AnimationState(..), IndividualRideCardState, ZoneType(..), FareProductType (..))
 import Services.API (BookingLocationAPIEntity(..))
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
@@ -110,6 +111,7 @@ dummyIndividualCard = {
     driverImage : "",
     isCancelled :  "",
     isSuccessfull :  "",
+    isScheduled : "",
     rating : 0,
     driverName : "",
     rideStartTime : "",
@@ -150,4 +152,11 @@ dummyIndividualCard = {
   , rideStartTimeUTC : ""
   , providerName : ""
   , providerType : ONUS
+  , showRepeatRide : ""
+  , rideType : ONE_WAY
+  , estimatedDistance : 0
+  , estimatedDuration : 0
+  , estimatedFare : 0
+  , showDestination : ""
+  , rideScheduledTime : ""
 }

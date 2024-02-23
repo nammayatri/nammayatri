@@ -2,7 +2,7 @@ module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
 import Common.DefaultConfig
-import JBridge as JB
+import Engineering.Helpers.Commons as EHC
 
 config :: AppConfig 
 config =
@@ -262,7 +262,7 @@ config =
             hotSpotConfig :
               { goToNearestPointWithinRadius : 12.0
               , showHotSpotsWithinRadius : 150.0
-              , enableHotSpot : JB.jBridgeMethodExists "locateOnMapV2"
+              , enableHotSpot : EHC.jBridgeMethodExists "locateOnMapV2"
               , updateHotSpotOutSideRange : 200.0
               }
           }
@@ -374,24 +374,39 @@ config =
   , cityConfig :
       [ defaultCityConfig 
           { cityName = "Bangalore",
-            cityCode = "std:080",
-            geoCodeConfig
-              { radius = 50000,
-                strictBounds = true
-              },
-            featureConfig {
-              enableCabBanner = true,
-              enableChangeRideVariant = true
-            }
+            cityCode = "std:080"
+            , geoCodeConfig
+              { radius = 700000
+              , strictBounds = true
+              }
+            , enableRentals = true 
+            , featureConfig {
+                enableCabBanner = true,
+                enableChangeRideVariant = true
+              }
+            , enableIntercity = true
+            , enableCabs = false
+            , estimateAndQuoteConfig {
+              showInfoIcon = true
+              }
           },
         defaultCityConfig 
-          { cityName = "Chennai",
-            cityCode = "std:044",
-            geoCodeConfig
-              { radius = 50000,
-                strictBounds = true
-              },
-            enableCabs = true
+          {   cityName = "Chennai"
+            , cityCode = "std:044"
+            , geoCodeConfig
+                { radius = 700000
+                , strictBounds = true
+                }
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = true
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false,
+                enableChangeRideVariant = false
+              }
           },
         defaultCityConfig
           { cityName = "Hyderabad",
@@ -410,6 +425,20 @@ config =
             referral
               { domain = "https://www.yatrisathi.in",
                 customerAppId = "in.juspay.jatrisaathi"
+              }
+            , geoCodeConfig
+              { radius = 700000
+              , strictBounds = true
+              }
+            , enableRentals = true 
+            , enableIntercity = true
+            , enableCabs = true
+            , estimateAndQuoteConfig {
+              showInfoIcon = true
+              }
+            , featureConfig {
+                enableCabBanner = true,
+                enableChangeRideVariant = false
               }
           }
       ]
@@ -464,5 +493,7 @@ defaultCityConfig =
     },
     appLogo : "",
     dashboardUrl : "",
-    appLogoLight : ""
+    appLogoLight : "",
+    enableRentals : false,
+    enableIntercity : false
   }

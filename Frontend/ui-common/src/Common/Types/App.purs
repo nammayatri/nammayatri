@@ -232,7 +232,7 @@ type LayoutBound =
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges | TollOrParkingCharges
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges | TollOrParkingCharges | RentalRateCard
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
 instance decodeRateCardType :: Decode RateCardType where decode = defaultEnumDecode
@@ -382,7 +382,8 @@ type CarouselImageConfig = {
   width :: Int,
   bgColor :: String,
   cornerRadius :: Number,
-  image :: String
+  image :: String,
+  isUrl :: Boolean
 }
 
 type CarouselTextConfig = {
@@ -553,3 +554,16 @@ type Price = {
     amount :: Number
   , currency :: String
 }
+type RentalBookingConfig = {
+    startTimeUTC :: String
+  , baseDuration :: Int
+  , baseDistance :: Int
+  , finalDuration :: Int
+  , finalDistance :: Int
+  , startOdometer :: String
+  , endOdometer :: String
+  , nightCharge :: String
+  , rideStartedAt :: String 
+  , rideEndedAt :: String
+}
+

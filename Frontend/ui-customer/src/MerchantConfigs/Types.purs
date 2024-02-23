@@ -55,7 +55,6 @@ type AppConfigCustomer a =
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
-  , showCheckoutRentalBanner :: Boolean
   , mapConfig :: MapConfig
   , metroTicketingConfig :: Array MetroConfig
   , enableWhatsappOTP :: Array String
@@ -79,6 +78,7 @@ type AppConfigCustomer a =
   , safety :: Safety
   , enableBookAny :: Boolean
   , acPopupConfig :: AcPopupConfig
+  , showCheckoutRentalBanner :: Boolean
   | a
   }
 
@@ -397,6 +397,8 @@ type CityConfig = {
   cityName :: String,
   cityCode :: String,
   geoCodeConfig :: GeoCodeConfig,
+  enableRentals :: Boolean,
+  enableIntercity :: Boolean,
   enableCabs :: Boolean,
   iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,

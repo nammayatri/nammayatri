@@ -417,3 +417,12 @@ formatNumber amount decimalPlaces = case (DI.fromNumber amount),decimalPlaces  o
                                       (Just value), _ -> show value
                                       Nothing, Just decimalPlace -> toStringWith (fixed decimalPlace) amount
                                       _,_ -> show amount
+                                      
+                                
+        
+formatMinIntoHoursMins :: Int -> String
+formatMinIntoHoursMins mins = 
+  let 
+    hours = mins / 60
+    minutes = mins `mod` 60
+  in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> "hr"

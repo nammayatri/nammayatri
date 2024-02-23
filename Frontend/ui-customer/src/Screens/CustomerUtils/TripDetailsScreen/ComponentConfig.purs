@@ -123,6 +123,7 @@ sourceToDestinationConfig state = let
       , color = Color.greyDavy
       , ellipsize = false
       }
+    , showDestination = false
     }
   in sourceToDestinationConfig'
 

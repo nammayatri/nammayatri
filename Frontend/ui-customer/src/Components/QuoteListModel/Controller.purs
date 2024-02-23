@@ -60,4 +60,5 @@ type QuoteListModelState = {
   , selectedEstimatesObject :: CVC.Config
   , showAnim :: Boolean
   , animEndTime :: Int
+  , isRentalSearch :: Boolean
 }

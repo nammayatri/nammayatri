@@ -38,7 +38,9 @@ import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Engineering.Helpers.Commons (os, screenWidth)
+import Engineering.Helpers.Commons (os, screenWidth, screenHeight)
+import Mobility.Prelude (boolToVisibility)
+import Debug (spy)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -83,7 +85,9 @@ view push config =
          ]
       ,linearLayout
         [ width MATCH_PARENT
-        , height if config.currentRateCardType == PaymentFareBreakup then WRAP_CONTENT else if config.showDetails then  (V 350) else (V 250) -- check in IOS (Added to handle glitch)
+        , height $ if config.currentRateCardType == PaymentFareBreakup then WRAP_CONTENT 
+                   else if config.currentRateCardType == RentalRateCard then V 400
+                   else if config.showDetails then V 350 else V 250 -- check in IOS (Added to handle glitch)
         , orientation HORIZONTAL
         ][PrestoAnim.animationSet [ if (DA.any (_ == config.currentRateCardType) [ PaymentFareBreakup, DefaultRateCard]) then (translateInXBackwardAnim config.onFirstPage) else (translateInXForwardAnim true) ] $
           case config.currentRateCardType of 
@@ -91,18 +95,20 @@ view push config =
             DriverAddition -> driverAdditionView push config 
             PaymentFareBreakup -> paymentfareBreakup push config
             TollOrParkingCharges -> tollOrParkingView push config
+            RentalRateCard -> rentalRateCardView push config
             _ -> defaultRateCardView push config 
-        ]     
+        ]
       ,linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
+      , padding $ PaddingBottom $ if config.currentRateCardType /= RentalRateCard then 20 else 0
       ][ case config.buttonText of
           Just text' -> textView $ 
                        [ text text'
                        , height WRAP_CONTENT
                        , width MATCH_PARENT
                        , padding $ PaddingVertical 12 16
-                       , onClick push $ const $ if config.currentRateCardType == DefaultRateCard then Close else GoToDefaultStart
+                       , onClick push $ const $ if DA.any (_ == config.currentRateCardType) [DefaultRateCard, RentalRateCard] then Close else GoToDefaultStart
                        , color Color.blue800
                        , gravity CENTER
                        ] <> FontStyle.subHeading1 TypoGraphy
@@ -450,14 +456,16 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = state.primaryButtonText
-      , color = Color.yellow900
+      { text = state.primaryButtonConfig.text
+      , color = state.primaryButtonConfig.color
       }
-      , margin = MarginVertical 20 10
-      , cornerRadius = 8.0
-      , background = Color.black900
-      , height = V 54
+      , margin = state.primaryButtonConfig.margin
+      , cornerRadius = state.primaryButtonConfig.cornerRadius
+      , background = state.primaryButtonConfig.background
+       , height = state.primaryButtonConfig.height
       , id = "RateCardButton"
+      , enableRipple = state.primaryButtonConfig.enableRipple
+      , rippleColor = state.primaryButtonConfig.rippleColor
       }
   in primaryButtonConfig'
 
@@ -480,3 +488,35 @@ getStringByKey config key = do
   case arr DA.!! 0 of
     Just ob -> ob.val
     Nothing -> ""
+
+rentalRateCardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rentalRateCardView push config =
+  scrollView
+  [ width MATCH_PARENT
+  , height if os == "IOS" then (V 350) else WRAP_CONTENT
+  ] 
+  [ linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ Padding 16 0 16 16
+    ]
+    [ fareList push config
+    , dottedHorizontalLineView push config
+    , commonTV push (getStringByKey config "TOTAL_FARE_CHANGE") Color.black900 FontStyle.paragraphText LEFT 0 NoAction
+    , commonTV push (getStringByKey config "EXCESS_DISTANCE_CHARGE_DESCRIPTION") Color.black650 FontStyle.paragraphText LEFT 16 NoAction
+    , commonTV push (getStringByKey config "NIGHT_TIME_FEE_DESCRIPTION") Color.black650 FontStyle.paragraphText LEFT 16 NoAction
+    , commonTV push (getStringByKey config "PARKING_FEES_AND_TOLLS_NOT_INCLUDED") Color.black650 FontStyle.paragraphText LEFT 16 NoAction
+    , dottedHorizontalLineView push config
+    , commonTV push ("* " <> getStringByKey config "FARE_ACCORDING_TO_GOVERNMENT") Color.black650 FontStyle.paragraphText LEFT 0 NoAction
+    ]
+  ]
+
+dottedHorizontalLineView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+dottedHorizontalLineView push config =
+  imageView
+  [ width MATCH_PARENT
+  , height $ V 2 
+  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
+  , margin $ MarginVertical 16 16
+  ]

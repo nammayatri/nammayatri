@@ -15,12 +15,12 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..))
+import Common.Types.App (RateCardType(..), RentalBookingConfig)
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -34,6 +34,7 @@ import JBridge (Location)
 import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
+import Screens.Types (FareProductType(..)) as FPT
 
 initData :: HomeScreenState
 initData = {
@@ -41,7 +42,6 @@ initData = {
       suggestedAmount : 0
     , finalAmount : 0
     , startedAt : ""
-    , currentSearchResultType : ESTIMATES
     , endedAt : ""
     , source : ""
     , destination : ""
@@ -51,6 +51,7 @@ initData = {
     , rating : 4.0
     , locationList : []
     , savedLocations : []
+    , fareProductType : FPT.ONE_WAY
     , recentSearchs : { predictionArray : []}
     , destinationSuggestions : []
     , tripSuggestions: []
@@ -65,6 +66,13 @@ initData = {
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
+    , selectedDateTimeConfig : {
+        year : 0
+      , month : 0
+      , day : 0
+      , hour : 0
+      , minute : 0
+    }
     , rateCard : {
        additionalFare : 0,
        currentRateCardType : DefaultRateCard,
@@ -102,6 +110,9 @@ initData = {
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
     , specialZoneSelectedVariant : Nothing
+    , quoteList : []
+    , selectedQuoteId : Nothing
+    , selectedQuoteVariant : Nothing
     , selectedEstimatesObject : {
       vehicleImage: ""
       , isSelected: false
@@ -146,6 +157,7 @@ initData = {
       , currentEstimateHeight : 184
       , selectedEstimateHeight : 0
       , validTill : ""
+      , showStroke: true
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -175,7 +187,6 @@ initData = {
     , infoCardPeekHeight : 0
     , peekHeight : 0
     , rideHistoryTrip : Nothing
-    , rentalsInfo : Just {rentalsScheduledAt : "12 : 45 PM"}
     , bannerData : {
         bannerItem : Nothing
       , currentBanner : 0
@@ -198,13 +209,23 @@ initData = {
     }
     , otherSelectedEstimates : []
     , rateCardCache : Nothing
+    , rentalsInfo : Nothing 
+    , startTimeUTC : ""
+    , invalidBookingId : Nothing
+    , maxEstimatedDuration : 0
+    , invalidBookingPopUpConfig : Nothing
     },
     props: {
       rideRequestFlow : false
+    , scheduledRidePollingDelay : 0.0
+    , startScheduledRidePolling : false
+    , maxDateBooking : 5
     , nightSafetyFlow : false
     , isHomescreenExpanded : false
+    , canScheduleRide : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
+    , stageBeforeChatScreen : RideAccepted
     , showCallPopUp : false
     , sourceLat : 0.0
     , isSource : Nothing
@@ -316,6 +337,7 @@ initData = {
     , bottomSheetState : STATE_COLLAPSED
     , removeNotification : true
     , city : AnyCity
+    , destCity : Nothing
     , isRepeatRide : false
     , currSlideIndex : 0.0
     , suggestionsListExpanded : false
@@ -355,7 +377,6 @@ initData = {
     , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false, cameraAnimatedToSource : true }
     , showSpecialZoneInfoPopup : false
     , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
-    , isBannerDataComputed : false
     , repeatRideVariant : ""
     , hasToll : false
     , repeatRideServiceTierName : Nothing
@@ -370,6 +391,16 @@ initData = {
     , showAcWorkingPopup : false
     , repeateRideTimerStoped : false
     , currentEstimateHeight : 184
+    , showEndOTP : false
+    , rideDurationTimer : ""
+    , rideDurationTimerId : ""
+    , stopLoc : Nothing
+    , showRentalInfo : false
+    , showIntercityUnserviceablePopUp : false
+    , showNormalRideNotSchedulablePopUp : false
+    , zoneOtpExpired : false
+    , isBannerDataComputed : false
+    , showScheduledRideExistsPopUp : false
   }
 }
 
@@ -442,7 +473,6 @@ dummyDriverInfo =
   , driverName : ""
   , eta : Nothing
   , vehicleDetails : ""
-  , currentSearchResultType : ESTIMATES
   , registrationNumber : ""
   , rating : 0.0
   , startedAt : ""
@@ -477,6 +507,8 @@ dummyDriverInfo =
   , vehicleColor : ""
   , providerName : ""
   , providerType : CT.ONUS
+  , rentalData : dummyRentalBookingConfig
+  , fareProductType : FPT.ONE_WAY
   }
 
 dummySettingBar :: SettingSideBarState
@@ -520,7 +552,6 @@ dummyQuoteAPIEntity = QuoteAPIEntity {
   serviceTierShortDesc : Nothing,
   serviceTierName : Nothing, 
   airConditioned : Nothing
-  
 }
 
 dummyDriverOfferAPIEntity :: QuoteAPIContents
@@ -593,7 +624,11 @@ dummyRideBooking = RideBookingRes
   serviceTierName : Nothing, 
   airConditioned : Nothing,
   isValueAddNP : Nothing,
-  providerName : Nothing
+  providerName : Nothing,
+  estimatedDistance : Nothing,
+  estimatedDuration : Nothing,
+  rideScheduledTime : Nothing,
+  vehicleServiceTierType : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
@@ -604,9 +639,10 @@ dummyRideBookingAPIDetails= RideBookingAPIDetails{
 
 dummyRideBookingDetails :: RideBookingDetails
 dummyRideBookingDetails = RideBookingDetails {
-  toLocation : dummyBookingDetails,
+  toLocation : Nothing,
   estimatedDistance : Nothing,
-  otpCode : Nothing
+  otpCode : Nothing,
+  stopLocation : Nothing
 }
 
 
@@ -626,4 +662,35 @@ dummyTrip = {
     isSpecialZone: true,
     vehicleVariant: Nothing,
     serviceTierNameV2 : Nothing
+}
+
+dummyRentalBookingConfig :: RentalBookingConfig
+dummyRentalBookingConfig = 
+  { startTimeUTC : ""
+  , baseDuration : 0
+  , baseDistance : 0
+  , startOdometer : ""
+  , endOdometer : ""
+  , nightCharge : ""
+  , finalDuration : 0
+  , finalDistance : 0
+  , rideStartedAt : ""
+  , rideEndedAt : ""
+  }
+
+dummyBookingTime :: BookingTime
+dummyBookingTime = {
+  bookingId : "0",
+  rideStartTime : "",
+  estimatedDuration : 0
+}
+
+dummyInvalidBookingPopUpConfig :: InvalidBookingPopUpConfig
+dummyInvalidBookingPopUpConfig = {
+  fromLocation : "",
+  toLocation : "",
+  bookingId : "",
+  rideScheduledTime : "",
+  maxEstimatedDuration : 0,
+  fareProductType : FPT.ONE_WAY
 }
