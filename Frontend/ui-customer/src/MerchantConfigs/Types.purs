@@ -55,7 +55,6 @@ type AppConfigCustomer a =
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
-  , showCheckoutRentalBanner :: Boolean
   , mapConfig :: MapConfig
   , metroTicketingConfig :: Array MetroConfig
   , enableWhatsappOTP :: Array String
@@ -78,6 +77,7 @@ type AppConfigCustomer a =
   , tipEnabledCities :: Array String
   , referral :: ReferalConfig
   , safety :: Safety
+  , showCheckoutRentalBanner :: Boolean
   | a
   }
 
@@ -391,6 +391,8 @@ type CityConfig = {
   cityName :: String,
   cityCode :: String,
   geoCodeConfig :: GeoCodeConfig,
+  enableRentals :: Boolean,
+  enableIntercity :: Boolean,
   enableCabs :: Boolean,
   estimateAndQuoteConfig :: EstimateConfig,
   featureConfig :: CityBasedFeatures

@@ -15,7 +15,7 @@
 
 module Screens.MyRidesScreen.Controller where
 
-import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode, _vehicleVariant)
+import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode, _vehicleVariant, _stopLocation)
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
@@ -34,10 +34,10 @@ import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Screens (ScreenName(..), getScreen)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
 import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..),City(..))
-import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn, getValueToLocalStore,  KeyStore(..))
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag, getFareProductType)
+import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..), RideBookingAPIDetails(..))
 import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
@@ -49,6 +49,9 @@ import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
 import PrestoDOM.List as PrestoList
 import JBridge (toast)
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import Debug (spy)
+import Screens.Types (FareProductType(..)) as FPT
 
 instance showAction :: Show Action where
   show _ = ""
@@ -95,6 +98,7 @@ data ScreenOutput = GoBack MyRidesScreenState
   | LoaderOutput MyRidesScreenState
   | BookRide
   | RepeatRide MyRidesScreenState
+  | GoToRideScheduledScreen MyRidesScreenState
 
 data Action = NoAction
             | OnFadeComplete String
@@ -155,7 +159,8 @@ eval (IndividualRideCardActionController (IndividualRideCardController.OnClick i
   let selectedCard = state.itemsRides !! index
   case selectedCard of
     Just selectedRide -> do
-      exit $ GoToTripDetails state { data { selectedItem = selectedRide}}
+      if selectedRide.status == "CONFIRMED" then exit $ GoToRideScheduledScreen state { data { selectedItem = selectedRide}}
+        else exit $ GoToTripDetails state { data { selectedItem = selectedRide}}
     Nothing -> continue state
 
 eval (IndividualRideCardActionController (IndividualRideCardController.RepeatRide index)) state = do
@@ -189,41 +194,51 @@ eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController Prima
 eval _ state = continue state
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
-myRideListTransformerProp listRes =  filter (\item -> (any (_ == item.status) [(toPropValue "COMPLETED"), (toPropValue "CANCELLED"), (toPropValue "REALLOCATED")])) (map (\(RideBookingRes ride) -> 
-  let imageInfo = case fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)of
+myRideListTransformerProp listRes =
+    filter (\item -> (any (_ == item.status) [(toPropValue "COMPLETED"), (toPropValue "CANCELLED"), (toPropValue "REALLOCATED"), (toPropValue "CONFIRMED")])) (map (\(RideBookingRes ride) -> 
+    let (RideBookingAPIDetails rideApiDetails) = ride.bookingDetails
+        isScheduled = ride.status == "CONFIRMED"
+        rideStartTime = fromMaybe ride.createdAt $ if isScheduled then ride.rideScheduledTime else ride.rideStartTime
+        destination = fromMaybe dummyBookingDetails $ if (getFareProductType rideApiDetails.fareProductType) == FPT.RENTAL then (ride.bookingDetails ^._contents^._stopLocation) else (ride.bookingDetails ^._contents^._toLocation)
+        imageInfo = case fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)of
                     Just variant -> split (Pattern ",") (getVehicleVariantImage $ show variant)
-                    Nothing -> ["",""]
-      imageName = fromMaybe "" $ imageInfo !!0
-      imageUrl = fromMaybe "" $ imageInfo !!1
-  in
-  { 
-    date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
-    time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
-    source : toPropValue (decodeAddress (Booking ride.fromLocation)),
-    destination : toPropValue (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
-    totalAmount : toPropValue ((getCurrency appConfig) <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
-    cardVisibility : toPropValue "visible",
-    shimmerVisibility : toPropValue "gone",
-    driverImage : toPropValue $ fetchImage FF_ASSET "ny_ic_user",
-    isCancelled : toPropValue (if ride.status == "CANCELLED" || ride.status == "REALLOCATED" then "visible" else "gone"),
-    isSuccessfull : toPropValue (if ride.status == "COMPLETED" then "visible" else "gone"),
-    rating : toPropValue (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
-    driverName : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName),
-    rideStartTime : toPropValue (convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A"),
-    rideEndTime : toPropValue (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
-    vehicleNumber : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
-    rideId : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
-    status : toPropValue (if ride.status == "REALLOCATED" then "CANCELLED" else ride.status),
-    rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
-    alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
-    zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
-    variantImage : toPropValue $ if os == "IOS" then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl
-  }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
+                    Nothing -> if isJust ride.vehicleServiceTierType then split (Pattern ",") (getVehicleVariantImage $ fromMaybe "" ride.vehicleServiceTierType) else ["",""]
+        imageName = fromMaybe "" $ imageInfo !!0
+        imageUrl = fromMaybe "" $ imageInfo !!1
+    in
+      {
+        date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC rideStartTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC rideStartTime "Do MMM") )),
+        time : toPropValue (convertUTCtoISC rideStartTime "h:mm A"),
+        source : toPropValue (decodeAddress (Booking ride.fromLocation)),
+        destination : toPropValue (decodeAddress $ Booking destination),
+        totalAmount : toPropValue ((getCurrency appConfig) <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+        cardVisibility : toPropValue "visible",
+        shimmerVisibility : toPropValue "gone",
+        driverImage : toPropValue $ fetchImage FF_ASSET "ny_ic_user",
+        isCancelled : toPropValue (if ride.status == "CANCELLED" || ride.status == "REALLOCATED" then "visible" else "gone"),
+        isSuccessfull : toPropValue (if ride.status == "COMPLETED" then "visible" else "gone"),
+        isScheduled : toPropValue (if isScheduled then "visible" else "gone"),
+        rating : toPropValue (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
+        driverName : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName),
+        rideStartTime : toPropValue (convertUTCtoISC rideStartTime "h:mm A"),
+        rideEndTime : toPropValue (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
+        vehicleNumber : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
+        rideId : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
+        status :toPropValue (if ride.status == "REALLOCATED" then "CANCELLED" else ride.status),
+        rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
+        alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
+        zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
+        showRepeatRide : toPropValue if getFareProductType rideApiDetails.fareProductType == FPT.RENTAL || isScheduled then "gone" else "visible",
+        showDestination : toPropValue if (decodeAddress $ Booking destination) == "" then "gone" else "visible",
+        variantImage : toPropValue $ PrestoList.renderImageSource $ PrestoList.ImageUrl imageUrl imageName,
+        showVariantImage : toPropValue $ (if isScheduled then "gone" else "visible")
+      }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) ["COMPLETED", "CANCELLED", "REALLOCATED"])) (map (\(RideBookingRes ride) ->
+myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) ["COMPLETED", "CANCELLED", "REALLOCATED", "CONFIRMED" ])) (map (\(RideBookingRes ride) ->
   let
+    (RideBookingAPIDetails rideApiDetails) = ride.bookingDetails
     fares = getFares ride.fareBreakup
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
@@ -234,20 +249,24 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
+    isScheduled = ride.status == "CONFIRMED"
+    rideStartTime = fromMaybe ride.createdAt $ if isScheduled then ride.rideScheduledTime else ride.rideStartTime
+    destination = (fromMaybe dummyBookingDetails $ if (getFareProductType rideApiDetails.fareProductType) == FPT.RENTAL then (ride.bookingDetails ^._contents^._stopLocation) else (ride.bookingDetails ^._contents^._toLocation))
      in {
-    date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
-    time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
+    date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC rideStartTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC rideStartTime "Do MMM") )),
+    time :  (convertUTCtoISC rideStartTime "h:mm A"),
     source :  decodeAddress (Booking ride.fromLocation),
-    destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
+    destination : decodeAddress $ Booking destination,
     totalAmount :  ((getCurrency appConfig) <> " " <> show (fromMaybe (0) rideDetails.computedPrice)),
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
     driverImage : fetchImage FF_ASSET  "ny_ic_user",
     isCancelled :  (if ride.status == "CANCELLED" || ride.status == "REALLOCATED" then "visible" else "gone"),
     isSuccessfull :  (if ride.status == "COMPLETED" then "visible" else "gone"),
+    isScheduled :  (if isScheduled then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),
     driverName : (rideDetails.driverName),
-    rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A"),
+    rideStartTime : (convertUTCtoISC rideStartTime "h:mm A"),
     rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
     vehicleNumber : (rideDetails.vehicleNumber),
     rideId : (rideDetails.id),
@@ -256,7 +275,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     bookingId : ride.id,
     rideEndTimeUTC : fromMaybe "" (ride.rideEndTime),
     sourceLocation : ride.fromLocation,
-    destinationLocation : ((ride.bookingDetails)^._contents)^._toLocation,
+    destinationLocation : destination,
     alpha : if isLocalStageOn HomeScreen then "1.0" else "0.5"
   , fareBreakUpList : fares
   , faresList : updatedFareList
@@ -280,6 +299,12 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , optionsVisibility : false
   , merchantExoPhone : ride.merchantExoPhone
   , serviceTierName : ride.serviceTierName
+  , showRepeatRide : if getFareProductType rideApiDetails.fareProductType == FPT.RENTAL || isScheduled then "gone" else "visible"
+  , rideType : getFareProductType rideApiDetails.fareProductType
+  , estimatedDistance : fromMaybe 0 ride.estimatedDistance
+  , estimatedDuration : fromMaybe 0 ride.estimatedDuration
+  , estimatedFare : ride.estimatedFare
+  , showDestination : if (decodeAddress $ Booking destination) == "" then "gone" else "visible" 
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 dummyFareBreakUp :: FareBreakupAPIEntity

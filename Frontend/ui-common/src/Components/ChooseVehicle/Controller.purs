@@ -35,7 +35,6 @@ type Config
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
     , pickUpCharges :: Int 
-    , layoutMargin :: Margin
     , isSingleEstimate :: Boolean
     , tollCharge :: Int
     , serviceTierShortDesc :: Maybe String
@@ -48,6 +47,8 @@ type Config
     , airConditioned :: Maybe Boolean
     , showEditButton :: Boolean
     , editBtnText :: String
+    , layoutMargin :: Margin 
+    , showStroke :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -91,4 +92,5 @@ config =
   , airConditioned : Nothing
   , showEditButton : false
   , editBtnText : ""
+  , showStroke : true
   }

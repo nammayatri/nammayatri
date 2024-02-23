@@ -126,7 +126,7 @@ addTipView push state =
   , gravity CENTER
   , clickable true
   , onClick push $ const $ if state.tipViewProps.stage == DEFAULT then AddTip else NoAction 
-  , visibility $ boolToVisibility state.enableTips
+  , visibility $ boolToVisibility (state.enableTips && not state.intercity)
   ] $ (case state.tipViewProps.stage of 
           DEFAULT -> [defaultTipView push state]
           TIP_AMOUNT_SELECTED -> [selectTipView push state]
@@ -427,7 +427,7 @@ chooseYourRideView push config isSingleEstimate =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , background tagConfig.backgroundColor
+      , background Color.white900
       , cornerRadii $ Corners 24.0 true true false false
       ][linearLayout
         [ width MATCH_PARENT
@@ -479,7 +479,9 @@ chooseYourRideView push config isSingleEstimate =
             , id $ EHC.getNewIDWithTag "rideEstimateHeaderLayout"
             ][ textView (
                 [ text 
-                    if length config.quoteList > 1 
+                    if config.intercity
+                    then (getString INTERCITY_OPTIONS)
+                    else if length config.quoteList > 1 
                     then (getString CHOOSE_YOUR_RIDE)
                     else (getString CONFIRM_YOUR_RIDE)
                 , color Color.black800
@@ -596,10 +598,15 @@ getQuoteListViewHeight config isSingleEstimate =
     let len = length config.quoteList
         quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
         height = if quoteHeight == 0 then (if isSingleEstimate then 48 else 84) else quoteHeight
-    in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then 16 else 5
+    in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then 20 else 5
 
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
-primaryButtonRequestRideConfig config = PrimaryButton.config
+primaryButtonRequestRideConfig config = let 
+  name = case config.quoteList !! config.activeIndex of
+              Just selectedItem -> fromMaybe "" selectedItem.serviceTierName
+              Nothing -> ""
+  in
+  PrimaryButton.config
   { textConfig
     { text = getString $ BOOK name
     , color = Color.yellow900
@@ -611,8 +618,4 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
   , enableRipple = true
   , rippleColor = Color.rippleShade
   }
-  where 
-    name = case config.quoteList !! config.activeIndex of
-              Just selectedItem -> fromMaybe "" selectedItem.serviceTierName
-              Nothing -> ""
 

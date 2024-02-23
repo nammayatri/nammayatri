@@ -1,19 +1,20 @@
 module Components.ChooseVehicle.View where
 
 import Common.Types.App
+import ConfigProvider
+import Debug
 
+import Common.Styles.Colors as Color
 import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
-import Font.Style as FontStyle
-import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
+import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Debug
+import Language.Types (STR(..))
+import Language.Strings (getString)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility)
-import ConfigProvider
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimConfig, Direction(..), AnimConfig, animConfig)
@@ -21,6 +22,9 @@ import Mobility.Prelude (boolToInvisibility)
 import Data.Maybe (isJust, Maybe (..), fromMaybe)
 import Engineering.Helpers.Utils as EHU
 import JBridge as JB
+import Data.String as DS
+import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||) ,negate, (*), (/), (<), (>=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -34,33 +38,24 @@ cardView push config =
     isActiveIndex = config.index == config.activeIndex
     stroke' = if isActiveIndex && (not config.showEditButton) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) then Color.blue600 else Color.white900
-    padding' = PaddingVertical 16 16
+    padding' = Padding 16 16 16 16
     bounds = JB.getLayoutBounds $ EHC.getNewIDWithTag config.id
   in
     frameLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , onClick push $ const $ OnSelect config
-      , clickable config.isEnabled
-      ][  PrestoAnim.animationSet
-            [ Anim.fadeInWithDuration 100 isActiveIndex
-            , Anim.fadeOutWithDuration 100 $ not isActiveIndex
-            ]
-            $ linearLayout
-                [ width MATCH_PARENT
-                , height $ V bounds.height
-                , background background'
-                , cornerRadius 6.0
-                , stroke stroke'
-                , gravity RIGHT
-                ][]
-      , linearLayout
+      ][ linearLayout
           [ width MATCH_PARENT
-          , height WRAP_CONTENT
+          , height $ WRAP_CONTENT
           , cornerRadius 6.0
           , id $ EHC.getNewIDWithTag config.id
-          , margin $ config.layoutMargin
+          , clickable config.isEnabled
+          , background background'
           , padding padding'
+          , margin $ config.layoutMargin
+          , stroke stroke'
+          , gravity RIGHT
+          , onClick push $ const $ OnSelect config
           , afterRender push (const NoAction)
           ]
           [ linearLayout
@@ -194,9 +189,9 @@ vehicleDetailsView push config =
                         "AUTO_RICKSHAW" -> "Auto Rickshaw"
                         "TAXI" -> "Non-AC Taxi"
                         "TAXI_PLUS" -> "AC Taxi"
-                        "SEDAN" -> "Sedan"
+                        "SEDAN" -> "Comfy" 
                         "SUV" -> "SUV"
-                        "HATCHBACK" -> "Hatchback"
+                        "HATCHBACK" -> "Eco" 
                         _ -> "Non-AC Taxi"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -240,7 +235,7 @@ capacityView push config =
     ][ vehicleInfoView "ic_user_filled" config.capacity]
 
 vehicleInfoView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
-vehicleInfoView imageName description = do
+vehicleInfoView imageName description = 
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT

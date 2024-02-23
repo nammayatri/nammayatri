@@ -16,13 +16,13 @@ module SuggestionUtils where
 
 import Data.Map (Map, insert, update, lookup, member, delete, keys, isEmpty, empty)
 import Data.Tuple.Nested ((/\))
-import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
+import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, compareUTCDate)
 import Data.Maybe
 import Prelude
 import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null, head)
 import Data.Ord (comparing)
 import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..), Address, LocationType(..))
-import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
+import Helpers.Utils(getDistanceBwCordinates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
 import Data.Int(toNumber)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..), getValueToLocalNativeStore)
 import MerchantConfig.Types (SuggestedDestinationAndTripsConfig)
@@ -47,6 +47,7 @@ import Data.Array as DA
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Accessor (_vehicleVariant)
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 foreign import setSuggestionsMapInJson :: Json -> Json
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
@@ -193,7 +194,7 @@ calculateScore frequency recencyDate frequencyConfig =
     frequencyWeight = frequencyConfig
     recencyWeight = 1.0 - frequencyWeight
     currentDate = (getCurrentUTC "")
-    recencyInSeconds = runFn2 getDifferenceBetweenDates currentDate recencyDate
+    recencyInSeconds = compareUTCDate currentDate recencyDate
     normalizedFrequency = frequency / (frequency + 1.0)
 
     normalizedRecency = 1.0 - (toNumber $ (recencyInSeconds / recencyInSeconds + 1))
@@ -268,7 +269,7 @@ rideListToTripsTransformer listRes =
     transformBooking (RideBookingRes ride) =
       let
        sourceAddressTransformed = getAddressFromBooking ride.fromLocation
-       toLocationTransformed = ((ride.bookingDetails)^._contents)^._toLocation
+       toLocationTransformed = fromMaybe dummyBookingDetails (((ride.bookingDetails)^._contents)^._toLocation)
        destinationAddressTransformed = getAddressFromBooking $ toLocationTransformed
        in {  sourceLat : (ride.fromLocation)^._lat,
              sourceLong : (ride.fromLocation)^._lon,
@@ -276,7 +277,7 @@ rideListToTripsTransformer listRes =
              destLong : toLocationTransformed^._lon,
              recencyDate : Just  (fromMaybe ride.createdAt ride.rideStartTime),
              source :  decodeAddress (Booking ride.fromLocation),
-             destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
+             destination : decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^._toLocation))),
              sourceAddress : sourceAddressTransformed,
              destinationAddress : destinationAddressTransformed,
              isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode)),

@@ -16,22 +16,32 @@
 module Screens.RideBookingFlow.HomeScreen.Config where
 
 import Common.Types.App
+import ConfigProvider
 import Language.Strings
+import Locale.Utils
+import Mobility.Prelude
 import Prelude
 import PrestoDOM
+
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
+import Accessor (_fareBreakup, _description, _rideEndTime, _amount)
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
-import Components.MessagingView as MessagingView
 import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
+import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
+import Components.LocationTagBarV2 as LocationTagBar
 import Components.MenuButton as MenuButton
+import Components.MessagingView as MessagingView
 import Components.PopUpModal as PopUpModal
+import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
@@ -39,57 +49,49 @@ import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SearchLocationModel as SearchLocationModel
-import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy, mapWithIndex, elem)
 import Data.Array as DA
 import Data.Either (Either(..))
+import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber)
 import Data.Int as INT
+import Data.Lens ((^.))
+import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
+import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
+import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
+import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
+import LocalStorage.Cache (getValueFromCache)
 import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
+import Resources.Localizable.EN (getEN)
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..))
+import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
+import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
-import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
-import Components.ChooseVehicle.Controller as ChooseVehicle
-import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
-import Data.Either (Either(..))
-import Font.Style (Style(..))
-import Services.API as API
-import Data.Lens ((^.))
-import Accessor (_fareBreakup, _description, _rideEndTime, _amount)
-import Resources.Localizable.EN(getEN)
-import Engineering.Helpers.Utils as EHU
-import Mobility.Prelude
-import Locale.Utils
-import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController 
-import LocalStorage.Cache (getValueFromCache)
-import ConfigProvider
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
-import Data.Lens ((^.), view)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -192,6 +194,7 @@ getDistanceString currDistance initDistance zoneType
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
+    isRentalRide = state.data.fareProductType == FPT.RENTAL
     config = PrimaryButton.config
     buttonText =
       if state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow && issueFaced
@@ -209,11 +212,11 @@ skipButtonConfig state =
         , background = state.data.config.primaryBackground
         , margin = MarginTop 22
         , id = "SkipButton"
-        , enableLoader = (JB.getBtnLoader "SkipButton")
-        , visibility = boolToVisibility $ doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
-        , isClickable = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
-        , alpha = if issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
-        , enableRipple = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        -- , enableLoader = (JB.getBtnLoader "SkipButton") -- TODO
+        , visibility = boolToVisibility $ isRentalRide || doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
+        , isClickable = isRentalRide || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        , alpha = if isRentalRide || issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
+        , enableRipple = isRentalRide || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
         , rippleColor = Color.rippleShade
         }
   in
@@ -403,10 +406,18 @@ rentalBannerConfig state =
       {
         backgroundColor = Color.blue600
       , stroke = "1," <> Color.grey900
-      , imageHeight = V 43
+      , imageHeight = V 45
       , imageWidth = V 66
       , imagePadding = PaddingVertical 0 0
-      , title = "Rental booking at " <> (maybe "" (_.rentalsScheduledAt) state.data.rentalsInfo)
+      , title = (maybe "" (\rentalsInfo ->
+                              if rentalsInfo.multipleScheduled then getString UPCOMING_BOOKINGS
+                              else do
+                                let timeUTC = rentalsInfo.rideScheduledAtUTC
+                                    fpt = rentalsInfo.fareProductType
+                                    bookingInfoString = if fpt == FPT.INTER_CITY then YOU_HAVE_UPCOMING_INTERCITY_BOOKING
+                                                        else YOU_HAVE_UPCOMING_RENTAL_BOOKING
+                                getString $ bookingInfoString $ EHC.convertUTCtoISC timeUTC "D" <> " " <> EHC.convertUTCtoISC timeUTC "MMMM" <> " " <> EHC.convertUTCtoISC timeUTC "YYYY" <> " , " <> EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
+                          ) state.data.rentalsInfo)
       , titleColor = Color.blue800
       , actionTextVisibility = false
       , cornerRadius = 8.0
@@ -509,10 +520,12 @@ metroTicketBannerConfig state =
         backgroundColor = Color.blue600'
       , title = "Book metro tickets with \nNamma Yatri Now!"
       , titleColor = Color.blue800
-      , actionText = "Book Now"
-      , actionTextColor = Color.white900
-      , actionTextBackgroundColor = Color.blue800
-      , actionTextCornerRadius = 12.0
+      , actionText {
+          text = "Book Now"
+        , backgroundColor = Just Color.blue800
+        , textColor = Color.white900
+        , cornerRadius = 12.0
+      }
       , imageUrl = fetchImage FF_ASSET "ny_ic_metro_banner"
       , margin = MarginTop 0
       , imageHeight = V 100
@@ -643,11 +656,13 @@ logOutPopUpModelConfig state =
       }
     _ ->
       let
+        isNormalRide = not (DA.any (_ == state.data.fareProductType) [FPT.INTER_CITY, FPT.RENTAL]) 
         config' = PopUpModal.config
         popUpConfig' =
           config'
             { primaryText { text = if (isLocalStageOn ST.QuoteList) then ((getString TRY_AGAIN) <> "?") else ((getString CANCEL_SEARCH) <> "?")}
             , buttonLayoutMargin = (MarginHorizontal 16 16)
+            , dontShowRetry =  not isNormalRide
             , dismissPopup = true
             , optionButtonOrientation = if(isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then  "VERTICAL" else "HORIZONTAL"
             , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH)}
@@ -659,13 +674,14 @@ logOutPopUpModelConfig state =
             , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
             , enableRipple = true
+            , visibility = isNormalRide
             }
             , option2 {
                text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
               , width = MATCH_PARENT
               , background = Color.white900
               , strokeColor = Color.white900
-              , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
+              , margin = MarginTop $ if ((isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) && isNormalRide ) then 14 else 3
               , color = Color.black650
               , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
              }
@@ -814,7 +830,8 @@ isMockLocationConfig state =
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = let
-  waitTimeConfig = textConfig $ state.data.currentSearchResultType == ST.QUOTES
+  isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+  waitTimeConfig = textConfig isQuotes  
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
     title {
@@ -829,7 +846,7 @@ waitTimeInfoCardConfig state = let
       accessibilityHint = getEN waitTimeConfig.primaryText
     }
   , secondaryText {
-      text = getString waitTimeConfig.secondaryText,
+      text = if not isQuotes then getVarString waitTimeConfig.secondaryText $ if state.data.vehicleVariant == "AUTO_RICKSHAW" then ["3", "1.5"] else ["5", "1"] else getString waitTimeConfig.secondaryText,
       visibility = VISIBLE,
       padding = PaddingLeft 16,
       color = Color.black700,
@@ -1050,10 +1067,14 @@ driverInfoCardViewState state = { props:
                                   , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType.priorityTag
-                                  , currentSearchResultType : state.data.currentSearchResultType
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
-                                  , isChatWithEMEnabled : state.props.isChatWithEMEnabled
+                                  , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL
+                                  , rideDurationTimer : state.props.rideDurationTimer
+                                  , rideDurationTimerId : state.props.rideDurationTimerId
+                                  , endOTPShown : state.props.showEndOTP
+                                  , showEndOTP : state.props.showEndOTP
+                                  , stageBeforeChatScreen : state.props.stageBeforeChatScreen
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -1079,8 +1100,8 @@ messagingViewConfig state = let
     { sendMessageActive = state.props.sendMessageActive
     , canSendSuggestion = state.props.canSendSuggestion
     , showAutoGeneratedText = (getValueToLocalStore NOTIFIED_CUSTOMER == "true") && isJust state.data.driverInfoCardState.eta && (HU.secondsToHms $ fromMaybe 0 state.data.driverInfoCardState.eta) /= "--"
-    , enableSuggestions = state.data.config.feature.enableSuggestions
     , showVehicleDetails = not state.props.isChatWithEMEnabled 
+    , enableSuggestions = if state.props.stageBeforeChatScreen == RideStarted then false else state.data.config.feature.enableSuggestions
     }
   , messages = state.data.messages
   , messagesSize = state.data.messagesSize
@@ -1101,7 +1122,7 @@ messagingViewConfig state = let
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int  --TODO Update these before final push
 getDefaultPeekHeight state = do
-  let isQuotes = state.data.currentSearchResultType == ST.QUOTES
+  let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
       height = case state.props.currentStage == ST.RideAccepted of 
                   true -> if isQuotes then 285 else 381
                   false -> if isQuotes then 377 else 368
@@ -1124,7 +1145,7 @@ driverInfoTransformer state =
     , vehicleDetails : cardState.vehicleDetails
     , registrationNumber : cardState.registrationNumber
     , rating : cardState.rating
-    , startedAt : cardState.startedAt
+    , startedAt : cardState.createdAt
     , endedAt : cardState.endedAt
     , source : cardState.source
     , destination : cardState.destination
@@ -1154,6 +1175,8 @@ driverInfoTransformer state =
     , bottomSheetState : state.props.currentSheetState
     , bannerData : state.data.bannerData
     , bannerArray : getDriverInfoCardBanners state DriverInfoCard.BannerCarousel
+    , rentalData : cardState.rentalData
+    , fareProductType : cardState.fareProductType
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1202,24 +1225,44 @@ getRateYourRideString str driverName = case getLanguageLocale languageKey of
     _   -> driverName <> " " <> str
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
-searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation
-                                    , locationList: state.data.locationList
-                                    , source: state.data.source
-                                    , destination: state.data.destination
-                                    , isSource: state.props.isSource
-                                    , isSrcServiceable: state.props.isSrcServiceable
-                                    , isDestServiceable: state.props.isDestServiceable
-                                    , isRideServiceable: state.props.isRideServiceable
-                                    , savedlocationList: state.data.savedLocations
-                                    , appConfig : state.data.config
-                                    , logField : state.data.logField
-                                    , crossBtnSrcVisibility: state.props.searchLocationModelProps.crossBtnSrcVisibility
-                                    , crossBtnDestVisibility: state.props.searchLocationModelProps.crossBtnDestVisibility
-                                    , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
-                                    , showLoader: state.props.searchLocationModelProps.showLoader
-                                    , prevLocation: state.data.searchLocationModelData.prevLocation
-                                    , currentLocationText : state.props.currentLocation.place 
+searchLocationModelViewState state = let 
+  suffixButtonText = if state.data.startTimeUTC == ""
+                          then getString NOW
+                          else formatDate "hh" <> ":" <> formatDate "mm" <> " " <> formatDate "A" <> ", " <> formatDate "MMM" <> " " <> formatDate "D"
+  in { isSearchLocation: state.props.isSearchLocation
+      , locationList: state.data.locationList
+      , source: state.data.source
+      , destination: state.data.destination
+      , isSource: state.props.isSource
+      , isSrcServiceable: state.props.isSrcServiceable
+      , isDestServiceable: state.props.isDestServiceable
+      , isRideServiceable: state.props.isRideServiceable
+      , savedlocationList: state.data.savedLocations
+      , appConfig : state.data.config
+      , logField : state.data.logField
+      , crossBtnSrcVisibility: state.props.searchLocationModelProps.crossBtnSrcVisibility
+      , crossBtnDestVisibility: state.props.searchLocationModelProps.crossBtnDestVisibility
+      , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
+      , showLoader: state.props.searchLocationModelProps.showLoader
+      , prevLocation: state.data.searchLocationModelData.prevLocation
+      , headerVisibility : state.props.canScheduleRide
+      , suffixButtonVisibility : boolToVisibility $ state.props.canScheduleRide
+      , suffixButton : {
+          text : suffixButtonText
+        , fontStyle : FontStyle.subHeading2 LanguageStyle
+        , prefixImage : "ny_ic_clock_unfilled"
+        , suffixImage : "ny_ic_chevron_down"
+        , padding : Padding 8 0 8 1
+        , gravity : CENTER_VERTICAL
+      }
+      , headerText : getString TRIP_DETAILS_
+      , currentLocationText : state.props.currentLocation.place 
                                     }
+  where 
+    formatDate :: String -> String
+    formatDate formatSTR =
+      let startTime = if state.data.startTimeUTC == "" then EHC.getCurrentUTC "" else state.data.startTimeUTC
+      in EHC.convertUTCtoISC startTime formatSTR
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
 quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
@@ -1231,7 +1274,7 @@ quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimate
                                 , selectedQuote: state.props.selectedQuote
                                 , autoSelecting: state.props.autoSelecting
                                 , searchExpire: state.props.searchExpire
-                                , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
+                                , showProgress : isLocalStageOn ConfirmingQuotes || (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
                                 , tipViewProps : getTipViewProps state
                                 , findingRidesAgain : state.props.findingRidesAgain
                                 , progress : state.props.findingQuotesProgress
@@ -1240,6 +1283,7 @@ quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimate
                                 , city : state.props.city
                                 , customerTipArray : tipConfig.customerTipArray
                                 , customerTipArrayWithValues : tipConfig.customerTipArrayWithValues
+                                , isRentalSearch : isLocalStageOn ConfirmingQuotes
                                 }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1399,18 +1443,20 @@ chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
 chooseYourRideConfig state = 
   let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
       city = getValueToLocalStore CUSTOMER_LOCATION
+      isIntercity = state.data.fareProductType == FPT.INTER_CITY
   in
   ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
     activeIndex = state.data.selectedEstimatesObject.index,
-    quoteList = state.data.specialZoneQuoteList,
+    quoteList = if (DA.any (_ == state.data.fareProductType) [ FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY]) then state.data.quoteList else state.data.specialZoneQuoteList,
     showTollExtraCharges = state.props.hasToll,
     nearByDrivers = state.data.nearByDrivers,
     showPreferences = state.data.showPreferences,
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore,
     flowWithoutOffers = state.props.flowWithoutOffers,
+    intercity = isIntercity,
     enableSingleEstimate = state.data.config.enableSingleEstimate,
     selectedEstimateHeight = state.props.selectedEstimateHeight,
     zoneType = state.props.zoneType.sourceTag,
@@ -1449,6 +1495,8 @@ getTipViewProps state = do
                             , isprimaryButtonVisible = false
                             , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                             , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                            -- , secondaryButtonText = getString GO_BACK_
+                            -- , secondaryButtonVisibility = true
                             }
     TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
                                        , onlyPrimaryText = false
@@ -1456,9 +1504,19 @@ getTipViewProps state = do
                                        , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
                                        , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
                                        , primaryButtonText = getTipViewText tipViewProps state (getString CONTINUE_SEARCH_WITH)
+                                      --  , secondaryButtonText = getString GO_BACK_
+                                      --  , secondaryButtonVisibility = true
                                        }
     TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true, isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
     RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps state (getString SEARCHING_WITH)) <> "." }
+    -- ADD_TIP_OR_CHANGE_RIDE_TYPE -> tipViewProps{ showTipsList = false
+    --                                           , isprimaryButtonVisible = true
+    --                                           , primaryText = getString TRY_ADDING_TIP_OR_CHANGE_RIDE_TYPE
+    --                                           , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+    --                                           , primaryButtonText = getString ADD_TIP
+    --                                           , secondaryButtonText = getString CHANGE_RIDE_TYPE
+    --                                           , secondaryButtonVisibility = true
+    --                                           }
 
 
 getTipViewText :: TipViewProps -> ST.HomeScreenState -> String -> String
@@ -1655,13 +1713,33 @@ rideCompletedCardConfig state =
           title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName,
           subTitle = (getString $ YOUR_FEEDBACK_HELPS_US appName),
           selectedRating = state.data.ratingViewState.selectedRating,
-          visible = not state.data.ratingViewState.issueFacedView
+          visible = not state.data.ratingViewState.issueFacedView,
+          driverImage = fetchImage FF_ASSET if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ic_new_avatar" else "ic_driver_avatar_cab"
         },
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.feature.enableSupport,
         showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled,
         safetyTitle = getString SAFETY_CENTER,
-        needHelpText = getString NEED_HELP
+        needHelpText = getString NEED_HELP,
+        showRentalRideDetails = state.data.fareProductType == FPT.RENTAL,
+        rentalBookingData {
+          baseDuration = state.data.driverInfoCardState.rentalData.baseDuration
+        , baseDistance = state.data.driverInfoCardState.rentalData.baseDistance
+        , finalDuration = state.data.driverInfoCardState.rentalData.finalDuration
+        , finalDistance = state.data.driverInfoCardState.rentalData.finalDistance
+        , finalFare = state.data.finalAmount
+        },
+        rentalRowDetails {
+          rideTime = getString RIDE_TIME
+        , rideDistance = getString RIDE_DISTANCE
+        , rideStartedAt = getString RIDE_STARTED_AT
+        , rideEndedAt = getString RIDE_ENDED_AT
+        , estimatedFare = getString ESTIMATED_FARE
+        , extraTimePrice = getString EXTRA_TIME_PRICE
+        , totalFare = getString TOTAL_FARE
+        , rideDetailsTitle = getString RIDE_DETAILS
+        , fareUpdateTitle = getString FARE_UPDATE
+        }
       }
   where 
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}
@@ -1740,7 +1818,7 @@ feedbackPillDataWithRating5 state = [
 getCarouselData :: ST.HomeScreenState -> Array CarouselData
 getCarouselData state =
   map (\item -> 
-    { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0 },
+    { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0, isUrl : false },
       youtubeConfig : EHC.getYoutubeData{ videoId = item.videoLink , videoType = "PORTRAIT_VIDEO",  videoHeight = item.videoHeight},
       contentType : if item.videoLink == "" then "IMAGE" else "VIDEO" ,
       gravity : item.gravity ,
@@ -1844,11 +1922,13 @@ locationTagBarConfig state  = let
             height : WRAP_CONTENT ,
             width : WRAP_CONTENT,
             padding : Padding 8 8 8 8 ,
+            enableRipple : true,
+            rippleColor : Color.rippleShade,
             id : item.id
           })
-        [ { image : "ny_ic_intercity", text : "Intercity", id : "INTER_CITY" },
-          { image : "ny_ic_rental" , text : "Rentals", id : "RENTALS" },
-          { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
+        [ { image : "ny_ic_intercity", text : (getString INTER_CITY_), id : "INTER_CITY" },
+          { image : "ny_ic_rental" , text : (getString RENTALS_), id : "RENTALS" }] --,
+          -- { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
   in 
     { tagList : locTagList }
   
@@ -2115,3 +2195,106 @@ generateReferralLink source medium term content campaign  =
       <> "%26utm_campaign%3D" <> campaign 
       -- <> "%26anid%3Dadmob&id=" <> packageId
 -- TODO: Add the above query params when needed
+
+rentalInfoViewConfig :: ST.HomeScreenState ->  PopUpModal.Config
+rentalInfoViewConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , cornerRadius = Corners 16.0 true true true true
+  , margin = Margin 24 32 24 0
+  , primaryText {
+      text = "Rental Ride Info"
+    }
+  , secondaryText {
+      text = "Please verify the odometer reading before sharing end ride otp"
+    , margin = Margin 16 4 16 24
+    , color = Color.black700
+    }
+  , option1 {
+      visibility = false
+    }
+  , option2 {
+      text =  getString OK_GOT_IT
+    , margin = (MarginHorizontal 16 16)
+    }
+  }
+  in popUpConfig'
+
+intercityInSpecialZonePopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+intercityInSpecialZonePopupConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = (MarginHorizontal 16 16),
+    buttonLayoutMargin = (Margin 0 16 16 0),
+    editTextVisibility = GONE,
+    dismissPopupConfig {
+      visibility = GONE
+      },
+    primaryText {
+      text = (getString LOCATION_UNSERVICEABLE), 
+      gravity = CENTER,
+      margin = MarginTop 16
+      },
+    secondaryText { 
+      text = getString $ if state.props.showNormalRideNotSchedulablePopUp then SCHEDULING_ALLOWED_IN_INTERCITY_RENTAL else SPECIAL_ZONE_INTERCITY_INELIGIBLE,
+      margin = MarginTop 4
+      },
+    option1 {
+      visibility = false
+      },
+    option2 { 
+      text = (getString GOT_IT),
+      padding = (Padding 16 0 16 0)
+    },
+    cornerRadius = (Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_unavailable"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 24
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+  }
+  in popUpConfig'
+
+
+scheduledRideExistsPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+scheduledRideExistsPopUpConfig state = let
+  bookingTime = ""
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = (MarginHorizontal 16 16),
+    buttonLayoutMargin = (Margin 0 16 16 0),
+    editTextVisibility = GONE,
+    dismissPopupConfig {
+      visibility = GONE
+      },
+    primaryText {
+      text = (getString A_RIDE_ALREADY_EXISTS), 
+      gravity = CENTER,
+      margin = MarginTop 16
+      },
+    secondaryText { 
+      text = getString $ YOU_HAVE_AN_ACTIVE_RIDE bookingTime,
+      margin = MarginTop 4
+      },
+    option1 {
+      visibility = false
+      },
+    option2 { 
+      text = (getString GOT_IT),
+      padding = (Padding 16 0 16 0)
+    },
+    cornerRadius = (Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = HU.fetchImage FF_COMMON_ASSET "ny_ic_time_conflicts"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 24
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+  }
+  in popUpConfig'

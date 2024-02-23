@@ -2,7 +2,7 @@ module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
 import Common.DefaultConfig
-import JBridge as JB
+import Engineering.Helpers.Commons as EHC
 
 config :: AppConfig 
 config =
@@ -230,7 +230,7 @@ config =
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,
     enableCustomerSupportForSafety : false,
-    enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2"
+    enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2"
   }
 
   , rideCompletedCardConfig : {
@@ -258,7 +258,7 @@ config =
             hotSpotConfig :
               { goToNearestPointWithinRadius : 12.0
               , showHotSpotsWithinRadius : 150.0
-              , enableHotSpot : JB.jBridgeMethodExists "locateOnMapV2"
+              , enableHotSpot : EHC.jBridgeMethodExists "locateOnMapV2"
               }
           }
       , labelTextSize : 30
@@ -366,25 +366,46 @@ config =
       [ { cityCode : "std:080"
         , cityName : "Bangalore"
         , geoCodeConfig :
-            { radius : 50000
+            { radius : 700000
             , strictBounds : true
             }
+        , enableRentals : true 
+        , featureConfig : {
+            enableCabBanner : true,
+            enableChangeRideVariant : true
+          }
+        , enableIntercity : true
         , enableCabs : false
+        , estimateAndQuoteConfig : {
+          showInfoIcon : true
+          }
+        },
+        { cityCode : "std:033"
+        , cityName : "Kolkata"
+        , geoCodeConfig :
+            { radius : 700000
+            , strictBounds : true
+            }
+        , enableRentals : true 
+        , enableIntercity : true
+        , enableCabs : true
         , estimateAndQuoteConfig : {
           showInfoIcon : true
           }
         , featureConfig : {
             enableCabBanner : true,
-            enableChangeRideVariant : true
+            enableChangeRideVariant : false
           }
-        }
-      , { cityCode : "std:044"
+        },
+        { cityCode : "std:044"
         , cityName : "Chennai"
         , geoCodeConfig :
-            { radius : 50000
+            { radius : 700000
             , strictBounds : true
             }
         , enableCabs : true
+        , enableRentals : true 
+        , enableIntercity : true
         , estimateAndQuoteConfig : {
           showInfoIcon : false
           }
@@ -430,5 +451,7 @@ defaultCityConfig =
     featureConfig : {
       enableCabBanner : false,
       enableChangeRideVariant : false
-    }
+    },
+    enableRentals : false,
+    enableIntercity : false
   }

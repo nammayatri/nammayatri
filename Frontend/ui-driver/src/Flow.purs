@@ -2520,12 +2520,12 @@ homeScreenFlow = do
             pure unit
           Nothing -> pure unit
       else if state.props.showDottedRoute then do
-          let coors = (walkCoordinate srcLon srcLat destLon destLat)
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
-          void $ pure $ removeAllPolylines ""
-          void $ liftFlowBT $ runEffectFn9 drawRoute coors "DOT" "#323643" false srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-          homeScreenFlow
-      else if not null state.data.route  then do
+        let coors = (walkCoordinate srcLon srcLat destLon destLat)
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
+        void $ pure $ removeAllPolylines ""
+        liftFlowBT $ drawRoute [coors] "DOT" false srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "DriverTrackingHomeScreenMap")
+        homeScreenFlow
+      else if not null state.data.route then do
         let shortRoute = (state.data.route !! 0)
         case shortRoute of
           Just (Route route) -> do
@@ -2533,7 +2533,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
             pure $ removeMarker "ic_vehicle_side"
             void $ pure $ removeAllPolylines ""
-            void $ liftFlowBT $ runEffectFn9 drawRoute coor "LineString" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            liftFlowBT $ drawRoute [coor] "LineString" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "DriverTrackingHomeScreenMap")
             pure unit
           Nothing -> pure unit
       else do
@@ -2545,7 +2545,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
             pure $ removeMarker "ny_ic_auto"
             void $ pure $ removeAllPolylines ""
-            void $ liftFlowBT $ runEffectFn9 drawRoute coor "ic_vehicle_side" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            liftFlowBT $ drawRoute [coor] "ic_vehicle_side" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "DriverTrackingHomeScreenMap")
             pure unit
           Nothing -> pure unit
       homeScreenFlow

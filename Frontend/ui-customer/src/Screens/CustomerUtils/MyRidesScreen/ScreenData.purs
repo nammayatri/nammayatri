@@ -16,7 +16,7 @@
 module Screens.MyRidesScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
-import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState, ZoneType(..))
+import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState, ZoneType(..), FareProductType(..))
 import Services.API (BookingLocationAPIEntity(..))
 import ConfigProvider
 import Prelude ((<>))
@@ -33,6 +33,7 @@ initData =
       , apiFailure: false
       , fromNavBar: true
       , optionsVisibility: true
+      , fromBanner : false
       }
   , data:
       { selectedItem: dummyIndividualCard
@@ -74,6 +75,7 @@ dummyIndividualCard = {
     driverImage : "",
     isCancelled :  "",
     isSuccessfull :  "",
+    isScheduled : "",
     rating : 0,
     driverName : "",
     rideStartTime : "",
@@ -109,4 +111,10 @@ dummyIndividualCard = {
   , optionsVisibility : false
   , merchantExoPhone : ""
   , serviceTierName : Nothing
+  , showRepeatRide : ""
+  , rideType : ONE_WAY
+  , estimatedDistance : 0
+  , estimatedDuration : 0
+  , estimatedFare : 0
+  , showDestination : ""
 }
