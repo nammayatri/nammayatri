@@ -24,3 +24,8 @@ ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ADD PRIMARY KEY ( langu
 
 ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ALTER COLUMN side_button_config TYPE json;
 ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ALTER COLUMN bottom_button_config TYPE json;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.lms_video_translation ADD COLUMN use_merchant_operating_city_default_language_video_url boolean NOT NULL default False;

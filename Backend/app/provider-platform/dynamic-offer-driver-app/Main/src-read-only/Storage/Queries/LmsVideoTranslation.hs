@@ -26,6 +26,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.LmsVideoTranslation.LmsVideoTranslation] -> m ()
 createMany = traverse_ create
 
+getAllTranslationsForVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ([Domain.Types.LmsVideoTranslation.LmsVideoTranslation])
+getAllTranslationsForVideoId (Kernel.Types.Id.Id videoId) = do
+  findAllWithKV
+    [ Se.Is Beam.videoId $ Se.Eq videoId
+    ]
+
 getVideoByLanguageAndVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m (Maybe (Domain.Types.LmsVideoTranslation.LmsVideoTranslation))
 getVideoByLanguageAndVideoId (Kernel.Types.Id.Id videoId) language = do
   findOneWithKV
@@ -34,15 +40,6 @@ getVideoByLanguageAndVideoId (Kernel.Types.Id.Id videoId) language = do
           Se.Is Beam.language $ Se.Eq language
         ]
     ]
-
-getVideoTranslationByVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ([Domain.Types.LmsVideoTranslation.LmsVideoTranslation])
-getVideoTranslationByVideoId limit offset (Kernel.Types.Id.Id videoId) = do
-  findAllWithOptionsKV
-    [ Se.Is Beam.videoId $ Se.Eq videoId
-    ]
-    (Se.Desc Beam.createdAt)
-    limit
-    offset
 
 updateCompletedWatchCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ()
 updateCompletedWatchCount completedWatchCount (Kernel.Types.Id.Id videoId) language = do
@@ -94,6 +91,7 @@ updateByPrimaryKey Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..} = d
       Se.Set Beam.thumbnailImage thumbnailImage,
       Se.Set Beam.title title,
       Se.Set Beam.url url,
+      Se.Set Beam.useMerchantOperatingCityDefaultLanguageVideoUrl useMerchantOperatingCityDefaultLanguageVideoUrl,
       Se.Set Beam.viewCount viewCount,
       Se.Set Beam.ytVideoId ytVideoId,
       Se.Set Beam.createdAt createdAt,
@@ -122,6 +120,7 @@ instance FromTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.Lm
             thumbnailImage = thumbnailImage,
             title = title,
             url = url,
+            useMerchantOperatingCityDefaultLanguageVideoUrl = useMerchantOperatingCityDefaultLanguageVideoUrl,
             videoId = Kernel.Types.Id.Id videoId,
             viewCount = viewCount,
             ytVideoId = ytVideoId,
@@ -144,6 +143,7 @@ instance ToTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.LmsV
         Beam.thumbnailImage = thumbnailImage,
         Beam.title = title,
         Beam.url = url,
+        Beam.useMerchantOperatingCityDefaultLanguageVideoUrl = useMerchantOperatingCityDefaultLanguageVideoUrl,
         Beam.videoId = Kernel.Types.Id.getId videoId,
         Beam.viewCount = viewCount,
         Beam.ytVideoId = ytVideoId,

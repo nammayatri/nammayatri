@@ -35,6 +35,12 @@ findByIdAndLanguage (Kernel.Types.Id.Id questionId) language = do
         ]
     ]
 
+getAllTranslationsByQuestionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ([Domain.Types.QuestionInformation.QuestionInformation])
+getAllTranslationsByQuestionId (Kernel.Types.Id.Id questionId) = do
+  findAllWithKV
+    [ Se.Is Beam.questionId $ Se.Eq questionId
+    ]
+
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe (Domain.Types.QuestionInformation.QuestionInformation))
 findByPrimaryKey language (Kernel.Types.Id.Id questionId) = do
   findOneWithKV

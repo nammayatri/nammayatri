@@ -29,6 +29,7 @@ data LmsVideoTranslationT f = LmsVideoTranslationT
     thumbnailImage :: B.C f Kernel.Prelude.Text,
     title :: B.C f Kernel.Prelude.Text,
     url :: B.C f Kernel.Prelude.Text,
+    useMerchantOperatingCityDefaultLanguageVideoUrl :: B.C f Kernel.Prelude.Bool,
     videoId :: B.C f Kernel.Prelude.Text,
     viewCount :: B.C f Kernel.Prelude.Int,
     ytVideoId :: B.C f Kernel.Prelude.Text,
