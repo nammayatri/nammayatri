@@ -419,6 +419,33 @@ rentalBannerConfig state =
       }
   in config'
 
+checkoutRentalBannerConfig :: ST.HomeScreenState -> Banner.Config
+checkoutRentalBannerConfig _ =
+  let
+    config = Banner.config
+    config' = config
+      { backgroundColor = Color.blue600
+      , stroke = "0," <> Color.grey900
+      , imageHeight = V 96
+      , imageWidth = V 80
+      , imagePadding = PaddingVertical 0 0
+      , title = getString RENTALS_INTERCITY_AVAILABLE
+      , titleColor = Color.blue800
+      , actionText {
+          text = getString CHECK_IT_OUT,
+          backgroundColor = Just Color.blue800 ,
+          textColor = Color.white900,
+          cornerRadius = if EHC.os == "IOS" then 9.0 else 50.0,
+          padding = PaddingHorizontal 16 16,
+          margin = MarginTop 6
+        }
+      , actionTextImgType = Banner.DownArrow
+      , actionTextVisibility = true
+      , cornerRadius = 12.0
+      , imageUrl = fetchImage FF_ASSET "ny_ic_rental_banner"
+      }
+  in config'
+
 disabilityBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
 disabilityBannerConfig state action =
   let

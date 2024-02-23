@@ -35,6 +35,7 @@ homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   liftFlowBT $ markPerformance "HOME_SCREEN_RUN"
   (GlobalState state) <- getState
+  let _ = spy "Inside HomeScreen" "Handler"
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
   void $ lift $ lift $ toggleLoader false
   case act of

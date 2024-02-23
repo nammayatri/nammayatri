@@ -723,6 +723,7 @@ homeScreenFlow = do
           --   homeScreenFlow
           if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false ) [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) then do 
               let currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
+                  _ = spy "sdfhjsdgaf" "sjkdlfskljh"
               updateLocalStage currentStage
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = currentStage ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance, isShorterTrip = response.distance < 500, findingQuotesProgress = 0.0}})
               homeScreenFlow
@@ -3753,6 +3754,7 @@ searchLocationFlow = do
       let latNum = fromMaybe 0.0 state.data.latLonOnMap.lat 
           lonNum = fromMaybe 0.0 state.data.latLonOnMap.lon
           focussedField = fromMaybe SearchLocPickup state.props.focussedTextField
+      let _ = spy "Inside locaSelected On map " state 
       {pickUpPoints, locServiceable , city, geoJson, specialLocCategory} <- getServiceability latNum lonNum $ fromMaybe SearchLocPickup state.props.focussedTextField
       if locServiceable then do
         case state.props.searchLocStage of 
@@ -3884,7 +3886,7 @@ searchLocationFlow = do
         $ SearchLocationScreenStateType 
             (\slsState -> slsState{data{ latLonOnMap = updatedState, confirmLocCategory = getZoneType specialLocCategory, srcLoc = if focussedField == SearchLocPickup then Just updatedState else state.data.srcLoc, destLoc = if focussedField == SearchLocDrop then Just updatedState else state.data.destLoc}})
       if isSpecialZone then 
-        specialLocFlow geoJson pickUpPoints specialLocCategory latNum lonNum
+        specialLocFlow geoJson pickUpPoints latNum lonNum
         else 
           updateLocDetailsFlow state latNum lonNum pickUpPoints cityName
 
@@ -3999,8 +4001,10 @@ searchLocationFlow = do
       savedLocResp <- lift $ lift $ Remote.getSavedLocationList ""
       case savedLocResp of 
         Right (SavedLocationsListRes savedLocs) -> do 
+          let _ = spy "inside getUpdatedLocationList " state.data.locationList
           let updatedLocList = getUpdatedLocationList state.data.locationList selectedItem.placeId
               savedLocList = AddNewAddress.savedLocTransformer savedLocs.list
+          let _ = spy "INside saved location list" savedLocList
           modifyScreenState $ SearchLocationScreenStateType (\searchLocScreenState -> searchLocScreenState{data{locationList = updatedLocList}})
           updateSavedLocations savedLocList
           searchLocationFlow
@@ -4447,7 +4451,6 @@ rentalScreenFlow = do
         modifyScreenState $ RentalScreenStateType (\_ -> state {data {currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true, showPopUpModal = true}})
         rentalScreenFlow 
       else do   
-        void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
         void $ lift $ lift $ toggleLoader true
         srcFullAddress <- getPlaceName (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon) HomeScreenData.dummyLocation true 
         destFullAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation true
@@ -4466,10 +4469,9 @@ rentalScreenFlow = do
         void $ lift $ lift $ toggleLoader false
         (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ ->do 
           searchLocationFlow)
-    RentalScreenController.GoToHomeScreen -> do 
-      -- updateRideScheduledTime ""
-      homeScreenFlow
-    RentalScreenController.SearchLocationForRentals updatedState locToBeUpdated -> do 
+        -- void $ pure $ toast $ "Rental Booking Not Allowed from this location" -- TODO-codex : Translations
+        modifyScreenState $ RentalScreenStateType (\_ -> state {data {currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true, showPopUpModal = true}})
+        rentalScreenFlow 
       let locToBeUpdated' = case locToBeUpdated of 
                               "PickUpLoc" -> SearchLocPickup
                               "FirstStop" -> SearchLocDrop 

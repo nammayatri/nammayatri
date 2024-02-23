@@ -226,7 +226,6 @@ localTextView textValue colorValue =
     , width MATCH_PARENT
     ] <> FontStyle.tags LanguageStyle
 
-
 getBaseFareForRentalOrInterCity :: String -> Int
 getBaseFareForRentalOrInterCity baseDistance =
   (fromMaybe 0 $ fromNumber =<< fromString =<< ((DS.split (DS.Pattern " ") baseDistance) DA.!! 0)) * 1000

@@ -626,6 +626,15 @@ locateOnMapFooterView push state = let
         , layoutGravity "center_vertical"
         , background Color.grey900
         ][]
+    
+    horizontalSeparatorView :: Int -> PrestoDOM (Effect Unit) w
+    horizontalSeparatorView wdth = 
+      linearLayout
+        [ width $ V wdth
+        , height $ V 24
+        , layoutGravity "center_vertical"
+        , background Color.grey900
+        ][]
 
 verticalSeparatorView :: forall w. Int -> Margin -> PrestoDOM (Effect Unit) w
 verticalSeparatorView hght margin' = 

@@ -309,6 +309,39 @@ sliderConfig = {
   bgAlpha : 50
 }
 
+foreign import drawRouteV2 :: DrawRouteConfig -> Effect Unit 
+foreign import renderSliderImpl :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) SliderConfig Unit
+
+foreign import getFromUTC :: String -> String -> String
+type SliderConfig = { 
+  id :: String,
+  sliderConversionRate :: Number,
+  sliderMinValue :: Int,
+  sliderMaxValue :: Int,
+  sliderDefaultValue :: Int,
+  toolTipId :: String,
+  enableToolTip :: Boolean,
+  progressColor :: String,
+  thumbColor :: String,
+  bgColor :: String,
+  bgAlpha :: Int 
+}
+
+sliderConfig :: SliderConfig
+sliderConfig = {
+  id : "",
+  sliderConversionRate : 1.0,
+  sliderMinValue : 0,
+  sliderMaxValue : 100,
+  sliderDefaultValue : 0,
+  toolTipId : "",
+  enableToolTip : false,
+  progressColor : Color.white900,
+  thumbColor : Color.blue800,
+  bgColor : Color.black,
+  bgAlpha : 50
+}
+
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
 

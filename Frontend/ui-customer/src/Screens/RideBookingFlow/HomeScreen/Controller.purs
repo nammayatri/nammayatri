@@ -2511,6 +2511,12 @@ eval (RentalInfoAction PopUpModal.OnButton1Click) state = continue state { props
 
 eval (RentalInfoAction PopUpModal.OnButton2Click) state = continue state { props { showRentalInfo = false}}
 
+eval (RentalInfoAction PopUpModal.DismissPopup) state = continue state
+
+eval (RentalInfoAction PopUpModal.OnButton1Click) state = continue state { props { showRentalInfo = false}}
+
+eval (RentalInfoAction PopUpModal.OnButton2Click) state = continue state { props { showRentalInfo = false}}
+
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
 eval (GenderBannerModal Banner.OnClick) state = exit $ GoToMyProfile state true
@@ -2592,6 +2598,24 @@ eval (RepeatRide index item) state = do
   void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
   void $ pure $ setValueToLocalStore TEST_POLLING_COUNT $ "22" 
   updateAndExit state{props{currentStage = LoadMap, suggestedRideFlow = true}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true, suggestedRideFlow = true, repeatRideVariant = item.vehicleVariant}} item
+
+eval RideSearchAction state = do 
+  void $ pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show true)
+  void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
+  void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
+  void $ pure $ setValueToLocalStore TEST_POLLING_COUNT $ "22"
+  updateAndExit state{props{currentStage = LoadMap}} $ RideSearchSO
+
+eval ConfirmRentalRideAction state = do 
+  updateAndExit state{props{currentStage = LoadMap}} $ ConfirmRentalRideSO state
+
+eval ChangeToRideAcceptedAction state = do
+  void $ pure $ updateLocalStage RideAccepted
+  updateAndExit state{props{currentStage = LoadMap}} $ Cancel state{props{currentStage = RideAccepted}}
+
+eval ChangeToRideStartedAction state = do
+  void $ pure $ updateLocalStage RideStarted
+  updateAndExit state{props{currentStage = LoadMap}} $ Cancel state{props{currentStage = RideStarted}}
 
 eval RideSearchAction state = do 
   void $ pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show true)
