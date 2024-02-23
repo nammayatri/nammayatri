@@ -55,7 +55,6 @@ baseAppStorage = do
     setValueToLocalStore BASE_URL (getBaseUrl "dummy")
     setValueToLocalStore RATING_SKIPPED "false"
     setValueToLocalStore POINTS_FACTOR "3"
-    setValueToLocalStore TRACKING_DRIVER "False"
     setValueToLocalStore ACCURACY_THRESHOLD "23.0"
     setValueToLocalStore BUNDLE_TIME_OUT "1000"
     setValueToLocalStore MESSAGES_DELAY "0"

@@ -64,7 +64,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, getValueFromIdMap)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -125,9 +125,10 @@ import Components.BannerCarousel as BannerCarousel
 import Components.MessagingView.Common.Types
 import Components.MessagingView.Common.View
 import Data.FoldableWithIndex
+import Screens.HomeScreen.DriverTracking (rideStatusPolling)
 
-screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
-screen initialState =
+screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
+screen initialState globalState =
   { initialState
   , view
   , name: "HomeScreen"
@@ -137,8 +138,8 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
-            _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
-            when (initialState.props.followsRide && isNothing initialState.data.followers) $ void $ launchAff $ flowRunner defaultGlobalState $ getFollowRide push UpdateFollowers
+            _ <- launchAff $ flowRunner globalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
+            when (initialState.props.followsRide && isNothing initialState.data.followers) $ void $ launchAff $ flowRunner globalState $ getFollowRide push UpdateFollowers
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
               _ <- storeCallBackCustomer push NotificationListener "HomeScreen"
@@ -147,7 +148,7 @@ screen initialState =
               push HandleCallback
             else do
               pure unit
-            when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeListItem push
+            when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner globalState $ computeListItem push
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
@@ -162,7 +163,7 @@ screen initialState =
                   pure unit
               FindingEstimate -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
+                _ <- launchAff $ flowRunner globalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
                 pure unit
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
@@ -172,12 +173,12 @@ screen initialState =
                   void $ pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
-                  void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
-              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
+                  void $ launchAff $ flowRunner globalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
+              ConfirmingRide -> void $ launchAff $ flowRunner globalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
-                  void $ launchAff $ flowRunner defaultGlobalState $ updateRecentTrips UpdateRepeatTrips push Nothing
+                  void $ launchAff $ flowRunner globalState $ updateRecentTrips UpdateRepeatTrips push Nothing
                 else do 
                   push RemoveShimmer 
                   pure unit
@@ -204,16 +205,15 @@ screen initialState =
                 _ <- pure $ enableMyLocation true
                 if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then do
                   void $ waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction
-                else 
+                else do
                   when 
                     (initialState.data.currentSearchResultType == QUOTES) $ do
                       let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
                       void $ startTimer secondsLeft "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
-                if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
-                  _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                  _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 1
-                else pure unit
+                  rideStatus <- runEffectFn1 getValueFromIdMap "RideStatusPolling"
+                  when (rideStatus.shouldPush) $ do
+                      void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                      void $ launchAff $ flowRunner globalState $ rideStatusPolling push 3000.0 rideStatus.id "pickup" 0
                 push LoadMessages
                 if(not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= QUOTES) then do
                   _ <- clearChatMessages
@@ -228,13 +228,10 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 _ <- pure $ enableMyLocation false
-                if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
-                  _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                  _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  _ <- launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip" 1
-                  pure unit
-                else
-                  pure unit
+                rideStatus <- runEffectFn1 getValueFromIdMap "RideStatusPolling"
+                when (rideStatus.shouldPush) $ do
+                    void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                    void $ launchAff $ flowRunner globalState $ rideStatusPolling push 20000.0 rideStatus.id "trip" 0
                 _ <- push RemoveChat
                 pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
@@ -245,13 +242,13 @@ screen initialState =
                 _ <- storeCallBackLocateOnMap push UpdatePickupLocation
                 pure unit
               TryAgain -> do
-                _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState
+                _ <- launchAff $ flowRunner globalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState
                 pure unit
               FindEstimateAndSearch -> do
                 push $ SearchForSelectedLocation
                 pure unit
               ReAllocated ->
-                void $ launchAff $ flowRunner defaultGlobalState $ reAllocateConfirmation push initialState ReAllocate 3000.0
+                void $ launchAff $ flowRunner globalState $ reAllocateConfirmation push initialState ReAllocate 3000.0
               _ -> pure unit
             if ((initialState.props.sourceLat /= (-0.1)) && (initialState.props.sourceLong /= (-0.1))) then do
               case initialState.props.sourceLat, initialState.props.sourceLong of

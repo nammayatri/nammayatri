@@ -187,6 +187,7 @@ import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBoo
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.Config(getNumbersToWhiteList)
 import SessionCache(getValueFromWindow, setValueInWindow)
+import Screens.HomeScreen.DriverTracking (resetTracking)
 
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
@@ -853,7 +854,7 @@ homeScreenFlow = do
             else homeScreenFlow
     ONGOING_RIDE state -> do
       setValueToLocalStore TRACKING_ENABLED "True"
-      setValueToLocalStore TRACKING_DRIVER "False"
+      liftFlowBT $ resetTracking
       setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
       let srcLat = state.data.driverInfoCardState.sourceLat
           srcLon = state.data.driverInfoCardState.sourceLng
@@ -901,7 +902,7 @@ homeScreenFlow = do
             dstLon = state.data.driverInfoCardState.destinationLng
         setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
         setValueToLocalStore FINDING_QUOTES_POLLING "false"
-        setValueToLocalStore TRACKING_DRIVER "False"
+        liftFlowBT $ resetTracking
         if not state.props.isInApp then do
           setValueToLocalStore TRACKING_ENABLED "False"
           pure unit
@@ -1316,25 +1317,6 @@ homeScreenFlow = do
           destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
       void $ pure $ openNavigation sourceLat sourceLng destLat destLng "DRIVE"
       homeScreenFlow
-    IN_APP_TRACK_STATUS state -> do
-      case state.props.currentStage of
-          RideAccepted -> do
-                          void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_pickup_track_inapp"
-                          pure unit
-          RideStarted  -> do
-                          void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ride_track_inapp"
-                          pure unit
-          _           -> pure unit
-      if (spy "driver current Stage "isLocalStageOn RideAccepted) || (spy "driver current Stage " isLocalStageOn RideStarted) then do
-        setValueToLocalStore TRACKING_DRIVER "False"
-        if not state.props.isInApp then do
-          setValueToLocalStore TRACKING_ENABLED "False"
-          homeScreenFlow
-          else do
-            setValueToLocalStore TRACKING_ENABLED "True"
-            homeScreenFlow
-        else
-          homeScreenFlow
     UPDATE_SAVED_LOCATION -> do
       savedLocationResp <- lift $ lift $ Remote.getSavedLocationList ""
       updateSourceLocation ""
@@ -1592,7 +1574,7 @@ updateFollower  = do
   (GlobalState allState) <- getState
   let followers = fromMaybe [] allState.homeScreen.data.followers
       noOfFollowers = Arr.length followers
-  setValueToLocalStore TRACKING_DRIVER "False"
+  void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "RideStatusPolling"
   setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
   modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{data{followers = followers, currentFollower = if noOfFollowers == 1 then Arr.head followers else followRideScreen.data.currentFollower, currentStage = if noOfFollowers > 1 then PersonList else FollowingRide}, props {city = allState.homeScreen.props.city}})
   followRideScreenFlow false

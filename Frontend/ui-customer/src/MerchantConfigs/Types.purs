@@ -373,5 +373,6 @@ type GeoCodeConfig = {
 }
 
 type DriverLocationPollingConfig = {
-  retryExpFactor :: Int
+  retryExpFactor :: Int,
+  maxPower :: Int
 }

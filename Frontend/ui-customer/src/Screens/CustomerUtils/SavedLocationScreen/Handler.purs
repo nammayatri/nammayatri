@@ -38,5 +38,4 @@ savedLocationScreen = do
     DeleteLocation tagName -> App.BackT $ App.NoBack <$> (pure $ DELETE_LOCATION tagName)
     EditLocation cardState -> App.BackT $ App.BackPoint <$> (pure $ EDIT_LOCATION cardState)
     GoBack -> do
-     _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
      App.BackT $ App.NoBack <$> (pure $ GO_BACK_FROM_SAVED_LOCATION)

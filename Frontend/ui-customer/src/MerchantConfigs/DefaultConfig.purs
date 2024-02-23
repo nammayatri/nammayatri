@@ -335,7 +335,8 @@ config =
       ]
   , bannerCarousel : defaultBannerCarousel
   , driverLocationPolling : {
-    retryExpFactor : 3
+    retryExpFactor : 2,
+    maxPower : 4
   }
 }
 

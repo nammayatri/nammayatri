@@ -32,7 +32,7 @@ import Presto.Core.Types.Language.Flow (getLogFields)
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
+  act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen (GlobalState state)
   void $ lift $ lift $ toggleLoader false
   case act of
     UpdateLocationName updatedState lat lng-> do
