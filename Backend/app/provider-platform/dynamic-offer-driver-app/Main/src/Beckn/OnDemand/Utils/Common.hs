@@ -15,6 +15,7 @@
 
 module Beckn.OnDemand.Utils.Common where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
@@ -28,6 +29,7 @@ import qualified Data.Text as T
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DCT
+import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -41,6 +43,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import SharedLogic.FareCalculator
 import Tools.Error
 
 firstStop :: [Spec.Stop] -> Maybe Spec.Stop
@@ -683,4 +686,122 @@ tfFulfillmentState state =
                 descriptorName = Nothing,
                 descriptorShortDesc = Nothing
               }
+      }
+
+tfQuotation :: DBooking.Booking -> Maybe Spec.Quotation
+tfQuotation booking =
+  Just
+    Spec.Quotation
+      { quotationBreakup = mkQuotationBreakup booking,
+        quotationPrice = tfQuotationPrice booking,
+        quotationTtl = Nothing
+      }
+
+tfQuotationPrice :: DBooking.Booking -> Maybe Spec.Price
+tfQuotationPrice booking =
+  Just
+    Spec.Price
+      { priceComputedValue = Nothing,
+        priceCurrency = Just "INR",
+        priceMaximumValue = Nothing,
+        priceMinimumValue = Nothing,
+        priceOfferedValue = Just $ encodeToText booking.estimatedFare,
+        priceValue = Just $ encodeToText booking.estimatedFare
+      }
+
+mkQuotationBreakup :: DBooking.Booking -> Maybe [Spec.QuotationBreakupInner]
+mkQuotationBreakup booking =
+  let fareParams = mkFareParamsBreakups mkPrice mkQuotationBreakupInner booking.fareParams
+   in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType booking.fareParams) fareParams -- TODO: Remove after roll out
+  where
+    mkPrice money =
+      Just
+        Spec.Price
+          { priceComputedValue = Nothing,
+            priceCurrency = Just "INR",
+            priceMaximumValue = Nothing,
+            priceMinimumValue = Nothing,
+            priceOfferedValue = Just $ encodeToText money,
+            priceValue = Just $ encodeToText money
+          }
+
+    mkQuotationBreakupInner title price =
+      Spec.QuotationBreakupInner
+        { quotationBreakupInnerPrice = price,
+          quotationBreakupInnerTitle = Just title
+        }
+
+    filterRequiredBreakups :: DFParams.FareParametersType -> Spec.QuotationBreakupInner -> Bool
+    filterRequiredBreakups fParamsType breakup = do
+      case fParamsType of
+        DFParams.Progressive ->
+          breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_DISTANCE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
+        DFParams.Slab ->
+          breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PLATFORM_FEE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.SGST)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CGST)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.FIXED_GOVERNMENT_RATE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
+        DFParams.Rental ->
+          breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_DISTANCE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TIME_BASED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
+
+type MerchantShortId = Text
+
+tfItems :: DBooking.Booking -> MerchantShortId -> Maybe [Spec.Item]
+tfItems booking shortId =
+  Just
+    [ Spec.Item
+        { itemDescriptor = tfItemDescriptor booking shortId,
+          itemFulfillmentIds = Just [booking.quoteId],
+          itemId = Just $ Common.mkItemId shortId booking.vehicleVariant,
+          itemLocationIds = Nothing,
+          itemPaymentIds = Nothing,
+          itemPrice = tfItemPrice booking,
+          itemTags = Nothing
+        }
+    ]
+
+tfItemPrice :: DBooking.Booking -> Maybe Spec.Price
+tfItemPrice booking =
+  Just
+    Spec.Price
+      { priceComputedValue = Nothing,
+        priceCurrency = Just "INR",
+        priceMaximumValue = Nothing,
+        priceMinimumValue = Nothing,
+        priceOfferedValue = Just $ encodeToText booking.estimatedFare,
+        priceValue = Just $ encodeToText booking.estimatedFare
+      }
+
+tfItemDescriptor :: DBooking.Booking -> MerchantShortId -> Maybe Spec.Descriptor
+tfItemDescriptor booking shortId =
+  Just
+    Spec.Descriptor
+      { descriptorCode = Just "RIDE",
+        descriptorShortDesc = Just $ Common.mkItemId shortId booking.vehicleVariant,
+        descriptorName = Nothing
       }
