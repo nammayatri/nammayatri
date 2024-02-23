@@ -261,9 +261,9 @@ search personId req bundleVersion clientVersion device = do
                 }
         routeResponse <- Maps.getRoutes person.id person.merchantId (Just merchantOperatingCity.id) request
 
-        riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
+        fork "Data Collection" $ do
+          riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
 
-        fork "calling mmi directions api" $ do
           whenJust riderConfig $ \config -> do
             let collectMMIData = fromMaybe False config.collectMMIRouteData
             when collectMMIData $ do
@@ -285,7 +285,6 @@ search personId req bundleVersion clientVersion device = do
                   QNB.create routeData
                 _ -> logInfo "MapsServiceConfig config not found for MMI"
 
-        fork "calling next billion directions api" $ do
           shouldCollectRouteData <- asks (.collectRouteData)
           when shouldCollectRouteData $ do
             nextBillionConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
@@ -305,7 +304,6 @@ search personId req bundleVersion clientVersion device = do
                   _ -> logInfo "No NextBillion config"
               _ -> logInfo "NextBillion route not found"
 
-        fork "Updating autocomplete data in search" $ do
           whenJust oneWayReq.sessionToken $ \token -> do
             whenJust riderConfig $ \config -> do
               let toCollectData = fromMaybe False config.collectAutoCompleteData
