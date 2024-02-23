@@ -112,7 +112,7 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
             }
 
 mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Maybe Text -> Maybe [Spec.TagGroup]
-mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
+mkCustomerInfoTags customerLanguage disabilityTag _ =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -127,7 +127,6 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
             Just $
               customerLanguageSingleton
                 ++ disabilityTagSingleton
-                ++ mbPhoneNumberSingleton
         }
     ]
   where
@@ -161,21 +160,23 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
               tagDisplay = Just False,
               tagValue = (A.decode . A.encode) =<< disabilityTag
             }
-    mbPhoneNumberSingleton
-      | isNothing mbPhoneNumber = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tag.CUSTOMER_PHONE_NUMBER,
-                      descriptorName = Just "Customer Phone Number",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = (A.decode . A.encode) =<< mbPhoneNumber
-            }
+
+-- not send in search, send in select
+-- mbPhoneNumberSingleton
+--   | isNothing mbPhoneNumber = []
+--   | otherwise =
+--     List.singleton $
+--       Spec.Tag
+--         { tagDescriptor =
+--             Just $
+--               Spec.Descriptor
+--                 { descriptorCode = Just $ show Tag.CUSTOMER_PHONE_NUMBER,
+--                   descriptorName = Just "Customer Phone Number",
+--                   descriptorShortDesc = Nothing
+--                 },
+--           tagDisplay = Just False,
+--           tagValue = (A.decode . A.encode) =<< mbPhoneNumber
+--         }
 
 mkReallocationInfoTags :: Maybe Bool -> [Spec.TagGroup]
 mkReallocationInfoTags = \case
