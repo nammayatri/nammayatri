@@ -43,12 +43,10 @@ onSearch ::
   FlowHandler AckResponse
 onSearch _ _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
-  mbDOnSearchReq <- Utils.withTransactionIdLogTag transactionId $ TaxiACL.buildOnSearchReqV2 reqV2
-  messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
-  txnId <- Utils.getTransactionId reqV2.onSearchReqContext
-
-  Utils.withTransactionIdLogTag txnId $ do
+  Utils.withTransactionIdLogTag transactionId $ do
     logInfo $ "OnSearch received:-" <> show reqV2
+    mbDOnSearchReq <- TaxiACL.buildOnSearchReqV2 reqV2
+    messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
 
     whenJust mbDOnSearchReq $ \request -> do
       Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
