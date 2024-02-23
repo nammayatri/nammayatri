@@ -191,7 +191,7 @@ tfCustomer res =
             { tagDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just "enable_frequent_location_updates",
+                    { descriptorCode = Just $ show Tags.ENABLE_FREQUENT_LOCATION_UPDATES,
                       descriptorName = Just "Enable Frequent Location Updates",
                       descriptorShortDesc = Nothing
                     },
