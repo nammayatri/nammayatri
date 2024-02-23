@@ -23,6 +23,7 @@ import Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -84,7 +85,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                 cancellationSource = DBCR.ByUser
               }
       context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
-      let cancelStatus = readMaybe . T.unpack =<< cancelReq.cancelStatus
+      let cancelStatus = A.decode . A.encode =<< cancelReq.cancelStatus
       case cancelStatus of
         Just Enums.CONFIRM_CANCEL -> do
           Redis.whenWithLockRedis (cancelLockKey cancelReq.bookingId.getId) 60 $ do
