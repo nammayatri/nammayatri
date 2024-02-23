@@ -154,6 +154,24 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_kafka"
+      , tls = False
+      }
+
+let riderClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_app"
+      , tls = False
+      }
+
 let kvConfigUpdateFrequency = +10
 
 let maxMessages
@@ -188,6 +206,8 @@ in  { esqDBCfg
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
     , searchRequestExpiry = Some +600
+    , riderClickhouseCfg
+    , kafkaClickhouseCfg
     , migrationPath =
       [ "dev/migrations-read-only/rider-app"
       , env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app"

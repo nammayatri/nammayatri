@@ -149,7 +149,7 @@ data AppEnv = AppEnv
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
-    driverClickhouseEnv :: ClickhouseEnv,
+    serviceClickhouseEnv :: ClickhouseEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
@@ -242,7 +242,7 @@ buildAppEnv cfg@AppCfg {..} = do
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
-  driverClickhouseEnv <- createConn driverClickhouseCfg
+  serviceClickhouseEnv <- createConn driverClickhouseCfg
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds

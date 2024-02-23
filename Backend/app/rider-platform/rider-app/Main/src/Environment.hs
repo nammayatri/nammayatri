@@ -36,6 +36,7 @@ import Kernel.External.Infobip.Types (InfoBIPConfig)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
@@ -75,6 +76,8 @@ data AppCfg = AppCfg
     hedisNonCriticalClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
     cutOffNonCriticalHedisCluster :: Bool,
+    riderClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg,
     hedisMigrationStage :: Bool,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
@@ -143,6 +146,8 @@ data AppEnv = AppEnv
     hostName :: Text,
     searchRequestExpiry :: Maybe Seconds,
     coreVersion :: Text,
+    serviceClickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseEnv :: ClickhouseEnv,
     loggerConfig :: LoggerConfig,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
@@ -232,6 +237,8 @@ buildAppEnv cfg@AppCfg {..} = do
   let s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  serviceClickhouseEnv <- createConn riderClickhouseCfg
+  kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

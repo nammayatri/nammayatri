@@ -1,0 +1,36 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  UTCTime: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
+  HighPrecMoney: Kernel.Types.Common
+
+module: Invoice
+types:
+  InvoiceRes:
+    date: UTCTime
+    rideStartTime: UTCTime
+    rideEndTime: UTCTime
+    totalAmount: HighPrecMoney
+    shortRideId: Text
+    driverName: Text
+    vehicleNumber: Text
+    source: Text
+    destination: Text
+    faresList: "[FareBreakup]"
+
+  FareBreakup:
+    title: Text
+    price: HighPrecMoney
+
+apis:
+  # GET /invoice
+  - GET:
+      endpoint: /invoice
+      auth: TokenAuth
+      mandatoryQuery:
+        from: UTCTime
+        to: UTCTime
+      response:
+        type: "[API.Types.UI.Invoice.InvoiceRes]"
