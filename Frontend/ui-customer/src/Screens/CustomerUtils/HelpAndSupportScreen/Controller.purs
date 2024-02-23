@@ -264,8 +264,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
                           _    -> do
                                     let newState = (myRideListTransform state (rideList ^._list))!!0
                                     updateAndExit (fromMaybe initData newState) (UpdateState (fromMaybe initData newState))
-      "failure"   -> continue updatedState{props{apiFailure = true}}
-      _           -> continue updatedState
+      _   -> continue updatedState {data{isNull = true }, props{apiFailure=false}}
 
 eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
 
