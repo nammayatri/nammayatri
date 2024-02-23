@@ -565,3 +565,31 @@ export const getMidnightUTC = function () {
   const utcTime = new Date(midnight);
   return utcTime.toISOString();
 }
+
+export const convertDateTimeConfigToUTCImpl = function (year, month, day, hour, minute, second) {
+  const dateIST = new Date(year, month - 1, day, hour, minute, second);
+  return new Date(dateIST).toISOString();
+};
+
+export const getUTCAfterNSecondsImpl = function (str, seconds) {
+  const date = new Date(str);
+  date.setSeconds(date.getSeconds() + seconds);
+  return date.toISOString();
+}
+
+export const compareUTCDateImpl = function (date1, date2) {
+  return Math.floor((new Date(date1) - new Date(date2))/1000); 
+}
+
+export const getUTCAfterNHoursImpl = function (str, hours) {
+  const date = new Date(str);
+  date.setHours(date.getHours() + hours);
+  return date.toISOString();
+}
+
+export const jBridgeMethodExists = function (method) {
+  if (window.JBridge[method]) {
+    return true;
+  }
+  return false;
+}

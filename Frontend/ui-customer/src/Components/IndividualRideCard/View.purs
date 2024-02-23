@@ -133,6 +133,7 @@ rideDetails push state =
       , width $ V 32
       , PrestoList.visibilityHolder "vehicleImgVisibility"
       , margin $ MarginRight 8
+      , PrestoList.visibilityHolder "showVariantImage"
       ]
     , textView
       ([ PrestoList.textHolder "date"
@@ -184,6 +185,20 @@ rideDetails push state =
               , gravity CENTER_VERTICAL
               , color Color.red
               ] <> FontStyle.tags LanguageStyle)]
+            , linearLayout[
+              height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , padding (Padding 8 4 8 6)
+              , PrestoList.visibilityHolder "isScheduled"
+              , cornerRadius 3.0
+              , background Color.blue600
+            ][textView (
+              [ text $ getString SCHEDULED
+              , PrestoList.visibilityHolder "isScheduled"
+              , height WRAP_CONTENT
+              , gravity CENTER_VERTICAL
+              , color Color.blue900
+              ] <> FontStyle.tags LanguageStyle)]
             ]
         ]
     ]
@@ -222,12 +237,18 @@ sourceAndDestination push state =
           , ellipsize true
           ] <> FontStyle.paragraphText LanguageStyle)
         ]
-    , SeparatorView.view separatorConfig
+    , linearLayout 
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , PrestoList.visibilityHolder "showDestination" 
+      ]
+      [SeparatorView.view separatorConfig]
     , linearLayout
       [ orientation HORIZONTAL
       , height WRAP_CONTENT
       , width MATCH_PARENT
       , background if os == "IOS" then Color.transparent else Color.white900
+      , PrestoList.visibilityHolder "showDestination" 
       ][  imageView
           [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_loc_red"
           , height $ V 16
@@ -390,6 +411,7 @@ viewDetailsAndRepeatRide push state =
       , margin $ Margin 15 15 15 7
       , background Color.grey900
       , visibility if state.isSrcServiceable then VISIBLE else GONE
+      , PrestoList.visibilityHolder "showRepeatRide"
       ][]
     , textView (
       [ width WRAP_CONTENT
@@ -408,6 +430,7 @@ viewDetailsAndRepeatRide push state =
       , weight 1.0
       , gravity CENTER
       , visibility if state.isSrcServiceable then VISIBLE else GONE
+      , PrestoList.visibilityHolder "showRepeatRide"
       ] <> FontStyle.body1 LanguageStyle)
   ]
 

@@ -476,9 +476,11 @@ instance encodeGeometry :: Encode Geometry where encode = defaultEncode
 -------- For RideSearch -----------
 
 newtype SearchReq = SearchReq {
-  contents :: OneWaySearchReq ,
+  contents :: ContentType ,
   fareProductType :: String
 }
+
+data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq
 
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
@@ -487,7 +489,8 @@ newtype OneWaySearchReq = OneWaySearchReq {
   isSourceManuallyMoved :: Maybe Boolean,
   isDestinationManuallyMoved :: Maybe Boolean,
   sessionToken :: Maybe String,
-  isSpecialLocation :: Maybe Boolean
+  isSpecialLocation :: Maybe Boolean,
+  startTime :: Maybe String
 }
 
 newtype SearchReqLocation = SearchReqLocation {
@@ -502,6 +505,7 @@ newtype LatLong = LatLong {
 
 newtype SearchRes = SearchRes {
   searchId :: String,
+  searchExpiry :: String,
   routeInfo :: Maybe Route
 }
 
@@ -517,6 +521,34 @@ newtype LocationAddress = LocationAddress {
   ward :: Maybe String,
   placeId :: Maybe String
 }
+
+newtype RentalSearchReq = RentalSearchReq {
+  origin :: SearchReqLocation,
+  stops :: Maybe (Array SearchReqLocation),
+  estimatedRentalDistance :: Int,
+  estimatedRentalDuration :: Int,
+  startTime :: String
+}
+
+derive instance genericContentType :: Generic ContentType _
+instance standardEncodeContentType :: StandardEncode ContentType where
+  standardEncode (OneWaySearchRequest body) = standardEncode body
+  standardEncode (RentalSearchRequest body) = standardEncode body
+instance showContentType :: Show ContentType where show = genericShow
+instance decodeContentType :: Decode ContentType
+  where
+    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (fail $ ForeignError "Unknown response")
+instance encodeContentType  :: Encode ContentType where
+  encode (OneWaySearchRequest body) = encode body
+  encode (RentalSearchRequest body) = encode body
+
+derive instance genericRentalSearchReq :: Generic RentalSearchReq _
+derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _
+instance standardEncodeRentalSearchReq :: StandardEncode RentalSearchReq where standardEncode (RentalSearchReq body) = standardEncode body
+instance showRentalSearchReq :: Show RentalSearchReq where show = genericShow
+instance decodeRentalSearchReq :: Decode RentalSearchReq where decode = defaultDecode
+instance encodeRentalSearchReq  :: Encode RentalSearchReq where encode = defaultEncode
+
 derive instance genericLocationAddress :: Generic LocationAddress _
 derive instance newtypeLocationAddress :: Newtype LocationAddress _
 instance standardEncodeLocationAddress :: StandardEncode LocationAddress where standardEncode (LocationAddress body) = standardEncode body
@@ -527,7 +559,7 @@ instance encodeLocationAddress  :: Encode LocationAddress where encode = default
 instance makeSearchReq :: RestEndpoint SearchReq SearchRes where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.searchReq "") headers reqBody Nothing
  decodeResponse = decodeJSON
- encodeRequest req = standardEncode req
+ encodeRequest req = encode req
 
 derive instance genericSearchReq :: Generic SearchReq _
 derive instance newtypeSearchReq :: Newtype SearchReq _
@@ -625,6 +657,7 @@ data OfferRes
   = Quotes {onDemandCab :: QuoteAPIEntity}
   | Metro {metro :: MetroOffer}
   | Public {publicTransport :: PublicTransportQuote}
+  | RentalQuotes {onRentalCab :: QuoteAPIEntity}
 
 newtype QuoteAPIEntity = QuoteAPIEntity {
   agencyNumber :: Maybe String,
@@ -650,12 +683,27 @@ newtype QuoteAPIDetails = QuoteAPIDetails {
 
 data QuoteAPIContents
   = ONE_WAY OneWayQuoteAPIDetails
-  -- | RENTAL TODO ADD RENTAL WHEN NEEDED
+  | RENTAL RentalQuoteAPIDetails
   | DRIVER_OFFER DriverOfferAPIEntity
   | SPECIAL_ZONE SpecialZoneQuoteAPIDetails
+  | INTER_CITY IntercityQuoteAPIDetails
 
 newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {
   distanceToNearestDriver :: String
+}
+
+newtype IntercityQuoteAPIDetails = IntercityQuoteAPIDetails {
+  quoteId :: String
+}
+
+newtype RentalQuoteAPIDetails = RentalQuoteAPIDetails {
+  baseFare :: Int ,
+  includedKmPerHr :: Maybe Int ,
+  perExtraKmRate :: Maybe Int ,
+  perExtraMinRate :: Maybe Int ,
+  perHourCharge :: Maybe Int ,
+  plannedPerKmRate :: Maybe Int ,
+  nightShiftCharge :: Maybe Int 
 }
 
 newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
@@ -774,6 +822,13 @@ instance showOneWayQuoteAPIDetails :: Show OneWayQuoteAPIDetails where show = ge
 instance decodeOneWayQuoteAPIDetails :: Decode OneWayQuoteAPIDetails where decode = defaultDecode
 instance encodeOneWayQuoteAPIDetails  :: Encode OneWayQuoteAPIDetails where encode = defaultEncode
 
+derive instance genericRentalQuoteAPIDetails :: Generic RentalQuoteAPIDetails _
+derive instance newtypeRentalQuoteAPIDetails :: Newtype RentalQuoteAPIDetails _
+instance standardEncodeRentalQuoteAPIDetails :: StandardEncode RentalQuoteAPIDetails where standardEncode (RentalQuoteAPIDetails body) = standardEncode body
+instance showRentalQuoteAPIDetails :: Show RentalQuoteAPIDetails where show = genericShow
+instance decodeRentalQuoteAPIDetails :: Decode RentalQuoteAPIDetails where decode = defaultDecode
+instance encodeRentalQuoteAPIDetails  :: Encode RentalQuoteAPIDetails where encode = defaultEncode
+
 derive instance genericSpecialZoneQuoteAPIDetails :: Generic SpecialZoneQuoteAPIDetails _
 derive instance newtypeSpecialZoneQuoteAPIDetails :: Newtype SpecialZoneQuoteAPIDetails _
 instance standardEncodeSpecialZoneQuoteAPIDetails :: StandardEncode SpecialZoneQuoteAPIDetails where standardEncode (SpecialZoneQuoteAPIDetails body) = standardEncode body
@@ -781,17 +836,27 @@ instance showSpecialZoneQuoteAPIDetails :: Show SpecialZoneQuoteAPIDetails where
 instance decodeSpecialZoneQuoteAPIDetails :: Decode SpecialZoneQuoteAPIDetails where decode = defaultDecode
 instance encodeSpecialZoneQuoteAPIDetails  :: Encode SpecialZoneQuoteAPIDetails where encode = defaultEncode
 
+derive instance genericIntercityQuoteAPIDetails :: Generic IntercityQuoteAPIDetails _
+derive instance newtypeIntercityQuoteAPIDetails :: Newtype IntercityQuoteAPIDetails _
+instance standardEncodeIntercityQuoteAPIDetails :: StandardEncode IntercityQuoteAPIDetails where standardEncode (IntercityQuoteAPIDetails body) = standardEncode body
+instance showIntercityQuoteAPIDetails :: Show IntercityQuoteAPIDetails where show = genericShow
+instance decodeIntercityQuoteAPIDetails :: Decode IntercityQuoteAPIDetails where decode = defaultDecode
+instance encodeIntercityQuoteAPIDetails  :: Encode IntercityQuoteAPIDetails where encode = defaultEncode
+
+
 derive instance genericOfferRes :: Generic OfferRes _
 instance standardEncodeOfferRes :: StandardEncode OfferRes where
   standardEncode (Quotes body) = standardEncode body
+  standardEncode (RentalQuotes body) = standardEncode body
   standardEncode (Metro body) = standardEncode body
   standardEncode (Public body) = standardEncode body
 instance showOfferRes :: Show OfferRes where show = genericShow
 instance decodeOfferRes :: Decode OfferRes
   where
-    decode body = (Quotes <$> decode body) <|> (Metro <$> decode body) <|> (Public <$> decode body) <|> (fail $ ForeignError "Unknown response")
+    decode body = (Quotes <$> decode body) <|> (RentalQuotes <$> decode body) <|> (Metro <$> decode body) <|> (Public <$> decode body) <|> (fail $ ForeignError "Unknown response")
 instance encodeOfferRes  :: Encode OfferRes where
   encode (Quotes body) = encode body
+  encode (RentalQuotes body) = encode body
   encode (Metro body) = encode body
   encode (Public body) = encode body
 
@@ -800,14 +865,18 @@ instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where
   standardEncode (ONE_WAY body) = standardEncode body
   standardEncode (DRIVER_OFFER body) = standardEncode body
   standardEncode (SPECIAL_ZONE body) = standardEncode body
+  standardEncode (RENTAL body) = standardEncode body
+  standardEncode (INTER_CITY body) = standardEncode body
 instance showQuoteAPIContents :: Show QuoteAPIContents where show = genericShow
 instance decodeQuoteAPIContents :: Decode QuoteAPIContents
   where
-    decode body = (ONE_WAY <$> decode body) <|> (DRIVER_OFFER <$> decode body) <|> (SPECIAL_ZONE <$> decode body) <|> (fail $ ForeignError "Unknown response")
+    decode body = (ONE_WAY <$> decode body) <|> (DRIVER_OFFER <$> decode body) <|> (SPECIAL_ZONE <$> decode body) <|> (RENTAL <$> decode body)<|> (fail $ ForeignError "Unknown response")
 instance encodeQuoteAPIContents  :: Encode QuoteAPIContents where
   encode (ONE_WAY body) = encode body
   encode (DRIVER_OFFER body) = encode body
   encode (SPECIAL_ZONE body) = encode body
+  encode (RENTAL body) = encode body
+  encode (INTER_CITY body) = encode body
 
 
 derive instance genericQuoteAPIEntity :: Generic QuoteAPIEntity _
@@ -906,32 +975,36 @@ instance encodeConfirmRequest  :: Encode ConfirmRequest where encode = defaultEn
 data RideBookingReq = RideBookingReq String
 
 newtype RideBookingRes = RideBookingRes {
+  agencyName :: String,
   agencyNumber :: Maybe String,
-  status :: String,
-  rideStartTime :: Maybe String,
-  rideEndTime :: Maybe String,
-  duration :: Maybe Int,
-  fareBreakup :: Array FareBreakupAPIEntity,
+  bookingDetails :: RideBookingAPIDetails ,
   createdAt :: String,
   discount :: Maybe Int,
-  estimatedTotalFare :: Int,
-  agencyName :: String,
-  rideList :: Array RideAPIEntity,
+  duration :: Maybe Int,
+  estimatedDistance :: Maybe Int,
+  estimatedDuration :: Maybe Int,
   estimatedFare :: Int,
-  tripTerms :: Array String,
-  id :: String,
-  updatedAt :: String,
-  bookingDetails :: RideBookingAPIDetails ,
+  estimatedTotalFare :: Int,
+  fareBreakup :: Array FareBreakupAPIEntity,
   fromLocation ::  BookingLocationAPIEntity,
-  merchantExoPhone :: String,
-  specialLocationTag :: Maybe String,
   hasDisability :: Maybe Boolean,
   hasNightIssue :: Maybe Boolean,
   sosStatus :: Maybe CTA.SosStatus,
   serviceTierName :: Maybe String,
   airConditioned :: Maybe Boolean,
   isValueAddNP :: Maybe Boolean,
-  providerName :: Maybe String
+  providerName :: Maybe String,
+  id :: String,
+  merchantExoPhone :: String,
+  rideEndTime :: Maybe String,
+  rideList :: Array RideAPIEntity,
+  rideScheduledTime :: Maybe String,
+  rideStartTime :: Maybe String,
+  specialLocationTag :: Maybe String,
+  status :: String,
+  tripTerms :: Array String,
+  updatedAt :: String,
+  vehicleServiceTierType :: Maybe String
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -960,7 +1033,10 @@ newtype RideAPIEntity = RideAPIEntity {
   rideEndTime:: Maybe String,
   rideRating :: Maybe Int,
   driverArrivalTime :: Maybe String,
-  bppRideId :: String
+  bppRideId :: String,
+  endOtp :: Maybe String,
+  startOdometerReading :: Maybe Number,
+  endOdometerReading :: Maybe Number
 }
 
 newtype RideBookingAPIDetails = RideBookingAPIDetails {
@@ -969,9 +1045,10 @@ newtype RideBookingAPIDetails = RideBookingAPIDetails {
 }
 
 newtype RideBookingDetails = RideBookingDetails {
-  toLocation :: BookingLocationAPIEntity,
+  toLocation :: Maybe BookingLocationAPIEntity,
   estimatedDistance :: Maybe Int,
-  otpCode :: Maybe String
+  otpCode :: Maybe String,
+  stopLocation :: Maybe BookingLocationAPIEntity
 }
 
 newtype BookingLocationAPIEntity = BookingLocationAPIEntity {
@@ -1363,6 +1440,7 @@ newtype GetRouteResp = GetRouteResp (Array Route)
 newtype Route = Route
   {
     points :: Snapped
+  , pointsForRentals :: Maybe Snapped
   , boundingBox :: Maybe (Array Number)
   , snappedWaypoints :: Snapped
   , duration :: Int
@@ -1638,6 +1716,11 @@ newtype DestinationServiceabilityReq = DestinationServiceabilityReq
   { location  :: LatLong
   }
 
+data ServiceabilityType = ORIGIN | DESTINATION
+
+derive instance genericServiceabilityType :: Generic ServiceabilityType _
+instance showServiceabilityType :: Show ServiceabilityType where show = genericShow
+
 newtype ServiceabilityReq = ServiceabilityReq
   { location  :: LatLong
   }
@@ -1647,7 +1730,8 @@ newtype ServiceabilityRes = ServiceabilityRes
     -- geoJson :: Maybe String, :: to be deprecated
     specialLocation :: Maybe SpecialLocation,
     city :: Maybe String ,
-    hotSpotInfo :: Array HotSpotInfo
+    hotSpotInfo :: Array HotSpotInfo,
+    currentCity :: Maybe String
   }
 
 newtype ServiceabilityResDestination = ServiceabilityResDestination
@@ -1688,10 +1772,19 @@ newtype HotSpotInfo = HotSpotInfo {
   geoHash :: String
 }
 
-instance makeOriginServiceabilityReq :: RestEndpoint ServiceabilityReq ServiceabilityRes where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.serviceabilityOrigin "") headers reqBody Nothing
+
+data ServiceabilityRequest = ServiceabilityRequest String ServiceabilityReq 
+
+instance makeServiceabilityReq :: RestEndpoint ServiceabilityRequest ServiceabilityRes where 
+    makeRequest reqBody@(ServiceabilityRequest serviceabilityType rqBody) headers = defaultMakeRequest POST (EP.locServiceability serviceabilityType) headers reqBody Nothing
     decodeResponse = decodeJSON
-    encodeRequest req = defaultEncode req
+    encodeRequest (ServiceabilityRequest serviceabilityType req) = defaultEncode req
+
+
+derive instance genericServiceabilityRequest :: Generic ServiceabilityRequest _
+instance standardEncodeServiceabilityRequest :: StandardEncode ServiceabilityRequest where standardEncode (ServiceabilityRequest serviceabilityType req) = standardEncode req
+instance decodeServiceabilityRequest :: Decode ServiceabilityRequest where decode = defaultDecode
+instance encodeServiceabilityRequest :: Encode ServiceabilityRequest where encode = defaultEncode
 
 derive instance genericServiceabilityReq :: Generic ServiceabilityReq _
 derive instance newtypeServiceabilityReq:: Newtype ServiceabilityReq _
@@ -1700,31 +1793,12 @@ instance showServiceabilityReq :: Show ServiceabilityReq where show = genericSho
 instance decodeServiceabilityReq :: Decode ServiceabilityReq where decode = defaultDecode
 instance encodeServiceabilityReq :: Encode ServiceabilityReq where encode = defaultEncode
 
-instance makeDestinationServiceabilityReq :: RestEndpoint DestinationServiceabilityReq ServiceabilityResDestination where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.serviceabilityDest "") headers reqBody Nothing
-    decodeResponse = decodeJSON
-    encodeRequest req = defaultEncode req
-
-derive instance genericDestinationServiceabilityReq :: Generic DestinationServiceabilityReq _
-derive instance newtypeDestinationServiceabilityReq:: Newtype DestinationServiceabilityReq _
-instance standardEncodeDestinationServiceabilityReq :: StandardEncode DestinationServiceabilityReq where standardEncode (DestinationServiceabilityReq req) = standardEncode req
-instance showDestinationServiceabilityReq :: Show DestinationServiceabilityReq where show = genericShow
-instance decodeDestinationServiceabilityReq :: Decode DestinationServiceabilityReq where decode = defaultDecode
-instance encodeDestinationServiceabilityReq :: Encode DestinationServiceabilityReq where encode = defaultEncode
-
 derive instance genericServiceabilityRes :: Generic ServiceabilityRes _
 derive instance newtypeServiceabilityRes:: Newtype ServiceabilityRes _
 instance standardEncodeServiceabilityRes :: StandardEncode ServiceabilityRes where standardEncode (ServiceabilityRes req) = standardEncode req
 instance showServiceabilityRes :: Show ServiceabilityRes where show = genericShow
 instance decodeServiceabilityRes :: Decode ServiceabilityRes where decode = defaultDecode
 instance encodeServiceabilityRes :: Encode ServiceabilityRes where encode = defaultEncode
-
-derive instance genericServiceabilityResDestination :: Generic ServiceabilityResDestination _
-derive instance newtypeServiceabilityResDestination :: Newtype ServiceabilityResDestination _
-instance standardEncodeServiceabilityResDestination :: StandardEncode ServiceabilityResDestination where standardEncode (ServiceabilityResDestination req) = standardEncode req
-instance showServiceabilityResDestination :: Show ServiceabilityResDestination where show = genericShow
-instance decodeServiceabilityResDestination :: Decode ServiceabilityResDestination where decode = defaultDecode
-instance encodeServiceabilityResDestination :: Encode ServiceabilityResDestination where encode = defaultEncode
 
 derive instance genericSpecialLocation :: Generic SpecialLocation _
 derive instance newtypeSpecialLocation:: Newtype SpecialLocation _
@@ -3526,3 +3600,147 @@ instance standardEncodeSDKEventsResp :: StandardEncode SDKEventsResp where stand
 instance showSDKEventsResp :: Show SDKEventsResp where show = genericShow
 instance decodeSDKEventsResp :: Decode SDKEventsResp where decode = defaultDecode
 instance encodeSDKEventsResp :: Encode SDKEventsResp where encode = defaultEncode
+----------------------- ################### ADD OR EDIT STOP ####################### ----------------------------
+data AddStopRequest = AddStopRequest String AddStopReq
+
+data EditStopRequest = EditStopRequest String EditStopReq
+
+newtype AddStopReq = AddStopReq
+ {  address :: LocationAddress,
+    gps :: LatLong
+ }
+
+newtype EditStopReq = EditStopReq
+  {  address :: LocationAddress,
+      gps :: LatLong
+  }
+
+newtype StopReq = StopReq
+  { address :: LocationAddress,
+    gps :: LatLong
+  }
+
+newtype StopRes = StopRes 
+  { 
+    result :: String
+  }
+
+data StopRequest = StopRequest String Boolean StopReq 
+
+instance makeStopReq :: RestEndpoint StopRequest StopRes where 
+    makeRequest reqBody@(StopRequest rideBookingId isEdit rqBody) headers = defaultMakeRequest POST (EP.addOrEditStop isEdit rideBookingId) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest (StopRequest rideBookingId isEdit rqBody) = defaultEncode rqBody
+
+derive instance genericStopReq :: Generic StopReq _
+derive instance newtypeStopReq:: Newtype StopReq _
+instance standardEncodeStopReq :: StandardEncode StopReq where standardEncode (StopReq req) = standardEncode req
+instance showStopReq :: Show StopReq where show = genericShow
+instance decodeStopReq :: Decode StopReq where decode = defaultDecode
+instance encodeStopReq :: Encode StopReq where encode = defaultEncode
+
+derive instance genericStopRes :: Generic StopRes _
+derive instance newtypeStopRes:: Newtype StopRes _
+instance standardEncodeStopRes :: StandardEncode StopRes where standardEncode (StopRes req) = standardEncode req
+instance showStopRes :: Show StopRes where show = genericShow
+instance decodeStopRes :: Decode StopRes where decode = defaultDecode
+instance encodeStopRes :: Encode StopRes where encode = defaultEncode
+
+derive instance genericStopRequest :: Generic StopRequest _ 
+instance standardEncodeStopRequest :: StandardEncode StopRequest where standardEncode (StopRequest id isEdit req) = standardEncode req
+instance decodeStopRequest :: Decode  StopRequest where decode = defaultDecode
+instance encodeStopRequest :: Encode StopRequest where encode = defaultEncode
+
+newtype AddStopRes = AddStopRes { 
+  result :: String 
+  }
+
+newtype EditStopRes = EditStopRes { 
+  result :: String 
+  }
+
+derive instance genericEditStopReq :: Generic EditStopReq _
+instance showEditStopReq        :: Show EditStopReq where show     = genericShow
+instance standardEncodeEditStopReq :: StandardEncode EditStopReq where standardEncode (EditStopReq res) = standardEncode res
+instance decodeEditStopReq         :: Decode EditStopReq where decode = defaultDecode
+instance encodeEditStopReq         :: Encode EditStopReq where encode = defaultEncode
+
+derive instance genericAddStopReq :: Generic AddStopReq _ 
+instance showAddStopReq :: Show AddStopReq where show = genericShow 
+instance standardEncodeAddStopReq :: StandardEncode AddStopReq where standardEncode (AddStopReq req) = standardEncode req
+instance decodeAddStopReq :: Decode  AddStopReq where decode = defaultDecode
+instance encodeAddStopReq :: Encode AddStopReq where encode = defaultEncode
+
+derive instance genericAddStopRequest :: Generic AddStopRequest _ 
+instance standardEncodeAddStopRequest :: StandardEncode AddStopRequest where standardEncode (AddStopRequest id req) = standardEncode req
+instance decodeAddStopRequest :: Decode  AddStopRequest where decode = defaultDecode
+instance encodeAddStopRequest :: Encode AddStopRequest where encode = defaultEncode
+
+
+derive instance genericEditStopRequest :: Generic EditStopRequest _ 
+instance standardEncodeEditStopRequest :: StandardEncode EditStopRequest where standardEncode (EditStopRequest id req) = standardEncode req
+instance decodeEditStopRequest :: Decode  EditStopRequest where decode = defaultDecode
+instance encodeEditStopRequest :: Encode EditStopRequest where encode = defaultEncode
+
+derive instance genericEditStopRes :: Generic EditStopRes _ 
+instance standardEncodeEditStopRes :: StandardEncode EditStopRes where standardEncode (EditStopRes req) = standardEncode req
+instance decodeEditStopRes :: Decode  EditStopRes where decode = defaultDecode
+instance encodeEditStopRes :: Encode EditStopRes where encode = defaultEncode
+
+derive instance genericAddStopRes :: Generic AddStopRes _ 
+instance standardEncodeAddStopRes :: StandardEncode AddStopRes where standardEncode (AddStopRes req) = standardEncode req
+instance decodeAddStopRes :: Decode  AddStopRes where decode = defaultDecode
+instance encodeAddStopRes :: Encode AddStopRes where encode = defaultEncode
+
+instance makeAddStopReq :: RestEndpoint AddStopRequest AddStopRes where
+  makeRequest reqBody@(AddStopRequest bookingId (AddStopReq rqBody)) headers = defaultMakeRequest POST (EP.addStop bookingId ) headers reqBody Nothing
+  decodeResponse    = decodeJSON
+  encodeRequest = standardEncode
+
+instance makeEditStopReq :: RestEndpoint EditStopRequest EditStopRes where 
+  makeRequest reqBody@(EditStopRequest bookingId (EditStopReq rqBody)) headers = defaultMakeRequest POST (EP.editStop bookingId ) headers reqBody Nothing
+  decodeResponse    = decodeJSON
+  encodeRequest = standardEncode  
+
+
+
+--------------------------------------------------- rentalSearch ----------------------------------------------------
+
+-- newtype RentalSearchReq = RentalSearchReq
+--   { origin :: LocationAddress
+--   , stops :: Maybe (Array LocationAddress)
+--   , isSpecialLocation :: Maybe Boolean
+--   , startTime :: String
+--   , estimatedRentalDistance :: String
+--   , estimatedRentalDuration :: String
+--   }
+
+-- newtype RentalSearchRes = RentalSearchRes
+--   { searchId :: String
+--   , startTime :: String
+--   , distance :: String
+--   , duration :: String
+--   , shortestRouteInfo :: String
+--   , stops :: Array LocationAddress
+--   , origin :: LocationAddress
+--   , now :: String
+--   }
+
+-- instance makeRentalSearchReq :: RestEndpoint RentalSearchReq RentalSearchRes where
+--   makeRequest reqBody headers = defaultMakeRequest POST (EP.rentalSearch "") headers reqBody Nothing
+--   decodeResponse = decodeJSON
+--   encodeRequest req = standardEncode req
+
+-- derive instance genericRentalSearchReq :: Generic RentalSearchReq _
+-- derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _
+-- instance standardEncodeRentalSearchReq :: StandardEncode RentalSearchReq where standardEncode (RentalSearchReq reqBody) = standardEncode reqBody
+-- instance showRentalSearchReq :: Show RentalSearchReq where show = genericShow
+-- instance decodeRentalSearchReq :: Decode RentalSearchReq where decode = defaultDecode
+-- instance encodeRentalSearchReq :: Encode RentalSearchReq where encode = defaultEncode
+
+-- derive instance genericRentalSearchRes :: Generic RentalSearchRes _
+-- derive instance newtypeRentalSearchRes :: Newtype RentalSearchRes _
+-- instance standardEncodeRentalSearchRes :: StandardEncode RentalSearchRes where standardEncode (RentalSearchRes reqBody) = standardEncode reqBody
+-- instance showRentalSearchRes :: Show RentalSearchRes where show = genericShow
+-- instance decodeRentalSearchRes :: Decode RentalSearchRes where decode = defaultDecode
+-- instance encodeRentalSearchRes :: Encode RentalSearchRes where encode = defaultEncode

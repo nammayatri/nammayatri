@@ -19,15 +19,19 @@ import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
+import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String as DS
+import Data.Int (fromNumber)
+import Data.Number (fromString)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
+import Resources.Constants as Constants
 import Font.Style as FontStyle
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility)
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=), (-), (<$>), (>>=), (=<<), (*), (>))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility, onClick)
 import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -36,6 +40,8 @@ import Helpers.Utils (isHaveFare, getCityFromString, formatFareType)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
 import Mobility.Prelude
 import Storage
+import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types (VehicleVariant(..)) as VV
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -59,6 +65,7 @@ view push state =
         , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 then 24 else EHC.safeMarginBottom)
         , onBackPressed push (const BackPressed)
         , afterRender push (const AfterRender)
+        , onClick push $ const NoAction
         ]
         [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
         , linearLayout
@@ -112,7 +119,7 @@ referenceList state =
   in
   (if (state.data.selectedItem.nightCharges ) then [ "1.5" <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) ] else [])
     <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
-    <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else [])
+    <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" state.data.selectedItem.faresList) then [ (getVarString WAITING_CHARGE_DESCRIPTION $ if state.data.selectedItem.vehicleVariant == Just VV.AUTO_RICKSHAW then ["3", "1.5"] else ["5", "1"] ) ] else [])
     <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])
     <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" state.data.selectedItem.faresList) then [ (getString CUSTOMER_TIP_DESCRIPTION) ] else [])
     <> (if (isHaveFare "TOLL_CHARGES" state.data.selectedItem.faresList) then [ "⁺" <> (getString TOLL_CHARGES_DESC) ] else [])
@@ -135,9 +142,9 @@ amountBreakupView state =
               , margin (MarginBottom 16)
               ]
               [ textView $
-                  [ text (getFareText item.fareType state.data.selectedItem.baseDistance)
+                  [ text (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType)
                   , color Color.black800
-                  , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
+                  , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance state.data.selectedItem.estimatedDistance state.data.selectedItem.rideType) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
                   , accessibility ENABLE
                   , layoutGravity "bottom"
                   ] <> FontStyle.paragraphText LanguageStyle
@@ -221,22 +228,34 @@ localTextView textValue colorValue =
     , width MATCH_PARENT
     ] <> FontStyle.tags LanguageStyle
 
-getFareText :: String -> String -> String
-getFareText fareType baseDistance = case fareType of
-                      "BASE_FARE" -> (getString BASE_FARES) -- <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")" -- Temporary fix for base distance
-                      "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
-                      "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
-                      "TOTAL_FARE" -> getString TOTAL_PAID
-                      "DEAD_KILOMETER_FARE" -> getString PICKUP_CHARGE
-                      "PICKUP_CHARGES" -> getString PICKUP_CHARGE
-                      "WAITING_CHARGES" -> getString WAITING_CHARGE
-                      "EARLY_END_RIDE_PENALTY" -> getString EARLY_END_RIDE_CHARGES
-                      "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
-                      "SERVICE_CHARGE" -> getString SERVICE_CHARGES
-                      "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
-                      "WAITING_OR_PICKUP_CHARGES"  -> getString WAITING_CHARGE
-                      "PLATFORM_FEE" -> getString PLATFORM_FEE
-                      "SGST" -> getString PLATFORM_GST
-                      "CUSTOMER_CANCELLATION_DUES" -> getString CUSTOMER_CANCELLATION_DUES
-                      "TOLL_CHARGES" -> getString TOLL_CHARGES <> "⁺"
-                      _ -> formatFareType fareType
+
+getBaseFareForRentalOrInterCity :: String -> Int
+getBaseFareForRentalOrInterCity baseDistance =
+  (fromMaybe 0 $ fromNumber =<< fromString =<< ((DS.split (DS.Pattern " ") baseDistance) DA.!! 0)) * 1000
+
+getFareText :: String -> String -> Int -> ST.FareProductType -> String
+getFareText fareType baseDistance estimatedDistance rideType = 
+    let baseDistance' = if rideType == FPT.RENTAL then Constants.getKmMeter estimatedDistance else baseDistance
+        baseDistanceInMeters = getBaseFareForRentalOrInterCity baseDistance
+        distanceBasedCharges = if rideType == FPT.RENTAL && (baseDistanceInMeters > estimatedDistance) then getString DIST_BASED_CHARGES <> " (" <> (Constants.getKmMeter $ (baseDistanceInMeters) - estimatedDistance ) <> ")" else getString DIST_BASED_CHARGES
+    in case fareType of
+        "BASE_FARE" -> (getString BASE_FARES) -- <> if baseDistance' == "0 m" then "" else " (" <> baseDistance' <> ")"
+        "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
+        "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
+        "TOTAL_FARE" -> getString TOTAL_PAID
+        "DEAD_KILOMETER_FARE" -> getString PICKUP_CHARGE
+        "PICKUP_CHARGES" -> getString PICKUP_CHARGE
+        "WAITING_CHARGES" -> getString WAITING_CHARGE
+        "EARLY_END_RIDE_PENALTY" -> getString EARLY_END_RIDE_CHARGES
+        "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
+        "SERVICE_CHARGE" -> getString SERVICE_CHARGES
+        "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
+        "WAITING_OR_PICKUP_CHARGES"  -> getString WAITING_CHARGE
+        "PLATFORM_FEE" -> getString PLATFORM_FEE
+        "SGST" -> getString PLATFORM_GST
+        "CUSTOMER_CANCELLATION_DUES" -> getString CUSTOMER_CANCELLATION_DUES
+        "TOLL_CHARGES" -> getString TOLL_CHARGES <> "⁺"
+        "DIST_BASED_FARE" -> distanceBasedCharges
+        "TIME_BASED_FARE" -> getString TIME_BASED_CHARGES
+        "EXTRA_TIME_FARE" -> getString EXTRA_TIME_CHARGES
+        _ -> formatFareType fareType

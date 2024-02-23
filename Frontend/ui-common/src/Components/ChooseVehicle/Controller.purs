@@ -64,6 +64,7 @@ type Config
     , selectedEstimateHeight :: Int
     , validTill :: String
     , waitingTimeInfo :: CT.WaitingTimeInfo
+    , showStroke :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -121,4 +122,5 @@ config =
   , selectedEstimateHeight : 0
   , validTill : ""
   , waitingTimeInfo : { freeMinutes: "", charge: "" }
+  , showStroke : true
   }
