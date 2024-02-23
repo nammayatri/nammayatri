@@ -22,7 +22,7 @@ import Data.Aeson.Types
 import Data.ByteString.Lazy.Char8 as LB
 import Data.Text as Text
 import Domain.Types.Common
-import Domain.Types.Location (DummyLocationInfo, dummyToLocationData)
+import Domain.Types.Location (DummyLocationInfo)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import EulerHS.Prelude hiding (id)
@@ -31,9 +31,10 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Cac
-import qualified Data.Aeson.KeyMap as KM
-import qualified Client.Main as CM
+
+-- import Kernel.Types.Cac
+-- import qualified Data.Aeson.KeyMap as KM
+-- import qualified Client.Main as CM
 -- import qualified Data.Aeson.Key as DAK
 
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig
@@ -214,6 +215,7 @@ readWithInfo' s = case s of
   Number scientific -> case KP.readMaybe (show scientific) of
     Just val -> Just val
     Nothing -> Nothing
+  Null -> Nothing
   _ -> error $ "Not able to parse value" <> show s
 
 parseFCMConfig :: Object -> Parser FCMConfig
@@ -227,6 +229,11 @@ valueToMaybe :: FromJSON a => A.Value -> Maybe a
 valueToMaybe value = case A.fromJSON value of
   A.Success a -> Just a
   A.Error _ -> Nothing
+
+valueToType :: FromJSON a => A.Value -> a
+valueToType val = case A.fromJSON val of
+  A.Success a -> a
+  A.Error _ -> error "Not a string"
 
 valueToText :: Value -> Text
 valueToText val = case val of
@@ -247,157 +254,164 @@ valueToTextList val =
     String text -> KP.map strip . splitOn "," $ text
     _ -> error $ "Not a string or array" <> (show val)
 
-getFCMConfig :: KM.KeyMap Value -> FCMConfig
-getFCMConfig v = 
-  let fcmUrl' = fromJSON <$> (KM.lookup (DAK.fromText (Text.pack "fcmUrl")) v)
-      fcmServiceAccount' = Success . valueToText <$> (KM.lookup (DAK.fromText (Text.pack "fcmServiceAccount")) v)
-      fcmTokenKeyPrefix' = Success . valueToText <$> (KM.lookup (DAK.fromText (Text.pack "fcmTokenKeyPrefix")) v)
-      result = [fcmServiceAccount', fcmTokenKeyPrefix']
-  in
-    case (KP.any isNothing result) || (isNothing fcmUrl') of
-      True -> 
+-- getFCMConfig :: KM.KeyMap Value -> FCMConfig
+-- getFCMConfig v =
+--   let fcmUrl' = fromJSON <$> (KM.lookup (DAK.fromText (Text.pack "fcmUrl")) v)
+--       fcmServiceAccount' = Success . valueToText <$> (KM.lookup (DAK.fromText (Text.pack "fcmServiceAccount")) v)
+--       fcmTokenKeyPrefix' = Success . valueToText <$> (KM.lookup (DAK.fromText (Text.pack "fcmTokenKeyPrefix")) v)
+--       result = [fcmServiceAccount', fcmTokenKeyPrefix']
+--   in
+--     case (KP.any isNothing result) || (isNothing fcmUrl') of
+--       True ->
 
-        error $ "FCM Config not found: " <> show ((KM.lookup (DAK.fromText (Text.pack "fcmUrl")) v))
-      False -> do
-        let fcmConfig = FCM.FCMConfig <$> (fromJust fcmUrl') <*> (fromJust fcmServiceAccount') <*> (fromJust fcmTokenKeyPrefix')
-        case fcmConfig of 
-          Error err -> error ("Couldn't parse bhai" <> show err)
-          Success fcmConfig' -> fcmConfig'
-  
-instance FromJSONCAC TransporterConfig where
-  fromJSONCAC CACValue {..} = 
-    case cacValue of
-      Object obj -> do
-        let newObject = KM.mapKeyVal (\key -> DAK.fromText (Text.replace "transporterConfig:" "" $ DAK.toText key))
-              (\val -> case val of
-                String s -> case ( (isInfixOf "{"  s) && (isInfixOf ":"  s)) of
-                  True -> case (CM.convertTextToObject ( Text.replace "'" "\"" s)) of 
-                    Left _ -> String s
-                    Right obj' -> Object obj'
-                  False -> String s
-                x -> x) obj
-            fcmConfig' = getFCMConfig newObject
-            newObject' = KP.foldr KM.delete newObject [DAK.fromText (Text.pack "fcmUrl"), DAK.fromText (Text.pack "fcmServiceAccount"), DAK.fromText (Text.pack "fcmTokenKeyPrefix")]
-            finalNewObject = KM.insert (DAK.fromText (Text.pack "fcmConfig")) (toJSON fcmConfig') newObject'
-        let res = fromJSON . toJSON $ finalNewObject
-        
-        case res of
-          Success res' -> res'
-          Error err -> error ("Couldn't parse bhai, maybe you are gay" <> show err)
-      _ -> error "This looks wrong bro"
+--         error $ "FCM Config not found: " <> show ((KM.lookup (DAK.fromText (Text.pack "fcmUrl")) v))
+--       False -> do
+--         let fcmConfig = FCM.FCMConfig <$> (fromJust fcmUrl') <*> (fromJust fcmServiceAccount') <*> (fromJust fcmTokenKeyPrefix')
+--         case fcmConfig of
+--           Error err -> error ("Couldn't parse bhai" <> show err)
+--           Success fcmConfig' -> fcmConfig'
 
-jsonToTransporterConfig :: Object -> Parser TransporterConfig
-jsonToTransporterConfig v =
-  TransporterConfig
-    <$> (Id <$> (v .: DAK.fromText (Text.pack "transporterConfig:merchantId")))
-    <*> (Id <$> (v .: DAK.fromText (Text.pack "transporterConfig:merchantOperatingCityId")))
-    <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:pickupLocThreshold")))
-    <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:dropLocThreshold")))
-    <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:rideTimeEstimatedThreshold")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:includeDriverCurrentlyOnRide")))
-    <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:defaultPopupDelay")))
-    <*> ((readWithInfo' :: (Value -> Maybe Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:popupDelayToAddAsPenalty")))
-    <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:thresholdCancellationScore")))
-    <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:minRidesForCancellationScore")))
-    <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:thresholdCancellationPercentageToUnlist")))
-    <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:minRidesToUnlist")))
-    <*> ((valueToText :: (Value -> Text)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mediaFileUrlPattern")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mediaFileSizeUpperLimit")))
-    <*> ((valueToText :: (Value -> Text)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:referralLinkPassword")))
-    <*> (parseFCMConfig v)
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:onboardingTryLimit")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:onboardingRetryTimeInHours")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:checkImageExtractionForDashboard")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:searchRepeatLimit")))
-    <*> ((readWithInfo :: (Value -> HighPrecMeters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:actualRideDistanceDiffThreshold")))
-    <*> ((readWithInfo :: (Value -> HighPrecMeters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:upwardsRecomputeBuffer")))
-    <*> ((readWithInfo :: (Value -> HighPrecMeters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:approxRideDistanceDiffThreshold")))
-    <*> ((readWithInfo :: (Value -> Double)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:minLocationAccuracy")))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverPaymentCycleBuffer")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverPaymentCycleDuration")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverPaymentCycleStartTime")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverPaymentReminderInterval")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverAutoPayNotificationTime")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverAutoPayExecutionTime")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:bankErrorExpiry")))))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeMandateNotificationBatchSize")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeMandateExecutionBatchSize")))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mandateNotificationRescheduleInterval")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mandateExecutionRescheduleInterval")))))
-    <*> (((fromIntegral :: (Int -> NominalDiffTime)) <$>) <$> (((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeCalculationTime")))))
-    <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeCalculatorBatchSize")))
-    <*> (((fromIntegral :: (Int -> NominalDiffTime)) <$>) <$> (((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeCalculatorBatchGap")))))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeRetryThresholdConfig")))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:orderAndNotificationStatusCheckTime")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:orderAndNotificationStatusCheckTimeLimit")))))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:badDebtBatchSize")))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:badDebtRescheduleTime")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:badDebtSchedulerTime")))))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:badDebtTimeThreshold")))
-    <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:timeDiffFromUtc")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:subscription")))
-    <*> ((readWithInfo :: (Value -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:subscriptionStartTime")))
-    <*> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:avgSpeedOfVehicle"))) :: Parser (Maybe AvgSpeedOfVechilePerKm))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:updateNotificationStatusBatchSize")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:updateOrderStatusBatchSize")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mandateValidity")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:aadhaarVerificationRequired")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:enableDashboardSms")))
-    <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverLocationAccuracyBuffer")))
-    <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:routeDeviationThreshold")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canDowngradeToSedan")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canDowngradeToHatchback")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canDowngradeToTaxi")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canSuvDowngradeToTaxi")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:rcLimit")))
-    <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:automaticRCActivationCutOff")))
-    <*> ((jsonDecode :: (Value -> [Language])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:languagesToBeTranslated")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:isAvoidToll")))
-    <*> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:aadhaarImageResizeConfig"))) :: Parser (Maybe AadhaarImageResizeConfig))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:enableFaceVerification")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:specialZoneBookingOtpExpiry")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:isPlanMandatory")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:freeTrialDays")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:openMarketUnBlocked")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cacheOfferListByDriverId")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:useOfferListCache")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:ratingAsDecimal")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:coinFeature")))
-    <*> ((readWithInfo :: (Value -> HighPrecMoney)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:coinConversionRate")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:refillVehicleModel")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeOverlaySendingTimeLimitInDays")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:overlayBatchSize")))
-    <*> ((readWithInfo :: (Value -> Double)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:snapToRoadConfidenceThreshold")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:useWithSnapToRoadFallback")))
-    <*> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:volunteerSmsSendingLimit"))) :: Parser (Maybe DashboardMediaSendingLimit))
-    <*> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverSmsReceivingLimit"))) :: Parser (Maybe DashboardMediaSendingLimit))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cancellationTimeDiff")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:coinExpireTime")))))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:stepFunctionToConvertCoins")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cancellationDistDiff")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:considerSpecialZoneRidesForPlanCharges")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:considerSpecialZoneRideChargesInFreeTrial")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:enableUdfForOffers")))
-    <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:nightSafetyRouteDeviationThreshold")))
-    <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:nightSafetyStartTime")))
-    <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:nightSafetyEndTime")))
-    <*> ((readWithInfo :: (Value -> HighPrecMoney)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cancellationFee")))
-    <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverDistanceTravelledOnPickupThresholdOnCancel")))
-    <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverTimeSpentOnPickupThresholdOnCancel")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cancellationFeeDisputeLimit")))
-    <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverDistanceToPickupThresholdOnCancel")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:numOfCancellationsAllowed")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canAddCancellationFee")))
-    <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:allowDefaultPlanAllocation")))
-    <*> ((valueToTextList :: (Value -> [Text])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:specialDrivers")))
-    <*> ((valueToTextList :: (Value -> [Text])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:specialLocationTags")))
-    <*> ((readWithInfo :: (Value -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:createdAt")))
-    <*> ((readWithInfo :: (Value -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:updatedAt")))
-    <*> ((valueToTextList :: (Value -> [Text])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:notificationRetryEligibleErrorCodes")))
-    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:notificationRetryCountThreshold")))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:notificationRetryTimeGap")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverAutoPayExecutionTimeFallBack")))))
-    <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:orderAndNotificationStatusCheckFallBackTime")))))
-    <*> ((valueToText :: (Value -> Text)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:kaptureDisposition")))
-    <*> ((fromMaybe dummyToLocationData) <$> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:dummyFromLocation"))) :: Parser (Maybe DummyLocationInfo)))
-    <*> ((fromMaybe dummyToLocationData) <$> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:dummyToLocation"))) :: Parser (Maybe DummyLocationInfo)))
+-- instance FromJSONCAC TransporterConfig where
+--   fromJSONCAC CACValue {..} =
+--     case cacValue of
+--       Object obj -> do
+--         let newObject'' = KM.filterWithKey (\key _ -> (Text.isPrefixOf "transporterConfig:" (DAK.toText key))) obj
+--             newObject = KM.mapKeyVal (\key -> DAK.fromText (Text.replace "transporterConfig:" "" $ DAK.toText key))
+--               (\val -> case val of
+--                 String s -> case ( (isInfixOf "{"  s) && (isInfixOf ":"  s)) of
+--                   True -> case (CM.convertTextToObject ( Text.replace "'" "\"" s)) of
+--                     Left _ -> String s
+--                     Right obj' -> Object obj'
+--                   False -> String s
+--                 x -> x) newObject''
+--             fcmConfig' = getFCMConfig newObject
+--             newObject' = KP.foldr KM.delete newObject [DAK.fromText (Text.pack "fcmUrl"), DAK.fromText (Text.pack "fcmServiceAccount"), DAK.fromText (Text.pack "fcmTokenKeyPrefix")]
+--             finalNewObject' = KM.insert (DAK.fromText (Text.pack "fcmConfig")) (toJSON fcmConfig') newObject'
+--             finalNewObject = KM.mapWithKey (\key val ->
+--               case (DAK.toText key) of
+--                 ("languagesToBeTranslated" :: Text) -> toJSON $ (readWithInfo val :: [Language])
+--                 ("notificationRetryEligibleErrorCodes" :: Text) -> toJSON $ valueToTextList val
+--                 ("specialDrivers" :: Text) -> toJSON $ valueToTextList val
+--                 ("specialLocationTags" :: Text) -> toJSON $ valueToTextList val
+--                 ("dummyFromLocation" :: Text) -> toJSON $ fromMaybe dummyToLocationData (valueToMaybe val)
+--                 ("dummyToLocation" :: Text) -> toJSON $ fromMaybe dummyToLocationData (valueToMaybe val)
+--                 _ -> val
+--               ) finalNewObject'
+--         fromJSON . toJSON $ finalNewObject
+--       _ -> error "This looks wrong bro"
+
+-- jsonToTransporterConfig :: Object -> Parser TransporterConfig
+-- jsonToTransporterConfig v =
+--   TransporterConfig
+--     <$> (Id <$> (v .: DAK.fromText (Text.pack "transporterConfig:merchantId")))
+--     <*> (Id <$> (v .: DAK.fromText (Text.pack "transporterConfig:merchantOperatingCityId")))
+--     <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:pickupLocThreshold")))
+--     <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:dropLocThreshold")))
+--     <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:rideTimeEstimatedThreshold")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:includeDriverCurrentlyOnRide")))
+--     <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:defaultPopupDelay")))
+--     <*> ((readWithInfo' :: (Value -> Maybe Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:popupDelayToAddAsPenalty")))
+--     <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:thresholdCancellationScore")))
+--     <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:minRidesForCancellationScore")))
+--     <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:thresholdCancellationPercentageToUnlist")))
+--     <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:minRidesToUnlist")))
+--     <*> ((valueToText :: (Value -> Text)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mediaFileUrlPattern")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mediaFileSizeUpperLimit")))
+--     <*> ((valueToText :: (Value -> Text)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:referralLinkPassword")))
+--     <*> (parseFCMConfig v)
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:onboardingTryLimit")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:onboardingRetryTimeInHours")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:checkImageExtractionForDashboard")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:searchRepeatLimit")))
+--     <*> ((readWithInfo :: (Value -> HighPrecMeters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:actualRideDistanceDiffThreshold")))
+--     <*> ((readWithInfo :: (Value -> HighPrecMeters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:upwardsRecomputeBuffer")))
+--     <*> ((readWithInfo :: (Value -> HighPrecMeters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:approxRideDistanceDiffThreshold")))
+--     <*> ((readWithInfo :: (Value -> Double)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:minLocationAccuracy")))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverPaymentCycleBuffer")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverPaymentCycleDuration")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverPaymentCycleStartTime")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverPaymentReminderInterval")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverAutoPayNotificationTime")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverAutoPayExecutionTime")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:bankErrorExpiry")))))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeMandateNotificationBatchSize")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeMandateExecutionBatchSize")))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mandateNotificationRescheduleInterval")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mandateExecutionRescheduleInterval")))))
+--     <*> (((fromIntegral :: (Int -> NominalDiffTime)) <$>) <$> (((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeCalculationTime")))))
+--     <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeCalculatorBatchSize")))
+--     <*> (((fromIntegral :: (Int -> NominalDiffTime)) <$>) <$> (((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeCalculatorBatchGap")))))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeRetryThresholdConfig")))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:orderAndNotificationStatusCheckTime")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:orderAndNotificationStatusCheckTimeLimit")))))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:badDebtBatchSize")))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:badDebtRescheduleTime")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:badDebtSchedulerTime")))))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:badDebtTimeThreshold")))
+--     <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:timeDiffFromUtc")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:subscription")))
+--     <*> ((readWithInfo :: (Value -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:subscriptionStartTime")))
+--     <*> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:avgSpeedOfVehicle"))) :: Parser (Maybe AvgSpeedOfVechilePerKm))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:updateNotificationStatusBatchSize")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:updateOrderStatusBatchSize")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:mandateValidity")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:aadhaarVerificationRequired")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:enableDashboardSms")))
+--     <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverLocationAccuracyBuffer")))
+--     <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:routeDeviationThreshold")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canDowngradeToSedan")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canDowngradeToHatchback")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canDowngradeToTaxi")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canSuvDowngradeToTaxi")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:rcLimit")))
+--     <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:automaticRCActivationCutOff")))
+--     <*> ((jsonDecode :: (Value -> [Language])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:languagesToBeTranslated")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:isAvoidToll")))
+--     <*> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:aadhaarImageResizeConfig"))) :: Parser (Maybe AadhaarImageResizeConfig))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:enableFaceVerification")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:specialZoneBookingOtpExpiry")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:isPlanMandatory")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:freeTrialDays")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:openMarketUnBlocked")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cacheOfferListByDriverId")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:useOfferListCache")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:ratingAsDecimal")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:coinFeature")))
+--     <*> ((readWithInfo :: (Value -> HighPrecMoney)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:coinConversionRate")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:refillVehicleModel")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverFeeOverlaySendingTimeLimitInDays")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:overlayBatchSize")))
+--     <*> ((readWithInfo :: (Value -> Double)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:snapToRoadConfidenceThreshold")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:useWithSnapToRoadFallback")))
+--     <*> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:volunteerSmsSendingLimit"))) :: Parser (Maybe DashboardMediaSendingLimit))
+--     <*> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverSmsReceivingLimit"))) :: Parser (Maybe DashboardMediaSendingLimit))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cancellationTimeDiff")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:coinExpireTime")))))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:stepFunctionToConvertCoins")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cancellationDistDiff")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:considerSpecialZoneRidesForPlanCharges")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:considerSpecialZoneRideChargesInFreeTrial")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:enableUdfForOffers")))
+--     <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:nightSafetyRouteDeviationThreshold")))
+--     <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:nightSafetyStartTime")))
+--     <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:nightSafetyEndTime")))
+--     <*> ((readWithInfo :: (Value -> HighPrecMoney)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cancellationFee")))
+--     <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverDistanceTravelledOnPickupThresholdOnCancel")))
+--     <*> ((readWithInfo :: (Value -> Seconds)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverTimeSpentOnPickupThresholdOnCancel")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:cancellationFeeDisputeLimit")))
+--     <*> ((readWithInfo :: (Value -> Meters)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverDistanceToPickupThresholdOnCancel")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:numOfCancellationsAllowed")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:canAddCancellationFee")))
+--     <*> ((readWithInfo :: (Value -> Bool)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:allowDefaultPlanAllocation")))
+--     <*> ((valueToTextList :: (Value -> [Text])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:specialDrivers")))
+--     <*> ((valueToTextList :: (Value -> [Text])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:specialLocationTags")))
+--     <*> ((readWithInfo :: (Value -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:createdAt")))
+--     <*> ((readWithInfo :: (Value -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:updatedAt")))
+--     <*> ((valueToTextList :: (Value -> [Text])) <$> (v .: DAK.fromText (Text.pack "transporterConfig:notificationRetryEligibleErrorCodes")))
+--     <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:notificationRetryCountThreshold")))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:notificationRetryTimeGap")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:driverAutoPayExecutionTimeFallBack")))))
+--     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:orderAndNotificationStatusCheckFallBackTime")))))
+--     <*> ((valueToText :: (Value -> Text)) <$> (v .: DAK.fromText (Text.pack "transporterConfig:kaptureDisposition")))
+--     <*> ((fromMaybe dummyToLocationData) <$> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:dummyFromLocation"))) :: Parser (Maybe DummyLocationInfo)))
+--     <*> ((fromMaybe dummyToLocationData) <$> ((valueToMaybe <$> (v .: DAK.fromText (Text.pack "transporterConfig:dummyToLocation"))) :: Parser (Maybe DummyLocationInfo)))

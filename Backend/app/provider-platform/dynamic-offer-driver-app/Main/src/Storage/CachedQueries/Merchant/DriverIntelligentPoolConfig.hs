@@ -22,8 +22,14 @@ module Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
 where
 
 import Client.Main as CM
-import Data.Aeson as DA
 -- import Data.Aeson.Types as DAT
+
+import Control.Lens.Combinators
+import Control.Lens.Fold
+import Data.Aeson as DA
+import qualified Data.Aeson.Key as DAK
+import qualified Data.Aeson.KeyMap as DAKM
+import Data.Aeson.Lens
 import Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text as Text
@@ -36,16 +42,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
 import qualified System.Environment as SE
 import System.Random
-import qualified Data.Aeson.Key as DAK
-import qualified Data.Aeson.KeyMap as DAKM
-import Control.Lens.Combinators
-import Control.Lens.Fold
-import Data.Aeson.Lens
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
 create = Queries.create
@@ -63,6 +65,14 @@ dropDriverIntelligentPoolConfig text =
     Just a -> DAK.fromText a
     Nothing -> text
 
+stringValueToObject :: [(Key, Value)] -> [(Key, Value)]
+stringValueToObject [] = []
+stringValueToObject ((k, v) : xs) = case DAK.toText k of
+  "availabilityTimeWindowOption" -> ("availabilityTimeWindowOption", toJSON ((valueToType v) :: SWC.SlidingWindowOptions)) : stringValueToObject xs
+  "acceptanceRatioWindowOption" -> ("acceptanceRatioWindowOption", toJSON ((valueToType v) :: SWC.SlidingWindowOptions)) : stringValueToObject xs
+  "cancellationAndRideFrequencyRatioWindowOption" -> ("cancellationAndRideFrequencyRatioWindowOption", toJSON ((valueToType v) :: SWC.SlidingWindowOptions)) : stringValueToObject xs
+  "minQuotesToQualifyForIntelligentPoolWindowOption" -> ("minQuotesToQualifyForIntelligentPoolWindowOption", toJSON ((valueToType v) :: SWC.SlidingWindowOptions)) : stringValueToObject xs
+  _ -> (k, v) : stringValueToObject xs
 
 getConfigFromCACStrict :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig
 getConfigFromCACStrict merchantOpCityId = do
@@ -72,7 +82,8 @@ getConfigFromCACStrict merchantOpCityId = do
   let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dipcCond toss
   let res' = (contextValue ^@.. _Value . _Object . reindexed dropDriverIntelligentPoolConfig (itraversed . indices (\k -> Text.isPrefixOf "driverIntelligentPoolConfig:" (DAK.toText k))))
-      res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
+      res'' = stringValueToObject res'
+      res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
   pure . fromMaybe (error "error in fetching the context value driverIntelligentPoolConfig: ") $ res
 
 initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig
@@ -96,19 +107,19 @@ getDriverIntelligentPoolConfigFromCAC id = do
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dipcCond toss
   let res' = (contextValue ^@.. _Value . _Object . reindexed dropDriverIntelligentPoolConfig (itraversed . indices (\k -> Text.isPrefixOf "driverIntelligentPoolConfig:" (DAK.toText k))))
       res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
-  maybe (initializeCACThroughConfig id ) pure res
-  
-  --     logDebug $ "dipc: the fetched context value is " <> show contextValue'
-  --     --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
-  --     valueHere <- buildDipcType contextValue'
-  --     logDebug $ "dipc: he build context value is1 " <> show valueHere
-  --     cacheDriverIntelligentPoolConfig valueHere
-  --     pure $ Just valueHere
-  -- where
-  --   buildDipcType cv = case (DAT.parse jsonToDriverIntelligentPoolConfig cv) of
-  --     DA.Success dipc -> pure $ dipc
-  --     DA.Error err ->
-  --       error $ (pack "error in parsing the context value for driverPoolConfig ") <> (pack err)
+  maybe (initializeCACThroughConfig id) pure res
+
+--     logDebug $ "dipc: the fetched context value is " <> show contextValue'
+--     --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
+--     valueHere <- buildDipcType contextValue'
+--     logDebug $ "dipc: he build context value is1 " <> show valueHere
+--     cacheDriverIntelligentPoolConfig valueHere
+--     pure $ Just valueHere
+-- where
+--   buildDipcType cv = case (DAT.parse jsonToDriverIntelligentPoolConfig cv) of
+--     DA.Success dipc -> pure $ dipc
+--     DA.Error err ->
+--       error $ (pack "error in parsing the context value for driverPoolConfig ") <> (pack err)
 
 findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId id = do

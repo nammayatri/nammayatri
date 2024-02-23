@@ -60,9 +60,11 @@ data DriverIntelligentPoolConfigD u = DriverIntelligentPoolConfig
 type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigD 'Safe
 
 instance FromJSON (DriverIntelligentPoolConfigD 'Unsafe)
+
 instance FromJSON (DriverIntelligentPoolConfigD 'Safe)
 
 instance ToJSON (DriverIntelligentPoolConfigD 'Unsafe)
+
 instance ToJSON (DriverIntelligentPoolConfigD 'Safe)
 
 data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance | RideFrequency
@@ -97,6 +99,7 @@ readWithInfo' s = case s of
   Number scientific -> case KP.readMaybe (show scientific) of
     Just val -> Just val
     Nothing -> Nothing
+  Null -> Nothing
   _ -> error $ "Not able to parse value" <> show s
 
 valueToType :: FromJSON a => Value -> a

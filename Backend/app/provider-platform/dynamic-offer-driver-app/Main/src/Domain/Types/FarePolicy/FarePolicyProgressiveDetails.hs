@@ -69,6 +69,7 @@ readWithInfo' msg s = case s of
   Number scientific -> case KP.readMaybe (show scientific) of
     Just val -> Just val
     Nothing -> Nothing
+  Null -> Nothing
   _ -> error . Text.pack $ "Failed to parse: for key: mes " <> msg <> " and value: " ++ show s
 
 jsonToWaitingChargeInfo :: Object -> Parser (Maybe WaitingChargeInfo)
