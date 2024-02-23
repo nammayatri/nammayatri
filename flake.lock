@@ -1967,11 +1967,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1708595277,
-        "narHash": "sha256-1KoxnEjyIUHxxNjCNEs+30EMRwGzZzqBN7LE6KPhCnI=",
+        "lastModified": 1708548052,
+        "narHash": "sha256-g90RrngxVSls+7Dq5UpuOVJ1/9vXHi2tF3Y90QpOdYw=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "fc9686a7b8392e19fe1410b79d54d34a57a5e672",
+        "rev": "d1d24695a5ee6da4fde39ecec9e93fba0742decd",
         "type": "github"
       },
       "original": {
@@ -3778,8 +3778,9 @@
         "type": "github"
       },
       "original": {
-        "path": "/Users/chakradhar.k/Projects/shared-kernel",
-        "type": "path"
+        "owner": "nammayatri",
+        "repo": "shared-kernel",
+        "type": "github"
       }
     },
     "systems": {

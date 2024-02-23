@@ -21,6 +21,7 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
+import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.List as DL
 import qualified Data.Text as T
