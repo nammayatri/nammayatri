@@ -35,36 +35,35 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import qualified Storage.CachedQueries.Lms as SCQL
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as SCQMM
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
-import Storage.Queries.LmsModule as SQLM
-import Storage.Queries.LmsModuleTranslation as SQLT
-import Storage.Queries.LmsModuleVideoInformation as SQLMVI
 import Storage.Queries.LmsVideoTranslation as SQLVT
 import Storage.Queries.ModuleCompletionInformation as SQMCI
 import qualified Storage.Queries.Person as QPerson
-import Storage.Queries.QuestionInformation as SQQI
-import Storage.Queries.QuestionModuleMapping as SQQMM
 import Tools.Auth
 import Tools.Error
 
 getLmsListAllModules :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.Vehicle.Variant.Variant) -> Environment.Flow API.Types.UI.LmsModule.LmsGetModuleRes
-getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage mbLimit mbOffset _mbVariant = do
+getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbLimit _mbOffset _mbVariant = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   let language = fromMaybe ENGLISH mbLanguage
-  modules <- mapM (generateModuleInfo language driver.id) =<< SQLM.getAllModules mbLimit mbOffset merchantOpCityId
+  modules <- mapM (generateModuleInfo language driver.id) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId -- todo :: mbLimit and mbOffset ( phase 2 of LMS)
   return $
     API.Types.UI.LmsModule.LmsGetModuleRes
-      { completed = sortOn (.completedAt) $ filter (\eModule -> eModule.moduleCompletionStatus == DTDMC.MODULE_COMPLETED) modules,
-        remaining = sortOn (.rank) $ filter (\eModule -> eModule.moduleCompletionStatus /= DTDMC.MODULE_COMPLETED) modules
+      { completed = sortOn (.completedAt) $ filter ((== DTDMC.MODULE_COMPLETED) . (.moduleCompletionStatus)) modules,
+        remaining = sortOn (.rank) $ filter ((/= DTDMC.MODULE_COMPLETED) . (.moduleCompletionStatus)) modules
       }
   where
     generateModuleInfo language personId eModule@LmsModule {..} = do
+      translations <- SCQL.getAllModuleTranslations eModule.id
       translation <-
-        SQLT.getByModuleIdAndLanguage eModule.id language >>= \case
-          Nothing -> SQLT.getByModuleIdAndLanguage eModule.id ENGLISH >>= fromMaybeM (LmsModuleTranslationNotFound eModule.id.getId language)
-          Just translation -> return translation
+        ( \case
+            Nothing -> fromMaybeM (LmsModuleTranslationNotFound eModule.id.getId language) $ find ((== ENGLISH) . (.language)) translations
+            Just translation -> return translation
+          )
+          $ find ((== language) . (.language)) translations
       mbModuleCompletionInfo <- SQDMC.findByDriverIdAndModuleId personId eModule.id
       totalVideosWatched <- maybe (pure []) (SQMCI.findAllByCompletionIdAndEntityAndStatus DTMCI.VIDEO DTMCI.ENTITY_PASSED . (.completionId)) mbModuleCompletionInfo
       now <- getCurrentTime
@@ -85,9 +84,9 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   let language = fromMaybe ENGLISH mbLanguage
   merchantOperatingCity <- SCQMM.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
-  moduleInfo <- SQLM.findById modId >>= fromMaybeM (LmsModuleNotFound modId.getId)
+  moduleInfo <- fromMaybeM (LmsModuleNotFound modId.getId) . find ((== modId) . (.id)) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId
   mbModuleCompletionInfo <- SQDMC.findByDriverIdAndModuleId personId modId
-  videos <- mapM (generateVideoRes merchantOperatingCity language mbModuleCompletionInfo) =<< SQLMVI.getAllVideos modId [ACTIVE]
+  videos <- mapM (generateVideoRes merchantOperatingCity language mbModuleCompletionInfo) =<< SCQL.getAllVideos modId [ACTIVE]
   selectedModuleInfo <- generateModuleInfoRes moduleInfo language
   return $
     API.Types.UI.LmsModule.LmsGetVideosRes
@@ -95,25 +94,31 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
           LmsModule.VIDEOS_AND_QUIZ _ -> True
           _ -> False,
         quizStatus = maybe API.Types.UI.LmsModule.ENTITY_INCOMPLETE (\modCompInfo -> if DTDMC.QUIZ `elem` modCompInfo.entitiesCompleted then API.Types.UI.LmsModule.ENTITY_COMPLETED else API.Types.UI.LmsModule.ENTITY_INCOMPLETE) mbModuleCompletionInfo,
-        completed = sortOn (.completedAt) $ filter (\eVideo -> eVideo.videoCompletionStatus == API.Types.UI.LmsModule.ENTITY_COMPLETED) videos,
-        pending = sortOn (.rank) $ filter (\eVideo -> eVideo.videoCompletionStatus == API.Types.UI.LmsModule.ENTITY_INCOMPLETE) videos,
+        completed = sortOn (.completedAt) $ filter ((== API.Types.UI.LmsModule.ENTITY_COMPLETED) . (.videoCompletionStatus)) videos,
+        pending = sortOn (.rank) $ filter ((== API.Types.UI.LmsModule.ENTITY_INCOMPLETE) . (.videoCompletionStatus)) videos,
         selectedModuleInfo = selectedModuleInfo
       }
   where
     generateVideoRes merchantOperatingCity language mbModuleCompletionInfo video@LmsModuleVideoInformation {..} = do
+      translations <- SCQL.getAllTranslationsForVideoId video.id
       translation <-
-        SQLVT.getVideoByLanguageAndVideoId video.id language >>= \case
-          Nothing ->
-            SQLVT.getVideoByLanguageAndVideoId video.id merchantOperatingCity.language >>= \case
-              Nothing -> SQLVT.getVideoByLanguageAndVideoId video.id ENGLISH >>= fromMaybeM (LmsVideoTranslationNotFound video.id.getId language)
-              Just translation -> return translation
-          Just translation -> return translation
+        ( \case
+            Nothing ->
+              ( \case
+                  Nothing -> fromMaybeM (LmsVideoTranslationNotFound video.id.getId language) $ find ((== ENGLISH) . (.language)) translations
+                  Just translation -> return translation
+              )
+                $ find ((== merchantOperatingCity.language) . (.language)) translations
+            Just translation -> return translation
+          )
+          $ find ((== language) . (.language)) translations
+      videoUrl <- getVideoUrlAccordingToConditionSet merchantOperatingCity translations translation
       now <- getCurrentTime
       mbVideoCompletionInfo <- listToMaybe <$> maybe (pure []) (SQMCI.findByCompletionIdAndEntityAndEntityId (Just 1) Nothing DTMCI.VIDEO video.id.getId . (.completionId)) mbModuleCompletionInfo
       return $
         API.Types.UI.LmsModule.LmsVideoRes
           { videoId = video.id,
-            url = (.url) translation,
+            url = videoUrl,
             ytVideoId = (.ytVideoId) translation,
             duration = (.duration) translation,
             completedWatchCount = (.completedWatchCount) translation,
@@ -133,17 +138,33 @@ getLmsListAllVideos (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage
             ..
           }
 
+    getVideoUrlAccordingToConditionSet merchantOperatingCity translations videoTranslation =
+      if videoTranslation.useMerchantOperatingCityDefaultLanguageVideoUrl
+        then
+          (.url)
+            <$> ( \case
+                    Nothing -> fromMaybeM (LmsVideoTranslationNotFound videoTranslation.videoId.getId ENGLISH) $ find ((== ENGLISH) . (.language)) translations
+                    Just translation -> return translation
+                )
+              (find ((== merchantOperatingCity.language) . (.language)) translations)
+        else return $ videoTranslation.url
+
     generateButtonConfigData :: [DTRD.ReelRowButtonConfig] -> [[DTRD.ReelButtonConfig]]
     generateButtonConfigData = foldl' (\acc eachRow -> acc <> [eachRow.row]) [[]]
 
 getLmsListAllQuiz :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.Flow API.Types.UI.LmsModule.LmsGetQuizRes
 getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
-  moduleInfo <- SQLM.findById modId >>= fromMaybeM (LmsModuleNotFound modId.getId)
+  moduleInfo <- fromMaybeM (LmsModuleNotFound modId.getId) . find ((== modId) . (.id)) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId
   merchantOperatingCity <- SCQMM.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   let language = fromMaybe ENGLISH mbLanguage
   mbModuleCompletionInfo <- SQDMC.findByDriverIdAndModuleId personId modId
-  questions <- mapM (generateQuizRes merchantOperatingCity modId language mbModuleCompletionInfo) =<< SQQMM.findAllWithModuleId modId
+  questions <- mapM (generateQuizRes merchantOperatingCity modId language mbModuleCompletionInfo) =<< SCQL.getAllQuestions modId
+
+  case moduleInfo.moduleCompletionCriteria of
+    LmsModule.VIDEOS_AND_QUIZ noOfQuestionsToBeCorrectToPass -> when (noOfQuestionsToBeCorrectToPass > length questions) $ throwError (NotEnoughQuestionsForModuleCompletionCriteria modId.getId)
+    _ -> pure ()
+
   selectedModuleInfo <- generateModuleInfoRes moduleInfo language
   return $
     API.Types.UI.LmsModule.LmsGetQuizRes
@@ -152,13 +173,18 @@ getLmsListAllQuiz (mbPersonId, _merchantId, merchantOpCityId) modId mbLanguage =
       }
   where
     generateQuizRes merchantOperatingCity _modId language mbModuleCompletionInfo question@DTQMM.QuestionModuleMapping {..} = do
+      translations <- SCQL.getAllTranslationsForQuestionId question.questionId
       questionInfo <-
-        SQQI.findByIdAndLanguage question.questionId language >>= \case
-          Nothing ->
-            SQQI.findByIdAndLanguage question.questionId merchantOperatingCity.language >>= \case
-              Nothing -> SQQI.findByIdAndLanguage question.questionId ENGLISH >>= fromMaybeM (LmsQuestionTranslationNotFound question.questionId.getId language)
-              Just translation -> return translation
-          Just translation -> return translation
+        ( \case
+            Nothing ->
+              ( \case
+                  Nothing -> fromMaybeM (LmsQuestionTranslationNotFound question.questionId.getId language) $ find ((== ENGLISH) . (.language)) translations
+                  Just translation -> return translation
+              )
+                $ find ((== merchantOperatingCity.language) . (.language)) translations
+            Just translation -> return translation
+          )
+          $ find ((== language) . (.language)) translations
       mbLastQuizAttempt <- listToMaybe <$> maybe (pure []) (SQMCI.findByCompletionIdAndEntityAndEntityId (Just 1) Nothing DTMCI.QUIZ question.questionId.getId . (.completionId)) mbModuleCompletionInfo
       return $
         API.Types.UI.LmsModule.LmsQuestionRes
@@ -187,14 +213,14 @@ markVideoByStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Pers
 markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  moduleInfo <- SQLM.findById req.moduleId >>= fromMaybeM (LmsModuleNotFound req.moduleId.getId)
-  videos <- SQLMVI.getAllVideos req.moduleId [ACTIVE]
+  moduleInfo <- fromMaybeM (LmsModuleNotFound req.moduleId.getId) . find ((== req.moduleId) . (.id)) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId
+  videos <- SCQL.getAllVideos req.moduleId [ACTIVE]
   unless (req.videoId `elem` ((.id) <$> videos)) $ do throwError (LmsVideoNotFound req.videoId.getId req.moduleId.getId)
 
   -- create driver module completion entry if not created
   driverModuleCompletion <- maybe (buildDriverModuleCompletion personId req.moduleId merchantId merchantOpCityId) pure =<< (SQDMC.findByDriverIdAndModuleId personId req.moduleId)
 
-  currentVideo <- SQLVT.getVideoByLanguageAndVideoId req.videoId req.language >>= fromMaybeM (LmsVideoTranslationNotFound req.videoId.getId req.language)
+  currentVideo <- fromMaybeM (LmsVideoTranslationNotFound req.videoId.getId req.language) . find ((== req.language) . (.language)) =<< SCQL.getAllTranslationsForVideoId req.videoId
 
   -- create module completion information entry with given status
   void $
@@ -241,14 +267,14 @@ markVideoByStatus (mbPersonId, merchantId, merchantOpCityId) req status = do
           else when allVideosCompleted $ do SQDMC.updateEntitiesCompleted (Just now) (dmc.entitiesCompleted <> [DTDMC.VIDEO]) dmc.completionId
 
 postLmsQuestionConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> API.Types.UI.LmsModule.QuestionConfirmReq -> Environment.Flow API.Types.UI.LmsModule.QuestionConfirmRes
-postLmsQuestionConfirm (mbPersonId, _merchantId, _merchantOpCityId) req = do
+postLmsQuestionConfirm (mbPersonId, _merchantId, merchantOpCityId) req = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  _modInfo <- SQLM.findById req.moduleId >>= fromMaybeM (LmsModuleNotFound req.moduleId.getId)
-  questions <- SQQMM.findAllWithModuleId req.moduleId
+  moduleInfo <- fromMaybeM (LmsModuleNotFound req.moduleId.getId) . find ((== req.moduleId) . (.id)) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId
+  questions <- SCQL.getAllQuestions req.moduleId
   unless (req.questionId `elem` ((.questionId) <$> questions)) $ do throwError (LmsQuestionNotFoundForModule req.questionId.getId req.moduleId.getId)
   driverModuleCompletion <- SQDMC.findByDriverIdAndModuleId personId req.moduleId >>= fromMaybeM (LmsDriverModuleCompletionEntryNotFound req.moduleId.getId personId.getId)
-  questionInfo <- SQQI.findByIdAndLanguage req.questionId req.language >>= fromMaybeM (LmsQuestionNotFound req.questionId.getId req.language)
+  questionInfo <- fromMaybeM (LmsQuestionNotFound req.questionId.getId req.language) . find ((== req.language) . (.language)) =<< SCQL.getAllTranslationsForQuestionId req.questionId
   (validationRes, isCorrect, selectedOptions) <-
     case req.selectedOption of
       API.Types.UI.LmsModule.SingleSelectedOption optionId -> do
@@ -275,7 +301,7 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, _merchantOpCityId) req = do
               Just attempt -> when (attempt.entityStatus /= DTMCI.ENTITY_PASSED) $ do (createModuleCompletionInformation driverModuleCompletion.completionId (attempt.attempt + 1) isCorrect selectedOptions) >>= SQMCI.create
           )
         . listToMaybe
-  void $ updateModuleInformationIfQuizCompletedCriteriaIsPassed driverModuleCompletion driver questions
+  void $ updateModuleInformationIfQuizCompletedCriteriaIsPassed driverModuleCompletion driver moduleInfo questions
   -- todo :: in future if rewards are there for each question watched then add the rewards && bonus
   return $
     API.Types.UI.LmsModule.QuestionConfirmRes
@@ -296,9 +322,8 @@ postLmsQuestionConfirm (mbPersonId, _merchantId, _merchantOpCityId) req = do
             createdAt = now,
             updatedAt = now
           }
-    updateModuleInformationIfQuizCompletedCriteriaIsPassed dmc driver questions = do
+    updateModuleInformationIfQuizCompletedCriteriaIsPassed dmc driver moduleInfo questions = do
       when (dmc.status /= DTDMC.MODULE_COMPLETED) $ do
-        moduleInfo <- SQLM.findById req.moduleId >>= fromMaybeM (LmsModuleNotFound req.moduleId.getId)
         completedQuestions <- SQMCI.findAllByCompletionIdAndEntityAndStatus DTMCI.QUIZ DTMCI.ENTITY_PASSED dmc.completionId
         let completedQuestionIds = completedQuestions <&> (.entityId)
         let totalCorrectCompleted = foldl' (\acc eQuestion -> if eQuestion.questionId.getId `elem` completedQuestionIds then (acc + 1) else acc) 0 questions
@@ -332,10 +357,13 @@ buildDriverModuleCompletion personId moduleId merchantId merchantOpCityId = do
 
 generateModuleInfoRes :: Domain.Types.LmsModule.LmsModule -> Language -> Environment.Flow API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
 generateModuleInfoRes moduleInfo@Domain.Types.LmsModule.LmsModule {..} language = do
+  translations <- SCQL.getAllModuleTranslations moduleInfo.id
   translation <-
-    SQLT.getByModuleIdAndLanguage moduleInfo.id language >>= \case
-      Nothing -> SQLT.getByModuleIdAndLanguage moduleInfo.id ENGLISH >>= fromMaybeM (LmsModuleTranslationNotFound moduleInfo.id.getId language)
-      Just translation -> return translation
+    ( \case
+        Nothing -> fromMaybeM (LmsModuleTranslationNotFound moduleInfo.id.getId language) $ find ((== ENGLISH) . (.language)) translations
+        Just translation -> return translation
+      )
+      $ find ((== language) . (.language)) translations
   return $
     API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
       { description = (.description) translation,

@@ -981,6 +981,7 @@ data LmsError
   | LmsQuestionNotFoundForModule Text Text
   | LmsCorrectOptionNotFound Text Language
   | NotAbleToDecodeTheOptionsInLms
+  | NotEnoughQuestionsForModuleCompletionCriteria Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''LmsError
@@ -997,6 +998,7 @@ instance IsBaseError LmsError where
     LmsQuestionNotFoundForModule questionId moduleId -> Just $ "Lms Question not found with id : " <> questionId <> "for module with id : " <> moduleId
     LmsCorrectOptionNotFound questionId language -> Just $ "Correct Option not found for question : " <> questionId <> " and language :" <> show language
     NotAbleToDecodeTheOptionsInLms -> Just $ "Not able to deocde the options in lms question information table"
+    NotEnoughQuestionsForModuleCompletionCriteria moduleId -> Just $ "Not enough question for module completion criteria for module: " <> moduleId
 
 instance IsHTTPError LmsError where
   toErrorCode = \case
@@ -1010,6 +1012,7 @@ instance IsHTTPError LmsError where
     LmsQuestionNotFoundForModule _ _ -> "LMS_QUESTION_NOT_FOUND_FOR_MODULE"
     LmsCorrectOptionNotFound _questionid _ -> "LMS_CORRECT_OPTION_NOT_FOUND"
     NotAbleToDecodeTheOptionsInLms -> "NOT_ABLE_TO_DECODE_THE_OPTIONS_FIELD_IN_QUESTION_INFORMATION"
+    NotEnoughQuestionsForModuleCompletionCriteria _ -> "NOT_ENOUGH_QUESTIONS_FOR_MOUDLE_COMPLETION_CRITERIA"
 
   toHttpCode _ = E400
 

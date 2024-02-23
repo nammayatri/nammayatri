@@ -25,6 +25,7 @@ data LmsVideoTranslation = LmsVideoTranslation
     thumbnailImage :: Kernel.Prelude.Text,
     title :: Kernel.Prelude.Text,
     url :: Kernel.Prelude.Text,
+    useMerchantOperatingCityDefaultLanguageVideoUrl :: Kernel.Prelude.Bool,
     videoId :: Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation,
     viewCount :: Kernel.Prelude.Int,
     ytVideoId :: Kernel.Prelude.Text,

@@ -25,6 +25,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.LmsModuleTranslation.LmsModuleTranslation] -> m ()
 createMany = traverse_ create
 
+getAllTranslationsByModuleId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m ([Domain.Types.LmsModuleTranslation.LmsModuleTranslation])
+getAllTranslationsByModuleId (Kernel.Types.Id.Id moduleId) = do
+  findAllWithKV
+    [ Se.Is Beam.moduleId $ Se.Eq moduleId
+    ]
+
 getByModuleIdAndLanguage :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.External.Types.Language -> m (Maybe (Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
 getByModuleIdAndLanguage (Kernel.Types.Id.Id moduleId) language = do
   findOneWithKV

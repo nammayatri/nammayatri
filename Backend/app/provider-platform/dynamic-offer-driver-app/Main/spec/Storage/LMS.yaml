@@ -75,6 +75,9 @@ LmsModuleTranslation:
       kvFunction : findOneWithKV
       where:
         and: [moduleId, language]
+    getAllTranslationsByModuleId:
+      kvFunction: findAllWithKV
+      where: moduleId
 
 
 LmsModuleVideoInformation:
@@ -127,6 +130,7 @@ LmsVideoTranslation:
     completedThresholdInPercentage : Maybe Int
     sideButtonConfig : "[ReelRowButtonConfig]"
     bottomButtonConfig : "[ReelRowButtonConfig]"
+    useMerchantOperatingCityDefaultLanguageVideoUrl : Bool
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -136,6 +140,7 @@ LmsVideoTranslation:
     thresholdEnabled: "False"
     sideButtonConfig: "'{}'"
     bottomButtonConfig: "'{}'"
+    useMerchantOperatingCityDefaultLanguageVideoUrl: "False"
 
   sqlType:
     sideButtonConfig: "json"
@@ -162,8 +167,8 @@ LmsVideoTranslation:
       kvFunction: findOneWithKV
       where:
         and: [videoId, language]
-    getVideoTranslationByVideoId:
-      kvFunction: findAllWithOptionsKV
+    getAllTranslationsForVideoId:
+      kvFunction: findAllWithKV
       where: videoId
     updateCompletedWatchCount:
       kvFunction: updateOneWithKV
@@ -339,3 +344,6 @@ QuestionInformation:
       kvFunction: findOneWithKV
       where:
         and: [questionId, language]
+    getAllTranslationsByQuestionId:
+      kvFunction: findAllWithKV
+      where: questionId
