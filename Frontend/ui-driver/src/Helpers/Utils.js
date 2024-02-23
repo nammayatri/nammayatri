@@ -510,15 +510,3 @@ export const getPopupType = function (just, nothing) {
     return just(localPopup);
   }
 };
-
-export const renderSlider = function (cb) {
-  return function (action) {
-    return function (config) {
-      const { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId } = config;
-      const callback = callbackMapper.map(function (val) {
-        cb(action(parseInt(val)))();
-      });
-      window.JBridge.renderSlider(id, callback, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
-    }
-  }
-}

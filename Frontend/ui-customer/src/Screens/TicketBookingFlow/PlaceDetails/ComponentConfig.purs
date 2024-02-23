@@ -15,6 +15,8 @@ import Screens.Types as ST
 import Data.Array as DA
 import JBridge as JB
 import Services.API (TicketPlaceStatus (..), TicketPlaceResp(..))
+import Language.Strings (getString )
+import Language.Types (STR(..))
 
 genericHeaderConfig :: ST.TicketBookingScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -36,7 +38,7 @@ genericHeaderConfig state = let
                                             Just placeInfo -> placeInfo ^._name
                                             Nothing -> "Book Tickets"
                   ST.ChooseTicketStage -> "Choose Tickets"
-                  ST.ViewTicketStage -> if DA.null state.props.ticketBookingList.booked && DA.null state.props.ticketBookingList.pendingBooking then "My Tickets" else "Choose Tickets"
+                  ST.ViewTicketStage -> if DA.null state.props.ticketBookingList.booked && DA.null state.props.ticketBookingList.pendingBooking then (getString MY_TICKETS) else "Choose Tickets"
                   ST.TicketInfoStage -> state.props.selectedBookingInfo.ticketPlaceName
                   _ -> ""
       , color = Color.darkCharcoal

@@ -22,6 +22,8 @@ import Prelude (class Eq, class Show)
 import Common.Types.App (RateCardType(..), FareList(..))
 import Components.PrimaryButton as PrimaryButton
 import Data.Maybe(Maybe(..))
+import PrestoDOM (Length(..), Margin(..), Visibility(..))
+import Styles.Colors as Color
 
 data Action = Close 
               | BackPressed 
@@ -48,13 +50,23 @@ type Config = {
     description :: String,
     buttonText :: Maybe String,
     applicableCharges :: String,
-    primaryButtonText :: String,
     fareList :: Array FareList,
     otherOptions :: Array FareList,
     additionalStrings :: Array FareList,
     driverAdditionsImage :: String,
-    fareInfoText :: String
+    fareInfoText :: String,
+    primaryButtonConfig :: ButtonConfig
 }
+
+type ButtonConfig =
+  { margin :: Margin
+  , text :: String
+  , color :: String
+  , height :: Length
+  , cornerRadius :: Number
+  , background :: String
+  , visibility :: Visibility
+  }
 
 config :: Config 
 config = {
@@ -71,11 +83,19 @@ config = {
     title : "",
     description : "",
     buttonText : Nothing,
-    primaryButtonText : "",
     applicableCharges : "",
     driverAdditionsImage : "",
     fareList : [],
     otherOptions : [],
     additionalStrings : [],
-    fareInfoText : ""
+    fareInfoText : "",
+    primaryButtonConfig : {
+      text: ""
+    , color : Color.yellow900
+    , margin : MarginVertical 20 10
+    , cornerRadius : 8.0
+    , background : Color.black900
+    , height : V 54
+    , visibility : GONE
+    }
 }

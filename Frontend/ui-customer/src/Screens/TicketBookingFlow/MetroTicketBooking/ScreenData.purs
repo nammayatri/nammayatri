@@ -20,7 +20,7 @@ import Screens.Types as ST
 initData :: ST.MetroTicketBookingScreenState
 initData = {
   data: {
-    ticketType : ST.ONE_WAY
+    ticketType : ST.ONE_WAY_TRIP
   , ticketCount : 1
   , srcLoc : ""
   , destLoc : ""

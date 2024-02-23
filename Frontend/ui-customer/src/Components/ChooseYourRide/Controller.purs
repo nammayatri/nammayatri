@@ -30,6 +30,7 @@ type Config
     , enableSingleEstimate :: Boolean
     , selectedEstimateHeight :: Int
     , zoneType :: ZoneType
+    , intercity :: Boolean
     }
 
 config :: Config
@@ -46,4 +47,5 @@ config =
   , enableSingleEstimate : false
   , selectedEstimateHeight : 0
   , zoneType : NOZONE
+  , intercity : false
   }

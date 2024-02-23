@@ -17,6 +17,7 @@ import Foreign.Generic (class Decode, class Encode)
 import Data.Generic.Rep (class Generic)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Data.Maybe
+import Common.Types.App (RentalBookingConfig)
 
 data Action = Support
             | RideDetails
@@ -50,7 +51,10 @@ type Config = {
   enableContactSupport :: Boolean,
   isFreeRide :: Boolean,
   needHelpText :: String,
-  lottieQRAnim :: LottieQRAnim
+  lottieQRAnim :: LottieQRAnim,
+  rentalRowDetails :: RentalRowConfig,
+  rentalBookingData :: RentalBookingConfig,
+  showRentalRideDetails :: Boolean
 }
 
 data Theme = DARK | LIGHT
@@ -65,6 +69,17 @@ data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVE
 derive instance genericRideCompletedElements :: Generic RideCompletedElements _
 instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
 
+data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | EstimatedFare | ExtraTimePrice | TotalFare
+
+derive instance genericRentalRowView :: Generic RentalRowView _
+instance eqRentalRowView :: Eq RentalRowView where eq = genericEq
+
+type RentalTextConfig = {
+  title :: String,
+  estimatedValue :: String,
+  actualValue :: String,
+  color :: String
+}
 
 config :: Config 
 config = {
@@ -162,7 +177,10 @@ config = {
     visible : false,
     url : ""
   },
-  needHelpText : ""
+  needHelpText : "",
+  rentalRowDetails : dummyRentalRowConfig,
+  rentalBookingData : dummyRentalBookingConfig,
+  showRentalRideDetails : false
 }
 
 type CustomerIssueCard = {
@@ -264,3 +282,42 @@ type LottieQRAnim = {
   visible :: Boolean,
   url :: String
 }
+
+type RentalRowConfig = {
+    rideTime :: String
+  , rideDistance :: String
+  , rideStartedAt :: String
+  , rideEndedAt :: String
+  , estimatedFare :: String
+  , extraTimePrice :: String
+  , totalFare :: String
+  , rideDetailsTitle :: String
+  , fareUpdateTitle :: String
+}
+
+dummyRentalRowConfig :: RentalRowConfig
+dummyRentalRowConfig = {
+    rideTime : ""
+  , rideDistance : ""
+  , rideStartedAt : ""
+  , rideEndedAt : ""
+  , estimatedFare : ""
+  , extraTimePrice : ""
+  , totalFare : ""
+  , rideDetailsTitle : ""
+  , fareUpdateTitle : ""
+}
+
+dummyRentalBookingConfig :: RentalBookingConfig
+dummyRentalBookingConfig = 
+  { startTimeUTC : ""
+  , baseDuration : 0
+  , baseDistance : 0
+  , startOdometer : ""
+  , endOdometer : ""
+  , nightCharge : ""
+  , estimatedFare : 0
+  , finalFare : 0
+  , finalDuration : 0
+  , finalDistance : 0
+  }

@@ -66,8 +66,8 @@ screen initialState =
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
-        let _ = spy "ZooTicketBookingFlow action " action
-        let _ = spy "ZooTicketBookingFlow state " state
+        let _ = spy "ZooTicketBookingFlow TicketList action " action
+        let _ = spy "ZooTicketBookingFlow TicketList state " state
         eval action state
   }
   where
@@ -111,6 +111,7 @@ view push state =
     , width MATCH_PARENT
     , background Color.white900
     , onBackPressed push $ const BackPressed
+    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     ]
     [ shimmerView state
     , linearLayout 
@@ -129,14 +130,14 @@ view push state =
           ] []
         , separatorView Color.greySmoke
         , scrollView
-            [ height MATCH_PARENT
+            [ height WRAP_CONTENT
             , width MATCH_PARENT
             , background Color.white900
             , afterRender push $ const AfterRender
             , fillViewport true
             ]
             [ linearLayout
-                [ height MATCH_PARENT
+                [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER
                 , orientation VERTICAL
@@ -257,12 +258,12 @@ ticketsListView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Un
 ticketsListView state push = 
   linearLayout
   [ width $ MATCH_PARENT
-  , height $ MATCH_PARENT
+  , height $ WRAP_CONTENT
   , orientation VERTICAL
   , margin $ MarginTop 12
   , padding $ PaddingHorizontal 16 16
-  ][ if DA.null state.props.ticketBookingList.booked then linearLayout[][] else ticketsCardListView state push state.props.ticketBookingList.booked "Booked Tickets"
-  ,  if DA.null state.props.ticketBookingList.pendingBooking then linearLayout[][] else ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
+  ][ if DA.null state.props.ticketBookingList.booked then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.booked "Booked Tickets"
+  ,  if DA.null state.props.ticketBookingList.pendingBooking then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
   , emptyTicketsView state push
   ]
 
@@ -346,10 +347,10 @@ ticketInfoCardView state push booking =
           ] <> FontStyle.subHeading1 TypoGraphy
         , linearLayout
           [ width WRAP_CONTENT
-          , height WRAP_CONTENT
+          , height $ V 20
           , background $ property.bgColor
           , padding $ PaddingRight 10
-          , cornerRadius 30.0
+          , cornerRadius 11.0
           , margin $ MarginLeft 5
           , gravity CENTER
           ][  imageView
@@ -381,6 +382,7 @@ ticketInfoCardView state push booking =
           [ text "View"
           , color Color.blue900
           , margin $ MarginRight 8
+          , padding $ Padding 4 8 4 8
           , textSize $ FontSize.a_14
           , fontStyle $ FontStyle.medium LanguageStyle
           ]

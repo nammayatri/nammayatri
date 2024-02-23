@@ -15,7 +15,8 @@
 
 module Screens.RideSelectionScreen.ScreenData where
 
-
+import Data.Maybe (Maybe(..))
+import Screens.Types (AnimationState(..), IndividualRideCardState, ZoneType(..), FareProductType (..))
 import Services.API (BookingLocationAPIEntity(..))
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
@@ -144,4 +145,7 @@ dummyIndividualCard = {
   , optionsVisibility : false
   , vehicleVariant : Nothing
   , merchantExoPhone : ""
+  , showRepeatRide : ""
+  , rideType : ONE_WAY
+  , estimatedDistance : 0
 }
