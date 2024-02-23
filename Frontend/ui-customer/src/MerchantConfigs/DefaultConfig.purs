@@ -2,7 +2,7 @@ module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
 import Common.DefaultConfig
-import JBridge as JB
+import Engineering.Helpers.Commons as EHC
 
 config :: AppConfig 
 config =
@@ -204,6 +204,7 @@ config =
       , enableBookingPreference: false
       , textColor: "#6D7280"
       , showInfoIcon : true 
+      , genericLoaderLottie : "ny_ic_generic_loader,https://assets.juspay.in/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
       }
   , customerTip : {
       auto : true,
@@ -229,7 +230,7 @@ config =
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,
     enableCustomerSupportForSafety : false,
-    enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2"
+    enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2"
   }
 
   , rideCompletedCardConfig : {
@@ -257,7 +258,7 @@ config =
             hotSpotConfig :
               { goToNearestPointWithinRadius : 8.0
               , showHotSpotsWithinRadius : 150.0
-              , enableHotSpot : JB.jBridgeMethodExists "locateOnMapV2"
+              , enableHotSpot : EHC.jBridgeMethodExists "locateOnMapV2"
               }
           }
       , labelTextSize : 30
@@ -348,6 +349,26 @@ config =
             { radius : 50000
             , strictBounds : true
             }
+        , enableRentals : false 
+        , enableIntercity : false
+        },
+        { cityCode : "std:033"
+        , cityName : "Kolkata"
+        , geoCodeConfig :
+            { radius : 700000
+            , strictBounds : true
+            }
+        , enableRentals : true 
+        , enableIntercity : true
+        },
+        { cityCode : "std:044"
+        , cityName : "Chennai"
+        , geoCodeConfig :
+            { radius : 700000
+            , strictBounds : true
+            }
+        , enableRentals : true 
+        , enableIntercity : true
         }
       ]
   , bannerCarousel : defaultBannerCarousel
@@ -369,5 +390,7 @@ defaultCityConfig =
     geoCodeConfig :
       { radius : 100000
       , strictBounds : false
-      }
+      },
+    enableRentals : false,
+    enableIntercity : false
   }

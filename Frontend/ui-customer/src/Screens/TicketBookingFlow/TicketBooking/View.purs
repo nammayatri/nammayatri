@@ -69,8 +69,8 @@ screen initialState =
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
-        let _ = spy "ZooTicketBookingFlow action " action
-        let _ = spy "ZooTicketBookingFlow state " state
+        let _ = spy "ZooTicketBookingFlow TicketBooking action " action
+        let _ = spy "ZooTicketBookingFlow TicketBooking state " state
         eval action state
   }
   where
@@ -338,6 +338,8 @@ termsAndConditionsView termsAndConditions isMarginTop =
       ][ textView $
          [ textFromHtml $ " &#8226;&ensp; " <> item
          , color Color.black700
+         , height WRAP_CONTENT
+         , width WRAP_CONTENT
          ] <> FontStyle.tags TypoGraphy
       ]
   ) termsAndConditions )
@@ -352,6 +354,8 @@ locationView state push icon lat lon =
   , onClick push (const $ OpenGoogleMap lat lon)
   ][  textView $ 
       [ text "Location"
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
       , color Color.black800
       , margin $ MarginBottom 8
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -386,6 +390,8 @@ serviceBreakUpView state push servicesv2 (TicketPlaceResp ticketPlaceResp) =
               ][  textView $
                   [ text $ item.serviceName
                   , color Color.black800
+                  , width WRAP_CONTENT
+                  , height WRAP_CONTENT
                   , margin $ MarginVertical 10 10
                   ] <> FontStyle.subHeading1 TypoGraphy
                 , linearLayout
@@ -415,6 +421,8 @@ serviceBreakUpView state push servicesv2 (TicketPlaceResp ticketPlaceResp) =
                           , textView $
                             [ text $ cat.categoryName <> " : "
                             , color $ Color.black800
+                            , height WRAP_CONTENT
+                            , width WRAP_CONTENT
                             ] <> FontStyle.body6 TypoGraphy
                         ]
                       , businessHoursView push state item.serviceName transformedServiceCatData (not singleServiceCategory)
@@ -490,6 +498,8 @@ businessHoursView push sate serviceName screenData paddingEnabled =
       ][  textView $
           [ text "Timings"
           , color Color.black800
+          , height WRAP_CONTENT
+          , width WRAP_CONTENT
           , margin $ MarginBottom 5
           ] <> FontStyle.body6 TypoGraphy
         , linearLayout
@@ -526,6 +536,8 @@ feesBreakUpView push state serviceName screenData paddingEnabled =
       ][  textView $ 
           [ text "Fees"
           , color Color.black800
+          , height WRAP_CONTENT
+          , width WRAP_CONTENT
           , margin $ MarginBottom 5
           ] <> FontStyle.body6 TypoGraphy
         , linearLayout
@@ -539,6 +551,8 @@ feesBreakUpView push state serviceName screenData paddingEnabled =
                     , orientation HORIZONTAL
                     ][  textView $
                         [ textFromHtml $ "<b>" <> item.key <> " : " <> "</b>" <> item.val
+                        , height WRAP_CONTENT
+                        , width WRAP_CONTENT
                         , gravity LEFT
                         ] <> FontStyle.paragraphText TypoGraphy
                     ] 
@@ -589,6 +603,8 @@ chooseTicketsView state push =
                 ]
               , textView $ 
                 [ text $ if state.data.dateOfVisit == "" then "Select Date Of Visit" else (convertUTCtoISC state.data.dateOfVisit "dddFull, DD/MM/YY")
+                , height WRAP_CONTENT
+                , width WRAP_CONTENT
                 , color Color.black800
                 ] <> FontStyle.h3 TypoGraphy
             ]
@@ -596,6 +612,8 @@ chooseTicketsView state push =
             [ text $ getMessageForSelectedDate state -- Tickets are available for upto 90 days in advance
             , visibility if state.props.validDate || state.data.dateOfVisit == "" then GONE else VISIBLE
             , color Color.red 
+            , height WRAP_CONTENT
+            , width WRAP_CONTENT
             , margin $ MarginVertical 8 8
             ] <> FontStyle.tags TypoGraphy
         ]
@@ -604,6 +622,7 @@ chooseTicketsView state push =
         else (linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
+        , background Color.purple
         , orientation VERTICAL
         ](map (serviceInputView push state) filteresServiceCatData))
       , linearLayout
@@ -620,11 +639,15 @@ chooseTicketsView state push =
             ]
           , textView $ 
             [ text "I agree to the"
+            , height WRAP_CONTENT
+            , width WRAP_CONTENT
             , color Color.black800
             ] <> FontStyle.body1 TypoGraphy
           , textView $ 
             [ text " Terms & Conditions"
             , color Color.blue900
+            , height WRAP_CONTENT
+            , width WRAP_CONTENT
             , onClick (\action -> do
                     _<- push action
                     _ <- JB.openUrlInApp $ getTermsAndConditionsUrl state.data.placeInfo
@@ -683,20 +706,26 @@ individualServiceView push state service =
           , orientation VERTICAL
           ][ textView $
              [ text service.serviceName
+             , height WRAP_CONTENT
+             , width WRAP_CONTENT
              , color $ if bookingClosedForService then Color.black600 else Color.black800
              ] <> FontStyle.h2 TypoGraphy
           ,  textView $
              [ text $ fromMaybe "" service.shortDesc
              , color $ if bookingClosedForService then Color.greyDark else Color.black800
+             , height WRAP_CONTENT
+             , width WRAP_CONTENT
              , visibility $ maybe GONE (\x -> VISIBLE) service.shortDesc
              ] <> FontStyle.body1 TypoGraphy
           ,  if length service.serviceCategories == 1 then
                case service.serviceCategories DA.!! 0 of
-                 Nothing -> linearLayout [][]
+                 Nothing -> linearLayout [height $ V 0][]
                  Just val -> textView $
                               [ text $ val.categoryName
                               , color $ if bookingClosedForService then Color.greyDark else Color.black800
                               , visibility $ if val.categoryName == "all" then GONE else VISIBLE
+                              , height WRAP_CONTENT
+                              , width WRAP_CONTENT
                               ] <> FontStyle.body1 TypoGraphy
              else linearLayout [][]
           ]
@@ -779,6 +808,8 @@ multipleServiceCategory push state serviceId selectedBHId categories selectedCat
     , textView $
       [ text "Select your ticket category"
       , color Color.black800
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
       , margin $ MarginVertical 20 8
       ] <> FontStyle.subHeading1 TypoGraphy
     , linearLayout

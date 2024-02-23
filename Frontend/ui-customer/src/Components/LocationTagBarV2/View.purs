@@ -66,6 +66,5 @@ tagView item isLast push =
             [ text textConfig.text
             , textSize textConfig.fontSize
             , color textConfig.color 
-            , padding $ PaddingBottom 3
             ] <> (FontStyle.getFontStyle textConfig.fontStyle LanguageStyle)
       ]

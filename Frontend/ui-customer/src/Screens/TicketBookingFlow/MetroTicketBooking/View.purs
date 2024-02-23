@@ -175,7 +175,7 @@ infoSelectioView state push =
                             , stroke $ "1," <> Color.grey900
                             , cornerRadius if EHC.os == "IOS" then 18.0 else 30.0
                             , gravity CENTER
-                            ][ selectionTab (getString ONE_WAY_STR)  ST.ONE_WAY push state
+                            ][ selectionTab (getString ONE_WAY_STR)  ST.ONE_WAY_TRIP push state
                             , selectionTab (getString ROUND_TRIP_STR) ST.ROUND_TRIP push state
                             ]
                         ]
@@ -313,7 +313,7 @@ headerView state push =
 incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 incrementDecrementView push state =
   let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then 6 else 6
-      limitReached = (state.data.ticketType == ST.ROUND_TRIP && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY && state.data.ticketCount >= ticketLimit)
+      limitReached = (state.data.ticketType == ST.ROUND_TRIP && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY_TRIP && state.data.ticketCount >= ticketLimit)
   in 
   linearLayout
         [ height WRAP_CONTENT
