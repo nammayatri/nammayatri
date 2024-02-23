@@ -609,7 +609,7 @@ driverInfoView push state =
                       [ height WRAP_CONTENT
                       , width MATCH_PARENT
                       , orientation VERTICAL
-                      , margin $ MarginTop 12
+                      , margin $ MarginTop if state.props.showBanner then 12 else 0
                       ][driverDetailsView (getDriverDetails state) "DriverDetailsView"
                       , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
                       , sizedBox (V 12) MATCH_PARENT

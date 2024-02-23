@@ -127,6 +127,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         super(bridgeComponents);
         registerCallBacks();
         translator = new TranslatorMLKit(bridgeComponents.getContext());
+        app = AppType.PROVIDER;
     }
 
     @JavascriptInterface

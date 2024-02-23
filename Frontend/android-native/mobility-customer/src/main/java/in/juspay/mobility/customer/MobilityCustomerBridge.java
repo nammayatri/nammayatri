@@ -80,11 +80,10 @@ import java.util.concurrent.Executors;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JuspayLogger;
+import in.juspay.mobility.common.MapRemoteConfig;
 import in.juspay.mobility.common.MobilityCommonBridge;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
-
-    public int debounceAnimateCameraCounter = 0;
 
     @Override
     public void reset() {
@@ -96,9 +95,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     public enum MapMode {
         NORMAL, SPECIAL_ZONE, HOTSPOT
     }
+    private Integer debounceAnimateCameraCounter;
 
     public MobilityCustomerBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
+        app = AppType.CONSUMER;
     }
 
 
@@ -206,13 +207,19 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
                 try {
+                    MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
+                    float zoomLevel;
+                    try {
+                        zoomLevel = (float) mapRemoteConfig.zoomLevel;
+                    }catch (Exception e){
+                        zoomLevel = 20.0f;
+                    }
                     JSONObject payload = new JSONObject(_payload);
                     String json = payload.optString("json", "");
                     String dest = payload.optString("destMarker", "");
                     String eta = payload.optString("eta", "");
                     String src = payload.optString("srcMarker", "");
                     String specialLocation = payload.optString("specialLocation", "");
-                    float zoomLevel = (float)payload.optDouble("zoomLevel", 17.0);
                     boolean autoZoom = payload.optBoolean("autoZoom", true);
                     ArrayList<LatLng> path = new ArrayList<>();
                     JSONObject jsonObject = new JSONObject(json);
@@ -245,6 +252,8 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             }
                             polyline = null;
                             currMarker.setAnchor(0.5f, 0);
+                            mapUpdate.isMapMoved = false;
+                            mapUpdate.isMapIdle = true;
                             animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
                         } else {
                             double destinationLat = path.get(0).latitude;
@@ -257,18 +266,19 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Collections.singletonList(DASH);
                             polyline.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
                             polyline.setPoints(path);
-                            if (debounceAnimateCameraCounter != 0) {
-                                debounceAnimateCameraCounter--;
+                            if(debounceAnimateCameraCounter == null) debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+                            if (autoZoom && mapUpdate.isMapIdle && (debounceAnimateCameraCounter <= 0 || mapUpdate.isMapMoved)) {
+                                moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                mapUpdate.isMapMoved = false;
+                                mapUpdate.isMapIdle = true;
+                                debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
                             } else {
-                                if (autoZoom) {
-                                    moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
-                                    debounceAnimateCameraCounter = 10;
-                                }
+                                debounceAnimateCameraCounter--;
                             }
                         }
                     }
                 } catch (JSONException e) {
-                    e.printStackTrace();
+                    Log.e(LOG_TAG, "Error in updateRoute", e);
                 }
             }
         });

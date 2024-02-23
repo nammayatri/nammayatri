@@ -270,6 +270,14 @@ public class MobilityCommonBridge extends HyperBridge {
 
     private  MediaPlayer mediaPlayer = null;
     private android.media.MediaPlayer audioPlayer;
+    protected AppType app;
+    protected MapUpdate mapUpdate = new MapUpdate();
+    private MapRemoteConfig mapRemoteConfig;
+
+    protected enum AppType {
+        CONSUMER,
+        PROVIDER
+    }
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -279,7 +287,19 @@ public class MobilityCommonBridge extends HyperBridge {
         callBack = this::callImageUploadCallBack;
         Utils.registerCallback(callBack);
         fetchAndUpdateLastKnownLocation();
+    }
 
+    public MapRemoteConfig getMapRemoteConfig() {
+        try {
+            if(this.mapRemoteConfig == null) {
+                mapRemoteConfig = new MapRemoteConfig();
+                String mapConfig = getKeyInNativeSharedPrefKeys("MAP_REMOTE_CONFIG");
+                mapRemoteConfig.fromJson(mapConfig);
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in getMapRemoteConfig", e);
+        }
+        return mapRemoteConfig;
     }
 
     private void fetchAndUpdateLastKnownLocation() {
@@ -1450,6 +1470,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
     @JavascriptInterface
     public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName, final String mapRouteConfig) {
+        onMapUpdate(null,null);
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
                 PolylineOptions polylineOptions = new PolylineOptions();
@@ -1655,6 +1676,78 @@ public class MobilityCommonBridge extends HyperBridge {
         return returnedBitmap;
     }
 
+    @SuppressLint("JavascriptInterface")
+    @JavascriptInterface
+    public void onMapUpdate(String isIdleCallback, String isMovedCallback) {
+        try {
+            MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
+            if(mapRemoteConfig.enableMapRecenter) {
+                if (app == AppType.CONSUMER) {
+                    ExecutorManager.runOnMainThread(() -> {
+                        try {
+                            if (!mapUpdate.isIdleListenerActive) {
+                                googleMap.setOnCameraIdleListener(() -> {
+                                    if (isIdleCallback != null) {
+                                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s';", isIdleCallback);
+                                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                                    }
+                                    mapUpdate.mapRecenterHandler.removeCallbacksAndMessages(null);
+                                    mapUpdate.mapRecenterHandler.postDelayed(() -> {
+                                        if(mapUpdate.isGestureMovement) mapUpdate.isMapMoved = true;
+                                        mapUpdate.isMapIdle = true;
+                                    }, mapRemoteConfig.recenterDelay);
+                                });
+                                mapUpdate.isIdleListenerActive = true;
+                            }
+                            if (!mapUpdate.isMoveListenerActive) {
+                                googleMap.setOnCameraMoveStartedListener(reason -> {
+                                    if(isMovedCallback != null){
+                                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%d';", isIdleCallback, reason);
+                                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                                    }
+                                    if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
+                                        mapUpdate.isGestureMovement = true;
+                                        mapUpdate.isMapIdle = false;
+                                    } else {
+                                        mapUpdate.isGestureMovement = false;
+                                    }
+                                    mapUpdate.mapRecenterHandler.removeCallbacksAndMessages(null);
+                                });
+                                mapUpdate.isMoveListenerActive = true;
+                            }
+                        } catch (Exception e) {
+                            Log.e(LOG_TAG, "Error in onMapUpdate Executor " + e);
+                        }
+                    });
+                }
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in onMapUpdate ", e);
+        }
+    }
+
+    @JavascriptInterface
+    public void removeOnMapUpdate() {
+        try {
+            if (googleMap != null) {
+                if(mapUpdate.isIdleListenerActive){
+                    googleMap.setOnCameraIdleListener(null);
+                    mapUpdate.isIdleListenerActive = false;
+                }
+                if(mapUpdate.isMoveListenerActive){
+                    googleMap.setOnCameraMoveStartedListener(null);
+                    mapUpdate.isMoveListenerActive = false;
+                }
+                Log.e(LOG_TAG, "MapRecenter Removed");
+            }
+            mapUpdate.mapRecenterHandler.removeCallbacksAndMessages(null);
+            mapUpdate.isMapMoved = false;
+            mapUpdate.isMapIdle = true;
+            mapUpdate.isGestureMovement = false;
+        } catch(Exception e) {
+            Log.e(LOG_TAG, "Error in removeOnMapUpdate " + e);
+        }
+    }
     @JavascriptInterface
     public void removeAllPolylines(String stringifyArray) {
         ExecutorManager.runOnMainThread(() -> {
@@ -1677,6 +1770,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 } 
             }
             isAnimationNeeded = false;
+            removeOnMapUpdate();
             if (polylineAnimatorSet != null) {
                 polylineAnimatorSet.cancel();
             }
@@ -3290,6 +3384,4 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
-
-
 }
