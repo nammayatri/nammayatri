@@ -20,6 +20,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import qualified Data.UUID as UUID

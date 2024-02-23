@@ -18,6 +18,7 @@ import qualified Beckn.OnDemand.Transformer.OnSearch as TOnSearch
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
+import BecknV2.Utils
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
 import EulerHS.Prelude hiding (find, id, map, readMaybe, state, unpack)
@@ -39,7 +40,7 @@ buildOnSearchReqV2 req = do
   logOnSearchEventV2 req
   onSearchTtl <- req.onSearchReqContext.contextTtl & fromMaybeM (InvalidRequest "Missing ttl")
   timestamp <- req.onSearchReqContext.contextTimestamp & fromMaybeM (InvalidRequest "Missing timestamp")
-  let validTill = fromJust $ parseISO8601Duration onSearchTtl <&> addDurationToUTCTime timestamp
+  let validTill = addDurationToUTCTime timestamp (fromJust (parseISO8601Duration onSearchTtl))
   case req.onSearchReqError of
     Nothing -> do
       -- generated function
