@@ -28,9 +28,8 @@ import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
-import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC)
-import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion, isInvalidUrl)
 import Engineering.Helpers.Events as Events
+import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC, isPreviousVersion, isInvalidUrl, getNewIDWithTag)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
 import Foreign.Object (empty)
@@ -62,6 +61,9 @@ import Debug
 import Effect.Uncurried (runEffectFn9)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import SessionCache
+import Helpers.API (callApiBT)
+import Screens.Types (FareProductType(..)) as FPT
+import Services.API (ServiceabilityType(..)) as ServiceabilityType
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -272,7 +274,7 @@ searchLocationBT payload = do
   withAPIResultBT (EP.autoComplete "") identity errorHandler (lift $ lift $ callAPI headers payload)
   where
   errorHandler errorPayload  = do
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage  = SearchLocationModel}})
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage  = HomeScreen}})
                 BackT $ pure GoBack
 
 
@@ -331,48 +333,54 @@ placeDetailsBT (PlaceDetailsReq id) = do
 ------------------------------------------------------------------------ RideSearchBT Function ----------------------------------------------------------------------------------------
 rideSearchBT :: SearchReq -> FlowBT String SearchRes
 rideSearchBT payload = do
-        headers <- getHeaders' "" true
-        withAPIResultBT (EP.searchReq "") identity errorHandler (lift $ lift $ callAPI headers payload)
+    headers <- getHeaders' "" true
+    withAPIResultBT (EP.searchReq "") identity handleError (lift $ lift $ callAPI headers payload)
     where
-      errorHandler errorPayload = do
+        handleError :: ErrorResponse -> FlowBT String SearchRes
+        handleError errorPayload = do
             let errResp = errorPayload.response
                 codeMessage = decodeError errResp.errorMessage "errorCode"
-            if  errorPayload.code == 400 && codeMessage == "RIDE_NOT_SERVICEABLE" then
-                pure $ toast (getString RIDE_NOT_SERVICEABLE)
-            else if errorPayload.code == 400 then
-                pure $ toast codeMessage
-            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
-            _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
+                message = if errorPayload.code == 400 && codeMessage == "RIDE_NOT_SERVICEABLE" 
+                            then getString RIDE_NOT_SERVICEABLE 
+                            else if errorPayload.code == 400 
+                            then codeMessage
+                            else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+            pure $ toast message
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
+            void $ pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> Boolean -> Boolean -> String -> Boolean -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation =
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = -- check this for rentals
     let appConfig = CP.getAppConfig CP.appConfig
-    in  SearchReq { "contents" : OneWaySearchReq{
-                                    "destination" : SearchReqLocation {
-                                        "gps" : LatLong {
-                                                    "lat" : dlat ,
-                                                    "lon" : dlong 
-                                                },
-                                        "address" : LocationAddress desAdd
-                                    },
-                                    "origin" : SearchReqLocation {
-                                        "gps" : LatLong {
-                                                    "lat" : slat ,
-                                                    "lon" : slong 
-                                                },
-                                        "address" : LocationAddress srcAdd
-                                    },
-                                    "isReallocationEnabled" : Just appConfig.feature.enableReAllocation,
-                                    "isSourceManuallyMoved" : Just sourceManuallyMoved,
-                                    "isDestinationManuallyMoved" : Just destManuallyMoved,
-                                    "sessionToken" : Just sessionToken,
-                                    "isSpecialLocation" : Just isSpecialLocation
-                                },
-                    "fareProductType" : "ONE_WAY"
-                   }
+    in  SearchReq 
+        { "contents" : OneWaySearchRequest 
+            ( OneWaySearchReq
+                { "startTime" : Just startTime
+                , "destination" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : dlat 
+                        , "lon" : dlong
+                        }
+                    , "address" : (LocationAddress desAdd)
+                    }
+                , "origin" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : slat 
+                        , "lon" : slong
+                        }
+                    , "address" : (LocationAddress srcAdd)
+                    }
+                , "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                , "isSourceManuallyMoved" : Just sourceManuallyMoved
+                , "isDestinationManuallyMoved" : Just destManuallyMoved
+                , "sessionToken" : Just sessionToken
+                , "isSpecialLocation" : Just isSpecialLocation
+                }
+            )
+        , "fareProductType" : "ONE_WAY"
+        }
 
 
 ------------------------------------------------------------------------ GetQuotes Function -------------------------------------------------------------------------------------------
@@ -386,6 +394,13 @@ getQuotes searchId = do
 rideConfirm quoteId = do
         headers <- getHeaders "" false
         withAPIResult (EP.confirmRide quoteId) unwrapResponse $ callAPI headers (ConfirmRequest quoteId)
+    where
+        unwrapResponse (x) = x
+
+addOrEditStop :: String -> StopReq -> Boolean -> Flow GlobalState (Either ErrorResponse StopRes)
+addOrEditStop bookingId req isEdit = do 
+    headers <- getHeaders "" false
+    withAPIResult (EP.addOrEditStop isEdit bookingId) unwrapResponse $ callAPI headers (StopRequest bookingId isEdit req)
     where
         unwrapResponse (x) = x
 
@@ -452,10 +467,10 @@ cancelRide payload bookingId = do
     where
         unwrapResponse (x) = x
 
-makeCancelRequest :: HomeScreenState -> CancelReq
-makeCancelRequest state = CancelReq {
-    "additionalInfo" : Just state.props.cancelDescription
-  , "reasonCode" : state.props.cancelReasonCode
+makeCancelRequest :: String -> String -> CancelReq
+makeCancelRequest cancelDescription cancelReasonCode = CancelReq {
+    "additionalInfo" : Just cancelDescription
+  , "reasonCode" : cancelReasonCode
   , "reasonStage" : "OnAssign"
   }
 
@@ -756,11 +771,12 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
             callDrawRoute route
     where
         callDrawRoute :: Maybe Route -> FlowBT String (Maybe Route)
-        callDrawRoute route = do
+        callDrawRoute route = do 
             case route of
                 Just (Route routes) -> do
-                  void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinates routes.points) "LineString" "#323643" true sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
-                  pure route
+                    lift $ lift $ liftFlow $ drawRoute [ (walkCoordinates routes.points)] "LineString" true sourceMarkerConfig destMarkerConfig 8 routeType specialLocation (getNewIDWithTag "CustomerHomeScreen")
+                    pure route
+                    
                 Nothing -> pure route
 
 type Markers = {
@@ -771,8 +787,8 @@ type Markers = {
 data TrackingType = RIDE_TRACKING | DRIVER_TRACKING
 
 
-getRouteMarkers :: String -> City -> TrackingType -> Markers
-getRouteMarkers variant city trackingType = 
+getRouteMarkers :: String -> City -> TrackingType -> FPT.FareProductType -> Markers
+getRouteMarkers variant city trackingType fareProductType = 
   { srcMarker : mkSrcMarker ,
     destMarker : mkDestMarker 
   }
@@ -792,7 +808,7 @@ getRouteMarkers variant city trackingType =
     mkDestMarker :: String
     mkDestMarker = 
         case trackingType of 
-            RIDE_TRACKING -> "ny_ic_dest_marker"
+            RIDE_TRACKING -> if fareProductType == FPT.RENTAL then "ny_ic_blue_marker" else "ny_ic_dest_marker"
             DRIVER_TRACKING -> "ny_ic_src_marker"
 
     getAutoImage :: City -> String
@@ -823,18 +839,11 @@ makeSendIssueReq email bookingId reason description nightSafety = SendIssueReq {
     "nightSafety" : nightSafety
 }
 
-originServiceabilityBT :: ServiceabilityReq -> FlowBT String ServiceabilityRes
-originServiceabilityBT req = do
+locServiceabilityBT :: ServiceabilityReq -> ServiceabilityType.ServiceabilityType -> FlowBT String ServiceabilityRes
+locServiceabilityBT req serviceabilityType = do
+    let serviceabilityType' = DS.toLower $ show serviceabilityType
     headers <- getHeaders' "" true
-    withAPIResultBT ((EP.serviceabilityOrigin "" )) identity errorHandler (lift $ lift $ callAPI headers req)
-    where
-    errorHandler (errorPayload) =  do
-            BackT $ pure GoBack
-
-destServiceabilityBT :: DestinationServiceabilityReq -> FlowBT String ServiceabilityResDestination
-destServiceabilityBT req = do
-    headers <- getHeaders' "" true
-    withAPIResultBT ((EP.serviceabilityDest "" )) identity errorHandler (lift $ lift $ callAPI headers req)
+    withAPIResultBT (EP.locServiceability serviceabilityType') identity errorHandler (lift $ lift $ callAPI headers (ServiceabilityRequest serviceabilityType' req))
     where
     errorHandler (errorPayload) =  do
             BackT $ pure GoBack
@@ -1315,3 +1324,60 @@ pushSDKEvents = do
     withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
     where
         unwrapResponse x = x
+
+  
+addStop :: String -> AddStopReq -> FlowBT String AddStopRes
+addStop bookingId req = (callApiBT (AddStopRequest bookingId req))
+
+makeAddStopReq :: Number -> Number -> Address -> AddStopReq
+makeAddStopReq lat lon stop  = AddStopReq{
+    "address" :  (LocationAddress stop),
+    "gps" : LatLong {
+        "lat" : lat ,
+        "lon" : lon
+        }
+    }
+
+makeEditStopReq :: Number -> Number -> Address -> EditStopReq
+makeEditStopReq lat lon stop  = EditStopReq{
+    "address" :  (LocationAddress stop),
+    "gps" : LatLong {
+        "lat" : lat ,
+        "lon" : lon
+        }
+    }
+
+makeStopReq :: Number -> Number -> Address -> StopReq
+makeStopReq lat lon stop  = StopReq{
+    "address" :  (LocationAddress stop),
+    "gps" : LatLong {
+        "lat" : lat ,
+        "lon" : lon
+        }
+    }
+
+mkRentalSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Int -> Int -> SearchReq
+mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalDistance estimatedRentalDuration =
+    let appConfig = CP.getAppConfig CP.appConfig
+    in  SearchReq { "contents" : RentalSearchRequest (
+                                        RentalSearchReq {
+                                                "stops" : if dlat == 0.0 then Nothing else 
+                                                    (Just [SearchReqLocation {
+                                                           "gps" : LatLong {
+                                                               "lat" : dlat ,
+                                                               "lon" : dlong
+                                                               },
+                                                           "address" : (LocationAddress desAdd)
+                                                  }]), 
+                                                  "origin" : SearchReqLocation {
+                                                   "gps" : LatLong {
+                                                               "lat" : slat ,
+                                                               "lon" : slong
+                                                   },"address" : (LocationAddress srcAdd)
+                                                  },
+                                                  "startTime" : startTime,
+                                                  "estimatedRentalDistance" : estimatedRentalDistance,
+                                                  "estimatedRentalDuration" : estimatedRentalDuration
+                                                 }),
+                    "fareProductType" : "RENTAL"
+                   }

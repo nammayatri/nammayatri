@@ -3,7 +3,7 @@ module MerchantConfig.DefaultConfig where
 import MerchantConfig.Types
 import Common.DefaultConfig
 import Common.Types.Config as CTC
-import JBridge as JB
+import Engineering.Helpers.Commons as EHC
 
 config :: AppConfig
 config =
@@ -509,7 +509,7 @@ config =
   , enableSuggestions : true
   , enableYatriCoins : false
   , enableAutoReferral : true
-  , enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2"
+  , enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2"
   }
   , showCorporateAddress : false
   , engilshInNative: "English"

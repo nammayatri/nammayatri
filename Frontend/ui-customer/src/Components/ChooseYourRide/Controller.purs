@@ -25,6 +25,7 @@ data Action
 type Config
   = { rideDistance :: String
     , rideDuration :: String
+    , rideTime :: String
     , activeIndex :: Int
     , quoteList :: Array ChooseVehicleController.Config
     , showTollExtraCharges :: Boolean
@@ -41,6 +42,7 @@ type Config
     , enableTips :: Boolean
     , showMultiProvider :: Boolean
     , currentEstimateHeight :: Int
+    , intercity :: Boolean
     }
 
 type BookAnyProps 
@@ -54,6 +56,7 @@ config :: Config
 config =
   { rideDistance: ""
   , rideDuration: ""
+  , rideTime: ""
   , activeIndex: 0
   , quoteList: []
   , showTollExtraCharges : (getAppConfig appConfig).searchLocationConfig.showAdditionalChargesText
@@ -81,6 +84,7 @@ config =
   , tipForDriver : 0
   , enableTips : true
   , showMultiProvider : false
+  , intercity : false
   }
 
 bookAnyProps :: BookAnyProps

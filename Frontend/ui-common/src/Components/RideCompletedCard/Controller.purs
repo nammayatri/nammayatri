@@ -22,6 +22,7 @@ import Data.Generic.Rep (class Generic)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Data.Maybe
 import Styles.Types
+import Common.Types.App (RentalBookingConfig)
 
 data Action = Support
             | RideDetails
@@ -73,8 +74,11 @@ type Config = {
   rentalRideConfig :: RentalRideConfig,
   rentalRideTextConfig :: RentalRideTextConfig,
   capacity :: Maybe Int,
-  serviceTierAndAC :: String
-, toll :: Toll
+  serviceTierAndAC :: String,
+  toll :: Toll,
+  rentalRowDetails :: RentalRowConfig,
+  rentalBookingData :: RentalBookingConfig,
+  showRentalRideDetails :: Boolean
 }
 
 data Theme = DARK | LIGHT
@@ -89,6 +93,17 @@ data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVE
 derive instance genericRideCompletedElements :: Generic RideCompletedElements _
 instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
 
+data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | EstimatedFare | ExtraTimePrice | TotalFare
+
+derive instance genericRentalRowView :: Generic RentalRowView _
+instance eqRentalRowView :: Eq RentalRowView where eq = genericEq
+
+type RentalTextConfig = {
+  title :: String,
+  estimatedValue :: String,
+  actualValue :: String,
+  color :: String
+}
 
 config :: Config 
 config = {
@@ -101,7 +116,7 @@ config = {
     title : "",
     titleColor : Color.grey900,
     finalAmount : 0,
-    initalAmount : 0,
+    initialAmount : 0,
     fareUpdatedVisiblity : false,
     gradient : [Color.black900, Color.black900, Color.pickledBlue, Color.black900],
     topPill : {
@@ -218,7 +233,10 @@ config = {
     textColor : Color.black600,
     imageVisibility : GONE,
     image : ""
-  }
+  },
+  rentalRowDetails : dummyRentalRowConfig,
+  rentalBookingData : dummyRentalBookingConfig,
+  showRentalRideDetails : false
 }
 
 type CustomerIssueCard = {
@@ -241,7 +259,7 @@ type TopCard = {
   title :: String,
   titleColor :: String,
   finalAmount :: Int,
-  initalAmount :: Int,
+  initialAmount :: Int,
   fareUpdatedVisiblity :: Boolean,
   gradient :: Array String,
   topPill :: TopPill,
@@ -366,3 +384,42 @@ type Toll = {
 , imageVisibility :: Visibility
 , image :: String
 }
+
+type RentalRowConfig = {
+    rideTime :: String
+  , rideDistance :: String
+  , rideStartedAt :: String
+  , rideEndedAt :: String
+  , estimatedFare :: String
+  , extraTimePrice :: String
+  , totalFare :: String
+  , rideDetailsTitle :: String
+  , fareUpdateTitle :: String
+}
+
+dummyRentalRowConfig :: RentalRowConfig
+dummyRentalRowConfig = {
+    rideTime : ""
+  , rideDistance : ""
+  , rideStartedAt : ""
+  , rideEndedAt : ""
+  , estimatedFare : ""
+  , extraTimePrice : ""
+  , totalFare : ""
+  , rideDetailsTitle : ""
+  , fareUpdateTitle : ""
+}
+
+dummyRentalBookingConfig :: RentalBookingConfig
+dummyRentalBookingConfig = 
+  { startTimeUTC : ""
+  , baseDuration : 0
+  , baseDistance : 0
+  , startOdometer : ""
+  , endOdometer : ""
+  , nightCharge : ""
+  , finalDuration : 0
+  , finalDistance : 0
+  , rideStartedAt : "" 
+  , rideEndedAt : ""
+  }

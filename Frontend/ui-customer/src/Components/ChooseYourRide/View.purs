@@ -8,7 +8,7 @@ import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config, BookAnyProps, bookAnyProps)
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (mapWithIndex, length, (!!), filter, nubBy, any, foldl, filter, elem)
+import Data.Array (mapWithIndex, length, (!!), filter, nubBy, any, foldl, filter, elem, null)
 import Data.Function.Uncurried (runFn1)
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
@@ -21,7 +21,7 @@ import JBridge (getLayoutBounds, getHeightFromPercent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, bind, not, show, bind, negate, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), map, (/=), (<), (<>))
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView, shimmerFrameLayout)
 import PrestoDOM.Properties (cornerRadii)
 import Data.Tuple (Tuple(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -29,6 +29,7 @@ import Styles.Colors as Color
 import ConfigProvider
 import PrestoDOM.Properties (sheetState)
 import Data.Int (toNumber,ceil, fromString)
+import Data.String (null) as DS
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
 import Screens.Types (ZoneType(..), TipViewStage(..))
@@ -104,7 +105,7 @@ addTipView push state =
   , clickable true
   , afterRender push $ const $ NoAction
   , onClick push $ const $ if state.tipViewProps.stage == DEFAULT then AddTip else NoAction 
-  , visibility $ boolToVisibility state.enableTips
+  , visibility $ boolToVisibility (state.enableTips && not state.intercity)
   ] $ (case state.tipViewProps.stage of 
           DEFAULT -> [defaultTipView push state]
           TIP_AMOUNT_SELECTED -> [selectTipView push state]
@@ -423,7 +424,7 @@ chooseYourRideView push config =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , background tagConfig.backgroundColor
+      , background Color.white900
       , cornerRadii $ Corners 24.0 true true false false
       ][linearLayout
         [ width MATCH_PARENT
@@ -487,7 +488,9 @@ chooseYourRideView push config =
                 ] 
               , textView (
                 [ text 
-                    if length config.quoteList > 1 
+                    if config.intercity
+                    then (getString INTERCITY_OPTIONS)
+                    else if length config.quoteList > 1 
                     then (getString CHOOSE_YOUR_RIDE)
                     else (getString CONFIRM_YOUR_RIDE)
                 , color Color.black800
@@ -559,6 +562,23 @@ estimatedTimeAndDistanceView push config =
         , color Color.black650
         ]
         <> FontStyle.paragraphText TypoGraphy
+    , linearLayout
+        [ height $ V 4
+        , width $ V 4
+        , cornerRadius 2.5
+        , background Color.black600
+        , visibility $ boolToVisibility $ not $ DS.null config.rideTime
+        , margin (Margin 6 2 6 0)
+        ]
+        []
+    , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text config.rideTime
+        , visibility $ boolToVisibility $ not $ DS.null config.rideTime
+        , color Color.black650
+        ]
+        <> FontStyle.paragraphText TypoGraphy
     ]
 
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -575,21 +595,27 @@ quoteListView push config =
     , margin $ MarginBottom if EHC.os == "IOS" then 44 else 0
     ]
     [scrollView
-      [ nestedScrollView $ length config.quoteList > 3
+      [ height $ if null (config.quoteList) then V 200 else viewHeight
       , width MATCH_PARENT
-      , height $ V viewHeight
-      ]
-      [  Keyed.linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , padding $ PaddingVertical 16 10
-          , margin $ MarginHorizontal 16 16
-          , orientation VERTICAL
-          ][  
-            (if config.showMultiProvider  then 
-                Tuple "MultiProvider" $ linearLayout
+      ][  if null (config.quoteList) then 
+            shimmerFrameLayout 
+            [ width MATCH_PARENT
+            , height $ V 200
+            , orientation VERTICAL
+            , background Color.transparent
+            ][ linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , padding $ PaddingHorizontal 16 16
+                , orientation VERTICAL
+                ] (mapWithIndex (\index _ -> 
+                      shimmerItemView (index == 0)) [1,2,3] )]
+            else 
+              Keyed.linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
+                , padding $ PaddingVertical 16 10
+                , margin $ MarginHorizontal 16 16
                 , orientation VERTICAL
                 ] $ mapWithIndex
                     ( \index item -> do
@@ -662,6 +688,17 @@ quoteListView push config =
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "KeyedButtonPrimary") 
       ]
 
+    shimmerItemView :: forall w. Boolean -> PrestoDOM (Effect Unit) w
+    shimmerItemView hasTopMargin = 
+      linearLayout
+        [ width MATCH_PARENT
+        , height $ V 80
+        , margin $ MarginVertical (if hasTopMargin then 16 else 0)  16 
+        , cornerRadius 8.0
+        , background Color.greyDark
+        ]
+        []
+
 getBookAnyProps :: ChooseVehicle.Config -> Array ChooseVehicle.Config -> BookAnyProps
 getBookAnyProps quote estimates = foldl (\acc item -> getMinMax acc item) bookAnyProps estimates
   where 
@@ -730,7 +767,7 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
     selectedItem = case config.quoteList !! config.activeIndex of
               Just selectedItem -> selectedItem
               Nothing -> ChooseVehicle.config
-    disableButton = (selectedItem.selectedServices == []) && selectedItem.vehicleVariant == "BOOK_ANY"
+    disableButton = (selectedItem.selectedServices == []) && selectedItem.vehicleVariant == "BOOK_ANY" || null config.quoteList
     name = fromMaybe "" selectedItem.serviceTierName
     title = if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK name 
 

@@ -494,7 +494,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         polylineOptions.add(toPointObj);
                         polylineOptions.add(fromPointObj);
                     }
-                    Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth, null);
+                    Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth, null, googleMap);
 
                     if (sourceMarker != null && !sourceMarker.equals("")) {
                         Bitmap sourceBitmap = constructBitmap(90, sourceMarker);
@@ -760,14 +760,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         return cameraPermission == PackageManager.PERMISSION_GRANTED;
     }
     //endregion
-
-    @JavascriptInterface
-    public void renderSlider(String id, String callback, int stepFunctionForCoinConversion, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId) {
-        ExecutorManager.runOnMainThread(() -> {
-            SliderComponent sliderComponent = new SliderComponent();
-            sliderComponent.addSlider(id,callback,stepFunctionForCoinConversion,conversionRate,minLimit,maxLimit,defaultValue,toolTipId, bridgeComponents);
-        });
-    }
 
     @JavascriptInterface
     public boolean isBackgroundLocationEnabled() {

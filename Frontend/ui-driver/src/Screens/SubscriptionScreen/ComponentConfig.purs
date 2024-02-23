@@ -505,15 +505,19 @@ offerCardBannerConfig isPlanCard bannerProps=
         backgroundColor = Color.yellow800,
         title = title',
         titleColor = Color.black800,
-        actionText = getString OFFER_CARD_BANNER_DESC,
-        actionTextColor = Color.black800,
+        actionText {
+          text = getString OFFER_CARD_BANNER_DESC,
+          textColor = Color.black800
+        },
+        alertText {
+          text = getString OFFER_CARD_BANNER_ALERT,
+          textColor = Color.red
+        },
         imageUrl = case getLanguageLocale languageKey of
                       "HI_IN" -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner_hi"
                       "BN_IN" -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner_bn"
                       _       -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner",
         isBanner = true,
-        alertText = getString OFFER_CARD_BANNER_ALERT,
-        alertTextColor = Color.red,
         alertTextVisibility = true,
         showActionArrow = false,
         bannerClickable = false,

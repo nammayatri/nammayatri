@@ -37,7 +37,7 @@ import Data.Function.Uncurried (Fn2, runFn3, Fn1, Fn3)
 import Data.Generic.Rep (class Generic)
 import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
 import Data.Number (pi, sin, cos, sqrt, asin, abs)
 import Data.Ord (comparing, Ordering)
 import Data.Profunctor.Strong (first)
@@ -56,7 +56,7 @@ import Effect.Console (logShow)
 import Effect.Uncurried (EffectFn1(..), EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Effect.Uncurried (EffectFn1, EffectFn4, EffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
+import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os, getCurrentUTC, compareUTCDate)
 import Engineering.Helpers.Commons (parseFloat, setText, toStringJSON) as ReExport
 import Engineering.Helpers.Utils (class Serializable, serialize)
 import Foreign (MultipleErrors, unsafeToForeign)
@@ -70,17 +70,16 @@ import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<), (#))
+import Prelude (class Eq, class EuclideanRing, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||), (#), max, ($>))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime)
 import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..))
-import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Function.Uncurried
@@ -95,6 +94,10 @@ import Constants (defaultDensity)
 import Mobility.Prelude
 import MerchantConfig.Types 
 import Common.Resources.Constants (assetDomain)
+import Data.Argonaut.Decode.Class as AD
+import Data.Argonaut.Decode.Parser as ADP
+import Data.Argonaut.Core as AC
+import Data.Argonaut.Encode.Class as AE
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -122,7 +125,6 @@ foreign import secondsToHms :: Int -> String
 foreign import getTime :: Unit -> Int
 
 foreign import drawPolygon :: String -> String -> Effect Unit
-foreign import getDifferenceBetweenDates :: Fn2 String String Int
 
 foreign import removeLabelFromMarker :: EffectFn1 Number Unit
 -- foreign import generateSessionToken :: String -> String
@@ -455,11 +457,13 @@ getDistanceString distanceInMeters decimalPoint
   | distanceInMeters >= 1000 = ReExport.parseFloat (toNumber distanceInMeters / 1000.0) decimalPoint <> " km"
   | otherwise = show distanceInMeters <> " m"
 
+-- threshold is in kms 
 updateLocListWithDistance :: Array LocationListItemState -> Number -> Number -> Boolean -> Number -> Array LocationListItemState 
-updateLocListWithDistance arr currLat currLon useThreshold threshold =   
+updateLocListWithDistance arr currLat currLon useThreshold threshold =  
   arr
   # map updateItemDistance
   # filter withinThreshold
+  # sortByActualDistance
 
   where
     updateItemDistance item = 
@@ -470,6 +474,8 @@ updateLocListWithDistance arr currLat currLon useThreshold threshold =
 
     withinThreshold item = 
       maybe true (\actualDist -> (actualDist <= round (threshold * 1000.0) && useThreshold) || not useThreshold) item.actualDistance
+
+    sortByActualDistance = sortBy (comparing (\item -> item.actualDistance))
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
@@ -573,6 +579,11 @@ getScreenFromStage stage = case stage of
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
   LoadMap -> "map_loader"
   ProviderSelection -> "provider_selection_screen"
+  RideSearch -> "ride_search"
+  ConfirmRentalRide -> "confirm_rental_ride"
+  ChangeToRideAccepted -> "change_to_ride_accepted"
+  ChangeToRideStarted -> "change_to_ride_started"
+  ConfirmingQuotes -> "confirming_quotes"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do
@@ -889,3 +900,72 @@ getSelectedServices dummy =
     Kochi -> ["Eco", "Hatchback", "Sedan"]
     Pondicherry -> ["Eco", "Auto"]
     _ ->  ["Eco", "Hatchback", "Sedan"] 
+
+getVariantDescription :: String -> { text :: String, airConditioned :: Boolean}
+getVariantDescription variant = 
+  case variant of
+    "AUTO_RICKSHAW" -> { text : "Commute friendly", airConditioned : false}
+    "TAXI" ->{text : "Non-AC Taxi" , airConditioned : false}
+    "TAXI_PLUS" ->{text : "AC Taxi" , airConditioned : false}
+    "SEDAN" ->{text : "AC, Plush rides" , airConditioned : true}
+    "SUV" ->{text : "AC , Spacious rides" , airConditioned : true}
+    "HATCHBACK" ->{text : "Non-AC , Budget rides " , airConditioned : false}
+    _ ->{text : "Non-AC Taxi" , airConditioned : false}
+
+getVehicleName :: String -> String
+getVehicleName vaiant = 
+  case (getMerchant FunctionCall) of
+    YATRISATHI -> case vaiant of
+                    "TAXI" -> "Non AC Taxi"
+                    "SUV"  -> "AC SUV"
+                    _      -> "AC Cab"
+    _          -> case vaiant of
+                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
+                    "TAXI" -> "Non-AC Taxi"
+                    "TAXI_PLUS" -> "AC Taxi"
+                    "SEDAN" -> "Comfy" 
+                    "SUV" -> "SUV"
+                    "HATCHBACK" -> "Eco" 
+                    _ -> "Non-AC Taxi"
+
+encodeBookingTimeList :: Array BookingTime -> String
+encodeBookingTimeList bookingTimeList = do
+  AC.stringify $ AE.encodeJson bookingTimeList
+
+decodeBookingTimeList :: LazyCheck -> (Array BookingTime)
+decodeBookingTimeList _ = 
+  fromMaybe [] $ 
+    case (AD.decodeJson =<< ADP.parseJson (getValueToLocalStore BOOKING_TIME_LIST)) of
+      Right resp -> Just resp
+      Left err   -> Nothing
+
+invalidBookingTime :: String -> Maybe Int -> Maybe BookingTime
+invalidBookingTime rideStartTime maybeEstimatedDuration =
+    if null bookingTimeList 
+      then Nothing 
+      else fromMaybe Nothing $ head $ filter (isJust) $ map (overlappingRide rideStartTime maybeEstimatedDuration) bookingTimeList
+          
+  where
+    overlappingRide :: String -> Maybe Int -> BookingTime -> Maybe BookingTime
+    overlappingRide rideTime maybeEstimatedDuration bookingDetails =
+      let diffInMins = (compareUTCDate bookingDetails.rideStartTime rideTime) / 60
+          overlappingPollingTime = diffInMins >= 0 && diffInMins <= 30
+      in
+        if ( overlappingPollingTime || (maybe false (\estimatedDuration -> (rideStartingInBetweenPrevRide diffInMins bookingDetails estimatedDuration) || (rideEndingInBetweenNextRide diffInMins bookingDetails estimatedDuration)) maybeEstimatedDuration))
+          then Just bookingDetails
+          else Nothing
+
+    bookingTimeList :: Array BookingTime
+    bookingTimeList = decodeBookingTimeList FunctionCall
+
+rideStartingInBetweenPrevRide :: Int -> BookingTime -> Int -> Boolean
+rideStartingInBetweenPrevRide diffInMins bookingDetails estimatedDuration =
+  let estimatedTripDuration = bookingDetails.estimatedDuration + diffInMins
+  in (diffInMins <= 0 && estimatedTripDuration >= 0 && estimatedTripDuration <= estimatedDuration + 30)
+
+rideEndingInBetweenNextRide :: Int -> BookingTime -> Int -> Boolean
+rideEndingInBetweenNextRide diffInMins _ estimatedDuration =
+  (diffInMins >= 0 && diffInMins <= estimatedDuration + 30)
+
+bufferTimePerKm :: Int -> Int
+bufferTimePerKm estimatedDistance = 3 * estimatedDistance
