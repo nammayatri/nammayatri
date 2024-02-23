@@ -36,17 +36,14 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideSt
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import Domain.Types.Beckn.Status as DStatus
-import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Beckn.Common as Common
-import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildOnStatusMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
@@ -64,7 +61,7 @@ buildOnStatusMessage (DStatus.NewBookingBuildReq {bookingId}) = do
               }
       }
 buildOnStatusMessage (DStatus.RideAssignedReq Common.DRideAssignedReq {..}) = do
-  let Common.BookingDetails {driver, vehicle, ride, booking} = bookingDetails
+  let Common.BookingDetails {..} = bookingDetails
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
   return $
@@ -78,7 +75,7 @@ buildOnStatusMessage (DStatus.RideAssignedReq Common.DRideAssignedReq {..}) = do
               }
       }
 buildOnStatusMessage (DStatus.RideStartedReq Common.DRideStartedReq {..}) = do
-  let Common.BookingDetails {driver, vehicle, ride, booking} = bookingDetails
+  let Common.BookingDetails {..} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
@@ -93,7 +90,7 @@ buildOnStatusMessage (DStatus.RideStartedReq Common.DRideStartedReq {..}) = do
               }
       }
 buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = do
-  let Common.BookingDetails {driver, vehicle, ride, booking} = bookingDetails
+  let Common.BookingDetails {..} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   distanceTagGroup <- Common.buildDistanceTagGroup ride
@@ -130,7 +127,7 @@ buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {.
       }
 buildOnStatusMessage DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails} = do
   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
-  let Common.BookingDetails {driver, vehicle, booking, ride} = bookingDetails
+  let Common.BookingDetails {..} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
@@ -163,8 +160,8 @@ buildOnStatusReqV2 merchant booking req = do
       city = fromMaybe merchant.city booking.bapCity
       country = fromMaybe merchant.country booking.bapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
-  buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req merchant bppConfig
+  -- bppConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req
 
 buildOnStatusReqV2' ::
   (MonadFlow m, EncFlow m r) =>
@@ -177,12 +174,10 @@ buildOnStatusReqV2' ::
   Context.Country ->
   DRB.Booking ->
   DStatus.OnStatusBuildReq ->
-  DM.Merchant ->
-  DBC.BecknConfig ->
   m Spec.OnStatusReq
-buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req merchant bppConfig = do
+buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req = do
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
-  message <- mkOnStatusMessageV2 req merchant bppConfig
+  message <- mkOnStatusMessageV2 req
   pure $
     Spec.OnStatusReq
       { onStatusReqError = Nothing,
@@ -193,18 +188,16 @@ buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country 
 mkOnStatusMessageV2 ::
   (MonadFlow m, EncFlow m r) =>
   DStatus.OnStatusBuildReq ->
-  DM.Merchant ->
-  DBC.BecknConfig ->
   m (Maybe Spec.ConfirmReqMessage)
-mkOnStatusMessageV2 res merchant bppConfig = do
-  order <- tfOrder res bppConfig merchant
+mkOnStatusMessageV2 res = do
+  order <- tfOrder res
   pure . Just $
     Spec.ConfirmReqMessage
       { confirmReqMessageOrder = order
       }
 
-tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> DBC.BecknConfig -> DM.Merchant -> m Spec.Order
-tfOrder (DStatus.NewBookingBuildReq {bookingId}) _ _ =
+tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> m Spec.Order
+tfOrder (DStatus.NewBookingBuildReq {bookingId}) =
   pure
     Spec.Order
       { orderId = Just bookingId.getId,
@@ -218,11 +211,11 @@ tfOrder (DStatus.NewBookingBuildReq {bookingId}) _ _ =
         orderProvider = Nothing,
         orderQuote = Nothing
       }
-tfOrder (DStatus.RideAssignedReq req) _ _ = Common.tfAssignedReqToOrder req
-tfOrder (DStatus.RideStartedReq req) _ _ = Common.tfStartReqToOrder req
-tfOrder (DStatus.RideCompletedReq req) bppConfig merchant = Common.tfCompleteReqToOrder req bppConfig merchant
-tfOrder (DStatus.BookingCancelledReq req) _ _ = Common.tfCancelReqToOrder req
-tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) _ _ = do
+tfOrder (DStatus.RideAssignedReq req) = Common.tfAssignedReqToOrder req
+tfOrder (DStatus.RideStartedReq req) = Common.tfStartReqToOrder req
+tfOrder (DStatus.RideCompletedReq req) = Common.tfCompleteReqToOrder req
+tfOrder (DStatus.BookingCancelledReq req) = Common.tfCancelReqToOrder req
+tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) = do
   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
   let Common.BookingDetails {driver, vehicle, booking, ride, isValueAddNP} = bookingDetails
   let image = Nothing
