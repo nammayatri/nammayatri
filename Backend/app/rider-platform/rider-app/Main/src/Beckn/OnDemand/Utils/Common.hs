@@ -87,8 +87,11 @@ mkStops origin stops startTime =
 
 mkAddress :: DLoc.LocationAddress -> Text
 mkAddress DLoc.LocationAddress {..} =
-  let res = map (Just . fromMaybe "") [door, building, street, area, city, state, country]
-   in T.intercalate "<>" $ catMaybes res
+  let res = map replaceEmpty [door, building, street, area, city, state, country]
+   in T.intercalate ", " $ catMaybes res
+
+replaceEmpty :: Maybe Text -> Maybe Text
+replaceEmpty string = if string == Just "" then Nothing else string
 
 mkPaymentTags :: Maybe [Spec.TagGroup]
 mkPaymentTags =
