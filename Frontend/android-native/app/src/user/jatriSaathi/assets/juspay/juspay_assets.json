@@ -450,7 +450,6 @@
       "ny_ic_user" : true,
       "ny_ic_vehicle_details" : true,
       "ny_ic_vehicle_nav_on_map" : true,
-      "ny_ic_vehicle_unfilled_black" : true,
       "ny_ic_vertical_line" : true,
       "ny_ic_video" : true,
       "ny_ic_videography" : true,

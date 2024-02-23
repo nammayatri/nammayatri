@@ -927,7 +927,6 @@ data Action = NoAction
             | LocationTagBarAC LocationTagBarV2Controller.Action
             | UpdateSheetState BottomSheetState
             | RentalBannerAction Banner.Action
-            | BottomNavBarAction1 BottomNavBarIcon
             | BannerCarousel BannerCarousel.Action
             | SetBannerItem ListItem
             | UpdateBanner
@@ -2738,13 +2737,6 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
     _ -> continue state
   
 eval (RentalBannerAction Banner.OnClick) state = exit $ GoToScheduledRides
-
-eval (BottomNavBarAction1 id) state = do 
-  let newState = state {props {focussedBottomIcon = id}}
-  case id of 
-    TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
-    MOBILITY -> continue newState 
-    _ -> continue state 
     
 eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
   void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_i_feel_safe"

@@ -456,48 +456,6 @@ view push state =
   where
     showSafetyAlertPopup = Arr.notElem (getValueToLocalNativeStore SAFETY_ALERT_TYPE) ["__failed", "false", "(null)"]
 
--- bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
--- bottomNavBarView push state = let 
---   viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen 
---   in
---   linearLayout
---     [ height MATCH_PARENT
---     , width MATCH_PARENT
---     , background Color.transparent
---     , alignParentBottom "true,-1"
---     , visibility viewVisibility
---     , gravity BOTTOM
---     , orientation VERTICAL
---     ][  separator (V 1) Color.grey900 state.props.currentStage
---       , linearLayout
---           [ height WRAP_CONTENT
---           , width MATCH_PARENT
---           , background Color.white900
---           , padding $ PaddingVertical 10 10
---           ](map (\item -> 
---               linearLayout
---               [ height WRAP_CONTENT
---               , weight 1.0 
---               , gravity CENTER 
---               , onClick push $ const $ BottomNavBarAction1 item.id
---               , orientation VERTICAL
---               , alpha if (state.props.focussedBottomIcon == item.id) then 1.0 else 0.5
---               ][  imageView
---                     [ height $ V 24 
---                     , width $ V 24 
---                     , imageWithFallback $ fetchImage FF_ASSET $ item.image
---                     ]
---                 , textView $
---                     [ text item.text 
---                     , height WRAP_CONTENT
---                     , width WRAP_CONTENT
---                     , color $ Color.black800
---                     ] <> FontStyle.body9 TypoGraphy
-
---               ]
---             ) ([  {text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}
---                 , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
---     ]
 getMapHeight :: HomeScreenState -> Length
 getMapHeight state = V (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then (((screenHeight unit)/ 4)*3) 
                             else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then ((screenHeight unit) - (getInfoCardPeekHeight state)) + 50

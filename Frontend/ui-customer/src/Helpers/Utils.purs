@@ -771,19 +771,15 @@ getDefaultPixelSize size =
 getBottomNavBarConfig :: String -> BottomNavBarState
 getBottomNavBarConfig screenName =
   let navdata = [
-        {
-          -- activeIcon: fetchImage FF_ASSET "ny_ic_home_active",
-          activeIcon: "",
+        { activeIcon: "",
           defaultIcon: fetchImage FF_ASSET "ny_ic_car_unfilled",
           text: "Mobility",
           showNewBanner : false,
           isVisible : true,
           screenName : ScreenNames.getScreen ScreenNames.HOME_SCREEN
         },
-        {
-          -- activeIcon: fetchImage FF_ASSET "ny_ic_earnings_active",
-          activeIcon: "",
-          defaultIcon: fetchImage FF_ASSET "ny_ic_tabler_icon_ticket",
+        { activeIcon: "",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_ticket_black",
           text: "Ticketing",
           isVisible : true,
           showNewBanner : false,
