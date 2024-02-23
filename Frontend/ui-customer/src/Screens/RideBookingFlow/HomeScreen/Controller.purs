@@ -944,6 +944,7 @@ data Action = NoAction
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
             | PopUpModalReferralAction PopUpModal.Action
+            | BannerCarousal BannerCarousel.Action
             | UpdateBookingDetails RideBookingRes
             | ShowEndOTP
             | RentalInfoAction PopUpModal.Action
@@ -2770,7 +2771,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
                         _ -> RideAccepted
                     , bookingId = response.id
                     }, data { 
-                      driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)}}
+                      driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE)}}
   continue newState
   
 eval ShowEndOTP state = continue state { props { showEndOTP = true } }
@@ -3217,30 +3218,6 @@ getPeekHeight state =
 
 logChatSuggestion :: HomeScreenState -> String -> Unit
 logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
-
-          
-getBannerConfigs :: HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
-getBannerConfigs state = 
-  (if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
-    then [sosSetupBannerConfig state BannerCarousal] 
-    else [])
-  <>
-  (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
-    then [disabilityBannerConfig state BannerCarousal] 
-    else [])
-  <> (getRemoteBannerConfigs state.props.city)
-  where
-    getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
-    getRemoteBannerConfigs city = do
-      let location = STR.toLower $ show city
-          language = getLanguage $ getLanguageLocale languageKey
-          configName = "customer_carousel_banner" <> language
-          datas = RC.carouselConfigData location configName
-      BannerCarousel.remoteConfigTransformer datas BannerCarousal
-    getLanguage :: String -> String
-    getLanguage lang = 
-      let language = STR.toLower $ STR.take 2 lang
-      in if not (STR.null language) then "_" <> language else "_en"
 
 
 openDateTimePicker :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState

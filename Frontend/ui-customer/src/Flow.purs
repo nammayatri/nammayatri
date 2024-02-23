@@ -603,7 +603,7 @@ homeScreenFlow = do
     ADD_STOP state -> do 
       let _ = spy "ADD_STOP" state
       (GlobalState globalState) <- getState
-      let updatedState = {lat : Just state.data.driverInfoCardState.sourceLat , lon : Just state.data.driverInfoCardState.sourceLng , city : state.props.city, addressComponents : encodeAddress state.data.driverInfoCardState.source [] Nothing , placeId : Nothing , address : state.data.driverInfoCardState.source} 
+      let updatedState = {lat : Just state.data.driverInfoCardState.sourceLat , lon : Just state.data.driverInfoCardState.sourceLng , city : state.props.city, addressComponents : encodeAddress state.data.driverInfoCardState.source [] Nothing state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng , placeId : Nothing , address : state.data.driverInfoCardState.source, metroInfo : Nothing, stationCode : ""} 
       modifyScreenState 
         $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData{ props{focussedTextField = Just SearchLocDrop, areBothLocMandatory = false, searchLocStage = PredictionsStage, actionType = AddingStopAction}
                                                               , data {locationList = globalState.globalProps.cachedSearches, fromScreen = (Screen.getScreen Screen.HOME_SCREEN), srcLoc = Just updatedState }})
@@ -3785,7 +3785,7 @@ searchLocationFlow = do
         let bookingId = globalState.homeScreen.props.bookingId 
             isEdit = globalState.homeScreen.data.driverInfoCardState.destination /= ""
             destLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.destLoc
-            stopLocation = encodeAddress destLoc.address [] Nothing
+            stopLocation = encodeAddress destLoc.address [] Nothing (fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon))
         let req = Remote.makeStopReq  (fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon)) stopLocation
         response <- lift $ lift $ Remote.addOrEditStop bookingId req isEdit
         void $ (setValueToLocalStore TRACKING_DRIVER) "False"
@@ -3805,7 +3805,7 @@ searchLocationFlow = do
         let bookingId = globalState.rideScheduledScreen.data.bookingId 
             isEdit = isJust globalState.rideScheduledScreen.data.destination 
             destLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.destLoc
-            stopLocation = encodeAddress destLoc.address [] Nothing
+            stopLocation = encodeAddress destLoc.address [] Nothing (fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon))
         let req = Remote.makeStopReq  (fromMaybe 0.0 (destLoc.lat)) (fromMaybe 0.0 (destLoc.lon)) stopLocation
         response <- lift $ lift $ Remote.addOrEditStop bookingId req isEdit
         case response of 
@@ -4393,7 +4393,7 @@ rentalScreenFlow = do
         let currentTime = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 60 -- TODO-codex :: Delay, need to check if this is the correct way
             isTimeAheadOfCurrent = unsafePerformEffect $ runEffectFn2 compareDate (state.data.startTimeUTC) currentTime
             newState = if state.data.startTimeUTC == "" || not isTimeAheadOfCurrent then state {data {startTimeUTC = currentTime}} else state
-        (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat) (fromMaybe 0.0 newState.data.pickUpLoc.lon) (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) (encodeAddress address.formattedAddress [] Nothing) (encodeAddress destAddress.formattedAddress [] Nothing) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
+        (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat) (fromMaybe 0.0 newState.data.pickUpLoc.lon) (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) (encodeAddress address.formattedAddress [] Nothing (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon))  (encodeAddress destAddress.formattedAddress [] Nothing (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon)) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
         -- (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat)  (fromMaybe 0.0 newState.data.pickUpLoc.lon) 0.0 0.0 (encodeAddress address.formattedAddress [] Nothing) (encodeAddress destAddress.formattedAddress [] Nothing) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
         modifyScreenState $ RentalScreenStateType (\rentalScreen -> state{data{searchId = rideSearchRes.searchId, currentStage = RENTAL_SELECT_VARIANT}})
         (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ ->do 
@@ -4456,8 +4456,8 @@ rentalScreenFlow = do
           if isNow then do 
             void $ liftFlowBT $ setFlowStatusData (FlowStatusData { source : {lat : pickUpLocLat, lng : pickUpLocLon, place : source, address : Nothing, city : getCityCodeFromCity updatedState.data.pickUpLoc.city }
                                                       , destination : {lat : dropLocLat , lng : dropLocLon , place : dest , address : Nothing, city : Nothing}
-                                                      , sourceAddress : encodeAddress source [] Nothing
-                                                      , destinationAddress : encodeAddress dest [] Nothing})
+                                                      , sourceAddress : encodeAddress source [] Nothing pickUpLocLat pickUpLocLon
+                                                      , destinationAddress : encodeAddress dest [] Nothing dropLocLat dropLocLon})
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
                 props{ sourceLat = pickUpLocLat
                      , sourceLong = pickUpLocLon
@@ -4468,8 +4468,8 @@ rentalScreenFlow = do
                      , city = updatedState.data.pickUpLoc.city}
                 , data { source = source
                        , destination = dest
-                       , sourceAddress = encodeAddress source [] Nothing
-                       , destinationAddress = encodeAddress dest [] Nothing }
+                       , sourceAddress = encodeAddress source [] Nothing pickUpLocLat pickUpLocLon
+                       , destinationAddress = encodeAddress dest [] Nothing dropLocLat dropLocLon}
                 })
             
             enterRentalRideSearchFlow resp.bookingId
@@ -4533,9 +4533,9 @@ fetchSrcAndDestLoc state = do
   PlaceName destPlaceName <- getPlaceName state.props.destinationLat state.props.destinationLong HomeScreenData.dummyLocation
   let address = srcPlaceName.formattedAddress
       destAddress = destPlaceName.formattedAddress
-  let currentLoc = {lat : Just state.props.currentLocation.lat, lon : Just state.props.currentLocation.lng , city : state.props.city, addressComponents : encodeAddress "" [] Nothing , placeId : Nothing , address : ""}
-      sourceLoc = {lat : Just state.props.sourceLat, lon : Just state.props.sourceLong , city : state.props.city, addressComponents : encodeAddress address [] Nothing , placeId : Nothing , address : address} 
-      destLoc = if state.props.destinationLat /= 0.0 then Just {lat : Just state.props.destinationLat, lon : Just state.props.destinationLong , city : state.props.city, addressComponents : encodeAddress destAddress [] Nothing , placeId : Nothing , address : destAddress} else Nothing
+  let currentLoc = {lat : Just state.props.currentLocation.lat, lon : Just state.props.currentLocation.lng , city : state.props.city, addressComponents : encodeAddress "" [] Nothing state.props.currentLocation.lat state.props.currentLocation.lng, placeId : Nothing , address : "", metroInfo : Nothing, stationCode : ""}
+      sourceLoc = {lat : Just state.props.sourceLat, lon : Just state.props.sourceLong , city : state.props.city, addressComponents : encodeAddress address [] Nothing state.props.sourceLat state.props.sourceLong, placeId : Nothing , address : address, metroInfo : Nothing, stationCode : ""} 
+      destLoc = if state.props.destinationLat /= 0.0 then Just {lat : Just state.props.destinationLat, lon : Just state.props.destinationLong , city : state.props.city, addressComponents : encodeAddress destAddress [] Nothing  state.props.destinationLat  state.props.destinationLong, placeId : Nothing , address : destAddress, metroInfo : Nothing, stationCode : ""} else Nothing
   pure $ {currentLoc, sourceLoc, destLoc, address , destAddress}
 
 

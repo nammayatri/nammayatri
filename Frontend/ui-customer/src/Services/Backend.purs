@@ -59,6 +59,7 @@ import MerchantConfig.Types (GeoCodeConfig)
 import Helpers.API (callApiBT)
 import Debug(spy)
 import Screens.Types (FareProductType(..)) as FPT
+import Services.API (ServiceabilityType(..)) as ServiceabilityType
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -806,15 +807,15 @@ makeSendIssueReq email bookingId reason description nightSafety = SendIssueReq {
     "nightSafety" : nightSafety
 }
 
-locServiceabilityBT :: ServiceabilityReq -> ServiceabilityType -> FlowBT String ServiceabilityRes
+locServiceabilityBT :: ServiceabilityReq -> ServiceabilityType.ServiceabilityType -> FlowBT String ServiceabilityRes
 locServiceabilityBT req serviceabilityType = do
     headers <- getHeaders' "" true
     withAPIResultBT (EP.locServiceability (getServiceabilityType serviceabilityType)) identity errorHandler (lift $ lift $ callAPI headers (ServiceabilityRequest (getServiceabilityType serviceabilityType) req))
     where
-    getServiceabilityType :: ServiceabilityType -> String
+    getServiceabilityType :: ServiceabilityType.ServiceabilityType -> String
     getServiceabilityType serviceabilityType = case serviceabilityType of
-        ORIGIN -> "origin"
-        DESTINATION -> "destination"
+        ServiceabilityType.ORIGIN -> "origin"
+        ServiceabilityType.DESTINATION -> "destination"
         _ -> "origin"
 
     errorHandler (errorPayload) =  do

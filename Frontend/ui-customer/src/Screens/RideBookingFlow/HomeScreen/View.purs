@@ -229,7 +229,7 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 1
                 else pure unit
                 push LoadMessages
-                if(not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= QUOTES) then do
+                if(not initialState.props.chatcallbackInitiated && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) then do
                   _ <- clearChatMessages
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- storeCallBackOpenChatScreen push OpenChatScreen
@@ -2720,7 +2720,7 @@ updateRecentTrips action push response = do
           handleResponse listResp
         Left _ -> liftFlow $ push $ action (RideBookingListRes {list : []} )
 
-driverLocationTracking :: (Action -> Effect Unit) -> (String -> Action) -> (String -> Action) -> (Int -> Int -> Action) -> Number -> String -> HomeScreenState -> String -> Int -> Flow GlobalState Unit
+driverLocationTracking :: (Action -> Effect Unit) -> (String -> RideBookingRes -> Action) -> (String -> Action) -> (Int -> Int -> Action) -> Number -> String -> HomeScreenState -> String -> Int -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
   (GlobalState gbState) <- getState
@@ -2826,15 +2826,15 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     getDuration factor counter = duration * (toNumber $ pow factor counter)
     handleRideBookingResp (RideBookingRes respBooking) = do
       let bookingStatus = respBooking.status
-      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.currentSearchResultType == QUOTES)}}}
+      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE)}}}
       case bookingStatus of
         "REALLOCATED" -> do
-            doAff do liftEffect $ push $ action bookingStatus
+            doAff do liftEffect $ push $ action bookingStatus ( RideBookingRes respBooking)
         _             -> do
             case (respBooking.rideList !! 0) of
               Just (RideAPIEntity res) -> do
                 let rideStatus = res.status
-                doAff do liftEffect $ push $ action rideStatus
+                doAff do liftEffect $ push $ action rideStatus ( RideBookingRes respBooking)
                 if (res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then 
                   doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime)
                 else pure unit

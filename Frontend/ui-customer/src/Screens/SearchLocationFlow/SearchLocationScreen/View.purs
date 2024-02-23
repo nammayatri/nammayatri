@@ -545,12 +545,12 @@ locateOnMapFooterView push state = let
         , background Color.grey900
         ][]
 
---     getDataBasedActionType :: SearchLocationActionType -> {imageUrl :: String, text :: String, action :: Action}
---     getDataBasedActionType actionType = 
---       case actionType of 
---         SearchLocationAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
---         AddingStopAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
---         MetroStationSelectionAction -> {imageUrl : "ny_ic_metro_map", text : "See Metro Map", action : MetroRouteMapAction}
+    getDataBasedActionType :: SearchLocationActionType -> {imageUrl :: String, text :: String, action :: Action}
+    getDataBasedActionType actionType = 
+      case actionType of 
+        SearchLocationAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
+        AddingStopAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
+        MetroStationSelectionAction -> {imageUrl : "ny_ic_metro_map", text : "See Metro Map", action : MetroRouteMapAction}
 
 
 -- searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w

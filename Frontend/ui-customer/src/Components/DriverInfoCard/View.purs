@@ -69,6 +69,7 @@ import Data.Function.Uncurried (runFn2)
 import Data.Int (floor, toNumber)
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
+import Data.String as STR
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -260,9 +261,9 @@ otpAndWaitView push state =
         , otpView push state
         ]
       , trackRideView push state
-     ] <> if (state.props.currentSearchResultType == QUOTES || state.data.driverArrived) then 
+     ] <> if (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.data.driverArrived) then 
            [(PrestoAnim.animationSet [ fadeIn true ] $ 
-           let isQuotes = state.props.currentSearchResultType == QUOTES
+           let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
            in
            linearLayout
            [ width WRAP_CONTENT
@@ -357,7 +358,7 @@ waitTimeView push state =
   ]
 
 waitTimeHint :: DriverInfoCardState -> String
-waitTimeHint state = (if state.props.currentSearchResultType == QUOTES then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
+waitTimeHint state = (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
                         [minutes, seconds] -> do 
                           let min = STR.trim $ minutes
                           let sec = STR.trim $ seconds
@@ -371,7 +372,7 @@ colorForWaitTime state =
   case waitTime of
     [minutes, _] -> 
       let mins = fromMaybe 0 (fromString (STR.trim minutes))
-          threshold = if state.props.currentSearchResultType == QUOTES then mins < 5 else mins > 2
+          threshold = if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then mins < 5 else mins > 2
       in
       if threshold then Color.carnation100 else Color.grey700 
     _ -> Color.grey700
@@ -404,7 +405,7 @@ otpView push state =
         , padding $ Padding 8 4 8 6
         ] <> FontStyle.body22 TypoGraphy
       ]
-  , if state.props.currentSearchResultType == QUOTES then shineAnimation shimmerHeight shimmerWidth else dummyView push
+  , if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then shineAnimation shimmerHeight shimmerWidth else dummyView push
   ]
 
 trackRideView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w

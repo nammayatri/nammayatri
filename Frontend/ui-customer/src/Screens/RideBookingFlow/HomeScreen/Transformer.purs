@@ -48,7 +48,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))

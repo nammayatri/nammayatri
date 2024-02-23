@@ -168,8 +168,6 @@ mockDriverInfo =
   { otp: ""
   , driverName: "Test Driver"
   , eta: Nothing
-  , vehicleDetails: "AUTO_RICKSHAW"
-  , currentSearchResultType: ESTIMATES
   , vehicleDetails: ""
   , registrationNumber: "XXXXXXXXXX"
   , rating: 5.0

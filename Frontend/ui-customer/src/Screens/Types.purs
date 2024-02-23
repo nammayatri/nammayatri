@@ -2331,7 +2331,7 @@ derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStag
 instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
 instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
 
-data TicketType = ONE_WAY | ROUND_TRIP
+data TicketType = ONE_WAY_TRIP | ROUND_TRIP
 
 derive instance genericTicketType :: Generic TicketType _
 instance eqTicketType :: Eq TicketType where eq = genericEq
