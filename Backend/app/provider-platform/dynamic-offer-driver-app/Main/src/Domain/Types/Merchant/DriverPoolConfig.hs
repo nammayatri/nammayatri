@@ -17,11 +17,11 @@ module Domain.Types.Merchant.DriverPoolConfig where
 -- import Data.Time (UTCTime)
 
 import Data.Aeson
-import Data.Aeson.Key as DAK
+-- import Data.Aeson.Key as DAK
 -- import Data.Time.Clock.POSIX
 
-import qualified Data.Aeson.KeyMap as KM
-import Data.Aeson.Types
+-- import qualified Data.Aeson.KeyMap as KM
+-- import Data.Aeson.Types
 import Data.Text as Text
 import Data.Time.Clock
 import Domain.Types.Common
@@ -63,38 +63,35 @@ data DriverPoolConfigD u = DriverPoolConfig
   }
   deriving (Generic, Show)
 
-data ShyValue a = ShyValue
-  { shyValue :: Value
-  }
+-- data ShyValue a = ShyValue
+--   { shyValue :: Value
+--   }
 
 type DriverPoolConfig = DriverPoolConfigD 'Safe
 
-class FromJSONShy a where
-  fromJSONShy :: FromJSON a => ShyValue a -> a
+-- class FromJSONShy a where
+--   fromJSONShy :: FromJSON a => ShyValue a -> Result a
 
-instance FromJSONShy DriverPoolConfig where
-  fromJSONShy ShyValue {..} =
-    case shyValue of
-      Object obj -> do
-        let newObject = KM.mapKeyVal (\key -> DAK.fromText (Text.replace "driverPoolConfig:" "" $ Text.pack $ show key)) (\val -> val) obj
-            finalNewObject =
-              KM.mapWithKey
-                ( \key val -> do
-                    if show key == ("distanceBasedBatchSplit" :: String)
-                      then do
-                        let distanceBasedBatchSplit :: [BatchSplitByPickupDistance] =
-                              case val of
-                                String str -> readWithInfo $ Text.unpack str
-                                _ -> error "Naughty boy this should have been string."
-                        toJSON distanceBasedBatchSplit
-                      else val
-                )
-                newObject
-        let res = fromJSON . toJSON $ finalNewObject
-        case res of
-          Success res' -> res'
-          Error _ -> error "Couldn't parse bhai, maybe you are gay"
-      _ -> error "This looks wrong bro"
+-- instance FromJSONShy DriverPoolConfig where
+--   fromJSONShy ShyValue {..} =
+--     case shyValue of
+--       Object obj -> do
+--         let newObject = KM.mapKeyVal (\key -> DAK.fromText (Text.replace "driverPoolConfig:" "" $ DAK.toText key)) (\val -> val) obj
+--             finalNewObject =
+--               KM.mapWithKey
+--                 ( \key val -> do
+--                     if DAK.toText key == ("distanceBasedBatchSplit" )
+--                       then do
+--                         let distanceBasedBatchSplit :: [BatchSplitByPickupDistance] =
+--                               case val of
+--                                 String str -> readWithInfo $ Text.unpack str
+--                                 _ -> error "Naughty boy this should have been string."
+--                         toJSON distanceBasedBatchSplit
+--                       else val
+--                 )
+--                 newObject
+--         fromJSON . toJSON $ finalNewObject
+--       _ -> error "This looks wrong bro"
 
 -- instance FromJSON DriverPoolConfig where
 --   parseJSON (Object v) = do
@@ -125,38 +122,46 @@ instance FromJSONShy DriverPoolConfig where
 -- <*>  ( (v.: DAK.fromText (Text.pack "updatedAt")))
 -- <*> (v.: DAK.fromText (Text.pack "vehicleVariant")) -- Think about something
 --   parseJSON _ = mzero
+readWithInfo' :: (Read a, Show a) => Value -> a
+readWithInfo' s = case s of
+  String str -> readWithInfo $ Text.unpack str
+  Number scientific -> case KP.readMaybe (show scientific) of
+    Just val -> val
+    Nothing -> error . Text.pack $ "Failed to parse: " ++ show scientific
+  _ -> error $ "Not able to parse value" <> show s
+
 readWithInfo :: (Read a, Show a) => String -> a
 readWithInfo s = case KP.readEither s of
   Right val -> val
   Left err -> error . Text.pack $ "Failed to parse: " ++ s ++ " err: " ++ show err
 
-jsonToDriverPoolConfig :: Object -> (Parser DriverPoolConfig)
-jsonToDriverPoolConfig v =
-  DriverPoolConfig
-    <$> (Id <$> ((v .: DAK.fromText (Text.pack "driverPoolConfig:id"))))
-    <*> (Id <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:merchantId")))
-    <*> (Id <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:merchantOperatingCityId")))
-    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:minRadiusOfSearch")))
-    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxRadiusOfSearch")))
-    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:radiusStepSize")))
-    <*> ((Seconds <$>) <$> KP.readMaybe <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverPositionInfoExpiry")))
-    <*> ((Meters <$>) <$> KP.readMaybe <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:actualDistanceThreshold")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxDriverQuotesRequired")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverQuoteLimit")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverRequestCountLimit")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverBatchSize")))
-    <*> ((readWithInfo :: (String -> [BatchSplitByPickupDistance])) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:distanceBasedBatchSplit")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxNumberOfBatches")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxParallelSearchRequests")))
-    <*> ((readWithInfo :: (String -> PoolSortingType)) <$> v .: DAK.fromText (Text.pack "driverPoolConfig:poolSortingType"))
-    <*> (Seconds <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:singleBatchProcessTime")))
-    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:tripDistance")))
-    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:radiusShrinkValueForDriversOnRide")))
-    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverToDestinationDistanceThreshold")))
-    <*> (Seconds <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverToDestinationDuration")))
-    <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:createdAt")))
-    <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:updatedAt")))
-    <*> ((KP.readMaybe :: (String -> Maybe DVeh.Variant)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:vehicleVariant")))
+-- jsonToDriverPoolConfig :: Object -> (Parser DriverPoolConfig)
+-- jsonToDriverPoolConfig v =
+--   DriverPoolConfig
+--     <$> (Id <$> ((v .: DAK.fromText (Text.pack "driverPoolConfig:id"))))
+--     <*> (Id <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:merchantId")))
+--     <*> (Id <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:merchantOperatingCityId")))
+--     <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:minRadiusOfSearch")))
+--     <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxRadiusOfSearch")))
+--     <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:radiusStepSize")))
+--     <*> ((Seconds <$>) <$> KP.readMaybe <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverPositionInfoExpiry")))
+--     <*> ((Meters <$>) <$> KP.readMaybe <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:actualDistanceThreshold")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxDriverQuotesRequired")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverQuoteLimit")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverRequestCountLimit")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverBatchSize")))
+--     <*> ((readWithInfo :: (String -> [BatchSplitByPickupDistance])) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:distanceBasedBatchSplit")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxNumberOfBatches")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxParallelSearchRequests")))
+--     <*> ((readWithInfo :: (String -> PoolSortingType)) <$> v .: DAK.fromText (Text.pack "driverPoolConfig:poolSortingType"))
+--     <*> (Seconds <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:singleBatchProcessTime")))
+--     <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:tripDistance")))
+--     <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:radiusShrinkValueForDriversOnRide")))
+--     <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverToDestinationDistanceThreshold")))
+--     <*> (Seconds <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverToDestinationDuration")))
+--     <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:createdAt")))
+--     <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:updatedAt")))
+-- <*> ((KP.readMaybe :: (String -> Maybe DVeh.Variant)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:vehicleVariant")))
 
 instance FromJSON (DriverPoolConfigD 'Unsafe)
 

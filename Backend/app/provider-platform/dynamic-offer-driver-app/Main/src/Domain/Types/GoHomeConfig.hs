@@ -15,8 +15,8 @@
 module Domain.Types.GoHomeConfig where
 
 import Data.Aeson
-import Data.Aeson.Key as DAK
-import Data.Aeson.Types
+-- import Data.Aeson.Key as DAK
+-- import Data.Aeson.Types
 import Data.Text as Text
 import Data.Time (UTCTime)
 -- import Data.Time.Clock.POSIX
@@ -58,24 +58,24 @@ readWithInfo s = case KP.readMaybe s of
   Just val -> val
   Nothing -> error . Text.pack $ "Failed to parse: " ++ s
 
-jsonToGoHomeConfig :: Object -> (Parser GoHomeConfig)
-jsonToGoHomeConfig v =
-  GoHomeConfig
-    <$> (Id <$> (v .: DAK.fromText (Text.pack "goHomeConfig:merchantId")))
-    <*> (Id <$> (v .: DAK.fromText (Text.pack "goHomeConfig:merchantOperatingCityId")))
-    <*> ((readWithInfo :: (String -> Bool)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:enableGoHome")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:startCnt")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:destRadiusMeters")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:activeTime")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:updateHomeLocationAfterSec")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:cancellationCnt")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:numHomeLocations")))
-    <*> ((readWithInfo :: (String -> Meters)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:goHomeFromLocationRadius")))
-    <*> ((readWithInfo :: (String -> Meters)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:goHomeWayPointRadius")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:numDriversForDirCheck")))
-    <*> ((readWithInfo :: (String -> Seconds)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:goHomeBatchDelay")))
-    <*> ((readWithInfo :: (String -> Meters)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:ignoreWaypointsTill")))
-    <*> ((readWithInfo :: (String -> Meters)) <$> v .: DAK.fromText (Text.pack "goHomeConfig:addStartWaypointAt")) -- Think goHomeConfig:about something
-    <*> ((readWithInfo :: (String -> Meters)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:newLocAllowedRadius")))
-    <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:createdAt")))
-    <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:updatedAt")))
+-- jsonToGoHomeConfig :: Object -> (Parser GoHomeConfig)
+-- jsonToGoHomeConfig v =
+--   GoHomeConfig
+--     <$> (Id <$> (v .: DAK.fromText (Text.pack "goHomeConfig:merchantId")))
+--     <*> (Id <$> (v .: DAK.fromText (Text.pack "goHomeConfig:merchantOperatingCityId")))
+--     <*> ((readWithInfo :: (String -> Bool)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:enableGoHome")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:startCnt")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:destRadiusMeters")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:activeTime")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:updateHomeLocationAfterSec")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:cancellationCnt")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:numHomeLocations")))
+--     <*> ((readWithInfo :: (String -> Meters)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:goHomeFromLocationRadius")))
+--     <*> ((readWithInfo :: (String -> Meters)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:goHomeWayPointRadius")))
+--     <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:numDriversForDirCheck")))
+--     <*> ((readWithInfo :: (String -> Seconds)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:goHomeBatchDelay")))
+--     <*> ((readWithInfo :: (String -> Meters)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:ignoreWaypointsTill")))
+--     <*> ((readWithInfo :: (String -> Meters)) <$> v .: DAK.fromText (Text.pack "goHomeConfig:addStartWaypointAt")) -- Think goHomeConfig:about something
+--     <*> ((readWithInfo :: (String -> Meters)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:newLocAllowedRadius")))
+--     <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:createdAt")))
+--     <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "goHomeConfig:updatedAt")))
