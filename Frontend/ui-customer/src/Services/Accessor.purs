@@ -293,3 +293,6 @@ _isSafetyCenterDisabled = lens (unwrap >>> _.isSafetyCenterDisabled) (\oldRec ne
 
 _deepLinkJSON :: forall a b c. Newtype a { deepLinkJSON :: b | c } => Lens' a b
 _deepLinkJSON = lens (unwrap >>> _.deepLinkJSON) (\oldRec newVal -> wrap ((unwrap oldRec) { deepLinkJSON = newVal }))
+
+_stopLocation :: forall a b c. Newtype a { stopLocation :: b | c } => Lens' a b
+_stopLocation = lens (unwrap >>> _.stopLocation) (\oldRec newVal -> wrap ((unwrap oldRec) { stopLocation = newVal }))

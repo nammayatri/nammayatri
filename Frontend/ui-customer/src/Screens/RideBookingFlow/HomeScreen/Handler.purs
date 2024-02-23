@@ -28,10 +28,12 @@ import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..
 import Screens.Types (BottomNavBarIcon(..))
 import Screens.HomeScreen.Transformer(getTripDetailsState)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import Debug
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   (GlobalState state) <- getState
+  let _ = spy "Inside HomeScreen" "Handler"
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
   void $ lift $ lift $ toggleLoader false
   case act of
@@ -183,7 +185,9 @@ homeScreen = do
     ReAllocateRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REALLOCATE_RIDE updatedState)
-    GoToRentalsFlow -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RENTALS_FLOW)
+    GoToRentalsFlow updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RENTALS_FLOW updatedState)
     GoToScheduledRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_SCHEDULED_RIDES)
     Add_Stop updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
@@ -212,3 +216,14 @@ homeScreen = do
     GoToSafetyEducation updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_SAFETY_EDUCATION)
+    Go_To_Search_Location_Flow updatedState isSource-> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_SEARCH_LOCATION_SCREEN updatedState isSource)
+    RideSearchSO -> 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SEARCH_FLOW)
+    ConfirmRentalRideSO state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
+      App.BackT $ App.NoBack <$> (pure $ CONFIRM_RENTAL_RIDE)
+    StayInHomeScreenSO state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
+      App.BackT $ App.NoBack <$> (pure $ STAY_IN_HOME_SCREEN)

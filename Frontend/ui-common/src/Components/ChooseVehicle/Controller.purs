@@ -32,8 +32,9 @@ type Config
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
     , pickUpCharges :: Int 
-    , layoutMargin :: Margin
     , isSingleEstimate :: Boolean
+    , layoutMargin :: Margin 
+    , showStroke :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -66,4 +67,5 @@ config =
   , pickUpCharges : 0
   , layoutMargin : MarginHorizontal 12 12
   , isSingleEstimate : false
+  , showStroke : true
   }
