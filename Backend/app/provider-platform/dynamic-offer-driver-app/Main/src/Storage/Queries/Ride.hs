@@ -385,6 +385,9 @@ updateSafetyAlertTriggered rideId = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+roundToMidnightUTC :: UTCTime -> UTCTime
+roundToMidnightUTC (UTCTime day _) = UTCTime day 0
+
 findAllRideItems ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Merchant ->
@@ -414,10 +417,10 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ defaultFrom) mbFrom
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ defaultTo) mbTo
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTC defaultTo)) mbTo
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ (ride.fare - (B.just_ (B.floor_ booking.estimatedFare))) B.>. B.val_ (Just fareDiff_) B.||. (ride.fare - (B.just_ (B.floor_ booking.estimatedFare))) B.<. B.val_ (Just fareDiff_)) mbFareDiff
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fareDiff_ -> B.sqlBool_ $ (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.>. B.val_ (Just fareDiff_) B.||. (ride.fare - B.just_ (B.floor_ booking.estimatedFare)) B.<. B.val_ (Just fareDiff_)) mbFareDiff
               )
               do
                 booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
