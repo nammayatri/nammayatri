@@ -14,6 +14,7 @@
 
 module Beckn.ACL.OnSelect where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
@@ -56,7 +57,7 @@ mkOnSelectMessageV2 ::
   Spec.OnSelectReqMessage
 mkOnSelectMessageV2 isValueAddNP bppConfig merchant req@DOnSelectReq {..} = do
   let fulfillments = [mkFulfillmentV2 req driverQuote isValueAddNP]
-  let paymentV2 = mkPaymentV2 bppConfig merchant
+  let paymentV2 = mkPaymentV2 bppConfig merchant driverQuote
   Spec.OnSelectReqMessage $
     Just
       Spec.Order
@@ -64,7 +65,7 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant req@DOnSelectReq {..} = do
           orderItems = Just $ map (\fulf -> mkItemV2 fulf driverQuote transporterInfo isValueAddNP) fulfillments,
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           orderPayments = Just [paymentV2],
-          orderProvider = Nothing,
+          orderProvider = mkProvider bppConfig,
           orderBilling = Nothing,
           orderCancellation = Nothing,
           orderCancellationTerms = Nothing,
@@ -85,10 +86,11 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
       fulfillmentTags = Nothing
     }
 
-mkPaymentV2 :: DBC.BecknConfig -> DM.Merchant -> Spec.Payment
-mkPaymentV2 bppConfig merchant = do
+mkPaymentV2 :: DBC.BecknConfig -> DM.Merchant -> DQuote.DriverQuote -> Spec.Payment
+mkPaymentV2 bppConfig merchant driverQuote = do
+  let amount = fromIntegral (driverQuote.estimatedFare.getMoney)
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
-  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkVehicleV2 :: DQuote.DriverQuote -> Spec.Vehicle
 mkVehicleV2 quote =
@@ -159,14 +161,23 @@ mkItemV2 :: Spec.Fulfillment -> DQuote.DriverQuote -> TransporterInfo -> Bool ->
 mkItemV2 fulfillment quote provider isValueAddNP = do
   let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
   Spec.Item
-    { itemId = Just $ provider.merchantShortId.getShortId <> show quote.vehicleVariant,
+    { itemId = Just $ Common.mkItemId provider.merchantShortId.getShortId quote.vehicleVariant,
       itemFulfillmentIds = Just [fulfillmentId],
       itemPrice = Just $ mkPriceV2 quote,
       itemTags = Just . L.singleton =<< mkItemTagsV2 quote isValueAddNP,
-      itemDescriptor = Nothing,
+      itemDescriptor = mkItemDescriptor quote,
       itemLocationIds = Nothing,
       itemPaymentIds = Nothing
     }
+
+mkItemDescriptor :: DQuote.DriverQuote -> Maybe Spec.Descriptor
+mkItemDescriptor res =
+  Just
+    Spec.Descriptor
+      { descriptorCode = Just "RIDE",
+        descriptorShortDesc = Just $ show res.vehicleVariant,
+        descriptorName = Just $ show res.vehicleVariant
+      }
 
 mkPriceV2 :: DQuote.DriverQuote -> Spec.Price
 mkPriceV2 quote =
@@ -266,4 +277,16 @@ mkQuotationPrice quote =
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ encodeToText quote.estimatedFare,
         priceValue = Just $ encodeToText quote.estimatedFare
+      }
+
+mkProvider :: DBC.BecknConfig -> Maybe Spec.Provider
+mkProvider becknConfig = do
+  return $
+    Spec.Provider
+      { providerDescriptor = Nothing,
+        providerFulfillments = Nothing,
+        providerId = Just $ becknConfig.subscriberId,
+        providerItems = Nothing,
+        providerLocations = Nothing,
+        providerPayments = Nothing
       }
