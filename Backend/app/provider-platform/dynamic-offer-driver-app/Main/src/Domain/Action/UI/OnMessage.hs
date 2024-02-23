@@ -44,9 +44,9 @@ data FCMReq = FCMReq
 sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasField "isBecknSpecVersion2" r Bool, HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FCMReq -> m APISuccess.APISuccess
 sendMessageFCM (_personId, _, _) FCMReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "Cannot send message during this stage of ride"
   BP.sendNewMessageToBAP booking ride message
   pure APISuccess.Success
   where
-    isValidRideStatus status = status == Ride.NEW
+    isValidRideStatus status = status `elem` [Ride.NEW, Ride.INPROGRESS]
