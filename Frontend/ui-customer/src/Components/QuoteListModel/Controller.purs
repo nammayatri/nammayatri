@@ -50,4 +50,5 @@ type QuoteListModelState = {
   , city :: City
   , customerTipArray :: Array String
   , customerTipArrayWithValues :: Array Int
+  , isRentalSearch :: Boolean
 }

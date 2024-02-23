@@ -126,7 +126,7 @@ addTipView push state =
   , gravity CENTER
   , clickable true
   , onClick push $ const $ if state.tipViewProps.stage == DEFAULT then AddTip else NoAction 
-  , visibility $ boolToVisibility state.enableTips
+  , visibility $ boolToVisibility (state.enableTips && not state.intercity)
   ] $ (case state.tipViewProps.stage of 
           DEFAULT -> [defaultTipView push state]
           TIP_AMOUNT_SELECTED -> [selectTipView push state]
@@ -427,7 +427,7 @@ chooseYourRideView push config isSingleEstimate =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , background tagConfig.backgroundColor
+      , background Color.white900
       , cornerRadii $ Corners 24.0 true true false false
       ][linearLayout
         [ width MATCH_PARENT
@@ -479,7 +479,9 @@ chooseYourRideView push config isSingleEstimate =
             , id $ EHC.getNewIDWithTag "rideEstimateHeaderLayout"
             ][ textView (
                 [ text 
-                    if length config.quoteList > 1 
+                    if config.intercity
+                    then (getString INTERCITY_OPTIONS)
+                    else if length config.quoteList > 1 
                     then (getString CHOOSE_YOUR_RIDE)
                     else (getString CONFIRM_YOUR_RIDE)
                 , color Color.black800

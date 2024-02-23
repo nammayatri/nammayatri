@@ -128,7 +128,6 @@ foreign import secondsToHms :: Int -> String
 foreign import getTime :: Unit -> Int
 
 foreign import drawPolygon :: String -> String -> Effect Unit
-foreign import getDifferenceBetweenDates :: Fn2 String String Int
 
 foreign import removeLabelFromMarker :: EffectFn1 Number Unit
 -- foreign import generateSessionToken :: String -> String
@@ -491,11 +490,13 @@ getDistanceString distanceInMeters decimalPoint
   | distanceInMeters >= 1000 = ReExport.parseFloat (toNumber distanceInMeters / 1000.0) decimalPoint <> " km"
   | otherwise = show distanceInMeters <> " m"
 
+-- threshold is in kms 
 updateLocListWithDistance :: Array LocationListItemState -> Number -> Number -> Boolean -> Number -> Array LocationListItemState 
-updateLocListWithDistance arr currLat currLon useThreshold threshold =   
+updateLocListWithDistance arr currLat currLon useThreshold threshold =  
   arr
   # map updateItemDistance
   # filter withinThreshold
+  # sortByActualDistance
 
   where
     updateItemDistance item = 
@@ -506,6 +507,8 @@ updateLocListWithDistance arr currLat currLon useThreshold threshold =
 
     withinThreshold item = 
       maybe true (\actualDist -> (actualDist <= round (threshold * 1000.0) && useThreshold) || not useThreshold) item.actualDistance
+
+    sortByActualDistance = sortBy (comparing (\item -> item.actualDistance))
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
@@ -605,6 +608,11 @@ getScreenFromStage stage = case stage of
   TryAgain -> "finding_rides_screen"
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
   LoadMap -> "map_loader"
+  RideSearch -> "ride_search"
+  ConfirmRentalRide -> "confirm_rental_ride"
+  ChangeToRideAccepted -> "change_to_ride_accepted"
+  ChangeToRideStarted -> "change_to_ride_started"
+  ConfirmingQuotes -> "confirming_quotes"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do
@@ -964,3 +972,31 @@ getImageBasedOnCity image =
   if city == AnyCity 
     then fetchImage FF_ASSET image
     else fetchImage FF_ASSET $ image <> "_" <> DS.toLower cityStr
+
+getVariantDescription :: String -> { text :: String, airConditioned :: Boolean}
+getVariantDescription variant = 
+  case variant of
+    "AUTO_RICKSHAW" -> { text : "Commute friendly", airConditioned : false}
+    "TAXI" ->{text : "Non-AC Taxi" , airConditioned : false}
+    "TAXI_PLUS" ->{text : "AC Taxi" , airConditioned : false}
+    "SEDAN" ->{text : "AC, Plush rides" , airConditioned : true}
+    "SUV" ->{text : "AC , Spacious rides" , airConditioned : true}
+    "HATCHBACK" ->{text : "Non-AC , Budget rides " , airConditioned : false}
+    _ ->{text : "Non-AC Taxi" , airConditioned : false}
+
+
+getVehicleName :: String -> String
+getVehicleName vaiant = 
+  case (getMerchant FunctionCall) of
+    YATRISATHI -> case vaiant of
+                    "TAXI" -> "Non AC Taxi"
+                    "SUV"  -> "AC SUV"
+                    _      -> "AC Cab"
+    _          -> case vaiant of
+                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
+                    "TAXI" -> "Non-AC Taxi"
+                    "TAXI_PLUS" -> "AC Taxi"
+                    "SEDAN" -> "Comfy" 
+                    "SUV" -> "SUV"
+                    "HATCHBACK" -> "Eco" 
+                    _ -> "Non-AC Taxi"

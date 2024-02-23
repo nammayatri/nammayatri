@@ -404,3 +404,10 @@ getFlexBoxCompatibleVersion _ =
         YATRISATHI -> "0.1.7"
         YATRI -> "2.2.2"
         _ -> "0.0.0"
+        
+formatMinIntoHoursMins :: Int -> String
+formatMinIntoHoursMins mins = 
+  let 
+    hours = mins / 60
+    minutes = mins `mod` 60
+  in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> "hr"

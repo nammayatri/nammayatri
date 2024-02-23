@@ -81,7 +81,8 @@ type Config = {
     topTextVisibility :: Boolean,
     isTipEnabled :: Boolean,
     isVisible :: Boolean,
-    isTipPopup :: Boolean
+    isTipPopup :: Boolean,
+    dontShowRetry :: Boolean
 }
 
 type CoverMediaConfig = {
@@ -190,6 +191,7 @@ type TopTitle = {
 config :: Config
 config = {
   optionButtonOrientation: "HORIZONTAL"
+  , dontShowRetry : false
   , activeIndex : 1
   , customerTipAvailable : false
   , backgroundClickable : true

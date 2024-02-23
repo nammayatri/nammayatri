@@ -67,6 +67,7 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Events as Events
@@ -74,7 +75,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getCityConfig, getVehicleVariantImage, getImageBasedOnCity)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition, differenceBetweenTwoUTC)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -89,10 +90,10 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight)
+import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight, findingQuotesSearchExpired)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts)
+import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
@@ -135,6 +136,8 @@ import Engineering.Helpers.BackTrack
 import Engineering.Helpers.Events as Events
 import Types.App
 import Mobility.Prelude
+import Effect.Unsafe (unsafePerformEffect)
+import Screens.Types (FareProductType(..)) as FPT
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -143,7 +146,7 @@ screen initialState =
   , name: "HomeScreen"
   , globalEvents:
       [ ( \push -> do
-            _ <- pure $ printLog "storeCallBackCustomer initially" "."
+            _ <- pure $ printLog "storeCallBackCustomer initially" "." 
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
@@ -183,7 +186,12 @@ screen initialState =
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
-              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
+              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation CheckFlowStatusAction 5 3000.0 push initialState
+              ConfirmingQuotes -> do
+                when ((getValueToLocalStore CONFIRM_QUOTES_POLLING) == "false") $ do
+                  void $ pure $ setValueToLocalStore CONFIRM_QUOTES_POLLING "true"
+                  let pollingCount = ceil ((toNumber $ findingQuotesSearchExpired false false)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT))) / 1000.0))
+                  void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation CheckFlowStatusAction pollingCount 3000.0 push initialState
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
@@ -198,6 +206,13 @@ screen initialState =
                 _ <- pure $ enableMyLocation true
                 _ <- pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
+                -- case initialState.data.rentalsInfo of
+                  -- Just rentalsInfo -> do
+                    -- when ((fromMaybe 180001 $ fromString (unsafePerformEffect $ compareUTCDate rentalsInfo.rideScheduledAtUTC (getCurrentUTC ""))) < 900) do
+                      -- let _ = spy "whenCase-codex" rentalsInfo.rideScheduledAtUTC
+                      -- _ <- pure $ updateLocalStage ConfirmingQuotes
+                      -- void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 15 3000.0 push initialState {props {bookingId = rentalsInfo.bookingId }}
+                  -- _ -> pure unit
               SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 let isRepeatRideEstimate = checkRecentRideVariant initialState
@@ -216,7 +231,7 @@ screen initialState =
                   void $ waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction
                 else 
                   when 
-                    (initialState.data.currentSearchResultType == QUOTES) $ do
+                    (initialState.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) $ do
                       let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
                       void $ startTimer secondsLeft "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
@@ -230,10 +245,20 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 1
                 else pure unit
                 push LoadMessages
-                when (not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= QUOTES) $ startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false
+                when (not initialState.props.chatcallbackInitiated && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) $ startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
-                _ <- pure $ enableMyLocation false
+                -- _ <- pure $ enableMyLocation false
+                --   _ <- clearChatMessages
+                --   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
+                --   _ <- storeCallBackOpenChatScreen push OpenChatScreen
+                --   _ <- startChatListenerService
+                --   _ <- pure $ scrollOnResume push ScrollToBottom
+                --   push InitializeChat
+                --   pure unit
+                -- else
+                --   pure unit
+                void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
@@ -241,10 +266,16 @@ screen initialState =
                   pure unit
                 else
                   pure unit
+                let isRental = initialState.data.fareProductType == FPT.RENTAL
                 case initialState.data.contactList of
-                  Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
-                  Just contacts -> validateAndStartChat contacts push initialState
+                  Nothing -> if (isRental && initialState.props.chatcallbackInitiated) then pure unit else void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
+                  Just contacts -> if (isRental && not initialState.props.chatcallbackInitiated) then startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false else  validateAndStartChat contacts push initialState
+                when (initialState.data.fareProductType /= FPT.RENTAL) $ do 
+                  void $ push RemoveChat
                 pure unit
+                if initialState.data.fareProductType == FPT.RENTAL then 
+                  void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ))/60) "1" "RideDurationTimer" push (RideDurationTimer)
+                  else pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
               ConfirmingLocation -> do
@@ -314,7 +345,7 @@ view push state =
         ) (const AfterRender)
     , accessibility DISABLE
     ]
-    [ linearLayout
+    [  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
@@ -443,9 +474,10 @@ view push state =
               else emptyTextView state
             , if state.props.currentStage == ChatWithDriver then messagingView push state else emptyTextView state
             , if state.props.currentStage /= RideRating && state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI) && state.props.currentStage == HomeScreen then (sourceUnserviceableView push state) else emptyTextView state
+            , if state.data.config.feature.enableZooTicketBookingFlow then bottomNavBarView push state else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
-            , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ]) then (quoteListModelView push state) else emptyTextView state
+            , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain, ConfirmingQuotes]) then (quoteListModelView push state) else emptyTextView state
             , if (state.props.isCancelRide) then (cancelRidePopUpView push state) else emptyTextView state
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
@@ -468,8 +500,11 @@ view push state =
             , if state.props.showBookingPreference then bookingPreferencesView push state else emptyTextView state
             , if isJust state.props.safetyAlertType && state.props.currentStage == RideStarted then safetyAlertPopup push state else  emptyTextView state
             , if state.props.showShareRide then PopupWithCheckbox.view (push <<< ShareRideAction) (shareRideConfig state) else emptyTextView state
+            , if state.props.showRentalInfo then rentalInfoPopUp push state else emptyTextView state
             , if state.props.referral.referralStatus /= NO_REFERRAL then referralPopUp push state else emptyTextView state 
             , if state.props.showSpecialZoneInfoPopup then specialZoneInfoPopup push state else emptyTextView state
+            , if state.props.showIntercityUnserviceablePopUp || state.props.showNormalRideNotSchedulablePopUp then intercityInSpecialZonePopupView push state else emptyTextView state
+            , if state.props.zoneOtpExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -478,7 +513,6 @@ view push state =
                     , clickable $ not DS.null state.props.repeatRideTimerId 
                     ][]
               else emptyTextView state
-            -- , bottomNavBarView push state -- TODO :: Mercy need once rentals is introduced
             ]  <> if state.props.showEducationalCarousel then 
                     [ linearLayout
                       [ height MATCH_PARENT
@@ -507,8 +541,8 @@ bottomNavBarView push state = let
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
+          , padding $ PaddingVertical 10 (10+safeMarginBottom)
           , background Color.white900
-          , padding $ PaddingVertical 10 10
           ](map (\item -> 
               linearLayout
               [ height WRAP_CONTENT
@@ -534,7 +568,7 @@ bottomNavBarView push state = let
                 , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
     ]
 getMapHeight :: HomeScreenState -> Length
-getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) 
+getMapHeight state = V (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then (((screenHeight unit)/ 4)*3) 
                             else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then ((screenHeight unit) - (getInfoCardPeekHeight state)) + 50
                             else (((screenHeight unit)/ 15)*10))
 
@@ -584,7 +618,8 @@ cancelSearchPopUp push state =
 
 messageWidgetView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messageWidgetView push state = 
-  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
+  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled ) && state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
+
   in 
   linearLayout
   [ height MATCH_PARENT
@@ -616,7 +651,7 @@ messageWidgetView push state =
      ]
   ]
   where disableSuggestions :: HomeScreenState -> Boolean
-        disableSuggestions state = state.data.currentSearchResultType == QUOTES || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
+        disableSuggestions state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
 
 messagingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messagingView push state = 
@@ -1091,7 +1126,8 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   , cornerRadii $ Corners (4.0) true true false false
   ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
     , shimmerView state
-    , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
+    , additionalServicesView push state
+    , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
     , suggestionsView push state
     , emptySuggestionsBanner state push
     ]
@@ -1142,6 +1178,14 @@ emptySuggestionsBanner state push =
         , color Color.black700
         ] <> (FontStyle.body1 LanguageStyle)
      ]
+    where 
+      getHomeScreenIllustration :: HomeScreenState -> String
+      getHomeScreenIllustration state = let 
+        cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+        in (if state.data.config.autoVariantEnabled && cityConfig.enableCabs then "ny_ic_home_illustration_auto_cab"
+          else if state.data.config.autoVariantEnabled then "ny_ic_home_illustration_auto"
+          else if cityConfig.enableCabs then "ny_ic_home_illustration_cab"
+          else "ny_ic_home_illustration_auto")
 
 savedLocationsView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 savedLocationsView state push =
@@ -1149,6 +1193,7 @@ savedLocationsView state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , clickable state.props.isSrcServiceable
+    , visibility $ boolToVisibility $ not $ state.props.showShimmer
     , padding $ PaddingHorizontal 16 16
     ]
     [ linearLayout
@@ -2326,8 +2371,7 @@ searchLocationModelView push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background if state.props.isRideServiceable then Color.transparent else Color.white900
-    ]
-    [ SearchLocationModel.view (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
+    ][ SearchLocationModel.view (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
 
 ------------------------ quoteListModelView ---------------------------
 quoteListModelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2428,7 +2472,7 @@ getMessageNotificationViewConfig state =
     showChatNotification : state.props.showChatNotification
   , enableChatWidget : state.props.enableChatWidget
   , isNotificationExpanded :state.props.isNotificationExpanded
-  , currentSearchResultType : state.data.currentSearchResultType
+  , fareProductType : state.data.fareProductType
   , config : state.data.config
   , rideStarted : state.props.currentStage == RideStarted
   , lastMessage : state.data.lastMessage
@@ -2555,13 +2599,14 @@ waitTimeInfoPopUp push state =
   , accessibility DISABLE
   ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig state) ]
 
+
 lottieLoaderView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push =
   lottieAnimationView
     [ id (getNewIDWithTag "lottieLoader")
     , afterRender
         ( \action -> do
-            void $ pure $ startLottieProcess lottieAnimationConfig {speed = 1.5, rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/ny_ic_generic_loader.json", lottieId = (getNewIDWithTag "lottieLoader") }
+            void $ pure $ startLottieProcess lottieAnimationConfig {speed = 1.5, rawJson = state.data.config.estimateAndQuoteConfig.genericLoaderLottie, lottieId = (getNewIDWithTag "lottieLoader") }
             pure unit
         )
         (const LottieLoaderAction)
@@ -2617,7 +2662,7 @@ getQuotesPolling pollingId action retryAction count duration push state = do
       let gotQuote = (getValueToLocalStore GOT_ONE_QUOTE)
       let minimumPollingCount = fromMaybe 0 (fromString (getValueToLocalStore TEST_MINIMUM_POLLING_COUNT))
       let usableCount = if gotQuote == "TRUE" && count > minimumPollingCount then minimumPollingCount else count
-      if (spy "USABLECOUNT :- " usableCount > 0) then do
+      if  usableCount > 0 then do
         resp <- selectList (state.props.estimateId)
         _ <- pure $ printLog "caseId" (state.props.estimateId)
         case resp of
@@ -2665,7 +2710,7 @@ updateRecentTrips action push response = do
           handleResponse listResp
         Left _ -> liftFlow $ push $ action (RideBookingListRes {list : []} )
 
-driverLocationTracking :: (Action -> Effect Unit) -> (String -> Action) -> (String -> Action) -> (Int -> Int -> Action) -> Number -> String -> HomeScreenState -> String -> Int -> Flow GlobalState Unit
+driverLocationTracking :: (Action -> Effect Unit) -> (String -> RideBookingRes -> Action) -> (String -> Action) -> (Int -> Int -> Action) -> Number -> String -> HomeScreenState -> String -> Int -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
   (GlobalState gbState) <- getState
@@ -2685,7 +2730,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           Just resp -> do
             void $ liftFlow $ push $ UpdateBookingDetails resp
             handleRideBookingResp resp
-    if (state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES) && (isLocalStageOn RideAccepted) then do
+    if (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng zoomLevel "ZOOM"
@@ -2698,13 +2743,14 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
         response <- getDriverLocation rideId
         case response of
           Right (GetDriverLocationResp resp) -> do
+            -- (GlobalState currentState) <- getState Fget
             let
               srcLat = (resp ^. _lat)
               srcLon = (resp ^. _lon)
               dstLat = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
               dstLon = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
               trackingType = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then Remote.DRIVER_TRACKING else Remote.RIDE_TRACKING
-              markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType 
+              markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.fareProductType
               sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
               destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
               specialLocationTag =  if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then
@@ -2724,36 +2770,35 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
                     destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker }
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-                _ <- pure $ removeAllPolylines ""
-                _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+                
+                if (srcLat /= 0.0 && srcLon /= 0.0 && dstLat /= 0.0 && dstLon /= 0.0) then do 
+                  _ <- pure $ removeAllPolylines ""
+                  void $ liftFlow $ drawRoute [(walkCoordinate srcLat srcLon dstLat dstLon)] "DOT" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag (getNewIDWithTag "CustomerHomeScreen")
+                  else pure unit
                 void $ delay $ Milliseconds duration
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
-                case routeResponse of
-                  Right (GetRouteResp routeResp) -> do
-                    case ((routeResp) !! 0) of
-                      Just (Route routes) -> do
-                        _ <- pure $ removeAllPolylines ""
-                        let (Snapped routePoints) = routes.points
-                            newPoints = if length routePoints > 1 then
-                                          getExtendedPath (walkCoordinates routes.points)
-                                        else
-                                          walkCoordinate srcLat srcLon dstLat dstLon
-                            newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
-                            srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
-                            destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText routes.distance }
-                        void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
-                        _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
-                        void $ delay $ Milliseconds duration
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState expCounter
-                      Nothing -> do
-                        void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (expCounter + 1)
-                  Left _ -> do
-                    void $ delay $ Milliseconds $ getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
-                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState (expCounter + 1)
+                
+                {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) --state.data.driverInfoCardState.destinationLng
+                let rentalPoints = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then points else Nothing
+                    rentalRoute = route 
+                    rentalDistance = routeDistance
+                    rentalDuration = routeDuration
+                {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon
+                -- void $ pure $ removeAllPolylines ""
+                if (srcLat /= 0.0 && srcLon /= 0.0 && dstLat /= 0.0 && dstLon /= 0.0) then do 
+                  _ <- pure $ removeAllPolylines ""
+                  let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
+                      destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText (fromMaybe 0 routeDistance) }
+                  liftFlow $ drawRoute [(fromMaybe {points : []} points), (fromMaybe {points : []} rentalPoints)] "LineString" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag (getNewIDWithTag "CustomerHomeScreen")
+                  else pure unit
+                _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance
+                let duration' = if isJust route then duration else getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter
+                    expCounter' = if isJust route then expCounter else expCounter + 1
+                void $ delay $ Milliseconds duration'
+                driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = route, speed = (fromMaybe 0 routeDistance) / (fromMaybe 1 routeDuration) } } routeState expCounter'
+
               else do
                 case state.data.route of
                   Just (Route route) -> do
@@ -2764,7 +2809,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                                       specialLocationConfig "" sourceSpecialTagIcon true getPolylineAnimationConfig
                                                     else
                                                       specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
-                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
+                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel, pureScriptID = (getNewIDWithTag "CustomerHomeScreen")}
                           _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                           void $ delay $ Milliseconds duration
                           driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
@@ -2782,15 +2827,15 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     isSpecialPickupZone = state.props.currentStage == RideAccepted && state.props.zoneType.priorityTag == SPECIAL_PICKUP && isJust state.data.driverInfoCardState.sourceAddress.area && state.data.config.feature.enableSpecialPickup
     handleRideBookingResp (RideBookingRes respBooking) = do
       let bookingStatus = respBooking.status
-      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.currentSearchResultType == QUOTES)}}}
+      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE)}}}
       case bookingStatus of
         "REALLOCATED" -> do
-            doAff do liftEffect $ push $ action bookingStatus
+            doAff do liftEffect $ push $ action bookingStatus ( RideBookingRes respBooking)
         _             -> do
             case (respBooking.rideList !! 0) of
               Just (RideAPIEntity res) -> do
                 let rideStatus = res.status
-                doAff do liftEffect $ push $ action rideStatus
+                doAff do liftEffect $ push $ action rideStatus ( RideBookingRes respBooking)
                 if (res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then 
                   doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime)
                 else pure unit
@@ -2803,30 +2848,32 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
         metersToKm distance (state.props.currentStage == RideStarted)
 
 
-confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-confirmRide action count duration push state = do
-  if (count /= 0) && (isLocalStageOn ConfirmingRide) && (state.props.bookingId /= "")then do
+confirmRide :: forall action. (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+confirmRide action checkFlowStatusAction count duration push state = do
+  if (count /= 0) && (isLocalStageOn ConfirmingRide || isLocalStageOn ConfirmingQuotes) && (state.props.bookingId /= "")then do
     resp <- rideBooking (state.props.bookingId)
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
     case resp of
       Right response -> do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
-            fareProductType = (resp.bookingDetails) ^. _fareProductType
-            status = if fareProductType == "OneWaySpecialZoneAPIDetails" then "CONFIRMED" else "TRIP_ASSIGNED"
-            willRideListNull = if fareProductType == "OneWaySpecialZoneAPIDetails" then true else false
-        if  status == resp.status && (willRideListNull || not (null resp.rideList)) then do
-            doAff do liftEffect $ push $ action response
-            -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
-            pure unit
+            fareProductType = getFareProductType $ (resp.bookingDetails) ^. _fareProductType
+            isSpecialZoneRide = any ( _ == fareProductType ) [FPT.ONE_WAY_SPECIAL_ZONE]
+            status = if isSpecialZoneRide then "CONFIRMED" else "TRIP_ASSIGNED"
+        if status == resp.status && (isSpecialZoneRide || not (null resp.rideList)) then do
+          doAff do liftEffect $ push $ action response
+          pure unit
+        else if resp.status == "CANCELLED" then do
+          doAff do liftEffect $ push $ checkFlowStatusAction
+          pure unit
         else do
-            void $ delay $ Milliseconds duration
-            confirmRide action (count - 1) duration push state
+          void $ delay $ Milliseconds duration
+          confirmRide action checkFlowStatusAction (count - 1) duration push state
       Left err -> do
         _ <- pure $ printLog "api error " err
         void $ delay $ Milliseconds duration
-        confirmRide action (count - 1) duration push state
-  else
+        confirmRide action checkFlowStatusAction (count - 1) duration push state
+  else do
     pure unit
 
 cancelRidePopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2949,6 +2996,14 @@ zoneTimerExpiredView state push =
   , width MATCH_PARENT
   , gravity CENTER
   ][ PopUpModal.view (push <<< ZoneTimerExpired) (zoneTimerExpiredConfig state)]
+
+rentalInfoPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rentalInfoPopUp push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity CENTER
+  ][ PopUpModal.view (push <<< RentalInfoAction) (rentalInfoViewConfig state)]
 
 editButtontView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 editButtontView push state =
@@ -3128,93 +3183,95 @@ homeScreenView push state =
 
 homeScreenViewV2 :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenViewV2 push state = 
-  relativeLayout
-    [ height $ V (screenHeight unit)
-    , width $ V (screenWidth unit)
-    ][ linearLayout
-        [ height $ V ((screenHeight unit)/ 3)
-        , width MATCH_PARENT
-        , background state.data.config.homeScreen.primaryBackground 
-        , padding $ (PaddingTop (safeMarginTop))
-        ][] 
-      , linearLayout 
+    relativeLayout
+      [ height $ V (screenHeight unit)
+      , width $ V (screenWidth unit)
+      ][ linearLayout
+          [ height $ V ((screenHeight unit)/ 3)
+          , width MATCH_PARENT
+          , background state.data.config.homeScreen.primaryBackground 
+          , padding $ (PaddingTop (safeMarginTop))
+          ][] 
+        , linearLayout 
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , orientation VERTICAL
           ][  homescreenHeader push state 
             , linearLayout
-              [ height MATCH_PARENT
-              , width WRAP_CONTENT
-              , background Color.white900
-              , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
-              , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900,  Color.grey700])
-              ][ scrollView
-                  [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
-                  , width MATCH_PARENT
-                  , padding $ PaddingBottom 70
-                  , nestedScrollView true
-                  , scrollBarY false
-                  ][ linearLayout
-                      [ width $ V (screenWidth unit)
-                      , height WRAP_CONTENT
-                      , orientation VERTICAL
-                      ] $ [savedLocationsView state push] <> 
-                        (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
-                          [locationUnserviceableView push state]
-                        else 
-                          []
-                          <> contentView state
-                          <> [ shimmerView state
-                          , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
-                          , suggestionsView push state
-                          , emptySuggestionsBanner state push
-                          , footerView push state
-                          ])
-                  ]
-              ]
-          ]
-        ]  
-  where 
-    contentView state = if state.props.showShimmer then [
-      PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
-        shimmerFrameLayout
-        [ height $ V 100
-        , width MATCH_PARENT 
-        , background Color.greyDark
-        , margin $ Margin 16 24 16 0
-        , cornerRadius 8.0
-        , onAnimationEnd
-            ( \action -> do
-                _ <- push action
-                _ <- getCurrentPosition push CurrentLocation
-                case state.props.currentStage of
-                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
-                  _ -> pure unit
-                pure unit
-            )(const MapReadyAction)
-        ][]] 
-      else
-      (maybe 
-        (if isHomeScreenView state && state.props.isBannerDataComputed 
-          then [mapView push state "CustomerHomeScreenMap"] 
-          else [emptyTextView state]
-        ) 
-        (\item -> [bannersCarousal item state push]) 
-        state.data.bannerData.bannerItem)
-
-showMapOnHomeScreen :: HomeScreenState -> Boolean
-showMapOnHomeScreen state = isHomeScreenView state && isNothing state.data.bannerData.bannerItem
+               [ height MATCH_PARENT
+               , width WRAP_CONTENT
+               , background Color.white900
+               , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
+               , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900,  Color.grey700])
+               ][ scrollView
+                   [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
+                   , width MATCH_PARENT
+                   , padding $ PaddingBottom 70
+                   , nestedScrollView true
+                   , scrollBarY false
+                   ][ linearLayout
+                       [ width $ V (screenWidth unit)
+                       , height WRAP_CONTENT
+                       , orientation VERTICAL
+                       ] $ [savedLocationsView state push] <> 
+                         (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
+                           [locationUnserviceableView push state]
+                         else 
+                           []
+                           <> contentView state
+                           <> [ shimmerView state
+                           , additionalServicesView push state
+                           , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
+                           , suggestionsView push state
+                           , emptySuggestionsBanner state push
+                           ])
+                   ]
+               ]
+           ]
+         ]  
+   where 
+      contentView state = if state.props.showShimmer then [ 
+       PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
+         linearLayout
+         [ height WRAP_CONTENT
+         , width MATCH_PARENT 
+         , margin $ MarginTop 16
+         , visibility $ boolToVisibility (state.props.showShimmer)
+         , onAnimationEnd
+             ( \action -> do
+                 _ <- push action
+                 _ <- getCurrentPosition push CurrentLocation
+                 case state.props.currentStage of
+                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
+                   _ -> pure unit
+                 pure unit
+             )(const MapReadyAction)
+         ][ tagShimmerView state]
+        ]
+        else
+          ( maybe 
+              (if isHomeScreenView state && state.props.isBannerDataComputed 
+                then [mapView push state "CustomerHomeScreenMap"] 
+                else [emptyTextView state]
+              ) 
+              (\item -> [bannersCarousal item state push]) 
+              state.data.bannerData.bannerItem)
+       
+            
+        
 
 isHomeScreenView :: HomeScreenState -> Boolean
 isHomeScreenView state = state.props.currentStage == HomeScreen
 
 footerView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-footerView push state = 
+footerView push state = let 
+  bottomPadding = if state.data.config.feature.enableZooTicketBookingFlow then 50 else 0 
+  in
   linearLayout  
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , padding $ Padding 24 5 24 30
+    , padding $ Padding 24 5 24 (30+bottomPadding)
     , gravity CENTER
     , accessibilityHint $  getString BOOK_AND_MOVE <>  getString ANYWHERE_IN_THE_CITY
     ][
@@ -3383,10 +3440,12 @@ pickupLocationView push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT 
                 , padding $ Padding 14 16 14 16 
-                , stroke $ "1," <> Color.mountainFig
+                , stroke $ "1,#373B49"
                 , onClick push $ const WhereToClick
                 , gravity CENTER_VERTICAL
                 , background Color.black900
+                , alpha if state.props.isSrcServiceable then 1.0 else 0.4
+                , clickable state.props.isSrcServiceable 
                 , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.black 0.2 
                 , cornerRadius $ 8.0 
                 ][  imageView 
@@ -3417,10 +3476,10 @@ mapView push state idTag =
   relativeLayout
     [ height mapDimensions.height
     , width mapDimensions.width 
-    -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
+    , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
     , stroke $ "1,"<>Color.grey700
     , margin if state.props.currentStage == HomeScreen then (Margin 16 16 16 0) else (Margin 0 0 0 0)
-    , onAnimationEnd
+     , onAnimationEnd
             ( \action -> do
                 _ <- push action
                 _ <- getCurrentPosition push CurrentLocation
@@ -3447,7 +3506,6 @@ mapView push state idTag =
         , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
         , clickable $ not isHomeScreenView state 
         ][]
-    --  , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][] -- TODO :: Mercy Once rentals is enabled.
      , linearLayout 
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -3521,8 +3579,9 @@ getMapDimensions state =
                     getMapHeight state
                   else if (isHomeScreenView state) then
                     V 100
-                  else
-                    MATCH_PARENT
+                  else if (state.data.fareProductType == FPT.RENTAL) then 
+                    V (screenHeight unit - 100)
+                  else MATCH_PARENT 
       mapWidth =  if state.props.currentStage /= HomeScreen then MATCH_PARENT else V ((screenWidth unit)-32)
   in {height : mapHeight, width : mapWidth}
 
@@ -3597,7 +3656,7 @@ suggestionsView push state =
 
 shimmerView :: forall w. HomeScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
-  shimmerFrameLayout
+  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
@@ -3609,7 +3668,7 @@ shimmerView state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         ]
-        [ linearLayout
+        [ shimmerFrameLayout
             [ width MATCH_PARENT
             , height $ V 80
             , margin $ Margin 16 16 16 10
@@ -3617,7 +3676,15 @@ shimmerView state =
             , background Color.greyDark
             ]
             []
-        , linearLayout
+        , shimmerFrameLayout
+            [ width MATCH_PARENT
+            , height $ V 80
+            , margin $ Margin 16 16 16 10
+            , cornerRadius 8.0
+            , background Color.greyDark
+            ]
+            []
+        , shimmerFrameLayout
             [ width MATCH_PARENT
             , height $ V 80
             , margin $ MarginHorizontal 16 16 
@@ -3625,8 +3692,30 @@ shimmerView state =
             , background Color.greyDark
             ]
             []
+          , tagShimmerView state
         ]
     ]
+
+tagShimmerView state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 8 8 8 0
+    ](map (\_ -> 
+      shimmerFrameLayout
+      [ height WRAP_CONTENT
+      , weight 1.0 
+      , cornerRadius 24.0
+      , padding $ Padding 12 8 12 8
+      , stroke $"1,"<> Color.grey900
+      , margin $ MarginHorizontal 8 8
+
+      ][textView
+        [ cornerRadius 16.0 
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.greyDark
+        ]]) [1,2,3])
 
 movingRightArrowView :: forall w. String -> PrestoDOM (Effect Unit) w
 movingRightArrowView viewId =
@@ -3947,32 +4036,38 @@ rentalBanner push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 8 0 8 28
-    , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
+    , padding $ Padding 8 0 8 0
+    , margin $ MarginHorizontal 8 8
+    , visibility $ boolToVisibility $ (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) 
+    , gradient if os == "IOS" then (Linear 270.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
     ][  if state.props.showShimmer then 
           textView[]
           else Banner.view (push <<< RentalBannerAction) (rentalBannerConfig state) ]
 
 additionalServicesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-additionalServicesView push state = 
+additionalServicesView push state = let 
+  showNewTag = true 
+  cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+  showAdditionalServices = (state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals || cityConfig.enableIntercity) && state.props.currentStage == HomeScreen
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL 
     , padding $ PaddingHorizontal 16 16
-    , visibility $ boolToVisibility $ not state.props.showShimmer
-    , margin $ MarginTop 20
-    ][  linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
+    , visibility $ boolToVisibility $ showAdditionalServices && (not state.props.showShimmer)
+    , margin $ MarginVertical 20 15
+    ][  linearLayout[
+          height WRAP_CONTENT
+        , width MATCH_PARENT 
         , gravity CENTER_VERTICAL
-        ]
-        [ textView $
-            [ text $ getString NAMMA_SERVICES
-            , color Color.black900
-            ] <> FontStyle.subHeading1 TypoGraphy
+        ][  textView $
+              [ text $ getString YATRI_SERVICES
+              , color Color.black900
+              , height MATCH_PARENT
+              ] <> FontStyle.subHeading1 TypoGraphy
           , newView push state
-        ]
+          ]
       , linearLayout
           [ height WRAP_CONTENT
           , margin $ MarginTop 16
@@ -3989,9 +4084,12 @@ computeListItem push = do
     
 updateEmergencyContacts :: (Action -> Effect Unit) -> HomeScreenState -> FlowBT String Unit
 updateEmergencyContacts push state = do
-  contacts <- getFormattedContacts
-  void $ liftFlowBT $ push (UpdateContacts contacts)
-  void $ liftFlowBT $ validateAndStartChat contacts push state
+  if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
+    then liftFlowBT $ startChatSerivces push state.data.driverInfoCardState.bppRideId "Customer" false 
+    else do
+      contacts <- getFormattedContacts
+      void $ liftFlowBT $ push (UpdateContacts contacts)
+      void $ liftFlowBT $ validateAndStartChat contacts push state
 
 validateAndStartChat :: Array NewContacts ->  (Action -> Effect Unit) -> HomeScreenState -> Effect Unit
 validateAndStartChat contacts push state = do
@@ -4101,3 +4199,33 @@ newView push state =
     , margin $ MarginLeft 8
     , visibility $ boolToVisibility $ state.data.config.homeScreen.showAdditionalServicesNew
     ] <> FontStyle.tags TypoGraphy
+  
+
+
+createRouteHelper routeState startLat startLon endLat endLon = do
+  if (startLat /= 0.0 && startLon /= 0.0 && endLat /= 0.0 && endLon /= 0.0) then do
+    routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon
+    case routeResp of 
+      Right (GetRouteResp resp) -> do 
+        case (head resp) of 
+          Just (Route route) -> do 
+            -- void $ pure $ removeAllPolylines ""
+            let (Snapped routePts) = route.points 
+                newPts = if length routePts > 1 then 
+                            getExtendedPath $ walkCoordinates (route.points)
+                            else 
+                              walkCoordinate startLat startLon endLat endLon
+                newRoute = route {points = Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points)}
+            pure $ {points : Just newPts, route : Just (Route newRoute), routeDuration : Just $ route.duration, routeDistance : Just $ route.distance}
+          Nothing -> pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
+      Left err -> do 
+        pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
+    else pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
+
+
+intercityInSpecialZonePopupView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+intercityInSpecialZonePopupView push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< IntercitySpecialZone) (intercityInSpecialZonePopupConfig state)]

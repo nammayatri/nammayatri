@@ -15,51 +15,62 @@
 
 module Screens.SearchLocationScreen.View where
 
-import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), bind, show, pure, const, unit, not, void, discard, map)
-import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig)
-import Components.InputView as InputView
-import Effect (Effect)
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..))
-import Styles.Colors as Color
-import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, rippleColor)
-import JBridge (showMap, debounceFunction, startLottieProcess, lottieAnimationConfig, storeCallBackLocateOnMap)
-import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, os)
-import Components.SeparatorView.View as SeparatorView
-import Components.LocationListItem as LocationListItem
+import Animation (translateYAnimFromTop, fadeInWithDelay, screenAnimation)
+import Animation.Config (translateFullYAnimWithDurationConfig)
+import Common.Types.App (LazyCheck(..))
+import Components.ChooseVehicle as ChooseVehicle
 import Components.FavouriteLocationModel as FavouriteLocationModel
-import Components.SaveFavouriteCard as SaveFavouriteCard
+import Components.InputView as InputView
+import Components.LocationListItem as LocationListItem
+import Components.LocationTagBarV2 as LocationTagBar
 import Components.MenuButton as MenuButton
-import Mobility.Prelude (boolToVisibility)
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.SaveFavouriteCard as SaveFavouriteCard
+import Components.SeparatorView.View as SeparatorView
+import Components.RateCard as RateCard
+import Control.Monad.Except.Trans (runExceptT , lift)
+import Control.Monad.Free (runFree)
+import Control.Transformers.Back.Trans (runBackT)
+import Data.Array(mapWithIndex, length, null, any) as DA
+import Data.Either (Either(..))
+import Data.Function.Uncurried (runFn3, runFn1)
+import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
+import Data.String (length, null, take) as DS
+import Data.Time.Duration (Milliseconds(..))
+import Debug(spy)
+import DecodeUtil (getAnyFromWindow)
+import Effect (Effect)
+import Effect.Aff (launchAff)
+import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom, safeMarginTop, flowRunner, getNewIDWithTag) as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Common.Types.App (LazyCheck(..))
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl)
-import Components.LocationTagBarV2 as LocationTagBar
-import Components.PrimaryButton as PrimaryButton
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Data.Array(mapWithIndex, length, null, any) as DA
-import Control.Monad.Except.Trans (runExceptT , lift)
-import Control.Transformers.Back.Trans (runBackT)
-import Effect.Aff (launchAff)
-import Types.App (defaultGlobalState)
-import Debug(spy)
-import Control.Monad.Free (runFree)
-import Helpers.Utils (fetchAndUpdateCurrentLocation, specialZoneTagConfig)
-import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
-import Resources.Constants (getDelayForAutoComplete)
-import Engineering.Helpers.Commons as EHC
-import Data.String (length, null, take) as DS
+import Helpers.CommonView (emptyTextView)
+import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, specialZoneTagConfig, getDefaultPixelSize, getCurrentLocationMarker)
+import JBridge (showMap, debounceFunction, startLottieProcess, toast, lottieAnimationConfig, storeCallBackLocateOnMap, getLayoutBounds, setMapPadding, removeMarker)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Components.LocationListItem.Controller 
-import Animation (translateYAnimFromTop)
-import Animation.Config (translateFullYAnimWithDurationConfig)
+import Log (printLog)
+import Mobility.Prelude (boolToVisibility, boolToInvisibility)
+import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map, identity, (>=), (*), when)
+import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout)
 import PrestoDOM.Animation as PrestoAnim
-import Data.Function.Uncurried (runFn3)
-import DecodeUtil (getAnyFromWindow)
-
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Resources.Constants (getDelayForAutoComplete)
+import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig)
+import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..))
+import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
+import Services.Backend (getQuotes, rideBooking)
+import Styles.Colors as Color
+import Types.App (defaultGlobalState)
+import Types.App (GlobalState, defaultGlobalState)
+import Effect.Aff (launchAff)
+import Effect.Class (liftEffect)
+import Storage (getValueToLocalStore, KeyStore(..))
+import Screens.SearchLocationScreen.ScreenData (dummyQuote)
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -77,56 +88,70 @@ searchLocationScreen initialState globalProps =
     globalEventsFunc push = do
       case initialState.props.searchLocStage of 
         LocateOnMapStage -> storeCallBackLocateOnMap push LocFromMap 
-        ConfirmLocationStage -> storeCallBackLocateOnMap push LocFromMap
+        ConfirmLocationStage -> do 
+          storeCallBackLocateOnMap push LocFromMap
+        ChooseYourRide -> do
+          void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+          when (DA.null initialState.data.quotesList) $ do
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ getEstOrQuotes GetQuotes CheckFlowStatusAction 10 1000.0 push initialState
+          pure unit
         _ -> pure unit 
       pure $ pure unit 
 
 
 view :: forall w. GlobalProps -> (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w 
 view globalProps push state = 
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ 
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , afterRender 
-        (\action -> mapRenderAction action)
-        $ const AfterRender
-    , padding $ PaddingVertical EHC.safeMarginTop 16
-    , onBackPressed push $ const BackpressAction
-    ][  mapView push state
-      , markerView push state
-      , searchLocationView push state globalProps
-      , locateOnMapFooterView push state 
-      , popUpViews push state globalProps
-      , locateOnMapView push state globalProps
-      , confirmLocationView push state
-    ]
-    
+    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+    , background Color.white900
+    ][  (if currentStageOn state ChooseYourRide then screenAnimation 
+          else PrestoAnim.animationSet
+                [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] ) $ 
+        relativeLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , onBackPressed push $ const BackpressAction
+          ][  mapViewLayout push state globalProps
+            , backIconView push state 
+            , markerView push state
+            , if currentStageOn state PredictionsStage then searchLocationView push state globalProps else emptyTextView
+            , if currentStageOn state PredictionsStage then locateOnMapFooterView push state else emptyTextView
+            , popUpViews push state globalProps
+            , if currentStageOn state LocateOnMapStage then locateOnMapView push state globalProps else emptyTextView
+            , confirmLocationView push state
+            , chooseYourRideView push state
+            , if state.props.showRateCard then 
+                linearLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                ][  RateCard.view (push <<< RateCardAC) (rentalRateCardConfig (MB.maybe dummyQuote identity (state.data.selectedQuote)))] 
+                else emptyTextView
+          ]
+      ]
   where
-    mapRenderAction :: Action -> Effect Unit
-    mapRenderAction action = do
-      void $ push action
-      void $ showMap (getNewIDWithTag "SearchLocationScreenMap") true "satellite" 17.0 push MapReady
-      void $ fetchAndUpdateCurrentLocation push (UpdateLocAndLatLong globalProps.recentSearches) RecenterCurrentLocation
-      pure unit
-
-    mapView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
-    mapView push state = 
-      linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , id (getNewIDWithTag "SearchLocationScreenMap")
-        ][]
 
     markerView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
-    markerView push state = let 
-      imageName = MB.maybe "" ( \ currField -> if currField == SearchLocPickup then "ny_ic_src_marker" else "ny_ic_blue_marker") state.props.focussedTextField 
+    markerView push state = let
+      actionType = state.props.actionType
+      currentStage = currentStageOn state ConfirmLocationStage
+      focusedField = state.props.focussedTextField
+      imageName =
+        if actionType == AddingStopAction then
+          "ny_ic_blue_marker"
+        else if currentStage then
+          "ny_ic_src_marker"
+        else case focusedField of
+          MB.Just SearchLocPickup -> "ny_ic_src_marker"
+          MB.Just _ -> if actionType == SearchLocationAction then "ny_ic_dest_marker" else "ny_ic_blue_marker"
+          MB.Nothing -> "ny_ic_blue_marker"  
       labelText = if DS.length state.data.defaultGate > state.appConfig.mapConfig.labelTextSize then
                                   (DS.take (state.appConfig.mapConfig.labelTextSize - 3) state.data.defaultGate) <> "..."
                                else
                                   state.data.defaultGate
-      labelVisibility = boolToVisibility $ not $ DS.null labelText
+      labelVisibility = boolToInvisibility $ not $ DS.null labelText
       in
       linearLayout
         [ height MATCH_PARENT
@@ -134,7 +159,7 @@ view globalProps push state =
         , orientation VERTICAL
         , gravity CENTER
         , background Color.transparent
-        , padding $ PaddingBottom if os == "IOS" then 53 else 70
+        , padding $ PaddingBottom if EHC.os == "IOS" then 53 else 70
         , orientation VERTICAL
         ][  textView $ 
               [ text labelText
@@ -142,9 +167,11 @@ view globalProps push state =
               , color Color.white900
               , cornerRadius 5.0
               , padding (Padding 5 5 5 5)
+              , height WRAP_CONTENT
+              , width WRAP_CONTENT
               , margin (MarginBottom 5)
               , visibility labelVisibility
-              , id $ getNewIDWithTag "LocateOnMapSLSPin"
+              , id $ EHC.getNewIDWithTag "LocateOnMapSLSPin"
               ] <> FontStyle.body3 TypoGraphy
           , imageView 
             [ width $ V 35
@@ -155,18 +182,166 @@ view globalProps push state =
             ]
           ]
 
+chooseYourRideView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
+chooseYourRideView push state =
+  linearLayout[
+    height MATCH_PARENT
+  , width MATCH_PARENT
+  , visibility $ boolToVisibility $ currentStageOn state ChooseYourRide
+  , background Color.transparent
+  , gravity BOTTOM 
+  ][  linearLayout[
+        height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , gravity CENTER_HORIZONTAL
+      , cornerRadii $ Corners 24.0 true true false false 
+      , stroke $ "1," <> Color.grey900
+      , background Color.white900
+  ][  textView
+      [ height $ V 4
+      , width $ V 28 
+      , cornerRadius 4.0 
+      , margin $ MarginVertical 10 2
+      , background Color.grey900
+      ]
+    , 
+    textView $
+        [ text $ getString CHOOSE_YOUR_RIDE 
+        , color Color.black800
+        , gravity CENTER_HORIZONTAL
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        ]
+        <> FontStyle.h2 TypoGraphy
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER
+      , margin $ MarginVertical 4 4
+      ]
+      [ createTextView $ show state.data.rideDetails.rideDuration <> " hrs"
+      , linearLayout
+          [ height $ V 4
+          , width $ V 4
+          , cornerRadius 2.5
+          , background Color.black600
+          , margin (Margin 6 2 6 0)
+          ]
+          []
+      , createTextView $ show state.data.rideDetails.rideDistance <> " km"
+      ]
+    , createTextView $ state.data.rideDetails.rideScheduledDate <> " , " <> state.data.rideDetails.rideScheduledTime
+    , verticalSeparatorView 1 (MarginVertical 12 12)
+    , chooseVehicleView state push
+    , verticalSeparatorView 1 (MarginTop 0)
+    , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonRequestRideConfig state) 
+    ]
+  ]
+  where
+    createTextView :: forall w. String -> PrestoDOM (Effect Unit) w
+    createTextView textContent =
+      textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text textContent
+        , color Color.black900
+        ]
+        <> FontStyle.paragraphText TypoGraphy
+
+chooseVehicleView :: forall w. SearchLocationScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+chooseVehicleView state push =
+    scrollView
+    [ height $ if DA.null state.data.quotesList then V 200 else getQuoteListViewHeight state 
+    , width MATCH_PARENT
+    ][  if DA.null state.data.quotesList  then 
+          shimmerFrameLayout 
+            [ width MATCH_PARENT
+            , height $ V 200
+            , orientation VERTICAL
+            , background Color.transparent
+            ][ linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , padding $ PaddingHorizontal 16 16
+                , orientation VERTICAL
+                ] (DA.mapWithIndex (\index _ -> 
+                  shimmerItemView (index == 0)) [1,2,3] )]
+          else 
+            linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            ( map 
+              ( \quote ->
+                  ChooseVehicle.view (push <<< ChooseVehicleAC) quote.quoteDetails { showInfo = true, showStroke = true, showAdditionalDesc = true}
+              ) (state.data.quotesList))]
+  where 
+    shimmerItemView :: forall w. Boolean -> PrestoDOM (Effect Unit) w
+    shimmerItemView hasTopMargin = 
+      linearLayout
+        [ width MATCH_PARENT
+        , height $ V 80
+        , margin $ MarginVertical (if hasTopMargin then 16 else 0)  16 
+        , cornerRadius 8.0
+        , background Color.greyDark
+        ]
+        []
+
+
+getQuoteListViewHeight :: SearchLocationScreenState -> Length
+getQuoteListViewHeight state = 
+    let len = DA.length state.data.quotesList
+        height1 = MB.maybe 0 (\item -> (runFn1 getLayoutBounds $ EHC.getNewIDWithTag item.quoteDetails.id).height) state.data.selectedQuote
+        quoteHeight = getDefaultPixelSize height1 
+        height = if quoteHeight == 0 then 84 else quoteHeight
+    in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then 16 else 5
+
+
+mapViewLayout push state globalProps = 
+  PrestoAnim.animationSet [fadeInWithDelay 250 true] $
+  relativeLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.white900
+    , onAnimationEnd (\action -> mapRenderAction action)
+              $ const AfterRender
+    ][  linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , background Color.white900 -- add watermark to this view ... TODO
+        ][]
+      , linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginBottom if state.props.searchLocStage == ChooseYourRide then 200 else 0
+        , visibility $ boolToInvisibility $ DA.any (_ == state.props.searchLocStage) [LocateOnMapStage , ConfirmLocationStage , ChooseYourRide]
+        , id (EHC.getNewIDWithTag "SearchLocationScreenMap")
+        ][]
+
+    ]
+
+  where 
+    mapRenderAction :: Action -> Effect Unit
+    mapRenderAction action = do
+      void $ push action
+      void $ showMap (EHC.getNewIDWithTag "SearchLocationScreenMap") true "satellite" 17.0 push MapReady
+      void $ fetchAndUpdateCurrentLocation push (UpdateLocAndLatLong globalProps.cachedSearches) RecenterCurrentLocation
+      pure unit
+
 confirmLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 confirmLocationView push state = let 
   zonePadding = 0 --if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
   viewVisibility = boolToVisibility $ currentStageOn state ConfirmLocationStage
-  headerText = MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_STOP_LOCATION)) state.props.focussedTextField 
+  headerText = if state.props.actionType == SearchLocationAction then (getString CONFIRM_PICKUP_LOCATION) else MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_STOP_LOCATION)) state.props.focussedTextField 
   tagConfig = specialZoneTagConfig state.data.confirmLocCategory
   in 
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    ][  backIconView push state 
-      , linearLayout
+    ][  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , visibility viewVisibility
@@ -199,7 +374,7 @@ confirmLocationView push state = let
                       , imageWithFallback $ fetchImage FF_COMMON_ASSET tagConfig.icon
                       ]
                     , textView
-                      [ width if os == "IOS" && state.data.confirmLocCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
+                      [ width if EHC.os == "IOS" && state.data.confirmLocCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
                       , height WRAP_CONTENT
                       , gravity CENTER
                       , textSize FontSize.a_14
@@ -233,7 +408,7 @@ confirmLocationView push state = let
 
 backIconView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 backIconView push state = let
-  viewVisibility = boolToVisibility $ currentStageOn state ConfirmLocationStage
+  viewVisibility = boolToVisibility $ DA.any (_ == state.props.searchLocStage) [ ConfirmLocationStage, ChooseYourRide]
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -245,7 +420,6 @@ backIconView push state = let
     , stroke $ "1," <> Color.grey900
     , gravity CENTER
     , onClick push $ const BackpressAction
-    , rippleColor Color.rippleShade
     , margin $ Margin 16 48 0 0
     ][  imageView
           [ height $ V 24 
@@ -302,12 +476,12 @@ nearByPickUpPointsView push state =
   , orientation VERTICAL
   , padding $ Padding 5 20 0 5
   , visibility $ boolToVisibility (state.data.defaultGate /= "")
-  , id $ getNewIDWithTag "scrollViewParentSLS"
+  , id $ EHC.getNewIDWithTag "scrollViewParentSLS"
   ][linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , id $ getNewIDWithTag "scrollViewChildSLS"
+    , id $ EHC.getNewIDWithTag "scrollViewChildSLS"
     , afterRender push (const AfterRender)
     ](DA.mapWithIndex (\index item ->
                     linearLayout
@@ -342,7 +516,6 @@ locateOnMapView push state globalProps = let
         ][ recenterButtonView push state
           , PrimaryButton.view (push <<< PrimaryButtonAC)(primaryButtonConfig state)]
 
-inputView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> Boolean -> GlobalProps -> PrestoDOM (Effect Unit) w
 inputView push state isEditable globalProps = 
   InputView.view (push <<< InputViewAC globalProps ) $ mapInputViewConfig state isEditable
 
@@ -366,87 +539,124 @@ recenterButtonView push state =
 
 
 popUpViews :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps -> PrestoDOM (Effect Unit) w
-popUpViews push state globalProps = 
+popUpViews push state globalProps = let 
+  ifAnyTrue = currentStageOn state AllFavouritesStage 
+  bgColor = if ifAnyTrue then Color.white900 else Color.transparent
+  in
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
+    , background bgColor
     , orientation VERTICAL
     ] [if currentStageOn state AllFavouritesStage 
-            then favouriteLocationModel state globalProps push
-            else if (state.props.showSaveFavCard)
-            then saveFavCardView push state globalProps
-            else 
-              linearLayout
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              , visibility GONE
-              , orientation VERTICAL
-              ][]]
+        then favouriteLocationModel state globalProps push
+        else if (state.props.showSaveFavCard)
+        then saveFavCardView push state globalProps
+        else if (state.props.locUnserviceable || state.props.isSpecialZone)
+        then locUnserviceableView push state
+        else emptyTextView]
+
+
+locUnserviceableView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
+locUnserviceableView push state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER 
+    , background Color.blackLessTrans
+    ][ PrestoAnim.animationSet
+        [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  $ 
+        PopUpModal.view (push <<< PopUpModalAC) (locUnserviceablePopUpConfig state) ]
 
 locateOnMapFooterView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 locateOnMapFooterView push state = let 
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage
-  locateOnMapData = getDataBasedActionType state.props.actionType 
-  
-  in PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ linearLayout
+  in linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , alignParentBottom "true,-1"
     , orientation VERTICAL
+    , gravity CENTER_VERTICAL
+    , adjustViewWithKeyboard "true"
     , visibility viewVisibility
     , background Color.white900
-    ][  verticalSeparatorView 2
+    ][  verticalSeparatorView 2 (MarginTop 0)
       , linearLayout
         [ height WRAP_CONTENT
-        , width $ MATCH_PARENT
-        , padding $ PaddingVertical 16 16
-        , gravity CENTER
-        , alpha $ if MB.isNothing state.props.focussedTextField then 0.5 else 1.0
-        , clickable $ MB.isJust state.props.focussedTextField
-        ][  imageView 
-            [ height $ V 20
-            , width $ V 20
-            , margin $ MarginRight 8
-            , layoutGravity "center"
-            , imageWithFallback $ fetchImage FF_ASSET locateOnMapData.imageUrl
-            ]  
-          , textView
-            [ text locateOnMapData.text
-            , layoutGravity "center"
-            , height WRAP_CONTENT
-            , gravity CENTER
-            , onClick push $ const $ locateOnMapData.action
-            ]
-
-          ]
-      ]
+        , width MATCH_PARENT
+        ] (DA.mapWithIndex (\index item -> let 
+              isNotLastIndex = index /= (DA.length (footerArray state) - 1)
+              in
+              linearLayout
+                [ height WRAP_CONTENT
+                , gravity CENTER_VERTICAL
+                , weight 1.0] $ 
+                [ linearLayout
+                  [ height WRAP_CONTENT
+                  , weight 1.0
+                  , padding $ PaddingVertical 16 16
+                  , gravity CENTER
+                  , alpha $ if MB.isNothing state.props.focussedTextField then 0.5 else 1.0
+                  , clickable $ MB.isJust state.props.focussedTextField
+                  ][  imageView 
+                      [ height $ V 20
+                      , width $ V 20
+                      , margin $ MarginRight 8
+                      , layoutGravity "center"
+                      , imageWithFallback item.imageName
+                      ]  
+                    , textView $
+                      [ text $ item.text
+                      , layoutGravity "center"
+                      , height WRAP_CONTENT
+                      , gravity CENTER
+                      , onClick push $ const $ item.action
+                      ] <> FontStyle.body1 TypoGraphy
+                    ]
+                ] <> if isNotLastIndex then [horizontalSeparatorView 2] else []
+        ) (footerArray state ))
+    ]
   where 
-    verticalSeparatorView :: Int -> PrestoDOM (Effect Unit) w
-    verticalSeparatorView hght = 
+    
+    horizontalSeparatorView :: Int -> PrestoDOM (Effect Unit) w
+    horizontalSeparatorView wdth = 
       linearLayout
-        [ width MATCH_PARENT
-        , height $ V hght
+        [ width $ V wdth
+        , height $ V 24
+        , layoutGravity "center_vertical"
         , background Color.grey900
         ][]
 
-    getDataBasedActionType :: SearchLocationActionType -> {imageUrl :: String, text :: String, action :: Action}
-    getDataBasedActionType actionType = 
-      case actionType of 
-        SearchLocationAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
-        AddingStopAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
-        MetroStationSelectionAction -> {imageUrl : "ny_ic_metro_map", text : "See Metro Map", action : MetroRouteMapAction}
+verticalSeparatorView :: forall w. Int -> Margin -> PrestoDOM (Effect Unit) w
+verticalSeparatorView hght margin' = 
+  linearLayout
+    [ width MATCH_PARENT
+    , height $ V hght
+    , margin $ margin'
+    , background Color.grey900
+    ][]
+
+footerArray state = 
+  case state.props.actionType of 
+    MetroStationSelectionAction -> [{action : MetroRouteMapAction, text : "See Metro Map", buttonType : "SetLocationOnMap", imageName : "ny_ic_metro_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_metro_map.png"}]
+    _ -> if state.props.focussedTextField == MB.Just SearchLocPickup then 
+            [ {action : SetLocationOnMap, text : getString SELECT_ON_MAP, buttonType : "SetLocationOnMap", imageName : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"}
+            , {action : CurrentLocation , text : getString CURRENT_LOCATION, buttonType : "CurrentLocation", imageName : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png"}
+            ]
+            else [{action : SetLocationOnMap, text : getString SELECT_LOCATION_ON_MAP, buttonType : "SetLocationOnMap", imageName : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"}]
+
 
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
-searchLocationView push state globalProps = 
-  let
-    viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage 
+searchLocationView push state globalProps = let
+  viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage  || currentStageOn state PredictionSelectedFromHome 
   in 
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , visibility viewVisibility
+    , adjustViewWithKeyboard "true"
     , background Color.white900
     ] $ [ inputView push state true globalProps
         , searchLottieLoader push state ] 
@@ -456,22 +666,16 @@ searchLocationView push state globalProps =
         , infoView $ findPlaceConfig state
         , infoView $ locUnserviceableConfig state 
         , predictionsView push state globalProps]
-
-
   where 
 
     findPlaceConfig :: SearchLocationScreenState -> InfoState
-    findPlaceConfig state =
-      let appName = MB.fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" MB.Nothing MB.Just
-      in { 
-        descImg : "ny_ic_empty_suggestions"
-      , viewVisibility : boolToVisibility $ 
-                          case state.props.actionType of 
-                              MetroStationSelectionAction -> DA.null state.data.updatedMetroStations
-                              _ -> DA.null state.data.locationList
-      , headerText : (getVarString WELCOME_TEXT [appName]) <> "!"
-      , descText : getString START_TYPING_TO_SEARCH_PLACES
-        }
+    findPlaceConfig state = let 
+      appName = MB.fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" MB.Nothing MB.Just
+      in
+      { descImg : "ny_ic_empty_suggestions"
+      , viewVisibility : boolToVisibility $ DA.null state.data.locationList 
+      , headerText : getVarString WELCOME_TEXT [appName] 
+      , descText : getString START_TYPING_TO_SEARCH_PLACES}
 
     locUnserviceableConfig :: SearchLocationScreenState -> InfoState
     locUnserviceableConfig state = 
@@ -492,16 +696,11 @@ locationTagsView state push globalProps =
     
 predictionsView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 predictionsView push state globalProps = let 
-  viewVisibility = boolToVisibility $ 
-    case state.props.actionType of 
-      MetroStationSelectionAction -> not $ DA.null state.data.updatedMetroStations
-      _ -> (not DA.null state.data.locationList) && (not state.props.locUnserviceable)
+  viewVisibility = boolToVisibility $ (not DA.null state.data.locationList) && (not state.props.locUnserviceable)
   headerText = if state.props.isAutoComplete then (getString SEARCH_RESULTS)
-                else if state.props.actionType == MetroStationSelectionAction then "Metro Stations"
                 else 
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ 
   scrollView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -519,7 +718,7 @@ predictionsView push state globalProps = let
               , color Color.black700
               , margin $ MarginVertical 14 8
               ] <> FontStyle.body3 TypoGraphy
-          , predictionArrayView $ if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
+          , predictionArrayView state.data.locationList
           , footerView
         ]
       ]
@@ -541,36 +740,36 @@ predictionsView push state globalProps = let
               (\index item -> locationListItemView item index ) 
               if (DA.null locList && state.props.actionType /= MetroStationSelectionAction) then globalProps.cachedSearches else locList )
 
-    metroStationsArray:: Array Station -> Array LocationListItemState
-    metroStationsArray metroStations = 
-      map (\item -> { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
-              , postfixImageUrl : ""
-              , postfixImageVisibility : false
-              , title : item.stationName
-              , subTitle : ""
-              , placeId : MB.Nothing
-              , lat : MB.Nothing
-              , lon : MB.Nothing
-              , description : ""
-              , tag : item.stationCode -- Needs refactor
-              , tagType : MB.Nothing
-              , cardType : MB.Nothing
-              , address : ""
-              , tagName : ""
-              , isEditEnabled : true
-              , savedLocation : ""
-              , placeName : ""
-              , isClickable : true
-              , alpha : 1.0
-              , fullAddress : dummyAddress
-              , locationItemType : MB.Nothing
-              , distance : MB.Nothing
-              , showDistance : MB.Just false
-              , actualDistance : MB.Nothing
-              , frequencyCount : MB.Nothing
-              , recencyDate : MB.Nothing
-              , locationScore : MB.Nothing
-              }) metroStations
+    -- metroStationsArray:: Array Station -> Array LocationListItemState
+    -- metroStationsArray metroStations = 
+    --   map (\item -> { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
+    --           , postfixImageUrl : ""
+    --           , postfixImageVisibility : false
+    --           , title : item.stationName
+    --           , subTitle : ""
+    --           , placeId : MB.Nothing
+    --           , lat : MB.Nothing
+    --           , lon : MB.Nothing
+    --           , description : ""
+    --           , tag : item.stationCode -- Needs refactor
+    --           , tagType : MB.Nothing
+    --           , cardType : MB.Nothing
+    --           , address : ""
+    --           , tagName : ""
+    --           , isEditEnabled : true
+    --           , savedLocation : ""
+    --           , placeName : ""
+    --           , isClickable : true
+    --           , alpha : 1.0
+    --           , fullAddress : dummyAddress
+    --           , locationItemType : MB.Nothing
+    --           , distance : MB.Nothing
+    --           , showDistance : MB.Just false
+    --           , actualDistance : MB.Nothing
+    --           , frequencyCount : MB.Nothing
+    --           , recencyDate : MB.Nothing
+    --           , locationScore : MB.Nothing
+    --           }) metroStations
 
     locationListItemView :: LocationListItemState -> Int -> PrestoDOM (Effect Unit) w
     locationListItemView item index = let 
@@ -604,18 +803,14 @@ searchLottieLoader push state =
       , padding $ PaddingBottom 80
       , margin (MarginTop ((EHC.screenHeight unit)/ 7 - (if EHC.os == "IOS" then 140 else 90)))
       , gravity CENTER
-      , id (getNewIDWithTag "searchLoader")
+      , id (EHC.getNewIDWithTag "searchLoader")
       , visibility $ boolToVisibility state.props.showLoader
       , afterRender (\action -> do
-        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (EHC.getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
         push action
         ) (const NoAction)
       ]
     ]
-
-currentStageOn :: SearchLocationScreenState ->  SearchLocationStage -> Boolean
-currentStageOn state stage  = 
-  stage == state.props.searchLocStage 
 
 
 favouriteLocationModel :: forall w. SearchLocationScreenState -> GlobalProps ->  (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -624,6 +819,7 @@ favouriteLocationModel state globalProps push =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
+    , clickable true
     ]
     [ FavouriteLocationModel.view (push <<< FavouriteLocationModelAC) (globalProps.savedLocations) ]
 
@@ -637,7 +833,7 @@ saveFavCardView push state globalProps =
     [ SaveFavouriteCard.view (push <<< SaveFavCardAC globalProps.savedLocations) (state.data.saveFavouriteCard) ]
 
 infoView :: forall w. InfoState -> PrestoDOM (Effect Unit) w
-infoView  item = 
+infoView item = 
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -684,3 +880,43 @@ type InfoState = {
   descText :: String
 }
 
+currentStageOn :: SearchLocationScreenState ->  SearchLocationStage -> Boolean
+currentStageOn state stage  = 
+  stage == state.props.searchLocStage
+
+getEstOrQuotes :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> SearchLocationScreenState -> Flow GlobalState Unit
+getEstOrQuotes action flowStatusAction count duration push state = do
+  if (currentStageOn state ChooseYourRide ) then
+    if (count > 0) then do
+      resp <- getQuotes (state.data.rideDetails.searchId)
+      _ <- pure $ printLog "caseId" (state.data.rideDetails.searchId)
+      case resp of
+        Right response -> do
+          _ <- pure $ printLog "api Results " response
+          let (GetQuotesRes resp) = response
+          if not (DA.null resp.quotes) || not (DA.null resp.estimates) then do
+            doAff do liftEffect $ push $ action response
+            pure unit
+          else do
+            if (count == 1) then do
+              doAff do liftEffect $ push $ action response
+            else do
+              void $ delay $ Milliseconds duration
+              getEstOrQuotes action flowStatusAction (count - 1) duration push state
+        Left err -> do
+          let errResp = err.response
+              codeMessage = decodeError errResp.errorMessage "errorMessage"
+          if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
+            void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
+            doAff do liftEffect $ push $ flowStatusAction
+          else do
+            void $ delay $ Milliseconds duration
+            if (count == 1) then do
+              let response = GetQuotesRes { quotes: [], estimates: [], fromLocation: SearchReqLocationAPIEntity { lat: 0.0, lon: 0.0 }, toLocation: MB.Nothing }
+              doAff do liftEffect $ push $ action response
+            else do
+              getEstOrQuotes action flowStatusAction (count - 1) duration push state
+    else
+      pure unit
+  else
+    pure unit

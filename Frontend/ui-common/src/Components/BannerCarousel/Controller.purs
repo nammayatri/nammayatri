@@ -40,6 +40,7 @@ data BannerType = AutoPay
   | ZooTicket
   | Safety
   | MetroTicket
+  | RentalsAndIntercity
 
 type CarouselConfig a = {
     item :: ListItem
@@ -77,7 +78,8 @@ type Config a = {
   actionIconVisibility :: Boolean,
   actionImageUrl :: String,
   actionImageVisibility :: Boolean,
-  actionArrowIconVisibility :: Boolean
+  actionArrowIconVisibility :: Boolean,
+  actionBottomArrowIconVisibility :: Boolean
 }
 
 config :: forall a. a -> Config a
@@ -112,7 +114,8 @@ config action = {
     actionImageUrl : "",
     showImageAsCTA : false,
     actionImageVisibility : false,
-    actionArrowIconVisibility : true
+    actionArrowIconVisibility : true,
+    actionBottomArrowIconVisibility : false
 }
 
 
@@ -135,7 +138,8 @@ type PropConfig = (
   actionIconVisibility :: PropValue,
   actionImageUrl :: PropValue,
   actionImageVisibility :: PropValue,
-  actionArrowIconVisibility :: PropValue
+  actionArrowIconVisibility :: PropValue,
+  actionBottomArrowIconVisibility :: PropValue
 )
 
 
@@ -160,7 +164,8 @@ bannerTransformer = map (
   actionIconVisibility : toPropValue $ if item.actionIconVisibility then "visible" else "gone",
   actionImageUrl : toPropValue item.actionImageUrl,
   actionImageVisibility : toPropValue $ if item.actionImageVisibility then "visible" else "gone",
-  actionArrowIconVisibility : toPropValue $ if item.actionArrowIconVisibility then "visible" else "gone"
+  actionArrowIconVisibility : toPropValue $ if item.actionArrowIconVisibility then "visible" else "gone",
+  actionBottomArrowIconVisibility : toPropValue $ if item.actionBottomArrowIconVisibility then "visible" else "gone"
   }
 )
 
@@ -186,6 +191,7 @@ remoteConfigTransformer remoteConfig action =
         showImageAsCTA = not $ DS.null remoteConfig.cta_image_url,
         actionImageVisibility = not $ DS.null remoteConfig.cta_image_url,
         actionTextVisibility = DS.null remoteConfig.cta_image_url ,
-        actionArrowIconVisibility = DS.null remoteConfig.cta_image_url
+        actionArrowIconVisibility = DS.null remoteConfig.cta_image_url,
+        actionBottomArrowIconVisibility = DS.null remoteConfig.cta_image_url
       }
     in config'') remoteConfig

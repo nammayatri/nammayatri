@@ -37,7 +37,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref (Ref, read, write)
-import Effect.Uncurried (EffectFn2, EffectFn8, EffectFn7, mkEffectFn2, mkEffectFn6, mkEffectFn7, runEffectFn2, runEffectFn6, runEffectFn7, runEffectFn8, EffectFn1)
+import Effect.Uncurried (EffectFn2, EffectFn8, EffectFn7, mkEffectFn2, mkEffectFn6, mkEffectFn7, runEffectFn2, runEffectFn6, runEffectFn7, runEffectFn8, EffectFn1, EffectFn6)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (empty, insert, lookup, Object, foldM, delete)
 import JSURI (decodeURIComponent)
@@ -106,6 +106,13 @@ foreign import getRandomID :: Int -> String
 foreign import toStringJSON :: forall a. a -> String
 
 foreign import isTrue :: forall a. a -> Boolean
+foreign import convertDateTimeConfigToUTCImpl :: EffectFn6 Int Int Int Int Int Int String
+foreign import getUTCAfterNSecondsImpl :: Fn2 String Int String
+foreign import getUTCAfterNHoursImpl :: EffectFn2 String Int String
+foreign import compareUTCDateImpl :: Fn2 String String Int
+foreign import jBridgeMethodExists :: String -> Boolean
+
+
 os :: String
 os = getOs unit
 
@@ -314,3 +321,15 @@ isInvalidUrl :: String -> Boolean
 isInvalidUrl url = do
   let strippedUrl = DS.stripPrefix (DS.Pattern "https://") url
   maybe false (\val ->  DS.contains (DS.Pattern "(null)") val || DS.contains (DS.Pattern "__failed") val || DS.contains (DS.Pattern "//") val) strippedUrl
+
+convertDateTimeConfigToUTC :: Int -> Int -> Int -> Int -> Int -> Int -> Effect String
+convertDateTimeConfigToUTC = runEffectFn6 convertDateTimeConfigToUTCImpl
+
+getUTCAfterNSeconds :: String -> Int -> String
+getUTCAfterNSeconds = runFn2 getUTCAfterNSecondsImpl
+
+getUTCAfterNHours :: String -> Int -> Effect String
+getUTCAfterNHours = runEffectFn2 getUTCAfterNHoursImpl
+
+compareUTCDate :: String -> String -> Int
+compareUTCDate = runFn2 compareUTCDateImpl

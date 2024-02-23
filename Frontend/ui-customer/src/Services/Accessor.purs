@@ -296,3 +296,6 @@ _deepLinkJSON = lens (unwrap >>> _.deepLinkJSON) (\oldRec newVal -> wrap ((unwra
 
 _rideEndTime :: forall a b c. Newtype a { rideEndTime :: b | c } => Lens' a b
 _rideEndTime = lens (unwrap >>> _.rideEndTime) (\oldRec newVal -> wrap ((unwrap oldRec) { rideEndTime = newVal }))
+
+_stopLocation :: forall a b c. Newtype a { stopLocation :: b | c } => Lens' a b
+_stopLocation = lens (unwrap >>> _.stopLocation) (\oldRec newVal -> wrap ((unwrap oldRec) { stopLocation = newVal }))
