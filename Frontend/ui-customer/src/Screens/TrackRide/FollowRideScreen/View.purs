@@ -690,7 +690,7 @@ driverLocationTracking push action duration id routeState = do
 
       destination = ride.destination
 
-      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
 
       sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
 
@@ -717,7 +717,7 @@ driverLocationTracking push action duration id routeState = do
 
               point = { lat: srcLat, lng: srcLon }
             addSosMarkers state.data.sosStatus point
-            liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ride.destination specialLocationTag
+            liftFlow $ drawRoute newPoints 0 {points : []} "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ride.destination specialLocationTag (getNewIDWithTag "FollowRideMap")
             liftFlow $ animateCamera srcLat srcLon 17.0 "ZOOM"
             void $ delay $ Milliseconds duration
             void
@@ -750,7 +750,7 @@ driverLocationTracking push action duration id routeState = do
 
       dstLon = ride.destinationLng
 
-      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
 
       sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
 

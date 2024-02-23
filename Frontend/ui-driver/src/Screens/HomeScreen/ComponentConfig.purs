@@ -819,7 +819,10 @@ rateCardState state =
         , description = getString (YATRI_SATHI_FEE_PAYABLE_FOR_DATE "YATRI_SATHI_FEE_PAYABLE_FOR_DATE") <> " " <> state.data.paymentState.date
         , buttonText = Nothing
         , currentRateCardType = CommonTypes.PaymentFareBreakup
-        , primaryButtonText = getString GOT_IT
+        , primaryButtonConfig {
+            text = getString GOT_IT
+          , visibility = VISIBLE
+          }
         , additionalStrings = [
           {key : "FEE_CORRESPONDING_TO_DISTANCE", val : getString FEE_CORRESPONDING_TO_THE_DISTANCE},
           {key : "GOT_IT", val : getString GOT_IT},
@@ -863,13 +866,16 @@ autopayBannerConfig state configureImage =
                         DUE_LIMIT_WARNING_BANNER -> Color.red
                         _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> Color.black900
                         _ -> Color.white900,
-        actionText = case bannerType of
+        actionText {
+          text = case bannerType of
                         _ | bannerType == DUE_LIMIT_WARNING_BANNER || bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getString PAY_NOW
                         _ -> (getString SETUP_NOW),
-        actionTextColor = case bannerType of
+          textColor = case bannerType of
                             _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> Color.black900
                             DUE_LIMIT_WARNING_BANNER -> Color.red
                             _ -> Color.white900,
+          style = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText
+        },
         imageUrl = fetchImage FF_ASSET $ case bannerType of
                       FREE_TRIAL_BANNER -> "ic_free_trial_period" 
                       SETUP_AUTOPAY_BANNER -> "ny_ic_driver_offer"
@@ -878,7 +884,6 @@ autopayBannerConfig state configureImage =
                       _ -> "",
         imageHeight = if configureImage then (V 75) else (V 105),
         imageWidth = if configureImage then (V 98) else (V 118),
-        actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText,
         titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7,
         imagePadding = case bannerType of
                             _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> PaddingTop 0

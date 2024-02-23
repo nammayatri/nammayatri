@@ -376,3 +376,10 @@ findValueFromTuples tuples key =
   in case tuple of
         Just (Tuple _ b) -> Just b
         Nothing          -> Nothing
+        
+formatMinIntoHoursMins :: Int -> String
+formatMinIntoHoursMins mins = 
+  let 
+    hours = mins / 60
+    minutes = mins `mod` 60
+  in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> "hr"

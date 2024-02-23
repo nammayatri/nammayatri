@@ -76,7 +76,8 @@ type Config = {
     listViewArray :: Array String,
     coverMediaConfig :: CoverMediaConfig,
     timerId :: String,
-    onlyTopTitle :: Visibility
+    onlyTopTitle :: Visibility,
+    dontShowRetry :: Boolean
 }
 
 type CoverMediaConfig = {
@@ -184,6 +185,7 @@ type TopTitle = {
 config :: Config
 config = {
   optionButtonOrientation: "HORIZONTAL"
+  , dontShowRetry : false
   , activeIndex : 1
   , customerTipAvailable : false
   , backgroundClickable : true

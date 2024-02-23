@@ -69,6 +69,7 @@ type AppConfigCustomer a =
   , locationTagBar :: LocationTagBarConfig
   , cityConfig :: Array CityConfig
   , driverLocationPolling :: DriverLocationPollingConfig
+  , showCheckoutRentalBanner :: Boolean
   | a
   }
 
@@ -215,7 +216,8 @@ type EstimateAndQuoteConfig = {
   enableBookingPreference :: Boolean, 
   textColor :: String,
   showInfoIcon :: Boolean,
-  variantInfo :: VariantConfig
+  variantInfo :: VariantConfig,
+  genericLoaderLottie :: String
 }
 
 type CustomerTip = {
