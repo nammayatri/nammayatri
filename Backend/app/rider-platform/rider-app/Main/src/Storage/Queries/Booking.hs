@@ -318,8 +318,12 @@ instance FromTType' BeamB.Booking Booking where
     merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId
     let pickupLocationMap = filter (\map1 -> map1.order == 0) mappings
         sortedPickupLocationMap = sortBy (comparing (.version)) pickupLocationMap
-        initialPickupLocMapping = last sortedPickupLocationMap
-    initialPickupLocation <- QL.findById initialPickupLocMapping.locationId >>= fromMaybeM (InternalError "Incorrect Location Mapping")
+    initialPickupLocation <-
+      if null sortedPickupLocationMap
+        then pure fl
+        else do
+          let initialPickupLocMapping = last sortedPickupLocationMap
+          QL.findById initialPickupLocMapping.locationId >>= fromMaybeM (InternalError "Incorrect Location Mapping")
     pure $
       Just
         Booking
