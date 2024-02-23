@@ -31,25 +31,22 @@ bookingStatusCode (DConfirm.DriverQuote _ _) = Nothing -- TODO: refactor it like
 bookingStatusCode (DConfirm.StaticQuote _) = Just "NEW"
 bookingStatusCode (DConfirm.RideOtpQuote _) = Just "NEW"
 
-buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Spec.ConfirmReqMessage
-buildOnConfirmMessageV2 res becknConfig = do
-  let order = tfOrder res becknConfig
+buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Spec.ConfirmReqMessage
+buildOnConfirmMessageV2 res pricing becknConfig = do
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = order
+    { confirmReqMessageOrder = tfOrder res pricing becknConfig
     }
 
-tfOrder :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Spec.Order
-tfOrder res bppConfig = do
-  let fulfillments = tfFulfillments res
-      payments = tfPayments res bppConfig
+tfOrder :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Spec.Order
+tfOrder res pricing bppConfig = do
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms bppConfig,
-      orderFulfillments = fulfillments,
+      orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
-      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId,
-      orderPayments = payments,
+      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId (Just pricing),
+      orderPayments = tfPayments res bppConfig,
       orderProvider = Nothing,
       orderQuote = Utils.tfQuotation res.booking,
       orderStatus = Just "ACTIVE"
@@ -57,14 +54,13 @@ tfOrder res bppConfig = do
 
 tfFulfillments :: DConfirm.DConfirmResp -> Maybe [Spec.Fulfillment]
 tfFulfillments res = do
-  let stops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode
   Just
     [ Spec.Fulfillment
-        { fulfillmentAgent = Nothing,
+        { fulfillmentAgent = tfAgent res,
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = Just res.booking.quoteId,
           fulfillmentState = mkFulfillmentState res.quoteType,
-          fulfillmentStops = stops,
+          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode,
           fulfillmentTags = Nothing,
           fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
           fulfillmentVehicle = tfVehicle res
@@ -72,13 +68,12 @@ tfFulfillments res = do
     ]
   where
     mkFulfillmentState quoteType = do
-      fulfilState <- bookingStatusCode quoteType
       Just $
         Spec.FulfillmentState
           { fulfillmentStateDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just fulfilState,
+                  { descriptorCode = bookingStatusCode quoteType,
                     descriptorShortDesc = Nothing,
                     descriptorName = Nothing
                   }
@@ -132,3 +127,22 @@ tfCancellationTerms becknConfig =
         cancellationTermFulfillmentState = Nothing,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
+
+tfAgent :: DConfirm.DConfirmResp -> Maybe Spec.Agent
+tfAgent res =
+  case res.rideInfo of
+    Just rideInfo -> do
+      let driverName = maybe (Just rideInfo.driver.firstName) (\ln -> Just rideInfo.driver.firstName <> Just " " <> Just ln) rideInfo.driver.lastName
+      return $
+        Spec.Agent
+          { agentContact = Nothing,
+            agentPerson =
+              Just
+                Spec.Person
+                  { personId = Nothing,
+                    personImage = Nothing,
+                    personName = driverName,
+                    personTags = Nothing
+                  }
+          }
+    Nothing -> Nothing

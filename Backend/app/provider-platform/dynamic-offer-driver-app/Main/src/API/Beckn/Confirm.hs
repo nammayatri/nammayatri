@@ -97,7 +97,8 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapVariantToVehicle dConfirmRes.vehicleVariant
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-      let onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes becknConfig
+      let pricing = Utils.convertBookingToPricing dConfirmRes.booking
+          onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
 
 confirmLockKey :: Text -> Text
