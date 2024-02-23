@@ -25,3 +25,7 @@ VALUES (
     now(),
     'CAB'
 );
+
+UPDATE atlas_app.beckn_config
+SET payment_params_json = '{"bankAccNumber": "xyz@upi","bankCode": "xyz"}'
+WHERE domain = 'MOBILITY';

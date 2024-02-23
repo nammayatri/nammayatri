@@ -118,7 +118,7 @@ makeRideAPIEntity Ride {..} =
   let driverMobileNumber' = if status == NEW then Just driverMobileNumber else Just "xxxx"
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
-      driverRating' = driverRating <|> Just (toCentesimal 5)
+      driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
    in RideAPIEntity
         { shortRideId = shortId,
           driverNumber = driverMobileNumber',
