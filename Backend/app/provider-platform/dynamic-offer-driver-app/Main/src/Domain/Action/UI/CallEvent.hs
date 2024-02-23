@@ -30,7 +30,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.Queries.Ride as QRide
-import Tools.Error
 import Tools.Event
 
 data CallEventReq = CallEventReq
@@ -48,6 +47,8 @@ sendCallDataToKafka :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaF
 sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exophoneNumber = do
   case mRideId of
     Just rideId -> do
-      ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-      triggerExophoneEvent $ ExophoneEventData vendor callType (Just rideId) callSid callStatus ride.merchantId triggeredBy (Just ride.driverId) exophoneNumber
+      mRide <- runInReplica $ QRide.findById rideId
+      case mRide of
+        Just ride -> triggerExophoneEvent $ ExophoneEventData vendor callType (Just rideId) callSid callStatus ride.merchantId triggeredBy (Just ride.driverId) exophoneNumber
+        Nothing -> triggerExophoneEvent $ ExophoneEventData vendor callType (Just rideId) callSid callStatus Nothing triggeredBy Nothing exophoneNumber
     Nothing -> triggerExophoneEvent $ ExophoneEventData vendor callType Nothing callSid callStatus Nothing triggeredBy Nothing exophoneNumber
