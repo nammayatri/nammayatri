@@ -55,7 +55,6 @@ type AppConfigCustomer a =
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
-  , showCheckoutRentalBanner :: Boolean
   , mapConfig :: MapConfig
   , metroTicketingConfig :: Array MetroConfig
   , enableWhatsappOTP :: Array String
@@ -76,6 +75,7 @@ type AppConfigCustomer a =
   , tipDisplayDuration :: Int
   , tipsEnabled :: Boolean
   , tipEnabledCities :: Array String
+  , showCheckoutRentalBanner :: Boolean
   | a
   }
 
@@ -222,7 +222,8 @@ type EstimateAndQuoteConfig = {
   enableBookingPreference :: Boolean, 
   textColor :: String,
   showInfoIcon :: Boolean,
-  variantInfo :: VariantConfig
+  variantInfo :: VariantConfig,
+  genericLoaderLottie :: String
 }
 
 type CustomerTip = {
@@ -377,7 +378,9 @@ type HotSpotConfig = {
 type CityConfig = {
   cityName :: String,
   cityCode :: String,
-  geoCodeConfig :: GeoCodeConfig
+  geoCodeConfig :: GeoCodeConfig,
+  enableRentals :: Boolean,
+  enableIntercity :: Boolean
 }
 
 type GeoCodeConfig = {

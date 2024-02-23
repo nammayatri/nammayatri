@@ -31,8 +31,6 @@ getBannerConfigs state action =
     then [disabilityBannerConfig state action] 
     else [])
   <> (if  state.data.config.banners.homeScreenSafety && isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
-  <> (if (state.data.config.feature.enableZooTicketBookingFlow)
-    then [ticketBannerConfig state action] else [])
   <> (getRemoteBannerConfigs state.props.city)
   where
     getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))

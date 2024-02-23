@@ -138,6 +138,6 @@ getquoteData state  metroQuote =
   where
     getTicketType :: String -> ST.TicketType
     getTicketType quoteType = case quoteType of 
-      "SingleJourney" -> ST.ONE_WAY
+      "SingleJourney" -> ST.ONE_WAY_TRIP
       "ReturnJourney" -> ST.ROUND_TRIP
-      _ -> ST.ONE_WAY
+      _ -> ST.ONE_WAY_TRIP

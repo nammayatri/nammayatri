@@ -17,14 +17,17 @@ module Components.DriverInfoCard.Controller where
 
 import MerchantConfig.Types
 
+import Common.Types.App (RentalBookingConfig)
 import Components.ChatView.Controller (ChatComponentConfig)
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), FareProductType(..))
 import Components.BannerCarousel as BannerCarousel
+import MerchantConfig.Types
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -45,6 +48,10 @@ data Action = NoAction
             | BannerStateChanged String
             | BannerCarousel BannerCarousel.Action
             | SpecialZoneInfoTag
+            | RideDurationTimer String String Int
+            | AddStop 
+            | RentalInfo
+            | ShowEndOTP
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -54,7 +61,6 @@ type DriverInfoCardState =
 type DriverInfoCardProps =
   {
     currentStage :: Stage,
-    currentSearchResultType :: SearchResultType,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
     showCallPopUp :: Boolean,
@@ -63,7 +69,12 @@ type DriverInfoCardProps =
     zoneType :: ZoneType,
     merchantCity :: City,
     showBanner :: Boolean,
-    isChatWithEMEnabled :: Boolean
+    isChatWithEMEnabled :: Boolean,
+    rideDurationTimer :: String,
+    rideDurationTimerId :: String,
+    endOTPShown :: Boolean,
+    showEndOTP :: Boolean,
+    stageBeforeChatScreen :: Stage
   }
 
 type DriverInfoCardData =
@@ -103,4 +114,6 @@ type DriverInfoCardData =
   , bottomSheetState :: BottomSheetState
   , bannerData :: BannerCarousalData
   , bannerArray :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+  , rentalData :: RentalBookingConfig
+  , fareProductType :: FareProductType
   }

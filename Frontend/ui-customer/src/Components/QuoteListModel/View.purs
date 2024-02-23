@@ -42,10 +42,9 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
+import Data.String (null) as DS
 import Locale.Utils
 import Mobility.Prelude
-import Engineering.Helpers.Utils(splitIntoEqualParts)
-import Debug
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -81,7 +80,7 @@ paymentView state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , visibility if state.selectedQuote == Nothing && (null state.quoteListModel) && (not isLocalStageOn FindingQuotes) && (not state.findingRidesAgain) then GONE else VISIBLE
+  , visibility if state.isRentalSearch then VISIBLE else if state.selectedQuote == Nothing && (null state.quoteListModel) && (not isLocalStageOn FindingQuotes) && (not state.findingRidesAgain) then GONE else VISIBLE
   , alignParentBottom "true,-1"
   , background Color.white900
   , accessibility DISABLE
@@ -93,7 +92,7 @@ paymentView state =
                         )(const NoAction)
           , height WRAP_CONTENT
           , width MATCH_PARENT
-          , visibility if state.showProgress then VISIBLE else GONE
+          , visibility if state.showProgress || state.isRentalSearch then VISIBLE else GONE
           , accessibilityHint "Booking Status: Looking for rides"
           , accessibility ENABLE
           ]
@@ -196,11 +195,12 @@ sourceDestinationView state push =
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
       ]
-      , SeparatorView.view separatorConfig
+      , if DS.null state.destination then textView[] else SeparatorView.view separatorConfig
       , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity CENTER_VERTICAL
+      , visibility $ boolToVisibility $ not $ DS.null state.destination
       ][ 
         imageView
         [ height $ V 15
@@ -242,7 +242,7 @@ findingRidesView state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , gravity CENTER_HORIZONTAL
-  , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain then VISIBLE else GONE
+  , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain || state.isRentalSearch then VISIBLE else GONE
   , clickable true
   , accessibility DISABLE
   , margin $ if state.tipViewProps.onlyPrimaryText then MarginBottom 80 else if state.tipViewProps.isprimaryButtonVisible then MarginBottom 82 else  MarginBottom 85
@@ -278,7 +278,7 @@ findingRidesView state push =
     , textView 
       [ text (getString FINDING_QUOTES_TEXT)
       , color "#7C7C7C"
-      , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
+      , visibility if state.appConfig.showQuoteFindingText || state.isRentalSearch then VISIBLE else GONE
       , textSize FontSize.a_17
       , accessibility DISABLE
       , lineHeight "25"

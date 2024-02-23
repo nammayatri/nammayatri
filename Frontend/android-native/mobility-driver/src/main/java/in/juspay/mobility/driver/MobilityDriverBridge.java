@@ -478,7 +478,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         polylineOptions.add(toPointObj);
                         polylineOptions.add(fromPointObj);
                     }
-                    Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
+                    Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth, googleMap);
 
                     if (sourceMarker != null && !sourceMarker.equals("")) {
                         Bitmap sourceBitmap = constructBitmap(90, sourceMarker);
@@ -745,24 +745,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
     //endregion
 
-    @JavascriptInterface
-    public void renderSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId) {
-        ExecutorManager.runOnMainThread(() -> {
-            SliderComponent sliderComponent = new SliderComponent();
-            sliderComponent.addSlider(id,callback,conversionRate,minLimit,maxLimit,defaultValue,toolTipId, bridgeComponents);
-        });
-    }
-
-    @JavascriptInterface
-    public boolean isBackgroundLocationEnabled() {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED);
-        }else{
-            return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
-        }
-    }
 }
 
 

@@ -4,7 +4,7 @@ import Prelude
 
 import Common.Types.App (ChatComponent)
 import MerchantConfig.Types (AppConfig)
-import Screens.Types (SearchResultType, Stage)
+import Screens.Types (SearchResultType, Stage, FareProductType)
 import Components.ChatView.Controller (ChatComponentConfig)
 import Components.MessagingView.Controller 
 
@@ -13,7 +13,7 @@ type MessageNotificationView a = {
   showChatNotification :: Boolean
 , enableChatWidget :: Boolean
 , isNotificationExpanded :: Boolean
-, currentSearchResultType :: SearchResultType
+, fareProductType :: FareProductType
 , config :: AppConfig
 , rideStarted ::Boolean
 , lastMessage :: ChatComponent

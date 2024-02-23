@@ -3,10 +3,11 @@ module Components.DriverInfoCard.Common.Types where
 import Prelude
 
 import MerchantConfig.Types (AppConfig)
-import Screens.Types (City, SearchResultType)
+import Screens.Types (City, SearchResultType, FareProductType)
+import Common.Types.App 
 
 type DriverDetailsType
-  = { searchType :: SearchResultType
+  = { fareProductType :: FareProductType
   , rating :: Number
   , driverName :: String
   , vehicleDetails :: String
@@ -25,4 +26,5 @@ type TripDetails a
   , onAnimationEnd :: a
   , backgroundColor :: String
   , enablePaddingBottom :: Boolean
+  , fareProductType :: FareProductType
     }

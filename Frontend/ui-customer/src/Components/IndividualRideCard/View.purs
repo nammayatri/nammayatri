@@ -214,12 +214,18 @@ sourceAndDestination push state =
           , ellipsize true
           ] <> FontStyle.paragraphText LanguageStyle)
         ]
-    , SeparatorView.view separatorConfig
+    , linearLayout 
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , PrestoList.visibilityHolder "showRepeatRide" 
+      ]
+      [SeparatorView.view separatorConfig]
     , linearLayout
       [ orientation HORIZONTAL
       , height WRAP_CONTENT
       , width MATCH_PARENT
       , background if os == "IOS" then Color.transparent else Color.white900
+      , PrestoList.visibilityHolder "showRepeatRide" 
       ][  imageView
           [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_loc_red"
           , height $ V 16
@@ -382,6 +388,7 @@ viewDetailsAndRepeatRide push state =
       , margin $ Margin 15 15 15 7
       , background Color.grey900
       , visibility if state.isSrcServiceable then VISIBLE else GONE
+      , PrestoList.visibilityHolder "showRepeatRide"
       ][]
     , textView (
       [ width WRAP_CONTENT
@@ -400,6 +407,7 @@ viewDetailsAndRepeatRide push state =
       , weight 1.0
       , gravity CENTER
       , visibility if state.isSrcServiceable then VISIBLE else GONE
+      , PrestoList.visibilityHolder "showRepeatRide"
       ] <> FontStyle.body1 LanguageStyle)
   ]
 
