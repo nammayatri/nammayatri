@@ -38,6 +38,6 @@ instance B.Table AutoCompleteDataT where
 
 type AutoCompleteData = AutoCompleteDataT Identity
 
-$(enableKVPG ''AutoCompleteDataT ['id] [])
+$(enableKVPG ''AutoCompleteDataT ['id] [['sessionToken]])
 
 $(mkTableInstances ''AutoCompleteDataT "auto_complete_data")

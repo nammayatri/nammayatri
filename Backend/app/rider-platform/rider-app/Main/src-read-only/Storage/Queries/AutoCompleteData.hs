@@ -23,7 +23,7 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.AutoComple
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.AutoCompleteData.AutoCompleteData] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findBySessionTokenAndSearchType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe (Domain.Types.AutoCompleteData.AutoCompleteData))
 findBySessionTokenAndSearchType sessionToken searchType = do

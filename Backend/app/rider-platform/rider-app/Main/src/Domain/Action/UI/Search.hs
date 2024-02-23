@@ -58,6 +58,7 @@ import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantState as QMMS
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
@@ -65,7 +66,6 @@ import qualified Storage.Queries.AutoCompleteData as QAutoCompleteData
 import qualified Storage.Queries.NextBillionData as QNB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonDisability as PD
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Event
