@@ -186,7 +186,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
 
-  if (not isValueAddNP && isJust searchRequest.disabilityTag)
+  if not isValueAddNP && isJust searchRequest.disabilityTag
     then do
       logTagError "onSearch" "disability tag enabled search estimates discarded, not supported for OFF-US transactions"
       pure ()
