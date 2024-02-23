@@ -88,7 +88,7 @@ buildOnCancelReq ::
   DBC.BecknConfig ->
   m Spec.OnCancelReq
 buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) becknConfig = do
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country Nothing
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
   pure $
     Spec.OnCancelReq
       { onCancelReqError = Nothing,

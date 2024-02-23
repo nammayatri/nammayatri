@@ -19,6 +19,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
+import BecknV2.Utils
 import qualified Data.List as L
 import qualified Data.Text as T
 import Domain.Types
@@ -28,7 +29,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
-import Kernel.Utils.Common hiding (formatTimeDifference)
+import Kernel.Utils.Common
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
 
 data DOnSelectReq = DOnSelectReq
@@ -221,15 +222,8 @@ mkQuoteV2 quote now = do
   Spec.Quotation
     { quotationBreakup = Just $ mkQuoteBreakupInner quote,
       quotationPrice = mkQuotationPrice quote,
-      quotationTtl = Just $ T.pack $ formatTimeDifference nominalDifferenceTime --------- todo
+      quotationTtl = Just $ formatTimeDifference nominalDifferenceTime
     }
-  where
-    formatTimeDifference :: (Semigroup a, IsString a) => NominalDiffTime -> a
-    formatTimeDifference duration =
-      let secondsDiff = (round :: Double -> Int) . realToFrac $ nominalDiffTimeToSeconds duration
-          (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)
-          (minutes, seconds) = divMod remainingSeconds 60
-       in "PT" <> show hours <> "H" <> show minutes <> "M" <> show seconds <> "S"
 
 mkQuoteBreakupInner :: DQuote.DriverQuote -> [Spec.QuotationBreakupInner]
 mkQuoteBreakupInner quote = do
