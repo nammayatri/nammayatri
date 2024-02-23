@@ -150,6 +150,8 @@ public class MobilityAppBridge extends HyperBridge {
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
         remoteConfigs = new MobilityRemoteConfigs(false, false);
         registerCallBacks();
+        String mapConfig = remoteConfigs.getString("map_config");
+        KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
     }
 
     @JavascriptInterface
