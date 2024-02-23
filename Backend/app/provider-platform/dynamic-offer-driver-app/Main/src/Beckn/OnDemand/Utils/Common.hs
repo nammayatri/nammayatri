@@ -274,8 +274,8 @@ mkStops' origin mbDestination mAuthorization =
 
 mkAddress :: DLoc.LocationAddress -> Text
 mkAddress DLoc.LocationAddress {..} =
-  let res = map (Just . fromMaybe "") [door, building, street, area, city, state, country]
-   in T.intercalate "<>" $ catMaybes res
+  let res = map replaceEmpty [door, building, street, area, city, state, country]
+   in T.intercalate ", " $ catMaybes res
 
 data DriverInfo = DriverInfo
   { mobileNumber :: Text,
@@ -611,25 +611,32 @@ mkOdometerTagGroupV2 startOdometerReading' =
 
 buildAddressFromText :: MonadFlow m => Text -> m OS.Address
 buildAddressFromText fullAddress = do
-  let splitedAddress = T.splitOn "<>" fullAddress
+  let splitedAddress = T.splitOn ", " fullAddress
       totalAddressComponents = List.length splitedAddress
   logDebug $ "Search Address:-" <> fullAddress
-  unless (totalAddressComponents == 7) $
-    throwError . InvalidRequest $ "Address should have 7 components seperated by `<>`, address:-" <> fullAddress
   let area_code_ = Nothing
-      building_ = Just $ splitedAddress List.!! 1
-      city_ = Just $ splitedAddress List.!! 4
-      country_ = Just $ splitedAddress List.!! 6
-      door_ = Just $ splitedAddress List.!! 0
-      locality_ = Just $ splitedAddress List.!! 3
-      state_ = Just $ splitedAddress List.!! 5
-      street_ = Just $ splitedAddress List.!! 2
+      building_ = splitedAddress !? (totalAddressComponents - 6)
+      city_ = splitedAddress !? (totalAddressComponents - 3)
+      country_ = splitedAddress !? (totalAddressComponents - 1)
+      door_ =
+        if totalAddressComponents > 7
+          then splitedAddress !? 0 <> Just ", " <> splitedAddress !? 1
+          else splitedAddress !? 0
+      locality_ = splitedAddress !? (totalAddressComponents - 4)
+      state_ = splitedAddress !? (totalAddressComponents - 2)
+      street_ = splitedAddress !? (totalAddressComponents - 5)
       building = replaceEmpty building_
       street = replaceEmpty street_
       locality = replaceEmpty locality_
       ward_ = Just $ T.intercalate ", " $ catMaybes [locality, street, building]
       ward = if ward_ == Just "" then city_ else ward_
   pure $ OS.Address {area_code = area_code_, building = building_, city = city_, country = country_, door = door_, locality = locality_, state = state_, street = street_, ward = ward}
+
+(!?) :: [a] -> Int -> Maybe a
+(!?) xs i
+  | i < 0 = Nothing
+  | i >= length xs = Nothing
+  | otherwise = Just $ xs List.!! i
 
 replaceEmpty :: Maybe Text -> Maybe Text
 replaceEmpty string = if string == Just "" then Nothing else string
