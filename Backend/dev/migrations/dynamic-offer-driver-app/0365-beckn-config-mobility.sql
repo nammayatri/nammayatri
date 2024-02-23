@@ -15,7 +15,10 @@ INSERT INTO
         on_search_ttl_sec,
         on_select_ttl_sec,
         on_init_ttl_sec,
-        on_confirm_ttl_sec
+        on_confirm_ttl_sec,
+        payment_params_json,
+        cancellation_fee_amount,
+        cancellation_fee_percentage
     )
 VALUES
     (
@@ -34,7 +37,10 @@ VALUES
         120,
         120,
         120,
-        120
+        120,
+        '{"bankAccNumber": "xyz@upi","bankCode": "xyz"}',
+        10,
+        0
     ),
     (
         'dd22a05d-29a3-42c8-9c8d-2de340f9b609',
@@ -52,9 +58,8 @@ VALUES
         120,
         120,
         120,
-        120
+        120,
+        '{"bankAccNumber": "xyz@upi","bankCode": "xyz"}',
+        10,
+        0
     );
-
-UPDATE atlas_driver_offer_bpp.beckn_config
-SET payment_params_json = '{"bankAccNumber": "xyz@upi","bankCode": "xyz"}'
-WHERE domain = 'MOBILITY';
