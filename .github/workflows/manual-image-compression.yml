@@ -20,7 +20,7 @@ jobs:
         if: steps.calibre.outputs.markdown != ''
         uses: peter-evans/create-pull-request@v6
         with:
-          title: Compressed Images
+          title: [github-bot][frontend/auto] Compressed Images
           branch-suffix: timestamp
-          commit-message: Compressed Images
+          commit-message: [github-bot][frontend/auto] Compressed Images
           body: ""
