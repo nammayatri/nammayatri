@@ -88,30 +88,19 @@ getQuotes searchRequestId = do
   activeBooking <- runInReplica $ QBooking.findLatestByRiderId searchRequest.riderId
   whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
   logDebug $ "search Request is : " <> show searchRequest
-  lockValueM :: Maybe Bool <- Redis.safeGet $ estimateBuildLockKey (show searchRequestId)
-  let isLockAcquired = fromMaybe False lockValueM
-  if not isLockAcquired
-    then do
-      offers <- getOffers searchRequest
-      estimates <- getEstimates searchRequestId
-      paymentMethods <- getPaymentMethods searchRequest
-      return $
-        GetQuotesRes
-          { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
-            toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
-            quotes = offers,
-            estimates,
-            paymentMethods
-          }
-    else do
-      return $
-        GetQuotesRes
-          { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
-            toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
-            quotes = [],
-            estimates = [],
-            paymentMethods = []
-          }
+  let lockKey = estimateBuildLockKey (show searchRequestId)
+  Redis.withLockRedisAndReturnValue lockKey 5 $ do
+    offers <- getOffers searchRequest
+    estimates <- getEstimates searchRequestId
+    paymentMethods <- getPaymentMethods searchRequest
+    return $
+      GetQuotesRes
+        { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
+          toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
+          quotes = offers,
+          estimates,
+          paymentMethods
+        }
 
 getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do

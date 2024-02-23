@@ -28,7 +28,6 @@ where
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
-import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
@@ -74,8 +73,6 @@ search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHand
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-    let key = DQ.estimateBuildLockKey $ show dSearchRes.searchId
-    Redis.setExp key True 5
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2
   -- fork "search metro" . withShortRetry $ do
   --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes
