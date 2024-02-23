@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Transformer.Init as TF
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import Kernel.Prelude
@@ -29,8 +30,6 @@ import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as VNP
-
--- import EulerHS.Prelude (readMaybe)
 
 buildInitReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>

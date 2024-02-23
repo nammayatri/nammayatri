@@ -48,7 +48,7 @@ buildOnUpdateReqV2 ::
   DM.Merchant ->
   m Spec.OnUpdateReq
 buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req bppConfig merchant = do
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country Nothing
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
   message <- mkOnUpdateMessageV2 req bppConfig merchant
   pure $
     Spec.OnUpdateReq
