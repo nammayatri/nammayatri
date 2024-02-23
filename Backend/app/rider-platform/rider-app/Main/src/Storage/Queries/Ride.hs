@@ -18,6 +18,7 @@ module Storage.Queries.Ride where
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.List (sortBy)
 import Data.Ord
+import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
@@ -211,6 +212,9 @@ instance BeamBackend.BeamSqlBackend be => B.HasSqlEqualityCheck be Common.Bookin
 instance BeamBackend.HasSqlValueSyntax be String => BeamBackend.HasSqlValueSyntax be Common.BookingStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
+roundToMidnightUTC :: UTCTime -> UTCTime
+roundToMidnightUTC (UTCTime day _) = UTCTime day 0
+
 findAllRideItems ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
@@ -237,8 +241,8 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> person.mobileNumberHash B.==?. B.val_ (Just hash)) mbCustomerPhoneDBHash
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverMobileNumber -> ride.driverMobileNumber B.==?. B.val_ driverMobileNumber) mbDriverPhone
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ defaultFrom) mbFrom
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ defaultTo) mbTo
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTC defaultTo)) mbTo
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
               )
               do
