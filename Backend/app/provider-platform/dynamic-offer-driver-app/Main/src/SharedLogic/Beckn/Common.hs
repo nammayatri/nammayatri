@@ -14,9 +14,11 @@
 
 module SharedLogic.Beckn.Common where
 
+import Domain.Types.BecknConfig as DBC
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParameters as Fare
+import Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
@@ -29,7 +31,11 @@ data BookingDetails = BookingDetails
     booking :: DRB.Booking,
     driver :: SP.Person,
     vehicle :: SVeh.Vehicle,
-    isValueAddNP :: Bool
+    isValueAddNP :: Bool,
+    bppConfig :: DBC.BecknConfig,
+    merchant :: DM.Merchant,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    paymentUrl :: Maybe Text
   }
 
 data DRideAssignedReq = DRideAssignedReq
@@ -47,8 +53,6 @@ data DRideStartedReq = DRideStartedReq
 data DRideCompletedReq = DRideCompletedReq
   { bookingDetails :: BookingDetails,
     fareParams :: Fare.FareParameters,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    paymentUrl :: Maybe Text,
     tripEndLocation :: Maybe Maps.LatLong
   }
 

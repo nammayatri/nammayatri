@@ -36,8 +36,8 @@ import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.Queries.BecknConfig as QBC
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -94,11 +94,11 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       | otherwise = throwM exc
 
     callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country = do
-      context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
+      context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapVariantToVehicle dConfirmRes.vehicleVariant
-      becknConfig <- QBC.findByMerchantIdDomainAndVehicle (Just dConfirmRes.transporter.id) (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
       let onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes becknConfig
-      void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage
+      void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
 
 confirmLockKey :: Text -> Text
 confirmLockKey id = "Driver:Confirm:BookingId-" <> id

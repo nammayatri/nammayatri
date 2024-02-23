@@ -23,7 +23,7 @@ where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
-import Data.List (sortBy)
+import Data.List (singleton, sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
@@ -122,7 +122,8 @@ data DSearchRes = DSearchRes
   }
 
 data NearestDriverInfo = NearestDriverInfo
-  { distanceToNearestDriver :: Meters,
+  { locationId :: Text,
+    distanceToNearestDriver :: Meters,
     driverLatLongs :: NonEmpty LatLong
   }
 
@@ -189,8 +190,9 @@ handler ValidatedDSearchReq {..} sReq = do
   for_ quotes QQuote.create
 
   forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
-
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation specialLocationTag searchMetricsMVar (addNearestDriverInfo driverPool quotes) (addNearestDriverInfo driverPool estimates)
+  driverInfoQuotes <- addNearestDriverInfo driverPool quotes
+  driverInfoEstimates <- addNearestDriverInfo driverPool estimates
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation specialLocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates
   where
     getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe Money)
     getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing)
@@ -276,30 +278,31 @@ handler ValidatedDSearchReq {..} sReq = do
         }
 
 addNearestDriverInfo ::
-  (HasField "vehicleVariant" a DVeh.Variant) =>
+  (HasField "vehicleVariant" a DVeh.Variant, MonadFlow m) =>
   (Maybe (NonEmpty DriverPoolResult)) ->
   [a] ->
-  [(a, Maybe NearestDriverInfo)]
-addNearestDriverInfo Nothing estdOrQuotes = map (\a -> (a, Nothing)) estdOrQuotes
+  m [(a, Maybe NearestDriverInfo)]
+addNearestDriverInfo Nothing estdOrQuotes = return $ map (\a -> (a, Nothing)) estdOrQuotes
 addNearestDriverInfo (Just driverPool) estdOrQuotes = do
   let mapOfDPRByVariant = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
   matchInputWithNearestDriver estdOrQuotes mapOfDPRByVariant
   where
     matchInputWithNearestDriver ::
-      (HasField "vehicleVariant" a DVeh.Variant) =>
+      (HasField "vehicleVariant" a DVeh.Variant, MonadFlow m) =>
       [a] ->
       M.Map DVeh.Variant (NonEmpty DriverPoolResult) ->
-      [(a, Maybe NearestDriverInfo)]
+      m [(a, Maybe NearestDriverInfo)]
     matchInputWithNearestDriver inputs driverPools = do
-      input <- inputs
+      let input = head inputs
       let driverPool' = M.lookup input.vehicleVariant driverPools
       case driverPool' of
-        Nothing -> return (input, Nothing)
+        Nothing -> return $ singleton (input, Nothing)
         Just dp -> do
+          locationId <- generateGUIDText
           let driverLatLongs = fmap (\x -> LatLong x.lat x.lon) dp
               distanceToNearestDriver = NE.head dp & (.distanceToPickup)
               nearestDriverInfo = NearestDriverInfo {..}
-          return (input, Just nearestDriverInfo)
+          return $ singleton (input, Just nearestDriverInfo)
 
 selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
 selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled farePolicies = do

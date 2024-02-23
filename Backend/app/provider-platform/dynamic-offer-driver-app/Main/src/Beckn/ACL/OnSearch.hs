@@ -16,6 +16,7 @@ module Beckn.ACL.OnSearch where
 
 import qualified Beckn.OnDemand.Transformer.OnSearch as TOnSearch
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.Utils
 import qualified Domain.Action.Beckn.Search as DSearch
 import Domain.Types.BecknConfig
 import Kernel.Prelude
@@ -41,4 +42,7 @@ mkOnSearchRequest ::
   m Spec.OnSearchReq
 mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapId bapUri bppId bppUri city country = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle provider.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show provider.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW)
-  TOnSearch.buildOnSearchRideReq bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country
+  ttlInInt <- bppConfig.onSearchTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+  TOnSearch.buildOnSearchRideReq ttlToISO8601Duration bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country

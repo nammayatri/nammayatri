@@ -23,9 +23,9 @@ import qualified Kernel.Utils.Text
 import qualified SharedLogic.Confirm
 import qualified Storage.CachedQueries.ValueAddNP as VNP
 
-buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> DBC.BecknConfig -> m BecknV2.OnDemand.Types.InitReq
-buildInitReq uiConfirm bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig = do
-  initReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain uiConfirm.booking.id.getId (Just uiConfirm.searchRequestId.getId) uiConfirm.merchant.bapId bapUrl (Just uiConfirm.providerId) (Just uiConfirm.providerUrl) uiConfirm.city uiConfirm.merchant.country
+buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> DBC.BecknConfig -> Text -> m BecknV2.OnDemand.Types.InitReq
+buildInitReq uiConfirm bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig initTtl = do
+  initReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain uiConfirm.booking.id.getId (Just uiConfirm.searchRequestId.getId) uiConfirm.merchant.bapId bapUrl (Just uiConfirm.providerId) (Just uiConfirm.providerUrl) uiConfirm.city uiConfirm.merchant.country (Just initTtl)
   let initReqMessage_ = buildInitReqMessage uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig
   pure $ BecknV2.OnDemand.Types.InitReq {initReqContext = initReqContext_, initReqMessage = initReqMessage_}
 

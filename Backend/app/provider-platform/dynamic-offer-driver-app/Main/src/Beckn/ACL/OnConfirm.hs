@@ -25,8 +25,6 @@ import qualified Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
-import Kernel.Utils.Common
-import SharedLogic.FareCalculator
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Text
 bookingStatusCode (DConfirm.DriverQuote _ _) = Nothing -- TODO: refactor it like so case match is not needed
@@ -50,10 +48,10 @@ tfOrder res bppConfig = do
       orderCancellationTerms = Just $ tfCancellationTerms bppConfig,
       orderFulfillments = fulfillments,
       orderId = Just res.booking.id.getId,
-      orderItems = tfItems res,
+      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId,
       orderPayments = payments,
       orderProvider = Nothing,
-      orderQuote = tfQuotation res,
+      orderQuote = Utils.tfQuotation res.booking,
       orderStatus = Just "ACTIVE"
     }
 
@@ -86,82 +84,12 @@ tfFulfillments res = do
                   }
           }
 
-tfItems :: DConfirm.DConfirmResp -> Maybe [Spec.Item]
-tfItems res =
-  Just
-    [ Spec.Item
-        { itemDescriptor = Nothing,
-          itemFulfillmentIds = Just [res.booking.quoteId],
-          itemId = Just $ Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant,
-          itemLocationIds = Nothing,
-          itemPaymentIds = Nothing,
-          itemPrice = tfItemPrice res,
-          itemTags = Nothing
-        }
-    ]
-
-tfItemPrice :: DConfirm.DConfirmResp -> Maybe Spec.Price
-tfItemPrice res =
-  Just
-    Spec.Price
-      { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
-        priceMaximumValue = Nothing,
-        priceMinimumValue = Nothing,
-        priceOfferedValue = Nothing,
-        priceValue = Just $ encodeToText res.booking.estimatedFare
-      }
-
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
   let amount = fromIntegral (res.booking.estimatedFare.getMoney)
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   Just $ L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
-
-tfQuotation :: DConfirm.DConfirmResp -> Maybe Spec.Quotation
-tfQuotation res =
-  Just
-    Spec.Quotation
-      { quotationBreakup = mkQuotationBreakup res,
-        quotationPrice = tfQuotationPrice res,
-        quotationTtl = Nothing
-      }
-
-tfQuotationPrice :: DConfirm.DConfirmResp -> Maybe Spec.Price
-tfQuotationPrice res =
-  Just
-    Spec.Price
-      { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
-        priceMaximumValue = Nothing,
-        priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText res.booking.estimatedFare,
-        priceValue = Just $ encodeToText res.booking.estimatedFare
-      }
-
-mkQuotationBreakup :: DConfirm.DConfirmResp -> Maybe [Spec.QuotationBreakupInner]
-mkQuotationBreakup res =
-  -- TODO::Beckn, `quotationBreakupInnerTitle` may not be according to spec.
-  Just $
-    mkFareParamsBreakups mkPrice mkQuotationBreakupInner res.booking.fareParams
-  where
-    mkPrice money =
-      Just
-        Spec.Price
-          { priceComputedValue = Nothing,
-            priceCurrency = Just "INR",
-            priceMaximumValue = Nothing,
-            priceMinimumValue = Nothing,
-            priceOfferedValue = Nothing,
-            priceValue = Just $ encodeToText money
-          }
-
-    mkQuotationBreakupInner title price =
-      Spec.QuotationBreakupInner
-        { quotationBreakupInnerPrice = price,
-          quotationBreakupInnerTitle = Just title
-        }
 
 tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
 tfVehicle res = do

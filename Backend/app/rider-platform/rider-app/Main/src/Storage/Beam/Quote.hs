@@ -42,7 +42,8 @@ data QuoteT f = QuoteT
     merchantOperatingCityId :: B.C f (Maybe Text),
     specialZoneQuoteId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime
+    createdAt :: B.C f UTCTime,
+    validTill :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

@@ -21,6 +21,7 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
+import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.List as DL
 import qualified Data.Text as T
@@ -29,6 +30,7 @@ import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id, state, (%~))
+import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
@@ -43,8 +45,11 @@ buildConfirmReqV2 res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  ttlInInt <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+  context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just ttlToISO8601Duration)
   let message = mkConfirmMessageV2 res bapConfig
   pure $ Spec.ConfirmReq context message
 

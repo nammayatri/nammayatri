@@ -132,8 +132,8 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CUSTOMER_CANCELLATION_DUES)
                    ]
 
-mkRideCompletedPayment :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> Spec.Payment
-mkRideCompletedPayment _paymentMethodInfo _paymentUrl merchant bppConfig = do
+mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> Spec.Payment
+mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 

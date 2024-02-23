@@ -55,7 +55,8 @@ data EstimateT f = EstimateT
     waitingChargePerMin :: B.C f (Maybe Money),
     specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    validTill :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

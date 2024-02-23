@@ -17,13 +17,17 @@ import qualified Servant.Client.Core
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
-  { cancellationFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+  { buyerFinderFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cancellationFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationFeePercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    buyerFinderFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     collectedBy :: B.C f Domain.Types.BecknConfig.PaymentCollectedBy,
     domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    onConfirmTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    onInitTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    onSearchTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    onSelectTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registryUrl :: B.C f Kernel.Prelude.Text,
     settlementType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

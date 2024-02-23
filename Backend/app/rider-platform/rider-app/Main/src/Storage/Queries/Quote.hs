@@ -132,7 +132,8 @@ instance FromTType' BeamQ.Quote Quote where
             vehicleVariant = vehicleVariant,
             tripTerms = trip,
             specialLocationTag = specialLocationTag,
-            createdAt = createdAt
+            createdAt = createdAt,
+            validTill = validTill
           }
     where
       getRentalDetails rentalDetailsId' = do
@@ -182,5 +183,6 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
             BeamQ.specialZoneQuoteId = specialZoneQuoteId,
             BeamQ.specialLocationTag = specialLocationTag,
-            BeamQ.createdAt = createdAt
+            BeamQ.createdAt = createdAt,
+            BeamQ.validTill = validTill
           }

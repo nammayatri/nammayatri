@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Transformer.Init as TF
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import Kernel.Prelude
@@ -46,4 +47,7 @@ buildInitReqV2 res = do
   let action = Context.INIT
   let domain = Context.MOBILITY
   isValueAddNP <- VNP.isValueAddNP res.providerId
-  TF.buildInitReq res bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig
+  ttlInInt <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+  TF.buildInitReq res bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig ttlToISO8601Duration

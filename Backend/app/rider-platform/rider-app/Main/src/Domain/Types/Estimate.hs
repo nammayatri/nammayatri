@@ -64,7 +64,8 @@ data Estimate = Estimate
     driversLocation :: [LatLong],
     specialLocationTag :: Maybe Text,
     updatedAt :: UTCTime,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    validTill :: UTCTime
   }
   deriving (Generic, Show)
 
@@ -125,7 +126,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     providerLogoUrl :: Maybe Text,
     providerDescription :: Maybe Text,
     providerId :: Text,
-    isValueAddNP :: Bool
+    isValueAddNP :: Bool,
+    validTill :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

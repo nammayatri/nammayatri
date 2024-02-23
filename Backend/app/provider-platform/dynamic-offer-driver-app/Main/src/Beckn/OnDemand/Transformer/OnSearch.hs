@@ -31,10 +31,10 @@ buildOnSearchMessage res bppConfig = do
     then Nothing
     else Just returnData
 
-buildOnSearchRideReq :: (Monad m, Kernel.Types.App.MonadFlow m) => DBC.BecknConfig -> Domain.Action.Beckn.Search.DSearchRes -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.BaseUrl -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Beckn.Context.Country -> m BecknV2.OnDemand.Types.OnSearchReq
-buildOnSearchRideReq bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country = do
+buildOnSearchRideReq :: (Monad m, Kernel.Types.App.MonadFlow m) => Kernel.Prelude.Text -> DBC.BecknConfig -> Domain.Action.Beckn.Search.DSearchRes -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Maybe Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.BaseUrl -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Beckn.Context.Country -> m BecknV2.OnDemand.Types.OnSearchReq
+buildOnSearchRideReq onSearchTtl bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country = do
   let onSearchReqError_ = Nothing
-  onSearchReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country
+  onSearchReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country (Just onSearchTtl)
   let onSearchReqMessage_ = buildOnSearchMessage res bppConfig
   pure $ BecknV2.OnDemand.Types.OnSearchReq {onSearchReqContext = onSearchReqContext_, onSearchReqError = onSearchReqError_, onSearchReqMessage = onSearchReqMessage_}
 

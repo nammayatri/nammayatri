@@ -15,6 +15,9 @@ module BecknV2.Utils where
 
 import BecknV2.OnDemand.Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Data.Text as T
+import Data.Time
+import Data.Time.Format.ISO8601
 import EulerHS.Prelude
 
 getTagV2 :: TagGroup -> Tag -> Maybe [Spec.TagGroup] -> Maybe Text
@@ -32,3 +35,14 @@ getTagV2 tagGroupCode tagCode mbTagGroups = do
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
     descriptorCode (Just desc) = desc.descriptorCode
     descriptorCode Nothing = Nothing
+
+parseISO8601Duration :: Text -> Maybe NominalDiffTime
+parseISO8601Duration durationStr = do
+  (calenderDiffernceTime :: CalendarDiffTime) <- iso8601ParseM $ T.unpack durationStr
+  Just $ ctTime calenderDiffernceTime
+
+formatTimeDifference :: NominalDiffTime -> Text
+formatTimeDifference duration = T.pack $ iso8601Show $ calendarTimeTime duration
+
+addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
+addDurationToUTCTime time duration = addUTCTime duration time
