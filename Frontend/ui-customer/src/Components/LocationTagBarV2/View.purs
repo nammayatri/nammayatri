@@ -17,7 +17,7 @@ module Components.LocationTagBarV2.View where
 
 import Components.LocationTagBarV2.Controller(Action(..), LocationTagBarConfig, TagConfig )
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity)
+import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor)
 import PrestoDOM.Properties (cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import Prelude(Unit, map, unit, ($), (<>), (-), (==), const)
@@ -47,7 +47,7 @@ tagView item isLast push =
     imageConfig = item.imageConfig
     rightMargin = if isLast then 0 else 8
   in linearLayout
-      [ height item.height 
+      ([ height item.height 
       , weight 1.0
       , background item.background
       , stroke item.stroke 
@@ -56,7 +56,7 @@ tagView item isLast push =
       , onClick push $ const $ TagClicked item.id
       , padding item.padding
       , margin $ MarginRight rightMargin
-      ][  imageView 
+      ] <> (if item.enableRipple then [rippleColor item.rippleColor] else []))[  imageView 
             [ height imageConfig.height
             , width imageConfig.width
             , imageWithFallback imageConfig.imageWithFallback
@@ -66,6 +66,5 @@ tagView item isLast push =
             [ text textConfig.text
             , textSize textConfig.fontSize
             , color textConfig.color 
-            , padding $ PaddingBottom 3
             ] <> (FontStyle.getFontStyle textConfig.fontStyle LanguageStyle)
       ]

@@ -75,7 +75,7 @@ primaryButtonConfig state = let
       , margin = (Margin 16 0 16 if EHC.os == "IOS" then 0 else 24)
       , height = V 52
       , id = "AddNewAddressSavedLocationScreen"
-      , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen")
+      -- , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen") -- TODO :: can be enabled once painting DOM even without state change PR is merged. 
       , background = state.data.config.primaryBackground
       , enableRipple = true
       }

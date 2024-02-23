@@ -463,10 +463,13 @@ export const scanQrCode = function (requestCode) {
 export const timePicker = function (cb) {
   return function (action) {
     return function () {
-      const callback = callbackMapper.map(function (resp, hour, min) {
-        cb(action(resp)(hour)(min))();
+      const callback = callbackMapper.map(function (hour, min, resp) {
+        cb(action(hour)(min)(resp))();
       });
-      return window.JBridge.timePicker(callback);
+      if (window.__OS == "IOS" )
+        return window.JBridge.timePicker(callback, "" ,"TimePicker");
+      else 
+        return window.JBridge.timePicker(callback);
     };
   };
 };
@@ -478,7 +481,10 @@ export const datePicker = function (label) {
         const callback = callbackMapper.map(function (resp, year, month, date) {
           cb(action(resp)(year)(month)(date))();
         });
-        return window.JBridge.datePicker(callback, label);
+        if (window.__OS == "IOS") 
+          return window.JBridge.datePicker(callback, label, "DatePicker");
+        else
+          return window.JBridge.datePicker(callback, label);
       };
     };
   };
@@ -624,8 +630,7 @@ export const methodArgumentCount = function (functionName) {
   }
 }
 
-
-export const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfig, destMarkerConfig, polylineWidth, type, mapRouteConfig) {
+const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfig, destMarkerConfig, polylineWidth, type, mapRouteConfig) {
   console.log("I AM HERE ------------------ IN DRAW ROUTE");
   try {
     if (window.__OS == "IOS" || methodArgumentCount("drawRoute") == 11) {
@@ -639,6 +644,7 @@ export const drawRoute = function (data, style, trackColor, isActual, sourceMark
     console.log("error in draw route", err);
   }
 }
+                   
 
 export const updateMarker = function (markerConfig) {
   return function () {
@@ -701,6 +707,29 @@ export const storeCallBackMessageUpdated = function (cb) {
     };
   };
 };
+
+export const setCurrentUser = function(_id) {
+  window.currentUser = _id
+  return _id;
+}
+
+
+export const drawRouteV2 = function (drawRouteConfig){
+  return function() {
+    try{
+      console.log("Inside drawRouteV2")
+      const { locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig } = drawRouteConfig.routes.normalRoute;
+      if (window.JBridge.drawRouteV2){
+        return window.JBridge.drawRouteV2(JSON.stringify(drawRouteConfig));
+      } else {
+        return drawRoute(locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig);
+      }
+    } catch (err) {
+      console.log("error in drawRouteV2----------------------------------", err);
+    }
+  };
+};
+
 
 export const storeKeyBoardCallback = function (cb, action) {
   const keyBoardCallback = function (state) {
@@ -975,6 +1004,7 @@ export const differenceBetweenTwoUTC = function (date1, date2) {
   if (isNaN(diffInSeconds)){
     return 0;
   }
+  console.log("differenceBetweenTwoUTC", date1, " ", date2, " " , diffInSeconds);
   return diffInSeconds;
 }
 
@@ -1176,6 +1206,14 @@ export const getCurrentPosition = function (cb) {
   };
 };
 
+export const updateSliderValue = function (config) {
+  return function () {
+    if (window.JBridge.updateSliderValue){
+      window.JBridge.updateSliderValue(JSON.stringify(config));
+    };
+  };
+};
+
 export const getCurrentPositionWithTimeoutImpl = function (cb, action, delay, shouldFallBack) {
   const callbackFallback = function () {
     cb(action("0.0")("0.0")(new Date().toISOString()))();
@@ -1191,21 +1229,6 @@ export const getCurrentPositionWithTimeoutImpl = function (cb, action, delay, sh
     window.JBridge.getCurrentPosition(callback);
   }
 }
-
-export const datePickerImpl = function (cb , action, delay){
-  const callback = callbackMapper.map(function (str, year, month, date) {
-    cb(action(str)(year)(month)(date))();
-  })
-  window.JBridge.datePicker(callback, "");
-}
-
-export const timePickerImpl = function (cb , action, delay){
-  const callback = callbackMapper.map(function (str, hour, min) {
-    cb(action(str)(hour)(min))();
-  })
-  window.JBridge.timePicker(callback);
-}
-
 
 
 export const translateStringWithTimeout = function (cb) {
@@ -1553,7 +1576,7 @@ export const removeAllPolylines = function (str) {
 }
 
 export const removeAllPolylinesAndMarkers = function (array, unit) {
-  const stringifiedArray = JSON.stringify(array)
+  const stringifiedArray = JSON.stringify(array);
   window.JBridge.removeAllPolylines(stringifiedArray);
   return unit;
 }
@@ -2565,9 +2588,52 @@ export const clearAudioPlayer = function () {
   }
 }
 
-export const jBridgeMethodExists = function (method) {
-  if (window.JBridge[method]) {
-    return true;
+export const datePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (str, year, month, date) {
+    cb(action(str)(year)(month)(date))();
+  })
+  if (window.__OS == "IOS")
+    window.JBridge.datePicker(callback, "", "DatePicker");
+  else 
+    window.JBridge.datePicker(callback, "");
+}
+
+export const timePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (hour, min, str) {
+    cb(action(hour)(min)(str))();
+  })
+  if (window.__OS == "IOS")
+    window.JBridge.datePicker(callback, "", "TimePicker");
+  else 
+    window.JBridge.timePicker(callback);
+}
+
+export const renderSliderImpl = (cb, action, config) => {
+  
+  const callback = callbackMapper.map(function (val) {
+    cb(action(parseInt(val)))();
+  });
+  const { id, stepFunctionForCoinConversion, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId, enableToolTip, progressColor, thumbColor, bgColor, bgAlpha, getCallbackOnProgressChanged } = config;
+  const configg =  { id, stepFunctionForCoinConversion, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId, enableToolTip, progressColor, thumbColor, bgColor, bgAlpha, getCallbackOnProgressChanged, callback };
+  window.JBridge.renderSlider(JSON.stringify(configg));
+};
+
+export const getFromUTC = (timestamp) => (val) => {
+  const date = new Date(timestamp);
+  switch (val) {
+    case "DAY":
+      return date.getUTCDate();
+    case "MONTH":
+      return date.getUTCMonth() + 1;
+    case "YEAR":
+      return date.getUTCFullYear();
+    case "HOUR":
+      return date.getUTCHours() + 6;
+    case "MINUTE":
+      return (date.getUTCMinutes() + 30) % 60;
+    case "SECOND":
+      return date.getUTCSeconds();
+    default:
+      return date.getUTCDate();
   }
-  return false;
 }

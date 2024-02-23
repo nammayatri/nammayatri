@@ -390,7 +390,7 @@ getMessageNotificationViewConfig state =
     showChatNotification : state.props.showChatNotification
   , enableChatWidget : state.props.enableChatWidget
   , isNotificationExpanded :state.props.isNotificationExpanded
-  , currentSearchResultType : ESTIMATES
+  , fareProductType : driverInfoCard.fareProductType
   , config : state.data.config
   , rideStarted : true
   , lastMessage : state.data.lastMessage
@@ -808,15 +808,24 @@ driverLocationTracking push action duration id routeState = do
 
   routeNotExist :: GetDriverLocationResp -> DriverInfoCard -> FollowRideScreenState -> Flow GlobalState Unit
   routeNotExist (GetDriverLocationResp resp) ride state = do
-    let srcLat = (resp ^. _lat)
-        srcLon = (resp ^. _lon)
-        dstLat = ride.destinationLat
-        dstLon = ride.destinationLng
-        destination = ride.destination
-        markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
-        sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
-        destSpecialTagIcon = zoneLabelIcon state.data.zoneType.destinationTag
-        specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
+    let
+      srcLat = (resp ^. _lat)
+
+      srcLon = (resp ^. _lon)
+
+      dstLat = ride.destinationLat
+
+      dstLon = ride.destinationLng
+
+      destination = ride.destination
+
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
+
+      sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
+
+      destSpecialTagIcon = zoneLabelIcon state.data.zoneType.destinationTag
+
+      specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
     routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
     case routeResponse of
       Right (GetRouteResp routeResp) -> do
@@ -839,7 +848,7 @@ driverLocationTracking push action duration id routeState = do
               srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
               destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = ride.destination }
             addSosMarkers state.data.sosStatus point
-            void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+            liftFlow $ drawRoute [newPoints] "LineString" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag (getNewIDWithTag "FollowRideMap") -- check this
             liftFlow $ animateCamera srcLat srcLon 16.0 "ZOOM"
             void $ delay $ Milliseconds duration
             void
@@ -872,7 +881,7 @@ driverLocationTracking push action duration id routeState = do
 
       dstLon = ride.destinationLng
 
-      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
 
       sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
 

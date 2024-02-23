@@ -253,6 +253,7 @@ coinsInfoCardConfig _ =
       , height = V 130
       , width = V 130
       , padding = PaddingRight 1
+      , visibility = VISIBLE
       }
     , buttonConfig
       { text = getString GOT_IT

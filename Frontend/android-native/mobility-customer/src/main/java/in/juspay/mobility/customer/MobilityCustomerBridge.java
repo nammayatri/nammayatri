@@ -36,6 +36,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.ButtCap;
 import com.google.android.gms.maps.model.Dash;
@@ -159,89 +160,98 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void updateRoute(String _payload) {
         ExecutorManager.runOnMainThread(() -> {
-            if (googleMap != null) {
-                try {
-                    MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
-                    float zoomLevel;
+            try {
+                JSONObject payload = new JSONObject(_payload);
+                String pureScriptID = payload.optString("pureScriptID","");
+                GoogleMap gMap = pureScriptID.isEmpty() ? googleMap : googleMapInstance.get(pureScriptID);
+                if (gMap != null) {
                     try {
-                        zoomLevel = (float) mapRemoteConfig.zoomLevel;
-                    }catch (Exception e){
-                        zoomLevel = 20.0f;
-                    }
-                    JSONObject payload = new JSONObject(_payload);
-                    String json = payload.optString("json", "");
-                    String dest = payload.optString("destMarker", "");
-                    String eta = payload.optString("eta", "");
-                    String src = payload.optString("srcMarker", "");
-                    String specialLocation = payload.optString("specialLocation", "");
-                    JSONObject specialLocationObject = new JSONObject(specialLocation);
-                    int dashUnit = specialLocationObject.optInt("dashUnit", 1);
-                    int gapUnit = specialLocationObject.optInt("gapUnit", 0);
-                    boolean autoZoom = payload.optBoolean("autoZoom", true);
-                    ArrayList<LatLng> path = new ArrayList<>();
-                    JSONObject jsonObject = new JSONObject(json);
-                    JSONArray coordinates = jsonObject.getJSONArray("points");
-                    for (int i = coordinates.length() - 1; i >= 0; i--) {
-                        JSONObject coordinate = (JSONObject) coordinates.get(i);
-                        double lng = coordinate.getDouble("lng");
-                        double lat = coordinate.getDouble("lat");
-                        LatLng tempPoint = new LatLng(lat, lng);
-                        path.add(tempPoint);
-                    }
-                    Marker currMarker = (Marker) markers.get(src);
-                    currMarker.setTitle("Vehicle Icon On Map");
-                    Marker destMarker = (Marker) markers.get(dest);
-                    String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
-                    MarkerConfig markerConfig = new MarkerConfig();
-                    markerConfig.locationName(eta);
-                    markerConfig.setLabelImage(destinationSpecialTagIcon);
-                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false,null, MarkerType.NORMAL_MARKER, markerConfig))));
-                    destMarker.setTitle("Driver is " + eta);
-                    if (polyline != null) {
-                        polyline.setEndCap(new ButtCap());
-                        if (path.size() == 0) {
-                            LatLng destination = destMarker.getPosition();
-                            animateMarkerNew(src, destination, currMarker);
-                            if(overlayPolylines != null) {
-                                overlayPolylines.remove();
-                                overlayPolylines = null;
-                            }
-                            polyline.remove();
-                            polyline = null;
 
-                            currMarker.setAnchor(0.5f, 0);
-                            mapUpdate.isMapMoved = false;
-                            mapUpdate.isMapIdle = true;
-                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
-                        } else {
-                            double destinationLat = path.get(0).latitude;
-                            double destinationLon = path.get(0).longitude;
-                            double sourceLat = path.get(path.size() - 1).latitude;
-                            double sourceLong = path.get(path.size() - 1).longitude;
-                            LatLng destination = path.get(path.size() - 1);
-                            animateMarkerNew(src, destination, currMarker);
-                            PatternItem dash = new Dash(dashUnit);
-                            PatternItem gap = new Gap(gapUnit);
-                            List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(dash, gap);
-                            polyline.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
-                            polyline.setPoints(path);
-                            if(debounceAnimateCameraCounter == null) debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
-                            if (autoZoom && mapUpdate.isMapIdle && (debounceAnimateCameraCounter <= 0 || mapUpdate.isMapMoved)) {
-                                moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                        MapRemoteConfig mapRemoteConfig = getMapRemoteConfig();
+                        float zoomLevel;
+                        try {
+                            zoomLevel = (float) mapRemoteConfig.zoomLevel;
+                        }catch (Exception e){
+                            zoomLevel = 20.0f;
+                        }
+
+                        String json = payload.optString("json", "");
+                        String dest = payload.optString("destMarker", "");
+                        String eta = payload.optString("eta", "");
+                        String src = payload.optString("srcMarker", "");
+                        String specialLocation = payload.optString("specialLocation", "");
+                        JSONObject specialLocationObject = new JSONObject(specialLocation);
+                        int dashUnit = specialLocationObject.optInt("dashUnit", 1);
+                        int gapUnit = specialLocationObject.optInt("gapUnit", 0);
+                        boolean autoZoom = payload.optBoolean("autoZoom", true);
+                        ArrayList<LatLng> path = new ArrayList<>();
+                        JSONObject jsonObject = new JSONObject(json);
+                        JSONArray coordinates = jsonObject.getJSONArray("points");
+                        for (int i = coordinates.length() - 1; i >= 0; i--) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            LatLng tempPoint = new LatLng(lat, lng);
+                            path.add(tempPoint);
+                        }
+                        Marker currMarker = (Marker) markers.get(src);
+                        currMarker.setTitle("Vehicle Icon On Map");
+                        Marker destMarker = (Marker) markers.get(dest);
+                        JSONObject specialLocationObject = new JSONObject(specialLocation);
+                        String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
+                        MarkerConfig markerConfig = new MarkerConfig();
+                        markerConfig.locationName(eta);
+                        markerConfig.setLabelImage(destinationSpecialTagIcon);
+                        destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false, null, MarkerType.NORMAL_MARKER, markerConfig))));
+                        destMarker.setTitle("Driver is " + eta);
+                        if (polyline != null) {
+                            polyline.setEndCap(new ButtCap());
+                            if (path.isEmpty()) {
+                                LatLng destination = destMarker.getPosition();
+                                animateMarkerNew(src, destination, currMarker);
+                                if(overlayPolylines != null) {
+                                    overlayPolylines.remove();
+                                    overlayPolylines = null;
+                                }
+                                polyline.remove();
+                                polyline = null;
                                 mapUpdate.isMapMoved = false;
                                 mapUpdate.isMapIdle = true;
-                                debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+                                currMarker.setAnchor(0.5f, 0);
+                                animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
                             } else {
-                                debounceAnimateCameraCounter--;
+                                double destinationLat = path.get(0).latitude;
+                                double destinationLon = path.get(0).longitude;
+                                double sourceLat = path.get(path.size() - 1).latitude;
+                                double sourceLong = path.get(path.size() - 1).longitude;
+                                LatLng destination = path.get(path.size() - 1);
+                                animateMarkerNew(src, destination, currMarker);
+                                PatternItem dash = new Dash(dashUnit);
+                                PatternItem gap = new Gap(gapUnit);
+                                List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(dash, gap);
+                                polyline.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
+                                polyline.setPoints(path);
+                                if(debounceAnimateCameraCounter == null) debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+                                if (autoZoom && mapUpdate.isMapIdle && (debounceAnimateCameraCounter <= 0 || mapUpdate.isMapMoved)) {
+                                    moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                    mapUpdate.isMapMoved = false;
+                                    mapUpdate.isMapIdle = true;
+                                    debounceAnimateCameraCounter = mapRemoteConfig.debounceAnimateCameraCounter;
+                                } else {
+                                    debounceAnimateCameraCounter--;
+                                }
                             }
                         }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                } catch (JSONException e) {
-                    Log.e(LOG_TAG, "Error in updateRoute", e);
                 }
-            }
+            } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
         });
     }
+
 
     private void animateMarkerNew(String src, LatLng destination, final Marker marker) {
         if (marker != null) {

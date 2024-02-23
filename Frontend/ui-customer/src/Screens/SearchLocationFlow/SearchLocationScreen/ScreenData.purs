@@ -15,18 +15,32 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..), TipViewStage(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
 import Services.API (PlaceName(..), LatLong(..))
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
+import Components.ChooseVehicle.Controller as ChooseVehicleController
+import Prelude (negate)
+ 
 
 initData :: SearchLocationScreenState 
 initData = {
   data : { srcLoc : Nothing
          , destLoc : Nothing
-         , currentLoc : Nothing 
+         , route : Nothing
+         , rideDetails : {
+            searchId : "",
+            rideDistance : 0,
+            rideDuration : 0,
+            rideScheduledDate : "",
+            rideScheduledTime : "",
+            rideScheduledTimeUTC : ""
+         }
+         , currentLoc : dummyLocationInfo{
+            address = "Current Location"
+         } 
          , locationList : []
          , fromScreen : getScreen HOME_SCREEN -- getScreen RENTAL_SCREEN
          , saveFavouriteCard : {
@@ -36,6 +50,7 @@ initData = {
             , selectedItem : locationListStateObj
             , isBtnActive : false
         }
+        , selectedQuote : Nothing
         , latLonOnMap : dummyLocationInfo
         , defaultGate : ""
         , nearByGates : []
@@ -43,6 +58,8 @@ initData = {
         , confirmLocCategory : NOZONE
         , metroStations : []
         , updatedMetroStations : []
+        , predictionSelectedFromHome : locationListStateObj
+        , quotesList : []
   } ,
   props : {
     searchLocStage : PredictionsStage ,
@@ -54,7 +71,29 @@ initData = {
     showLoader : false,
     canClearText : false,
     locUnserviceable : false,
-    isAutoComplete : false
+    isSpecialZone : false,
+    isAutoComplete : false,
+    pickUpSelectedOnMap : false,
+    showRateCard : false,
+    tipViewProps : {
+        stage : DEFAULT
+      , isVisible : false
+      , onlyPrimaryText : false
+      , isprimaryButtonVisible : false
+      , primaryText : ""
+      , secondaryText : ""
+      , customerTipArray : []
+      , customerTipArrayWithValues : []
+      , activeIndex : -1
+      , primaryButtonText : ""
+      },
+    customerTip : {
+        enableTips: false
+      , tipForDriver: 0
+      , tipActiveIndex: -1
+      , isTipSelected: false
+      }
+
   },
   appConfig : getAppConfig appConfig
 }
@@ -78,7 +117,26 @@ dummyLocationInfo = {
   placeId : Nothing,
   address : "",
   addressComponents : dummyAddress,
-  city : Nothing ,
   stationCode : "",
-  metroInfo : Nothing
+  metroInfo : Nothing,
+  city : AnyCity 
+}
+
+dummyQuote :: QuotesList
+dummyQuote = {
+  quoteDetails : ChooseVehicleController.config ,
+  index : 0 ,
+  activeIndex : 0 ,
+  fareDetails : dummyFareQuoteDetails
+}
+
+dummyFareQuoteDetails :: FareDetails
+dummyFareQuoteDetails = {
+  baseFare : 0 ,
+  includedKmPerHr : 0 ,
+  perExtraKmRate : 0 ,
+  perExtraMinRate : 0 ,
+  perHourCharge : 0 ,
+  plannedPerKmRate : 0,
+  nightShiftCharge : 0
 }
