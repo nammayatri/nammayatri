@@ -42,6 +42,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getPlaceDetails :: B.C f MapsService,
     autoComplete :: B.C f MapsService,
     getDistancesForCancelRide :: B.C f MapsService,
+    calculateMultiZonal :: B.C f MapsService,
     smsProvidersPriorityList :: B.C f [SmsService],
     snapToRoadProvidersList :: B.C f [MapsService],
     whatsappProvidersPriorityList :: B.C f [WhatsappService],

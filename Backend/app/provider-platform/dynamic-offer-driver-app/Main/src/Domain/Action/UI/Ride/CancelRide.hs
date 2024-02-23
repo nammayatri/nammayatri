@@ -27,6 +27,7 @@ import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
@@ -58,7 +59,7 @@ data ServiceHandle m = ServiceHandle
     findById :: Id DP.Person -> m (Maybe DP.Person),
     cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    pickUpDistance :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m Meters
+    pickUpDistance :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> Bool -> m Meters
   }
 
 cancelRideHandle :: ServiceHandle Flow
@@ -167,7 +168,16 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
             driverLocations <- LF.driversLocation [driverId]
             return $ listToMaybe driverLocations
           disToPickup <- forM mbLocation $ \location -> do
-            pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
+            case booking.tripCategory of
+              DTC.Rental _ -> do
+                let useOSRMShard = False
+                pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation) useOSRMShard
+              DTC.InterCity _ -> do
+                let useOSRMShard = False
+                pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation) useOSRMShard
+              _ -> do
+                let useOSRMShard = True
+                pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation) useOSRMShard
           let currentDriverLocation = getCoordinates <$> mbLocation
           logDebug "RideCancelled Coin Event by driver"
           fork "DriverRideCancelledCoin Event : " $ DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
@@ -208,13 +218,25 @@ driverDistanceToPickup ::
   Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
+  Bool ->
   m Meters
-driverDistanceToPickup merchantId merchantOpCityId tripStartPos tripEndPos = do
-  distRes <-
-    Maps.getDistanceForCancelRide merchantId merchantOpCityId $
-      Maps.GetDistanceReq
-        { origin = tripStartPos,
-          destination = tripEndPos,
-          travelMode = Just Maps.CAR
-        }
-  return $ distRes.distance
+driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPos useOSRMShard = do
+  if useOSRMShard
+    then do
+      distRes <-
+        Maps.getDistanceForCancelRideMultiZonal merchantId merchantOperatingCityId $
+          Maps.GetDistanceReq
+            { origin = tripStartPos,
+              destination = tripEndPos,
+              travelMode = Just Maps.CAR
+            }
+      return $ distRes.distance
+    else do
+      distRes <-
+        Maps.getDistanceForCancelRide merchantId merchantOperatingCityId $
+          Maps.GetDistanceReq
+            { origin = tripStartPos,
+              destination = tripEndPos,
+              travelMode = Just Maps.CAR
+            }
+      return $ distRes.distance

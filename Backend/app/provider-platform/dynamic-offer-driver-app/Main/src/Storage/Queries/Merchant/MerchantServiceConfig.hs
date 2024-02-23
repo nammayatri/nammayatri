@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -29,6 +30,7 @@ import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
+import Kernel.External.Maps.OSRM.Config as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
@@ -86,7 +88,8 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
   fromTType' BeamMSC.MerchantServiceConfigT {..} = do
     serviceConfigData <- maybe (throwError $ InternalError "Unable to decode MerchantServiceConfigT.configJSON") return $ case serviceName of
       Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> valueToMaybe configJSON
-      Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> valueToMaybe configJSON
+      Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig . Maps.OSRMSimpleConfig <$> valueToMaybe configJSON
+      Domain.MapsService Maps.OSRM_SHARDED -> Domain.MapsServiceConfig . Maps.OSRMConfig . Maps.OSRMShardedConfig <$> valueToMaybe configJSON
       Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> valueToMaybe configJSON
       Domain.MapsService Maps.NextBillion -> Domain.MapsServiceConfig . Maps.NextBillionConfig <$> valueToMaybe configJSON
       Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> valueToMaybe configJSON
@@ -136,7 +139,9 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       getServiceNameConfigJson = \case
         Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
           Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
-          Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+          Maps.OSRMConfig osrmCfg -> case osrmCfg of
+            Maps.OSRMSimpleConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+            Maps.OSRMShardedConfig cfg -> (Domain.MapsService Maps.OSRM_SHARDED, toJSON cfg)
           Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
           Maps.NextBillionConfig cfg -> (Domain.MapsService Maps.NextBillion, toJSON cfg)
         Domain.SmsServiceConfig smsCfg -> case smsCfg of

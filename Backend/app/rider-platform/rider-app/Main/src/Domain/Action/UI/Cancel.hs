@@ -141,8 +141,19 @@ cancel bookingId _ req = do
         case res of
           Right res' -> do
             let merchantOperatingCityId = booking.merchantOperatingCityId
-            disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
-            buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
+            case booking.bookingDetails of
+              SRB.RentalDetails _ -> do
+                let useOSRMShard = False
+                disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation) useOSRMShard
+                buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
+              SRB.InterCityDetails _ -> do
+                let useOSRMShard = False
+                disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation) useOSRMShard
+                buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
+              _ -> do
+                let useOSRMShard = True
+                disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation) useOSRMShard
+                buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
           Left err -> do
             logTagInfo "DriverLocationFetchFailed" $ show err
             buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
@@ -246,16 +257,28 @@ driverDistanceToPickup ::
   Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
+  Bool ->
   m Meters
-driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPos = do
-  distRes <-
-    Maps.getDistanceForCancelRide merchantId merchantOperatingCityId $
-      Maps.GetDistanceReq
-        { origin = tripStartPos,
-          destination = tripEndPos,
-          travelMode = Just Maps.CAR
-        }
-  return $ distRes.distance
+driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPos useOSRMShard = do
+  if useOSRMShard
+    then do
+      distRes <-
+        Maps.getDistanceForCancelRideMultiZonal merchantId merchantOperatingCityId $
+          Maps.GetDistanceReq
+            { origin = tripStartPos,
+              destination = tripEndPos,
+              travelMode = Just Maps.CAR
+            }
+      return $ distRes.distance
+    else do
+      distRes <-
+        Maps.getDistanceForCancelRide merchantId merchantOperatingCityId $
+          Maps.GetDistanceReq
+            { origin = tripStartPos,
+              destination = tripEndPos,
+              travelMode = Just Maps.CAR
+            }
+      return $ distRes.distance
 
 disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
 disputeCancellationDues (personId, merchantId) = do

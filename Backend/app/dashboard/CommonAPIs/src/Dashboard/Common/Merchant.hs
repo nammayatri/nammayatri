@@ -23,6 +23,7 @@ where
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Data.Either (isRight)
+import qualified Data.HashMap.Strict as HM
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
 import qualified Data.Text as T
@@ -127,12 +128,14 @@ type MapsServiceConfigUpdateAPI =
 data MapsServiceConfigUpdateReq
   = GoogleConfigUpdateReq GoogleCfgUpdateReq
   | OSRMConfigUpdateReq OSRMCfgUpdateReq
+  | OSRMShardedConfigUpdateReq OSRMShardedCfgUpdateReq
   | MMIConfigUpdateReq MMICfgUpdateReq
   deriving stock (Show, Generic)
 
 data MapsServiceConfigUpdateTReq
   = GoogleConfigUpdateTReq GoogleCfgUpdateTReq
   | OSRMConfigUpdateTReq OSRMCfgUpdateReq
+  | OSRMShardedConfigUpdateTReq OSRMShardedCfgUpdateReq
   | MMIConfigUpdateTReq MMICfgUpdateTReq
   deriving stock (Generic)
 
@@ -141,12 +144,14 @@ instance HideSecrets MapsServiceConfigUpdateReq where
   hideSecrets = \case
     GoogleConfigUpdateReq req -> GoogleConfigUpdateTReq $ hideSecrets req
     OSRMConfigUpdateReq req -> OSRMConfigUpdateTReq req
+    OSRMShardedConfigUpdateReq req -> OSRMShardedConfigUpdateTReq req
     MMIConfigUpdateReq req -> MMIConfigUpdateTReq $ hideSecrets req
 
 getMapsServiceFromReq :: MapsServiceConfigUpdateReq -> Maps.MapsService
 getMapsServiceFromReq = \case
   GoogleConfigUpdateReq _ -> Maps.Google
   OSRMConfigUpdateReq _ -> Maps.OSRM
+  OSRMShardedConfigUpdateReq _ -> Maps.OSRM_SHARDED
   MMIConfigUpdateReq _ -> Maps.MMI
 
 buildMapsServiceConfig ::
@@ -158,7 +163,9 @@ buildMapsServiceConfig = \case
     googleKey' <- encrypt googleKey
     pure . Maps.GoogleConfig $ Maps.GoogleCfg {googleKey = googleKey', ..}
   OSRMConfigUpdateReq OSRMCfgUpdateReq {..} -> do
-    pure . Maps.OSRMConfig $ Maps.OSRMCfg {..}
+    pure $ Maps.OSRMConfig $ Maps.OSRMSimpleConfig $ Maps.OSRMCfg {..}
+  OSRMShardedConfigUpdateReq OSRMShardedCfgUpdateReq {..} -> do
+    pure $ Maps.OSRMConfig $ Maps.OSRMShardedConfig $ Maps.OSRMShardedCfg {..}
   MMIConfigUpdateReq MMICfgUpdateReq {..} -> do
     mmiAuthSecret' <- encrypt mmiAuthSecret
     mmiApiKey' <- encrypt mmiApiKey
@@ -266,6 +273,15 @@ instance HideSecrets MMICfgUpdateReq where
 
 data OSRMCfgUpdateReq = OSRMCfgUpdateReq
   { osrmUrl :: BaseUrl,
+    radiusDeviation :: Maybe Meters
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- OSRM_SHARDED
+
+data OSRMShardedCfgUpdateReq = OSRMShardedCfgUpdateReq
+  { cityToRegionUrlMap :: HM.HashMap Text BaseUrl,
     radiusDeviation :: Maybe Meters
   }
   deriving stock (Show, Generic)

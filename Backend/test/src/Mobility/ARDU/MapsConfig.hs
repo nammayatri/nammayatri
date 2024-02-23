@@ -54,4 +54,6 @@ fetchOSRMConfig :: IO ()
 fetchOSRMConfig = do
   fetchConfig Fixtures.nammaYatriPartnerMerchantId OSRM func (fromJust $ parseBaseUrl "localhost:5000")
   where
-    func (MapsServiceConfig (OSRMConfig cfg)) = cfg.osrmUrl
+    func (MapsServiceConfig (OSRMConfig cfg)) = case cfg of
+      OSRMSimpleConfig _ -> fromJust $ parseBaseUrl "http://localhost:5000/"
+      OSRMShardedConfig _ -> fromJust $ parseBaseUrl "http://localhost:5000/"

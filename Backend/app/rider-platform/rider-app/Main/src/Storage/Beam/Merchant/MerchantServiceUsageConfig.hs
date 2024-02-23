@@ -42,6 +42,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     autoComplete :: B.C f MapsService,
     aadhaarVerificationService :: B.C f AadhaarVerificationService,
     getDistancesForCancelRide :: B.C f MapsService,
+    calculateMultiZonal :: B.C f MapsService,
     notifyPerson :: B.C f NotificationService,
     useFraudDetection :: B.C f Bool,
     smsProvidersPriorityList :: B.C f [SmsService],

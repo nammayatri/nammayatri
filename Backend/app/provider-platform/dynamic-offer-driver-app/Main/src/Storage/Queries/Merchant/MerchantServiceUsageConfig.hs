@@ -78,6 +78,7 @@ instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig
         BeamMSUC.getPlaceDetails = getPlaceDetails,
         BeamMSUC.autoComplete = autoComplete,
         BeamMSUC.getDistancesForCancelRide = getDistancesForCancelRide,
+        BeamMSUC.calculateMultiZonal = calculateMultiZonal,
         BeamMSUC.smsProvidersPriorityList = smsProvidersPriorityList,
         BeamMSUC.snapToRoadProvidersList = snapToRoadProvidersList,
         BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,

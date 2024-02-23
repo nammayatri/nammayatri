@@ -42,6 +42,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     autoComplete :: MapsService,
     aadhaarVerificationService :: AadhaarVerificationService,
     getDistancesForCancelRide :: MapsService,
+    calculateMultiZonal :: MapsService,
     smsProvidersPriorityList :: [SmsService],
     whatsappProvidersPriorityList :: [WhatsappService],
     issueTicketService :: IssueTicketService,

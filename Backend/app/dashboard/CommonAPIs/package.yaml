@@ -81,6 +81,7 @@ dependencies:
   - extra
   - servant-multipart
   - beckn-services
+  - unordered-containers
 
 ghc-options:
   - -Wall

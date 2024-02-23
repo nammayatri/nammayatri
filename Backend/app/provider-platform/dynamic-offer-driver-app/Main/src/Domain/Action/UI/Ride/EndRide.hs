@@ -288,7 +288,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             case mbDriverGoHomeReq of
               Just driverGoHomeReq -> do
                 let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
-                routesResp <- DMaps.getTripRoutes (driverId, booking.providerId, booking.merchantOperatingCityId) (buildRoutesReq tripEndPoint driverHomeLocation)
+                routesResp <- case booking.tripCategory of
+                  DTC.Rental _ -> DMaps.getTripRoutes (driverId, booking.providerId, booking.merchantOperatingCityId) (buildRoutesReq tripEndPoint driverHomeLocation)
+                  DTC.InterCity _ -> DMaps.getTripRoutes (driverId, booking.providerId, booking.merchantOperatingCityId) (buildRoutesReq tripEndPoint driverHomeLocation)
+                  _ -> DMaps.getTripRoutesMultiZonal (driverId, booking.providerId, booking.merchantOperatingCityId) (buildRoutesReq tripEndPoint driverHomeLocation)
                 logDebug $ "Routes resp for EndRide API :" <> show routesResp <> "(source, dest) :" <> show (tripEndPoint, driverHomeLocation)
                 let driverHomeDists = mapMaybe (.distance) routesResp
                 if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists

@@ -27,6 +27,7 @@ import Data.Maybe (listToMaybe)
 import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Common as BTC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Ride as SRide
@@ -117,7 +118,16 @@ cancel req merchant booking = do
               return Nothing
             Right locations -> return $ listToMaybe locations
         disToPickup <- forM mbLocation $ \location -> do
-          driverDistanceToPickup booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
+          case booking.tripCategory of
+            BTC.Rental _ -> do
+              let useOSRMShard = False
+              driverDistanceToPickup booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation) useOSRMShard
+            BTC.InterCity _ -> do
+              let useOSRMShard = False
+              driverDistanceToPickup booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation) useOSRMShard
+            _ -> do
+              let useOSRMShard = True
+              driverDistanceToPickup booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation) useOSRMShard
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
         logDebug "RideCancelled Coin Event by customer"
         DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)

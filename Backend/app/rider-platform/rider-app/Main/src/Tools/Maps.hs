@@ -24,6 +24,9 @@ module Tools.Maps
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
+    getDistanceForCancelRideMultiZonal,
+    getPickupRoutesMultiZonal,
+    getTripRoutesMultiZonal,
   )
 where
 
@@ -74,6 +77,17 @@ getDistanceForCancelRide ::
   m (GetDistanceResp a b)
 getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesForCancelRide)
 
+getDistanceForCancelRideMultiZonal ::
+  ( ServiceFlow m r,
+    HasCoordinates a,
+    HasCoordinates b
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  GetDistanceReq a b ->
+  m (GetDistanceResp a b)
+getDistanceForCancelRideMultiZonal = runWithServiceConfig Maps.getDistance (.calculateMultiZonal)
+
 getDistances ::
   ( ServiceFlow m r,
     HasCoordinates a,
@@ -91,17 +105,29 @@ getRoutes isAvoidToll personId merchantId mbMOCId req = do
   mOCId <- getMerchantOperatingCityId personId mbMOCId
   runWithServiceConfig (Maps.getRoutes $ fromMaybe merchant.isAvoidToll isAvoidToll) (.getRoutes) merchantId mOCId req
 
-getPickupRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes :: (ServiceFlow m r) => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes personId merchantId mbMOCId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
   runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getPickupRoutes) merchantId mOCId req
 
-getTripRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutesMultiZonal :: (ServiceFlow m r) => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutesMultiZonal personId merchantId mbMOCId req = do
+  merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  mOCId <- getMerchantOperatingCityId personId mbMOCId
+  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.calculateMultiZonal) merchantId mOCId req
+
+getTripRoutes :: (ServiceFlow m r) => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
 getTripRoutes personId merchantId mbMOCId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
   runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) merchantId mOCId req
+
+getTripRoutesMultiZonal :: (ServiceFlow m r) => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
+getTripRoutesMultiZonal personId merchantId mbMOCId req = do
+  merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  mOCId <- getMerchantOperatingCityId personId mbMOCId
+  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.calculateMultiZonal) merchantId mOCId req
 
 snapToRoad ::
   ( ServiceFlow m r

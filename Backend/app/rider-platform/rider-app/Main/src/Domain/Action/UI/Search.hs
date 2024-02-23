@@ -74,6 +74,8 @@ import Tools.Metrics
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Search as Search
 
+-- import SharedLogic.Polygon as Polygon hiding (False, True, City)
+
 data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq
   deriving (Generic, Show)
 

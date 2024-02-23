@@ -22,6 +22,7 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
+import Kernel.External.Maps.OSRM.Config as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
@@ -53,7 +54,9 @@ getServiceNameConfigJSON :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value
 getServiceNameConfigJSON = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
-    Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+    Maps.OSRMConfig osrmCfg -> case osrmCfg of
+      Maps.OSRMSimpleConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+      Maps.OSRMShardedConfig cfg -> (Domain.MapsService Maps.OSRM_SHARDED, toJSON cfg)
     Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
     Maps.NextBillionConfig cfg -> (Domain.MapsService Maps.NextBillion, toJSON cfg)
   Domain.SmsServiceConfig smsCfg -> case smsCfg of

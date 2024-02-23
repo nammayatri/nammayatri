@@ -94,6 +94,8 @@
             extraBuildDepends = lib.optional pkgs.stdenv.isDarwin pkgs.darwin.apple_sdk.frameworks.Cocoa;
             jailbreak = true;
           };
+          vector-circular.broken = false;
+          vector-circular.jailbreak = true;
           base32.jailbreak = true;
           amazonka-core.check = false;
         };

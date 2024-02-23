@@ -33,10 +33,10 @@ getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Mercha
 getRoutes (personId, merchantId) req = do
   Maps.getRoutes Nothing personId merchantId Nothing req
 
-getPickupRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getPickupRoutes :: (ServiceFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getPickupRoutes (personId, merchantId) req = do
   Maps.getPickupRoutes personId merchantId Nothing req
 
-getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getTripRoutes :: (ServiceFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getTripRoutes (personId, merchantId) req = do
   Maps.getTripRoutes personId merchantId Nothing req

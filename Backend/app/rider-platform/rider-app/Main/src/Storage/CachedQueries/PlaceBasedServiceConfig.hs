@@ -13,6 +13,7 @@ import Domain.Types.TicketPlace
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
+import Kernel.External.Maps.OSRM.Config as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
@@ -45,7 +46,9 @@ getServiceNameFromPlaceBasedConfigs :: PlaceBasedServiceConfig -> ServiceName
 getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig _ -> MapsService Maps.Google
-    Maps.OSRMConfig _ -> MapsService Maps.OSRM
+    Maps.OSRMConfig osrmCfg -> case osrmCfg of
+      Maps.OSRMSimpleConfig _ -> MapsService Maps.OSRM
+      Maps.OSRMShardedConfig _ -> MapsService Maps.OSRM_SHARDED
     Maps.MMIConfig _ -> MapsService Maps.MMI
     Maps.NextBillionConfig _ -> MapsService Maps.NextBillion
   SmsServiceConfig smsCfg -> case smsCfg of

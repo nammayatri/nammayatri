@@ -138,7 +138,9 @@ getServiceName :: MerchantServiceConfig -> ServiceName
 getServiceName msc = case msc.serviceConfig of
   MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig _ -> MapsService Maps.Google
-    Maps.OSRMConfig _ -> MapsService Maps.OSRM
+    Maps.OSRMConfig osrmCfg -> case osrmCfg of
+      Maps.OSRMSimpleConfig _ -> MapsService Maps.OSRM
+      Maps.OSRMShardedConfig _ -> MapsService Maps.OSRM_SHARDED
     Maps.MMIConfig _ -> MapsService Maps.MMI
     Maps.NextBillionConfig _ -> MapsService Maps.NextBillion
   SmsServiceConfig smsCfg -> case smsCfg of
