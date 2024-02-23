@@ -87,6 +87,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.Queries.DriverInformation as QDI
@@ -273,11 +274,17 @@ sendRideAssignedUpdateToBAP ::
   m ()
 sendRideAssignedUpdateToBAP booking ride driver veh = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
-  transporter <-
+  merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   mbTransporterConfig <- CQTC.findByMerchantOpCityId booking.merchantOperatingCityId -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+  let paymentUrl = Nothing
   vehicle <-
     case mbTransporterConfig of
       Just transporterConfig ->
@@ -297,7 +304,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
-  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking rideAssignedBuildReq
+  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig
@@ -360,15 +367,21 @@ sendRideStartedUpdateToBAP ::
   m ()
 sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
-  transporter <-
+  merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId) -- shrey00 : are these 2 lines needed?
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+  let paymentUrl = Nothing
   let bookingDetails = ACL.BookingDetails {..}
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  rideStartedMsgV2 <- ACL.buildOnStatusReqV2 transporter booking rideStartedBuildReq
+  rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq
   void $ callOnStatusV2 rideStartedMsgV2 retryConfig
 
 sendRideCompletedUpdateToBAP ::
@@ -389,15 +402,16 @@ sendRideCompletedUpdateToBAP ::
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
-  transporter <-
+  merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId) -- shrey00 : are these 2 lines needed?
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   let bookingDetails = ACL.BookingDetails {..}
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking rideCompletedBuildReq
+  rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking rideCompletedBuildReq
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig
 
 sendBookingCancelledUpdateToBAP ::
@@ -484,15 +498,21 @@ sendDriverArrivalUpdateToBAP ::
   m ()
 sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
-  transporter <-
+  merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+  let paymentUrl = Nothing
   let bookingDetails = ACL.BookingDetails {..}
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
-  driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking driverArrivedBuildReq
+  driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking driverArrivedBuildReq
   void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig
 
 sendStopArrivalUpdateToBAP ::
@@ -511,11 +531,17 @@ sendStopArrivalUpdateToBAP ::
   m ()
 sendStopArrivalUpdateToBAP booking ride driver vehicle = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+  let paymentUrl = Nothing
   when isValueAddNP $ do
-    transporter <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
     let bookingDetails = ACL.BookingDetails {..}
         stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
-    stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking stopArrivedBuildReq
+    stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking stopArrivedBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
     void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig
 
@@ -535,15 +561,21 @@ sendNewMessageToBAP ::
 sendNewMessageToBAP booking ride message = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
-    transporter <-
+    merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    let paymentUrl = Nothing
     let bookingDetails = ACL.BookingDetails {..}
         newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
-    newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking newMessageBuildReq
+    newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking newMessageBuildReq
     void $ callOnUpdateV2 newMessageMsgV2 retryConfig
 
 sendSafetyAlertToBAP ::
@@ -565,14 +597,20 @@ sendSafetyAlertToBAP ::
 sendSafetyAlertToBAP booking ride code reason driver vehicle = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
-    transporter <-
+    merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    let paymentUrl = Nothing
     let bookingDetails = ACL.BookingDetails {..}
         safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
 
     retryConfig <- asks (.shortDurationRetryCfg)
-    safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking safetyAlertBuildReq
+    safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking safetyAlertBuildReq
     void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig
 
 sendEstimateRepetitionUpdateToBAP ::
@@ -594,12 +632,18 @@ sendEstimateRepetitionUpdateToBAP ::
 sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource driver vehicle = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
-    transporter <-
+    merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    let bookingDetails = ACL.BookingDetails {ride, booking, driver, vehicle, isValueAddNP}
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    let paymentUrl = Nothing
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    let bookingDetails = ACL.BookingDetails {..}
         estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
 
-    estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking estimateRepetitionBuildReq
+    estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking estimateRepetitionBuildReq
     void $ callOnUpdateV2 estimateRepMsgV2 retryConfig
