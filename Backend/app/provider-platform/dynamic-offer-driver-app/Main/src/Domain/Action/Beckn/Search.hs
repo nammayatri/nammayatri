@@ -282,7 +282,7 @@ addNearestDriverInfo ::
   (Maybe (NonEmpty DriverPoolResult)) ->
   [a] ->
   m [(a, Maybe NearestDriverInfo)]
-addNearestDriverInfo Nothing estdOrQuotes = return $ map (\a -> (a, Nothing)) estdOrQuotes
+addNearestDriverInfo Nothing estdOrQuotes = return $ map (,Nothing) estdOrQuotes
 addNearestDriverInfo (Just driverPool) estdOrQuotes = do
   let mapOfDPRByVariant = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
   traverse (matchInputWithNearestDriver mapOfDPRByVariant) estdOrQuotes
