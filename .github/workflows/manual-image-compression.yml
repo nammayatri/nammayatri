@@ -1,4 +1,3 @@
-# https://github.com/calibreapp/image-actions?tab=readme-ov-file#compress-on-demand-or-on-schedule
 name: Optimise Images
 on:
   workflow_dispatch:
@@ -20,7 +19,7 @@ jobs:
         if: steps.calibre.outputs.markdown != ''
         uses: peter-evans/create-pull-request@v6
         with:
-          title: [github-bot][frontend/auto] Compressed Images
+          title: "[github-bot][frontend/auto] Compressed Images"
           branch-suffix: timestamp
-          commit-message: [github-bot][frontend/auto] Compressed Images
+          commit-message: "[github-bot][frontend/auto] Compressed Images"
           body: ""
