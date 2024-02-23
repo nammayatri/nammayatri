@@ -1,4 +1,4 @@
-INSERT INTO atlas_app.beckn_config (id, domain, gateway_url, registry_url, subscriber_id, subscriber_url, merchant_id, merchant_operating_city_id, unique_key_id, created_at, updated_at, vehicle_category)
+INSERT INTO atlas_app.beckn_config (id, domain, gateway_url, registry_url, subscriber_id, subscriber_url, merchant_id, merchant_operating_city_id, unique_key_id, created_at, updated_at, vehicle_category, search_ttl_sec, select_ttl_sec, init_ttl_sec, confirm_ttl_sec)
 VALUES (
     'dd22a05d-29a3-42c8-9c8d-2de340f9b710',
     'MOBILITY',
@@ -11,7 +11,11 @@ VALUES (
     'localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     now(),
     now(),
-    'AUTO_RICKSHAW'
+    'AUTO_RICKSHAW',
+    120,
+    120,
+    120,
+    120
 ), ('dd22a05d-29a3-42c8-9c8d-2de340f9b709',
     'MOBILITY',
     'http://localhost:8015/v1',
@@ -23,5 +27,9 @@ VALUES (
     'localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     now(),
     now(),
-    'CAB'
+    'CAB',
+    120,
+    120,
+    120,
+    120
 );

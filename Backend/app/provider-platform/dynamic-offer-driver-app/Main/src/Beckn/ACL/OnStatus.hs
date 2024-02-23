@@ -181,7 +181,7 @@ buildOnStatusReqV2' ::
   DBC.BecknConfig ->
   m Spec.OnStatusReq
 buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req merchant bppConfig = do
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country Nothing
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
   message <- mkOnStatusMessageV2 req merchant bppConfig
   pure $
     Spec.OnStatusReq
