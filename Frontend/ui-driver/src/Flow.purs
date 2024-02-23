@@ -215,7 +215,7 @@ baseAppFlow baseFlow event = do
       else if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) && not has package "manayatri" then do
         chooseCityFlow
       else do
-        when (has package "manayatri") $ setValueToLocalNativeStore DRIVER_LOCATION "Hyderabad" --TODO:: Need to handle the case properly here
+        if has package "manayatri" then setValueToLocalNativeStore DRIVER_LOCATION "Hyderabad" else pure unit --TODO:: Need to handle the case properly here
         authenticationFlow ""
 
     updateNightSafetyPopup :: FlowBT String Unit

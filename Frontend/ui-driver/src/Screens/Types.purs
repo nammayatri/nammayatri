@@ -2116,7 +2116,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked -- | VehicleNotSupported
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
