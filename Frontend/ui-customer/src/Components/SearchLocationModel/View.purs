@@ -73,30 +73,12 @@ view push state =
             , orientation VERTICAL
             , background state.appConfig.searchLocationConfig.backgroundColor
             , padding $ PaddingVertical safeMarginTop 16
-            ][  linearLayout
+            ][  if state.headerVisibility then backPressView state push  else textView[]
+              , linearLayout
                 [ orientation HORIZONTAL
                 , height $ V 105 
                 , width MATCH_PARENT
-                 ][ linearLayout
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , onClick push (const GoBack)
-                    , disableClickFeedback true
-                    , margin (Margin 5 17 0 0)
-                    , gravity CENTER
-                    , padding (Padding 4 4 4 4)
-                    , cornerRadius 20.0
-                    , rippleColor Color.rippleShade
-                    ]
-                  [ imageView
-                      [ height $ V 23
-                      , width $ V 23
-                      , accessibilityHint "Back : Button"
-                      , accessibility ENABLE
-                      , imageWithFallback state.appConfig.searchLocationConfig.backArrow
-                      , margin $ Margin 4 4 4 4
-                      ]
-                  ]
+                 ][ if not state.headerVisibility then backPressView state push else textView[]
                   , sourceDestinationImageView state
                   , sourceDestinationEditTextView state push
                   ]]
@@ -124,6 +106,79 @@ view push state =
                       ] ]
     where
       bottomSpacing = if safeMarginBottom == 0 then 16 else safeMarginBottom
+      
+      backPressView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+      backPressView state push =
+       linearLayout
+        [ height WRAP_CONTENT
+        , width $ if state.headerVisibility then MATCH_PARENT else WRAP_CONTENT
+        , disableClickFeedback true
+        , margin (Margin 5 17 0 0)
+        , gravity CENTER
+        , padding (Padding 4 4 4 4)
+        , cornerRadius 20.0
+        ][ imageView
+          [ height $ V 23
+          , width $ V 23
+          , accessibilityHint "Back : Button"
+          , rippleColor Color.rippleShade
+          , onClick push (const GoBack)
+          , accessibility ENABLE
+          , imageWithFallback state.appConfig.searchLocationConfig.backArrow
+          , margin $ Margin 4 4 4 4
+          ]
+        , textView  $
+          [ text $ state.headerText
+          , visibility $ state.suffixButtonVisibility
+          , color Color.white900  
+          , margin $ MarginLeft 8
+          ] <> (FontStyle.subHeading2 LanguageStyle)
+        , linearLayout 
+          [ weight 1.0
+          , height WRAP_CONTENT
+          , visibility $ state.suffixButtonVisibility
+          ] []
+        , dateTimePickerButton state push
+      ]
+    
+      dateTimePickerButton :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+      dateTimePickerButton config push =
+        linearLayout
+          [ height MATCH_PARENT
+          , width WRAP_CONTENT
+          , layoutGravity "right"
+          , orientation HORIZONTAL
+          , margin $ MarginRight 12
+          , visibility config.suffixButtonVisibility
+          ]
+          [ linearLayout
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , background Color.squidInkBlue
+              , cornerRadius 4.0
+              , padding $ config.suffixButton.padding
+              , gravity config.suffixButton.gravity
+              , onClick push $ const DateTimePickerButtonClicked
+              ]
+              [ imageView
+                  [ imageWithFallback $ fetchImage FF_ASSET config.suffixButton.prefixImage
+                  , height $ V 16
+                  , width $ V 16
+                  , margin $ MarginTop 1
+                  ]
+              , textView $
+                  [ text config.suffixButton.text
+                  , margin $ MarginHorizontal 4 4
+                  , color Color.black600
+                  ] <> FontStyle.subHeading2 LanguageStyle
+              , imageView
+                  [ imageWithFallback $ fetchImage FF_ASSET config.suffixButton.suffixImage
+                  , height $ V 16
+                  , width $ V 16
+                  , margin $ MarginTop 1
+                  ]
+              ]
+          ] 
 
 searchResultsParentView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 searchResultsParentView state push =
@@ -205,7 +260,8 @@ sourceDestinationImageView state =
   linearLayout
     [ height WRAP_CONTENT
     , width $ V 20
-    , margin $ Margin 4 9 8 0
+    , margin $ Margin (if state.headerVisibility then 24 else 4) 9 8 0
+    -- , padding $ PaddingLeft 16
     , orientation VERTICAL
     , gravity CENTER
     ][ linearLayout

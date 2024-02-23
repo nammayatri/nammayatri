@@ -15,35 +15,38 @@
 
 module Components.InputView.Controller where
 
-import Prelude
-import PrestoDOM ( Length(..), Padding(..), Margin(..))
+import Effect (Effect)
 import Components.SeparatorView.View as SeparatorView
+import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Prelude
+import PrestoDOM ( Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), Prop)
 
 data Action = TextFieldFocusChanged String Boolean Boolean
             | ClearTextField String 
             | InputChanged String 
             | AutoCompleteCallBack String Boolean
             | BackPress
+            | DateTimePickerButtonClicked
+            | BackPressed
             | NoAction
 
 type InputViewConfig = 
   { backIcon :: ImageConfig
   , headerText :: String 
+  , suffixButton :: ButtonLayoutConfig
   , headerVisibility :: Boolean
   , inputView :: Array InputView
   , imageLayoutMargin :: Margin
   , imageLayoutWidth :: Length
+  , imageLayoutVisibility :: Visibility
+  , suffixButtonVisibility :: Visibility
   , inputLayoutPading :: Padding
   }
 
 type InputView =
-  { margin :: Margin 
-  , padding :: Padding
-  , textValue :: String 
+  { padding :: Padding
   , height :: Length
-  , isFocussed :: Boolean 
-  , id :: String 
-  , placeHolder :: String 
+  , gravity :: Gravity
   , canClearText :: Boolean 
   , isEditable :: Boolean  
   , isClickable :: Boolean
@@ -51,7 +54,22 @@ type InputView =
   , stroke :: String
   , imageSeparator :: SeparatorView.Config 
   , clearTextIcon :: ImageConfig
+  , fontStyle :: forall properties. Array (Prop properties)
+  , inputTextConfig :: InputTextConfig
+  }
+  
+
+type InputTextConfig =
+  { textValue :: String
+  , isFocussed :: Boolean
+  , imageName :: String
+  , margin :: Margin
+  , placeHolder :: String
+  , id :: String
   , cornerRadius :: Number
+  , textColor :: String
+  , prefixImageVisibility :: Visibility
+  , prefixImageConfig :: ImageConfig
   }
 
 type ImageConfig = 
@@ -59,6 +77,15 @@ type ImageConfig =
   , height :: Length 
   , width :: Length 
   , padding :: Padding
+  }
+
+type ButtonLayoutConfig = 
+  { text :: String
+  , fontStyle :: Array (Prop (Effect Unit))
+  , prefixImage :: String
+  , suffixImage :: String
+  , padding :: Padding
+  , gravity :: Gravity
   }
 
 config :: InputViewConfig
@@ -74,5 +101,23 @@ config = {
   inputView : [],
   imageLayoutMargin : MarginLeft 24,
   imageLayoutWidth : V 20,
-  inputLayoutPading : PaddingLeft 8
+  inputLayoutPading : PaddingLeft 8,
+  imageLayoutVisibility : VISIBLE,
+  suffixButtonVisibility : GONE,
+  suffixButton : {
+    text : "",
+    fontStyle : [],
+    prefixImage : "",
+    suffixImage : "",
+    padding : Padding 0 0 0 0,
+    gravity : CENTER_VERTICAL
+  }
+}
+
+dummyImageConfig :: ImageConfig
+dummyImageConfig = {
+  imageName : "",
+  height : V 0,
+  width : V 0,
+  padding : Padding 0 0 0 0
 }

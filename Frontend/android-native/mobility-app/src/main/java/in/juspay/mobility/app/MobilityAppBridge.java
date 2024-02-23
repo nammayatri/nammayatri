@@ -54,6 +54,7 @@ import com.google.android.gms.auth.api.credentials.Credential;
 import com.google.android.gms.auth.api.credentials.Credentials;
 import com.google.android.gms.auth.api.credentials.HintRequest;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.slider.Slider;
 import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
@@ -135,6 +136,7 @@ public class MobilityAppBridge extends HyperBridge {
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     private CallBack callBack;
 
+    private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
@@ -473,7 +475,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     //region Chat Utiils
     @JavascriptInterface
-    public static void sendMessage(final String message) {
+    public void sendMessage(final String message) {
         for (SendMessageCallBack sendMessageCallBack : sendMessageCallBacks) {
             sendMessageCallBack.sendMessage(message);
         }
@@ -1073,7 +1075,6 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-
     @JavascriptInterface
     public void cleverTapCustomEvent(String event) {
         ExecutorManager.runOnBackgroundThread(() -> {
@@ -1169,5 +1170,51 @@ public class MobilityAppBridge extends HyperBridge {
                 break;
         }
         return super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @JavascriptInterface
+    public void updateSliderValue(String config){
+        ExecutorManager.runOnMainThread(() -> {
+            try{
+                JSONObject jsonData = new JSONObject(config);
+                int sliderValue = jsonData.optInt("sliderValue",0);
+                String id = jsonData.getString("id");
+                SliderComponent sliderComponent = sliderComponentHashMap.get(id);
+                if(sliderComponent != null)
+                    sliderComponent.updateSliderValue(sliderValue);
+
+            } catch(Exception e){
+                Log.e(UTILS, "Error in updating slider value: " + e);
+                e.printStackTrace();
+            }
+        });
+    }
+    @JavascriptInterface
+    public void renderSlider(String config) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject jsonData = new JSONObject(config);
+                String id = jsonData.getString("id");
+                String callback = jsonData.optString("callback", "");
+                float conversionRate = jsonData.optLong("sliderConversionRate", (long) 1.0);
+                int minLimit = jsonData.optInt("sliderMinValue",1);
+                int maxLimit = jsonData.optInt("sliderMaxValue",10);
+                int defaultValue = jsonData.optInt("sliderDefaultValue",1);
+                int stepFunctionForCoinConversion = jsonData.optInt("stepFunctionForCoinConversion",1);
+                String toolTipId = jsonData.optString("toolTipId","");
+                Boolean enableToolTip = jsonData.optBoolean("enableToolTip",false);
+                String progressColor = jsonData.optString("progressColor", "#FFFFFF");
+                String bgColor = jsonData.optString("bgColor", String.valueOf(Color.BLACK));
+                String thumbColor = jsonData.optString("thumbColor", "#2194FF");
+                int bgAlpha  = jsonData.optInt("bgAlpha", 50);
+                Boolean getCallbackOnProgressChanged = jsonData.optBoolean("getCallbackOnProgressChanged", false);
+                SliderComponent sliderComponent = new SliderComponent();
+                sliderComponentHashMap.put(id, sliderComponent);
+                sliderComponent.addSlider(id, callback, stepFunctionForCoinConversion, conversionRate , minLimit, maxLimit, defaultValue, toolTipId, enableToolTip, progressColor, thumbColor, bgColor, bgAlpha, getCallbackOnProgressChanged,  bridgeComponents);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        });
+
     }
 }

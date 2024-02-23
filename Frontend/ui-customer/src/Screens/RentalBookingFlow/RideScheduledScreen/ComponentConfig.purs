@@ -15,11 +15,13 @@
 
 module Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig where
 
+import Prelude
 import Components.GenericHeader.Controller as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.SeparatorView.View as SeparatorView
 import Components.SourceToDestination.Controller as SourceToDestination
-import Data.Maybe (maybe)
+import Components.SelectListModal as CancelRidePopUpConfig
+import Data.Maybe (Maybe(..), maybe)
 import Font.Style (Style(..))
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString)
@@ -27,6 +29,9 @@ import Language.Types (STR(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
 import Screens.Types (RideScheduledScreenState)
 import Styles.Colors as Color
+import Data.Array as DA
+import Data.String as DS
+import Screens.Types (FareProductType(..)) as FPT
 
 primaryButtonConfig :: RideScheduledScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -34,14 +39,17 @@ primaryButtonConfig state =
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-          { text = state.primaryButtonText
+          { text = if state.data.primaryButtonText == "" then getString GO_HOME else state.data.primaryButtonText
           , color = Color.yellow900
           , height = V 40
           }
       , gravity = CENTER
       , margin = (MarginHorizontal 16 16)
-      , isClickable = true
+      , isClickable =  state.data.bookingId /= ""
+      , alpha = if state.data.bookingId == "" then 0.5 else 1.0
       , id = "GoHomeButton"
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in
     primaryButtonConfig'
@@ -60,10 +68,11 @@ separatorConfig =
 sourceToDestinationConfig :: RideScheduledScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state =
   let
+    isRentalRide = state.data.fareProductType == FPT.RENTAL
     config = SourceToDestination.config
     sourceToDestinationConfig' = config
       { sourceTextConfig
-          { text = state.source
+          { text = state.data.source.address
           , textStyle = ParagraphText
           , ellipsize = true
           , maxLines = 2
@@ -77,19 +86,20 @@ sourceToDestinationConfig state =
           , width = V 16
           }
       , destinationImageConfig
-          { imageUrl = maybe ("ny_ic_plus_circle") (\_ -> "ny_ic_drop") state.destination
+          { imageUrl = maybe ("ny_ic_plus_circle") (\_ -> "ny_ic_drop") state.data.destination
           , margin = MarginTop 5
           , height = V 16
           , width = V 16
           }
       , destinationTextConfig
-          { text = maybe (getString ADD_FIRST_STOP) (\dest -> dest) state.destination
-          , color = maybe (Color.blue800) (\_ -> Color.black800) state.destination
-          , isEditable = true
+          { text = maybe (getString ADD_FIRST_STOP) (\dest -> dest.address) state.data.destination
+          , color = maybe (Color.blue800) (\_ -> Color.black800) state.data.destination
+          , isEditable = isRentalRide
           , textStyle = ParagraphText
           , ellipsize = true
-          , maxLines = 1
+          , maxLines = if isRentalRide then 1 else 2
           , margin = MarginLeft 12
+          , isClickable = isRentalRide
           }
       , distanceConfig { distanceVisibility = GONE }
       , separatorMargin = 24
@@ -98,7 +108,7 @@ sourceToDestinationConfig state =
     sourceToDestinationConfig'
 
 genericHeaderConfig :: RideScheduledScreenState -> GenericHeader.Config
-genericHeaderConfig _ = let
+genericHeaderConfig state = let
   config = GenericHeader.config
   genericHeaderConfig' = config
     {
@@ -112,7 +122,7 @@ genericHeaderConfig _ = let
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {
-        text = "Rental Ride"
+        text = if state.data.fareProductType == FPT.RENTAL then "Rental Ride" else "Intercity Booking"
       , color = Color.black800
       }
     , suffixImageConfig {
@@ -121,3 +131,41 @@ genericHeaderConfig _ = let
     , padding = (Padding 0 5 0 0)
     }
   in genericHeaderConfig'
+
+
+cancelRidePopUpConfig :: RideScheduledScreenState -> CancelRidePopUpConfig.Config
+cancelRidePopUpConfig state =
+  let
+    cancelRideconfig = CancelRidePopUpConfig.config
+    lastIndex = (DA.length state.data.cancellationReasons) - 1
+    cancelRideConfig = state.data.config.cancelReasonConfig
+  in
+    CancelRidePopUpConfig.config
+        { selectionOptions = state.data.cancellationReasons
+        , showAllOptionsText = (getString SHOW_ALL_OPTIONS)
+        , primaryButtonTextConfig
+          { firstText = getString WAIT_FOR_DRIVER
+          , secondText = getString CANCEL_RIDE
+          }
+        , activeIndex = state.props.cancelRideActiveIndex
+        , activeReasonCode = Just state.props.cancelReasonCode
+        , isLimitExceeded = DS.length state.props.cancelDescription >= 100
+        , cornerRadius = cancelRideConfig.buttonCornerRadius
+        , isSelectButtonActive =
+          ( case state.props.cancelRideActiveIndex of
+              Just cancelRideIndex -> true
+              Nothing -> false
+          )
+        , headingTextConfig{
+          text = getString CANCEL_RIDE <> "?"
+        }
+        , subHeadingTextConfig{
+          text = getString PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL
+        }
+        , hint = getString HELP_US_WITH_YOUR_REASON
+        , strings
+          { mandatory = getString MANDATORY
+          , limitReached = getString MAX_CHAR_LIMIT_REACHED <> " 100 " <> getString OF <> " 100"
+          }
+        , config = state.data.config
+        }

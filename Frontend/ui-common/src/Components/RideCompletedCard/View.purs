@@ -2,29 +2,27 @@ module Components.RideCompletedCard.View where
 
 import Components.RideCompletedCard.Controller 
 
-import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView, rippleColor)
+import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView, rippleColor, Prop)
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
 import Data.Functor (map)
 import PrestoDOM.Animation as PrestoAnim
 import Animation (fadeIn,fadeInWithDelay) as Anim
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max, mod )
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Data.Array (mapWithIndex, length, (!!), null)
+import Data.Array (mapWithIndex, length, (!!), null, any)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
 import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Properties (cornerRadii)
-import Language.Types (STR(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), RentalBookingConfig)
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Halogen.VDom.DOM.Prop (Prop)
 import Components.PopUpModal as PopUpModal
-import Language.Strings (getString)
 import JBridge as JB
 import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude
@@ -36,6 +34,7 @@ import JBridge(renderBase64Image)
 import Storage (getValueToLocalStore, KeyStore(..))
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
+import Engineering.Helpers.Utils as Utils
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -233,8 +232,8 @@ priceAndDistanceUpdateView config push =
               , height WRAP_CONTENT
               ] <> (FontStyle.body28 TypoGraphy)
           , textView $
-              [ textFromHtml $ "<strike> ₹" <> (show config.topCard.initalAmount) <> "</strike>"
-              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show config.topCard.initalAmount) <> " To ₹" <> (show config.topCard.finalAmount)
+              [ textFromHtml $ "<strike> ₹" <> (show config.topCard.initialAmount) <> "</strike>"
+              , accessibilityHint $ "Your Fare Has Been Updated From ₹"  <> (show config.topCard.initialAmount) <> " To ₹" <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , margin $ Margin 8 5 0 0
               , width WRAP_CONTENT
@@ -325,23 +324,37 @@ bottomCardView config push =
 
 customerSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerSideBottomCardsView config push = 
-  scrollView[
-    width MATCH_PARENT,
-    height $ if os == "IOS" then getBottomCardHeight "topViewId" else WRAP_CONTENT
-  ][
-    linearLayout[
-      height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding $ PaddingVertical 6 16
-    , background Color.white900
-    , gravity CENTER
-    ]$[
-      customerIssueView config push
-    , customerRatingDriverView config push
-    ] <> if config.customerIssueCard.isNightRide then [] else [needHelpPillView config push]
-  ]
+  let bottomCardPadding = if config.showRentalRideDetails then Padding 8 16 8 16 else Padding 16 16 16 16
+  in 
+    scrollView[
+      width MATCH_PARENT,
+      height $ if os == "IOS" then getBottomCardHeight "topViewId" else WRAP_CONTENT
+    ][
+      linearLayout[
+        height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , padding bottomCardPadding
+      , background Color.white900
+      , gravity CENTER
+      ]
+      [ if config.showRentalRideDetails then rentalTripDetailsView config push
+        else rideCustomerExperienceView config push 
+      ]
+    ]
 
+rideCustomerExperienceView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rideCustomerExperienceView config push =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , gravity CENTER
+  ]
+  [ customerIssueView config push
+  , customerRatingDriverView config push
+  , needHelpPillView config push
+  ]
 
 ---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
 customerIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -452,7 +465,7 @@ customerRatingDriverView config push =
   , padding $ Padding 10 10 10 20
   , gravity CENTER
   ][ imageView [
-      imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_driver_avatar"
+      imageWithFallback config.customerBottomCard.driverImage
       , height $ V 56
       , width $ V 56
     ]
@@ -741,7 +754,6 @@ stickyButtonView config push =
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
-  , weight 1.0
   , cornerRadii $ Corners 16.0 true true false false
   , background Color.white900
   , layoutGravity "bottom"
@@ -762,6 +774,127 @@ contactSupportPopUpView config push =
     width MATCH_PARENT,
     height MATCH_PARENT
   ][PopUpModal.view (push <<< ContactSupportPopUpAC) config.contactSupportPopUpConfig] 
+
+---------------------------------------------- (Driver Card 7) rentalRideDetailsView  ------------------------------------------------------------------------------------------------------------------------------------------
+
+rentalTripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rentalTripDetailsView config push =
+  let rentalRowDetails = config.rentalRowDetails
+  in 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ]
+    [ textView $
+      [ text rentalRowDetails.rideDetailsTitle
+      , color Color.black800
+      , margin $ MarginVertical 4 8
+      ] <> FontStyle.body1 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , cornerRadius 9.0
+      , background Color.white900
+      , padding $ Padding 16 16 16 16
+      , stroke $ "1,"<> Color.grey900
+      , orientation VERTICAL
+      ] 
+      [ rentalTripRowView config push RideTime
+      , rentalTripRowView config push RideDistance
+      , separatorView
+      , rentalTripRowView config push RideStartedAt
+      , rentalTripRowView config push RideEndedAt
+      ]
+    , textView $
+      [ text rentalRowDetails.fareUpdateTitle
+      , color Color.black800
+      , margin $ MarginVertical 24 8
+      ] <> FontStyle.body1 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , cornerRadius 9.0
+      , background Color.white900
+      , padding $ Padding 16 16 16 16
+      , stroke $ "1,"<> Color.grey900
+      , orientation VERTICAL
+      ]
+      [ rentalTripRowView config push EstimatedFare
+      , rentalTripRowView config push ExtraTimePrice
+      , separatorView
+      , rentalTripRowView config push TotalFare
+      ]
+    ]
+  
+  where 
+    separatorView = 
+      linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT 
+      , margin $ MarginTop 16
+      , background Color.grey700
+      ][]
+
+rentalTripRowView :: forall w. Config -> (Action -> Effect Unit) -> RentalRowView -> PrestoDOM (Effect Unit) w
+rentalTripRowView config push description =
+  let rentalBookingData = config.rentalBookingData
+      textConfig = getTextConfig config description
+  in 
+    linearLayout 
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , margin $ MarginTop if (description == RideTime || description == EstimatedFare) then 0 else 16
+    ] 
+    [ textView $ [
+        text $ textConfig.title
+      , weight 0.1
+      , gravity LEFT
+      ] <> FontStyle.body1 TypoGraphy
+    , linearLayout [
+        height MATCH_PARENT
+      , width WRAP_CONTENT
+      , gravity RIGHT
+      ] 
+      [ textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , ellipsize true
+        , singleLine true
+        , text $ textConfig.actualValue
+        , color $ textConfig.color
+        ] <> FontStyle.body1 TypoGraphy
+      , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ textConfig.estimatedValue
+        , color Color.black700
+        , ellipsize true
+        , singleLine true
+        ] <> FontStyle.body1 TypoGraphy
+      ]
+    ]
+    where
+      getTextConfig :: Config -> RentalRowView -> RentalTextConfig
+      getTextConfig config' description' = 
+        let rentalBookingData = config'.rentalBookingData
+            rentalRowDetails = config'.rentalRowDetails
+        in
+          case description' of
+            RideTime -> mkRentalTextConfig rentalRowDetails.rideTime (" / " <> show rentalBookingData.baseDuration <> "hr") (Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
+            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> "km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
+            RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt rentalBookingData.rideStartedAt "" Color.black600
+            RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt rentalBookingData.rideEndedAt "" Color.black600
+            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare ("₹" <> show config'.topCard.initialAmount) "" Color.black600
+            ExtraTimePrice -> mkRentalTextConfig rentalRowDetails.extraTimePrice ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
+            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare ("₹" <> show config'.topCard.finalAmount) "" Color.black600
+            
+      mkRentalTextConfig :: String -> String -> String -> String -> RentalTextConfig
+      mkRentalTextConfig title' estimatedValue' actualValue' color' = { title: title', estimatedValue: estimatedValue', actualValue: actualValue', color: color'}
+      showRedOrBlackColor :: Boolean -> String
+      showRedOrBlackColor isRed =
+        if isRed then Color.red else Color.black900
 
 --------------------------------- Helpers ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 commonTextView :: forall w. Config -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w

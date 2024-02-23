@@ -17,13 +17,13 @@ module Resources.Constants where
 
 import ConfigProvider
 
-import Accessor (_description, _amountWithCurrency)
-import Common.Types.App (LazyCheck(..), Price)
 import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl, mapMaybe, find)
+import Accessor (_description, _amount, _amountWithCurrency)
+import Common.Types.App (LazyCheck(..), OptionButtonList, Price)
 import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Data.String as DS
 import Engineering.Helpers.Commons (os)
@@ -65,7 +65,9 @@ decodeAddress addressWithCons =
       Booking bookingLocation -> bookingLocation
       SavedLoc savedLocation -> getBookingEntity savedLocation
   in
-    if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+    if (all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then
+      ""
+    else if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
       ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
     else if (trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
       ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
@@ -230,6 +232,9 @@ getFaresList fares chargeableRideDistance =
                       "SGST" -> getEN PLATFORM_GST
                       "CUSTOMER_CANCELLATION_DUES" -> getEN CUSTOMER_CANCELLATION_DUES
                       "TOLL_CHARGES" ->  getEN TOLL_CHARGES <> "⁺"
+                      "DIST_BASED_FARE" -> getEN DIST_BASED_CHARGES
+                      "TIME_BASED_FARE" -> getEN TIME_BASED_CHARGES
+                      "EXTRA_TIME_FARE" -> getEN EXTRA_TIME_CHARGES
                       _ -> formatFareType $ item.description
           }
     )
@@ -336,3 +341,55 @@ maxImageUploadInIssueReporting = 3
 emergencyContactInitialChatSuggestionId :: String
 emergencyContactInitialChatSuggestionId = "d6cddbb1a6aee372c0c7f05173da8f95"
 
+
+cancelReasons :: Boolean -> Array OptionButtonList
+cancelReasons showAcReason =
+  ([ { reasonCode: "CHANGE_OF_PLANS"
+    , description: getString CHANGE_OF_PLANS
+    , subtext: Just $ getString NO_LONGER_REQUIRE_A_RIDE_DUE_TO_CHANGE_IN_PLANS
+    , textBoxRequired : false
+    }
+  ]) <>
+  (if showAcReason 
+      then [ { reasonCode: "AC_NOT_TURNED_ON"
+              , description: getString AC_IS_NOT_AVAILABLE_ON_THIS_RIDE
+              , subtext: Just $ getString AC_NOT_WORKING_DESC
+              , textBoxRequired : false
+            }]
+      else []
+  ) <>
+  ([
+    { reasonCode: "GOT_ANOTHER_RIDE"
+    , description: getString GOT_ANOTHER_RIDE_ELSE_WHERE
+    , subtext: Just $ getString CANCELLING_AS_I_GOT_A_RIDE_ON_ANOTHER_APP
+    , textBoxRequired : false
+    }
+  , { reasonCode: "DRIVER_NOT_MOVING"
+    , description: getString DRIVER_IS_NOT_MOVING
+    , subtext: Just $ getString DRIVER_LOCATION_WASNT_CHANGING_ON_THE_MAP
+    , textBoxRequired : false
+    }
+  , { reasonCode: "WAIT_TIME_TOO_LONG"
+    , description: getString WAIT_TIME_TOO_LONG
+    , subtext: Just $ getString DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION
+    , textBoxRequired : false
+    }
+  , { reasonCode: "WRONG_PICKUP_LOCATION"
+    , description: getString WRONG_PICKUP_LOCATION
+    , subtext: Just $ getString THE_PICKUP_LOCATION_ENTERED_WAS_WRONG
+    , textBoxRequired : false
+    }
+  , { reasonCode: "OTHER"
+    , description: getString OTHER
+    , subtext: Just $ getString SOME_OTHER_REASON
+    , textBoxRequired : true
+    }
+  ])
+
+dummyCancelReason :: OptionButtonList
+dummyCancelReason =
+  { reasonCode: ""
+  , description: ""
+  , textBoxRequired: false
+  , subtext: Nothing
+  }

@@ -39,7 +39,10 @@ type TagConfig = {
   height :: Length,
   width :: Length,
   padding :: Padding,
-  id :: String}
+  id :: String,
+  enableRipple  :: Boolean,
+  rippleColor :: String
+  }
 
 type ImageConfig = {
   width :: Length,

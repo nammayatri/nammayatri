@@ -9,6 +9,7 @@ import PrestoDOM (BottomSheetState(..))
 import Foreign.Object (empty)
 import Services.API (Route(..), Snapped(..), LatLong(..), GetRouteResp(..), GetDriverLocationResp(..))
 import Common.Types.App as CT
+import Screens.Types (FareProductType(..)) as FPT
 
 initData :: FollowRideScreenState
 initData =
@@ -76,6 +77,7 @@ mockRoute =
     { boundingBox: Nothing
     , distance: 1671
     , duration: 150
+    , pointsForRentals : Nothing
     , points:
         Snapped
           [ LatLong
@@ -169,8 +171,7 @@ mockDriverInfo =
   { otp: ""
   , driverName: "Test Driver"
   , eta: Nothing
-  , vehicleDetails: "AUTO_RICKSHAW"
-  , currentSearchResultType: ESTIMATES
+  , vehicleDetails: ""
   , registrationNumber: "XXXXXXXXXX"
   , rating: 5.0
   , startedAt: ""
@@ -205,4 +206,6 @@ mockDriverInfo =
   , vehicleColor : ""
   , providerName : ""
   , providerType : CT.ONUS
+  , rentalData : dummyRentalBookingConfig
+  , fareProductType : FPT.ONE_WAY
   }
