@@ -83,7 +83,7 @@ buildStatusReqV2 DStatusReq {..} = do
       (Just booking.providerUrl)
       city
       merchant.country
-      Nothing
+      (Just "PT30S")
 
   pure $
     Spec.StatusReq
