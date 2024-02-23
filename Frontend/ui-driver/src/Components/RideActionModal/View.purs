@@ -77,9 +77,10 @@ view push config =
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             , gravity CENTER
-            ][ messageButton push config
-            , callButton push config
-            , openGoogleMap push config
+            ][ 
+                messageButton push config,
+                callButton push config,
+                 openGoogleMap push config
             ]
           ]
         ]
@@ -95,7 +96,7 @@ messageButton push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall)) then VISIBLE else GONE
+  , visibility if ( config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall)) then VISIBLE else GONE
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
   , background Color.white900
@@ -139,7 +140,7 @@ callButton push config =
   , stroke $ "1,"<> Color.black500
   , cornerRadius 30.0
   , alpha if config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT then 0.5 else 1.0
-  , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) then VISIBLE else GONE
+  , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer || config.rideType == ST.Rental) then VISIBLE else GONE
   , onClick push (const $ CallCustomer)
   , clickable (not (config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT))
   , rippleColor Color.rippleShade
@@ -281,7 +282,7 @@ rideActionView layoutMargin push config =
       , id $ getNewIDWithTag "rideActionLayout"
       ]([  
           rideActionDataView push config,
-          vehicleVariantTypeView push config,
+          rideTypeView push config,
          linearLayout
             [ width MATCH_PARENT
             , height $ V 1
@@ -299,19 +300,13 @@ rideActionView layoutMargin push config =
     , cancelRide push config
   ]
 
-vehicleVariantTypeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-vehicleVariantTypeView push config =
-  if config.rideType == ST.Rental then 
-    textView [ visibility GONE]
-  else rideTypeView push config
-
 openGoogleMap :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 openGoogleMap push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity RIGHT
-  , visibility $ boolToVisibility $ config.startRideActive || config.rideType /= ST.Rental || Maybe.isJust config.stopAddress 
+  , visibility $ if config.startRideActive || config.rideType /= ST.Rental || Maybe.isJust config.stopAddress then VISIBLE else INVISIBLE
   ][  linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -488,7 +483,7 @@ rentalRideDescView config push =
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , margin (Margin 25 8 0 0)
+        , margin (Margin 25 8 0 20)
         ][  textView $ 
             [ text $ (getString START_ODO_READING) <> ": "
             , height WRAP_CONTENT
@@ -514,7 +509,7 @@ stopTextView config push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , margin $ MarginTop 20
+  , margin (Margin 0 0 0 20)
   , visibility $ boolToVisibility $ Maybe.isJust config.stopAddress || Maybe.isJust config.lastStopAddress
   ][ linearLayout
       [height WRAP_CONTENT

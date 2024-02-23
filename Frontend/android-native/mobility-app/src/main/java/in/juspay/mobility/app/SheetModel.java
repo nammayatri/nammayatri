@@ -9,7 +9,7 @@
 package in.juspay.mobility.app;
 
 public class SheetModel {
-    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant,rideProductType, rentalRideDuration, rentalRideDistance, rentalStartTime, rentalStartDate;
+    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, rideDuration, rideDistance, rideStartTime, rideStartDate, tripCategory;
     private String requestId;
     private int startTime;
     private double updatedAmount;
@@ -50,11 +50,11 @@ public class SheetModel {
                       Boolean disabilityTag,
                       Boolean isTranslated,
                       Boolean gotoTag,
-                      String rideProductType,
-                      String rentalRideDuration,
-                      String rentalRideDistance,
-                      String rentalStartTime,
-                      String rentalStartDate){
+                      String tripCategory,
+                      String rideDuration,
+                      String rideDistance,
+                      String rideStartTime,
+                      String rideStartDate){
 
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
@@ -86,31 +86,31 @@ public class SheetModel {
         this.durationToPickup = durationToPickup;
         this.gotoTag = gotoTag;
         this.isTranslated = isTranslated;
-        this.rideProductType = rideProductType;
-        this.rentalRideDuration = rentalRideDuration;
-        this.rentalRideDistance = rentalRideDistance;
-        this.rentalStartTime = rentalStartTime;
-        this.rentalStartDate = rentalStartDate;
+        this.tripCategory = tripCategory;
+        this.rideDuration = rideDuration;
+        this.rideDistance = rideDistance;
+        this.rideStartTime = rideStartTime;
+        this.rideStartDate = rideStartDate;
     }
 
-    public String getRideProductType() {
-        return rideProductType;
+    public String getTripCategory() {
+        return tripCategory;
     }
 
-    public String getRentalRideDuration() {
-        return rentalRideDuration;
+    public String getRideDuration() {
+        return rideDuration;
     }
 
-    public String getRentalRideDistance() {
-        return rentalRideDistance;
+    public String getRideDistance() {
+        return rideDistance;
     }
 
-    public String getRentalRideStartDate() {
-        return rentalStartDate;
+    public String getRideStartDate() {
+        return rideStartDate;
     }
 
-    public String getRentalRideStartTime() {
-        return rentalStartTime;
+    public String getRideStartTime() {
+        return rideStartTime;
     }
 
     public boolean isGotoTag() {

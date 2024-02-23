@@ -421,6 +421,7 @@ getBN stringKey =
         REPORT_ISSUE_CHAT_PLACEHOLDER _ ->  "আপনার সমস্যাটি বর্ণনা. আমরা 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করব।"
         PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP ->  "অনুগ্রহ করে গ্রাহককে OTP-এর জন্য জিজ্ঞাসা করুন"
         ENTER_CURRENT_ODOMETER_READING ->  "বর্তমান ওডোমিটার রিডিং লিখুন"
+        ENTER_FINAL_ODO_READING -> "এন্টার ফাইনাল ওডো রিডিং"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER ->  "ওডোমিটারের শেষ 4 অঙ্ক লিখুন"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ওডোমিটারের অঙ্ক লিখুন"
         ODOMETER_READING_VALIDATION_FAILED -> "অনুগ্রহ করে বৈধ ওডোমিটার রিডিং লিখুন"
@@ -1259,3 +1260,4 @@ getBN stringKey =
         ENTER_END_RIDE_OTP -> "শেষ রাইড ওটিপি প্রবেশ করুন"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "আপনি স্টপ স্থানে নেই"
         ARRIVED_AT_STOP -> "স্টপে আগত হয়েছে"
+        END_ODO_READING_CANT_BE_MORE_THAN_300_START -> "শেষ ওডোমিটার পঠন থেকে 300 কিলোমিটারের বেশি হতে পারে না।"

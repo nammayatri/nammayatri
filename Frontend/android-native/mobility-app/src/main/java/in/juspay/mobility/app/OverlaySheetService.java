@@ -143,53 +143,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
-            if(model.getRideProductType().equals(RENTAL)){
-                holder.tagsBlock.setVisibility(View.VISIBLE);
-                holder.reqButton.setTextColor(getColor(R.color.white));
-                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.turquoise)));
-                if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
-                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                    } else {
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_non_ac_variant_tag);
-                        holder.rideTypeImage.setVisibility(View.GONE);
-                    }
-                    holder.rideTypeText.setText(variant);
-                }
-                holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
-                holder.rentalDateTimeTag.setVisibility(View.VISIBLE);
-                holder.rentalStartTime.setText(model.getRentalRideStartTime());
-                holder.rentalStartDate.setVisibility(View.VISIBLE);
-                if(model.getRentalRideStartDate() != "")
-                {
-                    holder.rentalStartDate.setText(model.getRentalRideStartDate());
-                }
-                holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
-                holder.rentalRideDuration.setText(model.getRentalRideDuration());
-                holder.rentalRideDistance.setText(model.getRentalRideDistance());
-                holder.destinationArea.setVisibility(View.GONE);
-                holder.destinationAddress.setVisibility(View.GONE);
-                holder.distanceToBeCovered.setVisibility(View.GONE);
-                holder.destinationPinCode.setVisibility(View.GONE);
-                holder.locationDashedLine.setVisibility(View.GONE);
-                holder.locationDestinationPinTag.setVisibility(View.GONE);
-                holder.gotoTag.setVisibility(View.GONE);
-                holder.customerTipTag.setVisibility(View.GONE);
-                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
-            }
-            else if (model.getRideProductType().equals(INTERCITY)) {
-                holder.tagsBlock.setVisibility(View.VISIBLE);
-                holder.reqButton.setTextColor(getColor(R.color.white));
-                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.blue800)));
-                holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
-                holder.gotoTag.setVisibility(View.GONE);
-                holder.customerTipTag.setVisibility(View.GONE);
-                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
-                holder.gotoTag.setVisibility(View.GONE);
-            }
-            else if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
                 String pickupChargesText = model.getCustomerTip() > 0 ?
                         getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
                         getString(R.string.includes_pickup_charges_10);
@@ -217,6 +171,54 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
+            }
+        });
+    }
+     
+    private void updateTripCategoryTag(SheetAdapter.SheetViewHolder holder, SheetModel model)
+    {
+        mainLooper.post(() -> {
+            String variant = model.getRequestedVehicleVariant();
+            holder.tagsBlock.setVisibility(View.VISIBLE);
+            holder.reqButton.setTextColor(getColor(R.color.white));
+            if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
+                if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
+                    holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
+                    holder.rideTypeTag.setVisibility(View.VISIBLE);
+                } else {
+                    holder.rideTypeTag.setVisibility(View.VISIBLE);
+                    holder.rideTypeTag.setBackgroundResource(R.drawable.ic_non_ac_variant_tag);
+                    holder.rideTypeImage.setVisibility(View.GONE);
+                }
+                holder.rideTypeText.setText(variant);
+            }
+            
+            holder.tripCategoryTag.setVisibility(View.VISIBLE);
+            holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
+            holder.rideStartTime.setText(model.getRideStartTime());
+            holder.gotoTag.setVisibility(View.GONE);
+            holder.customerTipTag.setVisibility(View.GONE);
+            holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
+            
+            if(model.getTripCategory().equals(RENTAL)){
+                holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
+                holder.rideDuration.setText(model.getRideDuration());
+                holder.rideDistance.setText(model.getRideDistance());
+                holder.destinationArea.setVisibility(View.GONE);
+                holder.destinationAddress.setVisibility(View.GONE);
+                holder.distanceToBeCovered.setVisibility(View.GONE);
+                holder.destinationPinCode.setVisibility(View.GONE);
+                holder.locationDashedLine.setVisibility(View.GONE);
+                holder.locationDestinationPinTag.setVisibility(View.GONE);
+                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.turquoise)));
+                holder.tripCategoryImage.setImageResource(R.drawable.ic_car_unfilled);  
+                holder.tripCategoryText.setText(getString(R.string.rental));    
+                holder.tripCategoryTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);      
+            }
+            else if (model.getTripCategory().equals(INTERCITY)) {
+                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.blue800)));
+                holder.tripCategoryImage.setImageResource(R.drawable.intercity);  
+                holder.tripCategoryText.setText(getString(R.string.intercity));
             }
         });
     }
@@ -315,7 +317,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
-            updateTagsView(holder, model);
+            if (model.getTripCategory().equals(RENTAL) || model.getTripCategory().equals(INTERCITY))
+                updateTripCategoryTag(holder, model);
+            else updateTagsView(holder, model);
             String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
@@ -603,35 +607,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
-                    String rideProductType = rideRequestBundle.getString("rideProductType");
-                    String rentalRideDuration = String.format("%02d:%02d hr", rideRequestBundle.getInt("rentalRideDuration") / 3600 ,( rideRequestBundle.getInt("rentalRideDuration") % 3600 ) / 60);
-                    String rentalRideDistance = String.format("%d km", rideRequestBundle.getInt("rentalRideDistance") / 1000);
-                    String rentalStartTime = "";
-                    String rentalStartDate= "";
-                    try {
-                                                
-                        final SimpleDateFormat dateTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                        dateTime.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-                        final Date rentalDateTime = dateTime.parse(rideRequestBundle.getString("rentalStartTime"));
-                        rentalDateTime.setTime(rentalDateTime.getTime() + (330 * 60 * 1000));
-
-                        final SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
-                        final SimpleDateFormat tf1 = new SimpleDateFormat("h:mm a");
-                        df1.setTimeZone(TimeZone.getTimeZone("IST"));
-                        tf1.setTimeZone(TimeZone.getTimeZone("IST"));
-                        String date = df1.format(rentalDateTime);
-                        String time = tf1.format(rentalDateTime);
-                        
-                        rentalStartTime = time;
-                        rentalStartDate = date.equals(df1.format(new Date())) ? "Today" : date;
-                    }
-                    catch(Exception e) {
-                        System.out.println("Exception in parsing rental start date and time");
-                        rentalStartDate = "Today";
-                        rentalStartTime = "now";
-                        e.printStackTrace();
-                    }
+                    String tripCategory = rideRequestBundle.getString("tripCategory");
+                    String rideDuration = String.format("%02d:%02d hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
+                    String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
+                    String rideStartTime = rideRequestBundle.getString("rideStartTime");
+                    String rideStartDate= rideRequestBundle.getString("rideStartDate");
+                   
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
 
@@ -660,11 +641,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             disabilityTag,
                             isTranslated,
                             gotoTag,
-                            rideProductType,
-                            rentalRideDuration,
-                            rentalRideDistance,
-                            rentalStartTime,
-                            rentalStartDate);
+                            tripCategory,
+                            rideDuration,
+                            rideDistance,
+                            rideStartTime,
+                            rideStartDate);
 
                     if (floatyView == null) {
                         startTimer();
@@ -1071,26 +1052,26 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         tipsList.get(i).setVisibility(View.INVISIBLE);
                     }
 
-                    if (sheetArrayList.get(i).getRideProductType().equals(RENTAL)) {
+                    if (sheetArrayList.get(i).getTripCategory().equals(RENTAL)) {
                         rentalList.get(i).setVisibility(View.VISIBLE);
                     }
                     else {
                         rentalList.get(i).setVisibility(View.INVISIBLE);
                     }
 
-                    if(viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getRideProductType().equals(RENTAL))
+                    if(viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getTripCategory().equals(RENTAL))
                     {
                         indicatorList.get(i).setBackgroundColor(getColor(R.color.turquoise10));
                     }
 
-                    if (sheetArrayList.get(i).getRideProductType().equals(INTERCITY)) {
+                    if (sheetArrayList.get(i).getTripCategory().equals(INTERCITY)) {
                         intercityList.get(i).setVisibility(View.VISIBLE);
                     }
                     else {
                         intercityList.get(i).setVisibility(View.INVISIBLE);
                     }
 
-                    if(viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getRideProductType().equals(INTERCITY))
+                    if(viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getTripCategory().equals(INTERCITY))
                     {
                         indicatorList.get(i).setBackgroundColor(getColor(R.color.blue600));
                     }

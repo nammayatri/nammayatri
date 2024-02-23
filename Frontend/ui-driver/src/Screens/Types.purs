@@ -18,7 +18,6 @@ module Screens.Types where
 import Common.Types.Config
 
 import Common.Types.App as Common
-import Domain.Payments as PP
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Components.GoToLocationModal.Controller as GoToModal
@@ -31,6 +30,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
+import Domain.Payments as PP
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
@@ -43,12 +43,12 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import PrestoDOM.List (ListItem)
+import RemoteConfig.Types as RC
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..))
 import Services.API (GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, TripCategory(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
-import RemoteConfig.Types as RC
 import Styles.Types (FontSize)
 
 
@@ -825,6 +825,15 @@ type AboutUsScreenState = {
   props :: AboutUsScreenProps
 }
 
+type UpdateRouteSrcDestConfig = {
+  srcLat :: Number,
+  srcLon :: Number,
+  destLat :: Number,
+  destLon :: Number,
+  source :: String,
+  destination :: String
+}
+
 type AboutUsScreenData = {
   versionNumber :: String
 }
@@ -1053,15 +1062,13 @@ type HomeScreenProps =  {
   screenName :: String,
   rideActionModal :: Boolean,
   enterOtpModal :: Boolean,
-  endRideOtpModal :: Boolean,
   rideOtp :: String,
   odometerValue :: String,
   enterOdometerReadingModal :: Boolean,
-  endRideOdometerReadingModal :: Boolean,
   endRideOdometerReadingValidationFailed :: Boolean,
   showNewStopPopup :: Boolean,
-  odometerConfig :: OdometerConfig,
   enterOtpFocusIndex :: Int,
+  enterOdometerFocusIndex :: Int,
   time :: Int,
   otpIncorrect :: Boolean,
   wrongVehicleVariant :: Boolean,
@@ -2402,12 +2409,10 @@ instance eqGoBackToScreen :: Eq GoBackToScreen where eq = genericEq
 instance encodeGoBackToScreen :: Encode GoBackToScreen where encode = defaultEnumEncode
 instance decodeGoBackToScreen :: Decode GoBackToScreen where decode = defaultEnumDecode
 
-type OdometerConfig = {
-  updateKm :: Boolean,
-  updateM :: Boolean
-}
-
-type OdometerReading = {
-  valueInM :: String,
-  valueInkm :: String
-}
+type OdometerReading =  {
+    digit0 :: String,
+    digit1 :: String,
+    digit2 :: String,
+    digit3 :: String,
+    digit4 :: String
+  }

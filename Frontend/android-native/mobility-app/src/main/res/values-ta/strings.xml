@@ -62,4 +62,8 @@
     <string name="customer_added">வாடிக்கையாளர் ஒரு நிலையாண்டை சேர்த்தார்!</string>
     <string name="navigate_to_location"> இருப்பிடத்திற்கு செல்லவும்</string>
     <string name="close"> மூடு</string>
+    <string name="today"> இன்று</string>
+    <string name="now"> இப்போது</string>
+    <string name="rental"> வாடகை</string>
+    <string name="intercity"> இடர்நகர</string>
 </resources>

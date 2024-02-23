@@ -169,10 +169,7 @@ initData = {
         , bannerScrollState: "0"
         , currentPage : 0
         },
-        odometerReading : {
-          valueInkm : "",
-          valueInM : ""
-      },
+        odometerReading : odometerDigits,
       prevLatLon : [],
       noOfLocations : 0
     },
@@ -186,16 +183,15 @@ initData = {
         rideActionModal : false,
         updatedArrivalInChat : false,
         enterOtpModal : false,
-        endRideOtpModal : false,
         odometerValue : "0000•0",
         startRideOdometerImage : "",
         endRideOdometerImage : "",
         enterOdometerReadingModal : false,
-        endRideOdometerReadingModal : false,
         endRideOdometerReadingValidationFailed : false,
         showNewStopPopup : false,
         rideOtp : "",
         enterOtpFocusIndex : 0,
+        enterOdometerFocusIndex : 0,
         time : 0,
         otpIncorrect : false,
         wrongVehicleVariant : false,
@@ -237,10 +233,6 @@ initData = {
         showCoinsPopup : false,
         isStatsModelExpanded : false,
         tobeLogged : false,
-        odometerConfig : {
-            updateKm : true,
-            updateM : false
-        },
         rideStartTimer : 0,
         odometerFileId : Nothing,
         odometerUploadAttempts : 0,
@@ -256,3 +248,14 @@ dummyDriverRideStats = DriverProfileStatsResp
     , bonusEarning : 0
     , coinBalance : 0
     }
+
+
+odometerDigits :: ST.OdometerReading
+odometerDigits = 
+  {
+    digit0 : "",
+    digit1 : "",
+    digit2 : "",
+    digit3 : "",
+    digit4 : ""
+  }

@@ -58,4 +58,8 @@
     <string name="customer_added">ഗ്രാഹകന്‍ ഒരു സ്റ്റോപ്പ് ചേർത്തു!</string>
     <string name="navigate_to_location">സ്ഥാനത്തിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക</string>
     <string name="close">അടയ്ക്കുക</string>
+    <string name="today">ഇന്ന്</string>
+    <string name="now"> ഇപ്പോള്‍</string>
+    <string name="rental"> റെന്റൽ</string>
+    <string name="intercity"> ഇന്റർസിറ്റി </string>
 </resources>

@@ -403,6 +403,7 @@ getKN stringKey =
         DEMO ->  "ಡೆಮೊ"
         PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP ->  "ದಯವಿಟ್ಟು OTP ಗಾಗಿ ಗ್ರಾಹಕರನ್ನು ಕೇಳಿ"
         ENTER_CURRENT_ODOMETER_READING -> "ಪ್ರಸ್ತುತ ಓಡೋಮೀಟರ್ ಓದುವಿಕೆಯನ್ನು ನಮೂದಿಸಿ"
+        ENTER_FINAL_ODO_READING -> "ಎಂಟರ್ ಫೈನಲ್ ಓಡೊ ರೀಡಿಂಗ್"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "ಓಡೋಮೀಟರ್ ಕ್ರಮಾಂಕದ ಕೊನೆಯ 4 ಅಂಕಿಗಳನ್ನು ನಮೂದಿಸಿ"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ಓಡೋಮೀಟರ್‌ನ ಅಂಕೆಗಳನ್ನು ನಮೂದಿಸಿ"
         ODOMETER_READING_VALIDATION_FAILED -> "ದಯವಿಟ್ಟು ಮಾನ್ಯ ದೂರಮಾಪಕ ಓದುವಿಕೆಯನ್ನು ನಮೂದಿಸಿ"
@@ -1259,3 +1260,4 @@ getKN stringKey =
         ENTER_END_RIDE_OTP -> "ಸವಾರಿ ಮುಗಿಸಲು ಒಟಿಪಿ ನಮೂದಿಸಿ"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "ನೀವು ನಿಲ್ದಾಣ ಸ್ಥಳದಲ್ಲಿ ಇಲ್ಲ"
         ARRIVED_AT_STOP -> "ನಿಲ್ದಾಣದಲ್ಲಿ ಬಂದಿದ್ದೇನೆ"
+        END_ODO_READING_CANT_BE_MORE_THAN_300_START ->  "ಕೊನೆಯ ODOಮೀಟರ್ ಓದುವಿಕೆ ಮೊದಲ ODOಮೀಟರ್ ಓದುವಿಕೆಯಿಂದ 300 ಕಿಲೋಮೀಟರ್‌ಗಿಂತ ಹೆಚ್ಚಾಗಿ ಇರಬಾರದು"

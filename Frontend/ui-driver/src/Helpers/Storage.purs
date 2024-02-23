@@ -130,13 +130,9 @@ data KeyStore = USER_NAME
                 | NIGHT_SAFETY_POP_UP
                 | REFERRER_URL
                 | RIDE_START_ODOMETER
-                | RIDE_START_ODOMETER_READING
                 | RIDE_END_ODOMETER
-                | RIDE_END_ODOMETER_READING
-                | RIDE_PRODUCT_TYPE
-                | RIDE_START_TIME
-                | RIDE_END_TIME
                 | RIDE_START_TIMER_ID
+                | PREVIOUS_LOCAL_STAGE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

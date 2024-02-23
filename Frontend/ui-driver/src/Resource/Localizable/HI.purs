@@ -409,6 +409,7 @@ getHI stringKey =
         ENTER_THE_DIGITS_OF_ODOMETER -> "ओडोमीटर के अंक दर्ज करें"
         ODOMETER_READING_VALIDATION_FAILED -> "कृपया वैध ओडोमीटर रीडिंग दर्ज करें"
         ENTER_CURRENT_ODOMETER_READING -> "वर्तमान ओडोमीटर पढ़ना दर्ज करें"
+        ENTER_FINAL_ODO_READING -> "एंटर फाइनल ओडो रीडिंग"
         DELETE ->  "मिटाना"
         VIEW ->  "देखना"
         ISSUE_NO ->  "निर्गत संख्या"
@@ -1258,4 +1259,5 @@ getHI stringKey =
         RIDE_TIME -> "सवारी का समय"
         ENTER_END_RIDE_OTP -> "सवारी समाप्त करने के लिए ओटीपी दर्ज करें"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "आप स्टॉप स्थान पर नहीं हैं"
+        END_ODO_READING_CANT_BE_MORE_THAN_300_START -> "अंतिम ODOमीटर पठन से 300 किलोमीटर से अधिक नहीं हो सकता।"
         ARRIVED_AT_STOP -> "स्टॉप पर पहुंच गए"

@@ -310,6 +310,7 @@ newtype EndRideReq = EndRideReq
     }
 
 newtype EndRideResponse = EndRideResponse {
+  result :: String,
   homeLocationReached :: Maybe Boolean
 }
 
@@ -587,7 +588,7 @@ newtype RidesInfo = RidesInfo
       nextStopLocation :: Maybe StopLocation,
       lastStopLocation :: Maybe StopLocation,
       tripEndTime :: Maybe String,
-      actualRideDistance :: Maybe Int,
+      actualRideDistance :: Maybe Number,
       stopLocationId :: Maybe String,
       tripScheduledAt :: Maybe String,
       estimatedDuration :: Maybe Int,

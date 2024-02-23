@@ -161,15 +161,8 @@ screen initialState =
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
-                                if (not initialState.props.chatcallbackInitiated) then do
-                                  _ <- JB.clearChatMessages
-                                  _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
-                                  _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
-                                  _ <- JB.startChatListenerService
-                                  _ <- pure $ JB.scrollOnResume push ScrollToBottom
-                                  push InitializeChat
-                                  pure unit
-                                else pure unit
+
+                                void $ initializeChat initialState push
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
@@ -183,8 +176,6 @@ screen initialState =
                                   else pure unit
                                 push GetMessages
             "RideStarted"    -> do
-
-                                when (initialState.data.activeRide.tripType == ST.Rental) $ void $ HU.storeCallBackForAddRideStop push CallBackNewStop
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toStringJSON initialState.data.activeRide.src_lat)
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toStringJSON initialState.data.activeRide.src_lon)
                                 _ <- pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toStringJSON initialState.data.activeRide.dest_lat)
@@ -193,17 +184,16 @@ screen initialState =
                                 _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
-                                _ <- push RemoveChat
+
+                                if (initialState.data.activeRide.tripType /= ST.Rental) then 
+                                  void $ push RemoveChat 
+                                else do 
+                                  void $ HU.storeCallBackForAddRideStop push CallBackNewStop
+                                  void $ initializeChat initialState push
+                                  startRentalRideStatusPolling initialState push
+
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
-                                
-                                if (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False")
-                                  then do
-                                    _ <- pure $ spy "global event rentalRideStatusPolling"
-                                    void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
-                                    void $ pure $  setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "True"
-                                    void $ launchAff $ EHC.flowRunner defaultGlobalState $ rentalRideStatusPolling (getValueToLocalStore RENTAL_RIDE_STATUS_POLLING_ID) 60000.0 initialState push NewStopAdded
-                                    pure unit
-                                else pure unit
+
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
@@ -259,7 +249,7 @@ view push state =
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
-      , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
+      , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
       , if showEnterOdometerReadingModalView then enterOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else dummyTextView
@@ -294,7 +284,7 @@ view push state =
   ]
   where 
     showPopups = (DA.any (_ == true ) [state.data.driverGotoState.gotoLocInRange, state.data.driverGotoState.goToInfo, state.data.driverGotoState.confirmGotoCancel, state.props.accountBlockedPopup])
-    showEnterOdometerReadingModalView = state.data.activeRide.tripType == ST.Rental && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
+    showEnterOdometerReadingModalView = state.data.activeRide.tripType == ST.Rental && state.props.enterOdometerReadingModal
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 blockerPopUpView push state = 
@@ -506,13 +496,6 @@ linkAadhaarPopup push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ][PopUpModal.view (push <<< LinkAadhaarPopupAC) (linkAadhaarPopupConfig state)]
-
-newStopPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-newStopPopup push state =
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  ][PopUpModal.view (push <<< NewStopPopup) (newStopPopupConfig state )]
 
 googleMap :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
 googleMap state =
@@ -1905,3 +1888,22 @@ computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
 computeListItem push = do
   bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
   void $ EHC.liftFlow $ push (SetBannerItem bannerItem)
+
+startRentalRideStatusPolling :: HomeScreenState -> (Action -> Effect Unit) -> Effect Unit
+startRentalRideStatusPolling initialState push =
+  when (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False") do
+      void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
+      void $ pure $  setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "True"
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ rentalRideStatusPolling (getValueToLocalStore RENTAL_RIDE_STATUS_POLLING_ID) 60000.0 initialState push NewStopAdded
+      pure unit
+  
+initializeChat :: HomeScreenState -> (Action -> Effect Unit) -> Effect Unit
+initializeChat initialState push =
+  if (not initialState.props.chatcallbackInitiated) then do
+      _ <- JB.clearChatMessages
+      _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
+      _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
+      _ <- JB.startChatListenerService
+      _ <- pure $ JB.scrollOnResume push ScrollToBottom
+      push InitializeChat
+    else pure unit

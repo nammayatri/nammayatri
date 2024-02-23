@@ -772,7 +772,7 @@ getRentalRideInfoCardOdometerView config image renderImage heading heading' subH
     height : WRAP_CONTENT, 
     width : V ((screenWidth unit) / 2) ,
     image : {
-      visibility : boolToVisibility config.isDriver, 
+      visibility : GONE, 
       height  : V 72, width : V 110, 
       renderImage : if config.isDriver then (renderImage) else ""
       } , 

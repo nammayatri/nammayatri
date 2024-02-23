@@ -56,4 +56,8 @@
     <string name="customer_added"> গ্রাহক একটি স্টপ যোগ করেছে!</string>
     <string name="navigate_to_location"> অবস্থানে নেভিগেট করুন</string>
     <string name="close"> বন্ধ করুন</string>
+    <string name="today"> আজ </string>
+    <string name="now"> এখন </string>
+    <string name="rental"> রেন্টাল </string>
+    <string name="intercity"> ইন্টারসিটি </string>
 </resources>

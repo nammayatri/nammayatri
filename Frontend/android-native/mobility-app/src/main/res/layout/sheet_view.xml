@@ -126,13 +126,44 @@
                                         android:id="@+id/intercityRideTypeText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="Intercity"
+                                        android:text="@string/intercity"
                                         android:paddingHorizontal="8dp"
                                         android:elevation="1dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:lineHeight="20dp"
                                         android:textColor="@color/white"/>
                                 </LinearLayout>        
+
+                                <LinearLayout
+                                    android:id="@+id/tripCategoryTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="match_parent"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:background="@drawable/ic_intercity_variant_tag"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingHorizontal="8dp"
+                                    android:visibility="gone">
+
+                                    <ImageView
+                                        android:id="@+id/tripCategoryImage"
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:src="@drawable/intercity" />
+
+                                    <TextView
+                                        android:id="@+id/tripCategoryText"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:elevation="1dp"
+                                        android:paddingVertical="6dp"
+                                        android:fontFamily="@font/plus_jakartasans_semibold"
+                                        android:lineHeight="20dp"
+                                        android:layout_gravity="center"
+                                        android:paddingHorizontal="8dp"
+                                        android:text="@string/intercity"
+                                        android:textColor="@color/white" />
+                                </LinearLayout>
 
                                 <LinearLayout
                                     android:id="@+id/rentalRideTypeTag"
@@ -153,7 +184,7 @@
                                         android:id="@+id/rentalRideTypeText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="Rental"
+                                        android:text="@string/rental"
                                         android:paddingHorizontal="8dp"
                                         android:elevation="1dp"
                                         android:fontFamily="@font/plus_jakartasans_semibold"
@@ -296,7 +327,7 @@
                                     android:gravity="right">
 
                                     <LinearLayout
-                                        android:id="@+id/rentalDateTimeTag"
+                                        android:id="@+id/rideStartDateTimeTag"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:orientation="vertical"
@@ -305,7 +336,7 @@
                                         >
 
                                         <TextView
-                                            android:id="@+id/rentalStartDate"
+                                            android:id="@+id/rideStartDate"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:layout_gravity="center_vertical"
@@ -317,7 +348,7 @@
                                             android:textFontWeight="600"
                                             android:textSize="14dp" />
                                         <TextView
-                                            android:id="@+id/rentalStartTime"
+                                            android:id="@+id/rideStartTime"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:fontFamily="@font/plus_jakartasans_semibold"
@@ -470,7 +501,7 @@
                                         android:visibility="gone"
                                         >
                                         <TextView
-                                            android:id="@+id/rentalRideDuration"
+                                            android:id="@+id/rideDuration"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:background="@drawable/ic_roundcorner_overlay"
@@ -484,7 +515,7 @@
                                             android:textSize="16dp" />
 
                                         <TextView
-                                            android:id="@+id/rentalRideDistance"
+                                            android:id="@+id/rideDistance"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:background="@drawable/ic_roundcorner_overlay"

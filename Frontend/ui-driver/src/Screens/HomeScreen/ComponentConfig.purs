@@ -79,7 +79,7 @@ rideActionModalConfig state =
   let
   config = RideActionModal.config
   rideActionModalConfig' = config {
-    startRideActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer),
+    startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted )),
     arrivedStopActive = state.props.arrivedAtStop,
     totalDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
     customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
@@ -118,7 +118,7 @@ rideActionModalConfig state =
     rideStartTimer = state.props.rideStartTimer,
     tripDuration = (\tripDuration -> (if ( tripDuration / 3600) < 10 then "0" else "") <> (show ( tripDuration / 3600) <> ":") <> (if (tripDuration `mod` 3600) / 60 < 10 then "0" else "") <> show ( (tripDuration `mod` 3600) / 60)  <> " Hr") <$> state.data.activeRide.tripDuration,
     rideStartTime = state.data.activeRide.tripStartTime,
-    startODOReading = maybe (getValueToLocalStore RIDE_START_ODOMETER_READING) show state.data.activeRide.startOdometerReading
+    startODOReading = maybe "0" show state.data.activeRide.startOdometerReading
     }
     in rideActionModalConfig'
 
@@ -273,55 +273,6 @@ linkAadhaarPopupConfig state = let
     , height = V 178
     , width = V 204
     }
-  }
-  in popUpConfig'
-
-newStopPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
-newStopPopupConfig state = let
-  config' = PopUpModal.config
-  popUpConfig' = config'{
-    optionButtonOrientation = "VERTICAL",
-    gravity = CENTER,
-    margin = Margin 16 20 16 20,
-    buttonLayoutMargin = Margin 16 0 16 20 ,
-    primaryText {
-      text = (getString CUSTOMER_ADDED_A_STOP)
-    , margin = Margin 16 24 16 24
-    , textStyle = Heading2
-    , color = Color.black
-    },
-    secondaryText {
-      text = ""
-    , margin = MarginBottom 24
-    , visibility = GONE
-    },
-    option1 {
-      text = (getString NAVIGATE_TO_LOCATION)
-    , margin = Margin 16 0 16 8
-    , background = Color.black900
-    , color = Color.yellow900
-    ,gravity = CENTER
-      , width = MATCH_PARENT
-    },
-    option2 {
-      text = (getString CLOSE)
-    , margin = Margin 16 0 16 8
-    , background = Color.white900
-    , color = Color.black900
-    , strokeColor = Color.white900
-    , gravity = CENTER
-    , width = MATCH_PARENT
-    },
-    cornerRadius = (PTD.Corners 15.0 true true true true),
-    coverImageConfig {
-      imageUrl = fetchImage FF_ASSET "customer_added_a_stop"
-    , visibility = VISIBLE
-    , height = V 189
-    , width = V 193
-    , margin = MarginTop 40
-    }
-    ,backgroundClickable = false
-    ,dismissPopup = false
   }
   in popUpConfig'
 
@@ -703,7 +654,7 @@ enterOtpStateConfig state =
         , textStyle = FontStyle.Heading1
       },
       headingConfig {
-        text = if state.props.endRideOtpModal then (getString ENTER_END_RIDE_OTP) else getString (ENTER_OTP)
+        text = if state.props.currentStage == ST.RideStarted then (getString ENTER_END_RIDE_OTP) else getString (ENTER_OTP)
       },
       errorConfig {
         text = if (state.props.otpIncorrect && state.props.wrongVehicleVariant) then (getString OTP_INVALID_FOR_THIS_VEHICLE_VARIANT) else if state.props.otpIncorrect then (getString ENTERED_WRONG_OTP)  else (getString OTP_LIMIT_EXCEEDED),
@@ -719,7 +670,7 @@ enterOtpStateConfig state =
       },
       modalType = ST.OTP,
       enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard,
-      confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint
+      confirmBtnColor = if state.props.currentStage == ST.RideStarted then Color.red else Color.darkMint
       }
       in inAppModalConfig'
 
@@ -732,20 +683,26 @@ enterOdometerReadingConfig state = let
       otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
       otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
       inputTextConfig {
-        text = state.data.odometerReading.valueInkm,
-        focusIndex = 5,
+        text = "",
+        focusIndex = state.props.enterOtpFocusIndex,
         textStyle = FontStyle.Heading1
       },
       headingConfig {
-        text = getString (ENTER_CURRENT_ODOMETER_READING),
+        text = if state.props.currentStage == ST.RideStarted then getString ENTER_FINAL_ODO_READING else getString (ENTER_CURRENT_ODOMETER_READING),
         margin = (MarginLeft 0)
       },
       errorConfig {
-        text = if (state.props.otpIncorrect && state.props.wrongVehicleVariant) then (getString OTP_INVALID_FOR_THIS_VEHICLE_VARIANT) else if state.props.otpIncorrect then (getString ENTERED_WRONG_OTP)  else (getString OTP_LIMIT_EXCEEDED),
-        visibility = boolToVisibility $ state.props.otpIncorrect || state.props.otpAttemptsExceeded
+        text = getString (ODOMETER_READING_VALIDATION_FAILED),
+        visibility = boolToVisibility $ state.props.endRideOdometerReadingValidationFailed
+      },
+      textBoxConfig {
+        textBoxesArray = [0,1,2,3,4],
+        width = V 42,
+        height = V 46,
+        margin = (Margin 6 0 6 0)
       },
       subHeadingConfig {
-        text = if state.props.endRideOdometerReadingValidationFailed then getString (ODOMETER_READING_VALIDATION_FAILED) else getString (ENTER_THE_DIGITS_OF_ODOMETER),
+        text =  getString (ENTER_THE_LAST_4_DIGITS_OF_ODOMETER),
         visibility = boolToVisibility $ not state.props.otpAttemptsExceeded,
         textStyle = FontStyle.Body1,
         gravity = CENTER
@@ -754,11 +711,10 @@ enterOdometerReadingConfig state = let
         alpha = 1.0
       },
       modalType = ST.ODOMETER,
-      confirmBtnColor = if state.props.endRideOdometerReadingModal then Color.red else Color.darkMint,
+      confirmBtnColor = if state.props.currentStage == ST.RideStarted then Color.red else Color.darkMint,
       isDismissable = true,
-      enableDeviceKeyboard = false,
-      odometerReading{ kiloMeters = state.data.odometerReading.valueInkm, meters = state.data.odometerReading.valueInM},
-      odometerConfig { updateKm = state.props.odometerConfig.updateKm , updateM = state.props.odometerConfig.updateM}
+      enableDeviceKeyboard = true,
+      odometerReading = state.data.odometerReading
       }
       in inAppModalConfig'
 
@@ -1326,8 +1282,8 @@ getRideCompletedConfig state = let
       background = Color.mangolia
     },
     rentalRideConfig {
-    rideStartODOReading = (maybe (getValueToLocalStore RIDE_START_ODOMETER_READING) show state.data.activeRide.startOdometerReading) <> "Km",
-    rideEndODOReading = (getValueToLocalStore RIDE_END_ODOMETER_READING) <> "Km",
+    rideStartODOReading = (maybe "0" show state.data.activeRide.startOdometerReading) <> "Km",
+    rideEndODOReading =  (maybe "0" show state.data.activeRide.endOdometerReading) <> "Km",
     baseRideDuration =  (show $ (fromMaybe 0 state.data.activeRide.tripDuration) / 3600) <> " hr " <> (show $ ((fromMaybe 0 state.data.activeRide.tripDuration) `mod` 3600 / 60)) <> " m",
     baseRideDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
     actualRideDuration = getActualDuration (fromMaybe (fromMaybe 0 $ Int.fromNumber state.data.activeRide.distance) state.data.endRideData.actualRideDuration),
@@ -1355,16 +1311,7 @@ getRideCompletedConfig state = let
     lottieQRAnim {
       visible = state.data.config.rideCompletedCardConfig.lottieQRAnim,
       url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
-    },
-    rentalRideTextConfig{
-    rideTime = getString RIDE_TIME,
-    rideDistance = getString RIDE_DISTANCE,
-    rideStart = getString RIDE_START,
-    rideStartedAt = getString RIDE_STARTED_AT,
-    rideEnd = getString RIDE_END,
-    rideEndedAt = getString RIDE_ENDED_AT,
-    odometerReading = getString ODOMETER_READING
-  }
+    }
   }
   in config'
 

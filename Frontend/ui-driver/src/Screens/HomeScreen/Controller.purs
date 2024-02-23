@@ -90,7 +90,7 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWi
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import RemoteConfig as RC
-import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideTypeConstructor)
+import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideTypeConstructor, getHomeStageFromString)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..),StopLocation(..))
@@ -396,7 +396,6 @@ data Action = NoAction
             | UploadImage
             | CallBackNewStop String
             | NewStopAdded Common.Paths (Maybe StopLocation) (Maybe StopLocation)
-            | NewStopPopup PopUpModal.Action
             | CustomerSafetyPopupAC PopUpModal.Action
             | UpdateLastLoc Number Number Boolean
             
@@ -488,8 +487,11 @@ eval BackPressed state = do
     continue state
   else if state.props.enterOtpModal then continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, rideActionModal = true } }
   else if (state.props.currentStage == ST.ChatWithCustomer) then do
-    _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.RideAccepted)
-    continue state{props{currentStage = ST.RideAccepted}}
+    previousStage <- pure $ getValueToLocalStore PREVIOUS_LOCAL_STAGE
+    _ <- pure $ setValueToLocalStore PREVIOUS_LOCAL_STAGE $ show state.props.currentStage
+    _ <- pure $ setValueToLocalStore LOCAL_STAGE previousStage
+    continue state{props{currentStage = getHomeStageFromString previousStage}}
+
   else if state.props.cancelRideModalShow then continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
   else if state.props.cancelConfirmationPopup then do
     _ <- pure $ TF.clearTimerWithId state.data.cancelRideConfirmationPopUp.timerID
@@ -530,6 +532,10 @@ eval (KeyboardCallback keyBoardState) state = do
     continue state
   else if state.props.enterOtpModal && not isOpen then
     continue state{ props{ rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false } }
+  else if (state.props.enterOdometerReadingModal) && not isOpen then
+    continueWithCmd state [do 
+    pure $ InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone "")
+    ]
   else
     continue state
 
@@ -554,7 +560,9 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
   ]
 
 eval (UploadImage) state = do
-  if state.props.odometerImageUploading then
+  _ <- pure $ printLog "UploadImage" $ getValueToLocalNativeStore LOCAL_STAGE
+  let stage = getValueToLocalNativeStore LOCAL_STAGE
+  if state.props.odometerImageUploading || ( stage == "RideStarted" && state.props.enterOdometerReadingModal) || ( stage == "RideCompleted" && state.props.currentStage == ST.RideStarted) then
     continue state {props {odometerImageUploading = false}}
   else if state.props.odometerUploadAttempts < 3 then do
     continueWithCmd (state {props {odometerUploadAttempts = state.props.odometerUploadAttempts + 1,odometerImageUploading = true}}) [do
@@ -564,7 +572,7 @@ eval (UploadImage) state = do
       ]
   else do
     let newState = state{props{odometerFileId = Nothing}}
-        exitAction = if state.props.endRideOdometerReadingModal then
+        exitAction = if state.props.currentStage == ST.RideStarted then
             EndRide newState
           else do
             StartRide newState
@@ -573,7 +581,7 @@ eval (UploadImage) state = do
 eval (CallBackImageUpload image imageName imagePath) state = do
     _ <- pure $ printLog ("value of image base 64 taking time" <> imageName <> " " <> imagePath) image
    
-    newState <- if state.props.endRideOdometerReadingModal then do
+    newState <- if state.props.currentStage == ST.RideStarted then do
                   void $ pure $ setValueToLocalStore RIDE_END_ODOMETER image
                   pure state{props{endRideOdometerImage =image, odometerImageUploading = false}} 
                 else do 
@@ -587,7 +595,7 @@ eval (CallBackImageUpload image imageName imagePath) state = do
 
 eval (UploadMultiPartDataCallback fileType fileId) state = do
   let newState = state{props{odometerFileId = Just fileId}}
-      exitAction = if state.props.endRideOdometerReadingModal then
+      exitAction = if state.props.currentStage == ST.RideStarted then
           EndRide newState
         else do
           StartRide newState
@@ -634,15 +642,6 @@ eval (NewStopAdded currentLocationLatLong nextStopLocation lastStopLocation) sta
       mapRendered = true
       }}
   updateAndExit newState $ Refresh newState {props{showNewStopPopup = false}}
-  
-eval (NewStopPopup PopUpModal.OnButton1Click) state = do
-  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
-  let newState = state { props{showNewStopPopup = false}}
-  updateAndExit newState $ Refresh newState
-
-eval (NewStopPopup PopUpModal.OnButton2Click) state = do  
-  let newState = state { props{showNewStopPopup = false}}
-  updateAndExit newState $ Refresh newState
   
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
@@ -737,14 +736,14 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state
     rideOtp = if (index + 1) > (length state.props.rideOtp) then ( take 4 (state.props.rideOtp <> key)) else (take index (state.props.rideOtp)) <> key <> (take 4 (drop (index+1) state.props.rideOtp))
     focusIndex = length rideOtp
     newState = state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex ,otpIncorrect = false} }
-    exitAction = if state.props.endRideOtpModal then EndRide newState else if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
+    exitAction = if state.props.currentStage == ST.RideStarted then EndRide newState else if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
   if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then 
       if state.data.activeRide.tripType == ST.Rental then 
         continue $ rentalNewState state
       else updateAndExit newState exitAction
   else continue newState
   where
-    rentalNewState newState = (newState { props = newState.props {enterOdometerReadingModal =  newState.props.enterOtpModal, endRideOdometerReadingModal = newState.props.endRideOtpModal, enterOtpModal = false, endRideOtpModal = false }})  
+    rentalNewState newState = (newState { props = newState.props {enterOdometerReadingModal =  newState.props.enterOtpModal, enterOtpModal = false }})  
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickBack text)) state = do
   let
@@ -757,64 +756,87 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, rideOtp = rideOtp, otpIncorrect = false } }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
   void $ pure $ hideKeyboardOnNavigation true
-  continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, endRideOtpModal= false} }
+  continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
-    let newState = state{props{rideOtp = otp ,enterOdometerReadingModal = state.props.enterOtpModal , enterOtpModal = false, endRideOtpModal = false, endRideOdometerReadingModal = state.props.endRideOtpModal}}
     if state.data.activeRide.tripType == ST.Rental then do
       void $ pure $ hideKeyboardOnNavigation true
-      continue (newState {data = state.data {odometerReading {valueInM = "", valueInkm=""}}, props = state.props {rideOtp = otp ,enterOdometerReadingModal =  state.props.enterOtpModal, endRideOdometerReadingModal = state.props.endRideOtpModal, enterOtpModal = false,endRideOtpModal = false, odometerConfig = state.props.odometerConfig {updateKm = true, updateM = false} }}) 
-    else if state.props.endRideOtpModal then updateAndExit newState $ EndRide newState else if state.props.zoneRideBooking then updateAndExit newState $ StartZoneRide newState else updateAndExit newState $ StartRide newState
+      continue state { data = state.data {
+        odometerReading {digit0 = "", digit1 = "", digit2 = "", digit3 = "", digit4 = ""}
+        }, 
+        props = state.props { 
+          rideOtp = otp,
+          enterOtpModal = false,
+          otpIncorrect = false,
+          enterOdometerReadingModal =  state.props.enterOtpModal, 
+          enterOdometerFocusIndex = 0 
+          }
+        }
+    else 
+      let newState = state { props { rideOtp = otp ,
+          enterOdometerReadingModal = state.props.enterOtpModal, 
+          enterOtpModal = false
+          }
+        }
+      in if state.props.currentStage == ST.RideStarted then
+        updateAndExit newState $ EndRide newState
+      else 
+        if state.props.zoneRideBooking then
+          updateAndExit newState $ StartZoneRide newState 
+        else
+          updateAndExit newState $ StartRide newState
 
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.BackPressed)) state = do
-  continue $ state { props = state.props { enterOtpModal = state.props.enterOdometerReadingModal, enterOdometerReadingModal = false,endRideOtpModal = state.props.endRideOdometerReadingModal,endRideOdometerReadingModal = false} }
+  continue $ state { props = state.props { enterOtpModal = state.props.enterOdometerReadingModal, enterOdometerReadingModal = false} }
 
-eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = do
-  _ <- pure $ printLog "InAppKeyboardModalOdometerAction" text
-  _ <- pure $ printLog "RIDE_START_ODOMETER_READING" $ fromMaybe 0 $ fromString $ getValueToLocalStore RIDE_START_ODOMETER_READING
-  _ <- pure $ printLog " state.data.odometerReading.valueInkm" $ fromMaybe 0 $ fromString state.data.odometerReading.valueInkm
-  let endOdometerValue = fromMaybe 0.0 $ Number.fromString (state.data.odometerReading.valueInkm <> "." <> state.data.odometerReading.valueInM)
-  let startOdometerValue = fromMaybe (fromMaybe endOdometerValue $ Number.fromString $ getValueToLocalStore RIDE_START_ODOMETER_READING) state.data.activeRide.startOdometerReading
-  
-  _ <- pure $ printLog " endOdometerValue < startOdometerValue" $ show $ endOdometerValue < startOdometerValue
-  if state.props.endRideOdometerReadingModal && (endOdometerValue < startOdometerValue || ((abs (endOdometerValue - startOdometerValue)) > 500.0))then
-    continue $ state { props { endRideOdometerReadingValidationFailed = true } }   
-  else if(state.props.odometerConfig.updateKm && state.data.odometerReading.valueInM == "" )
-    then do                                        
-    continue $ state { data { odometerReading{valueInkm = text}}}
-  else if ( state.props.odometerConfig.updateM && state.data.odometerReading.valueInkm == "") then do
-    continue $ state { data { odometerReading{valueInM = text}}}
-  else do                                 
-    let valueInM = if state.props.odometerConfig.updateM then text else state.data.odometerReading.valueInM
-    let newState = state{ data{odometerReading {valueInM=valueInM}},props{enterOtpModal = false, endRideOtpModal = false, odometerValue = state.data.odometerReading.valueInkm <> "." <> state.data.odometerReading.valueInM}}
-    continueWithCmd newState [pure UploadImage]
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone _)) state = do
+  let keyboardId = "OdometerKeyboard" <> show state.props.enterOdometerFocusIndex
+  if isAnyOdometerDigitEmpty state.data.odometerReading then do
+    void $ pure $ JB.requestKeyboardShow $ getNewIDWithTag keyboardId
+    continue state
+  else do
+    let newState = state{ props { odometerFileId = Nothing, enterOtpModal = false, odometerValue = makeOdometerReading state.data.odometerReading, endRideOdometerReadingValidationFailed = false } }
+    if (state.props.currentStage == ST.RideStarted)
+      then do
+        let startOdometerReading = maybe "0000.0" show state.data.activeRide.startOdometerReading
+        let endOdometerReading = if (take 1 startOdometerReading == "9") && (take 1 (makeOdometerReading state.data.odometerReading) == "0") then
+            "1" <> makeOdometerReading state.data.odometerReading
+          else makeOdometerReading state.data.odometerReading
+        if endOdometerReadingIsMoreThanStart endOdometerReading startOdometerReading && endOdometerReadingIsNotMoreThan300 endOdometerReading startOdometerReading then
+          updateAndExit newState $ EndRide newState
+        else do
+          void $ pure $ JB.requestKeyboardShow $ getNewIDWithTag keyboardId
+          void $ pure $ toast $ getString END_ODO_READING_CANT_BE_MORE_THAN_300_START
+          continue state { props { odometerValue = endOdometerReading, endRideOdometerReadingValidationFailed = true}}
+      else do
+        updateAndExit newState $ StartRide newState
+  where
+    endOdometerReadingIsNotMoreThan300 endOdometerReading startOdometerReading = (fromMaybe 0.0 $ Number.fromString endOdometerReading) - (fromMaybe 0.0 $ Number.fromString startOdometerReading) <= 300.0
+    endOdometerReadingIsMoreThanStart endOdometerReading startOdometerReading = (fromMaybe 0.0 $ Number.fromString startOdometerReading) <= (fromMaybe 0.0 $ Number.fromString endOdometerReading)
+    makeOdometerReading odometer = odometer.digit0 <> odometer.digit1 <> odometer.digit2 <> odometer.digit3 <> "." <> odometer.digit4
+    isAnyOdometerDigitEmpty odometer = Array.any (_ == "") [odometer.digit0, odometer.digit1, odometer.digit2, odometer.digit3, odometer.digit4]
   
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index)) state = do 
-  let kmStrLen = length state.data.odometerReading.valueInkm 
-      mStrLen = length state.data.odometerReading.valueInM            
-  if(state.props.odometerConfig.updateKm && kmStrLen >= 5  || state.props.odometerConfig.updateM && mStrLen >= 1) then continue $ state { props { endRideOdometerReadingValidationFailed = true } }
-  else if (state.props.odometerConfig.updateKm) then
-    continue state {data { odometerReading {valueInkm = state.data.odometerReading.valueInkm <> key}}, props { endRideOdometerReadingValidationFailed = false }}
-  else if (state.props.odometerConfig.updateM) then
-    continue state {data { odometerReading {valueInM = state.data.odometerReading.valueInM <> key}}, props { endRideOdometerReadingValidationFailed = false }}
-  else 
-    continue $ state { props { endRideOdometerReadingValidationFailed = true } }
+  let keyboardNextId = "OdometerKeyboard" <> show ( if index < 4 then index + 1 else index )
+      presentkeyboardId = "OdometerKeyboard" <> show index 
+  
+  void $ pure $ JB.requestKeyboardShow $ getNewIDWithTag $ if (key == "") then presentkeyboardId else keyboardNextId
+  let newOdometerReading = case index of
+        0 -> state.data.odometerReading { digit0 = key }
+        1 -> state.data.odometerReading { digit1 = key }
+        2 -> state.data.odometerReading { digit2 = key }
+        3 -> state.data.odometerReading { digit3 = key }
+        4 -> state.data.odometerReading { digit4 = key }
+        _ -> state.data.odometerReading
+      newState = state { data { odometerReading = newOdometerReading}, props { enterOdometerFocusIndex = index } }
 
-eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnTextViewClick str)) state = 
-  continue state{props{odometerConfig {updateKm = (str == "Km") , updateM = (str == "m")}}}
-
-eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickBack _)) state = do 
-  if (state.props.odometerConfig.updateKm) then 
-    continue state{data{odometerReading{valueInkm = (if length state.data.odometerReading.valueInkm > 0 then (take (length state.data.odometerReading.valueInkm - 1) state.data.odometerReading.valueInkm) else "")}}}
-    else if (state.props.odometerConfig.updateM) then 
-      continue state{data{odometerReading{valueInM = (if length state.data.odometerReading.valueInM > 0 then (take (length state.data.odometerReading.valueInM - 1) state.data.odometerReading.valueInM) else "")}}}
-      else continue state
+  continue newState
 
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
+  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
-  if state.data.activeRide.tripType == ST.Rental then continue state{props{endRideOtpModal = true,enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp="",odometerValue="0000•0"}, data{route = []}}
-  else if state.data.activeRide.tripType == ST.Intercity then continue state { props{ endRideOtpModal = true, enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp = "" } }
+  if state.data.activeRide.tripType == ST.Rental then continue state{props{enterOtpModal = true, enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, rideOtp="", odometerValue="0000•0"}, data{route = []}}
+  else if state.data.activeRide.tripType == ST.Intercity then continue state { props{enterOtpModal = true, enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp = "" } }
   else continue $ (state {props {endRidePopUp = true}, data {route = []}})
 
 eval (RideActionModalAction (RideActionModal.ArrivedAtStop)) state = do
@@ -866,6 +888,7 @@ eval (OpenChatScreen) state = do
 
 eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
   if not state.props.chatcallbackInitiated then continue state else do
+    _ <- pure $ setValueToLocalStore PREVIOUS_LOCAL_STAGE (show state.props.currentStage)
     _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.ChatWithCustomer)
     _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
     continueWithCmd state{props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false}} [do

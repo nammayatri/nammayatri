@@ -23,7 +23,7 @@ import Font.Style (Style (..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
 import Styles.Colors as Color
 import Common.Types.App(LazyCheck(..))
-import Screens.Types(KeyboardModalType(..))
+import Screens.Types(KeyboardModalType(..),OdometerReading(..))
 
 data Action = OnSelection String Int
             | OnClickDone String
@@ -55,23 +55,13 @@ type InAppKeyboardModalState = {
     , confirmBtnColor :: String
     , isDismissable :: Boolean
     , odometerReading :: OdometerReading
-    , odometerConfig :: OdometerConfig
-}
-
-type OdometerReading = {
-  meters :: String,
-  kiloMeters :: String
-}
-
-type OdometerConfig = {
-  updateKm :: Boolean,
-  updateM :: Boolean
 }
 
 type TextBoxConfig = {
   textBoxesArray :: Array Int
   , width :: Length
   , height :: Length
+  , margin :: Margin
 }
 
 type TextConfig =
@@ -233,17 +223,21 @@ config = {
   , textBoxConfig : {
       textBoxesArray : [1,2,3,4],
       width : V 48,
-      height : V 56
+      height : V 56,
+      margin : (Margin 0 0 0 0)
   }
   , isDismissable : true
   , confirmBtnColor : Color.darkMint
-  , odometerReading : {
-     meters : "",
-     kiloMeters : ""
-    }
-  , odometerConfig : {
-      updateKm : true,
-      updateM : false
-    }
+  , odometerReading : odometerDigits
   , enableDeviceKeyboard : false
+  }
+
+odometerDigits :: OdometerReading
+odometerDigits = 
+  {
+    digit0 : "",
+    digit1 : "",
+    digit2 : "",
+    digit3 : "",
+    digit4 : ""
   }
