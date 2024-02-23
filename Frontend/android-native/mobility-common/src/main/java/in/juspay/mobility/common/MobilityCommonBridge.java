@@ -3246,6 +3246,11 @@ public class MobilityCommonBridge extends HyperBridge {
         return super.onActivityResult(requestCode, resultCode, data);
     }
 
+    @JavascriptInterface
+    public String fetchPackageName(){
+        return bridgeComponents.getContext().getPackageName();
+    }
+
     @Override
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
         switch (requestCode) {

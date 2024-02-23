@@ -271,6 +271,7 @@ export const _isNetworkAvailable = function () {
   }
 }
 
+
 export const _renewFile = function (file) {
   return function () {
     console.log("renew files")
@@ -290,6 +291,21 @@ export const readFileImpl = function (filePath) {
 
 export const showLoaderImpl = function (str) {
   return window.JBridge.showLoader(str);
+};
+
+export const fetchPackageName = function (unit) {
+  return function () {
+    try {
+      if(window.JBridge.fetchPackageName){
+        return window.JBridge.fetchPackageName();
+      }else{
+        return "";
+      }
+    }catch(e){
+      console.log("Error in fetchPackageName : " + e);
+      return "";
+    }
+  };
 };
 
 export const isLocationPermissionEnabled = function (unit) {

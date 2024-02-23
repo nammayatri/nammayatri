@@ -205,15 +205,17 @@ baseAppFlow baseFlow event = do
           mbCity = find (\city' -> city'.cityName == driver_location) config.cityConfig
       maybe (pure unit) (\city -> setValueToLocalStore SHOW_SUBSCRIPTIONS (show city.showSubscriptions)) $ mbCity
       isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+      package <- lift $ lift $ liftFlow $ JB.fetchPackageName unit
       liftFlowBT $ Events.endMeasuringDuration "Flow.initialFlow"
       if isTokenValid regToken then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
       else if not config.flowConfig.chooseCity.runFlow then
         chooseLanguageFlow
-      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission then do
+      else if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) && not has package "manayatri" then do
         chooseCityFlow
-      else
+      else do
+        when (has package "manayatri") $ setValueToLocalNativeStore DRIVER_LOCATION "Hyderabad" --TODO:: Need to handle the case properly here
         authenticationFlow ""
 
     updateNightSafetyPopup :: FlowBT String Unit
@@ -224,9 +226,7 @@ baseAppFlow baseFlow event = do
       if (not withInTime) then 
         setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
       else 
-        pure unit
-
-       
+        pure unit 
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = 
