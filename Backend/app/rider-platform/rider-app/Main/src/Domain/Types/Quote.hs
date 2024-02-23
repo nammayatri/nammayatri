@@ -116,9 +116,9 @@ mkQuoteAPIDetails = \case
   RentalDetails DRentalDetails.RentalDetails {..} -> RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity {..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
   DriverOfferDetails DDriverOffer.DriverOffer {..} ->
-    let distanceToPickup' = distanceToPickup <|> (Just . HighPrecMeters $ toCentesimal 0)
-        durationToPickup' = durationToPickup <|> Just 0
-        rating' = rating <|> Just (toCentesimal 5)
+    let distanceToPickup' = distanceToPickup <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
+        durationToPickup' = durationToPickup <|> Just 0 -- TODO::remove this default value
+        rating' = rating <|> Just (toCentesimal 500) -- TODO::remove this default value
      in DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', durationToPickup = durationToPickup', rating = rating', ..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity {..}
