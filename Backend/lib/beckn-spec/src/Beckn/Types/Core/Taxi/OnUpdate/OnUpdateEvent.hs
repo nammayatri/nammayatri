@@ -27,6 +27,7 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.UpdatedEstimateEvent
 import Data.OpenApi
 import EulerHS.Prelude hiding (fromList)
 import qualified Kernel.Utils.JSON as J
@@ -43,6 +44,7 @@ data OnUpdateEvent
   | NewMessage NewMessageEvent
   | SafetyAlert SafetyAlertEvent
   | StopArrived StopArrivedEvent
+  | UpdatedEstimate UpdatedEstimateEvent
   deriving (Generic, Show)
 
 instance ToJSON OnUpdateEvent where

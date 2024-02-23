@@ -21,6 +21,10 @@ where
 
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.EstimateRevised as DER
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.QuoteRevised as DQR
+import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import SharedLogic.Beckn.Common as Reexport
@@ -35,6 +39,7 @@ data OnUpdateBuildReq
   | NewMessageBuildReq DNewMessageReq
   | SafetyAlertBuildReq DSafetyAlertReq
   | StopArrivedBuildReq DStopArrivedBuildReq
+  | UpdatedEstimateBuildReq DUpdatedEstimateReq
 
 newtype DStopArrivedBuildReq = DStopArrivedBuildReq
   { bookingDetails :: BookingDetails
@@ -55,4 +60,15 @@ data DSafetyAlertReq = DSafetyAlertReq
   { bookingDetails :: BookingDetails,
     code :: Text,
     reason :: Text
+  }
+
+data DUpdatedEstimateReq = DUpdatedEstimateReq
+  { bookingDetails :: BookingDetails,
+    specialLocationTag :: Maybe Text,
+    provider :: DM.Merchant,
+    fromLocation :: LatLong,
+    toLocation :: Maybe LatLong,
+    now :: UTCTime,
+    quoteRevised :: DQR.QuoteRevised,
+    estimateRevised :: DER.EstimateRevised
   }

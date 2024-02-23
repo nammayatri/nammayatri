@@ -25,6 +25,7 @@ import qualified Beckn.ACL.Common as Common
 import Beckn.Types.Core.Taxi.Common.Location
 import qualified Beckn.Types.Core.Taxi.Update as Update
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.AddStopEvent as AddStopU
+import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.ConfirmEstimateEvent as ConfirmEstimateU
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent as EditLocationU
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.EditStopEvent as EditStopU
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent as PaymentCompletedU
@@ -81,6 +82,15 @@ data UpdateBuildReq
         city :: Context.City,
         merchant :: DM.Merchant
       }
+  | ConfirmEstimateBuildReq
+      { bppBookingId :: Id DBooking.BPPBooking,
+        bppRideId :: Id DRide.BPPRide,
+        bppId :: Text,
+        bppUrl :: BaseUrl,
+        transactionId :: Text,
+        merchant :: DM.Merchant,
+        confirmEstimateStatus :: Bool
+      }
 
 buildUpdateReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -97,64 +107,91 @@ mkUpdateMessage ::
   UpdateBuildReq ->
   Update.UpdateMessage
 mkUpdateMessage req@PaymentCompletedBuildReq {} = do
-  Update.UpdateMessage $
-    Update.PaymentCompleted
-      PaymentCompletedU.PaymentCompletedEvent
-        { id = req.bppBookingId.getId,
-          update_target = "fulfillment.state.code,payment.status",
-          payment =
-            PaymentCompletedU.Payment
-              { collected_by = Common.castDPaymentCollector req.paymentMethodInfo.collectedBy,
-                _type = Common.castDPaymentType req.paymentMethodInfo.paymentType,
-                instrument = Common.castDPaymentInstrument req.paymentMethodInfo.paymentInstrument,
-                status = PaymentCompletedU.PAID
-              },
-          fulfillment =
-            PaymentCompletedU.FulfillmentInfo
-              { id = req.bppRideId.getId
-              }
-        }
+  Update.UpdateMessage
+    { order =
+        Update.PaymentCompleted
+          PaymentCompletedU.PaymentCompletedEvent
+            { id = req.bppBookingId.getId,
+              update_target = "fulfillment.state.code,payment.status",
+              payment =
+                PaymentCompletedU.Payment
+                  { collected_by = Common.castDPaymentCollector req.paymentMethodInfo.collectedBy,
+                    _type = Common.castDPaymentType req.paymentMethodInfo.paymentType,
+                    instrument = Common.castDPaymentInstrument req.paymentMethodInfo.paymentInstrument,
+                    status = PaymentCompletedU.PAID
+                  },
+              fulfillment =
+                PaymentCompletedU.FulfillmentInfo
+                  { id = req.bppRideId.getId
+                  }
+            },
+      update_target = "fulfillment.state.code,payment.status"
+    }
 mkUpdateMessage req@EditLocationBuildReq {..} = do
-  Update.UpdateMessage $
-    Update.EditLocation
-      EditLocationU.EditLocationEvent
-        { id = req.bppBookingId.getId,
-          update_target = "fulfillment.state.code,fufillment.start,fufillment.end",
-          fulfillment =
-            EditLocationU.FulfillmentInfo
-              { id = req.bppRideId.getId,
-                origin =
-                  EditLocationU.StartInfo
-                    { location = origin
-                    },
-                destination =
-                  Just $
-                    EditLocationU.EndInfo
-                      { location = destination
-                      }
-              }
-        }
+  Update.UpdateMessage
+    { order =
+        Update.EditLocation
+          EditLocationU.EditLocationEvent
+            { id = req.bppBookingId.getId,
+              update_target = "state, fulfillment.state.code, fufillment.start, fufillment.end",
+              state = "soft_update", --T0D0
+              fulfillment =
+                EditLocationU.FulfillmentInfo
+                  { id = req.bppRideId.getId,
+                    origin =
+                      EditLocationU.StartInfo
+                        { location = origin
+                        },
+                    destination =
+                      EditLocationU.EndInfo
+                        { location = destination
+                        }
+                  }
+            },
+      update_target = "state, fulfillment.state.code, fufillment.start, fufillment.end"
+    }
 mkUpdateMessage req@AddStopBuildReq {} = do
-  Update.UpdateMessage $
-    Update.AddStop
-      AddStopU.AddStopEvent
-        { id = req.bppBookingId.getId,
-          update_target = "fulfillment.state.code,fufillment.stops",
-          fulfillment =
-            AddStopU.FulfillmentInfo
-              { id = req.bppBookingId.getId,
-                stops = req.stops
-              }
-        }
+  Update.UpdateMessage
+    { order =
+        Update.AddStop
+          AddStopU.AddStopEvent
+            { id = req.bppBookingId.getId,
+              update_target = "fulfillment.state.code,fufillment.stops",
+              fulfillment =
+                AddStopU.FulfillmentInfo
+                  { id = req.bppRideId.getId,
+                    stops = req.stops
+                  }
+            },
+      update_target = "fulfillment.state.code,fufillment.stops"
+    }
 mkUpdateMessage req@EditStopBuildReq {} = do
-  Update.UpdateMessage $
-    Update.EditStop
-      EditStopU.EditStopEvent
-        { id = req.bppBookingId.getId,
-          update_target = "fulfillment.state.code,fufillment.stops",
-          fulfillment =
-            EditStopU.FulfillmentInfo
-              { id = req.bppBookingId.getId,
-                stops = req.stops
-              }
-        }
+  Update.UpdateMessage
+    { order =
+        Update.EditStop
+          EditStopU.EditStopEvent
+            { id = req.bppBookingId.getId,
+              update_target = "fulfillment.state.code,fufillment.stops",
+              fulfillment =
+                EditStopU.FulfillmentInfo
+                  { id = req.bppRideId.getId,
+                    stops = req.stops
+                  }
+            },
+      update_target = "fulfillment.state.code,fufillment.stops"
+    }
+mkUpdateMessage req@ConfirmEstimateBuildReq {} = do
+  Update.UpdateMessage
+    { order =
+        Update.ConfirmEstimate
+          ConfirmEstimateU.ConfirmEstimateEvent
+            { id = req.bppBookingId.getId,
+              update_target = "fulfillment.state.code",
+              fulfillment =
+                ConfirmEstimateU.FulfillmentInfo
+                  { id = req.bppRideId.getId,
+                    confirmEstimateStatus = req.confirmEstimateStatus
+                  }
+            },
+      update_target = "fulfillment.state.code"
+    }

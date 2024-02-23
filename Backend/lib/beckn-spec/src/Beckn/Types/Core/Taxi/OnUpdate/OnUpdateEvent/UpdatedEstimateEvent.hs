@@ -11,16 +11,19 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
-module Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType where
+module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.UpdatedEstimateEvent where
 
-import Data.Aeson.Types
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
+import qualified Beckn.Types.Core.Taxi.OnUpdate.Descriptor as Descriptor
+import qualified Beckn.Types.Core.Taxi.OnUpdate.Provider as Provider
 import Kernel.Prelude
 
-data UpdateEventType
-  = PAYMENT_COMPLETED
-  | EDIT_LOCATION
-  | ADD_STOP
-  | EDIT_STOP
-  | CONFIRM_ESTIMATE
-  deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
+data UpdatedEstimateEvent = UpdatedEstimateEvent
+  { id :: Text, -- bppBookingId
+    fulfillment :: FulfillmentInfo, -- to see
+    bpp_providers :: NonEmpty Provider.Provider,
+    bpp_descriptor :: Descriptor.Descriptor
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

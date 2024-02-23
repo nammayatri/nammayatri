@@ -161,6 +161,10 @@ library
       Beckn.Types.Core.Taxi.OnTrack
       Beckn.Types.Core.Taxi.OnTrack.Tracking
       Beckn.Types.Core.Taxi.OnUpdate
+      Beckn.Types.Core.Taxi.OnUpdate.Descriptor
+      Beckn.Types.Core.Taxi.OnUpdate.Fulfillment
+      Beckn.Types.Core.Taxi.OnUpdate.Item
+      Beckn.Types.Core.Taxi.OnUpdate.Location
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent
@@ -173,6 +177,10 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.UpdatedEstimateEvent
+      Beckn.Types.Core.Taxi.OnUpdate.Provider
+      Beckn.Types.Core.Taxi.OnUpdate.StartInfo
+      Beckn.Types.Core.Taxi.OnUpdate.StopInfo
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm
       Beckn.Types.Core.Taxi.Search
@@ -193,6 +201,7 @@ library
       Beckn.Types.Core.Taxi.Update
       Beckn.Types.Core.Taxi.Update.UpdateEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.AddStopEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.ConfirmEstimateEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.EditStopEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent

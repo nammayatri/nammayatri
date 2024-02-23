@@ -24,6 +24,13 @@ module Domain.Action.Beckn.OnUpdate
     DEstimate.FareRange (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
+    ProviderInfo (..),
+    EstimateInfo (..),
+    QuoteInfo (..),
+    OneWayQuoteDetails (..),
+    OneWaySpecialZoneQuoteDetails (..),
+    QuoteDetails (..),
+    InterCityQuoteDetails (..),
   )
 where
 
@@ -33,26 +40,38 @@ import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateRevised as DER
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.QuoteRevised as DQR
 import qualified Domain.Types.Ride as SRide
+import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
+import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment ()
 import Kernel.Beam.Functions
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.EstimateRevised as QER
+import qualified Storage.Queries.QuoteRevised as QQR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
+import Tools.Event
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.Notifications as Notify
@@ -88,6 +107,12 @@ data OnUpdateReq
       }
   | StopArrivedReq
       { bppRideId :: Id SRide.BPPRide
+      }
+  | UpdatedEstimateReq
+      { requestId :: Id DSearchReq.SearchRequest,
+        providerInfo :: ProviderInfo,
+        estimateInfo :: [EstimateInfo],
+        quoteInfo :: [QuoteInfo]
       }
 
 data ValidatedOnUpdateReq
@@ -133,6 +158,14 @@ data ValidatedOnUpdateReq
       { booking :: SRB.Booking,
         ride :: SRide.Ride
       }
+  | ValidatedUpdatedEstimateReq
+      { requestId :: Id DSR.SearchRequest,
+        providerInfo :: ProviderInfo,
+        estimateInfo :: [EstimateInfo],
+        quoteInfo :: [QuoteInfo],
+        _searchRequest :: SearchRequest,
+        merchant :: DMerchant.Merchant
+      }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
   { amount :: HighPrecMoney,
@@ -155,12 +188,13 @@ data EstimateRepetitionEstimateInfo = EstimateRepetitionEstimateInfo
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Money,
     nightShiftStart :: TimeOfDay,
-    nightShiftEnd :: TimeOfDay
+    nightShiftEnd :: TimeOfDay,
+    oldNightShiftCharge :: Maybe Centesimal
   }
 
 data WaitingChargesInfo = WaitingChargesInfo
-  { waitingTimeEstimatedThreshold :: Maybe Seconds,
-    waitingChargePerMin :: Maybe Money
+  -- { waitingTimeEstimatedThreshold :: Maybe Seconds,
+  { waitingChargePerMin :: Maybe Money
   }
 
 data EstimateBreakupInfo = EstimateBreakupInfo
@@ -171,6 +205,57 @@ data EstimateBreakupInfo = EstimateBreakupInfo
 data BreakupPriceInfo = BreakupPriceInfo
   { currency :: Text,
     value :: Money
+  }
+
+data ProviderInfo = ProviderInfo
+  { providerId :: Text,
+    name :: Text,
+    url :: BaseUrl,
+    mobileNumber :: Text,
+    ridesCompleted :: Int
+  }
+
+data EstimateInfo = EstimateInfo
+  { bppEstimateRevisedId :: Id DER.BPPEstimateRevised,
+    vehicleVariant :: VehicleVariant,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
+    itemId :: Text,
+    totalFareRange :: DER.FareRange,
+    descriptions :: [Text],
+    estimateBreakupList :: [EstimateBreakupInfo],
+    nightShiftInfo :: Maybe NightShiftInfo,
+    -- waitingCharges :: Maybe WaitingChargesInfo,
+    specialLocationTag :: Maybe Text
+  }
+
+data QuoteInfo = QuoteInfo
+  { vehicleVariant :: VehicleVariant,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
+    quoteDetails :: QuoteDetails,
+    itemId :: Text,
+    descriptions :: [Text],
+    specialLocationTag :: Maybe Text
+  }
+
+data QuoteDetails
+  = OneWayDetails OneWayQuoteDetails
+  | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
+  | InterCityDetails InterCityQuoteDetails
+
+newtype OneWayQuoteDetails = OneWayQuoteDetails
+  { distanceToNearestDriver :: HighPrecMeters
+  }
+
+newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
+  { quoteId :: Text
+  }
+
+newtype InterCityQuoteDetails = InterCityQuoteDetails
+  { quoteId :: Text
   }
 
 onUpdate ::
@@ -222,6 +307,18 @@ onUpdate = \case
   ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing
     Notify.notifyOnStopReached booking ride
+  ValidatedUpdatedEstimateReq {..} -> do
+    now <- getCurrentTime
+    estimateRevised <- traverse (buildEstimateRevised providerInfo now _searchRequest) estimateInfo
+    quoteRevised <- traverse (buildQuoteRevised requestId providerInfo now _searchRequest) quoteInfo
+    forM_ estimateRevised $ \est -> do
+      triggerEstimateRevisedEvent EstimateRevisedEventData {estimateRevised = est, personId = _searchRequest.riderId, merchantId = _searchRequest.merchantId}
+    -- QER.createMany estimateRevised
+    case listToMaybe estimateRevised of
+      Just est -> do
+        QER.create est
+      Nothing -> throwError (InvalidRequest $ "No estimate recieved")
+    QQR.createMany quoteRevised
 
 validateRequest ::
   ( CacheFlow m r,
@@ -279,6 +376,10 @@ validateRequest = \case
       SRB.RentalDetails SRB.RentalBookingDetails {..} -> do
         unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
         return $ ValidatedStopArrivedReq {..}
+  UpdatedEstimateReq {..} -> do
+    _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+    merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
+    return $ ValidatedUpdatedEstimateReq {..}
 
 mkBookingCancellationReason ::
   Id SRB.Booking ->
@@ -299,3 +400,128 @@ mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
       driverCancellationLocation = Nothing,
       driverDistToPickup = Nothing
     }
+
+buildEstimateRevised ::
+  MonadFlow m =>
+  ProviderInfo ->
+  UTCTime ->
+  SearchRequest ->
+  EstimateInfo ->
+  m DER.EstimateRevised
+buildEstimateRevised providerInfo now _searchRequest EstimateInfo {..} = do
+  uid <- generateGUID
+  tripTerms <- buildTripTerms descriptions
+  estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
+  pure
+    DER.EstimateRevised
+      { id = uid,
+        requestId = _searchRequest.id,
+        merchantId = Just _searchRequest.merchantId,
+        merchantOperatingCityId = Just _searchRequest.merchantOperatingCityId,
+        providerMobileNumber = providerInfo.mobileNumber,
+        providerName = providerInfo.name,
+        providerCompletedRidesCount = providerInfo.ridesCompleted,
+        providerId = providerInfo.providerId,
+        providerUrl = providerInfo.url,
+        estimatedDistance = _searchRequest.distance,
+        estimatedDuration = _searchRequest.estimatedRideDuration,
+        device = _searchRequest.device,
+        createdAt = now,
+        updatedAt = now,
+        status = DER.NEW,
+        estimateRevisedBreakupList = estimateBreakupList',
+        driversLocation = [Maps.LatLong {lat = 0, lon = 0}],
+        nightShiftInfo =
+          nightShiftInfo <&> \nightShiftInfo' ->
+            DER.NightShiftInfo
+              { nightShiftCharge = nightShiftInfo'.nightShiftCharge,
+                oldNightShiftCharge = nightShiftInfo'.oldNightShiftCharge, -- TODO: Doesn't make sense, to be removed
+                nightShiftStart = nightShiftInfo'.nightShiftStart,
+                nightShiftEnd = nightShiftInfo'.nightShiftEnd
+              },
+        waitingCharges =
+          DER.WaitingCharges
+            { -- { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin)
+              -- },
+              waitingChargePerMin = Nothing
+            },
+        ..
+      }
+
+buildQuoteRevised ::
+  MonadFlow m =>
+  Id DSearchReq.SearchRequest ->
+  ProviderInfo ->
+  UTCTime ->
+  SearchRequest ->
+  QuoteInfo ->
+  m DQR.QuoteRevised
+buildQuoteRevised requestId providerInfo now _searchRequest QuoteInfo {..} = do
+  logDebug $ "hello world onUpdate quote build start"
+  uid <- generateGUID
+  tripTerms <- buildTripTerms descriptions
+  quoteDetails' <- case quoteDetails of
+    OneWayDetails oneWayDetails ->
+      pure.DQR.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
+    OneWaySpecialZoneDetails details -> do
+      DQR.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
+    InterCityDetails details -> do
+      DQR.InterCityDetails <$> buildInterCityQuoteDetails details
+  logDebug $ "hello world onUpdate quote build end"
+  pure
+    DQR.QuoteRevised
+      { id = uid,
+        providerId = providerInfo.providerId,
+        providerUrl = providerInfo.url,
+        createdAt = now,
+        quoteRevisedDetails = quoteDetails',
+        merchantId = _searchRequest.merchantId,
+        merchantOperatingCityId = _searchRequest.merchantOperatingCityId,
+        ..
+      }
+
+mkOneWayQuoteDetails :: OneWayQuoteDetails -> DQR.OneWayQuoteRevisedDetails
+mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQR.OneWayQuoteRevisedDetails {..}
+
+buildTripTerms ::
+  MonadFlow m =>
+  [Text] ->
+  m (Maybe DTripTerms.TripTerms)
+buildTripTerms [] = pure Nothing
+buildTripTerms descriptions = do
+  id <- generateGUID
+  pure . Just $ DTripTerms.TripTerms {..}
+
+buildEstimateBreakUp ::
+  MonadFlow m =>
+  [EstimateBreakupInfo] ->
+  Id DER.EstimateRevised ->
+  m [DER.EstimateRevisedBreakup]
+buildEstimateBreakUp estimatesItems estId =
+  estimatesItems
+    `for` \estimateItem -> do
+      id <- generateGUID
+      price' <- mkEstimatePrice estimateItem.price
+      pure
+        DER.EstimateRevisedBreakup
+          { title = estimateItem.title,
+            price = price',
+            estimateRevisedId = estId,
+            ..
+          }
+
+mkEstimatePrice ::
+  MonadFlow m =>
+  BreakupPriceInfo ->
+  m DER.EstimateRevisedBreakupPrice
+mkEstimatePrice BreakupPriceInfo {..} = pure DER.EstimateRevisedBreakupPrice {..}
+
+buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
+buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
+  id <- generateGUID
+  pure DSpecialZoneQuote.SpecialZoneQuote {..}
+
+buildInterCityQuoteDetails :: MonadFlow m => InterCityQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
+buildInterCityQuoteDetails InterCityQuoteDetails {..} = do
+  id <- generateGUID
+  pure DSpecialZoneQuote.SpecialZoneQuote {..}

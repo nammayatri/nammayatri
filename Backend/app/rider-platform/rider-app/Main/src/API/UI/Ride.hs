@@ -18,6 +18,7 @@ module API.UI.Ride
     DRide.GetDriverLocResp,
     DRide.GetRideStatusResp (..),
     DRide.EditLocationReq (..),
+    DRide.ConfirmEstimateReq (..),
   )
 where
 
@@ -50,6 +51,11 @@ type API =
                   :> TokenAuth
                   :> ReqBody '[JSON] DRide.EditLocationReq
                   :> Post '[JSON] APISuccess
+                  :<|> "confirm"
+                  :> "estimate"
+                  :> TokenAuth
+                  :> ReqBody '[JSON] DRide.ConfirmEstimateReq
+                  :> Post '[JSON] APISuccess
               )
        )
 
@@ -58,6 +64,7 @@ handler rideId =
   getDriverLoc rideId
     :<|> getRideStatus rideId
     :<|> editLocation rideId
+    :<|> confirmEstimate rideId
 
 getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetDriverLocResp
 getDriverLoc rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId
@@ -67,3 +74,6 @@ getRideStatus rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag per
 
 editLocation :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler APISuccess
 editLocation rideId (personId, merchantId) editLocationReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.editLocation rideId (personId, merchantId) editLocationReq
+
+confirmEstimate :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.ConfirmEstimateReq -> FlowHandler APISuccess
+confirmEstimate rideId (personId, merchantId) confirmEstimateReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.confirmEstimate rideId (personId, merchantId) confirmEstimateReq

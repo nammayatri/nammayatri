@@ -17,9 +17,12 @@ module Domain.Action.UI.Ride
     GetRideStatusResp (..),
     EditLocation (..),
     EditLocationReq (..),
+    ConfirmEstimate (..),
+    ConfirmEstimateReq (..),
     getDriverLoc,
     getRideStatus,
     editLocation,
+    confirmEstimate,
   )
 where
 
@@ -82,9 +85,19 @@ data EditLocationReq = EditLocationReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+data ConfirmEstimateReq = ConfirmEstimateReq
+  { confirmEstimateStatus :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 data EditLocation = EditLocation
   { gps :: Maps.LatLong,
     address :: DLA.LocationAddress
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data ConfirmEstimate = ConfirmEstimate
+  { confirmEstimateStatus :: Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -223,7 +236,6 @@ editLocation rideId (_, merchantId) req = do
     QLM.create pickupMapForBooking
     pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) ride.merchantOperatingCityId
     QLM.create pickupMapForRide
-
     let origin = Just $ mkDomainLocation pickup
     bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
     let dUpdateReq =
@@ -239,6 +251,58 @@ editLocation rideId (_, merchantId) req = do
     becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
     void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
     QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
+
+  whenJust req.destination $ \dropoff -> do
+    updatedDestinationLocation <- buildLocation dropoff
+    QL.create updatedDestinationLocation
+    let destination = Just $ mkDomainLocation dropoff
+    bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+    let dUpdateReq =
+          ACL.EditLocationBuildReq
+            { bppRideId = ride.bppRideId,
+              bppId = booking.providerId,
+              bppUrl = booking.providerUrl,
+              transactionId = booking.transactionId,
+              origin = Nothing,
+              city = merchant.defaultCity, -- TODO: Correct during interoperability
+              ..
+            }
+    becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+    void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+  -- QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
+
+  pure Success
+
+confirmEstimate ::
+  ( CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Id SRide.Ride ->
+  (Id SPerson.Person, Id DM.Merchant) ->
+  ConfirmEstimateReq ->
+  m APISuccess
+confirmEstimate rideId (_, merchantId) req = do
+  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  let bookingId = ride.bookingId
+  booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  let dUpdateReq =
+        ACL.ConfirmEstimateBuildReq
+          { bppRideId = ride.bppRideId,
+            bppId = booking.providerId,
+            bppUrl = booking.providerUrl,
+            transactionId = booking.transactionId,
+            confirmEstimateStatus = req.confirmEstimateStatus,
+            ..
+          }
+  becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+  void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
   pure Success
 
 buildLocation :: MonadFlow m => EditLocation -> m DL.Location

@@ -12,15 +12,16 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType where
+module Beckn.Types.Core.Taxi.OnUpdate.Descriptor (Descriptor (..)) where
 
-import Data.Aeson.Types
-import Kernel.Prelude
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import EulerHS.Prelude hiding (exp, id)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data UpdateEventType
-  = PAYMENT_COMPLETED
-  | EDIT_LOCATION
-  | ADD_STOP
-  | EDIT_STOP
-  | CONFIRM_ESTIMATE
-  deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
+newtype Descriptor = Descriptor
+  { name :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Descriptor where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

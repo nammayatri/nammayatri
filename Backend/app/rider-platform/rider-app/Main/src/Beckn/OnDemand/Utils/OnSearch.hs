@@ -14,7 +14,7 @@
 
 module Beckn.OnDemand.Utils.OnSearch where
 
-import Beckn.OnDemand.Utils.Common as Common
+import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
@@ -212,7 +212,7 @@ buildWaitingChargeInfo' tagGroups = do
 buildWaitingChargeInfo :: MonadFlow m => Spec.Item -> m (Maybe OnSearch.WaitingChargesInfo)
 buildWaitingChargeInfo item = do
   let waitingChargePerMin' = buildWaitingChargeInfo' item.itemTags
-  return $ ---------- FIX TODO_______SOUMYAJIT
+  return $
     Just
       OnSearch.WaitingChargesInfo
         { waitingChargePerMin = waitingChargePerMin'

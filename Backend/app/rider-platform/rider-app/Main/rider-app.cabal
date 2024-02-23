@@ -206,6 +206,7 @@ library
       Domain.Types.Common
       Domain.Types.DriverOffer
       Domain.Types.Estimate
+      Domain.Types.EstimateRevised
       Domain.Types.Exophone
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
@@ -232,6 +233,7 @@ library
       Domain.Types.Person.PersonStats
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.Quote
+      Domain.Types.QuoteRevised
       Domain.Types.Rating
       Domain.Types.RegistrationToken
       Domain.Types.RentalDetails
@@ -278,6 +280,8 @@ library
       Storage.Beam.DriverOffer
       Storage.Beam.Estimate
       Storage.Beam.EstimateBreakup
+      Storage.Beam.EstimateRevised
+      Storage.Beam.EstimateRevisedBreakup
       Storage.Beam.Exophone
       Storage.Beam.FarePolicy.FareBreakup
       Storage.Beam.FeedbackForm
@@ -305,6 +309,7 @@ library
       Storage.Beam.Person.PersonStats
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.Quote
+      Storage.Beam.QuoteRevised
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
       Storage.Beam.RentalDetails
@@ -355,6 +360,8 @@ library
       Storage.Queries.DriverOffer
       Storage.Queries.Estimate
       Storage.Queries.EstimateBreakup
+      Storage.Queries.EstimateRevised
+      Storage.Queries.EstimateRevisedBreakup
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
       Storage.Queries.FeedbackForm
@@ -379,6 +386,7 @@ library
       Storage.Queries.Person.PersonStats
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.Quote
+      Storage.Queries.QuoteRevised
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalDetails

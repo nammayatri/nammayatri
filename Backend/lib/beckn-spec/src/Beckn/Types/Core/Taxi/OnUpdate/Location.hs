@@ -12,15 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType where
+module Beckn.Types.Core.Taxi.OnUpdate.Location
+  ( module Reexport,
+  )
+where
 
-import Data.Aeson.Types
-import Kernel.Prelude
-
-data UpdateEventType
-  = PAYMENT_COMPLETED
-  | EDIT_LOCATION
-  | ADD_STOP
-  | EDIT_STOP
-  | CONFIRM_ESTIMATE
-  deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
+import Beckn.Types.Core.Taxi.Search.Location as Reexport

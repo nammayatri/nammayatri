@@ -20,6 +20,18 @@ import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
+-- import qualified Domain.Types.Estimate as DEst
+-- import qualified Domain.Types.EstimateRevised as DER
+
+-- import qualified Domain.Types.EstimateRevised as DER
+-- import Domain.Types.FareParameters
+-- import qualified Domain.Types.FarePolicy as DFP
+-- import qualified Domain.Types.FareProduct as DFareProduct
+-- import SharedLogic.FareCalculator
+
+-- import qualified Storage.Queries.Estimate as QEst
+
+import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
@@ -29,16 +41,28 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Beam.Functions as B
+import Kernel.External.Maps.Types
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.EstimateCalculation as SHEC
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import SharedLogic.FarePolicy
 import qualified SharedLogic.LocationMapping as SLM
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.EstimateRevised as QER
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QuoteRevised as QQR
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import Tools.Event
+import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
 
 data DUpdateReq
@@ -52,7 +76,8 @@ data DUpdateReq
       { bookingId :: Id DBooking.Booking,
         rideId :: Id DRide.Ride,
         origin :: Maybe Common.Location,
-        destination :: Maybe Common.Location
+        destination :: Maybe Common.Location,
+        transactionId :: Text
       }
   | AddStopReq
       { bookingId :: Id DBooking.Booking,
@@ -62,8 +87,30 @@ data DUpdateReq
       { bookingId :: Id DBooking.Booking,
         stops :: [Common.Location]
       }
+  | ConfirmEstimateReq
+      { bookingId :: Id DBooking.Booking,
+        rideId :: Id DRide.Ride,
+        -- transactionId :: Text,
+        confirmEstimateStatus :: Bool
+      }
 
 data PaymentStatus = PAID | NOT_PAID
+
+data DistanceAndDuration = DistanceAndDuration
+  { distance :: Meters,
+    duration :: Seconds
+  }
+
+getDistanceAndDuration :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> Flow DistanceAndDuration
+getDistanceAndDuration merchantId merchantOpCityId fromLocation toLocation = do
+  response <-
+    Maps.getDistance merchantId merchantOpCityId $
+      Maps.GetDistanceReq
+        { origin = fromLocation,
+          destination = toLocation,
+          travelMode = Just Maps.CAR
+        }
+  return DistanceAndDuration {distance = response.distance, duration = response.duration}
 
 handler :: DUpdateReq -> Flow ()
 handler req@PaymentCompletedReq {} = do
@@ -109,6 +156,54 @@ handler EditLocationReq {..} = do
     QLM.create pickupMapForRide
     let entityData = Notify.EditLocationReq {..}
     Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
+  whenJust destination $ \dropOff -> do
+    endLocation <- buildLocation dropOff
+    QL.create endLocation
+    let updatedDropoffLocationKey = makeUpdatedDropoffLocationKey rideId
+    Redis.setExp updatedDropoffLocationKey endLocation 600 -- 10 miuntes
+    merchantOpCityId <- pure $ ride.merchantOperatingCityId
+    fromLocationLatLong <- pure $ locationToLatLon ride.fromLocation
+    currentLocation <- do
+      driverLocation <- LF.driversLocation [ride.driverId]
+      listToMaybe (driverLocation) & fromMaybeM LocationNotFound
+    currentLocationLatLong <- pure $ driverLocationToLatLong currentLocation
+    updatedToLocationLatLong <- pure $ gpsToLatLon dropOff.gps
+    originToCurrentLocation <- getDistanceAndDuration person.merchantId merchantOpCityId fromLocationLatLong currentLocationLatLong
+    currentLocationToNewDestination <- getDistanceAndDuration person.merchantId merchantOpCityId currentLocationLatLong updatedToLocationLatLong
+    totalDistance <- pure $ originToCurrentLocation.distance + currentLocationToNewDestination.distance
+    totalDuration <- pure $ originToCurrentLocation.duration + currentLocationToNewDestination.duration
+    searchReq <- QSR.findByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
+    booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+    allFarePoliciesProduct <- getAllFarePoliciesProduct person.merchantId merchantOpCityId fromLocationLatLong (Just updatedToLocationLatLong) booking.tripCategory
+    farePolicy <- getFarePolicy merchantOpCityId booking.tripCategory booking.vehicleVariant (Just allFarePoliciesProduct.area)
+    estimateRevised <- SHEC.buildEstimateRevised searchReq.id booking.startTime searchReq.isScheduled (Just totalDistance) allFarePoliciesProduct.specialLocationTag searchReq.customerCancellationDues False farePolicy
+    quoteRevised <- SHEC.buildQuoteRevised searchReq person.merchantId booking.startTime searchReq.isScheduled (Just totalDistance) (Just totalDuration) allFarePoliciesProduct.specialLocationTag searchReq.customerCancellationDues False farePolicy
+    QER.create estimateRevised
+    QQR.create quoteRevised
+    let entityData = Notify.EditLocationReq {..}
+    merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+    triggerEstimateRevisedEvent EstimateRevisedEventData {estimateRevised = estimateRevised, merchantId = person.merchantId}
+    Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData --
+    CallBAP.sendUpdatedEstimateToBAP booking ride estimateRevised quoteRevised booking.startTime fromLocationLatLong (Just updatedToLocationLatLong) merchant allFarePoliciesProduct.specialLocationTag
+  where
+    gpsToLatLon Common.Gps {..} = LatLong {..}
+    locationToLatLon DL.Location {..} = LatLong {..}
+    driverLocationToLatLong DDL.DriverLocation {..} = LatLong {..}
+handler req@ConfirmEstimateReq {} = do
+  confirmEstimateStatus <- pure $ req.confirmEstimateStatus
+  let updatedDropoffLocationKey = makeUpdatedDropoffLocationKey req.rideId
+  endLoaction :: DL.Location <- Redis.safeGet updatedDropoffLocationKey >>= fromMaybeM (InternalError "endloc not found")
+  case confirmEstimateStatus of
+    True -> do
+      ride <- runInReplica $ QRide.findById req.rideId >>= fromMaybeM (RideNotFound req.rideId.getId)
+      person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      dropoffMapForBooking <- SLM.buildDropLocationMapping endLoaction.id req.bookingId.getId DLM.BOOKING (Just person.merchantId) (Just person.merchantOperatingCityId)
+      QLM.create dropoffMapForBooking
+      dropoffMapForRide <- SLM.buildDropLocationMapping endLoaction.id req.rideId.getId DLM.RIDE (Just person.merchantId) (Just person.merchantOperatingCityId)
+      QLM.create dropoffMapForRide
+    --booking table
+    False -> do
+      logDebug $ "make no changes"
 
 -- handler _ = throwError (InvalidRequest "Not Implemented")
 
@@ -198,3 +293,6 @@ validateStopReq booking isEdit = do
   if isEdit
     then unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be edited " <> booking.id.getId) -- should we throw error or just allow?
     else unless (isNothing booking.stopLocationId) $ throwError (InvalidRequest $ "Can't add next stop before reaching previous stop " <> booking.id.getId)
+
+makeUpdatedDropoffLocationKey :: Id DRide.Ride -> Text
+makeUpdatedDropoffLocationKey id = "makeUpdatedDropoffLocationKey:RideId-" <> id.getId

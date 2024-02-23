@@ -17,6 +17,7 @@ module Tools.Event where
 
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Estimate as ES
+import qualified Domain.Types.EstimateRevised as DER
 import Domain.Types.Merchant
 import Domain.Types.Person
 import qualified Domain.Types.Quote as DQuote
@@ -57,6 +58,12 @@ data Payload
         vehVar :: VehicleVariant, --vehicle variant
         cAt :: UTCTime
       }
+  | EstimateRevised
+      { erId :: Id DER.EstimateRevised,
+        srId :: Id DSearchRequest.SearchRequest, --searchReqId
+        vehVar :: VehicleVariant, --vehicle variant
+        cAt :: UTCTime
+      }
   | Exophone
       { vendor :: Maybe Text,
         callType :: Maybe Text,
@@ -82,6 +89,12 @@ newtype BookingEventData = BookingEventData
 
 data EstimateEventData = EstimateEventData
   { estimate :: ES.Estimate,
+    personId :: Id Person,
+    merchantId :: Id Merchant
+  }
+
+data EstimateRevisedEventData = EstimateRevisedEventData
+  { estimateRevised :: DER.EstimateRevised,
     personId :: Id Person,
     merchantId :: Id Merchant
   }
@@ -116,6 +129,16 @@ triggerEstimateEvent ::
 triggerEstimateEvent estimateData = do
   let estimatePayload = Estimates {eId = estimateData.estimate.id, srId = estimateData.estimate.requestId, vehVar = estimateData.estimate.vehicleVariant, cAt = estimateData.estimate.createdAt}
   estEnvt <- createEvent (Just $ getId estimateData.personId) (getId estimateData.merchantId) Estimate RIDER_APP System (Just estimatePayload) (Just $ getId estimateData.estimate.id) (getId <$> estimateData.estimate.merchantOperatingCityId)
+  triggerEvent estEnvt
+
+triggerEstimateRevisedEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  EstimateRevisedEventData ->
+  m ()
+triggerEstimateRevisedEvent estimateRevisedData = do
+  let estimatePayload = EstimateRevised {erId = estimateRevisedData.estimateRevised.id, srId = estimateRevisedData.estimateRevised.requestId, vehVar = estimateRevisedData.estimateRevised.vehicleVariant, cAt = estimateRevisedData.estimateRevised.createdAt}
+  estEnvt <- createEvent (Just $ getId estimateRevisedData.personId) (getId estimateRevisedData.merchantId) Estimate RIDER_APP System (Just estimatePayload) (Just $ getId estimateRevisedData.estimateRevised.id) (getId <$> estimateRevisedData.estimateRevised.merchantOperatingCityId)
   triggerEvent estEnvt
 
 triggerRideCreatedEvent ::

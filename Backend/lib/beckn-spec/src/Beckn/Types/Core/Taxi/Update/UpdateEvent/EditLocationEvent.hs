@@ -22,74 +22,72 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.Location
-import Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType (UpdateEventType (EDIT_LOCATION))
-import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
-import EulerHS.Prelude hiding (fromList, id)
-import GHC.Exts (fromList)
+import EulerHS.Prelude hiding (fromList, id, state)
 import Kernel.Utils.Schema
 
 data EditLocationEvent = EditLocationEvent
   { id :: Text,
     update_target :: Text,
-    fulfillment :: FulfillmentInfo
+    fulfillment :: FulfillmentInfo,
+    state :: Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-instance ToJSON EditLocationEvent where
-  toJSON EditLocationEvent {..} = do
-    let (A.Object fulfJSON) = toJSON fulfillment
-    A.Object $
-      "id" .= id
-        <> "./komn/update_target" .= update_target
-        <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= EDIT_LOCATION) :: A.Object)))
+-- instance ToJSON EditLocationEvent where
+--   toJSON EditLocationEvent {..} = do
+--     let (A.Object fulfJSON) = toJSON fulfillment
+--     A.Object $
+--       "id" .= id
+--         <> "./komn/update_target" .= update_target
+--         <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= EDIT_LOCATION) :: A.Object)))
 
-instance FromJSON EditLocationEvent where
-  parseJSON = withObject "EditLocationEvent" $ \obj -> do
-    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "code")
-    unless (update_type == EDIT_LOCATION) $ fail "Wrong update_type."
-    EditLocationEvent
-      <$> obj .: "id"
-      <*> obj .: "./komn/update_target"
-      <*> obj .: "fulfillment"
+-- instance FromJSON EditLocationEvent where
+--   parseJSON = withObject "EditLocationEvent" $ \obj -> do
+--     update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "code")
+--     unless (update_type == EDIT_LOCATION) $ fail "Wrong update_type."
+--     EditLocationEvent
+--       <$> obj .: "id"
+--       <*> obj .: "./komn/update_target"
+--       <*> obj .: "fulfillment"
 
-instance ToSchema EditLocationEvent where
-  declareNamedSchema _ = do
-    txt <- declareSchemaRef (Proxy :: Proxy Text)
-    update_type <- declareSchemaRef (Proxy :: Proxy UpdateEventType)
-    let st =
-          mempty
-            & type_ L.?~ OpenApiObject
-            & properties
-              L..~ fromList
-                [("code", update_type)]
-            & required L..~ ["code"]
-        fulfillment =
-          toInlinedSchema (Proxy :: Proxy FulfillmentInfo)
-            & properties
-              L.<>~ fromList [("state", Inline st)]
-            & required L.<>~ ["state"]
-    return $
-      NamedSchema (Just "EditLocationEvent") $
-        mempty
-          & type_ L.?~ OpenApiObject
-          & properties
-            L..~ fromList
-              [ ("id", txt),
-                ("./komn/update_target", txt),
-                ("fulfillment", Inline fulfillment)
-              ]
-          & required
-            L..~ [ "id",
-                   "./komn/update_target",
-                   "fulfillment"
-                 ]
+-- instance ToSchema EditLocationEvent where
+--   declareNamedSchema _ = do
+--     txt <- declareSchemaRef (Proxy :: Proxy Text)
+--     update_type <- declareSchemaRef (Proxy :: Proxy UpdateEventType)
+--     let st =
+--           mempty
+--             & type_ L.?~ OpenApiObject
+--             & properties
+--               L..~ fromList
+--                 [("code", update_type)]
+--             & required L..~ ["code"]
+--         fulfillment =
+--           toInlinedSchema (Proxy :: Proxy FulfillmentInfo)
+--             & properties
+--               L.<>~ fromList [("state", Inline st)]
+--             & required L.<>~ ["state"]
+--     return $
+--       NamedSchema (Just "EditLocationEvent") $
+--         mempty
+--           & type_ L.?~ OpenApiObject
+--           & properties
+--             L..~ fromList
+--               [ ("id", txt),
+--                 ("./komn/update_target", txt),
+--                 ("fulfillment", Inline fulfillment)
+--               ]
+--           & required
+--             L..~ [ "id",
+--                    "./komn/update_target",
+--                    "fulfillment"
+--                  ]
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     origin :: StartInfo,
-    destination :: Maybe EndInfo
+    destination :: EndInfo
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
