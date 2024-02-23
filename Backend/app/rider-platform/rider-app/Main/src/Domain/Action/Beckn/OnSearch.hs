@@ -56,6 +56,7 @@ import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
@@ -76,7 +77,7 @@ data ValidatedOnSearchReq = ValidatedOnSearchReq
     providerInfo :: ProviderInfo,
     estimatesInfo :: [EstimateInfo],
     quotesInfo :: [QuoteInfo],
-    _searchRequest :: SearchRequest,
+    searchRequest :: SearchRequest,
     merchant :: DMerchant.Merchant,
     paymentMethodsInfo :: [DMPM.PaymentMethodInfo]
   }
@@ -168,8 +169,8 @@ data RentalQuoteDetails = RentalQuoteDetails
 
 validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
 validateRequest DOnSearchReq {..} = do
-  _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
-  merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
+  searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  merchant <- QMerch.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   return $ ValidatedOnSearchReq {..}
 
 onSearch ::
@@ -180,20 +181,27 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
 
-  let merchantOperatingCityId = _searchRequest.merchantOperatingCityId
+  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   mkBppDetails >>= CQBppDetails.createIfNotPresent
 
-  estimates <- traverse (buildEstimate providerInfo now _searchRequest) (filterEstimtesByPrefference estimatesInfo)
-  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest) (filterQuotesByPrefference quotesInfo)
-  merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
-  let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
-  forM_ estimates $ \est -> do
-    triggerEstimateEvent EstimateEventData {estimate = est, personId = _searchRequest.riderId, merchantId = _searchRequest.merchantId}
-  _ <- QEstimate.createMany estimates
-  _ <- QQuote.createMany quotes
-  _ <- QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
-  _ <- QSearchReq.updatePaymentMethods _searchRequest.id (paymentMethods <&> (.id))
-  QPFS.clearCache _searchRequest.riderId
+  isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
+
+  if (not isValueAddNP && isJust searchRequest.disabilityTag)
+    then do
+      logTagError "onSearch" "disability tag enabled search estimates discarded, not supported for OFF-US transactions"
+      pure ()
+    else do
+      estimates <- traverse (buildEstimate providerInfo now searchRequest) (filterEstimtesByPrefference estimatesInfo)
+      quotes <- traverse (buildQuote requestId providerInfo now searchRequest) (filterQuotesByPrefference quotesInfo)
+      merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
+      let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
+      forM_ estimates $ \est -> do
+        triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
+      _ <- QEstimate.createMany estimates
+      _ <- QQuote.createMany quotes
+      _ <- QPFS.updateStatus searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = searchRequest.id, validTill = searchRequest.validTill}
+      _ <- QSearchReq.updatePaymentMethods searchRequest.id (paymentMethods <&> (.id))
+      QPFS.clearCache searchRequest.riderId
   where
     {- Author: Hemant Mangla
       Rider quotes and estimates are filtered based on their preferences.
@@ -203,13 +211,13 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     -}
     filterQuotesByPrefference :: [QuoteInfo] -> [QuoteInfo]
     filterQuotesByPrefference _quotesInfo =
-      case _searchRequest.riderPreferredOption of
+      case searchRequest.riderPreferredOption of
         Rental -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> True; _ -> False) _quotesInfo
         _ -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> False; _ -> True) _quotesInfo
 
     filterEstimtesByPrefference :: [EstimateInfo] -> [EstimateInfo]
     filterEstimtesByPrefference _estimateInfo =
-      case _searchRequest.riderPreferredOption of
+      case searchRequest.riderPreferredOption of
         Rental -> []
         OneWay ->
           case quotesInfo of
@@ -243,24 +251,24 @@ buildEstimate ::
   SearchRequest ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate providerInfo now _searchRequest EstimateInfo {..} = do
+buildEstimate providerInfo now searchRequest EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
   pure
     DEstimate.Estimate
       { id = uid,
-        requestId = _searchRequest.id,
-        merchantId = Just _searchRequest.merchantId,
-        merchantOperatingCityId = Just _searchRequest.merchantOperatingCityId,
+        requestId = searchRequest.id,
+        merchantId = Just searchRequest.merchantId,
+        merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
         providerMobileNumber = providerInfo.mobileNumber,
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
-        estimatedDistance = _searchRequest.distance,
-        estimatedDuration = _searchRequest.estimatedRideDuration,
-        device = _searchRequest.device,
+        estimatedDistance = searchRequest.distance,
+        estimatedDuration = searchRequest.estimatedRideDuration,
+        device = searchRequest.device,
         createdAt = now,
         updatedAt = now,
         status = DEstimate.NEW,
@@ -289,7 +297,7 @@ buildQuote ::
   SearchRequest ->
   QuoteInfo ->
   m DQuote.Quote
-buildQuote requestId providerInfo now _searchRequest QuoteInfo {..} = do
+buildQuote requestId providerInfo now searchRequest QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
@@ -308,8 +316,8 @@ buildQuote requestId providerInfo now _searchRequest QuoteInfo {..} = do
         providerUrl = providerInfo.url,
         createdAt = now,
         quoteDetails = quoteDetails',
-        merchantId = _searchRequest.merchantId,
-        merchantOperatingCityId = _searchRequest.merchantOperatingCityId,
+        merchantId = searchRequest.merchantId,
+        merchantOperatingCityId = searchRequest.merchantOperatingCityId,
         ..
       }
 
