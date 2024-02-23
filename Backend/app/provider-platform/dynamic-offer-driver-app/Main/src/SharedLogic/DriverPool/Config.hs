@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
 import Kernel.Utils.Logging
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import qualified System.Environment as SE
@@ -73,6 +74,13 @@ dropDriverPoolConfig text =
     Just a -> DAK.fromText a
     Nothing -> text
 
+stringValueToObject :: [(Key, Value)] -> [(Key, Value)]
+stringValueToObject [] = []
+stringValueToObject ((k, v) : xs) =
+  case DAK.toText k of
+    "distanceBasedBatchSplit" -> ("distanceBasedBatchSplit", toJSON ((readWithInfo' v) :: [BatchSplitByPickupDistance])) : stringValueToObject xs
+    _ -> (k, v) : stringValueToObject xs
+
 getConfigFromCACStrict :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
 getConfigFromCACStrict merchantOpCityId mbvt dist = do
   dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))
@@ -80,13 +88,14 @@ getConfigFromCACStrict merchantOpCityId mbvt dist = do
   tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
   gen <- newStdGen
   let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-  contextValue <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
-  let res' = (contextValue ^@.. _Value . _Object . reindexed dropDriverPoolConfig (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
-      res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverPoolConfig)
-  pure . fromMaybe (error "error in fetching the context value") $ res
+  config <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
+  let res' = (config ^@.. _Value . _Object . reindexed dropDriverPoolConfig (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
+      res'' = stringValueToObject res'
+      res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverPoolConfig)
+  maybe (error "error in fetching the context value driverPoolConfig: ") pure res
 
-initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
-initializeCACThroughConfig merchantOpCityId mbvt dist = do
+initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => m ()
+initializeCACThroughConfig = do
   host <- liftIO $ SE.lookupEnv "CAC_HOST"
   interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
   interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
@@ -94,8 +103,13 @@ initializeCACThroughConfig merchantOpCityId mbvt dist = do
   config <- KSQS.findById' $ Text.pack tenant
   status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
   case status of
-    0 -> getConfigFromCACStrict merchantOpCityId mbvt dist
+    0 -> pure ()
     _ -> error $ "error in creating the client for tenant" <> Text.pack tenant <> " retrying again"
+
+helper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
+helper merchantOpCityId mbvt dist = do
+  _ <- initializeCACThroughConfig
+  getConfigFromCACStrict merchantOpCityId mbvt dist
 
 getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
 getDriverPoolConfigFromCAC merchantOpCityId mbvt dist = do
@@ -105,8 +119,10 @@ getDriverPoolConfigFromCAC merchantOpCityId mbvt dist = do
   let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
   let res' = (contextValue ^@.. _Value . _Object . reindexed dropDriverPoolConfig (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
-      res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverPoolConfig)
-  maybe (initializeCACThroughConfig merchantOpCityId mbvt dist) pure res
+      res'' = stringValueToObject res'
+      res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverPoolConfig)
+
+  maybe (helper merchantOpCityId mbvt dist) pure res
 
 -- case contextValue of
 --   Left err -> do
