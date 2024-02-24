@@ -16,4 +16,6 @@ import Servant
 import Tools.Auth
 
 getSpecialLocationList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Environment.Flow [SpecialLocationFull]
-getSpecialLocationList (_, _, merchantOperatingCityId) = findFullSpecialLocationsByMerchantOperatingCityId merchantOperatingCityId.getId
+getSpecialLocationList (_, _, merchantOperatingCityId) = notNullGateGeoJson <$> findFullSpecialLocationsByMerchantOperatingCityId merchantOperatingCityId.getId
+  where
+    notNullGateGeoJson = filter (any (isJust . (.geoJson)) . (.gatesInfo))

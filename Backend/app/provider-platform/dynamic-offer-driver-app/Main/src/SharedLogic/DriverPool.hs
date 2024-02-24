@@ -53,6 +53,7 @@ import Data.Fixed
 import Data.List (partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.List.NonEmpty.Extra as NE
 import Data.Tuple.Extra (snd3)
 import Domain.Action.UI.Route as DRoute
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
@@ -700,6 +701,7 @@ calculateDriverPoolWithActualDist ::
     LT.HasLocationService m r
   ) =>
   PoolCalculationStage ->
+  PoolType ->
   DriverPoolConfig ->
   Maybe Variant ->
   a ->
@@ -709,18 +711,35 @@ calculateDriverPoolWithActualDist ::
   Maybe PoolRadiusStep ->
   Bool ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental = do
+calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg mbVariant pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental = do
   driverPool <- calculateDriverPool poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep isRental
   case driverPool of
     [] -> return []
     (a : pprox) -> do
-      driverPoolWithActualDist <- computeActualDistance merchantId merchantOpCityId pickup (a :| pprox)
-      let filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
-            Nothing -> NE.toList driverPoolWithActualDist
-            Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip driverPoolWithActualDist (a :| pprox)
+      filtDriverPoolWithActualDist <-
+        case poolType of
+          SpecialZoneQueuePool -> pure $ map mkSpecialZoneQueueActualDistanceResult driverPool
+          _ -> do
+            driverPoolWithActualDist <- computeActualDistance merchantId merchantOpCityId pickup (a :| pprox)
+            pure $ case driverPoolCfg.actualDistanceThreshold of
+              Nothing -> NE.toList driverPoolWithActualDist
+              Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip (NE.sortOn (.driverPoolResult.driverId) driverPoolWithActualDist) (NE.sortOn (.driverId) $ a :| pprox)
       logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist
       return filtDriverPoolWithActualDist
   where
+    mkSpecialZoneQueueActualDistanceResult dpr = do
+      DriverPoolWithActualDistResult
+        { driverPoolResult = dpr,
+          actualDistanceToPickup = dpr.distanceToPickup,
+          actualDurationToPickup = Seconds 180, -- deafult 3 minutes here as its a queue on the gate
+          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing 0,
+          isPartOfIntelligentPool = False,
+          pickupZone = False,
+          specialZoneExtraTip = Nothing,
+          keepHiddenForSeconds = Seconds 0,
+          goHomeReqId = Nothing
+        }
+
     filterFunc threshold estDist distanceToPickup =
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
@@ -790,6 +809,7 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     CoreMetrics m
   ) =>
   PoolCalculationStage ->
+  PoolType ->
   DriverPoolConfig ->
   Maybe Variant ->
   a ->
@@ -798,7 +818,7 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   Maybe PoolRadiusStep ->
   Bool ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId merchantOpCityId mRadiusStep isRental = do
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType driverPoolCfg mbVariant pickup merchantId merchantOpCityId mRadiusStep isRental = do
   driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep isRental
   case driverPool of
     [] -> return []
@@ -808,9 +828,10 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
       driverPoolWithActualDistFromDestinationLocation <- computeActualDistance merchantId merchantOpCityId pickup driverPoolResultsWithDriverLocationAsDestinationLocation
       driverPoolWithActualDistFromCurrentLocation <- traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
       let driverPoolWithActualDist = NE.zipWith (curry combine) driverPoolWithActualDistFromDestinationLocation driverPoolWithActualDistFromCurrentLocation
-          filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
-            Nothing -> NE.toList driverPoolWithActualDist
-            Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActualDist
+          filtDriverPoolWithActualDist = case (driverPoolCfg.actualDistanceThreshold, poolType) of
+            (_, SpecialZoneQueuePool) -> NE.toList driverPoolWithActualDist
+            (Nothing, _) -> NE.toList driverPoolWithActualDist
+            (Just threshold, _) -> NE.filter (filterFunc threshold) driverPoolWithActualDist
       logDebug $ "secondly filtered driver pool result currently on ride" <> show filtDriverPoolWithActualDist
       return filtDriverPoolWithActualDist
   where
