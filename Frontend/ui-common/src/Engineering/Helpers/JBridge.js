@@ -616,10 +616,10 @@ export const drawRoute = function (data, style, trackColor, isActual, sourceMark
   }
 }
 
-export const updateRouteMarker = function (data) {
+export const updateRouteMarker = function (markerConfig) {
   return function () {
     if (window.JBridge.updateRouteMarker) {
-      return window.JBridge.updateRouteMarker(JSON.stringify(data));
+      return window.JBridge.updateRouteMarker(JSON.stringify(markerConfig));
     }
   }
 }

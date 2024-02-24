@@ -76,5 +76,11 @@ defaultGeoJsonFeature = {
       , defaultDriverExtra : 0
       , canQueueUpOnGate : false
     }
-  , geometry : ""
+  , geometry : defaultGeoJsonGeometry
+}
+
+defaultGeoJsonGeometry :: GeoJsonGeometry
+defaultGeoJsonGeometry = {
+    type : "MultiPolygon"
+  , coordinates : [[[[]]]]
 }

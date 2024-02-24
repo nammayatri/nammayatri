@@ -298,7 +298,7 @@ initData = {
         referralStatus : NO_REFERRAL,
         referralCode : Nothing
       }
-    , locateOnMapProps : { locationName : Nothing }
+    , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing }
     , showSpecialZoneInfoPopup : false
     }
 }

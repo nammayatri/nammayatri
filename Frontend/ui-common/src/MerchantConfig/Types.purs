@@ -127,7 +127,7 @@ type GeoJson = {
 type GeoJsonFeature = {
     type :: String
   , properties :: GeoJsonProperties
-  , geometry :: String
+  , geometry :: GeoJsonGeometry
 }
 
 type GeoJsonProperties = {
@@ -135,4 +135,9 @@ type GeoJsonProperties = {
   , id :: String
   , defaultDriverExtra :: Int
   , canQueueUpOnGate :: Boolean
+}
+
+type GeoJsonGeometry = {
+    type :: String
+  , coordinates :: Array (Array (Array (Array Number)))
 }

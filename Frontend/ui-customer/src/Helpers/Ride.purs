@@ -84,7 +84,7 @@ checkRideStatus rideAssigned = do
             void $ pure $ logEventWithTwoParams logField_ "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
           modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
           updateLocalStage rideStatus
-          maybe' (\_ -> pure unit) updateCity (getFlowStatusData "LazyCheck")
+          maybe' (\_ -> pure unit) updateFlowStatusData (getFlowStatusData "LazyCheck")
           let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
               (RideBookingDetails contents) = bookingDetails.contents
               otpCode = contents.otpCode
@@ -175,8 +175,11 @@ checkRideStatus rideAssigned = do
     Left err -> updateLocalStage HomeScreen
   if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
   where 
-    updateCity :: FlowStatusData -> FlowBT String Unit
-    updateCity (FlowStatusData flowStatusData) = modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = getCityNameFromCode flowStatusData.source.city}})
+    updateFlowStatusData :: FlowStatusData -> FlowBT String Unit
+    updateFlowStatusData (FlowStatusData flowStatusData) = 
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ city = getCityNameFromCode flowStatusData.source.city
+                                                                              , locateOnMapProps{ sourceLocationName = flowStatusData.source.address
+                                                                                                , sourceGeoJson = flowStatusData.sourceGeoJson } }})
         
 
 removeChatService :: String -> FlowBT String Unit

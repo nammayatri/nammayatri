@@ -30,7 +30,7 @@ import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Uncurried (runEffectFn1, runEffectFn9)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap, safeMarginTopWithDefault, screenWidth, safeMarginBottomWithDefault, safeMarginTop)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer, zoneLabelIcon)
 import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig, defaultMarkerConfig)
 import Mobility.Prelude (boolToVisibility)
 import Prelude
@@ -692,9 +692,9 @@ driverLocationTracking push action duration id routeState = do
 
       markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
 
-      sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
+      sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
 
-      destSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.destinationTag
+      destSpecialTagIcon = zoneLabelIcon state.data.zoneType.destinationTag
 
       specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
     routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
@@ -754,9 +754,9 @@ driverLocationTracking push action duration id routeState = do
 
       markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
 
-      sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
+      sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
 
-      destSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.destinationTag
+      destSpecialTagIcon = zoneLabelIcon state.data.zoneType.destinationTag
 
       specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
     locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)

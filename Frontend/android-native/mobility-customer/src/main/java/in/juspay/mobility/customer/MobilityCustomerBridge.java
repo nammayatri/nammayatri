@@ -226,7 +226,8 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
                     MarkerConfig markerConfig = new MarkerConfig();
                     markerConfig.locationName(eta);
-                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false,null, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER, markerConfig))));
+                    markerConfig.setLabelImage(destinationSpecialTagIcon);
+                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false,null, MarkerType.NORMAL_MARKER, markerConfig))));
                     destMarker.setTitle("Driver is " + eta);
                     if (polyline != null) {
                         polyline.setEndCap(new ButtCap());
@@ -314,7 +315,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     layer.removeLayerFromMap();
                 }
                 if (userPositionMarker != null) {
-                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(CURRENT_LOCATION, false,null,null, MarkerType.NORMAL_MARKER, new MarkerConfig())));
+                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(CURRENT_LOCATION, false,null, MarkerType.NORMAL_MARKER, new MarkerConfig())));
                     userPositionMarker.setTitle("");
                 }
             } catch (Exception e) {

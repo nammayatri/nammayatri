@@ -142,7 +142,7 @@ baseAppFlow baseFlow event = do
     -- resp <- Remote.getSpecialLocationListBT API.SpecialLocationFullReq
     -- _ <- pure $ spy "debug specialLocationList resp" resp
 
-    -- let transformedSpecialLocation = HU.transformSpecialLocationList resp
+    -- _ <- HU.transformSpecialLocationList resp
     -- json <- pure $ HU.setSpecialLocationList transformedSpecialLocation
     --     filteredKeys = DM.lookup "s01mtw0" transformedSpecialLocation
     -- _ <- pure $ spy "debug transformedSpecialLocation transformedSpecialLocation" transformedSpecialLocation
@@ -2164,7 +2164,7 @@ homeScreenFlow = do
           routeType = if state.props.currentStage == RideAccepted then "pickup" else "trip"
           srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = source }
           destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_dest_marker", primaryText = destination }
-      if state.props.currentStage == RideAccepted then do
+      if state.props.currentStage == RideAccepted && state.data.activeRide.specialLocationTag == Just "SpecialZonePickup" then do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
         let specialPickupZone = spy "debug zone UPDATE_ROUTE specialPickupZone" (HU.findSpecialPickupZone destLat destLon)
         case specialPickupZone of
@@ -2304,8 +2304,8 @@ homeScreenFlow = do
     UPDATE_SPECIAL_LOCATION_LIST -> do
       resp <- Remote.getSpecialLocationListBT API.SpecialLocationFullReq
       _ <- pure $ spy "debug specialLocationList resp" resp
-      let transformedSpecialLocation = HU.transformSpecialLocationList resp
-      json <- pure $ HU.setSpecialLocationList transformedSpecialLocation
+      _ <- pure $ HU.transformSpecialLocationList resp
+      -- json <- pure $ HU.setSpecialLocationList transformedSpecialLocation
       homeScreenFlow
   homeScreenFlow
 

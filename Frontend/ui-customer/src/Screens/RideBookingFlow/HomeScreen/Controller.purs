@@ -1497,9 +1497,9 @@ eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonAct
 eval (UpdateLocation key lat lon) state = case key of
   "LatLon" -> do
     exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-  _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
-          exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-        else continue state
+  _ -> case (filter(\item -> item.place == key) state.data.nearByPickUpPoints) !! 0 of
+        Just spot -> exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} spot.lat spot.lng
+        Nothing -> continue state
 
 eval (UpdatePickupLocation  key lat lon) state =
   case key of
@@ -1507,11 +1507,12 @@ eval (UpdatePickupLocation  key lat lon) state =
       exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
     _ -> do
       let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
-      case focusedIndex of
-        Just index -> do
+          spot = (filter(\item -> item.place == key) state.data.nearByPickUpPoints) !! 0
+      case focusedIndex, spot of
+        Just index, Just spot' -> do
           _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-        Nothing -> continue state
+          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} spot'.lat spot'.lng
+        _, _ -> continue state
 
 eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1765,12 +1766,8 @@ eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do
     formatDigits :: Int -> String
     formatDigits time = (if time >= 10 then "" else "0") <> show time
 
-eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate)) state = do
-  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng "DRIVE"
-  continue state
-
-eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigateToZone)) state = do
-  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng "WALK"
+eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate mode lat lon)) state = do
+  void $ pure $ openNavigation 0.0 0.0 lat lon (show mode)
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.RideSupport)) state = do
@@ -1889,7 +1886,7 @@ eval (PredictionClickedAction (LocationListItemController.OnClick item)) state =
 
 eval (SuggestedDestinationClicked item) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_sd_list_item"
-  locationSelected item true state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
+  locationSelected item true state{data{source = (getString CURRENT_LOCATION), nearByPickUpPoints = [], polygonCoordinates = ""}, props{isSource = Just false}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do
@@ -2024,7 +2021,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
       lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ removeAllPolylines ""
-  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.locationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
+  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
   when (state.data.destination == "") $ do

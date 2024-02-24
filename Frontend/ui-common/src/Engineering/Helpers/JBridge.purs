@@ -46,7 +46,6 @@ import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
 import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
-import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2,Fn5)
 import Foreign.Class (encode)
@@ -116,7 +115,7 @@ foreign import storeCallBackUploadMultiPartData :: forall action. EffectFn2 (act
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: EffectFn9 Locations String String Boolean MarkerConfig MarkerConfig Int String MapRouteConfig (Effect Unit)
-foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit
+foreign import updateRouteMarker :: MarkerConfig -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
 foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
 -- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
@@ -454,6 +453,7 @@ type LocateOnMapConfig = {
   , navigateToNearestGate :: Boolean
   , locationName :: String
   , locateOnMapPadding :: LocateOnMapPadding
+  , enableMapClickListener :: Boolean
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -480,6 +480,7 @@ locateOnMapConfig = {
   , navigateToNearestGate : true
   , locationName : ""
   , locateOnMapPadding : { left : 1.0, top : 1.0, right : 1.0, bottom : 1.0 }
+  , enableMapClickListener : false
 }
 
 type LocateOnMapPadding = {
@@ -510,8 +511,10 @@ type MarkerConfig = {
   , markerCallback :: String
   , markerCallbackForTags :: Array String
   , theme :: String
+  , position :: Paths
 }
 
+defaultMarkerConfig :: MarkerConfig
 defaultMarkerConfig = {
     showPointer : true
   , pointerIcon : ""
@@ -522,6 +525,7 @@ defaultMarkerConfig = {
   , markerCallback : ""
   , markerCallbackForTags : []
   , theme : "DARK"
+  , position : { lat : 0.0, lng : 0.0 }
 }
 
 type MapRouteConfig = {
@@ -548,15 +552,6 @@ type Location = {
   place :: String,
   address :: Maybe String,
   city :: Maybe String
-}
-
-type UpdateRouteMarker = {
-    locations :: Locations
-  , sourceName :: String
-  , destName :: String
-  , sourceIcon :: String
-  , destIcon :: String
-  , mapRouteConfig :: MapRouteConfig
 }
 
 type Suggestions = Array

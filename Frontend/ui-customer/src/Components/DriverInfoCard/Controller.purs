@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..))
 import Components.BannerCarousel as BannerCarousel
 
 data Action = NoAction
@@ -32,9 +32,8 @@ data Action = NoAction
             | CancelRide DriverInfoCardState
             | LocationTracking
             | MessageDriver
-            | OnNavigate
+            | OnNavigate NavigationMode Number Number
             | CallDriver
-            | OnNavigateToZone
             | ToggleBottomSheet
             | CollapseBottomSheet
             | ShareRide

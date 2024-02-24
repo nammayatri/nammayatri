@@ -79,7 +79,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location, MetroStationsList)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
-import Services.API (Prediction, SavedReqLocationAPIEntity(..))
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -91,6 +91,13 @@ import Data.Ord
 import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Constants (defaultDensity)
+import Data.Array as DA
+import Data.Argonaut.Decode.Class as AD
+import Data.Argonaut.Encode.Class as AE
+import Data.Argonaut.Core as AC
+import Data.Argonaut.Decode.Parser as ADP
+import Common.DefaultConfig as CC
+import Common.Types.Config as CCT
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -809,3 +816,33 @@ zoneLabelIcon zoneType =
     SPECIAL_PICKUP -> "ny_ic_city_police"
     METRO -> "ny_ic_metro_white"
     _ -> ""
+
+transformGeoJsonFeature :: Maybe String -> Array GateInfoFull -> String
+transformGeoJsonFeature geoJson gateInfoFulls =
+  if DS.null (fromMaybe "" geoJson) && DA.null gateInfoFulls then ""
+  else
+    AC.stringify $ AE.encodeJson CC.defaultGeoJson { features = geoJsonFeatures }
+    where
+      geoJsonFeatures :: Array CCT.GeoJsonFeature
+      geoJsonFeatures = 
+        map (\(GateInfoFull gateInfoFull) -> 
+              CC.defaultGeoJsonFeature {
+                  properties {
+                      name = gateInfoFull.name
+                    , defaultDriverExtra = fromMaybe 0 gateInfoFull.defaultDriverExtra
+                    , canQueueUpOnGate = fromMaybe false gateInfoFull.canQueueUpOnGate
+                  }
+                , geometry = case gateInfoFull.geoJson of
+                                Just geoJson -> fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson)
+                                Nothing      -> CC.defaultGeoJsonGeometry
+              }
+            ) gateInfoFulls
+        <> case geoJson of
+              Just geoJson' -> DA.singleton CC.defaultGeoJsonFeature{ geometry = fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson') }
+              Nothing -> []
+
+      decodeGeoJsonGeometry :: String -> Maybe CCT.GeoJsonGeometry
+      decodeGeoJsonGeometry stringGeometry =
+        case (AD.decodeJson =<< ADP.parseJson stringGeometry) of
+          Right resp -> Just resp
+          Left err   -> Nothing

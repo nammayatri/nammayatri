@@ -68,10 +68,9 @@ import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, s
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
-import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, defaultMarkerConfig)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -1486,7 +1485,7 @@ estimatedFareView push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER
-      , padding (PaddingVertical 4 4)
+      , padding (Padding 8 4 8 4)
       , visibility if state.props.zoneType.priorityTag /= NOZONE then VISIBLE else GONE
       , clickable $ isJust tagConfig.infoPopUpConfig
       , onClick push $ const $ SpecialZoneInfoTag
@@ -2766,8 +2765,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               dstLon = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
               trackingType = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then Remote.DRIVER_TRACKING else Remote.RIDE_TRACKING
               markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType 
-              sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
-              destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
+              sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
+              destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
               specialLocationTag =  if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then
                                       specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon true getPolylineAnimationConfig
                                     else
@@ -2796,7 +2795,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                           walkCoordinate srcLat srcLon dstLat dstLon
                             newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
                             srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
-                            destmarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = metersToKm routes.distance (state.props.currentStage == RideStarted) }
+                            destmarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText routes.distance }
                         _ <- liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destmarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
                         _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                         void $ delay $ Milliseconds duration
@@ -2817,7 +2816,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                                       specialLocationConfig "" sourceSpecialTagIcon true getPolylineAnimationConfig
                                                     else
                                                       specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
-                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta =  (metersToKm locationResp.distance (state.props.currentStage == RideStarted)), srcMarker =  markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
+                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
                           _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                           void $ delay $ Milliseconds duration
                           driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
@@ -2847,6 +2846,12 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                   doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime)
                 else pure unit
               Nothing -> pure unit
+    
+    getMarkerPrimaryText distance =
+      if state.props.currentStage == RideAccepted && state.props.zoneType.priorityTag == SPECIAL_PICKUP && isJust state.data.driverInfoCardState.sourceAddress.area then
+        fromMaybe "" state.data.driverInfoCardState.sourceAddress.area
+      else 
+        metersToKm distance (state.props.currentStage == RideStarted)
 
 
 confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
@@ -4257,7 +4262,7 @@ referralPopUp push state =
 
 specialZoneInfoPopup :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 specialZoneInfoPopup push state =
-  let tagConfig = specialZoneTagConfig state.props.confirmLocationCategory
+  let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
   in case tagConfig.infoPopUpConfig of
         Just infoPopUpConfig -> 
           PrestoAnim.animationSet [ Anim.fadeIn true ]

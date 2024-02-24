@@ -44,7 +44,7 @@ import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Shadow(.
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
+import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..), NavigationMode(..))
 import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -254,7 +254,7 @@ otpAndWaitView push state =
           ] <> FontStyle.body22 TypoGraphy
         , otpView push state
         ]
-      , trackRideView push state
+      -- , trackRideView push state -- TODO :: may use in future
      ] <> if (state.props.currentSearchResultType == QUOTES || state.data.driverArrived) then 
            [(PrestoAnim.animationSet [ fadeIn true ] $ 
            let isQuotes = state.props.currentSearchResultType == QUOTES
@@ -518,7 +518,7 @@ navigateView push state =
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
   , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted
-  , onClick push $ const $ OnNavigateToZone
+  , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
   ][ imageView
      [ width $ V 20
      , height $ V 20
@@ -683,6 +683,7 @@ distanceView push state =
         , height WRAP_CONTENT
         , color Color.blue900
         , text "Track on Google Maps  >"
+        , onClick push $ const $ OnNavigate DRIVE state.data.destinationLat state.data.destinationLng
         ] <> FontStyle.body6 TypoGraphy
      ]
   ]
@@ -787,14 +788,7 @@ contactView push state =
                 , height WRAP_CONTENT
                 , orientation HORIZONTAL
                 ][ textView $
-                    [ text $"is " <> eta
-                    , color Color.black900
-                    , visibility $ boolToVisibility $ eta /= "--"
-                    ] <> FontStyle.body7 TypoGraphy
-                  , textView $
-                    [ text case eta /= "--" of
-                        true -> getString AWAY
-                        false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_AT_PICKUP
+                    [ text $ driverPickUpStatusText state eta
                     , color Color.black900
                     ] <> FontStyle.body7 TypoGraphy
                   ]
@@ -804,6 +798,8 @@ contactView push state =
             , height WRAP_CONTENT
             , color Color.blue900
             , text "Show Walking Directions  >"
+            , visibility $ boolToVisibility $ state.props.zoneType == SPECIAL_PICKUP
+            , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
             ] <> FontStyle.body6 TypoGraphy
          ]
       , linearLayout
@@ -1202,7 +1198,7 @@ openGoogleMap push state =
       , cornerRadius 30.0
       , gravity CENTER
       , orientation HORIZONTAL
-      , onClick push (const OnNavigate)
+      , onClick push $ const $ OnNavigate DRIVE state.data.destinationLat state.data.destinationLng
       ][ textView (
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -1264,3 +1260,11 @@ getTripDetails state = {
   , backgroundColor : Color.white900
   , enablePaddingBottom : true
 }
+
+driverPickUpStatusText :: DriverInfoCardState -> String -> String
+driverPickUpStatusText state eta = 
+  case state.props.zoneType of
+    SPECIAL_PICKUP -> "is at pickup location"
+    _ -> case eta of
+          "--" -> "is " <> eta <> getString AWAY
+          _    -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_AT_PICKUP

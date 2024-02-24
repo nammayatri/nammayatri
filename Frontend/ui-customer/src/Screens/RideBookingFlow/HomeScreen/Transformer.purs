@@ -57,9 +57,6 @@ import Presto.Core.Types.Language.Flow (Flow(..), getLogFields)
 import ConfigProvider
 import Locale.Utils
 import Data.Either (Either(..))
-import Common.DefaultConfig as CC
-import Common.Types.Config as CCT
-import Engineering.Helpers.Utils (stringifyGeoJson)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -581,7 +578,8 @@ getSpecialTag specialTag =
   case specialTag of
     Just tag ->
       let zones = split (Pattern "_") tag
-          sourceTag = getZoneType $ fromMaybe "" (zones DA.!! 0)
+          pickupZone = getZoneType $ fromMaybe "" (zones DA.!! 3)
+          sourceTag = if pickupZone == SPECIAL_PICKUP then SPECIAL_PICKUP else getZoneType $ fromMaybe "" (zones DA.!! 0)
           destinationTag = getZoneType $ fromMaybe "" (zones DA.!! 1)
           priorityTag = if zones DA.!! 2 == Just "PriorityPickup" then sourceTag else destinationTag
       in { sourceTag : sourceTag, destinationTag : destinationTag, priorityTag : priorityTag}
@@ -592,7 +590,7 @@ getZoneType tag =
   case tag of
     "SureMetro" -> METRO
     "SureBlockedAreaForAutos" -> AUTO_BLOCKED
-    "SureShoppingMall" -> SPECIAL_PICKUP
+    "PickupZone" -> SPECIAL_PICKUP
     _ -> NOZONE
 
 getTripFromRideHistory :: MyRidesScreenState -> Trip
@@ -625,29 +623,3 @@ getActiveBooking = do
     case eiResp of
       Right (RideBookingListRes listResp) -> DA.head $ listResp.list
       Left _ -> Nothing
-  
--- gateInfoToGeoJsonFeature :: GatesInfo -> CCT.GeoJsonFeature
--- gateInfoToGeoJsonFeature (Gates)
-
-transformGeoJsonFeature :: Maybe String -> Array GateInfoFull -> String
-transformGeoJsonFeature geoJson gateInfoFulls = 
-  case geoJson of
-    Just geoJson' -> stringifyGeoJson CC.defaultGeoJson { features = geoJsonFeatures }
-    Nothing       -> ""
-  where
-    geoJsonFeatures :: Array CCT.GeoJsonFeature
-    geoJsonFeatures = 
-      map (\(GateInfoFull gateInfoFull) -> 
-            CC.defaultGeoJsonFeature {
-                properties {
-                    name = gateInfoFull.name
-                  , id = gateInfoFull.id
-                  , defaultDriverExtra = fromMaybe 0 gateInfoFull.defaultDriverExtra
-                  , canQueueUpOnGate = fromMaybe false gateInfoFull.canQueueUpOnGate
-                }
-              , geometry = fromMaybe "" gateInfoFull.geoJson
-            }
-          ) gateInfoFulls
-      <> case geoJson of
-            Just geoJson' -> DA.singleton CC.defaultGeoJsonFeature{ geometry = geoJson' }
-            Nothing -> []

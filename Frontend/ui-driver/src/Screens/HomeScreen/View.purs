@@ -375,8 +375,8 @@ specialPickupZone push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
-    , padding $ Padding 12 12 16 12
-    , margin $ Margin 20 13 20 15
+    , padding $ Padding 12 8 12 8
+    , margin $ Margin 20 0 20 0
     , cornerRadius 8.0
     , stroke $ "1," <> Color.yellow900
     , background Color.yellow600
@@ -384,7 +384,7 @@ specialPickupZone push state =
     , orientation HORIZONTAL
     ]
     [ imageView
-      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_police_special_zone"
+      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_city_police"
       , height $ V 32
       , width $ V 30
       , margin $ MarginRight 10
@@ -448,7 +448,7 @@ gotoRecenterAndSupport state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin $ Margin 12 8 12 0
+  , margin $ Margin 12 0 12 0
   , gravity if centerView then CENTER_HORIZONTAL else RIGHT
   , visibility if state.props.driverStatusSet /= ST.Offline then VISIBLE else GONE
   ][ linearLayout
@@ -852,7 +852,7 @@ updateLocationAndLastUpdatedView state push =
   linearLayout
   [ width MATCH_PARENT
   , padding $ Padding 16 8 16 8
-  , margin $ Margin 16 8 16 16
+  , margin $ Margin 16 4 16 2
   , cornerRadius 7.0
   , orientation HORIZONTAL
   , background Color.blue600
@@ -870,7 +870,7 @@ statsModel push state =
     , orientation VERTICAL
     , visibility $ boolToVisibility showStatsModel
     , gravity CENTER
-    , padding $ Padding 16 10 16 10
+    , padding $ Padding 16 2 16 6
     ][  if not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then
           StatsModel.view (push <<< StatsModelAction) (statsModelConfig state)
         else linearLayout

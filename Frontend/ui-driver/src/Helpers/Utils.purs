@@ -31,7 +31,7 @@ import Data.String.Common as DSC
 import MerchantConfig.Utils
 import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
 import Domain.Payments (PaymentStatus(..))
-import Common.Types.Config (CityConfig(..), GeoJson, GeoJsonFeature)
+import Common.Types.Config (CityConfig(..), GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)
@@ -58,7 +58,7 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not)
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<))
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
@@ -70,7 +70,7 @@ import Engineering.Helpers.Commons (flowRunner)
 import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
-import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
+import Foreign.Generic (Foreign)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig)
@@ -103,7 +103,10 @@ import Data.Argonaut.Core
 import Data.Argonaut.Decode.Error
 import Data.Argonaut.Decode.Class as AD
 import Data.Argonaut.Encode.Class as AE
+import Data.Argonaut.Core as AC
+import Data.Argonaut.Decode.Parser as ADP
 import DecodeUtil (decodeForeignObject, parseJSON)
+import Foreign.Generic.Class as FG
 import Debug
 
 type AffSuccess s = (s -> Effect Unit)
@@ -151,29 +154,25 @@ foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
 
 foreign import renderSlider :: forall action. (action -> Effect Unit) -> (Int -> action) -> SliderConfig -> Unit
-foreign import stringifyGeoJson :: GeoJson -> String
--- foreign import setSpecialLocationList :: SpecialLocationMap -> Unit
--- foreign import getSpecialLocationList :: Unit -> SpecialLocationMap
 
-foreign import setSpecialLocationListImpl :: Json -> Json
-foreign import getSpecialLocationListImpl :: String -> Json
-foreign import getGeoJsonImpl :: String -> GeoJson
 
-getEitherSpecialLocationList :: String -> Either JsonDecodeError SpecialLocationMap
-getEitherSpecialLocationList key = AD.decodeJson $ getSpecialLocationListImpl key
+decodeGeoJson :: String -> Maybe GeoJson
+decodeGeoJson stringGeoJson = 
+  case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of
+    Right resp -> Just resp
+    Left err   -> Nothing
 
-getSpecialLocationList :: String -> SpecialLocationMap 
-getSpecialLocationList key =
-  either (\err -> DM.empty) (\val -> val) (getEitherSpecialLocationList key)
+decodeGeoJsonGeometry :: String -> Maybe GeoJsonGeometry
+decodeGeoJsonGeometry stringGeometry =
+  case (AD.decodeJson =<< ADP.parseJson stringGeometry) of
+    Right resp -> Just resp
+    Left err   -> Nothing
 
--- getGeoJson :: String -> GeoJson 
--- getGeoJson stringGeoJson = decodeForeignObject (spy "debug zone parseJSON" (parseJSON stringGeoJson)) CC.defaultGeoJson
-  -- either (\err -> let _ = spy "debug zone getGeoJson error" err 
-  --                 in  Nothing) 
-  --         (\val -> Just val) (AD.decodeJson stringGeojson)
-
-setSpecialLocationList :: SpecialLocationMap -> Either JsonDecodeError SpecialLocationMap
-setSpecialLocationList destinations = AD.decodeJson $ setSpecialLocationListImpl $ AE.encodeJson destinations
+decodeSpecialLocationList :: String -> SpecialLocationMap 
+decodeSpecialLocationList dummy = 
+  case (AD.decodeJson =<< ADP.parseJson (getValueToLocalStore SPECIAL_LOCATION_LIST)) of
+    Right resp -> resp
+    Left err   -> DM.empty
 
 type SliderConfig = { 
   id :: String,
@@ -228,12 +227,6 @@ type SpecialLocationList = {
   , city :: String
 }
 
--- derive instance genericSpecialLocationHash :: Generic SpecialLocationHash _
--- instance standardEncodeSpecialLocationHash :: StandardEncode SpecialLocationHash where standardEncode (SpecialLocationHash _) = standardEncode {}
--- instance showSpecialLocationHash :: Show SpecialLocationHash where show = genericShow
--- instance decodeSpecialLocationHash :: Decode SpecialLocationHash where decode = defaultDecode
--- instance encodeSpecialLocationHash  :: Encode SpecialLocationHash where encode = defaultEncode
-
 dummyLabelConfig = { 
   label : "",
   backgroundColor : "",
@@ -268,42 +261,6 @@ startOtpReciever action push = do
     void $ initiateSMSRetriever
     liftEffect $ startOtpReciever action push
   pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
-
--- -- type Locations = {
--- --     paths :: Array Paths
--- -- }
-
-
--- -- type Paths = {
--- --     points :: Points
--- -- }
-
--- -- type Points = {
--- --     type :: String
--- -- ,   coordinates :: Array Point
--- -- }
-
--- -- type Point = Array Number
-
--- -- type Markers = {
--- --     markerObject :: Array MarkerObject
--- -- }
-
--- -- type MarkerObject = {
--- --     type :: String,
--- --     title :: String,
--- --     coordinates :: Array Number
--- -- }
-
--- -- newtype LocationLatLong = LocationLatLong
--- --   { lat :: String
--- --   , long :: String
--- --   }
-
--- -- derive instance genericLocationLatLong :: Generic LocationLatLong _
--- -- derive instance newtypeLocationLatLong :: Newtype LocationLatLong _
--- -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
--- -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
 getDistanceBwCordinates :: Number -> Number -> Number -> Number -> Number
 getDistanceBwCordinates lat1 long1 lat2 long2 = do
@@ -721,16 +678,16 @@ generateReferralLink source medium term content campaign driverReferralType doma
       <> "%26utm_campaign%3D" <> campaign 
       <> "%26anid%3Dadmob&id=" <> packageId
 
-transformSpecialLocationList :: SA.SpecialLocationFullRes -> SpecialLocationMap
-transformSpecialLocationList (SA.SpecialLocationFullRes specialLocations) =
-  DA.foldr (\(SA.SpecialLocationFull specialLocation) hashMap -> 
-              if not $ DA.null specialLocation.gatesInfo then
-                updateHashMap (SA.SpecialLocationFull specialLocation) hashMap
-              else hashMap
-            -- case specialLocation.geoJson of
-            --   Just geoJson -> updateHashMap (SA.SpecialLocationFull specialLocation) hashMap
-            --   Nothing -> hashMap
-        ) DM.empty specialLocations 
+transformSpecialLocationList :: SA.SpecialLocationFullRes -> Effect Unit
+transformSpecialLocationList (SA.SpecialLocationFullRes specialLocations) = do
+  let transformedList = DA.foldr (\(SA.SpecialLocationFull specialLocation) hashMap -> 
+                                    if not $ DA.null specialLocation.gatesInfo then
+                                      updateHashMap (SA.SpecialLocationFull specialLocation) hashMap
+                                    else hashMap
+                                  ) DM.empty specialLocations
+      json = AE.encodeJson transformedList
+      _ = runFn2 setValueToLocalStore (show SPECIAL_LOCATION_LIST) (AC.stringify json)
+  pure unit
 
 updateHashMap :: SA.SpecialLocationFull -> SpecialLocationMap -> SpecialLocationMap
 updateHashMap (SA.SpecialLocationFull specialLocation) hashMap =
@@ -750,10 +707,7 @@ transformGates gatesInfos =
 
 transformGeoJsonFeature :: Maybe String -> Array SA.GateInfoFull -> String
 transformGeoJsonFeature geoJson gateInfoFulls = 
-  EHU.stringifyGeoJson CC.defaultGeoJson { features = geoJsonFeatures }
-  -- case geoJson of
-  --   Just geoJson' -> EHU.stringifyGeoJson CC.defaultGeoJson { features = geoJsonFeatures }
-  --   Nothing       -> ""
+  AC.stringify $ AE.encodeJson CC.defaultGeoJson { features = geoJsonFeatures }
   where
     geoJsonFeatures :: Array GeoJsonFeature
     geoJsonFeatures = 
@@ -761,25 +715,24 @@ transformGeoJsonFeature geoJson gateInfoFulls =
             CC.defaultGeoJsonFeature {
                 properties {
                     name = gateInfoFull.name
-                  -- , id = gateInfoFull.id
                   , defaultDriverExtra = fromMaybe 0 gateInfoFull.defaultDriverExtra
                   , canQueueUpOnGate = fromMaybe false gateInfoFull.canQueueUpOnGate
                 }
-              , geometry = fromMaybe "" gateInfoFull.geoJson
+              , geometry = case gateInfoFull.geoJson of
+                              Just geoJson -> fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson)
+                              Nothing      -> CC.defaultGeoJsonGeometry
             }
           ) gateInfoFulls
       <> case geoJson of
-            Just geoJson' -> DA.singleton CC.defaultGeoJsonFeature{ geometry = geoJson' }
+            Just geoJson' -> DA.singleton CC.defaultGeoJsonFeature{ geometry = fromMaybe CC.defaultGeoJsonGeometry (decodeGeoJsonGeometry geoJson') }
             Nothing -> []
 
 findNearestSpecialZone :: Number -> Number -> Maybe SpecialLocationList
 findNearestSpecialZone lat lon =
   let currentGeoHash = runFn3 EHU.encodeGeohash lat lon 7
-      hashMap = getSpecialLocationList (show SPECIAL_LOCATION_LIST)
+      hashMap = decodeSpecialLocationList ""
       neighbourGeoHash = (EHU.geohashNeighbours currentGeoHash) <> [currentGeoHash]
       specialZoneMaps = spy "debug zone filtered specialZones" (DM.filterWithKey (\key value -> (DM.member key hashMap) && (ifGatesWithInRadius lat lon value.gates) ) hashMap)
-      -- specialZones = DA.foldr ()
-      -- specialZoneWithinRadius = DA.filter()
   in DL.head (DM.values specialZoneMaps)
   where
     ifGatesWithInRadius :: Number -> Number -> Array JB.Location -> Boolean
@@ -788,90 +741,26 @@ findNearestSpecialZone lat lon =
 findSpecialPickupZone :: Number -> Number -> Maybe SpecialLocationList
 findSpecialPickupZone lat lon =
   let currentGeoHash = runFn3 EHU.encodeGeohash lat lon 7
-      hashMap = getSpecialLocationList (show SPECIAL_LOCATION_LIST)
+      hashMap = decodeSpecialLocationList ""
       specialZone = spy "debug zone find specialZone" (DM.lookup currentGeoHash hashMap)
       nearestGate = spy "debug zone find nearestGate" case specialZone of
                                                         Just zone -> ((DA.sortWith (\gate -> getDistanceBwCordinates lat lon gate.lat gate.lng) zone.gates) DA.!! 0)
                                                         Nothing -> Nothing
       pickupZone = case specialZone, nearestGate of
                     Just zone, Just gate -> 
-                      case spy "debug zone getGeoJson" (Just $ getGeoJsonImpl zone.geoJson) of
+                      case spy "debug zone getGeoJson" (decodeGeoJson zone.geoJson) of
                         Just geoJson -> 
                           let feature = spy "debug zone feature" ((DA.filter (\feature -> feature.properties.name == gate.place) geoJson.features) DA.!! 0)
                           in case feature of
-                                -- Just feature' -> Just zone{ gates = [gate], geoJson = transformGeoJsonFeature (Just (encodeJSON feature'.geometry)) [] }
                                 Just feature' -> 
                                   let properties = feature'.properties
-                                      gatesInfoFull = SA.GateInfoFull { address : Nothing, canQueueUpOnGate : Just properties.canQueueUpOnGate, defaultDriverExtra : Just properties.defaultDriverExtra, geoJson : Just (encodeJSON feature'.geometry), name : properties.name, point : SA.LatLong { lat : gate.lat, lon : gate.lng } }
+                                      gatesInfoFull = SA.GateInfoFull { address : Nothing, canQueueUpOnGate : Just properties.canQueueUpOnGate, defaultDriverExtra : Just properties.defaultDriverExtra, geoJson : Just (AC.stringify $ AE.encodeJson feature'.geometry), name : properties.name, point : SA.LatLong { lat : gate.lat, lon : gate.lng } }
                                   in Just zone{ gates = [gate], geoJson = transformGeoJsonFeature Nothing [gatesInfoFull]  }
                                 Nothing -> Nothing
                         Nothing -> Nothing
                     _, _ -> Nothing
   in pickupZone
 
--- address :: Maybe String,
---   canQueueUpOnGate :: Maybe Boolean,
---   defaultDriverExtra :: Maybe Int,
---   geoJson :: Maybe String,
---   name :: String,
---   point :: LatLong
--- -- type SpecialLocationList = {
---     geoJson :: String
---   , gates :: Array JB.Location
---   , locationName :: String
---   , category :: String
---   , city :: String
--- }
-
--- transformSpecialLocation :: SpecialLocationMap
--- transformSpecialLocation
-
--- dummySpecialLocationList :: SA.SpecialLocationFull
--- dummySpecialLocationList = SA.SpecialLocationFull {
---     locationName : ""
---   , category : ""
---   , merchantOperatingCityId : Nothing
---   , gatesInfo : [dummyGateInfoFull1, dummyGateInfoFull2]
---   , gates : [dummyGatesInfo1, dummyGatesInfo2]
---   , geoJson : Just "{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"coordinates\":[[[[77.62169214923057,12.942371885297348],[77.62190544485338,12.941706210794209],[77.62255491804086,12.941974816509628],[77.62215708575593,12.942610126267724],[77.62169214923057,12.942371885297348]]]],\"type\":\"MultiPolygon\"},\"id\":0}"
--- }
-
--- dummySpecialLocationLists :: SA.SpecialLocationFullRes
--- dummySpecialLocationLists = SA.SpecialLocationFullRes [dummySpecialLocationList]
-
--- dummyGatesInfo1 :: SA.GatesInfo
--- dummyGatesInfo1 = SA.GatesInfo {
---     name : "place1"
---   , point : SA.LatLong{ lat : 1.0, lon : 2.0 }
---   , address : Nothing
--- }
-
--- dummyGatesInfo2 :: SA.GatesInfo
--- dummyGatesInfo2 = SA.GatesInfo {
---     name : "place2"
---   , point : SA.LatLong{ lat : 3.0, lon : 4.0 }
---   , address : Nothing
--- }
-
--- dummyGateInfoFull1 :: SA.GateInfoFull
--- dummyGateInfoFull1 = SA.GateInfoFull{
---     address : Nothing
---   , canQueueUpOnGate : Nothing
---   , defaultDriverExtra : Nothing
---   , geoJson : Just "{\"type\":\"Feature\",\"properties\":{\"name\":\"gate1\"},\"geometry\":{\"coordinates\":[[[[77.6222050173796,12.942196707957578],[77.62237038140256,12.941830003017529],[77.62257648728394,12.941909416871766],[77.62233682928166,12.942294807276923],[77.6222050173796,12.942196707957578]]]],\"type\":\"MultiPolygon\"},\"id\":2}"
---   , name : "place1"
---   , point : SA.LatLong{ lat : 1.0, lon : 2.0 }
--- }
-
--- dummyGateInfoFull2 :: SA.GateInfoFull
--- dummyGateInfoFull2 = SA.GateInfoFull{
---     address : Nothing
---   , canQueueUpOnGate : Nothing
---   , defaultDriverExtra : Nothing
---   , geoJson : Just "{\"type\":\"Feature\",\"properties\":{\"name\":\"gate2\"},\"geometry\":{\"coordinates\":[[[[77.6217592534947,12.942332178435294],[77.62188387565658,12.941991166401266],[77.62199891149822,12.94208225870267],[77.62185511669583,12.942362542498316],[77.6217592534947,12.942332178435294]]]],\"type\":\"MultiPolygon\"},\"id\":1}"
---   , name : "place2"
---   , point : SA.LatLong{ lat : 3.0, lon : 4.0 }
--- }
 checkSpecialPickupZone :: Maybe String -> Boolean
 checkSpecialPickupZone maybeLabel = 
   case maybeLabel of

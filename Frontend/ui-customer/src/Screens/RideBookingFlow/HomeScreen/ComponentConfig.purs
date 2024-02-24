@@ -1433,15 +1433,6 @@ chooseYourRideConfig state = ChooseYourRide.config
     zoneType = state.props.zoneType.sourceTag
   }
 
-
-specialLocationIcons :: ZoneType -> String
-specialLocationIcons tag =
-  case tag of
-    METRO -> "ny_ic_metro_black"
-    _     -> ""
-
-
-
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
 specialLocationConfig srcIcon destIcon isAnim animConfig = {
     sourceSpecialTagIcon : srcIcon
@@ -1450,16 +1441,6 @@ specialLocationConfig srcIcon destIcon isAnim animConfig = {
   , isAnimation : isAnim
   , autoZoom : true
   , polylineAnimationConfig : animConfig
-}
-
-updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> JB.UpdateRouteMarker
-updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon mapRouteConfig = {
-    locations : locations
-  , sourceName : sourceName
-  , destName : destName
-  , sourceIcon : sourceIcon
-  , destIcon : destIcon
-  , mapRouteConfig : mapRouteConfig
 }
 
 setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit
