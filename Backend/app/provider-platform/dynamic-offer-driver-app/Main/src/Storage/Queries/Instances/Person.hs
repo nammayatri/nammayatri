@@ -71,7 +71,8 @@ instance FromTType' BeamP.Person Person where
             totalEarnedCoins = totalEarnedCoins,
             usedCoins = usedCoins,
             registrationLat = registrationLat,
-            registrationLon = registrationLon
+            registrationLon = registrationLon,
+            useFakeOtp = useFakeOtp
           }
 
 instance ToTType' BeamP.Person Person where
@@ -113,5 +114,6 @@ instance ToTType' BeamP.Person Person where
         BeamP.totalEarnedCoins = totalEarnedCoins,
         BeamP.usedCoins = usedCoins,
         BeamP.registrationLat = registrationLat,
-        BeamP.registrationLon = registrationLon
+        BeamP.registrationLon = registrationLon,
+        BeamP.useFakeOtp = useFakeOtp
       }

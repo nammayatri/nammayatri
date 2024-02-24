@@ -423,5 +423,6 @@ instance ToTType' BeamP.Person Person where
         BeamP.hasCompletedSafetySetup = hasCompletedSafetySetup,
         BeamP.registrationLat = registrationLat,
         BeamP.registrationLon = registrationLon,
+        BeamP.useFakeOtp = useFakeOtp,
         BeamP.followsRide = followsRide
       }

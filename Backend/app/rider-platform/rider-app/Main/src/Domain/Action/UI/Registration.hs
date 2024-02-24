@@ -216,10 +216,10 @@ auth req mbBundleVersion mbClientVersion = do
   checkSlidingWindowLimit (authHitsCountKey person)
   _ <- cachePersonOTPChannel person.id otpChannel
   let entityId = getId $ person.id
-      useFakeOtpM = useFakeSms smsCfg
+      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
-  regToken <- makeSession scfg entityId mkId (show <$> useFakeOtpM)
+  regToken <- makeSession scfg entityId mkId useFakeOtpM
 
   if not person.blocked
     then do
@@ -275,10 +275,10 @@ signatureAuth req mbBundleVersion mbClientVersion = do
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
       >>= maybe (createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchant) return
   let entityId = getId $ person.id
-      useFakeOtpM = useFakeSms smsCfg
+      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
-  regToken <- makeSession scfg entityId mkId (show <$> useFakeOtpM)
+  regToken <- makeSession scfg entityId mkId useFakeOtpM
   if not person.blocked
     then do
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
@@ -290,10 +290,11 @@ signatureAuth req mbBundleVersion mbClientVersion = do
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
 
-buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> Context.City -> Id DMOC.MerchantOperatingCity -> m SP.Person
-buildPerson req mobileNumber notificationToken bundleVersion clientVersion merchantId currentCity merchantOperatingCityId = do
+buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> DMerchant.Merchant -> Context.City -> Id DMOC.MerchantOperatingCity -> m SP.Person
+buildPerson req mobileNumber notificationToken bundleVersion clientVersion merchant currentCity merchantOperatingCityId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
+  let useFakeOtp = if mobileNumber `elem` merchant.fakeOtpMobileNumbers then Just "7891" else Nothing
   personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   useFraudDetection <- do
@@ -330,7 +331,7 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         deviceToken = req.deviceToken,
         notificationToken = notificationToken,
         description = Nothing,
-        merchantId = merchantId,
+        merchantId = merchant.id,
         currentCity = currentCity,
         merchantOperatingCityId = merchantOperatingCityId,
         referralCode = Nothing,
@@ -352,6 +353,7 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         hasCompletedSafetySetup = False,
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon,
+        useFakeOtp,
         followsRide = False
       }
 
@@ -476,7 +478,7 @@ createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion 
           ( MerchantOperatingCityNotFound $
               "merchantId: " <> merchant.id.getId <> " ,city: " <> show currentCity
           )
-  person <- buildPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchant.id currentCity merchantOperatingCityId
+  person <- buildPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchant currentCity merchantOperatingCityId
   createPersonStats <- makePersonStats person
   _ <- Person.create person
   _ <- QDFS.create $ makeIdlePersonFlowStatus person

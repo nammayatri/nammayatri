@@ -113,6 +113,7 @@ data PersonE e = Person
     hasCompletedSafetySetup :: Bool,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double,
+    useFakeOtp :: Maybe Text,
     followsRide :: Bool
   }
   deriving (Generic)

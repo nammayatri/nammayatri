@@ -99,7 +99,8 @@ data PersonE e = Person
     totalEarnedCoins :: Int,
     usedCoins :: Int,
     registrationLat :: Maybe Double,
-    registrationLon :: Maybe Double
+    registrationLon :: Maybe Double,
+    useFakeOtp :: Maybe Text
   }
   deriving (Generic)
 

@@ -64,7 +64,8 @@ data PersonT f = PersonT
     totalEarnedCoins :: B.C f Int,
     usedCoins :: B.C f Int,
     registrationLat :: B.C f (Maybe Double),
-    registrationLon :: B.C f (Maybe Double)
+    registrationLon :: B.C f (Maybe Double),
+    useFakeOtp :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

@@ -73,6 +73,7 @@ data PersonT f = PersonT
     hasCompletedSafetySetup :: B.C f Bool,
     registrationLat :: B.C f (Maybe Double),
     registrationLon :: B.C f (Maybe Double),
+    useFakeOtp :: B.C f (Maybe Text),
     followsRide :: B.C f Bool
   }
   deriving (Generic, B.Beamable)

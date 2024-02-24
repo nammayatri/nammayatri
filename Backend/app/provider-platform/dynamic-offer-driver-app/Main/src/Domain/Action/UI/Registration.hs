@@ -31,6 +31,7 @@ import Domain.Action.UI.DriverReferral
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Merchant.TransporterConfig as TC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
@@ -143,10 +144,10 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
       >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id merchantOpCityId isDashboard) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
-      useFakeOtpM = useFakeSms smsCfg
+      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
-  token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM) merchantOpCityId.getId
+  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId
   _ <- QR.create token
   QP.updatePersonVersions person mbBundleVersion mbClientVersion
   whenNothing_ useFakeOtpM $ do
@@ -167,10 +168,9 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
-createDriverDetails personId merchantId merchantOpCityId = do
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
+createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   now <- getCurrentTime
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast personId
   mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
   let driverInfo =
@@ -213,10 +213,11 @@ createDriverDetails personId merchantId merchantOpCityId = do
   QD.create driverInfo
   pure ()
 
-makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
-makePerson req mbBundleVersion mbClientVersion merchantId merchantOperatingCityId isDashboard = do
+makePerson :: EncFlow m r => AuthReq -> TC.TransporterConfig -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+makePerson req transporterConfig mbBundleVersion mbClientVersion merchantId merchantOperatingCityId isDashboard = do
   pid <- BC.generateGUID
   now <- getCurrentTime
+  let useFakeOtp = if req.mobileNumber `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
   encMobNum <- encrypt req.mobileNumber
   return $
     SP.Person
@@ -254,7 +255,8 @@ makePerson req mbBundleVersion mbClientVersion merchantId merchantOperatingCityI
         totalEarnedCoins = 0,
         usedCoins = 0,
         registrationLat = req.registrationLat,
-        registrationLon = req.registrationLon
+        registrationLon = req.registrationLon,
+        useFakeOtp
       }
 
 makeSession ::
@@ -302,9 +304,10 @@ verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard = do
-  person <- makePerson req mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  person <- makePerson req transporterConfig mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard
   void $ QP.create person
-  createDriverDetails (person.id) merchantId merchantOpCityId
+  createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
   pure person
 
 verify ::
