@@ -181,8 +181,14 @@ getTravelledDistance (Just rideId) estimatedDistance = do
   multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get key
   case multipleRoutes of
     Just routes -> do
-      let distance = minimum $ map (RI.distance . RI.routeInfo) (filter (not . RI.deviation . RI.deviationInfo) routes)
-      return $ fromMaybe estimatedDistance distance
+      let undeviatedRoute = find (not . RI.deviation . RI.deviationInfo) routes
+      case undeviatedRoute of
+        Just route -> do
+          let distance = RI.distance $ RI.routeInfo route
+          return $ fromMaybe estimatedDistance distance
+        Nothing -> do
+          logInfo $ "UndeviatedRoute not found for ride" <> show rideId
+          return estimatedDistance
     Nothing -> do
       logInfo $ "MultipleRoutes not found for ride" <> show rideId
       return estimatedDistance
