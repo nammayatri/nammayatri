@@ -1,4 +1,4 @@
-const cacheMap = {};
+let cacheMap = {};
 
 export const getFromCache = function (key, nothing, just) {
   if (typeof cacheMap[key] !== "undefined") {
@@ -11,4 +11,7 @@ export const getFromCache = function (key, nothing, just) {
 export const setInCache = function (key, value) {
   cacheMap[key] = value;
   return value;
+}
+export const clearCache = function () {
+  cacheMap = {};
 }

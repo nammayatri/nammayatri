@@ -20,7 +20,7 @@ import Common.Resources.Constants (pickupZoomLevel, zoomLevel)
 import Common.Types.App (LazyCheck(..), Paths)
 import Components.DriverInfoCard.Common.View (addressShimmerView, driverDetailsView, driverInfoShimmer, sourceDestinationView)
 import Constants.Configs (getPolylineAnimationConfig)
-import Data.Array (any, head, length, mapWithIndex, (!!), notElem)
+import Data.Array (any, head, length, mapWithIndex, (!!), notElem, elem)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn2)
 import Data.Lens ((^.))
@@ -83,12 +83,13 @@ screen initialState globalState =
                   case initialState.data.driverInfoCardState of
                     Nothing -> pure unit
                     Just ride -> do
-                      void $ clearChatMessages
-                      void $ storeCallBackMessageUpdated push ride.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages
-                      void $ storeCallBackOpenChatScreen push OpenChatScreen
-                      void $ startChatListenerService
-                      void $ pure $ scrollOnResume push ScrollToBottom
-                      push InitializeChat
+                      when (initialState.props.isRideStarted && not initialState.props.currentUserOnRide) $ do
+                          void $ clearChatMessages
+                          void $ storeCallBackMessageUpdated push ride.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages
+                          void $ storeCallBackOpenChatScreen push OpenChatScreen
+                          void $ startChatListenerService
+                          void $ pure $ scrollOnResume push ScrollToBottom
+                          push InitializeChat
                 when tracking.shouldPush $ void $ launchAff $ flowRunner globalState $ driverLocationTracking push UpdateStatus 2000.0 tracking.id "trip"
               MockFollowRide -> void $ launchAff $ flowRunner globalState $ updateMockData push initialState tracking.id
               _ -> pure unit
@@ -584,20 +585,17 @@ headerView push state =
           , background Color.green100
           , onClick push $ const $ MessageEmergencyContact
           , accessibility ENABLE
-          , alpha $ if enableChat && (not $ isMockDrill state)  then 0.5 else 1.0
-          , clickable $ enableChat && (not $ isMockDrill state)
+          , alpha $ if state.props.isMock  then 0.5 else 1.0
+          , clickable $ not state.props.isMock
           , padding $ Padding 20 10 20 10
           ]
           [ imageView
-              [ imageWithFallback $ if state.data.config.feature.enableChat && (currentFollower.priority == 0) then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
+              [ imageWithFallback $ if state.data.config.feature.enableChat && (currentFollower.priority == 0) && state.props.isRideStarted && not state.props.currentUserOnRide then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
               , height $ V 20
               , width $ V 20
               ]
           ]
       ]
-    where enableChat = case state.data.currentFollower of
-            Just follower -> notElem follower.bookingId ["", "mock_drill"]
-            Nothing -> false
 
 emergencyActionsView ::
   forall w.
@@ -630,8 +628,8 @@ buttonView push state =
     , gravity CENTER
     , padding $ Padding 16 12 16 12
     , onClick push $ const CallPolice
-    , alpha $ if isMockDrill state then 0.5 else 1.0
-    , clickable $ not $ isMockDrill state
+    , alpha $ if state.props.isMock  then 0.5 else 1.0
+    , clickable $ not state.props.isMock
     ]
     [ imageView
         [ width $ V 16
@@ -817,10 +815,10 @@ driverLocationTracking push action duration id routeState = do
   addSosMarkers mbStatus point = case mbStatus of
     Nothing -> pure unit
     Just status -> case status of
-      Common.Resolved -> do
+      _ | elem status [Common.Resolved, Common.MockResolved] -> do
         _ <- pure $ removeMarker "SOSMarkerLabel"
         liftFlow $ addAndUpdateRideSafeOverlay point
-      Common.Pending -> do
+      _ | elem status [Common.Pending, Common.MockPending] -> do
         liftFlow $ addAndUpdateSOSRipples point
         liftFlow $ addNavigateMarker point push OnNavigate
       _ -> pure unit

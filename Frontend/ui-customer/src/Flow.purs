@@ -32,7 +32,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans as App
-import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex)
+import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem)
 import Data.Array as Arr
 import Data.Either (Either(..), either)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
@@ -187,6 +187,7 @@ import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBoo
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.Config(getNumbersToWhiteList)
 import SessionCache(getValueFromWindow, setValueInWindow)
+import LocalStorage.Cache (clearCache)
 
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
@@ -954,6 +955,7 @@ homeScreenFlow = do
                                       void $ pure $ metaLogEvent "ny_user_ride_completed"
                                       void $ updateLocalStage HomeScreen
                                       setValueToLocalStore IS_SOS_ACTIVE "false"
+                                      removeChatService ""
                                       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
                                       if (state.props.bookingId /= "") then do
                                         (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
@@ -1029,6 +1031,7 @@ homeScreenFlow = do
       void $ pure $ deleteValueFromLocalStore CONTACTS
       void $ pure $ deleteValueFromLocalStore USER_EMAIL
       void $ pure $ factoryResetApp ""
+      void $ pure $ clearCache ""
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_logout"
       void $ pure $ (setText (getNewIDWithTag "EnterMobileNumberEditText") "" )
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> EnterMobileNumberScreenData.initData)
@@ -1603,7 +1606,9 @@ updateFollower callFollowersApi callInitUi eventType = do
             currentStage = if isJust eventType && isNothing currentFollower then MockFollowRide
                            else if noOfFollowers > 1 && isNothing currentFollower then PersonList 
                            else FollowingRide},
-          props {city = allState.homeScreen.props.city}
+          props {city = allState.homeScreen.props.city,
+          currentUserOnRide = elem allState.homeScreen.props.currentStage [RideAccepted, RideStarted],
+          isMock = elem  eventType [Just "SOS_MOCK_DRILL", Just "SOS_MOCK_DRILL_NOTIFY"]}
         })
   followRideScreenFlow callInitUi
   where

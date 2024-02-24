@@ -2225,6 +2225,8 @@ type FollowRideScreenProps = {
 , isNotificationExpanded :: Boolean
 , startMapAnimation :: Boolean
 , isRideStarted :: Boolean
+, isMock :: Boolean
+, currentUserOnRide :: Boolean
 }
 
 
