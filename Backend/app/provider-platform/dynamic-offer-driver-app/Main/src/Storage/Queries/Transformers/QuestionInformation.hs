@@ -15,11 +15,18 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Error.Throwing (throwError)
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuestionInformation as Beam
+import Tools.Error
 
 convertOptionsToTable :: [Domain.Types.QuestionInformation.OptionEntity] -> Data.Aeson.Value
-convertOptionsToTable = error "TODO"
+convertOptionsToTable = Data.Aeson.toJSON
 
-getOptionsFromTable :: MonadFlow m => Data.Aeson.Value -> m ([Domain.Types.QuestionInformation.OptionEntity])
-getOptionsFromTable _options = error "TODO"
+getOptionsFromTable :: MonadFlow m => Data.Aeson.Value -> m [Domain.Types.QuestionInformation.OptionEntity]
+getOptionsFromTable options = valueToMaybe options >>= fromMaybeM NotAbleToDecodeTheOptionsInLms
+
+valueToMaybe :: (MonadFlow m, FromJSON Domain.Types.QuestionInformation.OptionEntity) => Data.Aeson.Value -> m (Maybe [Domain.Types.QuestionInformation.OptionEntity])
+valueToMaybe options = return $ case Data.Aeson.fromJSON options of
+  Data.Aeson.Success a -> Just a
+  Data.Aeson.Error _ -> Nothing

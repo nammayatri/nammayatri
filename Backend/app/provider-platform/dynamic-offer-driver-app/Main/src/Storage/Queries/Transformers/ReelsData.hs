@@ -19,13 +19,19 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.ReelsData as Beam
 
 convertBottomButtonConfigToTable :: [Domain.Types.ReelsData.ReelRowButtonConfig] -> Data.Aeson.Value
-convertBottomButtonConfigToTable = error "TODO"
+convertBottomButtonConfigToTable = Data.Aeson.toJSON
 
 convertSideButtonConfigToTable :: [Domain.Types.ReelsData.ReelRowButtonConfig] -> Data.Aeson.Value
-convertSideButtonConfigToTable = error "TODO"
+convertSideButtonConfigToTable = Data.Aeson.toJSON
 
 getBottomButtonConfigFromTable :: Data.Aeson.Value -> [Domain.Types.ReelsData.ReelRowButtonConfig]
-getBottomButtonConfigFromTable _bottomButtonConfig = error "TODO"
+getBottomButtonConfigFromTable bottomButtonConfig = fromMaybe [] (valueToMaybe bottomButtonConfig)
 
 getSideButtonConfigFromTable :: Data.Aeson.Value -> [Domain.Types.ReelsData.ReelRowButtonConfig]
-getSideButtonConfigFromTable _sideButtonConfig = error "TODO"
+getSideButtonConfigFromTable sideButtonConfig = fromMaybe [] (valueToMaybe sideButtonConfig)
+
+valueToMaybe :: Data.Aeson.Value -> Maybe [Domain.Types.ReelsData.ReelRowButtonConfig]
+valueToMaybe buttonConfig =
+  case Data.Aeson.fromJSON buttonConfig of
+    Data.Aeson.Success a -> Just a
+    Data.Aeson.Error _ -> Nothing
