@@ -394,7 +394,7 @@ rideLabelConfig _ = [
       backgroundColor : Color.green900,
       text : getString SPECIAL_PICKUP_ZONE_RIDE,
       secondaryText : "",
-      imageUrl : "ic_sp_zone,",
+      imageUrl : "ny_ic_location_pin_white,",
       cancelText : "ZONE_CANCEL_TEXT_DROP",
       cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
     }

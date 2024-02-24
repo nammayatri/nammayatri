@@ -1302,7 +1302,7 @@ constructTopPillConfig disability specialZonePickup
       text: "Zone pickup",
       textColor: Color.white900,
       background: Color.green900,
-      icon : Just "ic_sp_zone"
+      icon : Just "ny_ic_location_pin_white"
     }
   | otherwise = {
       visible: false,
