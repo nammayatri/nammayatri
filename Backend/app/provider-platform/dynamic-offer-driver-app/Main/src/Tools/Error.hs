@@ -16,6 +16,7 @@
 module Tools.Error (module Tools.Error) where
 
 import EulerHS.Prelude
+import Kernel.External.Types (Language)
 import Kernel.Types.Error as Tools.Error hiding (PersonError)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
@@ -960,3 +961,51 @@ instance IsHTTPError LocationMappingError where
   toHttpCode _ = E500
 
 instance IsAPIError LocationMappingError
+
+data LmsError
+  = LmsModuleTranslationNotFound Text Language
+  | LmsVideoNotFound Text Text
+  | LmsVideoTranslationNotFound Text Language
+  | LmsQuestionTranslationNotFound Text Language
+  | LmsModuleNotFound Text
+  | LmsDriverModuleCompletionEntryNotFound Text Text
+  | LmsQuestionNotFound Text Language
+  | LmsQuestionNotFoundForModule Text Text
+  | LmsCorrectOptionNotFound Text Language
+  | NotAbleToDecodeTheOptionsInLms
+  | NotEnoughQuestionsForModuleCompletionCriteria Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LmsError
+
+instance IsBaseError LmsError where
+  toMessage = \case
+    LmsModuleTranslationNotFound moduleId language -> Just $ "Module Translation Not found for moduleId :" <> moduleId <> "- and Language:" <> show language
+    LmsVideoNotFound videoId moduleId -> Just $ "LMS video not found with videoId " <> videoId <> "- and moduleId:" <> moduleId
+    LmsVideoTranslationNotFound videoId language -> Just $ "Video Translation Not found for videoId :" <> videoId <> "- and Language:" <> show language
+    LmsQuestionTranslationNotFound questionId language -> Just $ "Question Translation Not found for questionId :" <> questionId <> "- and Language:" <> show language
+    LmsModuleNotFound moduleId -> Just $ "Module not found with id : " <> moduleId
+    LmsDriverModuleCompletionEntryNotFound moduleId personId -> Just $ "Driver module completion entry not found with module id : " <> moduleId <> " - and driver Id : " <> personId
+    LmsQuestionNotFound questionId language -> Just $ "Lms Question not found with id : " <> questionId <> " with language : " <> show language
+    LmsQuestionNotFoundForModule questionId moduleId -> Just $ "Lms Question not found with id : " <> questionId <> "for module with id : " <> moduleId
+    LmsCorrectOptionNotFound questionId language -> Just $ "Correct Option not found for question : " <> questionId <> " and language :" <> show language
+    NotAbleToDecodeTheOptionsInLms -> Just $ "Not able to deocde the options in lms question information table"
+    NotEnoughQuestionsForModuleCompletionCriteria moduleId -> Just $ "Not enough question for module completion criteria for module: " <> moduleId
+
+instance IsHTTPError LmsError where
+  toErrorCode = \case
+    LmsModuleTranslationNotFound _moduleId _language -> "LMS_MODULE_TRANSLATION_NOT_FOUND"
+    LmsVideoNotFound _ _ -> "LMS_VIDEO_NOT_FOUND"
+    LmsVideoTranslationNotFound _videoId _language -> "LMS_VIDEO_TRANSLATION_NOT_FOUND"
+    LmsQuestionTranslationNotFound _questionId _language -> "LMS_QUESTION_TRANSLATION_NOT_FOUND"
+    LmsModuleNotFound _moduleId -> "LMS_MODULE_NOT_FOUND"
+    LmsDriverModuleCompletionEntryNotFound _ _ -> "LMS_DRIVER_MODULE_COMPLETION_ENTRY_NOT_FOUND"
+    LmsQuestionNotFound _questionId _ -> "LMS_QUESTION_NOT_FOUND"
+    LmsQuestionNotFoundForModule _ _ -> "LMS_QUESTION_NOT_FOUND_FOR_MODULE"
+    LmsCorrectOptionNotFound _questionid _ -> "LMS_CORRECT_OPTION_NOT_FOUND"
+    NotAbleToDecodeTheOptionsInLms -> "NOT_ABLE_TO_DECODE_THE_OPTIONS_FIELD_IN_QUESTION_INFORMATION"
+    NotEnoughQuestionsForModuleCompletionCriteria _ -> "NOT_ENOUGH_QUESTIONS_FOR_MOUDLE_COMPLETION_CRITERIA"
+
+  toHttpCode _ = E400
+
+instance IsAPIError LmsError

@@ -1,0 +1,23 @@
+CREATE TABLE atlas_driver_offer_bpp.reels_data ();
+
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN bottom_button_config json NOT NULL default '{}';
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN carousel_big_image_url text ;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN carousel_small_image_url text ;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN carousel_text_color text ;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN carousel_text_string text ;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN description text ;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN language text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN rank integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN reel_key text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN share_link text ;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN side_button_config json NOT NULL default '{}';
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN threshold_config text ;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN thumbnail_image_url text ;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN title text ;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN video_url text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.reels_data ADD PRIMARY KEY ( id);
