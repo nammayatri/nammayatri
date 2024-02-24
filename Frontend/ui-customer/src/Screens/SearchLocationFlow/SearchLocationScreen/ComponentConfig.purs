@@ -169,7 +169,8 @@ mapInputViewConfig :: ST.SearchLocationScreenState -> Boolean -> InputView.Input
 --           (inputViewArray state)
 mapInputViewConfig state isEditable = 
   let 
-    headerVisibility = not $ state.props.actionType == ST.SearchLocationAction
+    getInputView = getInputViewConfigBasedOnActionType state.props.actionType
+    headerVisibility = getInputView.headerVisibility
     imageLayoutMargin = if headerVisibility then MarginLeft 24 else MarginLeft 16
     backIconPadding = if headerVisibility then PaddingTop 16 else PaddingTop 8
     headerText = 
@@ -220,12 +221,6 @@ mapInputViewConfig state isEditable =
 --       }
 --     ]
 
--- getInputViewConfigBasedOnActionType :: ST.SearchLocationActionType -> { srcPrefixImageName :: String, destPrefixImageName :: String, srcPlaceHolder :: String, destPlaceHolder :: String, inputViewMargin :: Margin, headerVisibility :: Boolean, imageLayoutMargin :: Margin }
--- getInputViewConfigBasedOnActionType actionType =
---   case actionType of 
---         ST.AddingStopAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : "Enter Pickup Location", destPlaceHolder : "Add Stop",  inputViewMargin : MarginTop 8,  headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
---         ST.SearchLocationAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : "Enter Pickup Location", destPlaceHolder : "Add Stop", inputViewMargin : MarginTop 8, headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
---         ST.MetroStationSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Starting From?", destPlaceHolder : "Where to?", inputViewMargin : MarginTop 0, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
   where
     transformInputViewArray item = 
       { padding : Padding 8 7 8 7 
@@ -270,26 +265,35 @@ mapInputViewConfig state isEditable =
         addressOnMap = state.data.latLonOnMap.address
         pickUpFocussed = state.props.focussedTextField == MB.Just ST.SearchLocPickup 
         dropLocFocussed = state.props.focussedTextField == MB.Just ST.SearchLocDrop 
+        getInputView = getInputViewConfigBasedOnActionType state.props.actionType
       in 
         [ { textValue :  srcLoc
           , isFocussed : pickUpFocussed
-          , prefixImageName : "ny_ic_green_circle"
-          , margin : MarginTop 8
-          , placeHolder : if state.props.actionType == ST.SearchLocationAction then (getString START_) else (getString ENTER_PICKUP_LOC)
+          , prefixImageName : getInputView.srcPrefixImageName
+          , margin : getInputView.inputViewMargin
+          , placeHolder : getInputView.srcPlaceHolder
           , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
           , id : ST.SearchLocPickup
           , isEditable : not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
           } ,
           { textValue : destLoc
           , isFocussed : dropLocFocussed
-          , prefixImageName : if state.props.actionType == ST.SearchLocationAction then "ny_ic_red_circle" else "ny_ic_blue_circle"
-          , margin : MarginTop 8
-          , placeHolder : if state.props.actionType == ST.SearchLocationAction then (getString WHERE_TO) else (getString ADD_STOP)
+          , prefixImageName : getInputView.destPrefixImageName
+          , margin : getInputView.inputViewMargin
+          , placeHolder : getInputView.destPlaceHolder
           , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
           , id : ST.SearchLocDrop
           , isEditable : true
           }
         ]
+      
+    getInputViewConfigBasedOnActionType :: ST.SearchLocationActionType -> { srcPrefixImageName :: String, destPrefixImageName :: String, srcPlaceHolder :: String, destPlaceHolder :: String, inputViewMargin :: Margin, headerVisibility :: Boolean, imageLayoutMargin :: Margin }
+    getInputViewConfigBasedOnActionType actionType =
+      case actionType of 
+            ST.AddingStopAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : (getString ENTER_PICKUP_LOC), destPlaceHolder : (getString ADD_STOP),  inputViewMargin : MarginTop 8,  headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
+            ST.SearchLocationAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : (getString START_), destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
+            ST.MetroStationSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Starting From?", destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+
    
 
 menuButtonConfig :: ST.SearchLocationScreenState -> ST.Location -> MenuButton.Config

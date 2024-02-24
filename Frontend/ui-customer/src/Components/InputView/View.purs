@@ -21,7 +21,7 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, afterRender, clickable, textSize)
+import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize)
 import Data.Array (mapWithIndex, length)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
@@ -38,7 +38,7 @@ view push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , orientation HORIZONTAL
+    , orientation VERTICAL
     , padding $ PaddingHorizontal 16 16
     , background Color.black900 
     ][  if state.headerVisibility then backPressView state push else emptyTextView
@@ -48,7 +48,7 @@ view push state =
         , padding $ PaddingVertical 16 16
         , gravity CENTER_VERTICAL
         ][  if not state.headerVisibility then backPressView state push else emptyTextView
-          , if state.imageLayoutVisibility == VISIBLE then inputImageView push state else emptyTextView
+          , inputImageView push state
           , inputLayoutViews push state]
         ]
 

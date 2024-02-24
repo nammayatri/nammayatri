@@ -315,7 +315,8 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
 --                       currentLoc = MB.Just updatedLoc
 --                     , locationList = DA.sortBy (comparing (_.actualDistance)) $ updateLocListWithDistance recentSearches (MB.fromMaybe 0.0 updatedLoc.lat) (MB.fromMaybe 0.0 updatedLoc.lon) true state.appConfig.suggestedTripsAndLocationConfig.locationWithinXDist }
 eval (UpdateLocAndLatLong cachedSearches lat lng) state = do 
-  let updatedLoc = {placeId : MB.Nothing, city : AnyCity , addressComponents : LocationListItemController.dummyAddress , address : "Current Location" , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing, stationCode : ""}
+  let defaultAddress = if state.props.actionType == MetroStationSelectionAction then "" else "Current Location"
+      updatedLoc = {placeId : MB.Nothing, city : AnyCity , addressComponents : LocationListItemController.dummyAddress , address : defaultAddress , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing, stationCode : ""}
       shouldUpdateCurrent = MB.fromMaybe 0.0 state.data.currentLoc.lat == 0.0
       shouldUpdateSrc = MB.maybe true (\loc -> (MB.fromMaybe 0.0 loc.lat) == 0.0) (state.data.srcLoc)
   continue state{ data 
