@@ -215,6 +215,9 @@ instance BeamBackend.HasSqlValueSyntax be String => BeamBackend.HasSqlValueSynta
 roundToMidnightUTC :: UTCTime -> UTCTime
 roundToMidnightUTC (UTCTime day _) = UTCTime day 0
 
+roundToMidnightUTCToDate :: UTCTime -> UTCTime
+roundToMidnightUTCToDate (UTCTime day _) = UTCTime (addDays 1 day) 0
+
 findAllRideItems ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
@@ -242,7 +245,7 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> person.mobileNumberHash B.==?. B.val_ (Just hash)) mbCustomerPhoneDBHash
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverMobileNumber -> ride.driverMobileNumber B.==?. B.val_ driverMobileNumber) mbDriverPhone
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTC defaultTo)) mbTo
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
               )
               do
