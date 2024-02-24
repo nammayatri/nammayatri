@@ -1239,9 +1239,17 @@ eval (DriverInfoCardActionController (DriverInfoCardController.BannerStateChange
 eval(MessagingViewActionController (MessagingView.Call)) state = do
   void $ pure $ performHapticFeedback unit
   void $ pure $ hideKeyboardOnNavigation true
-  if length state.data.config.callOptions > 1 then
-    continue state { props { showCallPopUp = true } }
-  else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
+  if state.props.isChatWithEMEnabled 
+    then do
+      let filterContacts = filter (\item -> item.priority == 0) $ fromMaybe [] state.data.contactList
+      case head filterContacts of
+        Nothing -> continue state
+        Just contact -> do 
+          void $ pure $ showDialer contact.number true
+          continue state
+    else if length state.data.config.callOptions > 1 then
+      continue state { props { showCallPopUp = true } }
+    else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
 eval (MessagingViewActionController (MessagingView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""

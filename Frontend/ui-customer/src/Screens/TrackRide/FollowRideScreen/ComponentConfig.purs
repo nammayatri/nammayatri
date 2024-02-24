@@ -137,7 +137,7 @@ getPeekHeight _ =
 
     requiredPeekHeight = getDefaultPixelSize finalHeight
   in
-    if requiredPeekHeight == 0 then 300 else requiredPeekHeight
+    if requiredPeekHeight < 300 then 300 else requiredPeekHeight
 
 
 getChatSuggestions :: FollowRideScreenState -> Array String

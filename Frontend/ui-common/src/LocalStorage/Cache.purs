@@ -9,6 +9,7 @@ import DecodeUtil
 
 foreign import getFromCache :: forall a.Fn3 String (Maybe a) (a -> (Maybe a)) (Maybe a)
 foreign import setInCache ::forall a. Fn2 String a a
+foreign import clearCache :: String -> Unit
 
 
 

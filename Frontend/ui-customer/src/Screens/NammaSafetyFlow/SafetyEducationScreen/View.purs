@@ -305,7 +305,6 @@ descriptionView push state =
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , orientation VERTICAL
-            , padding getSafePadding
             ]
             [ relativeLayout
                 [ width MATCH_PARENT
@@ -314,7 +313,8 @@ descriptionView push state =
                 , onClick push $ const $ ShowVideoView true
                 ]
                 [ imageView
-                    [ imageUrlWithFallback $ ListImageUrl videoCoverImage viewConfig.videoId
+                    [ if EHC.os == "IOS" then imageUrl videoCoverImage
+                      else imageUrlWithFallback $ ListImageUrl videoCoverImage viewConfig.videoId
                     , height $ V 250
                     , width MATCH_PARENT
                     ]
@@ -342,8 +342,8 @@ descriptionView push state =
                           decodedFontStyle = fromMaybe FontStyle.Tags $ FontStyle.decodeFontStyle $ unsafeToForeign item.fontStyle
                         in
                           linearLayout
-                            [ width WRAP_CONTENT
-                            , height WRAP_CONTENT
+                            [ height WRAP_CONTENT
+                            , width MATCH_PARENT
                             , gravity CENTER_VERTICAL
                             ]
                             [ textView
@@ -355,12 +355,12 @@ descriptionView push state =
                                   ] <> FontStyle.getFontStyle decodedFontStyle TypoGraphy
                             , textView
                                 $ [ textFromHtml item.text
-                                  , width WRAP_CONTENT
                                   , height WRAP_CONTENT
                                   , color item.color
                                   , gravity LEFT
                                   , margin $ Margin item.marginLeft item.marginTop 0 0
                                   , padding $ PaddingVertical 3 3
+                                  , weight 1.0
                                   ]
                                 <> FontStyle.getFontStyle decodedFontStyle TypoGraphy
                             ]

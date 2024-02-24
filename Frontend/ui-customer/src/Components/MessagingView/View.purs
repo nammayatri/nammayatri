@@ -444,7 +444,7 @@ chatComponent state push config isLastItem receiver index =
   , onAnimationEnd (\_ -> when isLastItem $ void $ scrollToEnd (getNewIDWithTag "ChatScrollView") true) (const NoAction)
   ][ ((if enableFlexBox then flexBoxLayout else linearLayout) $ 
      [ height MATCH_PARENT
-     , width $ if (os == "IOS" && (STR.length config.message) > (if state.languageKey == "HI_IN" then 50 else 30) ) then MATCH_PARENT else WRAP_CONTENT
+     , width $ if (os == "IOS" && (STR.length message) > (if state.languageKey == "HI_IN" then 50 else 30) ) then MATCH_PARENT else WRAP_CONTENT
      , accessibility DISABLE_DESCENDANT
      , background chatConfig.background
      , cornerRadii chatConfig.cornerRadii

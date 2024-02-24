@@ -120,24 +120,24 @@ eval action state = case action of
   UpdateCurrentStage stage -> continue state{data{currentStage = stage}}
   NotificationListener notification -> 
     case notification of
-      "SOS_TRIGGERED" -> exit $ RestartTracking state
+      "SOS_TRIGGERED" -> exit $ RestartTracking state{props{isMock = false}}
       "SOS_RESOLVED" -> do
         _ <- pure $ clearAudioPlayer ""
-        if isMockDrill state 
-          then  
-            continueWithCmd state{data{sosStatus = Just MockResolved, emergencyAudioStatus = COMPLETED}}[ do
+        let isMock = state.data.currentStage == MockFollowRide
+        if isMock then  
+            continueWithCmd state{data{sosStatus = Just MockResolved, emergencyAudioStatus = COMPLETED}, props{isMock = isMock}}[ do
               void $ removeSOSRipples ""
               void $ addAndUpdateRideSafeOverlay $ getPoint mockDriverLocation
               pure NoAction
             ]
-          else exit $ RestartTracking state{data{emergencyAudioStatus = COMPLETED}}
+          else exit $ RestartTracking state{data{emergencyAudioStatus = COMPLETED}, props{isMock = isMock}}
       "SOS_MOCK_DRILL" -> startAudioPlayerCmd [do
           push <- getPushFn Nothing "FollowRideScreen"
           void $ launchAff $ flowRunner defaultGlobalState $ do
             liftFlow $ addAndUpdateSOSRipples $ getPoint mockDriverLocation
             liftFlow $ push $ UpdateMockSOSStatus $ Just MockPending
           pure NoAction
-        ] state
+        ] state{props{isMock = true}}
       _ -> continue state
   StopAudioPlayer -> do
     _ <- pure $ clearAudioPlayer ""
@@ -198,7 +198,7 @@ eval action state = case action of
     if driverInfoCardState.status == "CANCELLED" then do
       void $ pure $ toast $ getString RIDE_CANCELLED
       exit $ Exit state
-    else if isNothing state.data.driverInfoCardState
+    else if isNothing state.data.driverInfoCardState || (fromMaybe mockDriverInfo state.data.driverInfoCardState).status /= driverInfoCardState.status
       then exit $ RestartTracking newState
       else 
         if resp.status == "COMPLETED" 
@@ -252,7 +252,7 @@ eval action state = case action of
     case state.data.currentFollower of
         Nothing -> continue state
         Just follower -> 
-          if state.data.config.feature.enableChat && follower.priority == 0 then do
+          if state.data.config.feature.enableChat && follower.priority == 0 && state.props.isRideStarted && not state.props.currentUserOnRide then do
             if not state.props.chatCallbackInitiated then continue state else do
               _ <- pure $ performHapticFeedback unit
               _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
@@ -340,10 +340,7 @@ updateMessagesWithCmd state =
           pure unit
         else
           pure unit
-        if (state.props.showChatNotification) then
-          pure CollapseBottomSheet
-        else
-          pure NoAction
+        pure NoAction
     ]
 
 startAudioPlayerCmd :: Array (Effect Action) -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState

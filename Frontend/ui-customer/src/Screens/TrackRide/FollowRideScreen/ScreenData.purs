@@ -48,6 +48,8 @@ initData =
       , isNotificationExpanded: false
       , startMapAnimation: true
       , isRideStarted: false
+      , isMock : false
+      , currentUserOnRide : false
       }
   }
 

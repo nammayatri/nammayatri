@@ -150,7 +150,7 @@ messageNotificationView push state =
        ]  
     ]
     , separatorView state
-    , if (state.lastMessage.sentBy == "Driver" || not (didDriverMessage FunctionCall)) then quickRepliesView push state else dummyView state
+    , if (state.lastMessage.sentBy /= getCurrentUser (state.user.receiver /= "Driver")) || (state.user.receiver == "Driver" && not didDriverMessage FunctionCall) then quickRepliesView push state else dummyView state
     , if ((not $ DS.null state.lastSentMessage.sentBy) && (not $ DS.null state.lastReceivedMessage.sentBy)) then messageView push state state.lastSentMessage else dummyView state
   ]
 
@@ -183,7 +183,7 @@ messagePromtView push state =
   ]
 
 chatNotificationMessageView :: forall w action. (action -> Effect Unit) -> MessageNotificationView action -> PrestoDOM ( Effect Unit) w
-chatNotificationMessageView push state = if ((not $ didDriverMessage FunctionCall) && (not $ DS.null state.lastSentMessage.sentBy)) then messageView push state state.lastSentMessage
+chatNotificationMessageView push state = if ((state.user.receiver == "Driver" && not didDriverMessage FunctionCall) && (not $ DS.null state.lastSentMessage.sentBy)) then messageView push state state.lastSentMessage
                                             else if (not $ DS.null state.lastReceivedMessage.sentBy) then messageView push state state.lastReceivedMessage
                                             else dummyView state
 
