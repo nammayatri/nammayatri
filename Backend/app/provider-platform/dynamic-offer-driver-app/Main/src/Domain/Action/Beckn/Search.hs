@@ -23,7 +23,7 @@ where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
-import Data.List (singleton, sortBy)
+import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
@@ -285,24 +285,23 @@ addNearestDriverInfo ::
 addNearestDriverInfo Nothing estdOrQuotes = return $ map (\a -> (a, Nothing)) estdOrQuotes
 addNearestDriverInfo (Just driverPool) estdOrQuotes = do
   let mapOfDPRByVariant = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
-  matchInputWithNearestDriver estdOrQuotes mapOfDPRByVariant
+  traverse (matchInputWithNearestDriver mapOfDPRByVariant) estdOrQuotes
   where
     matchInputWithNearestDriver ::
       (HasField "vehicleVariant" a DVeh.Variant, MonadFlow m) =>
-      [a] ->
       M.Map DVeh.Variant (NonEmpty DriverPoolResult) ->
-      m [(a, Maybe NearestDriverInfo)]
-    matchInputWithNearestDriver inputs driverPools = do
-      let input = head inputs
+      a ->
+      m (a, Maybe NearestDriverInfo)
+    matchInputWithNearestDriver driverPools input = do
       let driverPool' = M.lookup input.vehicleVariant driverPools
       case driverPool' of
-        Nothing -> return $ singleton (input, Nothing)
+        Nothing -> return (input, Nothing)
         Just dp -> do
           locationId <- generateGUIDText
           let driverLatLongs = fmap (\x -> LatLong x.lat x.lon) dp
               distanceToNearestDriver = NE.head dp & (.distanceToPickup)
               nearestDriverInfo = NearestDriverInfo {..}
-          return $ singleton (input, Just nearestDriverInfo)
+          return (input, Just nearestDriverInfo)
 
 selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
 selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled farePolicies = do
