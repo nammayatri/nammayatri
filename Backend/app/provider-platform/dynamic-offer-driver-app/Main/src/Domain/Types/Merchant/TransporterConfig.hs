@@ -165,6 +165,7 @@ data TransporterConfigD u = TransporterConfig
     dummyFromLocation :: DummyLocationInfo,
     dummyToLocation :: DummyLocationInfo,
     scheduleRideBufferTime :: NominalDiffTime,
+    fakeOtpMobileNumbers :: [Text],
     considerDriversForSearch :: Bool
   }
   deriving (Generic, Show)

@@ -252,8 +252,10 @@ onVerifyRC verificationReq output = do
           RCQuery.upsert vehicleRC
           -- linking to driver
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" output.registration_number))
-          driverRCAssoc <- Domain.makeRCAssociation person.id rc.id (convertTextToUTC (Just "2099-12-12"))
-          DAQuery.create driverRCAssoc
+          mbAssoc <- DAQuery.findLinkedByRCIdAndDriverId person.id rc.id now
+          when (isNothing mbAssoc) $ do
+            driverRCAssoc <- Domain.makeRCAssociation person.id rc.id (convertTextToUTC (Just "2099-12-12"))
+            DAQuery.create driverRCAssoc
           whenJust output.registration_number $ \num -> Redis.del $ makeFleetOwnerKey num
           return Ack
         _ -> return Ack

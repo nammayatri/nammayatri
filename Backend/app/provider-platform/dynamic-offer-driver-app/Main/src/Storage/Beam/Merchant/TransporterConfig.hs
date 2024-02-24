@@ -140,6 +140,7 @@ data TransporterConfigT f = TransporterConfigT
     dummyFromLocation :: B.C f (Maybe A.Value),
     dummyToLocation :: B.C f (Maybe A.Value),
     scheduleRideBufferTime :: B.C f Seconds,
+    fakeOtpMobileNumbers :: B.C f [Text],
     considerDriversForSearch :: B.C f Bool
   }
   deriving (Generic, B.Beamable)

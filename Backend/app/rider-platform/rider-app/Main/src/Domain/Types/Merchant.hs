@@ -59,6 +59,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     numOfAllowedEditPickupLocationAttemptsThreshold :: Int,
     publicMediaFileUrlPattern :: Text,
     scheduleRideBufferTime :: NominalDiffTime,
+    fakeOtpMobileNumbers :: [Text],
     kaptureDisposition :: Text
   }
   deriving (Generic, Show)

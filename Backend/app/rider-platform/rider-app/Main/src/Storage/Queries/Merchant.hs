@@ -143,5 +143,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
         BeamM.publicMediaFileUrlPattern = publicMediaFileUrlPattern,
         BeamM.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
+        BeamM.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         BeamM.kaptureDisposition = kaptureDisposition
       }
