@@ -124,9 +124,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
               _ -> [NormalPool]
       logDebug $ "poolTypesWithFallback: " <> show poolTypesWithFallback
       let shouldDoMicroBatching = batchNum /= -1
-      allDriversNotOnRide <- calcDriverPool radiusStep merchantOpCityId_
       (currentDriverPoolBatch, poolType, nextScheduleTime) <-
-        calculateWithFallback poolTypesWithFallback $ \poolType ->
+        calculateWithFallback poolTypesWithFallback $ \poolType -> do
+          allDriversNotOnRide <- calcDriverPool poolType radiusStep merchantOpCityId_
           case poolType of
             SkipPool -> do
               incrementBatchNum searchTry.id
@@ -172,7 +172,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
               (,poolType,Just goHomeConfig.goHomeBatchDelay) <$> calculateGoHomeBatch merchantOpCityId_ transporterConfig intelligentPoolConfig goHomePool blockListedDrivers
             NormalPool -> do
               let allNearbyDriversCurrentlyNotOnRide = filterSpecialDrivers transporterConfig.specialDrivers allDriversNotOnRide
-              allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool radiusStep transporterConfig merchantOpCityId_
+              allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId_
               (,poolType,Nothing) <$> calculateNormalBatch merchantOpCityId_ transporterConfig intelligentPoolConfig (allNearbyDriversCurrentlyOnRide <> allNearbyDriversCurrentlyNotOnRide) radiusStep blockListedDrivers
       logDebug $ "finalPool: " <> show currentDriverPoolBatch
       cacheBatch currentDriverPoolBatch
@@ -297,20 +297,20 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
               return $ filterSpecialDrivers specialDrivers calculateGoHomeDriverPoolBatch
             _ -> return []
 
-        calcDriverPool radiusStep merchantOpCityId = do
+        calcDriverPool poolType radiusStep merchantOpCityId = do
           let vehicleVariant = searchTry.vehicleVariant
               merchantId = searchReq.providerId
           let pickupLoc = searchReq.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory)
-        calcDriverCurrentlyOnRidePool radiusStep transporterConfig merchantOpCityId = do
+          calculateDriverPoolWithActualDist DriverSelection poolType driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory)
+        calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
             then do
               let vehicleVariant = searchTry.vehicleVariant
               let pickupLoc = searchReq.fromLocation
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId (Just $ radiusStep - 1) (isRentalTrip searchTry.tripCategory)
+              calculateDriverCurrentlyOnRideWithActualDist DriverSelection poolType driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId (Just $ radiusStep - 1) (isRentalTrip searchTry.tripCategory)
             else pure []
         fillBatch merchantOpCityId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)
