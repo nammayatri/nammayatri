@@ -176,6 +176,7 @@ library
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
+      Domain.Action.UI.LmsModule
       Domain.Action.UI.Maps
       Domain.Action.UI.Message
       Domain.Action.UI.OnMessage
@@ -184,6 +185,7 @@ library
       Domain.Action.UI.Performance
       Domain.Action.UI.Plan
       Domain.Action.UI.Rating
+      Domain.Action.UI.Reels
       Domain.Action.UI.Registration
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
@@ -253,6 +255,7 @@ library
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
       Domain.Types.LeaderBoardConfig
+      Domain.Types.LmsEnumTypes
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Mandate
@@ -457,6 +460,7 @@ library
       Storage.CachedQueries.GoHomeConfig
       Storage.CachedQueries.KioskLocation
       Storage.CachedQueries.KioskLocationTranslation
+      Storage.CachedQueries.Lms
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
@@ -473,6 +477,7 @@ library
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
+      Storage.CachedQueries.ReelsData
       Storage.CachedQueries.RegistryMapFallback
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.DriverEdaKafka
@@ -574,6 +579,8 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.Transformers.QuestionInformation
+      Storage.Queries.Transformers.ReelsData
       Storage.Queries.Translations
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
@@ -598,15 +605,46 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      API.Action.UI.LmsModule
+      API.Action.UI.Reels
+      API.Types.UI.LmsModule
+      API.Types.UI.Reels
+      Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
       Domain.Types.InterCityTravelCities
+      Domain.Types.LmsModule
+      Domain.Types.LmsModuleTranslation
+      Domain.Types.LmsModuleVideoInformation
+      Domain.Types.LmsVideoTranslation
       Domain.Types.MerchantState
+      Domain.Types.ModuleCompletionInformation
+      Domain.Types.QuestionInformation
+      Domain.Types.QuestionModuleMapping
+      Domain.Types.ReelsData
+      Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPoolConfig
       Storage.Beam.InterCityTravelCities
+      Storage.Beam.LmsModule
+      Storage.Beam.LmsModuleTranslation
+      Storage.Beam.LmsModuleVideoInformation
+      Storage.Beam.LmsVideoTranslation
       Storage.Beam.MerchantState
+      Storage.Beam.ModuleCompletionInformation
+      Storage.Beam.QuestionInformation
+      Storage.Beam.QuestionModuleMapping
+      Storage.Beam.ReelsData
+      Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPoolConfig
       Storage.Queries.InterCityTravelCities
+      Storage.Queries.LmsModule
+      Storage.Queries.LmsModuleTranslation
+      Storage.Queries.LmsModuleVideoInformation
+      Storage.Queries.LmsVideoTranslation
       Storage.Queries.MerchantState
+      Storage.Queries.ModuleCompletionInformation
+      Storage.Queries.QuestionInformation
+      Storage.Queries.QuestionModuleMapping
+      Storage.Queries.ReelsData
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:

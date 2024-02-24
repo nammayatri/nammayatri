@@ -1,0 +1,21 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Domain.Action.UI.Reels where
+
+import API.Types.UI.Reels
+import qualified API.Types.UI.Reels
+import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Person
+import qualified Environment
+import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Types
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
+import Servant
+import Tools.Auth
+
+getReelsGetAllReelVideos :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Text -> Environment.Flow API.Types.UI.Reels.ReelsResp
+getReelsGetAllReelVideos = error "Logic yet to be decided"
