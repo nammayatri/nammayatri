@@ -877,7 +877,7 @@ eval (TimeUpdate time lat lng) state = do
             void $ launchAff $ flowRunner defaultGlobalState $ do
               push <- liftFlow $ getPushFn Nothing "HomeScreen"
               _ <- pure $ JB.exitLocateOnMap ""
-              let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"], geoJson = zone.geoJson, points = zone.gates, locationName = zone.locationName, navigateToNearestGate = false, specialZoneMarkerConfig{ showZoneLabel = true, labelActionImage = "ny_ic_navigation_blue_frame", labelImage = "ny_ic_city_police", showLabelActionImage = true } }
+              let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"], geoJson = zone.geoJson, points = zone.gates, locationName = zone.locationName, navigateToNearestGate = false, specialZoneMarkerConfig{ showZoneLabel = true, labelActionImage = "ny_ic_navigation_blue_frame", labelImage = "ny_ic_city_police", showLabelActionImage = true }, enableMapClickListener = true }
               pure unit
             pure unit
           else pure unit

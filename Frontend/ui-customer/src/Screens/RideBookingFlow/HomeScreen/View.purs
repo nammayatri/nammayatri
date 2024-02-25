@@ -65,13 +65,14 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault)
+import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, defaultMarkerConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, defaultMarkerConfig, locateOnMap, locateOnMapConfig)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -211,6 +212,11 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                  when (initialState.props.zoneType.priorityTag == SPECIAL_PICKUP) $ do
+                    let specialPickupZone = spy "debug zone findSpecialPickupZone" (findSpecialPickupZone initialState.props.locateOnMapProps.sourceGeoJson initialState.props.locateOnMapProps.sourceGates initialState.data.driverInfoCardState.sourceLat initialState.data.driverInfoCardState.sourceLng)
+                    case specialPickupZone of
+                      Just pickUpZone -> runEffectFn1 locateOnMap locateOnMapConfig { geoJson = pickUpZone.geoJson, points = pickUpZone.gates, locationName = pickUpZone.locationName, navigateToNearestGate = false }
+                      Nothing -> pure unit
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 1
                 else pure unit
                 push LoadMessages
@@ -1467,7 +1473,7 @@ estimatedFareView push state =
   [ orientation VERTICAL
   , height WRAP_CONTENT
   , width MATCH_PARENT
-  , background Color.blue800
+  , background tagConfig.backgroundColor
   , clickable true
   , visibility if (state.props.currentStage == SettingPrice) then VISIBLE else GONE
   , stroke ("1," <> Color.grey900)
@@ -2771,7 +2777,14 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                       specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon true getPolylineAnimationConfig
                                     else
                                       specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
-            if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
+            if isSpecialPickupZone then do
+              let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
+                  destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText 0 }
+              _ <- pure $ removeAllPolylines ""
+              _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+              void $ delay $ Milliseconds duration
+              driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
+            else if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
                 let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
                     destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker }
@@ -2795,8 +2808,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                           walkCoordinate srcLat srcLon dstLat dstLon
                             newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
                             srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
-                            destmarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText routes.distance }
-                        _ <- liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destmarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+                            destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText routes.distance }
+                        _ <- liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
                         _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                         void $ delay $ Milliseconds duration
                         driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState expCounter
@@ -2831,6 +2844,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     pure unit
   where
     getDuration factor counter = duration * (toNumber $ pow factor counter)
+    isSpecialPickupZone = state.props.currentStage == RideAccepted && state.props.zoneType.priorityTag == SPECIAL_PICKUP && isJust state.data.driverInfoCardState.sourceAddress.area
     handleRideBookingResp (RideBookingRes respBooking) = do
       let bookingStatus = respBooking.status
       void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.currentSearchResultType == QUOTES)}}}
@@ -2848,7 +2862,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               Nothing -> pure unit
     
     getMarkerPrimaryText distance =
-      if state.props.currentStage == RideAccepted && state.props.zoneType.priorityTag == SPECIAL_PICKUP && isJust state.data.driverInfoCardState.sourceAddress.area then
+      if isSpecialPickupZone then
         fromMaybe "" state.data.driverInfoCardState.sourceAddress.area
       else 
         metersToKm distance (state.props.currentStage == RideStarted)

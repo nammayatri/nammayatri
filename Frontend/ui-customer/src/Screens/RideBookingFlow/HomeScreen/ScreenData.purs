@@ -298,7 +298,7 @@ initData = {
         referralStatus : NO_REFERRAL,
         referralCode : Nothing
       }
-    , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing }
+    , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing }
     , showSpecialZoneInfoPopup : false
     }
 }
@@ -470,10 +470,10 @@ dummyLocationName = PlaceName {
 
 specialLocation :: SpecialLocation
 specialLocation = SpecialLocation{
-    "category" :"",
-     "gates": [],
+    "category" : "",
      "locationName" : "",
-     "gatesInfo" : []
+     "gatesInfo" : [],
+     "geoJson" : Nothing
  }
 
 dummyLocation :: Location

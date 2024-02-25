@@ -2562,6 +2562,9 @@ eval (ChooseYourRideAction (ChooseYourRideController.OnIconClick autoAssign)) st
 eval (ChooseYourRideAction ChooseYourRideController.PreferencesDropDown) state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
 
+eval (ChooseYourRideAction ChooseYourRideController.SpecialZoneInfoTag) state = do
+  continue state{ props{ showSpecialZoneInfoPopup = true } }
+
 eval CheckAndAskNotificationPermission state = do 
   _ <- pure $ checkAndAskNotificationPermission false
   continue state

@@ -179,7 +179,8 @@ checkRideStatus rideAssigned = do
     updateFlowStatusData (FlowStatusData flowStatusData) = 
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ city = getCityNameFromCode flowStatusData.source.city
                                                                               , locateOnMapProps{ sourceLocationName = flowStatusData.source.address
-                                                                                                , sourceGeoJson = flowStatusData.sourceGeoJson } }})
+                                                                                                , sourceGeoJson = flowStatusData.sourceGeoJson
+                                                                                                , sourceGates = flowStatusData.sourceGates } }})
         
 
 removeChatService :: String -> FlowBT String Unit

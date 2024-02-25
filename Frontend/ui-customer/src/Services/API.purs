@@ -1616,14 +1616,14 @@ newtype ServiceabilityReq = ServiceabilityReq
 
 newtype ServiceabilityRes = ServiceabilityRes
   { serviceable :: Boolean,
-    geoJson :: Maybe String,
+    -- geoJson :: Maybe String, :: to be deprecated
     specialLocation :: Maybe SpecialLocation,
     city :: Maybe String 
   }
 
 newtype ServiceabilityResDestination = ServiceabilityResDestination
   { serviceable :: Boolean,
-    geoJson :: Maybe String,
+    -- geoJson :: Maybe String, :: to be deprecated
     specialLocation :: Maybe SpecialLocation,
     city :: Maybe String
   }
@@ -1631,9 +1631,10 @@ newtype ServiceabilityResDestination = ServiceabilityResDestination
 newtype SpecialLocation = SpecialLocation
   {
     category :: String,
-    gates :: Array GatesInfo,
+    -- gates :: Array GatesInfo, :: to be deprecated
     gatesInfo :: Array GateInfoFull,
-    locationName :: String
+    locationName :: String,
+    geoJson :: Maybe String
   }
 
 newtype GatesInfo = GatesInfo {

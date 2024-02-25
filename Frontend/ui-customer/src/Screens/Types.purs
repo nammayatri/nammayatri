@@ -1600,6 +1600,7 @@ newtype FlowStatusData = FlowStatusData {
   , sourceLabelIcon :: Maybe String
   , destLabelIcon :: Maybe String
   , sourceGeoJson :: Maybe String
+  , sourceGates :: Maybe (Array Location)
 }
 
 derive instance genericFlowStatusData :: Generic FlowStatusData _
@@ -2323,6 +2324,7 @@ data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicke
 type LocateOnMapProps = {
     sourceLocationName :: Maybe String
   , sourceGeoJson :: Maybe String
+  , sourceGates :: Maybe (Array Location)
 }
 
 data NavigationMode = WALK | DRIVE

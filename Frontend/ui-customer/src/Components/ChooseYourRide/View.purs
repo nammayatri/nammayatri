@@ -315,6 +315,8 @@ chooseYourRideView push config =
         , padding (Padding 0 4 0 4)
         , cornerRadii $ Corners 24.0 true true false false
         , visibility if config.zoneType /= NOZONE then VISIBLE else GONE
+        , clickable $ isJust tagConfig.infoPopUpConfig
+        , onClick push $ const $ SpecialZoneInfoTag
         ] [ imageView
             [ width (V 20)
             , height (V 20)
@@ -328,6 +330,13 @@ chooseYourRideView push config =
             , textSize FontSize.a_14
             , text tagConfig.text
             , color Color.white900
+            ]
+          , imageView
+            [ width (V 18)
+            , height (V 18)
+            , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
+            , margin (MarginLeft 6)
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_white_info"
             ]
           ] 
       , linearLayout

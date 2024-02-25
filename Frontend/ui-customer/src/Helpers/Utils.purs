@@ -192,6 +192,12 @@ foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 
 foreign import getMockFollowerName :: String -> String
 
+decodeGeoJson :: String -> Maybe CCT.GeoJson
+decodeGeoJson stringGeoJson = 
+  case (AD.decodeJson =<< ADP.parseJson stringGeoJson) of
+    Right resp -> Just resp
+    Left err   -> Nothing
+
 data TimeUnit
   = HOUR
   | MINUTE
@@ -211,6 +217,15 @@ type SpecialZoneInfoPopUp = {
   , primaryButtonText :: String
   , icon :: String
 }
+
+type SpecialLocationList = {
+    geoJson :: String
+  , gates :: Array Location
+  , locationName :: String
+  , category :: String
+  , city :: String
+}
+
 
 convertUTCToISTAnd12HourFormat :: String -> Maybe String
 convertUTCToISTAnd12HourFormat inputTime = do
@@ -846,3 +861,46 @@ transformGeoJsonFeature geoJson gateInfoFulls =
         case (AD.decodeJson =<< ADP.parseJson stringGeometry) of
           Right resp -> Just resp
           Left err   -> Nothing
+
+findSpecialPickupZone :: Maybe String -> Maybe (Array Location) -> Number -> Number -> Maybe SpecialLocationList
+findSpecialPickupZone stringGeoJson gates lat lon =
+  case spy "debug findSpecialPickupZone stringGeoJson" stringGeoJson, spy "debug findSpecialPickupZone gates" gates of
+    Just stringGeoJson', Just gates' -> 
+      case decodeGeoJson stringGeoJson' of
+        Just geoJson -> 
+          let gate = spy "debug findSpecialPickupZone gate" (DA.find (\gate -> gate.lat == lat && gate.lng == lon) gates')
+          in case gate of
+                Just gate' -> 
+                  let feature = spy "debug findSpecialPickupZone feature" (DA.find (\feature -> feature.properties.name == gate'.place) geoJson.features)
+                  in Just { geoJson : AC.stringify $ AE.encodeJson geoJson{ features = [feature] }, gates : [gate'], locationName : "", category : "", city : "" }
+                Nothing -> Nothing
+        Nothing -> Nothing
+    _, _ -> Nothing
+--   let currentGeoHash = runFn3 EHU.encodeGeohash lat lon 7
+--       hashMap = decodeSpecialLocationList ""
+--       specialZone = spy "debug zone find specialZone" (DM.lookup currentGeoHash hashMap)
+--       nearestGate = spy "debug zone find nearestGate" case specialZone of
+--                                                         Just zone -> ((DA.sortWith (\gate -> getDistanceBwCordinates lat lon gate.lat gate.lng) zone.gates) DA.!! 0)
+--                                                         Nothing -> Nothing
+--       pickupZone = case specialZone, nearestGate of
+--                     Just zone, Just gate -> 
+--                       case spy "debug zone getGeoJson" (decodeGeoJson zone.geoJson) of
+--                         Just geoJson -> 
+--                           let feature = spy "debug zone feature" ((DA.filter (\feature -> feature.properties.name == gate.place) geoJson.features) DA.!! 0)
+--                           in case feature of
+--                                 Just feature' -> 
+--                                   let properties = feature'.properties
+--                                       gatesInfoFull = SA.GateInfoFull { address : Nothing, canQueueUpOnGate : Just properties.canQueueUpOnGate, defaultDriverExtra : Just properties.defaultDriverExtra, geoJson : Just (AC.stringify $ AE.encodeJson feature'.geometry), name : properties.name, point : SA.LatLong { lat : gate.lat, lon : gate.lng } }
+--                                   in Just zone{ gates = [gate], geoJson = transformGeoJsonFeature Nothing [gatesInfoFull]  }
+--                                 Nothing -> Nothing
+--                         Nothing -> Nothing
+--                     _, _ -> Nothing
+--   in pickupZone
+
+-- -- type SpecialLocationList = {
+-- --     geoJson :: String
+-- --   , gates :: Array JB.Location
+-- --   , locationName :: String
+-- --   , category :: String
+-- --   , city :: String
+-- -- }

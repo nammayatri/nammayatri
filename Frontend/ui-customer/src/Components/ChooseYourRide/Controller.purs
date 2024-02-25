@@ -14,6 +14,7 @@ data Action
   | PreferencesDropDown
   | RadioButtonClick Boolean
   | OnIconClick Boolean
+  | SpecialZoneInfoTag
 
 
 type Config
