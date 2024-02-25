@@ -289,8 +289,9 @@ getDistanceBetweenPoints ::
   LatLong ->
   LatLong ->
   [LatLong] ->
+  Meters ->
   m Meters
-getDistanceBetweenPoints merchantId merchantOpCityId origin destination interpolatedPoints = do
+getDistanceBetweenPoints merchantId merchantOpCityId origin destination interpolatedPoints estimatedDistance = do
   -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
   let pickedWaypoints = origin :| (pickWaypoints interpolatedPoints <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
@@ -303,7 +304,8 @@ getDistanceBetweenPoints merchantId merchantOpCityId origin destination interpol
         }
   let mbShortestRouteDistance = (.distance) =<< getRouteInfoWithShortestDuration routeResponse
   -- Next error is impossible, because we never receive empty list from directions api
-  mbShortestRouteDistance & fromMaybeM (InvalidRequest "Couldn't calculate route distance")
+  --mbShortestRouteDistance & fromMaybeM (InvalidRequest "Couldn't calculate route distance")
+  return $ fromMaybe estimatedDistance mbShortestRouteDistance
 
 -- TODO reuse code from rider-app
 getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
