@@ -766,5 +766,5 @@ checkSpecialPickupZone maybeLabel =
   case maybeLabel of
     Just label -> let arr = DS.split (DS.Pattern "_") label
                       specialPickupZone = fromMaybe "" (arr DA.!! 3)
-                  in not $ DS.null specialPickupZone 
+                  in specialPickupZone == "PickupZone"
     Nothing    -> false
