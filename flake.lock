@@ -3770,15 +3770,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1708700474,
-        "narHash": "sha256-8J33cglZY/H48r7wjE9JV8S81s9YRwWpt98MQ6ocDG0=",
+        "lastModified": 1708955523,
+        "narHash": "sha256-Yp4vDmHBapX2OfQh9swzE6YePBlwSOtb0H18uzPRoKU=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "19ff44a686458b9ba9bd7c13df466d4f296923bc",
+        "rev": "5c49e76114e632f98b0bfe7daf78a857526e685a",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "Backend/fix/moving-kafka-properties-to-dhall-map",
         "repo": "shared-kernel",
         "type": "github"
       }
