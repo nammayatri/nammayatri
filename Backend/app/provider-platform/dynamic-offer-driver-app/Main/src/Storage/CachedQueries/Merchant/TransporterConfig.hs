@@ -56,6 +56,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 -- import qualified Data.ByteString.Lazy.Char8 as BSL
 
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+import Kernel.Types.Cac
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
@@ -63,38 +64,40 @@ import qualified Storage.Queries.Merchant.TransporterConfig as Queries
 import qualified System.Environment as Se
 import System.Random
 
-dropTransporterConfig :: Key -> Key
-dropTransporterConfig text =
-  -- DAK.fromText $ Text.drop 10 (Text.pack $ show text)
-  case Text.stripPrefix "transporterConfig:" (DAK.toText text) of
-    Just a -> DAK.fromText a
-    Nothing -> text
+-- dropTransporterConfig :: Key -> Key
+-- dropTransporterConfig text =
+--   -- DAK.fromText $ Text.drop 10 (Text.pack $ show text)
+--   case Text.stripPrefix "transporterConfig:" (DAK.toText text) of
+--     Just a -> DAK.fromText a
+--     Nothing -> text
 
-initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => m ()
-initializeCACThroughConfig = do
-  host <- liftIO $ Se.lookupEnv "CAC_HOST"
-  interval' <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
-  interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
-  tenant <- liftIO (Se.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
-  config <- KSQS.findById' $ Text.pack tenant
-  status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
-  case status of
-    0 -> pure ()
-    _ -> error $ "error in creating the client for tenant" <> Text.pack tenant
+-- initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => m ()
+-- initializeCACThroughConfig = do
+--   host <- liftIO $ Se.lookupEnv "CAC_HOST"
+--   interval' <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
+--   interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
+--   tenant <- liftIO (Se.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+--   config <- KSQS.findById' $ Text.pack tenant
+--   status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
+--   case status of
+--     0 -> pure ()
+--     _ -> error $ "error in creating the client for tenant" <> Text.pack tenant
 
 getTransporterConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m TransporterConfig
 getTransporterConfigFromCACStrict id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
-  let res' = (config ^@.. _Value . _Object . reindexed dropTransporterConfig (itraversed . indices (\k -> Text.isPrefixOf "transporterConfig:" (DAK.toText k))))
+  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "transporterConfig:") (itraversed . indices (\k -> Text.isPrefixOf "transporterConfig:" (DAK.toText k))))
       res'' = parsingMiddleware $ DAKM.fromList res'
       res = (DA.Object res'') ^? _JSON :: Maybe TransporterConfig
   maybe (error ("Could not find TransporterConfig config corresponding to the stated merchant id" <> show id')) pure res
 
 createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m TransporterConfig
 createThroughConfigHelper id' toss = do
-  _ <- initializeCACThroughConfig
+  tenant <- liftIO (Se.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  config <- KSQS.findById' $ Text.pack tenant
+  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue
   getTransporterConfigFromCACStrict id' toss
 
 -- getFcmConfigKeys :: [(Key, Value)] -> [(Key,Value)]
@@ -164,7 +167,7 @@ getConfig id toss = do
   confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id))]
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
-  let res' = (config ^@.. _Value . _Object . reindexed dropTransporterConfig (itraversed . indices (\k -> Text.isPrefixOf "transporterConfig:" (DAK.toText k))))
+  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "transporterConfig:") (itraversed . indices (\k -> Text.isPrefixOf "transporterConfig:" (DAK.toText k))))
       res'' = parsingMiddleware $ DAKM.fromList res'
       res = (DA.Object res'') ^? _JSON :: Maybe TransporterConfig
   maybe (createThroughConfigHelper id toss) pure res

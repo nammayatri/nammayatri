@@ -38,6 +38,7 @@ import EulerHS.Language as L (getOption)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -71,12 +72,12 @@ getDriverPoolConfigFromDB merchantOpCityId (Just vehicle) dist = do
         Just applicableConfig -> return applicableConfig
         Nothing -> getDefaultDriverPoolConfig configs dist
 
-dropDriverPoolConfig :: Key -> Key
-dropDriverPoolConfig text =
-  -- DAK.fromText $ Text.drop 10 (Text.pack $ show text)
-  case Text.stripPrefix "driverPoolConfig:" (DAK.toText text) of
-    Just a -> DAK.fromText a
-    Nothing -> text
+-- dropDriverPoolConfig :: Key -> Key
+-- dropDriverPoolConfig text =
+--   -- DAK.fromText $ Text.drop 10 (Text.pack $ show text)
+--   case Text.stripPrefix "driverPoolConfig:" (DAK.toText text) of
+--     Just a -> DAK.fromText a
+--     Nothing -> text
 
 stringValueToObject :: [(Key, Value)] -> [(Key, Value)]
 stringValueToObject [] = []
@@ -93,26 +94,28 @@ getConfigFromCACStrict merchantOpCityId mbvt dist = do
   gen <- newStdGen
   let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   config <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
-  let res' = (config ^@.. _Value . _Object . reindexed dropDriverPoolConfig (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
+  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
       res'' = stringValueToObject res'
       res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverPoolConfig)
   maybe (error "error in fetching the context value driverPoolConfig: ") pure res
 
-initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => m ()
-initializeCACThroughConfig = do
-  host <- liftIO $ SE.lookupEnv "CAC_HOST"
-  interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
-  interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
-  tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
-  config <- KSQS.findById' $ Text.pack tenant
-  status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
-  case status of
-    0 -> pure ()
-    _ -> error $ "error in creating the client for tenant" <> Text.pack tenant <> " retrying again"
+-- initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => m ()
+-- initializeCACThroughConfig = do
+--   host <- liftIO $ SE.lookupEnv "CAC_HOST"
+--   interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
+--   interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
+--   tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+--   config <- KSQS.findById' $ Text.pack tenant
+--   status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
+--   case status of
+--     0 -> pure ()
+--     _ -> error $ "error in creating the client for tenant" <> Text.pack tenant <> " retrying again"
 
 helper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
 helper merchantOpCityId mbvt dist = do
-  _ <- initializeCACThroughConfig
+  tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  config <- KSQS.findById' $ Text.pack tenant
+  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue
   getConfigFromCACStrict merchantOpCityId mbvt dist
 
 getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
@@ -122,7 +125,7 @@ getDriverPoolConfigFromCAC merchantOpCityId mbvt dist = do
   gen <- newStdGen
   let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
-  let res' = (contextValue ^@.. _Value . _Object . reindexed dropDriverPoolConfig (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
+  let res' = (contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
       res'' = stringValueToObject res'
       res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverPoolConfig)
 

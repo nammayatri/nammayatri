@@ -33,6 +33,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+import Kernel.Types.Cac
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -74,37 +75,39 @@ import Tools.Error (GenericError (..))
 --   logDebug $ "goHomeConfig: " <> show ans
 --   pure ans
 
-dropGoHomeConfig :: Key -> Key
-dropGoHomeConfig text =
-  -- DAK.fromText $ Text.drop 10 (Text.pack $ show text)
-  case Text.stripPrefix "goHomeConfig:" (DAK.toText text) of
-    Just a -> DAK.fromText a
-    Nothing -> text
+-- dropGoHomeConfig :: Key -> Key
+-- dropGoHomeConfig text =
+--   -- DAK.fromText $ Text.drop 10 (Text.pack $ show text)
+--   case Text.stripPrefix "goHomeConfig:" (DAK.toText text) of
+--     Just a -> DAK.fromText a
+--     Nothing -> text
 
-initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => m ()
-initializeCACThroughConfig = do
-  host <- liftIO $ Se.lookupEnv "CAC_HOST"
-  interval' <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
-  interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
-  tenant <- liftIO (Se.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
-  config <- KSQS.findById' $ Text.pack tenant
-  status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
-  case status of
-    0 -> pure ()
-    _ -> error $ "error in creating the client for tenant" <> Text.pack tenant <> " retrying again"
+-- initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => m ()
+-- initializeCACThroughConfig = do
+--   host <- liftIO $ Se.lookupEnv "CAC_HOST"
+--   interval' <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
+--   interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
+--   tenant <- liftIO (Se.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+--   config <- KSQS.findById' $ Text.pack tenant
+--   status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
+--   case status of
+--     0 -> pure ()
+--     _ -> error $ "error in creating the client for tenant" <> Text.pack tenant <> " retrying again"
 
 getGoHomeConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
 getGoHomeConfigFromCACStrict id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
-  let res8 = (config ^@.. _Value . _Object . reindexed dropGoHomeConfig (itraversed . indices (\k -> Text.isPrefixOf "goHomeConfig:" (DAK.toText k))))
+  let res8 = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (\k -> Text.isPrefixOf "goHomeConfig:" (DAK.toText k))))
       res9 = (DA.Object $ DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
   maybe (error ("Could not find Go-To config corresponding to the stated merchant id" <> show id')) pure res9
 
 createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
 createThroughConfigHelper id' toss = do
-  _ <- initializeCACThroughConfig
+  tenant <- liftIO (Se.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  config <- KSQS.findById' $ Text.pack tenant
+  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue
   getGoHomeConfigFromCACStrict id' toss
 
 getGoHomeConfigFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
@@ -112,7 +115,7 @@ getGoHomeConfigFromCAC id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
-  let res8 = (config ^@.. _Value . _Object . reindexed dropGoHomeConfig (itraversed . indices (\k -> Text.isPrefixOf "goHomeConfig:" (DAK.toText k))))
+  let res8 = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (\k -> Text.isPrefixOf "goHomeConfig:" (DAK.toText k))))
       res9 = (DA.Object $ DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
   maybe (createThroughConfigHelper id' toss) pure res9
 
