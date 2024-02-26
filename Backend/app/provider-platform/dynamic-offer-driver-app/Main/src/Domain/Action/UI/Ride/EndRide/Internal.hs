@@ -421,12 +421,12 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
     case transporterConfig.driverFeeCalculationTime of
       Nothing -> pure ()
       Just dfCalcTime -> do
-        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName
-        let dfCalculationJobTs = diffUTCTime (addUTCTime dfCalcTime driverFee.endTime) now
-        case isDfCaclculationJobScheduled of
-          ----- marker ---
-          Nothing -> do
-            whenWithLockRedis (mkLockKeyForDriverFeeCalculation driverFee.startTime driverFee.endTime merchantOpCityId) 60 $ do
+        whenWithLockRedis (mkLockKeyForDriverFeeCalculation driverFee.startTime driverFee.endTime merchantOpCityId) 60 $ do
+          isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName
+          let dfCalculationJobTs = diffUTCTime (addUTCTime dfCalcTime driverFee.endTime) now
+          case isDfCaclculationJobScheduled of
+            ----- marker ---
+            Nothing -> do
               createJobIn @_ @'CalculateDriverFees dfCalculationJobTs maxShards $
                 CalculateDriverFeesJobData
                   { merchantId = merchantId,
@@ -442,7 +442,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
                   }
               setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName dfCalculationJobTs
               setDriverFeeBillNumberKey merchantOpCityId 1 36000 (driverFee.serviceName)
-          _ -> pure ()
+            _ -> pure ()
 
 mkDriverFee ::
   ( MonadFlow m,

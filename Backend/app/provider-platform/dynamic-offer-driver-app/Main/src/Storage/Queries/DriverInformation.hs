@@ -71,13 +71,13 @@ findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
       pure $ DriverInfo.driverId <$> driverInfos
     Left _ -> pure []
 
-findAllByEnabledAtInWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
-findAllByEnabledAtInWindow merchantId from to = do
+findAllByEnabledAtInWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
+findAllByEnabledAtInWindow merchantOpCityId from to = do
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDI.enabledAt $ Se.GreaterThanOrEq from,
           Se.Is BeamDI.enabledAt $ Se.LessThanOrEq to,
-          Se.Is BeamDI.merchantId $ Se.Eq (Just merchantId.getId)
+          Se.Is BeamDI.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId)
         ]
     ]
 
@@ -102,21 +102,21 @@ fetchAllByIds merchantId driversIds = do
         Just _person -> dInfo' : acc
         Nothing -> acc
 
-fetchAllDriversWithPaymentPending :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [DriverInformation]
-fetchAllDriversWithPaymentPending merchantId = do
+fetchAllDriversWithPaymentPending :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [DriverInformation]
+fetchAllDriversWithPaymentPending merchantOpCityId = do
   findAllWithDb
     [ Se.And
         [ Se.Is BeamDI.paymentPending $ Se.Eq True,
-          Se.Is BeamDI.merchantId $ Se.Eq (Just merchantId.getId)
+          Se.Is BeamDI.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId)
         ]
     ]
 
-fetchAllBlockedDriversWithSubscribedFalse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [DriverInformation]
-fetchAllBlockedDriversWithSubscribedFalse merchantId = do
+fetchAllBlockedDriversWithSubscribedFalse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [DriverInformation]
+fetchAllBlockedDriversWithSubscribedFalse merchantOpCityId = do
   findAllWithDb
     [ Se.And
         [ Se.Is BeamDI.subscribed $ Se.Eq False,
-          Se.Is BeamDI.merchantId $ Se.Eq (Just merchantId.getId)
+          Se.Is BeamDI.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId)
         ]
     ]
 

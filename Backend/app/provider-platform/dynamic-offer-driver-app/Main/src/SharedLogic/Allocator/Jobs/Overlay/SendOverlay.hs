@@ -53,7 +53,7 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOperatingCityId merchant Nothing
   driverIds <- nub <$> getBatchedDriverIds merchantId merchantOpCityId jobId jobData.condition jobData.freeTrialDays jobData.timeDiffFromUtc jobData.driverPaymentCycleDuration jobData.driverPaymentCycleStartTime jobData.overlayBatchSize serviceName
   logInfo $ "The Job " <> jobId.getId <> " is scheduled for following driverIds " <> show driverIds
-  driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantId jobId
+  driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantOpCityId jobId
 
   if driverIdsLength > 0 || (invoiceOverlayCondition jobData.condition && not (null driverIds))
     then do
@@ -63,9 +63,9 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
       unless (null driverIds) $ mapM_ (sendOverlayAccordingToCondition jobData serviceName) driverIds
       case jobData.rescheduleInterval of
         Just interval -> do
-          lastScheduledTime <- getLastScheduledJobTime merchantId jobId jobData.scheduledTime jobData.timeDiffFromUtc
+          lastScheduledTime <- getLastScheduledJobTime merchantOpCityId jobId jobData.scheduledTime jobData.timeDiffFromUtc
           let newScheduledTime = addUTCTime (fromIntegral interval) lastScheduledTime
-          setLastScheduledJobTime merchantId jobId newScheduledTime
+          setLastScheduledJobTime merchantOpCityId jobId newScheduledTime
           pure (ReSchedule newScheduledTime)
         Nothing -> return Complete
   where
@@ -124,36 +124,36 @@ sendOverlay driver overlayKey udf1 amount = do
     fork ("sending overlay to driver with driverId " <> (show driver.id)) $ do
       TN.sendOverlay driver.merchantOperatingCityId driver.id driver.deviceToken $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
 
-getSendOverlaySchedulerDriverIdsLength :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id AnyJob -> m Integer
-getSendOverlaySchedulerDriverIdsLength merchantId jobId = Hedis.lLen $ makeSendOverlaySchedulerDriverIdsKey merchantId jobId
+getSendOverlaySchedulerDriverIdsLength :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> m Integer
+getSendOverlaySchedulerDriverIdsLength merchantOpCityId jobId = Hedis.lLen $ makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId
 
-getFirstNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id AnyJob -> Integer -> m [Id DP.Person]
-getFirstNSendOverlaySchedulerDriverIds merchantId jobId num = Hedis.lRange (makeSendOverlaySchedulerDriverIdsKey merchantId jobId) 0 (num -1)
+getFirstNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> Integer -> m [Id DP.Person]
+getFirstNSendOverlaySchedulerDriverIds merchantOpCityId jobId num = Hedis.lRange (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId) 0 (num -1)
 
-deleteNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id AnyJob -> Integer -> m ()
-deleteNSendOverlaySchedulerDriverIds merchantId jobId num = Hedis.lTrim (makeSendOverlaySchedulerDriverIdsKey merchantId jobId) num (-1)
+deleteNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> Integer -> m ()
+deleteNSendOverlaySchedulerDriverIds merchantOpCityId jobId num = Hedis.lTrim (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId) num (-1)
 
-addSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id AnyJob -> NonEmpty (Id DP.Person) -> m ()
-addSendOverlaySchedulerDriverIds merchantId jobId = Hedis.rPush (makeSendOverlaySchedulerDriverIdsKey merchantId jobId)
+addSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> NonEmpty (Id DP.Person) -> m ()
+addSendOverlaySchedulerDriverIds merchantOpCityId jobId = Hedis.rPush (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId)
 
-makeSendOverlaySchedulerDriverIdsKey :: Id DM.Merchant -> Id AnyJob -> Text
-makeSendOverlaySchedulerDriverIdsKey merchantId jobId = "SendOverlayScheduler:merchantId-" <> merchantId.getId <> ":jobId-" <> jobId.getId
+makeSendOverlaySchedulerDriverIdsKey :: Id DMOC.MerchantOperatingCity -> Id AnyJob -> Text
+makeSendOverlaySchedulerDriverIdsKey merchantOpCityId jobId = "SendOverlayScheduler:merchantOpCityId-" <> merchantOpCityId.getId <> ":jobId-" <> jobId.getId
 
-getLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id AnyJob -> TimeOfDay -> Seconds -> m UTCTime
-getLastScheduledJobTime merchantId jobId scheduledTime timeDiffFromUtc = do
-  Hedis.get (makeLastScheduledTimeJobKey merchantId jobId) >>= \case
+getLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> TimeOfDay -> Seconds -> m UTCTime
+getLastScheduledJobTime merchantOpCityId jobId scheduledTime timeDiffFromUtc = do
+  Hedis.get (makeLastScheduledTimeJobKey merchantOpCityId jobId) >>= \case
     Nothing -> do
       now <- getLocalCurrentTime timeDiffFromUtc
       let lastScheduledTime = addUTCTime (fromIntegral $ -1 * timeDiffFromUtc) (UTCTime (utctDay now) (timeOfDayToTime scheduledTime))
-      setLastScheduledJobTime merchantId jobId lastScheduledTime
+      setLastScheduledJobTime merchantOpCityId jobId lastScheduledTime
       pure lastScheduledTime
     Just lastScheduledTime -> pure lastScheduledTime
 
-setLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id AnyJob -> UTCTime -> m ()
-setLastScheduledJobTime merchantId jobId = Hedis.set (makeLastScheduledTimeJobKey merchantId jobId)
+setLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id AnyJob -> UTCTime -> m ()
+setLastScheduledJobTime merchantOpCityId jobId = Hedis.set (makeLastScheduledTimeJobKey merchantOpCityId jobId)
 
-makeLastScheduledTimeJobKey :: Id DM.Merchant -> Id AnyJob -> Text
-makeLastScheduledTimeJobKey merchantId jobId = "SendOverlayScheduler:lastScheduledTime:merchantId-" <> merchantId.getId <> ":jobId" <> jobId.getId
+makeLastScheduledTimeJobKey :: Id DMOC.MerchantOperatingCity -> Id AnyJob -> Text
+makeLastScheduledTimeJobKey merchantOpCityId jobId = "SendOverlayScheduler:lastScheduledTime:merchantOpCityId-" <> merchantOpCityId.getId <> ":jobId" <> jobId.getId
 
 getBatchedDriverIds ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -181,21 +181,21 @@ getBatchedDriverIds merchantId merchantOperatingCityId jobId condition freeTrial
       return driverIds
     _ -> do
       -- except for the invoice generated condition, for rest of the conditions the all the required driverIds will be fetched one time and will be cached
-      driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantId jobId
+      driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantOperatingCityId jobId
       when (driverIdsLength < 1) do
         driverIds <- case condition of
-          DOverlay.PaymentOverdueGreaterThan _ -> QDI.fetchAllDriversWithPaymentPending merchantId <&> (<&> (.driverId))
-          DOverlay.PaymentOverdueBetween _ _ -> QDI.fetchAllDriversWithPaymentPending merchantId <&> (<&> (.driverId))
-          DOverlay.BlockedDrivers -> QDI.fetchAllBlockedDriversWithSubscribedFalse merchantId <&> (<&> (.driverId))
+          DOverlay.PaymentOverdueGreaterThan _ -> QDI.fetchAllDriversWithPaymentPending merchantOperatingCityId <&> (<&> (.driverId))
+          DOverlay.PaymentOverdueBetween _ _ -> QDI.fetchAllDriversWithPaymentPending merchantOperatingCityId <&> (<&> (.driverId))
+          DOverlay.BlockedDrivers -> QDI.fetchAllBlockedDriversWithSubscribedFalse merchantOperatingCityId <&> (<&> (.driverId))
           DOverlay.FreeTrialDaysLeft numOfDays -> do
             now <- getCurrentTime
             let startTime = addUTCTime (-1 * fromIntegral timeDiffFromUtc) $ addUTCTime (-1 * 86400 * fromIntegral (freeTrialDays - (numOfDays - 1))) (UTCTime (utctDay now) (secondsToDiffTime 0))
                 endTime = addUTCTime 86400 startTime
-            QDI.findAllByEnabledAtInWindow merchantId (Just startTime) (Just endTime) <&> (<&> (.driverId))
+            QDI.findAllByEnabledAtInWindow merchantOperatingCityId (Just startTime) (Just endTime) <&> (<&> (.driverId))
           _ -> return []
-        whenJust (nonEmpty driverIds) $ addSendOverlaySchedulerDriverIds merchantId jobId
-      batchedDriverIds <- getFirstNSendOverlaySchedulerDriverIds merchantId jobId $ fromIntegral overlayBatchSize
-      deleteNSendOverlaySchedulerDriverIds merchantId jobId $ fromIntegral overlayBatchSize
+        whenJust (nonEmpty driverIds) $ addSendOverlaySchedulerDriverIds merchantOperatingCityId jobId
+      batchedDriverIds <- getFirstNSendOverlaySchedulerDriverIds merchantOperatingCityId jobId $ fromIntegral overlayBatchSize
+      deleteNSendOverlaySchedulerDriverIds merchantOperatingCityId jobId $ fromIntegral overlayBatchSize
       return batchedDriverIds
   where
     getFeeType paymentMode = case paymentMode of
