@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/Backend/fix/moving-kafka-properties-to-dhall-map";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
