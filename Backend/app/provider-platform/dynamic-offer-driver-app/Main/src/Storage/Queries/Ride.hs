@@ -345,9 +345,8 @@ getRidesForDate driverId date diffTime = do
         ]
     ]
 
-updateArrival :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m ()
-updateArrival rideId = do
-  now <- getCurrentTime
+updateArrival :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> UTCTime -> m ()
+updateArrival rideId now = do
   updateOneWithKV
     [ Se.Set BeamR.driverArrivalTime $ Just now,
       Se.Set BeamR.updatedAt now
