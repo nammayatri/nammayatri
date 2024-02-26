@@ -293,7 +293,7 @@ enableLocationPermission state push =
           ]
         ]
       , textView $
-        [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> appName <> " from your device settings to start riding"
+        [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> appName <> " from your device settings to start riding\n\n" <> "Background location access is used to get you ride requests even when your app is closed and not in use."
         , gravity CENTER
         , color Color.black700
         , margin $ MarginTop 4

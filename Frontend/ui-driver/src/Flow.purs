@@ -205,17 +205,15 @@ baseAppFlow baseFlow event = do
           mbCity = find (\city' -> city'.cityName == driver_location) config.cityConfig
       maybe (pure unit) (\city -> setValueToLocalStore SHOW_SUBSCRIPTIONS (show city.showSubscriptions)) $ mbCity
       isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-      package <- lift $ lift $ liftFlow $ JB.fetchPackageName unit
       liftFlowBT $ Events.endMeasuringDuration "Flow.initialFlow"
       if isTokenValid regToken then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
       else if not config.flowConfig.chooseCity.runFlow then
         chooseLanguageFlow
-      else if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) && not has package "manayatri" then do
+      else if (getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission) then do
         chooseCityFlow
       else do
-        if has package "manayatri" then setValueToLocalNativeStore DRIVER_LOCATION "Hyderabad" else pure unit --TODO:: Need to handle the case properly here
         authenticationFlow ""
 
     updateNightSafetyPopup :: FlowBT String Unit
@@ -3105,20 +3103,24 @@ chooseCityFlow = do
     
     detectCityAPI :: Number -> Number -> ST.ChooseCityScreenState -> FlowBT String Unit
     detectCityAPI lat lon state = do
-      resp <- lift $ lift $ Remote.detectCity lat lon
-      case resp of
-        Right (API.DetectCityResp resp') -> do
-          let unserviceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true },  data { locationSelected = Nothing }}
-              compareStrings = on (==) (toLower <<< trim)
-          case resp'.city of
-            Just city -> do
-              let cityInList = any (\cityOb -> compareStrings cityOb.cityName city) state.data.config.cityConfig
-                  locationServiceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just city }, props { locationUnserviceable = false, locationDetectionFailed = false }}
-              modifyScreenState if cityInList then locationServiceableState else unserviceableState
-            Nothing -> modifyScreenState unserviceableState
-        Left _ -> do
-          liftFlowBT $ firebaseLogEvent "ny_driver_detect_city_fallback"
-          straightLineDist lat lon state
+      package <- lift $ lift $ liftFlow $ JB.fetchPackageName unit
+      if has package "manayatri" 
+        then modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just "Hyderabad" }, props { locationUnserviceable = false, locationDetectionFailed = false }}
+        else do
+          resp <- lift $ lift $ Remote.detectCity lat lon
+          case resp of
+            Right (API.DetectCityResp resp') -> do
+              let unserviceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true },  data { locationSelected = Nothing }}
+                  compareStrings = on (==) (toLower <<< trim)
+              case resp'.city of
+                Just city -> do
+                  let cityInList = any (\cityOb -> compareStrings cityOb.cityName city) state.data.config.cityConfig
+                      locationServiceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just city }, props { locationUnserviceable = false, locationDetectionFailed = false }}
+                  modifyScreenState if cityInList then locationServiceableState else unserviceableState
+                Nothing -> modifyScreenState unserviceableState
+            Left _ -> do
+              liftFlowBT $ firebaseLogEvent "ny_driver_detect_city_fallback"
+              straightLineDist lat lon state
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do
