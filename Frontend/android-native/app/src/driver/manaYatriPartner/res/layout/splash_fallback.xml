@@ -13,39 +13,45 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="center"
             android:gravity="center"
-            android:orientation="horizontal">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                android:textSize="24sp"
-                android:fontFamily="@font/plus_jakarta_sans_bold"
-                android:text="Namma " />
+            android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <ImageView
+                android:layout_width="250dp"
+                android:layout_height="120dp"
                 android:layout_gravity="center"
-                android:fontFamily="@font/plus_jakarta_sans_bold"
-                android:text="Yatri Partner"
-                android:textColor="@color/yellow900"
-                android:textSize="24sp"
-                android:textStyle="bold" />
+                android:src="@drawable/ic_launcher_with_name"/>
         </LinearLayout>
 
-        <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="100dp"
-            android:layout_gravity="center"
-            android:progress="0"
-            android:indeterminate="true"
-            android:indeterminateDrawable="@drawable/progressbar_clip"
-            style="?android:attr/progressBarStyleLarge" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="bottom"
+            android:orientation="vertical"
+            android:paddingBottom="50dp">
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="bottom"
+            android:orientation="vertical"
+            android:paddingBottom="0dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="300dp"
+                    android:layout_height="120dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_powered_by_" />
+            </LinearLayout>
+        </LinearLayout>
 
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/splash_lottie"
