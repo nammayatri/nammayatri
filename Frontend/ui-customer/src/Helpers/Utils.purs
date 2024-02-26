@@ -650,6 +650,7 @@ cityCodeMap =
   , Tuple (Just "std:033") Kolkata
   , Tuple (Just "std:001") Paris
   , Tuple (Just "std:484") Kochi
+  , Tuple (Just "std:0484") Kochi
   , Tuple (Just "std:011") Delhi
   , Tuple (Just "std:040") Hyderabad
   , Tuple (Just "std:022") Mumbai
