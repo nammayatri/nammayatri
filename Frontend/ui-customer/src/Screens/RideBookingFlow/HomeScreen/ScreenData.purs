@@ -300,6 +300,12 @@ initData = {
         referralCode : Nothing
       }
     , safetyAlertType : Nothing
+    , rideSearchProps : {
+            sessionId : ""
+          , sourceManuallyMoved : false
+          , destManuallyMoved : false
+          , autoCompleteType : Nothing
+        }
     }
 }
 
