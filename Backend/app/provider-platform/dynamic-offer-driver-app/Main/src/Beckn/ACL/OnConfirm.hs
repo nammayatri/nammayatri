@@ -49,7 +49,9 @@ tfOrder res pricing bppConfig = do
       orderPayments = tfPayments res bppConfig,
       orderProvider = Nothing,
       orderQuote = Utils.tfQuotation res.booking,
-      orderStatus = Just "ACTIVE"
+      orderStatus = Just "ACTIVE",
+      orderCreatedAt = Just res.booking.createdAt,
+      orderUpdatedAt = Just res.booking.updatedAt
     }
 
 tfFulfillments :: DConfirm.DConfirmResp -> Maybe [Spec.Fulfillment]
