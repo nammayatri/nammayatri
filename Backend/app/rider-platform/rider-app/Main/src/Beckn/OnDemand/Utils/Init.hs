@@ -47,7 +47,8 @@ mkStops origin mDestination mStartOtp =
                           locationCountry = Just $ Spec.Country Nothing origin.address.country,
                           locationGps = A.decode $ A.encode originGps,
                           locationState = Just $ Spec.State origin.address.state,
-                          locationId = Nothing
+                          locationId = Nothing,
+                          locationUpdatedAt = Nothing
                         },
                   stopType = Just $ show Enums.START,
                   stopAuthorization =
@@ -72,7 +73,8 @@ mkStops origin mDestination mStartOtp =
                             locationCountry = Just $ Spec.Country Nothing destination.address.country,
                             locationGps = A.decode $ A.encode (destinationGps destination),
                             locationState = Just $ Spec.State destination.address.state,
-                            locationId = Nothing
+                            locationId = Nothing,
+                            locationUpdatedAt = Nothing
                           },
                     stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,

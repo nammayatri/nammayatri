@@ -44,6 +44,8 @@ buildOnTrackReq req = do
           ..
         }
   where
+    -- trackingLocation = Nothing,
+
     key = "Track:bppRideId:" <> req.context.message_id
 
 handleError ::

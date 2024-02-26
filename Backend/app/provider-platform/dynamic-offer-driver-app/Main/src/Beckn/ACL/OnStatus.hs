@@ -209,7 +209,9 @@ tfOrder (DStatus.NewBookingBuildReq {bookingId}) =
         orderItems = Nothing,
         orderPayments = Nothing,
         orderProvider = Nothing,
-        orderQuote = Nothing
+        orderQuote = Nothing,
+        orderCreatedAt = Nothing,
+        orderUpdatedAt = Nothing --------To do keep booking created and updated time
       }
 tfOrder (DStatus.RideAssignedReq req) = Common.tfAssignedReqToOrder req
 tfOrder (DStatus.RideStartedReq req) = Common.tfStartReqToOrder req
@@ -236,5 +238,7 @@ tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDe
         orderItems = Nothing,
         orderPayments = Nothing,
         orderProvider = Nothing,
-        orderQuote = Nothing
+        orderQuote = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
       }
