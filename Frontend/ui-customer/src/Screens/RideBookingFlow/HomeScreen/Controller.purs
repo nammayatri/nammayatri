@@ -129,6 +129,7 @@ import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import LocalStorage.Cache (getValueFromCache)
+import DecodeUtil (getAnyFromWindow)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1831,7 +1832,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state
 eval ShareRide state = do
   continueWithCmd state
         [ do
-            _ <- pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/journey/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "journey/?id="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
             void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]

@@ -14,25 +14,19 @@
 -}
 module Screens.NammaSafetyFlow.SetupSafetySettingsScreen.View where
 
-import Animation
-import Prelude
-import PrestoDOM
-import Screens.NammaSafetyFlow.ComponentConfig
-import Screens.NammaSafetyFlow.Components.HelperViews
+import Animation (fadeIn, screenAnimation)
+import Prelude (Unit, bind, const, discard, map, not, pure, unit, void, ($), (&&), (+), (/=), (<<<), (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, background, color, cornerRadius, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, shimmerFrameLayout, stroke, text, textFromHtml, textView, visibility, weight, width)
+import Screens.NammaSafetyFlow.ComponentConfig (continueNextStepButtonConfig, removeContactPopUpModelConfig)
+import Screens.NammaSafetyFlow.Components.HelperViews (emptyTextView, recommendContactsToInstallView, shimmerView)
 import Common.Types.App (LazyCheck(..))
-import Components.GenericHeader as GenericHeader
-import Components.GenericRadioButton.Controller as GenericRadioButton
-import Components.GenericRadioButton.View (radioButtonView)
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!), (..))
-import Data.Function.Uncurried (runFn2)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String as DS
+import Data.Array (length, null, (..))
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -48,18 +42,14 @@ import MerchantConfig.DefaultConfig as DC
 import Mobility.Prelude (boolToVisibility)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.EmergencyContactsScreen.View (getFirstChar, getLastChar)
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactsList
 import Screens.NammaSafetyFlow.SetupSafetySettingsScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (NammaSafetyScreenState, NewContacts, RecordingState(..), SafetySetupStage(..), StepsHeaderModelState)
 import Screens.Types as ST
-import Services.API (GetSosDetailsRes(..))
 import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 
-screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
+screen :: ST.NammaSafetyScreenState -> Screen Action ST.NammaSafetyScreenState ScreenOutput
 screen initialState =
   { initialState
   , view: view
@@ -86,7 +76,7 @@ screen initialState =
   }
 
 view ::
-  forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+  forall w. (Action -> Effect Unit) -> ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   screenAnimation
     $ relativeLayout
@@ -111,7 +101,7 @@ view push state =
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
 -- ---------------------------------- settingUpView -----------------------------------
-settingUpView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+settingUpView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 settingUpView state push =
   relativeLayout
     [ height MATCH_PARENT
@@ -125,7 +115,7 @@ settingUpView state push =
         $ settingUpContentView (settingUpContentViewData state) state push
     ]
 
-settingUpContentView :: ContentViewDataType -> NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+settingUpContentView :: ContentViewDataType -> ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 settingUpContentView config state push =
   let
     footerBounds = JB.getLayoutBounds $ EHC.getNewIDWithTag "SettingUpContentViewFooter"
@@ -202,7 +192,7 @@ settingUpContentView config state push =
                   , linearLayout
                       [ height WRAP_CONTENT
                       , width MATCH_PARENT
-                      , visibility $ boolToVisibility $ state.props.setupStage == SetDefaultEmergencyContacts
+                      , visibility $ boolToVisibility $ state.props.setupStage == ST.SetDefaultEmergencyContacts
                       , orientation VERTICAL
                       ]
                       [ ContactsList.view (push <<< ContactListAction) state.data.emergencyContactsList
@@ -210,7 +200,7 @@ settingUpContentView config state push =
                   , linearLayout
                       [ width MATCH_PARENT
                       , height WRAP_CONTENT
-                      , visibility $ boolToVisibility $ state.props.setupStage == SetDefaultEmergencyContacts && (not $ null state.data.emergencyContactsList)
+                      , visibility $ boolToVisibility $ state.props.setupStage == ST.SetDefaultEmergencyContacts && (not $ null state.data.emergencyContactsList)
                       ]
                       [ recommendContactsToInstallView Language
                       ]
@@ -236,7 +226,7 @@ settingUpContentView config state push =
           ]
       ]
 
-stepsHeaderData :: Int -> StepsHeaderModelState
+stepsHeaderData :: Int -> ST.StepsHeaderModelState
 stepsHeaderData currentIndex =
   { activeIndex: currentIndex
   , textArray: [ getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS ]
@@ -252,9 +242,9 @@ type ContentViewDataType
     , isActive :: Boolean
     }
 
-settingUpContentViewData :: NammaSafetyScreenState -> ContentViewDataType
+settingUpContentViewData :: ST.NammaSafetyScreenState -> ContentViewDataType
 settingUpContentViewData state = case state.props.setupStage of
-  SetDefaultEmergencyContacts ->
+  ST.SetDefaultEmergencyContacts ->
     { title: getString SHARE_INFO_WITH_EMERGENCY_CONTACTS_TITLE
     , desc:
         getString
@@ -266,23 +256,22 @@ settingUpContentViewData state = case state.props.setupStage of
     , step: 0
     , isActive: state.data.shareToEmergencyContacts && length state.data.emergencyContactsList /= 0
     }
-  SetNightTimeSafetyAlert ->
+  ST.SetNightTimeSafetyAlert ->
     { title: getString ENABLE_NIGHT_TIME_SAFETY_ALERTS_TITLE
     , desc: getString ENABLE_NIGHT_TIME_SAFETY_ALERTS_DESC
     , image: "ny_ic_night_safety"
     , step: 1
     , isActive: state.data.nightSafetyChecks
     }
-  SetPersonalSafetySettings ->
+  ST.SetPersonalSafetySettings ->
     { title: getString ALMOST_DONE_TITLE
     , desc: getString ALMOST_DONE_DESC
     , image: ""
     , step: 2
     , isActive: state.data.nightSafetyChecks
     }
-  _ -> { title: "", desc: "", image: "", step: 5, isActive: false }
 
-removeContactPopUpView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+removeContactPopUpView :: forall w. (Action -> Effect Unit) -> ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 removeContactPopUpView push state =
   linearLayout
     [ height MATCH_PARENT
@@ -292,27 +281,6 @@ removeContactPopUpView push state =
 
 getSafePadding :: Padding
 getSafePadding = Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
-
-shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
-shimmerView state =
-  relativeLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ Margin 16 16 16 16
-    , visibility if state.props.showShimmer then VISIBLE else GONE
-    ]
-    [ sfl (V 400) 16 1 true
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , alignParentBottom "true,-1"
-        ]
-        [ sfl (V 80) 130 3 (getValueToLocalStore IS_SOS_ACTIVE == "true")
-        , sfl (V 80) 130 1 (getValueToLocalStore IS_SOS_ACTIVE /= "true")
-        ]
-    ]
 
 sfl :: forall w. Length -> Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
 sfl height' marginTop numberOfBoxes visibility' =
@@ -327,7 +295,7 @@ sfl height' marginTop numberOfBoxes visibility' =
         , height WRAP_CONTENT
         ]
         ( map
-            ( \item ->
+            ( \_ ->
                 linearLayout
                   [ height height'
                   , background Color.greyDark
@@ -342,14 +310,14 @@ sfl height' marginTop numberOfBoxes visibility' =
         )
     ]
 
-toggleSwitchView :: Boolean -> SafetySetupStage -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+toggleSwitchView :: Boolean -> ST.SafetySetupStage -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 toggleSwitchView isActive stage push =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ToggleSwitch stage
-    , visibility $ boolToVisibility $ stage /= SetPersonalSafetySettings
+    , visibility $ boolToVisibility $ stage /= ST.SetPersonalSafetySettings
     ]
     [ imageView
         [ imageUrl if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"

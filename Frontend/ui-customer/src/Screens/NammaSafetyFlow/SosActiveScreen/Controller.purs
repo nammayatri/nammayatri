@@ -14,33 +14,20 @@
 -}
 module Screens.NammaSafetyFlow.SosActiveScreen.Controller where
 
-import Data.Maybe
-import Log
-import Prelude
-import PrestoDOM
-import Screens.Types
-import Storage
+import Data.Maybe (Maybe(..))
+import Log (trackAppBackPress, trackAppScreenRender)
+import Prelude (class Show, discard, pure, unit, void, ($), (==))
+import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import Screens.Types (NammaSafetyScreenState)
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Array as DA
-import Data.String as DS
-import Engineering.Helpers.Commons as EHC
-import Helpers.Utils as HU
-import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
-import JBridge (askRequestedPermissions, showDialer)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Presto.Core.Types.Language.Flow (delay)
-import PrestoDOM.Core (getPushFn)
+import JBridge (showDialer)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
-import Services.API (ContactDetails(..), GetEmergencySettingsRes(..))
-import Services.Config (getSupportNumber)
-import Types.App (defaultGlobalState)
-import Types.EndPoint (updateSosVideo)
-import Debug
+import Services.API (GetEmergencySettingsRes)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -116,6 +103,6 @@ eval (MarkRideAsSafe PrimaryButtonController.OnClick) state = exit $ UpdateAsSaf
 
 eval LearnMoreClicked state = exit $ GoToEducationScreen state
 
-eval (SelectedCurrentLocation lat lon name) state = continue state { data { currentLocation = name } }
+eval (SelectedCurrentLocation _ _ name) state = continue state { data { currentLocation = name } }
 
 eval _ state = continue state

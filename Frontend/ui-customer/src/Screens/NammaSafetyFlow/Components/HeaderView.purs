@@ -8,8 +8,8 @@
 -}
 module Screens.NammaSafetyFlow.Components.HeaderView where
 
-import Prelude
-import PrestoDOM
+import Prelude (Unit, const, ($), (<<<), (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textFromHtml, textView, visibility, weight, width)
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Effect (Effect)

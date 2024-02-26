@@ -14,33 +14,16 @@
 -}
 module Screens.NammaSafetyFlow.SafetyEducationScreen.Controller where
 
-import Log
-import Prelude
-import PrestoDOM
-import Screens.Types
-import Storage
+import Log (trackAppBackPress, trackAppScreenRender)
+import Prelude (class Show, discard, pure, unit, void, ($), (+), (<), (==))
+import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit)
+import Screens.Types (NammaSafetyScreenState)
 import Components.GenericHeader.Controller as GenericHeaderController
-import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Array as DA
-import Data.Maybe
-import Data.String as DS
-import Engineering.Helpers.Commons as EHC
-import Helpers.Utils as HU
-import JBridge (askRequestedPermissions, releaseYoutubeView, switchYoutubeVideo)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Presto.Core.Types.Language.Flow (delay)
-import PrestoDOM.Core (getPushFn)
-import PrestoDOM.Types.Core (class Loggable)
+import Data.Maybe (Maybe(..), fromMaybe, isNothing)
+import JBridge (releaseYoutubeView, switchYoutubeVideo)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
-import Services.API (ContactDetails(..), GetEmergencySettingsRes(..))
-import Services.Config (getSupportNumber)
-import Types.App (defaultGlobalState)
-import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
-import Types.EndPoint (updateSosVideo)
-import Debug
-import RemoteConfig as RC
 
 instance showAction :: Show Action where
   show _ = ""

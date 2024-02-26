@@ -14,19 +14,15 @@
 -}
 module Screens.NammaSafetyFlow.Components.ContactsList where
 
-import Common.Types.App
-import Data.Array
-import Data.Maybe
-import Mobility.Prelude
-import Prelude
-import PrestoDOM
-import Screens.Types
-import Styles.Types
+import Common.Types.App (LazyCheck(..))
+import Data.Array (length, mapWithIndex)
+import Mobility.Prelude (boolToVisibility)
+import Prelude (Unit, const, ($), (/=), (<<<), (<>), (==))
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, accessibility, accessibilityHint, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
+import Screens.Types (NewContacts)
 import Components.GenericRadioButton.Controller as GenericRadioButton
 import Components.GenericRadioButton.View (radioButtonView)
-import Data.String as DS
 import Effect (Effect)
-import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.Utils as HU
 import Language.Strings (getString)

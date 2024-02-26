@@ -8,50 +8,36 @@
 -}
 module Screens.NammaSafetyFlow.ActivateSafetyScreen.View where
 
-import Animation
-import Mobility.Prelude
-import Prelude
-import PrestoDOM
-import Screens.NammaSafetyFlow.ComponentConfig
-import Screens.NammaSafetyFlow.Components.ContactsList
-import Screens.NammaSafetyFlow.Components.HelperViews
-import Screens.Types
-import Timers
+import Animation (screenAnimation)
+import Mobility.Prelude (boolToInvisibility, boolToVisibility)
+import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (/=), (<<<), (<>), (==), (||))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, singleLine, stroke, text, textFromHtml, textView, visibility, weight, width)
+import Screens.NammaSafetyFlow.ComponentConfig (dismissSoSButtonConfig, startTestDrillButtonConfig)
+import Screens.NammaSafetyFlow.Components.HelperViews (emptyTextView, layoutWithWeight, safetyPartnerView, separatorView, shimmerView)
+import Screens.Types (NammaSafetyScreenState)
+import Timers (startTimer)
 import Common.Types.App (LazyCheck(..))
-import Components.GenericHeader as GenericHeader
-import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!), (..), elem)
-import Data.Function.Uncurried (runFn2)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String as DS
+import Data.Array (elem, mapWithIndex, null)
+import Data.Maybe (Maybe(..))
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Utils as EHU
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
-import Helpers.Utils (getLocationName)
-import JBridge as JB
+import Helpers.Utils (FetchImageFrom(..), fetchImage, getLocationName)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.DefaultConfig as DC
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM.Animation as PrestoAnim
-import Screens.EmergencyContactsScreen.View (getFirstChar, getLastChar)
 import Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
-import Screens.Types as ST
-import Services.API (GetSosDetailsRes(..), SosFlow(..), Sos(..))
+import Services.API (GetSosDetailsRes(..), SosFlow(..))
 import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 
@@ -462,7 +448,9 @@ otherActionsView state push =
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
           ]
-            <> if state.props.showTestDrill then [] else [ onClick push $ const ShowSafetyIssueView ]
+            <> if state.props.showTestDrill 
+                then [] 
+                else [ onClick push $ const $ if state.data.config.feature.enableCustomerSupportForSafety then CallSupport else ShowSafetyIssueView ]
         )
         [ imageWithTextView
             $ if state.data.config.feature.enableCustomerSupportForSafety then
@@ -545,56 +533,6 @@ otherActionsView state push =
     , visibility: not state.props.showTestDrill
     }
 
-shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
-shimmerView state =
-  relativeLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ Margin 16 16 16 16
-    , visibility $ boolToVisibility state.props.showShimmer
-    , background Color.black900
-    ]
-    [ sfl (V 400) 16 1 true
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , alignParentBottom "true,-1"
-        ]
-        [ sfl (V 80) 130 3 (getValueToLocalStore IS_SOS_ACTIVE == "true")
-        , sfl (V 80) 130 1 (getValueToLocalStore IS_SOS_ACTIVE /= "true")
-        ]
-    ]
-
-sfl :: forall w. Length -> Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
-sfl height' marginTop numberOfBoxes visibility' =
-  shimmerFrameLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , margin $ MarginTop marginTop
-    , visibility $ boolToVisibility visibility'
-    ]
-    [ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        ]
-        ( map
-            ( \item ->
-                linearLayout
-                  [ height height'
-                  , background Color.greyDark
-                  , cornerRadius 12.0
-                  , weight 1.0
-                  , stroke $ "1," <> Color.grey900
-                  , margin $ Margin 4 4 4 4
-                  ]
-                  []
-            )
-            (1 .. numberOfBoxes)
-        )
-    ]
-
 disclaimerView :: forall w. NammaSafetyScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 disclaimerView state push =
   linearLayout
@@ -618,8 +556,8 @@ disclaimerView state push =
         , margin $ MarginTop 16
         , orientation VERTICAL
         ]
-        ( mapWithIndex
-            ( \index item ->
+        ( map
+            ( \item ->
                 measureView
                   { text': item.text
                   , showBullet: true

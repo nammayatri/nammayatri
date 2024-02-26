@@ -8,16 +8,16 @@
 -}
 module Screens.NammaSafetyFlow.SafetyEducationScreen.View where
 
-import Animation
-import Data.Array
-import Data.Maybe
-import Mobility.Prelude
-import Prelude
-import PrestoDOM
-import Screens.Types
+import Animation (screenAnimation, triggerOnAnimationEnd)
+import Data.Array as DA
+import Data.Maybe as Mb
+import Mobility.Prelude (boolToInvisibility, boolToVisibility)
+import Prelude (Unit, const, negate, not, pure, void, ($), (&&), (+), (-), (<), (<<<), (<>), (==), (>), map)
+import PrestoDOM (Gradient(..), Gravity(..), ImageUrl(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, alpha, background, color, cornerRadius, gradient, gravity, height, id, imageUrl, imageUrlWithFallback, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textFromHtml, textView, visibility, weight, width)
+import Screens.Types (NammaSafetyScreenState)
 import Common.Types.App (LazyCheck(..))
 import Data.Function.Uncurried (runFn5)
-import Debug (spy)
+import Debug (spy) 
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
@@ -31,7 +31,6 @@ import RemoteConfig as RC
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.Components.HelperViews as HV
 import Screens.NammaSafetyFlow.SafetyEducationScreen.Controller (Action(..), ScreenOutput, eval)
-import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
@@ -66,7 +65,7 @@ view push state =
             , width MATCH_PARENT
             , orientation VERTICAL
             ]
-            [ if isJust state.props.educationViewIndex then
+            [ if Mb.isJust state.props.educationViewIndex then
                 if state.props.showVideoView then
                   videoView push state
                 else descriptionView push state
@@ -74,11 +73,11 @@ view push state =
             ]
         ]
   where
-  background' = if isJust state.props.educationViewIndex && state.props.showVideoView then Color.black900 else Color.white900
+  background' = if Mb.isJust state.props.educationViewIndex && state.props.showVideoView then Color.black900 else Color.white900
 
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
-  headerConfig = (Header.config Language) { title = if isJust state.props.educationViewIndex && not state.props.showVideoView
+  headerConfig = (Header.config Language) { title = if Mb.isJust state.props.educationViewIndex && not state.props.showVideoView
                                                        then "" 
                                                        else getString LEARN_ABOUT_NAMMA_SAFETY,
                                             headerVisiblity = boolToVisibility $ not state.props.showVideoView
@@ -90,7 +89,7 @@ aboutNammaSafetyView state push =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility $ isNothing state.props.educationViewIndex
+    , visibility $ boolToVisibility $ Mb.isNothing state.props.educationViewIndex
     ]
     [ linearLayout
         [ width MATCH_PARENT
@@ -111,7 +110,7 @@ aboutNammaSafetyView state push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             ]
-            (mapWithIndex (\index item -> cardView item index push) state.data.videoList)
+            (DA.mapWithIndex (\index item -> cardView item index push) state.data.videoList)
         ]
     ]
 
@@ -159,7 +158,7 @@ videoView push state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , background Color.black900
-    , visibility $ boolToInvisibility $ isJust state.props.educationViewIndex
+    , visibility $ boolToInvisibility $ Mb.isJust state.props.educationViewIndex
     ]
     [ linearLayout
         [ height MATCH_PARENT
@@ -199,7 +198,7 @@ videoView push state =
                 , gravity CENTER_VERTICAL
                 , id $ EHC.getNewIDWithTag "SafetyYoutubeVideoView"
                 , onAnimationEnd
-                    ( \action -> do
+                    ( \_ -> do
                         void $ pure $ runFn5 JB.setYoutubePlayer (EHC.getYoutubeData { videoId = viewConfig.videoId, videoType = "PORTRAIT_VIDEO", videoHeight = 1500, showFullScreen = true, showSeekBar = false, hideFullScreenButton = true }) (EHC.getNewIDWithTag "SafetyYoutubeVideoView") "PAUSED" push YoutubeVideoStatus
                     )
                     (const NoAction)
@@ -244,17 +243,17 @@ videoView push state =
                 , width WRAP_CONTENT
                 ]
                 [ arrowButtonView false 20 (index > 0) push false $ ChangeEducationViewIndex (index - 1)
-                , arrowButtonView true 0 (index < length state.data.videoList - 1) push false $ ChangeEducationViewIndex (index + 1)
+                , arrowButtonView true 0 (index < DA.length state.data.videoList - 1) push false $ ChangeEducationViewIndex (index + 1)
                 ]
             ]
         ]
     ]
   where
-  index = fromMaybe (-1) state.props.educationViewIndex
+  index = Mb.fromMaybe (-1) state.props.educationViewIndex
 
   gradientAngle = if EHC.os == "IOS" then 270.0 else 180.0
 
-  viewConfig = fromMaybe { videoId: "", title: "", coverImageUrl: "", description: [] } (state.data.videoList !! index)
+  viewConfig = Mb.fromMaybe { videoId: "", title: "", coverImageUrl: "", description: [] } (state.data.videoList DA.!! index)
 
 arrowButtonView :: forall w. Boolean -> Int -> Boolean -> (Action -> Effect Unit) -> Boolean -> Action -> PrestoDOM (Effect Unit) w
 arrowButtonView isDirectionRight marginRight isActive push isDarkTheme action =
@@ -336,10 +335,10 @@ descriptionView push state =
                 , orientation VERTICAL
                 , padding $ Padding 16 16 16 16
                 ]
-                ( mapWithIndex
-                    ( \index (RC.DescriptionComponent item) ->
+                ( map
+                    ( \(RC.DescriptionComponent item) ->
                         let
-                          decodedFontStyle = fromMaybe FontStyle.Tags $ FontStyle.decodeFontStyle $ unsafeToForeign item.fontStyle
+                          decodedFontStyle = Mb.fromMaybe FontStyle.Tags $ FontStyle.decodeFontStyle $ unsafeToForeign item.fontStyle
                         in
                           linearLayout
                             [ height WRAP_CONTENT
@@ -382,12 +381,11 @@ descriptionView push state =
             , width WRAP_CONTENT
             ]
             [ arrowButtonView false 20 (index > 0) push true $ ChangeEducationViewIndex (index - 1)
-            , arrowButtonView true 0 (index < length state.data.videoList - 1) push true $ ChangeEducationViewIndex (index + 1)
+            , arrowButtonView true 0 (index < DA.length state.data.videoList - 1) push true $ ChangeEducationViewIndex (index + 1)
             ]
         ]
     ]
   where
-  index = fromMaybe (-1) state.props.educationViewIndex
-  viewConfig = fromMaybe { videoId: "", title: "", coverImageUrl: "", description: [] } (state.data.videoList !! index)
+  index = Mb.fromMaybe (-1) state.props.educationViewIndex
+  viewConfig = Mb.fromMaybe { videoId: "", title: "", coverImageUrl: "", description: [] } (state.data.videoList DA.!! index)
   videoCoverImage = EHC.getImageUrl "" viewConfig.videoId
-  _ = spy "viewConfig " viewConfig

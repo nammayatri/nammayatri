@@ -1029,3 +1029,4 @@ data STR
   | YET_TO_START String
   | MESSAGE_FROM String
   | RIDE_CANCELLED
+  | TRACK_RIDE_STRING String String String String

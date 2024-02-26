@@ -1,16 +1,18 @@
 module Screens.NammaSafetyFlow.Components.HelperViews where
 
-import Prelude
-import PrestoDOM
+import Prelude (Unit, ($), (<>), (==), map, (/=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), PrestoDOM, Visibility(..), Orientation(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, padding, text, textView, visibility, weight, width, relativeLayout, orientation, alignParentBottom, shimmerFrameLayout, stroke)
 import Common.Types.App (LazyCheck(..))
 import Effect (Effect)
 import Font.Style as FontStyle
-import Helpers.Utils
+import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Mobility.Prelude
-import Storage
+import Mobility.Prelude (boolToVisibility)
+import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Screens.Types as ST
+import Data.Array as DA
 
 emptyTextView :: forall w. PrestoDOM (Effect Unit) w
 emptyTextView = textView [ visibility GONE ]
@@ -75,4 +77,53 @@ safetyPartnerView _lazy =
               ]
             <> FontStyle.tags TypoGraphy
         ]
+    ]
+
+shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  relativeLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ Margin 16 16 16 16
+    , visibility if state.props.showShimmer then VISIBLE else GONE
+    ]
+    [ sfl (V 400) 16 1 true
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , alignParentBottom "true,-1"
+        ]
+        [ sfl (V 80) 130 3 (getValueToLocalStore IS_SOS_ACTIVE == "true")
+        , sfl (V 80) 130 1 (getValueToLocalStore IS_SOS_ACTIVE /= "true")
+        ]
+    ]
+
+sfl :: forall w. Length -> Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
+sfl height' marginTop numberOfBoxes visibility' =
+  shimmerFrameLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin $ MarginTop marginTop
+    , visibility $ boolToVisibility visibility'
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        ]
+        ( map
+            ( \_ ->
+                linearLayout
+                  [ height height'
+                  , background Color.greyDark
+                  , cornerRadius 12.0
+                  , weight 1.0
+                  , stroke $ "1," <> Color.grey900
+                  , margin $ Margin 4 4 4 4
+                  ]
+                  []
+            )
+            (1 DA... numberOfBoxes)
+        )
     ]

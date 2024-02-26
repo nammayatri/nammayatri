@@ -1024,3 +1024,4 @@ getFR stringKey =
         YET_TO_START name -> name <> " n'a pas encore commencé le trajet"
         MESSAGE_FROM name -> "Message de " <> name
         RIDE_CANCELLED -> "Trajet annulé"
+        TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Salut,\n\nJe suis en train de rouler avec le chauffeur " <> driverName <> " de " <> appName <> "! Suivez ce trajet sur : " <> trackLink <> "\n\nNuméro de véhicule : " <> vehicleNumber

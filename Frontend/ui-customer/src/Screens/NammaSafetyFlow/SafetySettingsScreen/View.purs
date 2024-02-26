@@ -8,25 +8,18 @@
 -}
 module Screens.NammaSafetyFlow.SafetySettingsScreen.View where
 
-import Animation
-import Prelude
-import PrestoDOM
-import Screens.NammaSafetyFlow.ComponentConfig
-import Screens.NammaSafetyFlow.Components.ContactsList
-import Screens.NammaSafetyFlow.Components.HelperViews
+import Animation (fadeIn, screenAnimation)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, background, color, cornerRadius, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textFromHtml, textView, visibility, weight, width)
+import Screens.NammaSafetyFlow.ComponentConfig (goToDrillButtonConfig, shareTripPopupConfig, startNSOnboardingButtonConfig)
+import Screens.NammaSafetyFlow.Components.HelperViews as HV
 import Common.Types.App (LazyCheck(..))
-import Components.GenericHeader as GenericHeader
-import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Components.PrimaryButton as PrimaryButton
-import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!), (..))
-import Data.Function.Uncurried (runFn2)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String as DS
+import Data.Array (mapWithIndex, null)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -35,19 +28,16 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
-import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.DefaultConfig as DC
 import Mobility.Prelude (boolToVisibility)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.EmergencyContactsScreen.View (getFirstChar, getLastChar)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.SafetySettingsScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..), NewContacts, RecordingState(..), StepsHeaderModelState)
-import Services.API (GetSosDetailsRes(..), RideShareOptions(..))
+import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
+import Services.API (RideShareOptions(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
@@ -97,9 +87,9 @@ view push state =
             ]
             [ Header.view (push <<< SafetyHeaderAction) headerConfig
             , dashboardView state push
-            , shimmerView state
+            , HV.shimmerView state
             ]
-        , if state.props.showRideShareOptionsPopup then PopupWithCheckbox.view (push <<< ShareTripOptionPopup) $ shareTripPopupConfig state else emptyTextView
+        , if state.props.showRideShareOptionsPopup then PopupWithCheckbox.view (push <<< ShareTripOptionPopup) $ shareTripPopupConfig state else HV.emptyTextView
         ]
   where
   padding' =
@@ -292,9 +282,9 @@ userSettingsView state push visibility' =
                       ]
                     <> FontStyle.body2 TypoGraphy
                 ]
-            , separatorView Color.lightGreyShade $ Margin 16 16 16 16
+            , HV.separatorView Color.lightGreyShade $ Margin 16 16 16 16
             , toggleSwitchViewLayout (ToggleSwitch SetNightTimeSafetyAlert) state.data.nightSafetyChecks (getString NIGHT_TIME_SAFETY_CHECKS) push true 16
-            , separatorView Color.lightGreyShade $ Margin 16 16 16 16
+            , HV.separatorView Color.lightGreyShade $ Margin 16 16 16 16
             , linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
@@ -375,9 +365,6 @@ toggleSwitchViewLayout action isActive text' push visibility' marginLeft =
     , toggleSwitchView isActive true action push
     ]
 
-getHeaderTitle :: SafetySetupStage -> String
-getHeaderTitle stage = getString NAMMA_SAFETY
-
 toggleSwitchView :: Boolean -> Boolean -> Action -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 toggleSwitchView isActive visibility' action push =
   linearLayout
@@ -392,53 +379,4 @@ toggleSwitchView isActive visibility' action push =
         , width $ V 40
         , height $ V 24
         ]
-    ]
-
-shimmerView :: forall w. NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
-shimmerView state =
-  relativeLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ Margin 16 16 16 16
-    , visibility $ boolToVisibility state.props.showShimmer
-    ]
-    [ sfl (V 400) 16 1 true
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , alignParentBottom "true,-1"
-        ]
-        [ sfl (V 80) 130 3 (getValueToLocalStore IS_SOS_ACTIVE == "true")
-        , sfl (V 80) 130 1 (getValueToLocalStore IS_SOS_ACTIVE /= "true")
-        ]
-    ]
-
-sfl :: forall w. Length -> Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
-sfl height' marginTop numberOfBoxes visibility' =
-  shimmerFrameLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , margin $ MarginTop marginTop
-    , visibility $ boolToVisibility visibility'
-    ]
-    [ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        ]
-        ( map
-            ( \item ->
-                linearLayout
-                  [ height height'
-                  , background Color.greyDark
-                  , cornerRadius 12.0
-                  , weight 1.0
-                  , stroke $ "1," <> Color.grey900
-                  , margin $ Margin 4 4 4 4
-                  ]
-                  []
-            )
-            (1 .. numberOfBoxes)
-        )
     ]

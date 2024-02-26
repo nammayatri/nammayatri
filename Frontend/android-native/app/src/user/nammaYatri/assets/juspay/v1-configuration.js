@@ -245,6 +245,5 @@ window.getMerchantConfig = function () {
       , "name" : "Namma Yatri"
       , "website" : "https://nammayatri.in/"
     }
-    , 
   })
 }

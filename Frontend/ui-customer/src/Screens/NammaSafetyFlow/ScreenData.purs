@@ -14,12 +14,11 @@
 -}
 module Screens.NammaSafetyFlow.ScreenData where
 
-import Data.Maybe
-import Screens.Types
+import Data.Maybe (Maybe(..))
+import Screens.Types 
 import Engineering.Helpers.Commons as EHC
 import MerchantConfig.DefaultConfig as DC
 import Services.API as API
-import RemoteConfig as RC
 import Prelude ((==))
 
 initData :: NammaSafetyScreenState
