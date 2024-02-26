@@ -77,7 +77,7 @@ import MerchantConfig.Types (AppConfig(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
-import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork)
+import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork, Flow)
 import PrestoDOM (initUI)
 import Resource.Constants (decodeAddress)
 import Resource.Constants as RC
@@ -244,18 +244,18 @@ chooseLanguageFlow = do
 checkRideAndInitiate :: Maybe Event -> FlowBT String Unit
 checkRideAndInitiate event = do
   (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
-  Events.measureDurationFlowBT "External.checkAndDownloadMLModel" $ checkAndDownloadMLModel
+  void $ lift $ lift $ fork $ checkAndDownloadMLModel
   let activeRide = (not (null activeRideResponse.list))
   activeRide ?
     currentRideFlow (Just (GetRidesHistoryResp activeRideResponse)) 
     $ getDriverInfoFlow event (Just (GetRidesHistoryResp activeRideResponse))
     where 
-      checkAndDownloadMLModel :: FlowBT String Unit
+      checkAndDownloadMLModel :: Flow GlobalState Unit
       checkAndDownloadMLModel = do
         let language = getLanguageLocale languageKey
-        downloadedLanguages <- lift $ lift $ doAff $ makeAff \cb -> JB.listDownloadedTranslationModels (cb <<< Right) 1000 $> nonCanceler
+        downloadedLanguages <- doAff $ makeAff \cb -> JB.listDownloadedTranslationModels (cb <<< Right) 1000 $> nonCanceler
         if (language /= "__failed" && not (languageExists downloadedLanguages language)) then do
-          void $ liftFlowBT $ runEffectFn1 JB.downloadMLTranslationModel language
+          void $ liftFlow $ runEffectFn1 JB.downloadMLTranslationModel language
         else pure unit
       languageExists :: Array String -> String -> Boolean
       languageExists languages lang =
@@ -370,8 +370,6 @@ enterOTPFlow = do
 
 getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> FlowBT String Unit
 getDriverInfoFlow event activeRideResp = do
-  void $ pure $ delay $ Milliseconds 1.0
-  void $ pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
   appConfig <- getAppConfigFlowBT Constants.appConfig
   case getDriverInfoApiResp of
@@ -966,8 +964,6 @@ applicationSubmittedFlow screenType = do
 driverProfileFlow :: FlowBT String Unit
 driverProfileFlow = do
   logField_ <- lift $ lift $ getLogFields
-  void $ pure $ delay $ Milliseconds 1.0
-  void $ pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{isRideActive = getValueToLocalStore IS_RIDE_ACTIVE == "true"} })
   action <- UI.driverProfileScreen
   case action of
@@ -1867,8 +1863,6 @@ homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
   Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
-    void $ pure $ delay $ Milliseconds 1.0
-    void $ pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
     void $ pure $ cleverTapSetLocation unit
     if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer]) then currentRideFlow Nothing
       else pure unit
