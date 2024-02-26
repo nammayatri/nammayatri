@@ -41,10 +41,10 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
+import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when, (<$>))
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
-import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..))
+import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..), AutoCompleteReqType(..))
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)
@@ -268,19 +268,20 @@ searchLocationBT payload = do
                 BackT $ pure GoBack
 
 
-makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> SearchLocationReq
-makeSearchLocationReq input lat lng language components geoCodeConfig = SearchLocationReq {
+makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> Maybe AutoCompleteReqType -> String -> SearchLocationReq
+makeSearchLocationReq input lat lng language components geoCodeConfig autoCompleteType sessionToken = SearchLocationReq {
     "input" : input,
     "location" : (show lat <> "," <> show lng),
     "radius" : geoCodeConfig.radius,
     "components" : components,
     "language" : language,
-    "sessionToken" : Nothing,
     "strictbounds": if geoCodeConfig.strictBounds then Just true else Nothing,
     "origin" : LatLong {
             "lat" : lat,
             "lon" : lng
-            }
+            },
+    "sessionToken" : Just sessionToken,
+    "autoCompleteType" : spy "debug search makeSearchLocationReq" (show <$> autoCompleteType)
     }
 
 ------------------------------------------------------------------------ OnCallBT Function ------------------------------------------------------------------------------------
@@ -334,25 +335,29 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd =
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> Boolean -> Boolean -> String -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd sourceManuallyMoved destManuallyMoved sessionToken =
     let appConfig = CP.getAppConfig CP.appConfig
     in  SearchReq { "contents" : OneWaySearchReq{
-                                                  "destination" : SearchReqLocation {
-                                                           "gps" : LatLong {
-                                                               "lat" : dlat ,
-                                                               "lon" : dlong
-                                                               },
-                                                           "address" : (LocationAddress desAdd)
-                                                  },
-                                                  "origin" : SearchReqLocation {
-                                                   "gps" : LatLong {
-                                                               "lat" : slat ,
-                                                               "lon" : slong
-                                                   },"address" : (LocationAddress srcAdd)
-                                                  },
-                                                  "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
-                                                 },
+                                    "destination" : SearchReqLocation {
+                                        "gps" : LatLong {
+                                                    "lat" : dlat ,
+                                                    "lon" : dlong 
+                                                },
+                                        "address" : LocationAddress desAdd
+                                    },
+                                    "origin" : SearchReqLocation {
+                                        "gps" : LatLong {
+                                                    "lat" : slat ,
+                                                    "lon" : slong 
+                                                },
+                                        "address" : LocationAddress srcAdd
+                                    },
+                                    "isReallocationEnabled" : Just appConfig.feature.enableReAllocation,
+                                    "isSourceManuallyMoved" : Just sourceManuallyMoved,
+                                    "isDestinationManuallyMoved" : Just destManuallyMoved,
+                                    "sessionToken" : Just sessionToken
+                                },
                     "fareProductType" : "ONE_WAY"
                    }
 

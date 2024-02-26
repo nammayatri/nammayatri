@@ -946,6 +946,7 @@ type HomeScreenStateProps =
   , isChatWithEMEnabled :: Boolean
   , referral :: ReferralStatusProp
   , safetyAlertType :: Maybe SafetyAlertType
+  , rideSearchProps :: RideSearchProps
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -2332,3 +2333,14 @@ type MetroTicketStatusScreenProps = {
 }
 
 data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicketsToMetroTicketStatus
+
+type RideSearchProps = {
+    sessionId :: String
+  , sourceManuallyMoved :: Boolean
+  , destManuallyMoved :: Boolean
+  , autoCompleteType :: Maybe AutoCompleteReqType
+}
+
+data AutoCompleteReqType = PICKUP | DROP
+derive instance genericAutoCompleteReqType :: Generic AutoCompleteReqType _
+instance showAutoCompleteReqType :: Show AutoCompleteReqType where show = genericShow

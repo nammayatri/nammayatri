@@ -261,13 +261,14 @@ instance encodeLogOutRes :: Encode LogOutRes where encode = defaultEncode
 
 newtype SearchLocationReq = SearchLocationReq {
   components :: String,
-  sessionToken :: Maybe String,
   location :: String,
   radius :: Int,
   input :: String,
   language :: String,
   strictbounds :: Maybe Boolean,
-  origin :: LatLong
+  origin :: LatLong,
+  sessionToken :: Maybe String,
+  autoCompleteType :: Maybe String
 }
 
 newtype SearchLocationResp = SearchLocationResp {
@@ -482,7 +483,10 @@ newtype SearchReq = SearchReq {
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
   destination :: SearchReqLocation,
-  isReallocationEnabled :: Maybe Boolean
+  isReallocationEnabled :: Maybe Boolean,
+  isSourceManuallyMoved :: Maybe Boolean,
+  isDestinationManuallyMoved :: Maybe Boolean,
+  sessionToken :: Maybe String
 }
 
 newtype SearchReqLocation = SearchReqLocation {

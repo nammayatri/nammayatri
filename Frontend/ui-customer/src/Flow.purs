@@ -596,7 +596,7 @@ homeScreenFlow = do
           currentDate =  getCurrentDate ""
       void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show updatedState.props.sourceLat) <> " long: " <> (show updatedState.props.sourceLong))},
                                           {key : "Latest Search", value : (unsafeToForeign $ currentDate <> " " <> currentTime)}]
-      (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress)
+      (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId)
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
       case rideSearchRes.routeInfo of
         Just (Route response) -> do
@@ -759,7 +759,7 @@ homeScreenFlow = do
                             Just false -> let config = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
                                           in config{ geoCodeConfig{ strictBounds = true }}
                             _          -> defaultCityConfig
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( state.props.sourceLat) ( state.props.sourceLong) (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig)
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( state.props.sourceLat) ( state.props.sourceLong) (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig state.props.rideSearchProps.autoCompleteType state.props.rideSearchProps.sessionId)
       let event =
             case state.props.isSource of
               Just true -> "ny_user_auto_complete_api_trigger_src"
@@ -1695,7 +1695,7 @@ rideSearchFlow flowType = do
               currentDate =  getCurrentDate ""
           void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show finalState.props.sourceLat) <> " long: " <> (show finalState.props.sourceLong))},
                                               {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
-          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress)
+          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId)
           void $ liftFlowBT $ setFlowStatusData 
             ( FlowStatusData 
               { source : 
@@ -2410,7 +2410,7 @@ addNewAddressScreenFlow input = do
   case flow of
     SEARCH_ADDRESS input state -> do
       (GlobalState newState) <- getState
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input newState.homeScreen.props.sourceLat newState.homeScreen.props.sourceLong (EHC.getMapsLanguageFormat (getLanguageLocale languageKey) ) "" defaultCityConfig.geoCodeConfig)
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input newState.homeScreen.props.sourceLat newState.homeScreen.props.sourceLong (EHC.getMapsLanguageFormat (getLanguageLocale languageKey) ) "" defaultCityConfig.geoCodeConfig Nothing "")
       let sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
           predictionList = AddNewAddress.getLocationList sortedByDistanceList
           recentLists = state.data.recentSearchs.predictionArray
@@ -3660,7 +3660,7 @@ searchLocationFlow = do
                             let config = getCityConfig state.appConfig.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
                             in config{ geoCodeConfig{ strictBounds = true }}
                           _ -> defaultCityConfig
-      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq searchString lat lng (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig)
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq searchString lat lng (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig Nothing "")
       let sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
           predictionList = getLocationList sortedByDistanceList
           sortedRecentsList =  updateLocListWithDistance globalState.globalProps.recentSearches lat lng true state.appConfig.suggestedTripsAndLocationConfig.locationWithinXDist

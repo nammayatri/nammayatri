@@ -74,7 +74,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -105,6 +105,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm, safetyIssueOptions)
 import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..))
+import Screens.Types (AutoCompleteReqType(..)) as ST
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
@@ -1499,27 +1500,35 @@ eval (MAPREADY key latitude longitude) state =
 eval OpenSearchLocation state = do
   _ <- pure $ performHapticFeedback unit
   let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
-  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2, findPlaceIllustration = null state.data.locationList}}, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
+  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2, findPlaceIllustration = null state.data.locationList}, rideSearchProps{ sessionId = generateSessionId unit } }, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
-eval (UpdateLocation key lat lon) state = case key of
-  "LatLon" -> do
-    exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-  _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
-          exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
-        else continue state
-
-eval (UpdatePickupLocation  key lat lon) state =
+eval (UpdateLocation key lat lon) state = do
+  let sourceManuallyMoved = if state.props.isSource == Just true then true else state.props.rideSearchProps.sourceManuallyMoved
+      destManuallyMoved = if state.props.isSource == Just false then true else state.props.rideSearchProps.destManuallyMoved
+      latitude = fromMaybe 0.0 (NUM.fromString lat)
+      longitude = fromMaybe 0.0 (NUM.fromString lon)
   case key of
     "LatLon" -> do
-      exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+      exit $ UpdateLocationName state{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved }}} latitude longitude
+    _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
+            exit $ UpdateLocationName state{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved }}} latitude longitude
+          else continue state
+
+eval (UpdatePickupLocation  key lat lon) state = do
+  let sourceManuallyMoved = true
+      latitude = fromMaybe 0.0 (NUM.fromString lat)
+      longitude = fromMaybe 0.0 (NUM.fromString lon)
+  case key of
+    "LatLon" -> do
+      exit $ UpdatePickupName state{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}}} latitude longitude
     _ -> do
       let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
       case focusedIndex of
         Just index -> do
           _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+          exit $ UpdatePickupName state{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}}} latitude longitude
         Nothing -> continue state
 
 eval (CheckBoxClick autoAssign) state = do
@@ -1663,7 +1672,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
 eval WhereToClick state = do
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-      updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
+      updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }, rideSearchProps{sessionId = generateSessionId unit}}, data{source=(getString CURRENT_LOCATION)}}
   exit $ UpdateSavedLocation updateState 
 
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
@@ -1903,7 +1912,7 @@ eval (PredictionClickedAction (LocationListItemController.OnClick item)) state =
 
 eval (SuggestedDestinationClicked item) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_sd_list_item"
-  locationSelected item true state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
+  locationSelected item true state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do
@@ -2646,7 +2655,10 @@ validateSearchInput state searchString =
   else
     continue state
   where
-  callSearchLocationAPI = updateAndExit state{props{ searchLocationModelProps{showLoader = true, findPlaceIllustration = false}}} $ SearchPlace searchString state
+  autoCompleteType = if state.props.isSource == Just true then Just ST.PICKUP else Just ST.DROP
+  sourceManuallyMoved = if state.props.isSource == Just true then false else state.props.rideSearchProps.sourceManuallyMoved
+  destManuallyMoved = if state.props.isSource == Just false then false else state.props.rideSearchProps.destManuallyMoved
+  callSearchLocationAPI = updateAndExit state{props{ searchLocationModelProps{showLoader = true, findPlaceIllustration = false}}} $ SearchPlace searchString state{ props{ rideSearchProps{ autoCompleteType = autoCompleteType, sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved } } }
 
 constructLatLong :: Number -> Number -> String -> Location
 constructLatLong lat lng _ =
