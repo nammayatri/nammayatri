@@ -14,19 +14,15 @@
 -}
 module Screens.NammaSafetyFlow.ComponentConfig where
 
-import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (any, null)
 import Engineering.Helpers.Commons as EHC
-import Font.Style (Style(..))
-import Helpers.Utils as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
-import Prelude (($), (<>), (==), (>), (||), not, map)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
+import Prelude (map, not, ($), (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
 import Services.API (RideShareOptions(..))

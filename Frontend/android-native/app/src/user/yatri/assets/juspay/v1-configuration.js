@@ -257,6 +257,6 @@ window.getMerchantConfig = function () {
       , "supportMail" :"support@nammayatri.in"
       , "name" : "Yatri"
       , "website" : "https://www.getyatri.com"
-    },
+    }
   })
 }

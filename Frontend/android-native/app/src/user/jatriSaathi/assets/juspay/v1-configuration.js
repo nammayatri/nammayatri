@@ -116,7 +116,7 @@ window.getMerchantConfig = function () {
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "merchantLogo" : "ny_ic_yatri_sathi_logo,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_yatri_sathi_logo.png",
     "feedbackBackground": "#2C2F3A",
-    "sideBarList": ["MyRides", "Tickets", "NammaSafety", "Favorites", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
+    "sideBarList": ["MyRides", "Tickets", "Favorites", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
     "nyBrandingVisibility": false,
     "fontType": "Assets",

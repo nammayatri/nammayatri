@@ -1,19 +1,19 @@
 module Screens.NammaSafetyFlow.Components.ContactCircle where
 
-import Common.Types.App
-import Data.Array
-import Data.Maybe
-import Prelude
-import PrestoDOM
-import Screens.Types
-import Styles.Types
+import Common.Types.App (LazyCheck(..))
+import Data.Array (take, (!!))
+import Data.Maybe (fromMaybe)
+import Prelude (Unit, const, ($), (&&), (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), PrestoDOM, alignParentRight, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, relativeLayout, text, textView, visibility, width)
+import Screens.Types (NewContacts)
+import Styles.Types (Color)
 import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Screens.NammaSafetyFlow.Components.HelperViews as HV
 import Font.Style as FontStyle
 import Helpers.Utils as HU
-import Mobility.Prelude
+import Mobility.Prelude (boolToVisibility)
 import Styles.Colors as Color
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

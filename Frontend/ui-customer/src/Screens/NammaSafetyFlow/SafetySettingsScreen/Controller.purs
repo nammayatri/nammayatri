@@ -14,25 +14,17 @@
 -}
 module Screens.NammaSafetyFlow.SafetySettingsScreen.Controller where
 
-import JBridge
-import Log
-import Prelude
-import PrestoDOM
-import Screens.Types
-import Storage
+import JBridge as JB 
+import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
+import Prelude (class Show, discard, map, not, pure, void, ($), (/=), (==))
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String as DS
-import Engineering.Helpers.Commons as EHC
 import Foreign (unsafeToForeign)
-import Helpers.Utils as HU
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Presto.Core.Types.Language.Flow (delay)
-import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.ComponentConfig (labelData)
@@ -40,9 +32,6 @@ import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), RideShareOptions(..))
-import Services.Config (getSupportNumber)
-import Types.App (defaultGlobalState)
-import Types.EndPoint (updateSosVideo)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -104,10 +93,10 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             }
         )
         response.defaultEmergencyNumbers
-  void $ pure $ setCleverTapUserProp [ { key: "Safety Setup Completed", value: unsafeToForeign response.hasCompletedSafetySetup } ]
-  void $ pure $ setCleverTapUserProp [ { key: "Auto Share Night Ride", value: unsafeToForeign response.shareTripWithEmergencyContacts } ]
-  void $ pure $ setCleverTapUserProp [ { key: "Mock Safety Drill Completed", value: unsafeToForeign response.hasCompletedMockSafetyDrill } ]
-  void $ pure $ setCleverTapUserProp [ { key: "Night Safety Check Enabled", value: unsafeToForeign response.nightSafetyChecks } ]
+  void $ pure $ JB.setCleverTapUserProp [ { key: "Safety Setup Completed", value: unsafeToForeign response.hasCompletedSafetySetup } ]
+  void $ pure $ JB.setCleverTapUserProp [ { key: "Auto Share Night Ride", value: unsafeToForeign response.shareTripWithEmergencyContacts } ]
+  void $ pure $ JB.setCleverTapUserProp [ { key: "Mock Safety Drill Completed", value: unsafeToForeign response.hasCompletedMockSafetyDrill } ]
+  void $ pure $ JB.setCleverTapUserProp [ { key: "Night Safety Check Enabled", value: unsafeToForeign response.nightSafetyChecks } ]
   continue
     state
       { data

@@ -188,6 +188,7 @@ import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.Config(getNumbersToWhiteList)
 import SessionCache(getValueFromWindow, setValueInWindow)
 import LocalStorage.Cache (clearCache)
+import DecodeUtil (getAnyFromWindow)
 
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
@@ -1549,8 +1550,9 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_SHARE_RIDE state -> do
       contacts <- getFormattedContacts 
+      let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       if null contacts then do
-        void $ pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/journey/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+        void $ pure $ shareTextMessage "" $ getString $ STR.TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "journey/?id="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
         void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
       else do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{contactList = Just contacts}, props{showShareRide = true}})

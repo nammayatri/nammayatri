@@ -1020,3 +1020,4 @@ getEN stringKey =
         YET_TO_START name -> name <> " is yet to start the ride"
         MESSAGE_FROM name -> "Message from " <> name
         RIDE_CANCELLED -> "Ride Cancelled"
+        TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Hey,\n\nI am riding with " <> appName <>" Driver " <> driverName <> "! Track this ride on: " <> trackLink <> "\n\nVehicle number: " <> vehicleNumber

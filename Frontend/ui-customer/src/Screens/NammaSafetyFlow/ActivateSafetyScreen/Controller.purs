@@ -14,26 +14,17 @@
 -}
 module Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller where
 
-import Debug
-import JBridge
+import JBridge as JB
 import Log
-import Prelude
-import PrestoDOM
-import Screens.Types
-import Storage
-import Timers
-
+import Prelude (class Show, bind, discard, map, not, pure, show, void, ($), (&&), (/=), (==))
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import Screens.Types (NammaSafetyScreenState)
+import Timers (clearTimerWithId)
 import Common.Types.App as CTA
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String as DS
-import Engineering.Helpers.Commons as EHC
-import Helpers.Utils as HU
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Presto.Core.Types.Language.Flow (delay)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
@@ -42,8 +33,6 @@ import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), Sos(..), SosFlow(..), RideShareOptions(..))
 import Services.Config (getSupportNumber)
-import Types.App (defaultGlobalState)
-import Types.EndPoint (updateSosVideo)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -83,6 +72,7 @@ data Action
   | ShowSafetyIssueView
   | SelectedCurrentLocation Number Number String
   | GoToEducationView
+  | CallSupport
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -213,15 +203,19 @@ eval (UpdateSosId (Sos sos)) state = do
 eval ShowPoliceView state = continue state { props { showCallPolice = true } }
 
 eval CallPolice state = do
-  void $ pure $ showDialer "112" false
+  void $ pure $ JB.showDialer "112" false
   exit $ CreateSos state true
 
 eval ShowSafetyIssueView state = exit $ GoToIssueScreen state
 
-eval (SelectedCurrentLocation lat lon name) state = continue state { data { currentLocation = name } }
+eval (SelectedCurrentLocation _ _ name) state = continue state { data { currentLocation = name } }
 
 eval GoToEducationView state = do
   _ <- pure $ clearTimerWithId state.props.timerId
   exit $ GoToEducationScreen state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "" } }
+
+eval CallSupport state = do
+  void $ pure $ JB.showDialer (getSupportNumber "") false
+  continue state
 
 eval _ state = continue state

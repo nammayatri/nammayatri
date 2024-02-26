@@ -14,39 +14,21 @@
 -}
 module Screens.NammaSafetyFlow.SetupSafetySettingsScreen.Controller where
 
-import Prelude
-import PrestoDOM
-import Screens.Types
-import Components.GenericHeader.Controller as GenericHeaderController
+import Prelude (class Show, discard, map, not, pure, void, ($), (/=), (<>), (==), (||))
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
-import Constants (defaultDensity)
 import Data.Array as DA
-import Data.Function.Uncurried (runFn1)
-import Data.Int as DI
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String as DS
-import Data.Time.Duration (Milliseconds(..))
-import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Utils (loaderText, toggleLoader)
-import Helpers.Utils as HU
-import JBridge (askRequestedPermissions, openUrlInApp, showDialer, stopRecord, getLayoutBounds)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Log (printLog, trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenRender)
-import Presto.Core.Types.Language.Flow (delay)
-import PrestoDOM.Core (getPushFn)
+import JBridge as JB
+import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactList
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), RideShareOptions(..))
-import Services.Config (getSupportNumber)
-import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
-import Types.App (defaultGlobalState)
-import Types.EndPoint (updateSosVideo)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -144,7 +126,7 @@ eval (GoToNextStep PrimaryButtonController.OnClick) state = do
     SetDefaultEmergencyContacts -> continue state { props { setupStage = SetNightTimeSafetyAlert } }
     SetPersonalSafetySettings ->
       do
-        void $ pure $ askRequestedPermissions [ "android.permission.CALL_PHONE" ]
+        void $ pure $ JB.askRequestedPermissions [ "android.permission.CALL_PHONE" ]
         exit $ PostEmergencySettings state
     _ -> continue state
 

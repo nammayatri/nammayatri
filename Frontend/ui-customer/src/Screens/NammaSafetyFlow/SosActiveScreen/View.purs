@@ -8,52 +8,38 @@
 -}
 module Screens.NammaSafetyFlow.SosActiveScreen.View where
 
-import Animation
-import Prelude
-import PrestoDOM
-import Screens.NammaSafetyFlow.ComponentConfig
-import Screens.NammaSafetyFlow.Components.ContactsList
-import Screens.NammaSafetyFlow.Components.HelperViews
+import Animation (screenAnimationFadeInOut)
+import Prelude (Unit, const, discard, not, pure, unit, void, ($), (&&), (<<<), (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textView, visibility, weight, width)
+import Screens.NammaSafetyFlow.ComponentConfig (cancelSOSBtnConfig)
+import Screens.NammaSafetyFlow.Components.HelperViews (layoutWithWeight, safetyPartnerView, separatorView)
 import Common.Types.App (LazyCheck(..))
-import Components.GenericHeader as GenericHeader
-import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Components.StepsHeaderModel as StepsHeaderModel
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!), (..))
-import Data.Function.Uncurried (runFn2)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String as DS
+import Data.Array (mapWithIndex, null)
+import Data.Maybe (Maybe)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Utils as EHU
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage, getLocationName, getAssetsBaseUrl)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.DefaultConfig as DC
 import Mobility.Prelude (boolToVisibility)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM.Animation as PrestoAnim
-import Screens.EmergencyContactsScreen.View (getFirstChar, getLastChar)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.SosActiveScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..), NewContacts, RecordingState(..), StepsHeaderModelState)
 import Screens.Types as ST
-import Services.API (GetSosDetailsRes(..))
-import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 
-screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
+screen :: ST.NammaSafetyScreenState -> Screen Action ST.NammaSafetyScreenState ScreenOutput
 screen initialState =
   { initialState
   , view: view
@@ -76,7 +62,7 @@ screen initialState =
         eval action state
   }
 
-view :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
+view :: forall w. (Action -> Effect Unit) -> ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   linearLayout
     [ height MATCH_PARENT
@@ -111,7 +97,7 @@ view push state =
       }
 
 ------------------------------------- dashboardView -----------------------------------
-sosActiveView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+sosActiveView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 sosActiveView state push =
   linearLayout
     [ height MATCH_PARENT
@@ -132,7 +118,7 @@ sosActiveView state push =
         ]
     ]
 
-sosDescriptionView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+sosDescriptionView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 sosDescriptionView state push =
   linearLayout
     [ height WRAP_CONTENT
@@ -195,7 +181,7 @@ sosDescriptionView state push =
         else
           SOS_TRIGGERED_DESC
 
-sosActionsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+sosActionsView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 sosActionsView state push =
   linearLayout
     [ width MATCH_PARENT
@@ -220,7 +206,7 @@ sosActionsView state push =
         ]
     ]
 
-emergencyContactsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+emergencyContactsView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 emergencyContactsView state push =
   linearLayout
     [ width MATCH_PARENT
@@ -275,7 +261,7 @@ emergencyContactsView state push =
         )
     ]
 
-callPoliceView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> STR -> forall w. PrestoDOM (Effect Unit) w
+callPoliceView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> STR -> forall w. PrestoDOM (Effect Unit) w
 callPoliceView state push text' =
   linearLayout
     ( [ height WRAP_CONTENT
@@ -311,56 +297,7 @@ type ImageTextViewConfig
     , image :: Maybe String
     }
 
-shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
-shimmerView state =
-  relativeLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ Margin 16 16 16 16
-    , visibility $ boolToVisibility state.props.showShimmer
-    ]
-    [ sfl (V 400) 16 1 true
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , alignParentBottom "true,-1"
-        ]
-        [ sfl (V 80) 130 3 (getValueToLocalStore IS_SOS_ACTIVE == "true")
-        , sfl (V 80) 130 1 (getValueToLocalStore IS_SOS_ACTIVE /= "true")
-        ]
-    ]
-
-sfl :: forall w. Length -> Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
-sfl height' marginTop numberOfBoxes visibility' =
-  shimmerFrameLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , margin $ MarginTop marginTop
-    , visibility $ boolToVisibility visibility'
-    ]
-    [ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        ]
-        ( map
-            ( \item ->
-                linearLayout
-                  [ height height'
-                  , background Color.greyDark
-                  , cornerRadius 12.0
-                  , weight 1.0
-                  , stroke $ "1," <> Color.grey900
-                  , margin $ Margin 4 4 4 4
-                  ]
-                  []
-            )
-            (1 .. numberOfBoxes)
-        )
-    ]
-
-dialPoliceView :: forall w. NammaSafetyScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+dialPoliceView :: forall w. ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 dialPoliceView state push =
   relativeLayout
     [ height MATCH_PARENT

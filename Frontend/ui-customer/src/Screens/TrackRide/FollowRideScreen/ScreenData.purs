@@ -43,7 +43,7 @@ initData =
       , chatCallbackInitiated: false
       , openChatScreen: false
       , sendMessageActive: false
-      , sheetState: Just EXPANDED
+      , sheetState: Nothing
       , currentSheetState: HALF_EXPANDED
       , isNotificationExpanded: false
       , startMapAnimation: true
