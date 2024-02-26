@@ -2611,7 +2611,7 @@ otpAndWaitView push state =
   linearLayout
   [ height $ V 40
   , orientation HORIZONTAL
-  , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] && (state.props.stageBeforeChatScreen /= RideStarted && state.data.rideType == RideType.RENTAL_RIDE))
+  , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] && (state.props.stageBeforeChatScreen /= RideStarted))
   , clipChildren false
   , clickable true
   , gravity BOTTOM
