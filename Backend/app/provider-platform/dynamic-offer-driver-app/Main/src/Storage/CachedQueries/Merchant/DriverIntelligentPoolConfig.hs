@@ -41,6 +41,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+import Kernel.Types.Cac
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
@@ -58,12 +59,12 @@ getDriverIntelligentPoolConfigFromDB id =
     Just a -> return . Just $ coerce @(DriverIntelligentPoolConfigD 'Unsafe) @DriverIntelligentPoolConfig a
     Nothing -> flip whenJust cacheDriverIntelligentPoolConfig /=<< Queries.findByMerchantOpCityId id
 
-dropDriverIntelligentPoolConfig :: Key -> Key
-dropDriverIntelligentPoolConfig text =
-  -- DAK.fromText $ Text.drop 10 (Text.pack $ show text)
-  case Text.stripPrefix "driverIntelligentPoolConfig:" (DAK.toText text) of
-    Just a -> DAK.fromText a
-    Nothing -> text
+-- dropDriverIntelligentPoolConfig :: Key -> Key
+-- dropDriverIntelligentPoolConfig text =
+--   -- DAK.fromText $ Text.drop 10 (Text.pack $ show text)
+--   case Text.stripPrefix "driverIntelligentPoolConfig:" (DAK.toText text) of
+--     Just a -> DAK.fromText a
+--     Nothing -> text
 
 stringValueToObject :: [(Key, Value)] -> [(Key, Value)]
 stringValueToObject [] = []
@@ -81,22 +82,29 @@ getConfigFromCACStrict merchantOpCityId = do
   gen <- newStdGen
   let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dipcCond toss
-  let res' = (contextValue ^@.. _Value . _Object . reindexed dropDriverIntelligentPoolConfig (itraversed . indices (\k -> Text.isPrefixOf "driverIntelligentPoolConfig:" (DAK.toText k))))
+  let res' = (contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverIntelligentPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverIntelligentPoolConfig:" (DAK.toText k))))
       res'' = stringValueToObject res'
       res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
   pure . fromMaybe (error "error in fetching the context value driverIntelligentPoolConfig: ") $ res
 
-initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig
-initializeCACThroughConfig id = do
-  host <- liftIO $ SE.lookupEnv "CAC_HOST"
-  interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
-  interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
+-- initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig
+-- initializeCACThroughConfig id = do
+--   host <- liftIO $ SE.lookupEnv "CAC_HOST"
+--   interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
+--   interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
+--   tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+--   config <- KSQS.findById' $ Text.pack tenant
+--   status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
+--   case status of
+--     0 -> getConfigFromCACStrict id
+--     _ -> error $ "error in creating the client for tenant" <> Text.pack tenant <> " retrying again"
+
+cacFallbackHelper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig
+cacFallbackHelper id = do
   tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
   config <- KSQS.findById' $ Text.pack tenant
-  status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
-  case status of
-    0 -> getConfigFromCACStrict id
-    _ -> error $ "error in creating the client for tenant" <> Text.pack tenant <> " retrying again"
+  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue
+  getConfigFromCACStrict id
 
 getDriverIntelligentPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig
 getDriverIntelligentPoolConfigFromCAC id = do
@@ -105,9 +113,9 @@ getDriverIntelligentPoolConfigFromCAC id = do
   let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "driver_offer_bpp_v2"
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dipcCond toss
-  let res' = (contextValue ^@.. _Value . _Object . reindexed dropDriverIntelligentPoolConfig (itraversed . indices (\k -> Text.isPrefixOf "driverIntelligentPoolConfig:" (DAK.toText k))))
+  let res' = (contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverIntelligentPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverIntelligentPoolConfig:" (DAK.toText k))))
       res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
-  maybe (initializeCACThroughConfig id) pure res
+  maybe (cacFallbackHelper id) pure res
 
 --     logDebug $ "dipc: the fetched context value is " <> show contextValue'
 --     --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
