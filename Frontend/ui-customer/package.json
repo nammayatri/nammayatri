@@ -18,7 +18,9 @@
     "start": "npm-run-all -p dev webpack-dev",
     "repl": "spago repl",
     "clean": "sh cleanSpago.sh",
-    "webpack-uglify": "uglifyjs dist/android/index_bundle.js --output dist/android/index_bundle.js --mangle --compress"
+    "webpack-uglify": "uglifyjs dist/android/index_bundle.js --output dist/android/index_bundle.js --mangle --compress",
+    "fast:purs": "spago build -w --purs-args '--purs=fastpurs'",
+    "fast:start": "npm-run-all -p fast:purs webpack-dev"
   },
   "author": "juspay",
   "license": "ISC",
@@ -48,7 +50,9 @@
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
-    "webpack-merge": "^5.8.0"
+    "webpack-merge": "^5.8.0",
+    "hyper-purescript": "^0.0.25",
+    "purescript-psa": "0.8.2"
   },
   "dependencies": {
     "axios": ">=1.6.0",
