@@ -448,6 +448,7 @@ createNotificationService req notificationCall = do
 
 createExecutionService ::
   ( EncFlow m r,
+    HasShortDurationRetryCfg r c,
     BeamFlow m r
   ) =>
   (Payment.MandateExecutionReq, Text) ->
@@ -457,7 +458,7 @@ createExecutionService ::
 createExecutionService (request, orderId) merchantId executionCall = do
   executionOrder <- mkExecutionOrder request
   QOrder.create executionOrder
-  executionResp <- executionCall request
+  executionResp <- withShortRetry $ executionCall request
   QOrder.updateStatus (Id orderId) executionResp.orderId executionResp.status
   return executionResp
   where
