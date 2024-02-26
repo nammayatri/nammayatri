@@ -71,7 +71,9 @@ tfOrder res bapConfig = do
       orderPayments = tfPayments res bapConfig,
       orderProvider = Nothing,
       orderQuote = tfQuotation res,
-      orderStatus = Nothing
+      orderStatus = Nothing,
+      orderCreatedAt = Nothing,
+      orderUpdatedAt = Nothing
     }
 
 tfFulfillments :: DOnInit.OnInitRes -> Maybe [Spec.Fulfillment]

@@ -99,7 +99,9 @@ buildOnUpdateReqOrderV2 req' = case req' of
           orderPayments = Nothing,
           orderProvider = Nothing,
           orderQuote = Nothing,
-          orderStatus = Nothing
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
         }
   OU.NewMessageBuildReq OU.DNewMessageReq {..} -> do
     let BookingDetails {..} = bookingDetails
@@ -116,7 +118,9 @@ buildOnUpdateReqOrderV2 req' = case req' of
           orderPayments = Nothing,
           orderProvider = Nothing,
           orderQuote = Nothing,
-          orderStatus = Nothing
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
         }
   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
     let BookingDetails {..} = bookingDetails
@@ -133,7 +137,9 @@ buildOnUpdateReqOrderV2 req' = case req' of
           orderPayments = Nothing,
           orderProvider = Nothing,
           orderQuote = Nothing,
-          orderStatus = Nothing
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
         }
   OU.StopArrivedBuildReq OU.DStopArrivedBuildReq {..} -> do
     let BookingDetails {..} = bookingDetails
@@ -149,5 +155,7 @@ buildOnUpdateReqOrderV2 req' = case req' of
           orderPayments = Nothing,
           orderProvider = Nothing,
           orderQuote = Nothing,
-          orderStatus = Nothing
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
         }
