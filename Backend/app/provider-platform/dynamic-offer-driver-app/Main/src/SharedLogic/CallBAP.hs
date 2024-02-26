@@ -483,7 +483,7 @@ sendDriverArrivalUpdateToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
-  Maybe UTCTime ->
+  UTCTime ->
   m ()
 sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   transporter <-

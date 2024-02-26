@@ -105,7 +105,7 @@ buildOnUpdateMessage (BookingCancelledBuildReq DBookingCancelledReq {..}) = do
         update_target = "state,fufillment.state.code"
       }
 buildOnUpdateMessage (DriverArrivedBuildReq DDriverArrivedReq {..}) = do
-  let tagGroups = Common.mkArrivalTimeTagGroup arrivalTime
+  let tagGroups = Common.mkArrivalTimeTagGroup (Just arrivalTime)
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups) Nothing False False
   return $
     OnUpdate.OnUpdateMessage

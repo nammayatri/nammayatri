@@ -303,8 +303,9 @@ arrivedAtPickup rideId req = do
   driverReachedDistance <- asks (.driverReachedDistance)
   unless (distance < driverReachedDistance) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
-    QRide.updateArrival rideId
-    BP.sendDriverArrivalUpdateToBAP booking ride ride.driverArrivalTime
+    now <- getCurrentTime
+    QRide.updateArrival rideId now
+    BP.sendDriverArrivalUpdateToBAP booking ride now
   pure Success
   where
     isValidRideStatus status = status == DRide.NEW

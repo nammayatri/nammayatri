@@ -546,32 +546,34 @@ mkLocationTagGroupV2 location =
   ]
 
 mkArrivalTimeTagGroupV2 :: Maybe UTCTime -> [Spec.TagGroup]
-mkArrivalTimeTagGroupV2 arrivalTime =
-  [ Spec.TagGroup
-      { tagGroupDisplay = Just False,
-        tagGroupDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just "driver_arrived_info",
-                descriptorName = Just "Driver Arrived Info",
-                descriptorShortDesc = Nothing
-              },
-        tagGroupList =
-          Just
-            [ Spec.Tag
-                { tagDisplay = Just False,
-                  tagDescriptor =
-                    Just $
-                      Spec.Descriptor
-                        { descriptorCode = Just "arrival_time",
-                          descriptorName = Just "Chargeable Distance",
-                          descriptorShortDesc = Nothing
-                        },
-                  tagValue = show <$> arrivalTime
-                }
-            ]
-      }
-  ]
+mkArrivalTimeTagGroupV2 arrivalTime
+  | isNothing arrivalTime = []
+  | otherwise =
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "driver_arrived_info",
+                  descriptorName = Just "Driver Arrived Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just "arrival_time",
+                            descriptorName = Just "Chargeable Distance",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = show <$> arrivalTime
+                  }
+              ]
+        }
+    ]
 
 mkOdometerTagGroupV2 :: Maybe Centesimal -> [Spec.TagGroup]
 mkOdometerTagGroupV2 startOdometerReading =

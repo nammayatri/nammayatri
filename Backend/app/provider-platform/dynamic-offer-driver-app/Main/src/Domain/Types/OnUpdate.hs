@@ -82,7 +82,7 @@ data DDriverArrivedReq = DDriverArrivedReq
     driver :: SP.Person,
     vehicle :: SVeh.Vehicle,
     booking :: DRB.Booking,
-    arrivalTime :: Maybe UTCTime
+    arrivalTime :: UTCTime
   }
 
 data DEstimateRepetitionReq = DEstimateRepetitionReq

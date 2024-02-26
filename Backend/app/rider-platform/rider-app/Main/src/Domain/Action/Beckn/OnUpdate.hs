@@ -464,9 +464,10 @@ onUpdate ValidatedBookingReallocationReq {..} = do
   Notify.notifyOnBookingReallocated booking
 onUpdate ValidatedDriverArrivedReq {..} = do
   now <- getCurrentTime
+  let dArrivalTime = fromMaybe now arrivalTime
   unless (isJust ride.driverArrivalTime) $ do
-    _ <- QRide.updateDriverArrival ride.id
-    void $ QPFS.updateStatus booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = Just now}
+    _ <- QRide.updateDriverArrival ride.id dArrivalTime
+    void $ QPFS.updateStatus booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = Just dArrivalTime}
 onUpdate ValidatedNewMessageReq {..} = do
   Notify.notifyOnNewMessage booking message
 onUpdate ValidatedEstimateRepetitionReq {..} = do

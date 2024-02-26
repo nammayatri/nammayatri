@@ -171,7 +171,7 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country =
         }
   OU.DriverArrivedBuildReq OU.DDriverArrivedReq {..} -> do
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    let driverArrivedInfoTags = Utils.mkArrivalTimeTagGroupV2 arrivalTime
+    let driverArrivedInfoTags = Utils.mkArrivalTimeTagGroupV2 (Just arrivalTime)
     fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just driverArrivedInfoTags) Nothing False False (Just $ show Event.DRIVER_ARRIVED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.OnUpdateReq
