@@ -55,6 +55,7 @@ import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner, resetIdMap)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
@@ -554,6 +555,7 @@ homeScreenFlow = do
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
   liftFlowBT $ handleUpdatedTerms $ getString STR.TERMS_AND_CONDITIONS_UPDATED
   flow <- UI.homeScreen
+  void $ lift $ lift $ fork $ Remote.pushSDKEvents
   case flow of
     ADD_STOP state -> do 
       let _ = spy "ADD_STOP" state

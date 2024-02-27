@@ -2,6 +2,14 @@ import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
 
+window.events = {};
+try {
+  if (typeof window.assetDownloadDuration === "number") {
+    window.events.assetDownloadDuration =
+      Date.now() - window.assetDownloadDuration;
+  }
+} catch (err) {}
+
 if (!window.__OS) {
   const getOS = function () { //taken from getOS() in presto-ui
     const userAgent = navigator.userAgent;
@@ -133,7 +141,7 @@ function callInitiateResult () {
   const payload = {
     event: "initiate_result"
     , service: "in.juspay.becknui"
-    , payload: { status: "SUCCESS" }
+    , payload: { action : "initiate", status: "SUCCESS" }
     , error: false
     , errorMessage: ""
     , errorCode: ""
@@ -169,10 +177,42 @@ window.onMerchantEvent = function (_event, globalPayload) {
       window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
     }
     console.log(window.merchantID);
+    try {
+      if (
+        clientPaylod.payload &&
+        clientPaylod.payload.hasOwnProperty("onCreateTimeStamp") &&
+        clientPaylod.payload.hasOwnProperty("initiateTimeStamp") &&
+        typeof window.events.onCreateToInitiateDuration === "undefined" &&
+        typeof window.events.initAppToInitiateDuration === "undefined"
+      ) {
+        window.events.onCreateToInitiateDuration =
+          new Date().getTime() - clientPaylod.payload.onCreateTimeStamp;
+        window.events.initAppToInitiateDuration =
+          new Date().getTime() - clientPaylod.payload.initiateTimeStamp;
+        window.events.onCreateToHomeScreenRenderDuration =
+          new Date(clientPaylod.payload.onCreateTimeStamp);
+        window.events.initAppToHomeScreenRenderDuration = 
+          new Date(clientPaylod.payload.initiateTimeStamp);
+      }
+    } catch (err) {}
     callInitiateResult();
   } else if (_event == "process") {
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
+     try {
+      const parsedPayload = JSON.parse(payload);
+      if (
+        parsedPayload.payload &&
+        parsedPayload.payload.hasOwnProperty("initiateTimeStamp") &&
+        typeof window.events.initAppToProcessDuration === "undefined" &&
+        typeof window.events.onCreateToProcessDuration === "undefined"
+      ) {
+        window.events.onCreateToProcessDuration =
+          new Date().getTime() - parsedPayload.payload.onCreateTimeStamp;
+        window.events.initAppToProcessDuration =
+          new Date().getTime() - parsedPayload.payload.initiateTimeStamp;
+      }
+    } catch (err) {}
     if (clientPaylod.action == "notification") {
       if (clientPaylod.notification_content && clientPaylod.notification_content.type) {
         window.callNotificationCallBack(clientPaylod.notification_content.type);

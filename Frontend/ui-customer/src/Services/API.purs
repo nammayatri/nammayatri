@@ -3332,3 +3332,31 @@ instance standardEncodeRetryMetrTicketPaymentResp :: StandardEncode RetryMetrTic
 instance showRetryMetrTicketPaymentResp :: Show RetryMetrTicketPaymentResp where show = genericShow
 instance decodeRetryMetrTicketPaymentResp :: Decode RetryMetrTicketPaymentResp where decode = defaultDecode
 instance encodeRetryMetrTicketPaymentResp  :: Encode RetryMetrTicketPaymentResp where encode = defaultEncode
+
+----------------------------- SDK Events -----------------------------------------------------
+newtype SDKEventsReq = SDKEventsReq {
+  event :: String
+}
+
+newtype SDKEventsResp = SDKEventsResp {
+  result :: String
+}
+
+instance makeSDKEventsReq :: RestEndpoint SDKEventsReq SDKEventsResp where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.pushSDKEvents "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericSDKEventsReq :: Generic SDKEventsReq _
+derive instance newtypeSDKEventsReq :: Newtype SDKEventsReq _
+instance standardEncodeSDKEventsReq :: StandardEncode SDKEventsReq where standardEncode (SDKEventsReq reqBody) = standardEncode reqBody
+instance showSDKEventsReq :: Show SDKEventsReq where show = genericShow
+instance decodeSDKEventsReq :: Decode SDKEventsReq where decode = defaultDecode
+instance encodeSDKEventsReq :: Encode SDKEventsReq where encode = defaultEncode
+
+derive instance genericSDKEventsResp :: Generic SDKEventsResp _
+derive instance newtypeSDKEventsResp :: Newtype SDKEventsResp _
+instance standardEncodeSDKEventsResp :: StandardEncode SDKEventsResp where standardEncode (SDKEventsResp resp) = standardEncode resp
+instance showSDKEventsResp :: Show SDKEventsResp where show = genericShow
+instance decodeSDKEventsResp :: Decode SDKEventsResp where decode = defaultDecode
+instance encodeSDKEventsResp :: Encode SDKEventsResp where encode = defaultEncode

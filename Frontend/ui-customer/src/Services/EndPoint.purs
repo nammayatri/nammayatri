@@ -247,3 +247,6 @@ getMetroBookingList dummy = (getBaseUrl "52") <> "/frfs/booking/list"
 
 retryMetrTicketPayment :: String -> String
 retryMetrTicketPayment quoteId = (getBaseUrl "53") <> "/frfs/quote/" <> quoteId <> "/payment/retry"
+
+pushSDKEvents :: String -> String
+pushSDKEvents _ =  (getBaseUrl "") <> "/sdk/events"

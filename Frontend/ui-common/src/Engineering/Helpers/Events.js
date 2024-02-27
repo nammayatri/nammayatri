@@ -65,3 +65,20 @@ export const getEvents = function () {
     return JSON.stringify({});
   }
 };
+
+export const addEventData = function (key) {
+  return function (value) {
+    return function () {
+      try {
+        if (
+          typeof window.events[key] === "undefined" &&
+          typeof value !== "undefined" &&
+          value !== ""
+        )
+          window.events[key] = value;
+      } catch (error) {
+        console.log("Add event data catch block" + error);
+      }
+    };
+  };
+};

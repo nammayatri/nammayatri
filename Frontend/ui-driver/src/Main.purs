@@ -42,7 +42,7 @@ import Helpers.Utils as Utils
 import Effect.Exception (error)
 import Data.Function.Uncurried (runFn2)
 import Screens (ScreenName(..)) as ScreenNames
-import Services.Events as Events
+import Engineering.Helpers.Events as Events
 import Data.Array as DA
 import Effect.Uncurried (runEffectFn1)
 import Screens.Types as ST
