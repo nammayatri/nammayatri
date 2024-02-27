@@ -79,7 +79,7 @@ rideActionModalConfig state =
   let
   config = RideActionModal.config
   rideActionModalConfig' = config {
-    startRideActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer),
+    startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted ) ),
     arrivedStopActive = state.props.arrivedAtStop,
     totalDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
     customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
@@ -732,20 +732,26 @@ enterOdometerReadingConfig state = let
       otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
       otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
       inputTextConfig {
-        text = state.data.odometerReading.valueInkm,
-        focusIndex = 5,
+        text = state.props.odometerValue,
+        focusIndex = state.props.enterOtpFocusIndex,
         textStyle = FontStyle.Heading1
       },
       headingConfig {
-        text = getString (ENTER_CURRENT_ODOMETER_READING),
+        text = if state.props.endRideOdometerReadingModal then getString ENTER_FINAL_ODO_READING else getString (ENTER_CURRENT_ODOMETER_READING),
         margin = (MarginLeft 0)
       },
       errorConfig {
-        text = if (state.props.otpIncorrect && state.props.wrongVehicleVariant) then (getString OTP_INVALID_FOR_THIS_VEHICLE_VARIANT) else if state.props.otpIncorrect then (getString ENTERED_WRONG_OTP)  else (getString OTP_LIMIT_EXCEEDED),
-        visibility = boolToVisibility $ state.props.otpIncorrect || state.props.otpAttemptsExceeded
+        text = getString (ODOMETER_READING_VALIDATION_FAILED),
+        visibility = boolToVisibility $ state.props.endRideOdometerReadingValidationFailed
+      },
+      textBoxConfig {
+        textBoxesArray = [0,1,2,3,4],
+        width = V 42,
+        height = V 46,
+        margin = (Margin 6 0 6 0)
       },
       subHeadingConfig {
-        text = if state.props.endRideOdometerReadingValidationFailed then getString (ODOMETER_READING_VALIDATION_FAILED) else getString (ENTER_THE_DIGITS_OF_ODOMETER),
+        text =  getString (ENTER_THE_LAST_4_DIGITS_OF_ODOMETER),
         visibility = boolToVisibility $ not state.props.otpAttemptsExceeded,
         textStyle = FontStyle.Body1,
         gravity = CENTER
@@ -757,8 +763,7 @@ enterOdometerReadingConfig state = let
       confirmBtnColor = if state.props.endRideOdometerReadingModal then Color.red else Color.darkMint,
       isDismissable = true,
       enableDeviceKeyboard = false,
-      odometerReading{ kiloMeters = state.data.odometerReading.valueInkm, meters = state.data.odometerReading.valueInM},
-      odometerConfig { updateKm = state.props.odometerConfig.updateKm , updateM = state.props.odometerConfig.updateM}
+      odometerReading = state.data.odometerReading
       }
       in inAppModalConfig'
 

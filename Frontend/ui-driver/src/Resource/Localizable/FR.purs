@@ -397,6 +397,7 @@ getFR stringKey =
         DEMO -> "Démo"
         PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP -> "Veuillez demander au client le OTP"
         ENTER_CURRENT_ODOMETER_READING -> "Entrez la lecture actuelle du compteur kilométrique"
+        ENTER_FINAL_ODO_READING -> "Entrez la lecture finale du compteur kilométrique"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "Entrez les 4 derniers chiffres du compteur kilométrique"
         ENTER_THE_DIGITS_OF_ODOMETER -> "Entrez les chiffres du compteur kilométrique"
         ODOMETER_READING_VALIDATION_FAILED -> "Veuillez saisir un kilométrage valide"
@@ -958,4 +959,5 @@ getFR stringKey =
         ENTER_END_RIDE_OTP -> "Entrez le OTP de fin de trajet"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "Vous n'êtes pas à l'emplacement de l'arrêt"
         ARRIVED_AT_STOP -> "Arrivé à l'arrêt"
+        END_ODO_READING_CANT_BE_MORE_THAN_300_START -> "La lecture du compteur kilométrique de fin ne peut pas dépasser 300 km à partir de la lecture du compteur kilométrique de départ"
         _ -> ""

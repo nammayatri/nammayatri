@@ -193,7 +193,16 @@ screen initialState =
                                 _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
-                                _ <- push RemoveChat
+
+                                when (initialState.data.activeRide.tripType /= ST.Rental) $ void $ push RemoveChat
+                                when (initialState.data.activeRide.tripType == ST.Rental && not initialState.props.chatcallbackInitiated) $ do
+                                  _ <- JB.clearChatMessages
+                                  _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
+                                  _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
+                                  _ <- JB.startChatListenerService
+                                  _ <- pure $ JB.scrollOnResume push ScrollToBottom
+                                  push InitializeChat
+
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
                                 
                                 if (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False")
@@ -211,6 +220,7 @@ screen initialState =
                                   pure unit
                                   else pure unit
             _                -> do
+                                void $ push RemoveChat
                                 _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ JB.removeAllPolylines ""

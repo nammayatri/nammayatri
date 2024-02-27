@@ -137,6 +137,7 @@ data KeyStore = USER_NAME
                 | RIDE_START_TIME
                 | RIDE_END_TIME
                 | RIDE_START_TIMER_ID
+                | PREVIOUS_LOCAL_STAGE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

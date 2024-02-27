@@ -405,6 +405,7 @@ getEN stringKey =
         DEMO -> "Demo"
         PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP -> "Please ask the customer for the OTP"
         ENTER_CURRENT_ODOMETER_READING -> "Enter current odometer reading"
+        ENTER_FINAL_ODO_READING -> "Enter final odo reading"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "Enter the last 4 digits of odometer"
         ENTER_THE_DIGITS_OF_ODOMETER -> "Enter the digits of odometer"
         ODOMETER_READING_VALIDATION_FAILED -> "Please enter valid odometer reading"
@@ -1259,3 +1260,4 @@ getEN stringKey =
         ENTER_END_RIDE_OTP -> "Enter end ride OTP"
         ARRIVED_AT_STOP -> "Arrived at stop"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "You are not at the stop location"
+        END_ODO_READING_CANT_BE_MORE_THAN_300_START -> "end ODO reading cannot be more than 300 km from start ODO reading"

@@ -1951,7 +1951,7 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalNativeStore RIDE_ID id
           _ <- pure $ hideKeyboardOnNavigation true
           liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,enterOdometerReadingModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,enterOdometerReadingModal = false, endRideOdometerReadingValidationFailed = false, enterOdometerFocusIndex=0}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
           if updatedState.data.activeRide.tripType == ST.Rental && isNothing updatedState.data.activeRide.nextStopAddress then do
@@ -1966,16 +1966,15 @@ homeScreenFlow = do
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           currentRideFlow Nothing
         Left errorPayload -> do
-          _ <- updateStage $ HomeScreenStage RideAccepted
           let errResp = errorPayload.response
           let codeMessage = decodeErrorCode errResp.errorMessage
           
           liftFlowBT $ logEvent logField_ "incorrect flow"
           if ( errorPayload.code == 400 && codeMessage == "INCORRECT_OTP") then do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = "",enterOdometerReadingModal= false,enterOtpFocusIndex = 0} })
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = "", enterOdometerReadingModal= false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
               void $ lift $ lift $ toggleLoader false
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = "",enterOtpFocusIndex = 0} })
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
               void $ lift $ lift $ toggleLoader false
               else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           homeScreenFlow
@@ -2024,32 +2023,38 @@ homeScreenFlow = do
           state.props.odometerFileId
         else Nothing 
         
-      (endRideResp) <- lift $ lift $ callApi $ API.EndRideRequest id (Remote.makeEndRideReq endRideOtp endRideOdometerReading fileId (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation tripDistance tripDistanceWithAcc ts)
-      
-      _ <- pure $ printLog "endRideResp" (show endRideResp)
+      (endRideResp) <- lift $ lift $ Remote.endRide id (Remote.makeEndRideReq endRideOtp endRideOdometerReading fileId (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation tripDistance tripDistanceWithAcc ts)
       case (endRideResp) of
+        Right (API.EndRideResponse response) -> do
+          when state.data.driverGotoState.isGotoEnabled do
+            getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+            modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
+              { driverInformation = Just getDriverInfoResp,
+                gotoPopupType = case response.homeLocationReached of 
+                  Nothing -> ST.NO_POPUP_VIEW
+                  Just true -> ST.REACHED_HOME
+                  Just false -> ST.MORE_GOTO_RIDES
+              })
+          onSuccessEndRide
         Left errorPayload -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, endRideOtpModal = endRideOtpModalOnError, endRideOdometerReadingModal=false, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
-          void $ lift $ lift $ toggleLoader false
-          homeScreenFlow
-        Right (response) -> do
-          let endRideRespCode = response.code
-          if endRideRespCode /= 200 then do
-
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, endRideOtpModal = endRideOtpModalOnError, endRideOdometerReadingModal=false, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
-            void $ lift $ lift $ toggleLoader false
-            homeScreenFlow
-          else do
-            let API.EndRideResponse endRideResp = response.response
-            when state.data.driverGotoState.isGotoEnabled do
-              getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-              modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
-                { driverInformation = Just getDriverInfoResp,
-                  gotoPopupType = case endRideResp.homeLocationReached of 
-                    Nothing -> ST.NO_POPUP_VIEW
-                    Just true -> ST.REACHED_HOME
-                    Just false -> ST.MORE_GOTO_RIDES
-                })
+          (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
+          case (head rideHistoryResponse.list) of
+            Nothing -> do
+                onSuccessEndRide
+            Just _ -> do
+              void $ lift $ lift $ toggleLoader false
+              let errResp = errorPayload.response
+              let codeMessage = decodeErrorCode errResp.errorMessage
+              liftFlowBT $ logEvent logField_ "incorrect flow"
+              if ( errorPayload.code == 400 && codeMessage == "INCORRECT_OTP") then do
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = endRideOtpModalOnError, otpAttemptsExceeded = false, rideOtp = "",enterOdometerReadingModal= false, endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
+              else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = false,otpAttemptsExceeded = true, enterOtpModal = endRideOtpModalOnError, rideOtp = "",enterOdometerReadingModal= false,endRideOdometerReadingModal = false, enterOtpFocusIndex = 0, enterOdometerFocusIndex=0} })
+              else
+                pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+              homeScreenFlow
+      where
+        onSuccessEndRide = do
             _ <- pure $ cleverTapCustomEvent "ny_driver_ride_ended"
             _ <- pure $ metaLogEvent "ny_driver_ride_ended"
             liftFlowBT $ firebaseLogEvent "ny_driver_ride_ended"
@@ -2111,8 +2116,7 @@ homeScreenFlow = do
                       isFreeRide = fromMaybe false response.isFreeRide
                     }
                   })
-              
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {endRideOdometerReadingModal = false, showRideCompleted = true}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {enterOtpModal = false, endRideOdometerReadingModal = false, endRideOdometerReadingValidationFailed = false,enterOdometerFocusIndex=0, showRideCompleted = true}})
             _ <- updateStage $ HomeScreenStage RideCompleted
             void $ lift $ lift $ toggleLoader false
             updateDriverDataToStates
@@ -2252,8 +2256,10 @@ homeScreenFlow = do
       if state.data.activeRide.tripType == ST.Rental  then do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
         if state.props.currentStage /= RideAccepted && isNothing state.data.activeRide.nextStopAddress then do
+          _ <- pure $ printLog " DEBUG 1" $ show state.props.currentStage
           void $ pure $ removeAllPolylines ""
         else do
+          _ <- pure $ printLog " DEBUG 2" $ show srcLat <> " " <> show srcLon <> " " <> show destLat <> " " <> show destLon
           GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
           let shortRoute = (routeApiResponse !! 0)
           case shortRoute of

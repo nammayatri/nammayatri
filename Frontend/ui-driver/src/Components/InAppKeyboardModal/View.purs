@@ -19,14 +19,15 @@ import Common.Types.App
 import Components.InAppKeyboardModal.Controller (Action(..), InAppKeyboardModalState, SingleElementTextBoxConfig, InputFieldConfig)
 import Animation (translateYAnim)
 import Animation.Config (translateYAnimConfig)
-import Data.Array (mapWithIndex)
+import Data.Array (mapWithIndex, insertAt)
+import Data.Maybe (fromMaybe)
 import Data.String (take, drop, length)
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, void, ($), (/), (<>), (==), (||), (>=), (&&), (<), not, pure, (<$>), (/=))
+import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), not, pure, (<$>), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, letterSpacing, onFocus)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility, letterSpacing, imageWithFallback, lineHeight, id, pattern, textFromHtml, placeHolder)
@@ -39,7 +40,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Debug (spy)
 import Data.Array as DA
-import JBridge (showKeyboard)
+import JBridge (showKeyboard, requestKeyboardShow)
 
 view :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -196,7 +197,7 @@ otpView push state =
            , orientation VERTICAL
            , gravity if(state.modalType == KeyboardModalType.OTP || state.modalType == KeyboardModalType.ODOMETER) then CENTER else LEFT
        ]
-             ([] <> [if state.modalType == KeyboardModalType.OTP then if state.enableDeviceKeyboard then editTextSingleBox push state else textBoxes push state  $ otpTextBoxConfig state  else if state.modalType == KeyboardModalType.ODOMETER then if state.enableDeviceKeyboard then inputOdometerReading push state else captureOdometerReadingView push state else textView[]] <> [singleTextBox push state] <>
+             ([] <> [if state.modalType == KeyboardModalType.OTP then if state.enableDeviceKeyboard then editTextSingleBox push state else textBoxes push state  $ otpTextBoxConfig state  else if state.modalType == KeyboardModalType.ODOMETER then if state.enableDeviceKeyboard then inputOdometerReading push state else  captureOdometerReadingView push state else textView[]] <> [singleTextBox push state] <>
                     [textView $
                     [ width state.subHeadingConfig.width
                     , height state.subHeadingConfig.height
@@ -272,7 +273,7 @@ keyboard push state =
            , background if key == "back" then Color.lightGrey else Color.darkMint
            , cornerRadius 4.0
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
-           , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone if state.modalType == KeyboardModalType.ODOMETER && state.odometerConfig.updateM then state.odometerReading.meters else state.inputTextConfig.text))
+           , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
            , clickable if key == "back" then true 
                       else ((length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && state.modalType == KeyboardModalType.OTP && not state.otpIncorrect ) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber))  || state.modalType == KeyboardModalType.ODOMETER 
            ][ 
@@ -312,59 +313,37 @@ keyboard push state =
        ) item.keys )
     ) state.keyList )
 
-
 captureOdometerReadingView :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
-captureOdometerReadingView push config = 
+captureOdometerReadingView push state = 
   linearLayout
   [ height WRAP_CONTENT
   , gravity CENTER
   , margin $ MarginHorizontal 16 16
   , width MATCH_PARENT
-  ][  inputField push config {  isAdjustable : true,
-                                width : (V 0),
-                                isActive : config.odometerConfig.updateKm,
-                                unitVal : "Km",
-                                letterSpacing : (6.0),
-                                textVal : config.odometerReading.kiloMeters
-                              }
-    , textView  
-      [ text "•"
-      , height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , margin $ MarginHorizontal 16 16
-      , textSize FontSize.a_14 
-      , fontStyle $ FontStyle.bold LanguageStyle
-      ]
-    , inputField push config {  isAdjustable : false,
-                                width : (V 110),
-                                isActive : config.odometerConfig.updateM,
-                                unitVal : "m",
-                                letterSpacing : (2.0),
-                                textVal : config.odometerReading.meters
-                              }
+  ][  inputField push state
   ]
 
-inputField :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> InputFieldConfig -> PrestoDOM (Effect Unit) w
-inputField push config inputFieldConfig = 
+inputField :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
+inputField push state = 
   linearLayout
-  ([ height $ V 60
+  [ height $ V 60
   , cornerRadius 8.0 
-  , stroke $ "1,"<> if inputFieldConfig.isActive then Color.blue900 else Color.grey800
-  , onClick push $ const $ OnTextViewClick (inputFieldConfig.unitVal)
-  , onFocus push $ const $ OnTextViewClick (inputFieldConfig.unitVal)
+  , stroke $ "1,"<> Color.borderColorLight 
   , padding $ Padding 16 16 16 16
-  ] <> if inputFieldConfig.isAdjustable then [weight 1.0] else [width inputFieldConfig.width])[  textView $
+  , gravity CENTER
+  , weight 1.0][  
+      textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , text inputFieldConfig.textVal
-      , letterSpacing $ PX inputFieldConfig.letterSpacing
+      , text state.inputTextConfig.text
+      , letterSpacing $ PX 6.0
       , height MATCH_PARENT
       , color Color.black900
       ] <> FontStyle.h2 TypoGraphy
     , textView $
       [ height MATCH_PARENT
       , width WRAP_CONTENT
-      , text inputFieldConfig.unitVal
+      , text "Km"
       , margin $ MarginLeft 12
       , color Color.black600
       ] <> FontStyle.h2 TypoGraphy
@@ -378,57 +357,38 @@ inputOdometerReading push state =
     height WRAP_CONTENT,
     orientation HORIZONTAL,
     gravity CENTER,
+    margin (Margin 0 20 0 20),
     visibility if state.modalType == KeyboardModalType.ODOMETER then VISIBLE else GONE
-  ][
-    editText $
-    [ width $ V 270,
-      height WRAP_CONTENT,
-      color Color.greyTextColor,
-      placeHolder $ "Km",
-      onFocus push $ const $ OnTextViewClick ("Km"),
-      letterSpacing $ PX 2.0,
-      gravity CENTER,
-      id $ getNewIDWithTag "OdometerKeyboard",
-      afterRender (\_ -> void $ pure $ showKeyboard (getNewIDWithTag "OdometerKeyboard")
-            ) (const NoAction),
-      onChange (\action -> do case action of
-                                  OnClickDone text -> 
-                                    if length text >= 4 then do
-                                      void $ push action
-                                    else pure unit
-                                  _ -> pure unit
-                  ) OnClickDone,
-      pattern "[0-9]*,6",
-      inputType Numeric
-  ] <> (FontStyle.priceFont_big LanguageStyle),
-   textView  
-      [ text $ "•"
-      , height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , margin $ Margin 0 0 0 0
-      , padding $ Padding 0 0 0 0
-      , textSize FontSize.a_14 
-      , fontStyle $ FontStyle.bold LanguageStyle
-      ],
-    editText $
-    [ width $ V 30,
-      height WRAP_CONTENT,
-      color Color.greyTextColor,
-      placeHolder $ "M",
-      letterSpacing $ PX 2.0,
-      onFocus push $ const $ OnTextViewClick ("m"),
-      gravity CENTER,
-      id $ getNewIDWithTag "OdometerKeyboardM",
-      afterRender (\_ -> void $ pure $ showKeyboard (getNewIDWithTag "OdometerKeyboardM")
-            ) (const NoAction),
-      onChange (\action -> do case action of
-                                  OnClickDone text -> 
-                                    if length text >= 1 then do
-                                      void $ push action
-                                    else pure unit
-                                  _ -> pure unit
-                  ) OnClickDone,
-      pattern "[0-9]*,1",
-      inputType Numeric
-  ] <> (FontStyle.priceFont_big LanguageStyle)
-  ]
+  ](
+    fromMaybe [] $
+    insertAt 4 
+      (textView $ 
+        [ text "•",
+          width state.textBoxConfig.width,
+          height state.textBoxConfig.height,
+          stroke $ "1," <> Color.black600,
+           gravity CENTER,
+          cornerRadius 4.0,
+          margin state.textBoxConfig.margin
+        ]<>(FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle))
+      (mapWithIndex (\index item ->
+        editText $
+        [
+          width state.textBoxConfig.width,
+          height state.textBoxConfig.height, 
+          margin state.textBoxConfig.margin,
+          stroke $ "1," <> if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight,
+          color Color.greyTextColor,
+          cornerRadius 4.0,
+          gravity CENTER,
+          id $ getNewIDWithTag $ "OdometerKeyboard" <> show index,
+          onFocus push (const (OnclickTextBox index)),
+          onChange (\action -> do case action of
+                                      OnClickDone text -> 
+                                        void $ push (OnSelection text index)
+                                      _ -> pure unit
+                      ) OnClickDone,
+          pattern "[0-9]*,1",
+          inputType Numeric
+      ] <> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) state.textBoxConfig.textBoxesArray)
+  )

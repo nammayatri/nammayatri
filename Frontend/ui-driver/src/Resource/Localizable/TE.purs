@@ -406,6 +406,7 @@ getTE stringKey =
         DEMO -> "డెమో"
         PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP -> "దయచేసి OTP కోసం కస్టమర్‌ని అడగండి"
         ENTER_CURRENT_ODOMETER_READING -> "ప్రస్తుత ఓడోమీటర్ రీడింగ్‌ను నమోదు చేయండి"
+        ENTER_FINAL_ODO_READING -> "ఎంటర్ ఫైనల్ ఓడో రీడింగ్"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "ఓడోమీటర్ యొక్క చివరి 4 అంకెలను నమోదు చేయండి"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ఓడోమీటర్ యొక్క అంకెలను నమోదు చేయండి"
         ODOMETER_READING_VALIDATION_FAILED -> "దయచేసి చెల్లుబాటు అయ్యే ఓడోమీటర్ రీడింగ్‌ని నమోదు చేయండి"
@@ -1259,3 +1260,4 @@ getTE stringKey =
         OUR_SAFETY_PARTNER -> "మా భద్రతా భాగస్వామి"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "మీరు స్టాప్ లో ఉన్నారు"
         ARRIVED_AT_STOP -> "స్టాప్ లో చేరింది"
+        END_ODO_READING_CANT_BE_MORE_THAN_300_START -> "ముగింపు ఓడో రీడింగ్ నుండి 300 కిలోమీటర్ల నుండి ఎక్కడ ఉండక కాదు"

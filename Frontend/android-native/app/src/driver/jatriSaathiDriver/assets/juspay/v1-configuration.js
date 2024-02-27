@@ -274,7 +274,7 @@ window.getMerchantConfig = function () {
       "lottieQRAnim" : true
   }
   , "waitTimeConfig" : {
-    "enableWaitTime" : false
+    "enableWaitTime" : true
   }
   })
 }

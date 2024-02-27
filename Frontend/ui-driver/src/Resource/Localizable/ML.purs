@@ -406,6 +406,7 @@ getML stringKey =
         DEMO ->  "ഡെമോ"
         PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP ->  "ഉപഭോക്താവിനോട് OTP ചോദിക്കുക"
         ENTER_CURRENT_ODOMETER_READING -> "നിലവിലെ ഓഡമീറ്റർ റീഡിങ് നൽകുക"
+        ENTER_FINAL_ODO_READING -> "എന്റർ ഫൈനൽ ഓഡോ റീഡിങ്ങ്" 
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "ഓഡമീറ്റർ നിലവിലെ അവസാനത്തെ 4 അക്ക നൽകുക"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ഓഡോമീറ്ററിൻ്റെ അക്കങ്ങൾ നൽകുക"
         ODOMETER_READING_VALIDATION_FAILED -> "സാധുവായ ഓഡോമീറ്റർ റീഡിംഗ് നൽകുക"
@@ -1260,3 +1261,4 @@ getML stringKey =
         ENTER_END_RIDE_OTP -> "റൈഡ് അവസാനിപ്പിക്കുക ഓടിപി നൽകുക"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "നിങ്ങൾ സ്റ്റോപ്പ് സ്ഥലത്തിലാണ്"
         ARRIVED_AT_STOP -> "സ്റ്റോപ്പിൽ എത്തി"
+        END_ODO_READING_CANT_BE_MORE_THAN_300_START -> "അവസാനം ഓഡോമീറ്റർ റീഡിങ് ആരംഭ ഓഡോമീറ്റർ റീഡിങ്ങിലേക്ക് 300 കിലോമീറ്റർ കൂടുതലാകരുത്"

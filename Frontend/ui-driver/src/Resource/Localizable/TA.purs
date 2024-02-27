@@ -402,6 +402,7 @@ getTA stringKey =
         DEMO ->  "டெமோ"
         PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP ->  "OTP ஐ வாடிக்கையாளரிடம் கேளுங்கள்"
         ENTER_CURRENT_ODOMETER_READING -> "தற்போதைய ஓட்டமிட்டர் வாசிப்பை உள்ளிடவும்"
+        ENTER_FINAL_ODO_READING -> "என்டர் ஃபைனல் ஓடோ ரீடிங்"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "ஓட்டமிட்டரின் கடைசி 4 இலக்கங்களை உள்ளிடவும்"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ஓடோமீட்டரின் இலக்கங்களை உள்ளிடவும்"
         ODOMETER_READING_VALIDATION_FAILED -> "சரியான ஓடோமீட்டர் வாசிப்பை உள்ளிடவும்"
@@ -1259,4 +1260,4 @@ getTA stringKey =
         ENTER_END_RIDE_OTP -> "சவாரி முடிவு OTP ஐ உள்ளிடவும்"
         YOU_ARE_NOT_AT_STOP_LOCATION -> "நீங்கள் நிறுத்த இடத்தில் இல்லை"
         ARRIVED_AT_STOP -> "நிறுத்தம் வந்துவிட்டது"
-
+        END_ODO_READING_CANT_BE_MORE_THAN_300_START -> "இறுதிச் செல் ஓட்டுமீட்டர் வாசிப்பிலிருந்து 300 கிமீ விட அதிகமாக இருக்க முடியாது"

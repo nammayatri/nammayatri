@@ -145,3 +145,14 @@ getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, ar
                 areaCode :  areaCode,
                 lon : lon
         }
+
+getHomeStageFromString :: String -> ST.HomeScreenStage
+getHomeStageFromString localStage = 
+  case localStage of
+        "HomeScreen" -> ST.HomeScreen
+        "RideRequested" -> ST.RideRequested
+        "RideAccepted" -> ST.RideAccepted
+        "RideStarted" -> ST.RideStarted
+        "RideCompleted" -> ST.RideCompleted
+        "ChatWithCustomer" -> ST.ChatWithCustomer
+        _ -> ST.HomeScreen

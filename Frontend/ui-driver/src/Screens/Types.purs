@@ -1060,8 +1060,8 @@ type HomeScreenProps =  {
   endRideOdometerReadingModal :: Boolean,
   endRideOdometerReadingValidationFailed :: Boolean,
   showNewStopPopup :: Boolean,
-  odometerConfig :: OdometerConfig,
   enterOtpFocusIndex :: Int,
+  enterOdometerFocusIndex :: Int,
   time :: Int,
   otpIncorrect :: Boolean,
   wrongVehicleVariant :: Boolean,
@@ -2402,12 +2402,10 @@ instance eqGoBackToScreen :: Eq GoBackToScreen where eq = genericEq
 instance encodeGoBackToScreen :: Encode GoBackToScreen where encode = defaultEnumEncode
 instance decodeGoBackToScreen :: Decode GoBackToScreen where decode = defaultEnumDecode
 
-type OdometerConfig = {
-  updateKm :: Boolean,
-  updateM :: Boolean
-}
-
-type OdometerReading = {
-  valueInM :: String,
-  valueInkm :: String
-}
+type OdometerReading =  {
+    digit0 :: String,
+    digit1 :: String,
+    digit2 :: String,
+    digit3 :: String,
+    digit4 :: String
+  }
