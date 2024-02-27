@@ -2344,3 +2344,7 @@ type RideSearchProps = {
 data AutoCompleteReqType = PICKUP | DROP
 derive instance genericAutoCompleteReqType :: Generic AutoCompleteReqType _
 instance showAutoCompleteReqType :: Show AutoCompleteReqType where show = genericShow
+
+data LocationType = Source | Destination 
+derive instance genericLocationType :: Generic LocationType _
+instance eqLocationType :: Eq LocationType where eq = genericEq

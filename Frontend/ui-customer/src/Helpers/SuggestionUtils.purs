@@ -22,7 +22,7 @@ import Data.Maybe
 import Prelude
 import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null)
 import Data.Ord (comparing)
-import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..))
+import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..), Address, LocationType(..))
 import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
 import Data.Int(toNumber)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..), getValueToLocalNativeStore)
@@ -43,6 +43,8 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBook
 import Data.Foldable (foldl)
 import Data.Lens((^.))
 import Accessor (_contents, _lat, _lon, _toLocation, _otpCode)
+import Data.String as DS
+import Data.Array as DA
 
 foreign import encodeGeohash :: Fn3 Number Number Int String
 foreign import geohashNeighbours :: String -> Array String
@@ -294,3 +296,48 @@ updateMapWithPastTrips trips state = foldl updateMap (getSuggestionsMapFromLocal
     updateMap suggestionsMap trip =
       let geohash = encodeTripGeohash trip geohashPrecision
       in addOrUpdateSuggestedTrips geohash trip true suggestionsMap config
+
+getLocationTitle :: String -> String
+getLocationTitle singleLineAddress = 
+  maybe "" identity $ DA.head $ DS.split (DS.Pattern ",") singleLineAddress
+
+getLocationSubTitle :: String -> String
+getLocationSubTitle singleLineAddress = 
+  (DS.drop ((fromMaybe 0 (DS.indexOf (DS.Pattern ",") (singleLineAddress))) + 2) (singleLineAddress))
+
+getLocationFromTrip :: LocationType -> Trip -> Number -> Number -> LocationListItemState
+getLocationFromTrip locationType trip sourceLat sourceLong = 
+  let lat = if locationType == Destination then trip.destLat else trip.sourceLat
+      lon = if locationType == Destination then trip.destLong else trip.sourceLong
+      fullAddress = if locationType == Destination then trip.destinationAddress else trip.sourceAddress
+      singleLineAddress = if locationType == Destination then trip.destination else trip.source
+      distanceFromSource = getDistanceBwCordinates lat lon sourceLat sourceLong
+  in 
+    { prefixImageUrl : fetchImage FF_ASSET "ny_ic_recent_search"
+    , postfixImageUrl : ""
+    , postfixImageVisibility : true
+    , title : getLocationTitle singleLineAddress
+    , subTitle : getLocationSubTitle singleLineAddress
+    , placeId : Nothing
+    , lat : Just lat
+    , lon : Just lon
+    , description : ""
+    , tag : ""
+    , tagType : Nothing
+    , cardType : Nothing
+    , address : ""
+    , tagName : ""
+    , isEditEnabled : true
+    , savedLocation : ""
+    , placeName : ""
+    , isClickable : true
+    , alpha : 1.0
+    , fullAddress : fullAddress
+    , locationItemType : Just SUGGESTED_DESTINATIONS
+    , distance : Just $ show distanceFromSource
+    , showDistance : Just true
+    , actualDistance : Nothing
+    , frequencyCount : trip.frequencyCount
+    , recencyDate : trip.recencyDate
+    , locationScore : trip.locationScore
+    }

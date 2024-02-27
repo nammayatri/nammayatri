@@ -424,19 +424,18 @@ dummySettingBar = {
 }
 
 dummyAddress :: Address
-dummyAddress = {
-              "area" : Nothing
-            , "state" : Nothing
-            , "country" : Nothing
-            , "building" : Nothing
-            , "door" : Nothing
-            , "street" : Nothing
-            , "city" : Nothing
-            , "areaCode" : Nothing
-            , "ward" : Nothing
-            , "placeId" : Nothing
-            }
-
+dummyAddress = 
+  { "area"      : Nothing
+  , "state"     : Nothing
+  , "country"   : Nothing
+  , "building"  : Nothing
+  , "door"      : Nothing
+  , "street"    : Nothing
+  , "city"      : Nothing
+  , "areaCode"  : Nothing
+  , "ward"      : Nothing
+  , "placeId"   : Nothing
+  }
 dummyQuoteAPIEntity :: QuoteAPIEntity
 dummyQuoteAPIEntity = QuoteAPIEntity {
   agencyNumber : Nothing,
