@@ -21,6 +21,7 @@ module API.UI.Confirm
 where
 
 import qualified Beckn.ACL.Init as ACL
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as Merchant
@@ -36,6 +37,7 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Auth
 
 type API =
@@ -47,8 +49,9 @@ type API =
     :> QueryParam "paymentMethodId" (Id DMPM.MerchantPaymentMethod)
     :> Post '[JSON] ConfirmRes
 
-newtype ConfirmRes = ConfirmRes
-  { bookingId :: Id DRB.Booking
+data ConfirmRes = ConfirmRes
+  { bookingId :: Id DRB.Booking,
+    confirmTtl :: Int
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
 
@@ -68,12 +71,18 @@ confirm (personId, _) quoteId mbPaymentMethodId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
+    bapConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dConfirmRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
     handle (errHandler dConfirmRes.booking) $
       void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq
 
     return $
       ConfirmRes
-        { bookingId = dConfirmRes.booking.id
+        { bookingId = dConfirmRes.booking.id,
+          confirmTtl = ttlInInt
         }
   where
     errHandler booking exc

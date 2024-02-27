@@ -14,6 +14,7 @@ import qualified Tools.Beam.UtilsTH
 data BecknConfig = BecknConfig
   { buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     collectedBy :: Domain.Types.BecknConfig.PaymentCollectedBy,
+    confirmBufferTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     confirmTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     domain :: Kernel.Prelude.Text,
     gatewayUrl :: Servant.Client.Core.BaseUrl,

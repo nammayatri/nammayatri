@@ -15,10 +15,12 @@
 module API.UI.Select
   ( DSelect.DSelectReq (..),
     DSelect.DSelectRes (..),
+    DSelect.DSelectResultRes (..),
     DSelect.SelectListRes (..),
     DSelect.QuotesResultResponse (..),
     DSelect.CancelAPIResponse (..),
     API,
+    select,
     select2,
     selectList,
     selectResult,
@@ -29,14 +31,13 @@ where
 
 import qualified Beckn.ACL.Cancel as CACL
 import qualified Beckn.ACL.Select as ACL
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
 import Environment
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -46,17 +47,26 @@ import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
+import Tools.Error
 
 -------- Select Flow --------
 type API =
   "estimate"
     :> ( TokenAuth
            :> Capture "estimateId" (Id DEstimate.Estimate)
-           :> "select2"
+           :> "select"
            :> ReqBody '[JSON] DSelect.DSelectReq
-           :> Post '[JSON] APISuccess
+           :> Post '[JSON] DSelect.DSelectResultRes
+           :<|> TokenAuth
+             :> Capture "estimateId" (Id DEstimate.Estimate)
+             :> "select2"
+             :> ReqBody '[JSON] DSelect.DSelectReq
+             :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "quotes"
@@ -73,15 +83,38 @@ type API =
 
 handler :: FlowServer API
 handler =
-  select2
+  select
+    :<|> select2
     :<|> selectList
     :<|> selectResult
     :<|> cancelSearch
 
+select :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.DSelectResultRes
+select (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
+    dSelectReq <- DSelect.select personId estimateId req
+    becknReq <- ACL.buildSelectReqV2 dSelectReq
+    void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  let searchRequestId = estimate.requestId
+  searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
+  autoAssignEnabled <- searchRequest.autoAssignEnabled & fromMaybeM (InternalError "Invalid autoAssignEnabled")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle searchRequest.merchantId "MOBILITY" (UCommon.mapVariantToVehicle estimate.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  selectTtl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  ttlInInt <-
+    if autoAssignEnabled
+      then do
+        initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
+        confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
+        confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
+        pure (selectTtl + initTtl + confirmTtl + confirmBufferTtl)
+      else pure selectTtl
+  pure DSelect.DSelectResultRes {selectTtl = ttlInInt}
+
 select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler APISuccess
 select2 (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
-    dSelectReq <- DSelect.select personId estimateId req
+    dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
   pure Success
