@@ -362,8 +362,8 @@ arrivedAtStop rideId pt = do
       stopLoc <- runInReplica $ QLoc.findById nextStopId >>= fromMaybeM (InvalidRequest $ "Stop location doesn't exist for ride " <> ride.id.getId)
       let curPt = LatLong stopLoc.lat stopLoc.lon
           distance = distanceBetweenInMeters pt curPt
-      driverReachedDistance <- asks (.driverReachedDistance)
-      unless (distance < driverReachedDistance) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
+      transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
       QBooking.updateStopArrival booking.id
       BP.sendStopArrivalUpdateToBAP booking ride driver vehicle
       pure Success
