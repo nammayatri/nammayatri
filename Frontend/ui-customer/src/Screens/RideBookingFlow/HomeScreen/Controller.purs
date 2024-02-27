@@ -933,6 +933,7 @@ data Action = NoAction
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
             | PopUpModalReferralAction PopUpModal.Action
+            | ShowBookingPreference
             | UpdateBookingDetails RideBookingRes
             | UpdateContacts (Array NewContacts)
             | UpdateChatWithEM Boolean
@@ -1395,6 +1396,8 @@ eval BackPressed state = do
           continue updatedState{props{showRateCard = false}}
       else if updatedState.props.showMultipleRideInfo then 
         continue updatedState{props{showMultipleRideInfo=false}}
+      else if state.props.showBookingPreference then 
+        continue state {props {showBookingPreference = false}}
       else do
         _ <- pure $ updateLocalStage SearchLocationModel
         continue updatedState{data{rideHistoryTrip = Nothing},props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
@@ -1498,6 +1501,8 @@ eval (MAPREADY key latitude longitude) state =
       pure AfterRender
     ]
 
+eval ShowBookingPreference state = continue state {props {showBookingPreference = not state.props.showBookingPreference, showMultipleRideInfo = false}}
+
 eval OpenSearchLocation state = do
   _ <- pure $ performHapticFeedback unit
   let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
@@ -1540,10 +1545,10 @@ eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ if autoAssign then "4" else "17"
   _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ if autoAssign then "8000.0" else "1500.0"
   _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT $ if autoAssign then "22" else "117"
-  continue state{props{flowWithoutOffers = (show autoAssign) == "true"}}
+  continue state{props{flowWithoutOffers = autoAssign, showBookingPreference = false}}
 
 eval (OnIconClick autoAssign) state = do
-  continue state { props {showMultipleRideInfo = not autoAssign}}
+  continue state { props {showMultipleRideInfo = true}}
 
 eval PreferencesDropDown state = do
   continue state { data { showPreferences = not state.data.showPreferences}}

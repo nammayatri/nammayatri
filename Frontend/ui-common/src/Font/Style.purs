@@ -183,6 +183,12 @@ subHeading1 typography = [
 , lineHeight "24"
 ] <> if (getFontType "")  == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
+subHeading3 :: LazyCheck -> forall properties. (Array (Prop properties))
+subHeading3 typography = [
+  textSize FontSize.a_16
+, lineHeight "20"
+] <> if (getFontType "")  == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
+
 subHeading2 :: LazyCheck ->  forall properties. (Array (Prop properties))
 subHeading2 typography = [
   textSize FontSize.a_16

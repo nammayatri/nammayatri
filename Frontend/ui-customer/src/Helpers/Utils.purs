@@ -90,6 +90,7 @@ import Data.Tuple(Tuple(..) ,snd, fst)
 import Data.Ord
 import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
+import Data.Function.Uncurried (runFn1)
 import Constants (defaultDensity)
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -753,8 +754,7 @@ getCityConfig cityConfigs cityName = do
   
 getDefaultPixelSize :: Int -> Int
 getDefaultPixelSize size =
-  let pixels = runFn1 getPixels FunctionCall
-      androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
-  in if os == "IOS" 
-    then size
-    else ceil $ (toNumber size / pixels) * androidDensity
+  if os == "IOS" then size
+  else let pixels = runFn1 getPixels FunctionCall
+           androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall) / defaultDensity
+       in ceil $ (toNumber size / pixels) * androidDensity

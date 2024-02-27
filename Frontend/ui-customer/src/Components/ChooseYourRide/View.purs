@@ -33,6 +33,8 @@ import Mobility.Prelude
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
+  let isSingleEstimate = (length config.quoteList) == 1 && (fromMaybe ChooseVehicle.config (config.quoteList !! 0)).vehicleVariant == "AUTO_RICKSHAW" && config.enableSingleEstimate
+  in
   linearLayout
     [ width MATCH_PARENT
     , height $ V $ EHC.screenHeight unit
@@ -70,7 +72,7 @@ view push config =
             , width MATCH_PARENT
             , orientation VERTICAL
             ]
-            [ chooseYourRideView push config
+            [ chooseYourRideView push config isSingleEstimate
             -- , bottomDummyView push config
             ]
           -- ]
@@ -86,9 +88,7 @@ view push config =
       , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
       , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
       ]
-      [ bookingPreferencesView push config
-      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config)
-      ]
+      [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config) ]
     ]
   where
     getPeekHeight :: Config -> Int
@@ -265,8 +265,8 @@ multipleOfferInfoView push menuImage autoAssign =
     , onClick push $ const $ OnIconClick autoAssign
     ]
 
-chooseYourRideView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-chooseYourRideView push config =
+chooseYourRideView :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
+chooseYourRideView push config isSingleEstimate =
   let estimateConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       anims = if EHC.os == "IOS"
               then [fadeIn true]
@@ -305,7 +305,7 @@ chooseYourRideView push config =
       , background Color.white900
       , margin $ MarginTop 10
       , clickable true
-      , padding $ PaddingTop 7
+      , padding $ PaddingTop if EHC.os == "IOS" then 13 else 7
       , stroke $ "1," <> Color.grey900
       , gravity CENTER
       , cornerRadii $ Corners 24.0 true true false false
@@ -350,9 +350,10 @@ chooseYourRideView push config =
               , width MATCH_PARENT
               , margin $ MarginTop 12
               , background Color.grey900
+              , visibility $ boolToVisibility $ not isSingleEstimate
               ][]
           ]
-      , quoteListView push config
+      , quoteListView push config isSingleEstimate
       ]
   ]
 
@@ -388,8 +389,8 @@ estimatedTimeAndDistanceView push config =
         <> FontStyle.paragraphText TypoGraphy
     ]
 
-quoteListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-quoteListView push config =
+quoteListView :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
+quoteListView push config isSingleEstimate =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -403,19 +404,21 @@ quoteListView push config =
       ][  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
+          , padding $ PaddingBottom if isSingleEstimate then 0 else 10
           , orientation VERTICAL
           ]( mapWithIndex
-              ( \index item ->
-                  ChooseVehicle.view (push <<< ChooseVehicleAC) (item)
+              ( \index item -> do 
+                  let vehicleImage = if isSingleEstimate then (HU.fetchImage HU.FF_ASSET "ny_ic_single_estimate_auto") else item.vehicleImage 
+                  ChooseVehicle.view (push <<< ChooseVehicleAC) (item{isSingleEstimate = isSingleEstimate, vehicleImage = vehicleImage})
               ) config.quoteList
           )]]
 
 getQuoteListViewHeight :: Config -> Length
 getQuoteListViewHeight config =
     let len = length config.quoteList
-        quoteHeight = getHeightOfEstimateItem config
-        height = if quoteHeight == 0 then 87 else quoteHeight + 7
-    in V $ (if len >= 4 then 3 * height else len * height) + 5
+        quoteHeight = HU.getDefaultPixelSize $ getHeightOfEstimateItem config
+        height = if quoteHeight == 0 then 87 else quoteHeight
+    in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then (if EHC.os == "IOS" then 12 else 10) else 5
 
 getHeightOfEstimateItem :: Config -> Int
 getHeightOfEstimateItem config = (runFn1 getLayoutBounds $ EHC.getNewIDWithTag (fromMaybe ChooseVehicle.config (config.quoteList !! 0)).id).height

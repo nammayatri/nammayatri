@@ -300,3 +300,9 @@ tealishGreen = "#E5F5E9"
 
 darkGradientBlue :: Color
 darkGradientBlue = "#E2EAFF"
+
+black7000 :: Color
+black7000 = "#B32C2F3A"
+
+white13 :: Color 
+white13 = "#21000000"

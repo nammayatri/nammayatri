@@ -231,7 +231,7 @@ window.getMerchantConfig = function () {
       }
       , "enableOnlyAuto" : true
       , "showNearByDrivers": false
-      , "enableBookingPreference": true
+      , "enableBookingPreference": false
       , "textColor": "#6D7280"
       , "showInfoIcon" : true 
       }

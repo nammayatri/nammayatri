@@ -113,6 +113,7 @@ initData = {
       , isBookingOption : false
       , pickUpCharges : 0
       , layoutMargin : Margin 0 0 0 0
+      , isSingleEstimate : false
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -294,6 +295,7 @@ initData = {
     , sosBannerType : Nothing
     , showShareRide : false
     , followsRide: false
+    , showBookingPreference : false
     , isChatWithEMEnabled: false
     , referral : {
         referralStatus : NO_REFERRAL,
