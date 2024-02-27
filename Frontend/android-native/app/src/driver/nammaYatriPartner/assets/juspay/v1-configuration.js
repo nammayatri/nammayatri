@@ -381,7 +381,8 @@ window.getMerchantConfig = function () {
   , "waitTimeConfig" : {
     "thresholdDist" : 0.03,
     "routeDistance" : 30,
-    "diffBtwTwoHeartBeats" : 10
+    "diffBtwTwoHeartBeats" : 10,
+    "straightLineDist" : 0.015
   }
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true

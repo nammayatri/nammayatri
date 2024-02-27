@@ -91,7 +91,8 @@ config =
     thresholdDist : 0.05,
     thresholdTime : 180,
     routeDistance : 30,
-    diffBtwTwoHeartBeats : 10
+    diffBtwTwoHeartBeats : 10,
+    straightLineDist : 0.015
   }
   , bottomNavConfig : {
       home : 
