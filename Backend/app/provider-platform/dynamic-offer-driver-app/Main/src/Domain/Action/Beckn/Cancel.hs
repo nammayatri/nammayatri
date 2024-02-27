@@ -42,7 +42,6 @@ import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import Lib.SessionizerMetrics.Types.Event
-import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -133,8 +132,6 @@ cancel req merchant booking = do
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
 
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
-    fork "cancelBooking - Notify BAP" $ do
-      BP.sendBookingCancelledUpdateToBAP booking merchant bookingCR.source
 
     whenJust mbRide $ \ride ->
       fork "cancelRide - Notify driver" $ do
