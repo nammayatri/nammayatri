@@ -16,6 +16,7 @@ INSERT INTO
         select_ttl_sec,
         init_ttl_sec,
         confirm_ttl_sec,
+        confirm_buffer_ttl_sec,
         payment_params_json
     )
 VALUES
@@ -36,6 +37,7 @@ VALUES
         120,
         120,
         120,
+        120,
         '{"bankAccNumber": "xyz@upi","bankCode": "xyz"}'
     ),
     (
@@ -51,6 +53,7 @@ VALUES
         now(),
         now(),
         'CAB',
+        120,
         120,
         120,
         120,

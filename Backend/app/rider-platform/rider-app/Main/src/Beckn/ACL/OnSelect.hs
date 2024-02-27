@@ -51,7 +51,9 @@ buildOnSelectReqV2 req = do
     fulfillments <- order.orderFulfillments & fromMaybeM (InvalidRequest "Missing orderFulfillments")
     fulfillment <- listToMaybe fulfillments & fromMaybeM (InvalidRequest "Missing fulfillment")
     quote <- order.orderQuote & fromMaybeM (InvalidRequest "Missing orderQuote")
-    quotesInfo <- traverse (buildQuoteInfoV2 fulfillment quote timestamp order) items
+    onSelectTtl <- context.contextTtl & fromMaybeM (InvalidRequest "Missing ttl")
+    let validTill = addDurationToUTCTime timestamp (fromJust (parseISO8601Duration onSelectTtl))
+    quotesInfo <- traverse (buildQuoteInfoV2 fulfillment quote timestamp order validTill) items
     messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
     let bppEstimateId = Id $ UUID.toText messageUuid
         providerInfo =
@@ -82,9 +84,10 @@ buildQuoteInfoV2 ::
   Spec.Quotation ->
   UTCTime ->
   Spec.Order ->
+  UTCTime ->
   Spec.Item ->
   m DOnSelect.QuoteInfo
-buildQuoteInfoV2 fulfillment quote contextTime order item = do
+buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   fulfillmentType <- fulfillment.fulfillmentType & fromMaybeM (InvalidRequest "Missing fulfillmentType")
   quoteDetails <- case fulfillmentType of
     "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime
@@ -110,6 +113,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order item = do
             estimatedTotalFare = Money estimatedTotalFare,
             discount = Money <$> discount,
             serviceTierName = serviceTierName,
+            quoteValidTill = validTill,
             ..
           }
   where

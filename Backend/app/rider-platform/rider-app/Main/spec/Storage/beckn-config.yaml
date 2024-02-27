@@ -27,6 +27,7 @@ BecknConfig:
     selectTTLSec: Maybe Int
     initTTLSec: Maybe Int
     confirmTTLSec: Maybe Int
+    confirmBufferTTLSec: Maybe Int
 
   types:
     VehicleCategory:

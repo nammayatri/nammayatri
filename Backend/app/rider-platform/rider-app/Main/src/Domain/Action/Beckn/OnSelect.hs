@@ -68,7 +68,8 @@ data QuoteInfo = QuoteInfo
     estimatedTotalFare :: Money,
     quoteDetails :: DriverOfferQuoteDetails,
     specialLocationTag :: Maybe Text,
-    serviceTierName :: Maybe Text
+    serviceTierName :: Maybe Text,
+    quoteValidTill :: UTCTime
   }
 
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
@@ -162,6 +163,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             quoteDetails = DQuote.DriverOfferDetails driverOffer,
             requestId = estimate.requestId,
             itemId = estimate.itemId,
+            validTill = quoteValidTill,
             ..
           }
   pure quote

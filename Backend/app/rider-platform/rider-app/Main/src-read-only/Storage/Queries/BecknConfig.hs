@@ -63,6 +63,7 @@ updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   updateWithKV
     [ Se.Set Beam.buyerFinderFee buyerFinderFee,
       Se.Set Beam.collectedBy collectedBy,
+      Se.Set Beam.confirmBufferTTLSec confirmBufferTTLSec,
       Se.Set Beam.confirmTTLSec confirmTTLSec,
       Se.Set Beam.domain domain,
       Se.Set Beam.gatewayUrl $ Kernel.Prelude.showBaseUrl gatewayUrl,
@@ -100,6 +101,7 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Domain.Types.BecknConfig.BecknConfig
           { buyerFinderFee = buyerFinderFee,
             collectedBy = collectedBy,
+            confirmBufferTTLSec = confirmBufferTTLSec,
             confirmTTLSec = confirmTTLSec,
             domain = domain,
             gatewayUrl = gatewayUrl',
@@ -127,6 +129,7 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
     Beam.BecknConfigT
       { Beam.buyerFinderFee = buyerFinderFee,
         Beam.collectedBy = collectedBy,
+        Beam.confirmBufferTTLSec = confirmBufferTTLSec,
         Beam.confirmTTLSec = confirmTTLSec,
         Beam.domain = domain,
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,

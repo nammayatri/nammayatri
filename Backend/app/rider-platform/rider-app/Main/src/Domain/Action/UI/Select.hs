@@ -16,10 +16,12 @@
 module Domain.Action.UI.Select
   ( DSelectReq (..),
     DSelectRes (..),
+    DSelectResultRes (..),
     SelectListRes (..),
     QuotesResultResponse (..),
     CancelAPIResponse (..),
     select,
+    select2,
     selectList,
     selectResult,
   )
@@ -88,6 +90,12 @@ data DSelectRes = DSelectRes
     autoAssignEnabled :: Bool
   }
 
+newtype DSelectResultRes = DSelectResultRes
+  { selectTtl :: Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data QuotesResultResponse = QuotesResultResponse
   { selectedQuotes :: Maybe SelectListRes,
     bookingId :: Maybe (Id Booking)
@@ -121,7 +129,14 @@ instance FromJSON CancelAPIResponse where
   parseJSON err = typeMismatch "Object APISuccess" err
 
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> Flow DSelectRes
-select personId estimateId req@DSelectReq {..} = do
+select personId estimateId req = do
+  now <- getCurrentTime
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  when (estimate.validTill < now) $ throwError (InvalidRequest $ "Estimate expired " <> show estimate.id) -- select validation check
+  select2 personId estimateId req
+
+select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> Flow DSelectRes
+select2 personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
