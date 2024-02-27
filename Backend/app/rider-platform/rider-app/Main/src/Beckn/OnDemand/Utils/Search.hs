@@ -26,29 +26,28 @@ import qualified Tools.Maps as Maps
 
 mkSearchFulFillmentTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe Bool -> Maybe [Maps.RouteInfo] -> Maybe [Spec.TagGroup]
 mkSearchFulFillmentTags distance duration mbPoints mbIsReallocationEnabled mbMultipleRoutes =
-  Just $
-    mkRouteInfoTags distance duration mbPoints mbMultipleRoutes
-      ++ mkReallocationInfoTags mbIsReallocationEnabled
+  mkRouteInfoTags distance duration mbPoints mbMultipleRoutes <> mkReallocationInfoTags mbIsReallocationEnabled
 
-mkRouteInfoTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe [Maps.RouteInfo] -> [Spec.TagGroup]
+mkRouteInfoTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe [Maps.RouteInfo] -> Maybe [Spec.TagGroup]
 mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
-  [ Spec.TagGroup
-      { tagGroupDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tag.ROUTE_INFO,
-                descriptorName = Just "Route Information",
-                descriptorShortDesc = Nothing
-              },
-        tagGroupDisplay = Just False,
-        tagGroupList =
-          Just $
-            distanceSingleton
-              ++ durationSingleton
-              ++ mbPointsSingleton
-              ++ mkMultipleRoutesTags
-      }
-  ]
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tag.ROUTE_INFO,
+                  descriptorName = Just "Route Information",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just $
+              distanceSingleton
+                ++ durationSingleton
+                ++ mbPointsSingleton
+                ++ mkMultipleRoutesTags
+        }
+    ]
   where
     distanceSingleton
       | isNothing distance = []
@@ -123,16 +122,13 @@ mkCustomerInfoTags customerLanguage disabilityTag _ =
                   descriptorShortDesc = Nothing
                 },
           tagGroupDisplay = Just False,
-          tagGroupList =
-            Just $
-              customerLanguageSingleton
-                ++ disabilityTagSingleton
+          tagGroupList = customerLanguageSingleton customerLanguage <> disabilityTagSingleton disabilityTag
         }
     ]
   where
-    customerLanguageSingleton
-      | isNothing customerLanguage = []
-      | otherwise =
+    customerLanguageSingleton Nothing = Nothing
+    customerLanguageSingleton (Just language) =
+      Just $
         List.singleton $
           Spec.Tag
             { tagDescriptor =
@@ -143,11 +139,11 @@ mkCustomerInfoTags customerLanguage disabilityTag _ =
                       descriptorShortDesc = Nothing
                     },
               tagDisplay = Just False,
-              tagValue = (Just . show) =<< customerLanguage
+              tagValue = (Just . show) language
             }
-    disabilityTagSingleton
-      | isNothing disabilityTag = []
-      | otherwise =
+    disabilityTagSingleton Nothing = Nothing
+    disabilityTagSingleton (Just disability) =
+      Just $
         List.singleton $
           Spec.Tag
             { tagDescriptor =
@@ -158,30 +154,13 @@ mkCustomerInfoTags customerLanguage disabilityTag _ =
                       descriptorShortDesc = Nothing
                     },
               tagDisplay = Just False,
-              tagValue = (A.decode . A.encode) =<< disabilityTag
+              tagValue = (A.decode . A.encode) disability
             }
 
--- not send in search, send in select
--- mbPhoneNumberSingleton
---   | isNothing mbPhoneNumber = []
---   | otherwise =
---     List.singleton $
---       Spec.Tag
---         { tagDescriptor =
---             Just $
---               Spec.Descriptor
---                 { descriptorCode = Just $ show Tag.CUSTOMER_PHONE_NUMBER,
---                   descriptorName = Just "Customer Phone Number",
---                   descriptorShortDesc = Nothing
---                 },
---           tagDisplay = Just False,
---           tagValue = (A.decode . A.encode) =<< mbPhoneNumber
---         }
-
-mkReallocationInfoTags :: Maybe Bool -> [Spec.TagGroup]
-mkReallocationInfoTags = \case
-  Nothing -> []
-  Just isReallocationEnabled ->
+mkReallocationInfoTags :: Maybe Bool -> Maybe [Spec.TagGroup]
+mkReallocationInfoTags Nothing = Nothing
+mkReallocationInfoTags isReallocationEnabled =
+  Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
             Just $

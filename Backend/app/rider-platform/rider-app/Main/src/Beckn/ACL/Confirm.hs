@@ -69,7 +69,7 @@ tfOrder res bapConfig = do
       orderId = Just res.bppBookingId.getId,
       orderItems = tfItems res,
       orderPayments = tfPayments res bapConfig,
-      orderProvider = Nothing,
+      orderProvider = tfProvider res,
       orderQuote = tfQuotation res,
       orderStatus = Nothing,
       orderCreatedAt = Nothing,
@@ -218,4 +218,16 @@ tfVehicle res = do
         vehicleMake = Nothing,
         vehicleModel = Nothing,
         vehicleRegistration = Nothing
+      }
+
+tfProvider :: DOnInit.OnInitRes -> Maybe Spec.Provider
+tfProvider res =
+  Just $
+    Spec.Provider
+      { providerId = Just res.bppId,
+        providerItems = Nothing,
+        providerLocations = Nothing,
+        providerPayments = Nothing,
+        providerDescriptor = Nothing,
+        providerFulfillments = Nothing
       }

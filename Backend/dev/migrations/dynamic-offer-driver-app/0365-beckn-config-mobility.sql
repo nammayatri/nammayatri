@@ -1,3 +1,4 @@
+-- only for Local testing dont run in MASTER or PROD
 INSERT INTO
     atlas_driver_offer_bpp.beckn_config (
         id,
@@ -26,7 +27,7 @@ VALUES
         'MOBILITY',
         'http://localhost:8015/v1',
         'http://localhost:8020',
-        'localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+        'NAMMA_YATRI',
         'http://localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
         'favorit0-0000-0000-0000-00000favorit',
         null,
@@ -47,7 +48,7 @@ VALUES
         'MOBILITY',
         'http://localhost:8015/v1',
         'http://localhost:8020',
-        'localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+        'NAMMA_YATRI',
         'http://localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
         'favorit0-0000-0000-0000-00000favorit',
         null,
