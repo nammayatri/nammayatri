@@ -29,7 +29,8 @@ data RegistrationTokenT f = RegistrationTokenT
     personId :: B.C f Text,
     merchantId :: B.C f Text,
     createdAt :: B.C f Time.UTCTime,
-    operatingCity :: B.C f City
+    operatingCity :: B.C f City,
+    enabled :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

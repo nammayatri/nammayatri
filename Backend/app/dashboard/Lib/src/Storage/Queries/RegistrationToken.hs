@@ -78,6 +78,17 @@ findByPersonIdAndMerchantIdAndCity personId merchantId city =
         ]
     ]
 
+updateEnabledStatusByPersonIdAndMerchantIdAndCity :: BeamFlow m r => Id Person -> Id Merchant -> City.City -> Bool -> m ()
+updateEnabledStatusByPersonIdAndMerchantIdAndCity personId merchantId city enabled =
+  updateWithKV
+    [Se.Set BeamRT.enabled enabled]
+    [ Se.And
+        [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
+          Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
+          Se.Is BeamRT.operatingCity $ Se.Eq city
+        ]
+    ]
+
 deleteAllByPersonId :: BeamFlow m r => Id Person -> m ()
 deleteAllByPersonId personId = deleteWithKV [Se.Is BeamRT.personId $ Se.Eq $ getId personId]
 
