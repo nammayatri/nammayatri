@@ -59,7 +59,7 @@ mkPayment txnCity collectedBy paymentStatus mAmount mTxnId mPaymentParams mSettl
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
       paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff,
-      paymentType = encodeToText' Spec.PRE_ORDER
+      paymentType = encodeToText' Spec.ON_FULFILLMENT
     }
   where
     anyTrue = or

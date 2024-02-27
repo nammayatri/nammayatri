@@ -57,7 +57,7 @@ tfCatalogDescriptor res = do
 
 tfCatalogProviders :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> BecknV2.OnDemand.Types.Provider
 tfCatalogProviders res bppConfig = do
-  let providerId_ = Just res.provider.subscriberId.getShortId
+  let providerId_ = Just bppConfig.subscriberId
       providerLocations_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkProviderLocations ((map snd res.estimates) <> (map snd res.quotes))
       providerPayments_ = Just $ mkPayment res.provider bppConfig
       providerDescriptor_ = tfCatalogDescriptor res

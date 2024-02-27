@@ -27,9 +27,8 @@ import Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Text
-bookingStatusCode (DConfirm.DriverQuote _ _) = Nothing -- TODO: refactor it like so case match is not needed
-bookingStatusCode (DConfirm.StaticQuote _) = Just "NEW"
-bookingStatusCode (DConfirm.RideOtpQuote _) = Just "NEW"
+bookingStatusCode (DConfirm.DriverQuote _ _) = Just "TRIP_ASSIGNED" -- TODO: refactor it like so case match is not needed
+bookingStatusCode _ = Just "NEW"
 
 buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Spec.ConfirmReqMessage
 buildOnConfirmMessageV2 res pricing becknConfig = do
@@ -55,13 +54,13 @@ tfOrder res pricing bppConfig = do
     }
 
 tfFulfillments :: DConfirm.DConfirmResp -> Maybe [Spec.Fulfillment]
-tfFulfillments res = do
+tfFulfillments res =
   Just
     [ Spec.Fulfillment
         { fulfillmentAgent = tfAgent res,
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = Just res.booking.quoteId,
-          fulfillmentState = mkFulfillmentState res.quoteType,
+          fulfillmentState = mkFulfillmentState $ bookingStatusCode res.quoteType,
           fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode,
           fulfillmentTags = Nothing,
           fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
@@ -69,13 +68,14 @@ tfFulfillments res = do
         }
     ]
   where
-    mkFulfillmentState quoteType = do
+    mkFulfillmentState Nothing = Nothing
+    mkFulfillmentState stateCode =
       Just $
         Spec.FulfillmentState
           { fulfillmentStateDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = bookingStatusCode quoteType,
+                  { descriptorCode = stateCode,
                     descriptorShortDesc = Nothing,
                     descriptorName = Nothing
                   }

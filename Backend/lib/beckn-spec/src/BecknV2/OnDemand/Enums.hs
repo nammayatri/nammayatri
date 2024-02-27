@@ -144,7 +144,6 @@ data QuoteBreakupTitle
   | -- Custom Titles not in ONDC Spec
     SERVICE_CHARGE
   | DEAD_KILOMETER_FARE
-  | EXTRA_DISTANCE_FARE
   | DRIVER_SELECTED_FARE
   | CUSTOMER_SELECTED_FARE
   | TOTAL_FARE -- removed from init/on_init
