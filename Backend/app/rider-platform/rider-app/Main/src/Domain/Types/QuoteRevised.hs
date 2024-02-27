@@ -1,0 +1,142 @@
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
+
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+{-# LANGUAGE DerivingVia #-}
+
+module Domain.Types.QuoteRevised where
+
+import Control.Applicative
+import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Domain.Types.BppDetails as DBppDetails
+import qualified Domain.Types.DriverOffer as DDriverOffer
+import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.RentalDetails as DRentalDetails
+import qualified Domain.Types.SearchRequest as DSearchRequest
+import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
+import qualified Domain.Types.TripTerms as DTripTerms
+import Domain.Types.VehicleVariant (VehicleVariant)
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
+import qualified Tools.JSON as J
+import qualified Tools.Schema as S
+
+data QuoteRevised = QuoteRevised
+  { id :: Id QuoteRevised,
+    requestId :: Id DSearchRequest.SearchRequest,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
+    providerId :: Text,
+    providerUrl :: BaseUrl,
+    itemId :: Text,
+    vehicleVariant :: VehicleVariant,
+    tripTerms :: Maybe DTripTerms.TripTerms,
+    quoteRevisedDetails :: QuoteRevisedDetails,
+    merchantId :: Id DMerchant.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    specialLocationTag :: Maybe Text,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, Show, PrettyShow)
+
+data QuoteRevisedDetails
+  = OneWayDetails OneWayQuoteRevisedDetails
+  | InterCityDetails DSpecialZoneQuote.SpecialZoneQuote
+  | RentalDetails DRentalDetails.RentalDetails
+  | DriverOfferDetails DDriverOffer.DriverOffer
+  | OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote
+  deriving (Generic, Show)
+  deriving (PrettyShow) via Showable QuoteRevisedDetails
+
+newtype OneWayQuoteRevisedDetails = OneWayQuoteRevisedDetails
+  { distanceToNearestDriver :: HighPrecMeters
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, PrettyShow)
+
+data QuoteRevisedAPIEntity = QuoteRevisedAPIEntity
+  { id :: Id QuoteRevised,
+    vehicleVariant :: VehicleVariant,
+    estimatedFare :: Money,
+    estimatedTotalFare :: Money,
+    discount :: Maybe Money,
+    agencyName :: Text,
+    agencyNumber :: Maybe Text,
+    tripTerms :: [Text],
+    quoteRevisedDetails :: QuoteRevisedAPIDetails,
+    specialLocationTag :: Maybe Text,
+    agencyCompletedRidesCount :: Maybe Int,
+    createdAt :: UTCTime,
+    isValueAddNP :: Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+-- do not change constructor names without changing fareProductConstructorModifier
+data QuoteRevisedAPIDetails
+  = OneWayAPIDetails OneWayQuoteRevisedAPIDetails
+  | InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity
+  | RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity
+  | DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity
+  | OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity
+  deriving (Show, Generic)
+
+instance ToJSON QuoteRevisedAPIDetails where
+  toJSON = genericToJSON J.fareProductOptions
+
+instance FromJSON QuoteRevisedAPIDetails where
+  parseJSON = genericParseJSON J.fareProductOptions
+
+instance ToSchema QuoteRevisedAPIDetails where
+  declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
+
+newtype OneWayQuoteRevisedAPIDetails = OneWayQuoteRevisedAPIDetails
+  { distanceToNearestDriver :: HighPrecMeters
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+newtype OneWaySpecialZoneQuoteRevisedAPIDetails = OneWaySpecialZoneQuoteRevisedAPIDetails
+  { quoteRevisedId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+mkQuoteRevisedAPIDetails :: QuoteRevisedDetails -> QuoteRevisedAPIDetails
+mkQuoteRevisedAPIDetails = \case
+  RentalDetails DRentalDetails.RentalDetails {..} -> RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity {..}
+  OneWayDetails OneWayQuoteRevisedDetails {..} -> OneWayAPIDetails OneWayQuoteRevisedAPIDetails {..}
+  DriverOfferDetails DDriverOffer.DriverOffer {..} ->
+    let distanceToPickup' = distanceToPickup <|> (Just . HighPrecMeters $ toCentesimal 0)
+        durationToPickup' = durationToPickup <|> Just 0
+        rating' = rating <|> Just (toCentesimal 5)
+     in DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', durationToPickup = durationToPickup', rating = rating', ..}
+  OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
+  InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity {..}
+
+mkQAPIEntityList :: [QuoteRevised] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteRevisedAPIEntity]
+mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =
+  makeQuoteRevisedAPIEntity q bpp isValueAddNP : mkQAPIEntityList qRemaining bppRemaining remVNP
+mkQAPIEntityList [] [] [] = []
+mkQAPIEntityList _ _ _ = [] -- This should never happen as all the list are of same length
+
+makeQuoteRevisedAPIEntity :: QuoteRevised -> DBppDetails.BppDetails -> Bool -> QuoteRevisedAPIEntity
+makeQuoteRevisedAPIEntity (QuoteRevised {..}) bppDetails isValueAddNP =
+  let agencyCompletedRidesCount = Just 0
+      providerNum = fromMaybe "+91" bppDetails.supportNumber
+   in QuoteRevisedAPIEntity
+        { agencyName = bppDetails.name,
+          agencyNumber = Just providerNum,
+          tripTerms = maybe [] (.descriptions) tripTerms,
+          quoteRevisedDetails = mkQuoteRevisedAPIDetails quoteRevisedDetails,
+          ..
+        }

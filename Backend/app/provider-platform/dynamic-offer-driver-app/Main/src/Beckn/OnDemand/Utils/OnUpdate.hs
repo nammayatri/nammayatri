@@ -27,14 +27,22 @@ import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.Common as DTC
+import Domain.Types.EstimateRevised
+import qualified Domain.Types.EstimateRevised as DER
 import qualified Domain.Types.FareParameters as DFParams
+import qualified Domain.Types.FareParameters as Params
+import qualified Domain.Types.FarePolicy as Policy
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.QuoteRevised as DQR
 import qualified Domain.Types.Ride as DRide
-import EulerHS.Prelude hiding (id, (%~))
+import qualified Domain.Types.Vehicle.Variant as Variant
+import EulerHS.Prelude hiding (id, view, (%~), (^?))
 import Kernel.Types.Common
 import Kernel.Utils.Common
-import SharedLogic.FareCalculator as Fare
+import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy
 import Tools.Error
 
 -- TODO::Beckn, `Payment.ON_ORDER` Not present in spec.
@@ -59,7 +67,7 @@ mkRideCompletedQuote ride fareParams = do
             priceOfferedValue = Nothing
           }
       breakup =
-        Fare.mkFareParamsBreakups (mkPrice currency) mkBreakupItem fareParams
+        mkFareParamsBreakups (mkPrice currency) mkBreakupItem fareParams
           & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams)
   pure
     Spec.Quotation
@@ -308,3 +316,195 @@ mkSafetyAlertTags reason code =
             tagDisplay = Just False,
             tagValue = Just reason
           }
+
+mkUpdatedEstimateTags :: DER.EstimateRevised -> Maybe [Spec.TagGroup]
+mkUpdatedEstimateTags estimateRevised = do
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "updated_estimate",
+                  descriptorName = Just "Updated Estimate",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just
+              updatedEstimateSingleton
+        }
+    ]
+  where
+    updatedEstimateSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "new_estimate",
+                    descriptorName = Just "New Estimate",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just . show $ estimateRevised
+          }
+
+data Pricing = Pricing
+  { pricingId :: Text,
+    pricingMaxFare :: Money,
+    pricingMinFare :: Money,
+    vehicleVariant :: Variant.Variant,
+    tripCategory :: DTC.TripCategory,
+    fareParams :: Maybe Params.FareParameters,
+    farePolicy :: Maybe Policy.FarePolicy,
+    estimatedDistance :: Maybe Meters,
+    specialLocationTag :: Maybe Text,
+    fulfillmentType :: Text
+  }
+
+convertEstimateToPricing :: (DER.EstimateRevised) -> Pricing
+convertEstimateToPricing (DER.EstimateRevised {..}) =
+  Pricing
+    { pricingId = id.getId,
+      pricingMaxFare = maxFare,
+      pricingMinFare = minFare,
+      fulfillmentType = "RIDE",
+      ..
+    }
+
+convertQuoteToPricing :: (DQR.QuoteRevised) -> Pricing
+convertQuoteToPricing (DQR.QuoteRevised {..}) =
+  Pricing
+    { pricingId = id.getId,
+      pricingMaxFare = estimatedFare,
+      pricingMinFare = estimatedFare,
+      estimatedDistance = distance,
+      fareParams = Just fareParams,
+      fulfillmentType = mapToFulfillmentType tripCategory,
+      ..
+    }
+  where
+    mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = "RIDE_OTP"
+    mapToFulfillmentType (DTC.RoundTrip DTC.RideOtp) = "RIDE_OTP"
+    mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = "RIDE_OTP"
+    mapToFulfillmentType (DTC.Rental _) = "RENTAL"
+    mapToFulfillmentType _ = "RIDE_OTP" -- backward compatibility
+
+mkItemTags :: Pricing -> [Spec.TagGroup]
+mkItemTags pricing =
+  [mkGeneralInfoTag pricing, mkFareParamsTag pricing, mkRateCardTag pricing]
+
+mkGeneralInfoTag :: Pricing -> Spec.TagGroup
+mkGeneralInfoTag pricing =
+  let specialLocationTag = pricing.specialLocationTag
+   in Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = Just "general_info",
+                  descriptorName = Just "General Information",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just $
+              specialLocationTagSingleton specialLocationTag
+        }
+  where
+    specialLocationTagSingleton specialLocationTag
+      | isNothing specialLocationTag = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDisplay = Just True,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just "special_location_tag",
+                      descriptorName = Just "Special Location Tag",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = specialLocationTag
+            }
+
+buildFareParamsBreakupsTags :: FareParamsBreakupItem -> Spec.Tag
+buildFareParamsBreakupsTags FareParamsBreakupItem {..} = do
+  Spec.Tag
+    { tagDisplay = Just False,
+      tagDescriptor =
+        Just
+          Spec.Descriptor
+            { descriptorCode = Just title,
+              descriptorName = Just title,
+              descriptorShortDesc = Nothing
+            },
+      tagValue = Just $ show price.getMoney
+    }
+
+mkPriceHere :: Money -> Money
+mkPriceHere a = a
+
+data FareParamsBreakupItem = FareParamsBreakupItem
+  { title :: Text,
+    price :: Money
+  }
+
+mkFareParamsBreakupItem :: Text -> Money -> FareParamsBreakupItem
+mkFareParamsBreakupItem = FareParamsBreakupItem
+
+mkFareParamsTag :: Pricing -> Spec.TagGroup
+mkFareParamsTag pricing = do
+  let fareParamsBreakups = maybe [] (mkFareParamsBreakups mkPriceHere mkFareParamsBreakupItem) pricing.fareParams
+      fareParamsBreakupsTags = buildFareParamsBreakupsTags <$> fareParamsBreakups
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just
+          Spec.Descriptor
+            { descriptorCode = Just "fare_breakup",
+              descriptorName = Just "Fare Breakup",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList = Just fareParamsBreakupsTags
+    }
+
+buildRateCardTags :: RateCardBreakupItem -> Spec.Tag
+buildRateCardTags RateCardBreakupItem {..} = do
+  Spec.Tag
+    { tagDisplay = Just False,
+      tagDescriptor =
+        Just
+          Spec.Descriptor
+            { descriptorCode = Just title,
+              descriptorName = Just title,
+              descriptorShortDesc = Nothing
+            },
+      tagValue = Just value
+    }
+
+mkValue :: Text -> Text
+mkValue a = a
+
+data RateCardBreakupItem = RateCardBreakupItem
+  { title :: Text,
+    value :: Text
+  }
+
+mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
+mkRateCardBreakupItem = RateCardBreakupItem
+
+mkRateCardTag :: Pricing -> Spec.TagGroup
+mkRateCardTag pricing = do
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups mkValue mkRateCardBreakupItem pricing.estimatedDistance) pricing.farePolicy
+      farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just
+          Spec.Descriptor
+            { descriptorCode = Just "rate_card",
+              descriptorName = Just "Rate Card",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList = Just farePolicyBreakupsTags
+    }

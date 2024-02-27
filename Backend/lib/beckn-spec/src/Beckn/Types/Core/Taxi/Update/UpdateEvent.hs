@@ -18,6 +18,7 @@ module Beckn.Types.Core.Taxi.Update.UpdateEvent
 where
 
 import Beckn.Types.Core.Taxi.Update.UpdateEvent.AddStopEvent
+import Beckn.Types.Core.Taxi.Update.UpdateEvent.ConfirmEstimateEvent
 import Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent
 import Beckn.Types.Core.Taxi.Update.UpdateEvent.EditStopEvent
 import Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
@@ -31,6 +32,7 @@ data UpdateEvent
   | EditLocation EditLocationEvent
   | AddStop AddStopEvent
   | EditStop EditStopEvent
+  | ConfirmEstimate ConfirmEstimateEvent
   deriving (Generic, Show)
 
 instance ToJSON UpdateEvent where

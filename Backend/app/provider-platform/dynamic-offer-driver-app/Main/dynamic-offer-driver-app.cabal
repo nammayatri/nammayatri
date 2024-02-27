@@ -237,6 +237,7 @@ library
       Domain.Types.DriverQuote
       Domain.Types.DriverReferral
       Domain.Types.DriverStats
+      Domain.Types.EstimateRevised
       Domain.Types.Exophone
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
@@ -284,6 +285,7 @@ library
       Domain.Types.Plan
       Domain.Types.PlanTranslation
       Domain.Types.Quote
+      Domain.Types.QuoteRevised
       Domain.Types.Rating
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
@@ -333,6 +335,7 @@ library
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
+      SharedLogic.EstimateCalculation
       SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
@@ -388,6 +391,7 @@ library
       Storage.Beam.DriverQuote
       Storage.Beam.DriverReferral
       Storage.Beam.DriverStats
+      Storage.Beam.EstimateRevised
       Storage.Beam.Exophone
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
@@ -440,6 +444,7 @@ library
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
       Storage.Beam.Quote
+      Storage.Beam.QuoteRevised
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
@@ -527,6 +532,7 @@ library
       Storage.Queries.DriverQuote.Internal
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
+      Storage.Queries.EstimateRevised
       Storage.Queries.Exophone
       Storage.Queries.FareParameters
       Storage.Queries.FareParameters.FareParametersProgressiveDetails
@@ -579,6 +585,7 @@ library
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
       Storage.Queries.Quote
+      Storage.Queries.QuoteRevised
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
       Storage.Queries.RegistryMapFallback

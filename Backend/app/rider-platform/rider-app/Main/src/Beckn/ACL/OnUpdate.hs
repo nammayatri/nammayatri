@@ -18,18 +18,21 @@ module Beckn.ACL.OnUpdate
 where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.Utils as Utils
-import Data.Maybe (listToMaybe)
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import EulerHS.Prelude hiding (state)
+import Kernel.Prelude hiding (find, map, readMaybe)
+import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Error
 import Tools.Error (GenericError (InvalidRequest))
 
 buildOnUpdateReqV2 ::
@@ -44,7 +47,7 @@ buildOnUpdateReqV2 req = do
   transactionId <- Utils.getTransactionId req.onUpdateReqContext
   messageId <- Utils.getMessageId req.onUpdateReqContext
   handleErrorV2 req $ \message -> do
-    parseEventV2 transactionId messageId message.confirmReqMessageOrder
+    parseEventV2 transactionId messageId message.confirmReqMessageOrder req.onUpdateReqContext
 
 handleErrorV2 ::
   (MonadFlow m) =>
@@ -59,8 +62,8 @@ handleErrorV2 req action = do
       logTagError "on_update req" $ "on_update error: " <> show err
       pure Nothing
 
-parseEventV2 :: (MonadFlow m, CacheFlow m r) => Text -> Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
-parseEventV2 transactionId messageId order = do
+parseEventV2 :: (MonadFlow m, CacheFlow m r) => Text -> Text -> Spec.Order -> Spec.Context -> m DOnUpdate.OnUpdateReq
+parseEventV2 transactionId messageId order context = do
   eventType <-
     order.orderFulfillments
       >>= listToMaybe
@@ -90,6 +93,7 @@ parseEventV2 transactionId messageId order = do
     "NEW_MESSAGE" -> parseNewMessageEvent order
     "SAFETY_ALERT" -> parseSafetyAlertEvent order
     "STOP_ARRIVED" -> parseStopArrivedEvent order
+    "UPDATED_ESTIMATE" -> parseUpdatedEstimateEvent transactionId order context
     _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseNewMessageEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -142,3 +146,68 @@ parseStopArrivedEvent order = do
     DOnUpdate.StopArrivedReq
       { bppRideId = Id bppRideId
       }
+
+parseUpdatedEstimateEvent :: (MonadFlow m) => Text -> Spec.Order -> Spec.Context -> m DOnUpdate.OnUpdateReq
+parseUpdatedEstimateEvent transactionId order context = do
+  providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "fulfillment.provider_id is not present in UpdatedEstimate Event.")
+  providerUrl <- Beckn.OnDemand.Utils.Common.getContextBppUri context >>= Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing bpp_uri")
+  provider <- order.orderProvider & fromMaybeM (InvalidRequest "fulfillment.provider is not present in UpdatedEstimate Event.")
+  item <- order.orderItems & fromMaybeM (InvalidRequest "item is not present in UpdatedEstimate Event.")
+  fulfillment <- order.orderFulfillments & fromMaybeM (InvalidRequest "fulfillment is not present in UpdatedEstimate Event.")
+  name_ <- getProviderName order
+  (estimateInfo, quoteInfo) <- partitionEithers <$> traverse (buildEstimateOrQuoteInfo provider fulfillment) item
+  let providerInfo =
+        DOnUpdate.ProviderInfo
+          { providerId = providerId,
+            name = name_,
+            url = providerUrl,
+            mobileNumber = "",
+            ridesCompleted = 0
+          }
+  return $
+    DOnUpdate.UpdatedEstimateReq
+      { requestId = Id transactionId,
+        providerInfo,
+        estimateInfo,
+        quoteInfo
+      }
+
+buildEstimateOrQuoteInfo ::
+  (Monad m, Kernel.Types.App.MonadFlow m) =>
+  Spec.Provider ->
+  [Spec.Fulfillment] ->
+  Spec.Item ->
+  m (Either DOnUpdate.EstimateInfo DOnUpdate.QuoteInfo)
+buildEstimateOrQuoteInfo provider fulfillments item = do
+  let descriptions_ = []
+  let discount_ = Nothing
+  estimatedFare_ <- Utils.getEstimatedFare item
+  estimatedTotalFare_ <- Utils.getEstimatedFare item
+  itemId_ <- Utils.getItemId item
+  specialLocationTag_ <- Utils.buildSpecialLocationTag item
+  vehicleVariant_ <- Utils.getVehicleVariant provider item
+  quoteOrEstId_ <- Utils.getQuoteFulfillmentId item
+  fulfillment <- filter (\f -> f.fulfillmentId == Just quoteOrEstId_) fulfillments & listToMaybe & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment for item")
+  fulfillmentType <- fulfillment.fulfillmentType & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment type")
+  case fulfillmentType of
+    "RIDE_OTP" -> do
+      let quoteDetails_ = DOnUpdate.OneWaySpecialZoneDetails (DOnUpdate.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
+      pure $ Right $ DOnUpdate.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, vehicleVariant = vehicleVariant_}
+    "INTER_CITY" -> do
+      let quoteDetails_ = DOnUpdate.InterCityDetails (DOnUpdate.InterCityQuoteDetails {quoteId = quoteOrEstId_})
+      pure $ Right $ DOnUpdate.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, vehicleVariant = vehicleVariant_}
+    _ -> do
+      let bppEstimateId_ = Id quoteOrEstId_
+      let nightShiftInfo_ = Utils.buildNightShiftInfo item
+      totalFareRange_ <- Utils.getTotalFareRange item
+      -- waitingCharges_ <- Utils.buildWaitingChargeInfo item
+      estimateBreakupList_ <- Utils.buildEstimateBreakupList item
+      pure $ Left $ DOnUpdate.EstimateInfo {bppEstimateRevisedId = bppEstimateId_, descriptions = descriptions_, discount = discount_, estimateBreakupList = estimateBreakupList_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, nightShiftInfo = nightShiftInfo_, specialLocationTag = specialLocationTag_, totalFareRange = totalFareRange_, vehicleVariant = vehicleVariant_}
+
+getProviderName :: MonadFlow m => Spec.Order -> m Text
+getProviderName order =
+  order
+    & (.orderProvider)
+    >>= (.providerDescriptor)
+    >>= (.descriptorName)
+    & fromMaybeM (InvalidRequest "Missing Provider Name")

@@ -159,3 +159,42 @@ buildOnUpdateReqOrderV2 req' bppConfig merchant = case req' of
           orderQuote = Nothing,
           orderStatus = Nothing
         }
+  OU.UpdatedEstimateBuildReq OU.DUpdatedEstimateReq {..} -> do
+    logDebug $ "hello world recieved in transformer"
+    let BookingDetails {..} = bookingDetails
+    let updatedEstimateTags = Utils.mkUpdatedEstimateTags estimateRevised
+    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing updatedEstimateTags Nothing False False (Just $ show Event.UPDATED_ESTIMATE) isValueAddNP -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+    logDebug $ "hello world sent from transformer"
+    pure $
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems =
+            Just $
+              List.singleton $
+                Spec.Item
+                  { itemId = Just estimateRevised.id.getId,
+                    itemDescriptor = Nothing,
+                    itemFulfillmentIds = Nothing,
+                    itemLocationIds = Nothing,
+                    itemPaymentIds = Nothing,
+                    itemPrice = Nothing,
+                    itemTags = Nothing
+                  },
+          orderPayments = Nothing,
+          orderProvider =
+            Just $
+              Spec.Provider
+                { providerId = Just provider.id.getId,
+                  providerLocations = Nothing,
+                  providerPayments = Nothing,
+                  providerDescriptor = Nothing,
+                  providerItems = Nothing,
+                  providerFulfillments = Nothing
+                },
+          orderQuote = Nothing,
+          orderStatus = Nothing
+        }

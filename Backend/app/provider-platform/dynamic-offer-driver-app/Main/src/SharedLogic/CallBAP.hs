@@ -29,6 +29,7 @@ module SharedLogic.CallBAP
     buildBppUrl,
     sendSafetyAlertToBAP,
     mkTxnIdKey,
+    sendUpdatedEstimateToBAP,
   )
 where
 
@@ -61,10 +62,12 @@ import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.DriverOnboarding.Image as DIT
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.EstimateRevised as DER
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.QuoteRevised as DQR
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
@@ -589,3 +592,36 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
 
     estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking estimateRepetitionBuildReq
     void $ callOnUpdateV2 estimateRepMsgV2 retryConfig
+
+sendUpdatedEstimateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DER.EstimateRevised ->
+  DQR.QuoteRevised ->
+  UTCTime ->
+  LatLong ->
+  Maybe LatLong ->
+  DM.Merchant ->
+  Maybe Text ->
+  m ()
+sendUpdatedEstimateToBAP booking ride estimateRevised quoteRevised now fromLocation toLocation provider specialLocationTag = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  when isValueAddNP $ do
+    transporter <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    let bookingDetails = ACL.BookingDetails {..}
+        updatedEstimateBuildReq = ACL.UpdatedEstimateBuildReq ACL.DUpdatedEstimateReq {..}
+    retryConfig <- asks (.shortDurationRetryCfg)
+    updatedEstimateMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking updatedEstimateBuildReq
+    void $ callOnUpdateV2 updatedEstimateMsgV2 retryConfig

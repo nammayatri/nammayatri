@@ -18,7 +18,13 @@ module Beckn.Types.Core.Taxi.OnUpdate
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Tags as Reexport
+import Beckn.Types.Core.Taxi.OnUpdate.Descriptor as Reexport
+import Beckn.Types.Core.Taxi.OnUpdate.Fulfillment as Reexport
+import Beckn.Types.Core.Taxi.OnUpdate.Item as Reexport
+import Beckn.Types.Core.Taxi.OnUpdate.Location as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent as Reexport
+import Beckn.Types.Core.Taxi.OnUpdate.Provider as Reexport
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 

@@ -40,33 +40,47 @@ buildUpdateReq subscriber req = do
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == req.context.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
-  pure $ parseEvent req.message.order
+  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "transaction_id is not present.")
+  logDebug $ "hello world req: " <> show req
+  parseEvent transactionId req.message.order
 
-parseEvent :: Update.UpdateEvent -> DUpdate.DUpdateReq
-parseEvent (Update.PaymentCompleted pcEvent) = do
-  DUpdate.PaymentCompletedReq
-    { bookingId = Id pcEvent.id,
-      rideId = Id pcEvent.fulfillment.id,
-      paymentStatus = castPaymentStatus pcEvent.payment.status,
-      paymentMethodInfo = mkPaymentMethodInfo pcEvent.payment
-    }
-parseEvent (Update.EditLocation elEvent) = do
-  DUpdate.EditLocationReq
-    { bookingId = Id elEvent.id,
-      rideId = Id elEvent.fulfillment.id,
-      origin = elEvent.fulfillment.origin.location,
-      destination = elEvent.fulfillment.destination >>= (.location)
-    }
-parseEvent (Update.AddStop asEvent) = do
-  DUpdate.AddStopReq
-    { bookingId = Id asEvent.id,
-      stops = asEvent.fulfillment.stops
-    }
-parseEvent (Update.EditStop esEvent) = do
-  DUpdate.EditStopReq
-    { bookingId = Id esEvent.id,
-      stops = esEvent.fulfillment.stops
-    }
+parseEvent :: (MonadFlow m) => Text -> Update.UpdateEvent -> m (DUpdate.DUpdateReq)
+parseEvent _ (Update.PaymentCompleted pcEvent) = do
+  return $
+    DUpdate.PaymentCompletedReq
+      { bookingId = Id pcEvent.id,
+        rideId = Id pcEvent.fulfillment.id,
+        paymentStatus = castPaymentStatus pcEvent.payment.status,
+        paymentMethodInfo = mkPaymentMethodInfo pcEvent.payment
+      }
+parseEvent transactionId (Update.EditLocation elEvent) = do
+  return $
+    DUpdate.EditLocationReq
+      { bookingId = Id elEvent.id,
+        rideId = Id elEvent.fulfillment.id,
+        origin = elEvent.fulfillment.origin.location,
+        destination = elEvent.fulfillment.destination.location,
+        transactionId = transactionId
+      }
+parseEvent _ (Update.AddStop asEvent) = do
+  return $
+    DUpdate.AddStopReq
+      { bookingId = Id asEvent.id,
+        stops = asEvent.fulfillment.stops
+      }
+parseEvent _ (Update.EditStop esEvent) = do
+  return $
+    DUpdate.EditStopReq
+      { bookingId = Id esEvent.id,
+        stops = esEvent.fulfillment.stops
+      }
+parseEvent _ (Update.ConfirmEstimate ceEvent) = do
+  return $
+    DUpdate.ConfirmEstimateReq
+      { bookingId = Id ceEvent.id,
+        rideId = Id ceEvent.fulfillment.id,
+        confirmEstimateStatus = ceEvent.fulfillment.confirmEstimateStatus
+      }
 
 mkPaymentMethodInfo :: Update.Payment -> DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Update.Payment {..} =

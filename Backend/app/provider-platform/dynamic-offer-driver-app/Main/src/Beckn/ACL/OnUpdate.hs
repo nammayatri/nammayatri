@@ -23,6 +23,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
 import qualified Beckn.OnDemand.Utils.Common as BUtils
+import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
@@ -35,6 +36,9 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent as SafetyAlertDU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent as StopArrivedOU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.UpdatedEstimateEvent as UpdatedEstimateOU
+import Beckn.Types.Core.Taxi.Search.StartInfo as SI
+import Beckn.Types.Core.Taxi.Search.StopInfo as SI
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
@@ -45,6 +49,8 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildOnUpdateMessage ::
@@ -202,6 +208,42 @@ buildOnUpdateMessage (StopArrivedBuildReq DStopArrivedBuildReq {..}) = do
               },
         update_target = "order.fufillment.state.code"
       }
+buildOnUpdateMessage (UpdatedEstimateBuildReq res@DUpdatedEstimateReq {..}) = do
+  let BookingDetails {..} = bookingDetails
+  let tagGroups =
+        [ Tags.TagGroup
+            { display = False,
+              code = "updated_estimate",
+              name = "Updated Estimate",
+              list = [Tags.Tag (Just False) (Just "updated_estimate") (Just "Updated Estimate") (Just "true")]
+            }
+        ]
+  fulfillmentOld <- Common.mkFulfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups) Nothing False False
+  let startInfo = mkStartInfo res
+  let stopInfo = mkStopInfo res
+  let pricings = [Utils.convertEstimateToPricing estimateRevised, Utils.convertQuoteToPricing quoteRevised]
+  let (pricingEntities :: [PricingEntities]) = map (mkPricingEntities startInfo stopInfo provider) pricings
+  let item = map (.item) pricingEntities
+      fulfillment = map (.fulfillment) pricingEntities
+  let providerSpec =
+        OnUpdate.Provider
+          { id = provider.subscriberId.getShortId,
+            descriptor = OnUpdate.Descriptor {name = provider.name},
+            item,
+            fulfillment
+          }
+  return $
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.UpdatedEstimate $
+            UpdatedEstimateOU.UpdatedEstimateEvent
+              { id = booking.id.getId,
+                bpp_providers = pure providerSpec,
+                bpp_descriptor = OnUpdate.Descriptor provider.name,
+                fulfillment = fulfillmentOld
+              },
+        update_target = "order.fufillment.state.code, order.fulfillment.tags"
+      }
 
 buildOnUpdateMessageV2 ::
   ( MonadFlow m,
@@ -222,3 +264,138 @@ buildOnUpdateMessageV2 merchant booking req = do
   bppUri <- BUtils.mkBppUri merchant.id.getId
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (BUtils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   TFOU.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country booking req bppConfig merchant
+
+mkStartInfo :: DUpdatedEstimateReq -> SI.StartInfo
+mkStartInfo dReq =
+  SI.StartInfo
+    { location =
+        OnUpdate.Location
+          { gps = OnUpdate.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
+            address = Nothing
+          }
+    }
+
+mkStopInfo :: DUpdatedEstimateReq -> Maybe SI.StopInfo
+mkStopInfo res =
+  ( \toLoc ->
+      SI.StopInfo
+        { location =
+            OnUpdate.Location
+              { gps = OnUpdate.Gps {lat = toLoc.lat, lon = toLoc.lon},
+                address = Nothing
+              }
+        }
+  )
+    <$> res.toLocation
+
+data PricingEntities = PricingEntities
+  { fulfillment :: OnUpdate.FulfillmentInfo,
+    item :: OnUpdate.Item
+  }
+
+currency' :: Text
+currency' = "INR"
+
+mkPricingEntities :: SI.StartInfo -> Maybe SI.StopInfo -> DM.Merchant -> Utils.Pricing -> PricingEntities
+mkPricingEntities start end provider pricing = do
+  let variant = Common.castVariant pricing.vehicleVariant
+      minPriceDecimalValue = OnUpdate.DecimalValue $ toRational pricing.pricingMinFare
+      maxPriceDecimalValue = OnUpdate.DecimalValue $ toRational pricing.pricingMaxFare
+      fareParamsBreakups = maybe [] (mkFareParamsBreakups Utils.mkPriceHere Utils.mkFareParamsBreakupItem) pricing.fareParams
+      fareParamsBreakupsTags = buildFareParamsBreakupsTags <$> fareParamsBreakups
+
+      rateCardBreakups = maybe [] (mkFarePolicyBreakups Utils.mkValue Utils.mkRateCardBreakupItem pricing.estimatedDistance) pricing.farePolicy
+      rateCardTags = buildRateCardTags <$> rateCardBreakups
+
+      fulfillment =
+        OnUpdate.FulfillmentInfo
+          { start,
+            end = end,
+            id = pricing.pricingId,
+            _type = pricing.fulfillmentType,
+            vehicle = OnUpdate.Vehicle {category = variant}
+          }
+      item =
+        OnUpdate.Item
+          { id = Common.mkItemId provider.shortId.getShortId pricing.vehicleVariant,
+            fulfillment_id = fulfillment.id,
+            price =
+              OnUpdate.ItemPrice
+                { currency = currency',
+                  value = minPriceDecimalValue,
+                  offered_value = minPriceDecimalValue,
+                  minimum_value = minPriceDecimalValue,
+                  maximum_value = maxPriceDecimalValue
+                },
+            tags =
+              Just $
+                OnUpdate.TG
+                  [ mkGeneralInfoTag,
+                    mkFareParamsTag fareParamsBreakupsTags,
+                    mkRateCardTag rateCardTags
+                  ]
+          }
+  PricingEntities
+    { fulfillment,
+      item
+    }
+  where
+    mkGeneralInfoTag =
+      let specialLocationTag = pricing.specialLocationTag
+       in OnUpdate.TagGroup
+            { display = False,
+              code = "general_info",
+              name = "General Information",
+              list =
+                [ OnUpdate.Tag
+                    { display = (\_ -> Just True) =<< specialLocationTag,
+                      code = (\_ -> Just "special_location_tag") =<< specialLocationTag,
+                      name = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
+                      value = specialLocationTag
+                    },
+                  OnUpdate.Tag
+                    { display = Just False,
+                      code = Just "distance_to_nearest_driver",
+                      name = Just "Distance To Nearest Driver",
+                      value = Nothing
+                    }
+                ]
+            }
+
+    mkFareParamsTag fareParamsBreakupsTags =
+      OnUpdate.TagGroup
+        { display = False,
+          code = "fare_breakup",
+          name = "Fare Breakup",
+          list = fareParamsBreakupsTags
+        }
+
+    mkRateCardTag rateCardTags =
+      OnUpdate.TagGroup
+        { display = False,
+          code = "rate_card",
+          name = "Rate Card",
+          list = rateCardTags
+        }
+
+buildFareParamsBreakupsTags ::
+  Utils.FareParamsBreakupItem ->
+  OnUpdate.Tag
+buildFareParamsBreakupsTags Utils.FareParamsBreakupItem {..} = do
+  OnUpdate.Tag
+    { display = Just False,
+      code = Just title,
+      name = Just title,
+      value = Just $ show price.getMoney
+    }
+
+buildRateCardTags ::
+  Utils.RateCardBreakupItem ->
+  OnUpdate.Tag
+buildRateCardTags Utils.RateCardBreakupItem {..} = do
+  OnUpdate.Tag
+    { display = Just False,
+      code = Just title,
+      name = Just title,
+      value = Just value
+    }

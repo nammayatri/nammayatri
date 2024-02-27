@@ -18,6 +18,7 @@ module Tools.Event where
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.DriverQuote
 import qualified Domain.Types.Estimate as ES
+import qualified Domain.Types.EstimateRevised as DER
 import Domain.Types.Merchant
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Person
@@ -61,6 +62,12 @@ data Payload
         vehVar :: Variant.Variant, --vehicle variant
         cAt :: UTCTime
       }
+  | EstimateRevised
+      { erId :: Id DER.EstimateRevised,
+        srId :: Id DSearchRequest.SearchRequest, --searchReqId
+        vehVar :: Variant.Variant, --vehicle variant
+        cAt :: UTCTime
+      }
   | Exophone
       { vendor :: Maybe Text,
         callType :: Maybe Text,
@@ -89,6 +96,11 @@ data BookingEventData = BookingEventData
 
 data EstimateEventData = EstimateEventData
   { estimate :: ES.Estimate,
+    merchantId :: Id Merchant
+  }
+
+data EstimateRevisedEventData = EstimateRevisedEventData
+  { estimateRevised :: DER.EstimateRevised,
     merchantId :: Id Merchant
   }
 
@@ -128,6 +140,16 @@ triggerEstimateEvent ::
 triggerEstimateEvent estimateData = do
   let estimatePayload = Estimates {eId = estimateData.estimate.id, srId = estimateData.estimate.requestId, vehVar = estimateData.estimate.vehicleVariant, cAt = estimateData.estimate.createdAt}
   estEnvt <- createEvent Nothing (getId estimateData.merchantId) Estimate DYNAMIC_OFFER_DRIVER_APP System (Just estimatePayload) (Just $ getId estimateData.estimate.id) Nothing
+  triggerEvent estEnvt
+
+triggerEstimateRevisedEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  EstimateRevisedEventData ->
+  m ()
+triggerEstimateRevisedEvent estimateRevisedData = do
+  let estimatePayload = EstimateRevised {erId = estimateRevisedData.estimateRevised.id, srId = estimateRevisedData.estimateRevised.requestId, vehVar = estimateRevisedData.estimateRevised.vehicleVariant, cAt = estimateRevisedData.estimateRevised.createdAt}
+  estEnvt <- createEvent Nothing (getId estimateRevisedData.merchantId) Estimate DYNAMIC_OFFER_DRIVER_APP System (Just estimatePayload) (Just $ getId estimateRevisedData.estimateRevised.id) Nothing
   triggerEvent estEnvt
 
 triggerRideEndEvent ::
