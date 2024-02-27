@@ -13,6 +13,7 @@ import qualified IssueManagement.Storage.Beam.MediaFile as MediaFile
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as PaymentTransaction
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
+import qualified "rider-app" Storage.Beam.AutoCompleteData as AutoCompleteData
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
@@ -106,6 +107,7 @@ data DBCreateObject
   | LocationObject Location.Location
   | LocationMappingObject LocationMapping.LocationMapping
   | NextBillionDataObject NextBillionData.NextBillionData
+  | AutoCompleteDataObject AutoCompleteData.AutoCompleteData
   deriving (Generic, FromJSON, ToJSON, Show)
 
 modelName :: DBCreateObject -> Text
@@ -158,3 +160,4 @@ modelName (BecknRequestObject _) = "BecknRequest"
 modelName (LocationObject _) = "Location"
 modelName (LocationMappingObject _) = "LocationMapping"
 modelName (NextBillionDataObject _) = "NextBillionData"
+modelName (AutoCompleteDataObject _) = "AutoCompleteData"
