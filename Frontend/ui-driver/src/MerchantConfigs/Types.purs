@@ -158,7 +158,8 @@ type WaitTimeConfig = {
   thresholdDist :: Number,
   thresholdTime :: Int,
   routeDistance :: Int,
-  diffBtwTwoHeartBeats :: Int
+  diffBtwTwoHeartBeats :: Int,
+  straightLineDist :: Number
 }
 
 type FlowConfig = {

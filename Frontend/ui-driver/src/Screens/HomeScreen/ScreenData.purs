@@ -153,7 +153,7 @@ initData = {
         , bannerScrollState: "0"
         , currentPage : 0
       },
-      prevLatLon : [],
+      prevLatLon : Nothing,
       noOfLocations : 0,
       isVehicleSupported : true
     },
