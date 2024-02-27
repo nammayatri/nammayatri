@@ -26,6 +26,7 @@ import Kafka.Producer as Producer
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis.Config
 import Kernel.Streaming.Kafka.Producer.Types
+import qualified Kernel.Types.Common as KTC
 import Kernel.Types.Logging
 import Kernel.Utils.Dhall (FromDhall)
 import Types.DBSync.Create as X
@@ -58,7 +59,8 @@ data AppCfg = AppCfg
     maxMessages :: Text,
     loggerConfig :: LoggerConfig,
     dontEnableForDb :: [Text],
-    dontEnableForKafka :: [Text]
+    dontEnableForKafka :: [Text],
+    kafkaProperties :: [KTC.KafkaProperties]
   }
   deriving (Generic, FromDhall)
 

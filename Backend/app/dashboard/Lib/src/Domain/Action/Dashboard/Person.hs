@@ -105,6 +105,11 @@ newtype ReleaseRegisterReq = ReleaseRegisterReq
   {token :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
+newtype ChangeEnabledStatusReq = ChangeEnabledStatusReq
+  { enabled :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data ReleaseRegisterRes = ReleaseRegisterRes
   { username :: Text,
     token :: Text,
@@ -406,6 +411,18 @@ changeMobileNumberByAdmin _ personId req = do
   QP.updatePersonMobile personId encMobileNum
   pure Success
 
+changeEnabledStatus ::
+  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]) =>
+  TokenInfo ->
+  Id DP.Person ->
+  ChangeEnabledStatusReq ->
+  m APISuccess
+changeEnabledStatus tokenInfo personId req = do
+  void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
+  QReg.updateEnabledStatusByPersonIdAndMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city req.enabled
+  pure Success
+
 changeEmailByAdmin ::
   (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
@@ -416,6 +433,22 @@ changeEmailByAdmin _ personId req = do
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   encEmail <- encrypt $ T.toLower req.newEmail
   QP.updatePersonEmail personId encEmail
+  pure Success
+
+deletePerson ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  TokenInfo ->
+  Id DP.Person ->
+  m APISuccess
+deletePerson _ personId = do
+  void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  QAccess.deleteAllByPersonId personId
+  Auth.cleanCachedTokens personId
+  QReg.deleteAllByPersonId personId
+  QP.deletePerson personId
   pure Success
 
 buildPerson :: (EncFlow m r) => CreatePersonReq -> m SP.Person

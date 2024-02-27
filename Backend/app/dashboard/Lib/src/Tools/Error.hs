@@ -84,6 +84,7 @@ instance IsAPIError RoleError
 data MerchantError
   = MerchantAlreadyExist Text
   | MerchantAccountLimitExceeded Text
+  | UserDisabled
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MerchantError
@@ -92,13 +93,16 @@ instance IsBaseError MerchantError where
   toMessage = \case
     MerchantAlreadyExist shortId -> Just $ "Merchant with shortId \"" <> show shortId <> "\" already exist."
     MerchantAccountLimitExceeded shortId -> Just $ "Merchant with shortId \"" <> show shortId <> "\" already exist."
+    UserDisabled -> Just "User is disabled. Contact admin"
 
 instance IsHTTPError MerchantError where
   toErrorCode = \case
     MerchantAlreadyExist _ -> "MERCHANT_ALREADY_EXIST"
     MerchantAccountLimitExceeded _ -> "MERCHANT_ACCOUNT_LIMIT_EXCEEDED"
+    UserDisabled -> "USER_DISABLED"
   toHttpCode = \case
     MerchantAlreadyExist _ -> E400
     MerchantAccountLimitExceeded _ -> E400
+    UserDisabled -> E400
 
 instance IsAPIError MerchantError

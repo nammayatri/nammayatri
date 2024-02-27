@@ -29,6 +29,7 @@ import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.RegistrationToken as QR
+import Tools.Error
 
 type AuthFlow m r =
   ( BeamFlow m r,
@@ -99,6 +100,7 @@ validateToken ::
   DR.RegistrationToken ->
   m DR.RegistrationToken
 validateToken sr = do
+  unless (sr.enabled) $ Utils.throwError UserDisabled
   registrationTokenExpiry <- asks (.registrationTokenExpiry)
   let nominal = realToFrac . daysToSeconds $ registrationTokenExpiry
   expired <- Utils.isExpired nominal sr.createdAt

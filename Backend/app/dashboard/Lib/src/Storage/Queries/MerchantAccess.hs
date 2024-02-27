@@ -98,6 +98,9 @@ updatePerson2faForMerchant personId merchantId secretKey =
         ]
     ]
 
+deleteAllByPersonId :: BeamFlow m r => Id DP.Person -> m ()
+deleteAllByPersonId personId = deleteWithKV [Se.Is BeamMA.personId $ Se.Eq $ getId personId]
+
 findAllUserAccountForMerchant ::
   BeamFlow m r =>
   Id DMerchant.Merchant ->
