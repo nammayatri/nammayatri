@@ -76,7 +76,8 @@ data BookingAPIEntity = BookingAPIEntity
     sosStatus :: Maybe DSos.SosStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    isValueAddNP :: Bool
+    isValueAddNP :: Bool,
+    editPickupAttemptsLeft :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -167,6 +168,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       updatedAt = booking.updatedAt,
       hasDisability = hasDisability,
       sosStatus = mbSosStatus,
+      editPickupAttemptsLeft = fromMaybe 0 (activeRide >>= (.allowedEditLocationAttempts)),
       isValueAddNP
     }
   where
