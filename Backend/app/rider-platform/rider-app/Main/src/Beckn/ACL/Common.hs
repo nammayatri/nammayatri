@@ -211,7 +211,7 @@ getLocationFromTagV2 tagGroup key latKey lonKey =
 parseDriverArrivedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.DriverArrivedReq
 parseDriverArrivedEvent order msgId = do
   bookingDetails <- parseBookingDetails order msgId
-  let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
+  let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
   let arrivalTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
   return $
     Common.DriverArrivedReq
