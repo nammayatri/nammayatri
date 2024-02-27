@@ -268,6 +268,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.orderAndNotificationStatusCheckFallBackTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckFallBackTime,
         BeamTC.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
         BeamTC.considerDriversForSearch = considerDriversForSearch,
+        BeamTC.arrivedStopThreshold = arrivedStopThreshold,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.specialDrivers = specialDrivers,
