@@ -39,3 +39,9 @@ ALTER TABLE atlas_app.beckn_config ADD COLUMN select_ttl_sec integer ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN search_ttl_sec integer ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN init_ttl_sec integer ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN confirm_ttl_sec integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.beckn_config ADD COLUMN confirm_buffer_ttl_sec integer ;
