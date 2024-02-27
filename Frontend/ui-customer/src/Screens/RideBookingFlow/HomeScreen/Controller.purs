@@ -69,6 +69,7 @@ import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons
+import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
@@ -1919,6 +1920,7 @@ eval (PredictionClickedAction (LocationListItemController.OnClick item)) state =
 
 eval (SuggestedDestinationClicked item) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_sd_list_item"
+  let _ = unsafePerformEffect $ Events.addEventData "External.OneClick.SuggestedDestinationClicked" "true"
   locationSelected item true state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
@@ -2475,6 +2477,7 @@ eval (UpdateETA currentETA currentDistance) state = do
 
 eval (RepeatRide index item) state = do 
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_repeat_trip"
+  let _ = unsafePerformEffect $ Events.addEventData "External.OneClick.RepeatRideClicked" "true"
   void $ pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show true)
   void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
   void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
@@ -2546,6 +2549,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     }}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
+  let _ = unsafePerformEffect $ Events.addEventData "External.OneClick.SearchId" state.props.searchId
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   if state.data.currentSearchResultType == QUOTES then  do
     _ <- pure $ updateLocalStage ConfirmingRide

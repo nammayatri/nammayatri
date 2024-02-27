@@ -78,7 +78,7 @@ import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..))
 import Services.Backend as Remote
-import Services.Events as Events
+import Engineering.Helpers.Events as Events
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)

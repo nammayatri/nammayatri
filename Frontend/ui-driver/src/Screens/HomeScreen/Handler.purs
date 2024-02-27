@@ -32,7 +32,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
-import Services.Events as Events
+import Engineering.Helpers.Events as Events
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Screens.Types (KeyboardModalType(..))

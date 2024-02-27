@@ -69,6 +69,7 @@ import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, s
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -1453,7 +1454,7 @@ estimatedFareView push state =
   , gravity CENTER
   , cornerRadii $ Corners 24.0 true true false false
   , afterRender
-        ( \action -> do
+        ( \action -> do            
             let fareEstimate = if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
             _ <- pure $  setValueToLocalStore FARE_ESTIMATE_DATA fareEstimate
             pure unit

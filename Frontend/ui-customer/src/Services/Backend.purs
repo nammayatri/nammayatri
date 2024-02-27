@@ -30,6 +30,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
 import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion, isInvalidUrl)
+import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
 import Foreign.Object (empty)
@@ -1255,4 +1256,11 @@ getMetroStatusBT bookingId = do
           errorHandler _ = do
                 BackT $ pure GoBack
 
-
+------------------------------------------------------------------------- Push SDK Events -----------------------------------------------------------------------------
+pushSDKEvents :: Flow GlobalState (Either ErrorResponse SDKEventsResp)
+pushSDKEvents = do
+    headers <- getHeaders "" false
+    events <- liftFlow $ Events.getEvents
+    withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
+    where
+        unwrapResponse x = x
