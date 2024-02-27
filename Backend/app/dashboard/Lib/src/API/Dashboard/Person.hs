@@ -71,6 +71,15 @@ type API =
              :> DashboardAuth 'DASHBOARD_ADMIN
              :> ReqBody '[JSON] DPerson.CreatePersonReq
              :> Post '[JSON] DPerson.CreatePersonRes
+           :<|> "delete"
+             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "personId" (Id DP.Person)
+             :> Delete '[JSON] APISuccess
+           :<|> "changeEnabledStatus"
+             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "personId" (Id DP.Person)
+             :> ReqBody '[JSON] DPerson.ChangeEnabledStatusReq
+             :> Post '[JSON] APISuccess
            :<|> ( "change"
                     :> "email"
                     :> DashboardAuth 'DASHBOARD_ADMIN
@@ -122,6 +131,8 @@ handler =
       :<|> resetMerchantAccess
       :<|> resetMerchantCityAccess
       :<|> createPerson
+      :<|> deletePerson
+      :<|> changeEnabledStatus
       :<|> changeEmailByAdmin
       :<|> changePasswordByAdmin
       :<|> changeMobileByAdmin
@@ -197,3 +208,11 @@ registerRelease tokenInfo = withFlowHandlerAPI' . DPerson.registerRelease tokenI
 getProductSpecInfo :: BeamFlow' => Maybe Text -> FlowHandler DPerson.GetProductSpecInfoResp
 getProductSpecInfo releaseId =
   withFlowHandlerAPI' $ DPerson.getProductSpecInfo releaseId
+
+deletePerson :: BeamFlow' => TokenInfo -> Id DP.Person -> FlowHandler APISuccess
+deletePerson tokenInfo personId =
+  withFlowHandlerAPI' $ DPerson.deletePerson tokenInfo personId
+
+changeEnabledStatus :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.ChangeEnabledStatusReq -> FlowHandler APISuccess
+changeEnabledStatus tokenInfo personId req =
+  withFlowHandlerAPI' $ DPerson.changeEnabledStatus tokenInfo personId req

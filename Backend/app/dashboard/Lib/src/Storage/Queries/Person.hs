@@ -166,6 +166,9 @@ updatePersonEmail personId encEmail = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+deletePerson :: BeamFlow m r => Id Person -> m ()
+deletePerson personId = deleteWithKV [Se.Is BeamP.id $ Se.Eq $ getId personId]
+
 updatePersonMobile :: BeamFlow m r => Id Person -> EncryptedHashed Text -> m ()
 updatePersonMobile personId encMobileNumber = do
   now <- getCurrentTime

@@ -292,7 +292,8 @@ buildRegistrationToken personId merchantId city = do
         personId = personId,
         merchantId = merchantId,
         createdAt = now,
-        operatingCity = city
+        operatingCity = city,
+        enabled = True
       }
 
 registerFleetOwner ::

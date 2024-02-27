@@ -1,0 +1,1 @@
+ALTER TABLE atlas_bap_dashboard.registration_token ADD COLUMN enabled BOOLEAN DEFAULT TRUE NOT NULL;
