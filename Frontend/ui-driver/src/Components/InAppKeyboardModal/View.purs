@@ -27,7 +27,7 @@ import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), not, pure, (<$>), (/=))
+import Prelude (Unit, const, map, unit, void, show, ($), (/), (<>), (==), (||), (>=), (&&), (<), (>), not, pure, (<$>), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, letterSpacing, onFocus)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility, letterSpacing, imageWithFallback, lineHeight, id, pattern, textFromHtml, placeHolder)
@@ -275,7 +275,7 @@ keyboard push state =
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
            , clickable if key == "back" then true 
-                      else ((length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && state.modalType == KeyboardModalType.OTP && not state.otpIncorrect ) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber))  || state.modalType == KeyboardModalType.ODOMETER 
+                      else ((length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && state.modalType == KeyboardModalType.OTP && not state.otpIncorrect ) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber))  || (state.modalType == KeyboardModalType.ODOMETER && length state.inputTextConfig.text > 3)
            ][ 
                 if key == "back" then 
                 imageView

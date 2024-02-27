@@ -2160,7 +2160,8 @@ homeScreenFlow = do
         "DRIVER_ASSIGNMENT" -> do
           let (GlobalState defGlobalState) = defaultGlobalState
           when (isJust defGlobalState.homeScreen.data.activeRide.disabilityTag) $ do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showAccessbilityPopup = true}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showAccessbilityPopup = true}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {mapRendered = true}})
           currentRideFlow Nothing
         "RIDE_REQUESTED"    -> do
           _ <- updateStage $ HomeScreenStage RideRequested

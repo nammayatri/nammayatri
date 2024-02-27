@@ -780,7 +780,8 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
           otpIncorrect = false,
           enterOdometerReadingModal =  state.props.enterOtpModal, 
           endRideOdometerReadingModal = state.props.endRideOtpModal, 
-          enterOdometerFocusIndex = 0 
+          enterOdometerFocusIndex = 0,
+          endRideOdometerReadingValidationFailed = false
           }
         }
     else 
@@ -818,7 +819,9 @@ eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone odometerR
     let newState = state{ props { odometerFileId = Nothing, enterOtpModal = false, endRideOtpModal = false, odometerValue = odometerReading, endRideOdometerReadingValidationFailed = false } }
     if (state.props.currentStage == ST.RideStarted)
       then do
-        let startOdometerReading = maybe "0000.0" show state.data.activeRide.startOdometerReading
+        let startOdometerLength = length $ show state.data.activeRide.startOdometerReading
+        let startOdometerValue = maybe "0000.0" show state.data.activeRide.startOdometerReading
+        let startOdometerReading = if startOdometerLength < 4 then (if startOdometerLength == 0 then "0000" else if startOdometerLength == 1 then "000" else if startOdometerLength == 2 then "00" else if startOdometerLength == 3 then "0" else "") <> (startOdometerValue) else startOdometerValue
         let endOdometerReading = if (take 1 startOdometerReading == "9") && (take 1 (odometerReading) == "0") then
             "1" <> odometerReading
           else odometerReading

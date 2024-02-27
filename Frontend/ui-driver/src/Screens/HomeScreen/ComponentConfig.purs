@@ -757,7 +757,7 @@ enterOdometerReadingConfig state = let
         gravity = CENTER
       },
       imageConfig {
-        alpha = 1.0
+        alpha = if DS.length state.props.odometerValue < 4 then 0.5 else 1.0
       },
       modalType = ST.ODOMETER,
       confirmBtnColor = if state.props.endRideOdometerReadingModal then Color.red else Color.darkMint,
