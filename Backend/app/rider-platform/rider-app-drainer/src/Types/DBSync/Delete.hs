@@ -15,6 +15,7 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as PaymentTransaction
 import Sequelize
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
+import qualified "rider-app" Storage.Beam.AutoCompleteData as AutoCompleteData
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
@@ -107,6 +108,7 @@ data DeleteModel
   | LocationDelete
   | LocationMappingDelete
   | NextBillionDataDelete
+  | AutoCompleteDataDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -158,6 +160,7 @@ getTagDelete BecknRequestDelete = "BecknRequestOptions"
 getTagDelete LocationDelete = "LocationOptions"
 getTagDelete LocationMappingDelete = "LocationMappingOptions"
 getTagDelete NextBillionDataDelete = "NextBillionDataOptions"
+getTagDelete AutoCompleteDataDelete = "AutoCompleteDataOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
@@ -208,6 +211,7 @@ parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
 parseTagDelete "LocationOptions" = return LocationDelete
 parseTagDelete "LocationMappingOptions" = return LocationMappingDelete
 parseTagDelete "NextBillionDataOptions" = return NextBillionDataDelete
+parseTagDelete "AutoCompleteDataOptions" = return AutoCompleteDataDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -259,6 +263,7 @@ data DBDeleteObject
   | LocationDeleteOptions DeleteModel (Where Postgres Location.LocationT)
   | LocationMappingDeleteOptions DeleteModel (Where Postgres LocationMapping.LocationMappingT)
   | NextBillionDataDeleteOptions DeleteModel (Where Postgres NextBillionData.NextBillionDataT)
+  | AutoCompleteDataDeleteOptions DeleteModel (Where Postgres AutoCompleteData.AutoCompleteDataT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -412,3 +417,6 @@ instance FromJSON DBDeleteObject where
       NextBillionDataDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ NextBillionDataDeleteOptions deleteModel whereClause
+      AutoCompleteDataDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ AutoCompleteDataDeleteOptions deleteModel whereClause

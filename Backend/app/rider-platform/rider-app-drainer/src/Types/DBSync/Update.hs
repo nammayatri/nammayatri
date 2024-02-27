@@ -15,6 +15,7 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as PaymentTransaction
 import Sequelize
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
+import qualified "rider-app" Storage.Beam.AutoCompleteData as AutoCompleteData
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
@@ -110,6 +111,7 @@ data UpdateModel
   | LocationUpdate
   | LocationMappingUpdate
   | NextBillionDataUpdate
+  | AutoCompleteDataUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -161,6 +163,7 @@ getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
 getTagUpdate LocationUpdate = "LocationOptions"
 getTagUpdate LocationMappingUpdate = "LocationMappingOptions"
 getTagUpdate NextBillionDataUpdate = "NextBillionDataOptions"
+getTagUpdate AutoCompleteDataUpdate = "AutoCompleteDataOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
@@ -211,6 +214,7 @@ parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
 parseTagUpdate "LocationOptions" = return LocationUpdate
 parseTagUpdate "LocationMappingOptions" = return LocationMappingUpdate
 parseTagUpdate "NextBillionDataOptions" = return NextBillionDataUpdate
+parseTagUpdate "AutoCompleteDataOptions" = return AutoCompleteDataUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -262,6 +266,7 @@ data DBUpdateObject
   | LocationOptions UpdateModel [Set Postgres Location.LocationT] (Where Postgres Location.LocationT)
   | LocationMappingOptions UpdateModel [Set Postgres LocationMapping.LocationMappingT] (Where Postgres LocationMapping.LocationMappingT)
   | NextBillionDataOptions UpdateModel [Set Postgres NextBillionData.NextBillionDataT] (Where Postgres NextBillionData.NextBillionDataT)
+  | AutoCompleteDataOptions UpdateModel [Set Postgres AutoCompleteData.AutoCompleteDataT] (Where Postgres AutoCompleteData.AutoCompleteDataT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -417,3 +422,6 @@ instance FromJSON DBUpdateObject where
       NextBillionDataUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ NextBillionDataOptions updateModel updVals whereClause
+      AutoCompleteDataUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ AutoCompleteDataOptions updateModel updVals whereClause
