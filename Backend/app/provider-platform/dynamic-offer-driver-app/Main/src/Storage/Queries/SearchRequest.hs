@@ -18,6 +18,7 @@ module Storage.Queries.SearchRequest where
 import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Types.LocationMapping as DLM
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest as Domain
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
@@ -59,8 +60,8 @@ createDSReq searchRequest = do
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
 
-findByTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe SearchRequest)
-findByTransactionId transactionId = findOneWithKV [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId]]
+findByTransactionIdAndMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id DM.Merchant -> m (Maybe SearchRequest)
+findByTransactionIdAndMerchantId transactionId merchantId = findOneWithKV [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId, Se.Is BeamSR.providerId $ Se.Eq merchantId.getId]]
 
 updateAutoAssign ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

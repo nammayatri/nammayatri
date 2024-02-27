@@ -206,9 +206,9 @@ validateCancelSearchRequest ::
   SignatureAuthResult ->
   CancelSearchReq ->
   m ST.SearchTry
-validateCancelSearchRequest _ _ req = do
+validateCancelSearchRequest merchantId _ req = do
   let transactionId = req.transactionId
-  searchReq <- QSR.findByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
+  searchReq <- QSR.findByTransactionIdAndMerchantId transactionId merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId <> ",merchantId-" <> merchantId.getId)
   QST.findTryByRequestId searchReq.id >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchReq.id.getId)
 
 validateCancelRequest ::
