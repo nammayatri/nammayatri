@@ -68,6 +68,7 @@ type AppConfigCustomer a =
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
   , cityConfig :: Array CityConfig
+  , enableSingleEstimate :: Boolean
   , driverLocationPolling :: DriverLocationPollingConfig
   | a
   }

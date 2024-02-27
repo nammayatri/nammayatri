@@ -200,7 +200,7 @@ config =
       }
       , enableOnlyAuto : false
       , showNearByDrivers: false
-      , enableBookingPreference: true
+      , enableBookingPreference: false
       , textColor: "#6D7280"
       , showInfoIcon : true 
       }
@@ -335,6 +335,7 @@ config =
         }
       ]
   , bannerCarousel : defaultBannerCarousel
+  , enableSingleEstimate : false
   , driverLocationPolling : {
     retryExpFactor : 3
   }

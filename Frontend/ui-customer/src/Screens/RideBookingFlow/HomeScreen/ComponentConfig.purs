@@ -1442,8 +1442,9 @@ chooseYourRideConfig state = ChooseYourRide.config
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
     nearByDrivers = state.data.nearByDrivers,
     showPreferences = state.data.showPreferences,
-    bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city /= Kochi,
-    flowWithoutOffers = state.props.flowWithoutOffers
+    bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore,
+    flowWithoutOffers = state.props.flowWithoutOffers,
+    enableSingleEstimate = state.data.config.enableSingleEstimate
   }
 
 
@@ -1510,27 +1511,6 @@ getTipViewText tipViewProps prefixString =
   case (getLanguageLocale languageKey) of
     "EN_US" -> prefixString <> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP)
     _ -> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP) <> " " <> prefixString
-
-requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
-requestInfoCardConfig _ = let
-  config = RequestInfoCard.config
-  requestInfoCardConfig' = config{
-    title {
-      text = getString CHOOSE_BETWEEN_MULTIPLE_RIDES
-    }
-  , primaryText {
-      text = getString ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE
-    }
-  , imageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_select_offer",
-      height = V 122,
-      width = V 116
-    }
-  , buttonConfig {
-      text = getString GOT_IT
-    }
-  }
-  in requestInfoCardConfig'
 
 reportIssueOptions :: ST.HomeScreenState -> Array OptionButtonList -- need to modify
 reportIssueOptions state =
@@ -1629,8 +1609,9 @@ chooseVehicleConfig :: ST.HomeScreenState -> ChooseVehicle.Config
 chooseVehicleConfig state = let
   config = ChooseVehicle.config
   selectedEstimates = state.data.selectedEstimatesObject
+  isSingleEstimate = selectedEstimates.vehicleVariant == "AUTO_RICKSHAW" && ((DA.length state.data.specialZoneQuoteList) == 1)
   chooseVehicleConfig' = config
-    { vehicleImage = "ny_ic_auto_quote_list"
+    { vehicleImage = if isSingleEstimate then "ny_ic_single_estimate_auto" else "ny_ic_auto_quote_list"
     , isSelected = true
     , vehicleVariant = selectedEstimates.vehicleVariant
     , vehicleType = selectedEstimates.vehicleType
@@ -1648,6 +1629,7 @@ chooseVehicleConfig state = let
     , isBookingOption = false
     , pickUpCharges = selectedEstimates.pickUpCharges 
     , layoutMargin = Margin 0 0 0 0
+    , isSingleEstimate = isSingleEstimate
     }
   in chooseVehicleConfig'
 

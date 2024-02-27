@@ -14,28 +14,67 @@ import Debug
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility)
 import ConfigProvider
-
+import Data.Function.Uncurried (runFn1)
+import JBridge(getLayoutBounds)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  let isActiveIndex = config.index == config.activeIndex
+  let 
+      isActiveIndex = config.index == config.activeIndex
+      stroke' = if config.isSingleEstimate then "0," <> Color.grey900 else if isActiveIndex then "2," <> Color.blue800 else "1," <> Color.white900
+      background' = if isActiveIndex && (not config.isSingleEstimate) then Color.blue600 else Color.white900
+      padding' = if config.isSingleEstimate then PaddingHorizontal 12 12 else Padding 8 16 12 16
+      vehicleDetailsHeight = (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "VehicleDetailsView").height 
   in 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background if isActiveIndex then Color.blue600 else Color.white900
+  , background background'
   , cornerRadius 6.0
   , id $ EHC.getNewIDWithTag config.id
-  , stroke $ if isActiveIndex then "2," <> Color.blue800 else "1," <> Color.white900
+  , stroke stroke'
   , margin $ config.layoutMargin
-  , padding $ Padding 8 16 12 16
+  , padding padding'
   , clickable config.isEnabled
   , onClick push $ const $ OnSelect config
   , afterRender push (const NoAction)
   ][ linearLayout
+     [ height WRAP_CONTENT
+     , width MATCH_PARENT
+     , orientation VERTICAL
+     , gravity CENTER
+     , afterRender push (const NoAction)
+     , visibility $ boolToVisibility config.isSingleEstimate
+     ][ imageView
+      [ height $ V 80
+      , width $ V 80
+      , imageWithFallback config.vehicleImage
+      ]
+     , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        ][linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , orientation VERTICAL
+          , id $ EHC.getNewIDWithTag "VehicleDetailsView"
+          ][ vehicleDetailsView push config
+            , capacityView push config 
+          ] 
+       , linearLayout[weight 1.0, height WRAP_CONTENT][]
+       , linearLayout
+          [ width WRAP_CONTENT
+          , height $ if vehicleDetailsHeight == 0 then MATCH_PARENT else (V vehicleDetailsHeight)
+          , afterRender push (const NoAction)
+          , gravity CENTER_VERTICAL
+          ][priceDetailsView push config]
+        ]
+      ]
+    , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , afterRender push (const NoAction)
+      , visibility $ boolToVisibility $ not config.isSingleEstimate
       ][ imageView
           [ imageWithFallback config.vehicleImage
           , height $ V 48
@@ -56,8 +95,6 @@ view push config =
           , afterRender push (const NoAction)
           ][priceDetailsView push config]
       ]
-
-
   ]
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -75,7 +112,7 @@ vehicleDetailsView push config =
           , text $ getVehicleName config
           , color Color.black800
           ]
-        <> FontStyle.subHeading1 TypoGraphy
+        <> FontStyle.body7 TypoGraphy
     ]
   where 
     getVehicleName :: Config -> String
@@ -97,14 +134,14 @@ vehicleDetailsView push config =
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
-      infoIcon = if isActiveIndex then "ny_ic_info_blue_lg" else "ny_ic_info_grey"
+      infoIcon = if isActiveIndex || config.isSingleEstimate then "ny_ic_info_blue_lg" else "ny_ic_info_grey"
   in
   linearLayout
     [ height WRAP_CONTENT
     , width $  WRAP_CONTENT
     , orientation HORIZONTAL
     , padding $ PaddingLeft 8
-    , gravity $ RIGHT
+    , gravity $ if config.isSingleEstimate then CENTER_VERTICAL else RIGHT
     , onClick push $ const $ ShowRateCard config
     ]
     [ textView
@@ -113,12 +150,12 @@ priceDetailsView push config =
           , text config.price
           , color Color.black800
           ]
-        <> FontStyle.h3 TypoGraphy
+        <> FontStyle.body7 TypoGraphy
       , imageView
         [ imageWithFallback $ fetchImage FF_COMMON_ASSET infoIcon
         , width $ V 15
         , height $ V 15
-        , margin $ Margin 4 6 0 0
+        , margin $ if config.isSingleEstimate then MarginLeft 4 else Margin 4 6 0 0
         , visibility $ boolToVisibility config.showInfo
         ]
     ]

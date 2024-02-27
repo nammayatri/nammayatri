@@ -945,6 +945,7 @@ type HomeScreenStateProps =
   , followsRide :: Boolean
   , isChatWithEMEnabled :: Boolean
   , referral :: ReferralStatusProp
+  , showBookingPreference :: Boolean
   , safetyAlertType :: Maybe SafetyAlertType
   , rideSearchProps :: RideSearchProps
   }
