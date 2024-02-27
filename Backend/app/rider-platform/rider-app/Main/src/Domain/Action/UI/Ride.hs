@@ -26,6 +26,8 @@ where
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified Data.HashMap.Strict as HM
+import Data.List (sortBy)
+import Data.Ord
 import qualified Domain.Types.Booking.Type as DB
 import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
 import qualified Domain.Types.Location as DL
@@ -199,8 +201,9 @@ editLocation rideId (_, merchantId) req = do
   whenJust req.origin $ \pickup -> do
     when (ride.status /= SRide.NEW) do
       throwError (InvalidRequest $ "Customer is not allowed to change pickup as the ride is not NEW for rideId: " <> ride.id.getId)
-    lastMapping <- QLM.findLastMapping ride.id.getId 0 >>= fromMaybeM (InternalError $ "Latest mapping not found for rideId: " <> ride.id.getId)
-    initialLocationForRide <- QL.findById lastMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> lastMapping.locationId.getId)
+    pickupLocationMappings <- QLM.findAllByEntityIdAndOrder ride.id.getId 0
+    oldestMapping <- (listToMaybe $ sortBy (comparing (Down . (.version))) pickupLocationMappings) & fromMaybeM (InternalError $ "Latest mapping not found for rideId: " <> ride.id.getId)
+    initialLocationForRide <- QL.findById oldestMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> oldestMapping.locationId.getId)
     let initialLatLong = Maps.LatLong {lat = initialLocationForRide.lat, lon = initialLocationForRide.lon}
         currentLatLong = pickup.gps
     let distance = CD.distanceBetweenInMeters initialLatLong currentLatLong
