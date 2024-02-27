@@ -771,7 +771,7 @@ mkQuotationBreakup booking =
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
-            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_DISTANCE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DISTANCE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
@@ -793,7 +793,7 @@ mkQuotationBreakup booking =
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
-            || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_DISTANCE_FARE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.DISTANCE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TIME_BASED_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
@@ -814,7 +814,7 @@ tfItems booking shortId pricing =
           itemLocationIds = Nothing,
           itemPaymentIds = Nothing,
           itemPrice = tfItemPrice booking,
-          itemTags = Just $ mkRateCardTag pricing
+          itemTags = mkRateCardTag pricing
         }
     ]
 
@@ -934,25 +934,24 @@ mkGeneralInfoTag pricing =
             tagValue = Just $ show . double2Int . realToFrac $ distanceToNearestDriver
           }
 
-mkRateCardTag :: Maybe Pricing -> [Spec.TagGroup]
-mkRateCardTag mbPricing = do
-  case mbPricing of
-    Nothing -> []
-    Just pricing -> do
-      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups mkValue mkRateCardBreakupItem pricing.estimatedDistance) pricing.farePolicy
-          farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
-      List.singleton $
-        Spec.TagGroup
-          { tagGroupDisplay = Just False,
-            tagGroupDescriptor =
-              Just
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.FARE_POLICY,
-                    descriptorName = Just "Fare Policy",
-                    descriptorShortDesc = Nothing
-                  },
-            tagGroupList = Just farePolicyBreakupsTags
-          }
+mkRateCardTag :: Maybe Pricing -> Maybe [Spec.TagGroup]
+mkRateCardTag Nothing = Nothing
+mkRateCardTag (Just pricing) = do
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups mkValue mkRateCardBreakupItem pricing.estimatedDistance) pricing.farePolicy
+      farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
+  Just $
+    List.singleton $
+      Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.FARE_POLICY,
+                  descriptorName = Just "Fare Policy",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList = Just farePolicyBreakupsTags
+        }
 
 mkValue :: Text -> Text
 mkValue a = a
