@@ -81,4 +81,6 @@ mkPayment merchant bppConfig = do
   List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 mkItemTags :: CUtils.Pricing -> [Spec.TagGroup]
-mkItemTags pricing = CUtils.mkRateCardTag (Just pricing) <> [CUtils.mkGeneralInfoTag pricing]
+mkItemTags pricing = do
+  let rateCardTag = CUtils.mkRateCardTag (Just pricing) & fromMaybe []
+  rateCardTag <> [CUtils.mkGeneralInfoTag pricing]

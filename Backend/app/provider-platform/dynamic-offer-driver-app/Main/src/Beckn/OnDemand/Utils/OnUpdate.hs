@@ -93,7 +93,7 @@ mkRideCompletedQuote ride fareParams = do
             `elem` [ Just (show Enums.BASE_FARE),
                      Just (show Enums.SERVICE_CHARGE),
                      Just (show Enums.DEAD_KILOMETER_FARE),
-                     Just (show Enums.EXTRA_DISTANCE_FARE),
+                     Just (show Enums.DISTANCE_FARE),
                      Just (show Enums.DRIVER_SELECTED_FARE),
                      Just (show Enums.CUSTOMER_SELECTED_FARE),
                      Just (show Enums.TOTAL_FARE),

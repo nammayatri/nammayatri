@@ -98,7 +98,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
 
-          extraDistanceFareCaption = show Enums.EXTRA_DISTANCE_FARE
+          extraDistanceFareCaption = show Enums.DISTANCE_FARE
           mbExtraKmFareRounded = det.extraKmFare <&> roundToIntegral . (* dayPartRate) . fromIntegral -- temp fix :: have to fix properly
           extraDistanceFareItem =
             mbExtraKmFareRounded <&> \extraKmFareRounded ->

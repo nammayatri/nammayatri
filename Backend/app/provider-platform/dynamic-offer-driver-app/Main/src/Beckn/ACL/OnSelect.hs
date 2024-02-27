@@ -119,19 +119,19 @@ mkAgentPersonV2 quote isValueAddNP =
     { personId = Nothing,
       personImage = Nothing,
       personName = Just quote.driverName,
-      personTags = Just . L.singleton =<< mkAgentTagsV2 quote isValueAddNP
+      personTags =
+        if isValueAddNP
+          then Just . L.singleton $ mkAgentTagsV2 quote
+          else Nothing
     }
 
-mkAgentTagsV2 :: DQuote.DriverQuote -> Bool -> Maybe Spec.TagGroup
-mkAgentTagsV2 quote isValueAddNP
-  | not isValueAddNP = Nothing
-  | otherwise =
-    Just $
-      Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor = Just $ Spec.Descriptor (Just $ show Tags.AGENT_INFO) (Just "Agent Info") Nothing,
-          tagGroupList = Just $ mkAgentTagList quote
-        }
+mkAgentTagsV2 :: DQuote.DriverQuote -> Spec.TagGroup
+mkAgentTagsV2 quote =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor = Just $ Spec.Descriptor (Just $ show Tags.AGENT_INFO) (Just "Agent Info") Nothing,
+      tagGroupList = Just $ mkAgentTagList quote
+    }
 
 mkAgentTagList :: DQuote.DriverQuote -> [Spec.Tag]
 mkAgentTagList quote =
@@ -262,7 +262,7 @@ mkQuoteBreakupInner quote = do
       breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_DISTANCE_FARE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.DISTANCE_FARE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_SELECTED_FARE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.CUSTOMER_SELECTED_FARE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
