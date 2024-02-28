@@ -116,6 +116,7 @@ dependencies:
   - singletons-th
   - regex-posix
   - pureMD5
+  - lens-aeson
 
 ghc-options:
   - -fwrite-ide-info
