@@ -20,12 +20,13 @@ import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enum
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
+import Data.Aeson as A
 import qualified Data.List as L
-import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
+import Kernel.Utils.Common
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
 bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED -- TODO: refactor it like so case match is not needed
@@ -85,8 +86,8 @@ tfFulfillments res =
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
-  let amount = fromIntegral (res.booking.estimatedFare.getMoney)
-  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
+  let amount = HighPrecMoney (fromMaybe 0.0 $ A.decode $ A.encode res.booking.estimatedFare.getMoney)
+  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
   Just $ L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
