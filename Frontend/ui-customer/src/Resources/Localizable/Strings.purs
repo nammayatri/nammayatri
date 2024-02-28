@@ -29,6 +29,7 @@ import Resources.Localizable.KN (getKN)
 import Resources.Localizable.ML (getML)
 import Resources.Localizable.FR (getFR)
 import Resources.Localizable.TA (getTA)
+import Resources.Localizable.TE (getTE)
 import Locale.Utils
 
 getString :: STR -> String
@@ -54,4 +55,5 @@ getStringFromLocal language key =
     "ML_IN" -> getML key
     "FR_FR" -> getFR key
     "TA_IN" -> getTA key
+    "TE_IN" -> getTE key
     _       -> getEN key

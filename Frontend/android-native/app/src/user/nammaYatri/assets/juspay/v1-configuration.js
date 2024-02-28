@@ -137,6 +137,21 @@ window.getMerchantConfig = function () {
       "CALL_SUPPORT_DESCRIPTION" : "நம்ம யாத்ரி ஆதரவிற்கு அழைப்பை மேற்கொள்ள உள்ளீர்கள். தொடர விரும்புகிறீர்களா?",
       "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "சிக்கல் தீர்ந்துவிட்டது என்று நம்புகிறோம், ஏதேனும் கேள்விகளுக்கு தயங்காமல் எங்களுக்கு support@nammayatri.in இல் எழுதவும்."
     },
+    "teluguStrings": {
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "మీ లొకేషన్ మా సిస్టమ్‌కు సమీపంలోని అన్ని ఆటోల ద్వారా మ్యాప్ చేయడానికి మరియు మీకు వీలైనంత త్వరగా ప్రయాణించేలా చేయడంలో సహాయపడుతుంది.",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER": "నమ్మ యాత్రికి స్వాగతం! \nరైడులు బుక్ చేయడానికి, దయచేసి మిమ్మల్ని కనుగొనడానికి మమ్మల్ని అనుమతించండి!",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "వెబ్‌సైట్: <u>https://nammayatri.in/</u>",
+      "YOUR_FEEDBACK_HELPS_US": "మీ అభిప్రాయం యాప్ అనుభవాన్ని మెరుగుపరచడంలో మాకు సహాయపడుతుంది",
+      "LEARN_HOW_TEXT": "నమ్మ యాత్రి మీ అవసరాలను ఎలా తీరుస్తుందో తెలుసుకోండి",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "డ్రైవర్ జోడింపు పరిమితులు బేస్ ఫేర్‌లో 10%కి సమీప ₹10కి లెక్కించబడతాయి",
+      "FARE_INFO_TEXT": "ఈ ఛార్జీ కర్ణాటక రాష్ట్ర ప్రభుత్వ నిబంధనల ప్రకారం ఆటో డ్రైవర్ చేర్పులపై ఆధారపడి ఉంటుంది మరియు ఇది నమ్మ యాత్రి ద్వారా నిర్ణయించబడదు.",
+      "PLEASE_ENABLE_LOCATION_PERMISSION": "రైడ్‌ల కోసం వెతకడం ప్రారంభించడానికి దయచేసి యాప్ సెట్టింగ్‌ల నుండి స్థాన అనుమతులను ప్రారంభించండి.",
+      "TAXI_FROM_ZONE": "నమ్మాయాత్రి జోన్ నుండి",
+      "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN": "నమ్మ యాత్రి జోన్ కోసం OTP గడువు ముగిసింది, దయచేసి మళ్లీ బుక్ చేసుకోవడానికి ప్రయత్నించండి",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER": "మీ సమస్య వివరించండి. నమ్మాయాత్రి 24 గంటల లో పరిష్కరించటం లేదా సహాయం చేయడం చేస్తుంది.",
+      "CALL_SUPPORT_DESCRIPTION": "మీరు మద్దతు బృందానికి కాల్ చేయబోతున్నారు. మీరు కొనసాగించాలనుకుంటున్నారా?",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED": "సమస్య పరిష్కరించబడిందని మేము ఆశిస్తున్నాము!, ఏదైనా ప్రశ్నల కోసం support@nammayatri.in కి వ్రాయండి."
+    },
     "languageList": [{
       "name": "English",
       "value": "EN_US",
@@ -153,6 +168,10 @@ window.getMerchantConfig = function () {
       "name": "தமிழ்",
       "value": "TA_IN",
       "subTitle": "Tamil"
+    }, {
+      "name": "తెలుగు",
+      "value": "TE_IN",
+      "subTitle": "Telugu"
     }
   ],
     "bannerConfig" : {

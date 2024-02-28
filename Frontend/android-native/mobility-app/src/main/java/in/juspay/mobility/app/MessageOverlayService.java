@@ -270,12 +270,12 @@ public class MessageOverlayService extends Service implements View.OnClickListen
 
     private static JSONObject defaultSuggestions () {
         try {
-            JSONObject dols1BP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\"}");
-            JSONObject dols2BP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\"}");
-            JSONObject dols3BP = new JSONObject("{\"en_us\":\"5 mins\",\"ta_in\":\"5 mins\",\"kn_in\":\"5 mins\",\"hi_in\":\"5 mins\",\"ml_in\":\"5 mins\",\"bn_in\":\"5 mins\"}");
-            JSONObject dols1AP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\"}");
-            JSONObject dols2AP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\"}");
-            JSONObject dols3AP = new JSONObject("{\"en_us\":\"5 mins\",\"ta_in\":\"5 mins\",\"kn_in\":\"5 mins\",\"hi_in\":\"5 mins\",\"ml_in\":\"5 mins\",\"bn_in\":\"5 mins\"}");
+            JSONObject dols1BP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\",\"te_in\":\"సరే\"}");
+            JSONObject dols2BP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\",\"te_in\":\"అవును\"}");
+            JSONObject dols3BP = new JSONObject("{\"en_us\":\"5 mins\",\"ta_in\":\"5 mins\",\"kn_in\":\"5 mins\",\"hi_in\":\"5 mins\",\"ml_in\":\"5 mins\",\"bn_in\":\"5 mins\",\"te_in\":\"5 mins\"}");
+            JSONObject dols1AP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\",\"te_in\":\"అవును\"}");
+            JSONObject dols2AP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\",\"te_in\":\"సరే\"}");
+            JSONObject dols3AP = new JSONObject("{\"en_us\":\"5 mins\",\"ta_in\":\"5 mins\",\"kn_in\":\"5 mins\",\"hi_in\":\"5 mins\",\"ml_in\":\"5 mins\",\"bn_in\":\"5 mins\",\"te_in\":\"5 mins\"}");
             JSONObject suggestions = new JSONObject();
             suggestions.put("dols1BP", dols1BP);
             suggestions.put("dols2BP", dols2BP);
