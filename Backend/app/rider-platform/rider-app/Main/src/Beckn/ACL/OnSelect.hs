@@ -29,6 +29,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
 import Kernel.Utils.Common
 import Tools.Error
 
@@ -39,7 +40,7 @@ buildOnSelectReqV2 ::
 buildOnSelectReqV2 req = do
   logDebug $ "on_select requestV2: " <> show req
   let context = req.onSelectReqContext
-  timestamp <- context.contextTimestamp & fromMaybeM (InvalidRequest "Missing Timestamp")
+  timestamp <- context.contextTimestamp >>= Just . convertRFC3339ToUTC & fromMaybeM (InvalidRequest "Missing Timestamp")
   ContextV2.validateContext Context.ON_SELECT context
   handleErrorV2 req $ \message -> do
     providerId <- context.contextBppId & fromMaybeM (InvalidRequest "Missing bpp_id")

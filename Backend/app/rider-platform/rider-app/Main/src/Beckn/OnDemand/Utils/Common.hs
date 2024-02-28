@@ -18,6 +18,7 @@ module Beckn.OnDemand.Utils.Common where
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import qualified Data.List as List
@@ -54,7 +55,7 @@ mkStops origin stops startTime =
                         locationAreaCode = origin.address.areaCode,
                         locationCity = Just $ Spec.City Nothing origin.address.city,
                         locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                        locationGps = A.decode $ A.encode originGps,
+                        locationGps = Utils.gpsToText originGps,
                         locationState = Just $ Spec.State origin.address.state,
                         locationUpdatedAt = Nothing,
                         locationId = Nothing
@@ -73,7 +74,7 @@ mkStops origin stops startTime =
                                  locationAreaCode = stop.address.areaCode,
                                  locationCity = Just $ Spec.City Nothing stop.address.city,
                                  locationCountry = Just $ Spec.Country Nothing stop.address.country,
-                                 locationGps = A.decode $ A.encode $ destinationGps stop,
+                                 locationGps = Utils.gpsToText $ destinationGps stop,
                                  locationState = Just $ Spec.State stop.address.state,
                                  locationId = Nothing,
                                  locationUpdatedAt = Nothing
@@ -250,7 +251,7 @@ mkStops' origin mDestination =
                           locationAreaCode = origin.address.areaCode,
                           locationCity = Just $ Spec.City Nothing origin.address.city,
                           locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                          locationGps = A.decode $ A.encode originGps,
+                          locationGps = Utils.gpsToText originGps,
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing,
                           locationUpdatedAt = Nothing
@@ -270,7 +271,7 @@ mkStops' origin mDestination =
                             locationAreaCode = destination.address.areaCode,
                             locationCity = Just $ Spec.City Nothing destination.address.city,
                             locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                            locationGps = A.decode $ A.encode destinationGps,
+                            locationGps = Utils.gpsToText destinationGps,
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing,
                             locationUpdatedAt = Nothing

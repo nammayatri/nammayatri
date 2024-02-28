@@ -22,8 +22,10 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.UUID as UUID
 import EulerHS.Prelude
+import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Text.Printf (printf)
 
 allNothing :: (Data d) => d -> Bool
 allNothing = not . or . gmapQ (const True `ext1Q` isJust)
@@ -48,3 +50,6 @@ decodeReq reqBS =
       case A.eitherDecodeStrict reqBS of
         Right reqV2 -> pure $ Right reqV2
         Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
+
+gpsToText :: Gps.Gps -> Maybe Text
+gpsToText Gps.Gps {..} = Just $ (T.pack $ printf "%.6f" lat) <> ", " <> (T.pack $ printf "%.6f" lon)
