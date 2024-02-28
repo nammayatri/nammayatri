@@ -58,5 +58,12 @@
     <string name="safety_deviation_alert">ನಾವು ನಿನ್ನ ಸವಾರಿ ವೇಗದ ರೂಟ್ ಯಲ್ಲಿ ಇದ್ದೇವೆ ಎಂದು ಗುರುತಿಸಿದ್ದೇವೆ. ನೀವು ನಿಮ್ಮ ಪ್ರಯಾಣದಲ್ಲಿ ಸುರಕ್ಷಿತವಾಗಿದ್ದೀರಾ?</string>
     <string name="everything_okay">ಎಲ್ಲಾ ಸರಿಯಾಗಿದೆಯೇ?</string>
     <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">ನಾವು ನಿನ್ನ ಚಾಲಕನು ಸ್ವಲ್ಪ ಹೊಡೆಯುತ್ತಿಲ್ಲವೆನ್ನುತ್ತಿದ್ದೇವೆ. ನೀವು ನಿಜಾಯಿತು ಸುರಕ್ಷಿತವಾಗಿರುತ್ತಿದ್ದೀರಾ?</string>
-
+    <string name="customer_edited">ಗ್ರಾಹಕ ಒಂದು ನಿಲ್ದಾಣವನ್ನು ಸಂಪಾದಿಸಿದರು!</string>
+    <string name="customer_added">ಗ್ರಾಹಕ ಒಂದು ನಿಲ್ದಾಣವನ್ನು ಸೇರಿಸಿದರು!</string>
+    <string name="navigate_to_location">ಸ್ಥಳಕ್ಕೆ ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ</string>
+    <string name="close"> ಮುಚ್ಚಿಕೊಳ್ಳಿ</string>
+    <string name="today"> ಇಂದು</string>
+    <string name="now"> ಈಗ</string>
+    <string name="rental"> ರೆಂಟಲ್</string>
+    <string name="intercity"> ಇಂಟರ್‌ಸಿಟಿ </string>
 </resources>

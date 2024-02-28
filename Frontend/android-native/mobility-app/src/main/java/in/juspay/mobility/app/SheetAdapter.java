@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+import androidx.cardview.widget.CardView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -66,12 +67,12 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, rideStartTime, rideStartDate, rideDuration, rideDistance, tripCategoryText;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
-        ImageView assetZonePickup, assetZoneDrop, rideTypeImage;
-        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag;
-
+        ImageView assetZonePickup, assetZoneDrop, rideTypeImage, locationDashedLine, tripCategoryImage;
+        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, rentalRideTypeTag, intercityRideTypeTag, rentalDurationDistanceTag, rideStartDateTimeTag, tripCategoryTag;
+        CardView locationDestinationPinTag;
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
             pickUpDistance = itemView.findViewById(R.id.distancePickUp);
@@ -106,6 +107,19 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             rideTypeImage = itemView.findViewById(R.id.rideTypeImage);
             durationToPickupImage = itemView.findViewById(R.id.durationToPickupImage);
             gotoTag = itemView.findViewById(R.id.gotoTag);
+            rentalDurationDistanceTag = itemView.findViewById(R.id.rentalDurationDistanceTag);
+            rideDuration = itemView.findViewById(R.id.rideDuration);
+            rideDistance = itemView.findViewById(R.id.rideDistance);
+            rideStartDateTimeTag = itemView.findViewById(R.id.rideStartDateTimeTag);
+            rideStartTime = itemView.findViewById(R.id.rideStartTime);
+            rideStartDate = itemView.findViewById(R.id.rideStartDate);
+            // rentalRideTypeTag = itemView.findViewById(R.id.rentalRideTypeTag);
+            // intercityRideTypeTag = itemView.findViewById(R.id.intercityRideTypeTag);
+            locationDashedLine = itemView.findViewById(R.id.locationDashedLine);
+            locationDestinationPinTag = itemView.findViewById(R.id.locationDestinationPinTag);
+            tripCategoryTag = itemView.findViewById(R.id.tripCategoryTag);
+            tripCategoryImage = itemView.findViewById(R.id.tripCategoryImage);
+            tripCategoryText = itemView.findViewById(R.id.tripCategoryText);
         }
     }
 

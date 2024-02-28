@@ -41,6 +41,9 @@ startRide rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/start"
 endRide :: String -> String
 endRide rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/end"
 
+arrivedAtStop :: String -> String
+arrivedAtStop rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/arrived/stop"
+
 cancelRide :: String -> String
 cancelRide rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/cancel"
 
@@ -288,3 +291,6 @@ convertCoinToCash _ =  (getBaseUrl "") <> "/coins/convertCoinToCash"
 
 pushSDKEvents :: String -> String
 pushSDKEvents _ =  (getBaseUrl "") <> "/sdk/events"
+
+uploadOdometerImage :: String -> String
+uploadOdometerImage rideId = (getBaseUrl "") <> "/driver/ride/"<>rideId<>"/uploadOdometer"

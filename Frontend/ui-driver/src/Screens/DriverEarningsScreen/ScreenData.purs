@@ -15,7 +15,7 @@
 module Screens.DriverEarningsScreen.ScreenData where
 
 import Prelude
-import Screens.Types (AnimationState(..), DriverEarningsScreenState, DriverEarningsSubView(..), DriverEarningsPopupType(..))
+import Screens.Types (AnimationState(..), DriverEarningsScreenState, DriverEarningsSubView(..), DriverEarningsPopupType(..),TripType(..))
 import Engineering.Helpers.Commons (getCurrentUTC)
 import Data.Maybe (Maybe(..))
 import MerchantConfig.DefaultConfig as DC
@@ -72,7 +72,8 @@ initData =
             spLocTagVisibility : false,
             specialZoneLayoutBackground : "",
             specialZoneImage : "",
-            specialZoneText : ""
+            specialZoneText : "",
+            tripType : OneWay
         }
       , logField : empty
       }

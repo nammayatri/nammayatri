@@ -9,7 +9,7 @@
 package in.juspay.mobility.app;
 
 public class SheetModel {
-    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant;
+    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, rideDuration, rideDistance, rideStartTime, rideStartDate, tripCategory;
     private String requestId;
     private int startTime;
     private double updatedAmount;
@@ -49,7 +49,12 @@ public class SheetModel {
                       String requestedVehicleVariant,
                       Boolean disabilityTag,
                       Boolean isTranslated,
-                      Boolean gotoTag){
+                      Boolean gotoTag,
+                      String tripCategory,
+                      String rideDuration,
+                      String rideDistance,
+                      String rideStartTime,
+                      String rideStartDate){
 
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
@@ -81,6 +86,31 @@ public class SheetModel {
         this.durationToPickup = durationToPickup;
         this.gotoTag = gotoTag;
         this.isTranslated = isTranslated;
+        this.tripCategory = tripCategory;
+        this.rideDuration = rideDuration;
+        this.rideDistance = rideDistance;
+        this.rideStartTime = rideStartTime;
+        this.rideStartDate = rideStartDate;
+    }
+
+    public String getTripCategory() {
+        return tripCategory;
+    }
+
+    public String getRideDuration() {
+        return rideDuration;
+    }
+
+    public String getRideDistance() {
+        return rideDistance;
+    }
+
+    public String getRideStartDate() {
+        return rideStartDate;
+    }
+
+    public String getRideStartTime() {
+        return rideStartTime;
     }
 
     public boolean isGotoTag() {
