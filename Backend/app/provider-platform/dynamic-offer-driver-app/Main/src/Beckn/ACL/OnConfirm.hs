@@ -20,7 +20,6 @@ import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enum
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
-import Data.Aeson as A
 import qualified Data.List as L
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types
@@ -90,9 +89,9 @@ tfFulfillments res =
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
-  let amount = HighPrecMoney (fromMaybe 0.0 $ A.decode $ A.encode res.booking.estimatedFare.getMoney)
+  let amount = Just $ show res.booking.estimatedFare.getMoney
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  Just $ L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  Just $ L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
 tfVehicle res = do

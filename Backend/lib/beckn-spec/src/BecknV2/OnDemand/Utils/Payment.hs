@@ -23,7 +23,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import Data.Aeson as A
 import Domain.Types
 import Kernel.Prelude
-import Kernel.Utils.Common
 
 type TxnId = Text
 
@@ -41,7 +40,7 @@ mkPayment ::
   City ->
   CollectedBy ->
   Spec.PaymentStatus ->
-  Maybe HighPrecMoney ->
+  Maybe Text ->
   Maybe TxnId ->
   Maybe BknPaymentParams ->
   Maybe SettlementType ->
@@ -64,10 +63,10 @@ mkPayment txnCity collectedBy paymentStatus mAmount mTxnId mPaymentParams mSettl
   where
     anyTrue = or
 
-mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe HighPrecMoney -> Spec.PaymentParams
+mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe Text -> Spec.PaymentParams
 mkPaymentParams mPaymentParams _mTxnId mAmount =
   Spec.PaymentParams
-    { paymentParamsAmount = encodeToText' =<< mAmount,
+    { paymentParamsAmount = mAmount,
       paymentParamsBankAccountNumber = mPaymentParams >>= (.bankAccNumber),
       paymentParamsBankCode = mPaymentParams >>= (.bankCode),
       paymentParamsCurrency = Just "INR",
@@ -75,7 +74,7 @@ mkPaymentParams mPaymentParams _mTxnId mAmount =
       paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }
 
-mkPaymentTags :: City -> Maybe SettlementType -> Maybe HighPrecMoney -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> [Spec.TagGroup]
+mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> [Spec.TagGroup]
 mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff =
   catMaybes
     [ Just $ mkBuyerFinderFeeTagGroup mbff,
@@ -110,7 +109,7 @@ mkBuyerFinderFeeTagGroup mbff =
           tagDisplay = Just False
         }
 
-mkSettlementTagGroup :: City -> Maybe HighPrecMoney -> Maybe SettlementWindow -> Maybe BaseUrl -> Spec.TagGroup
+mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Spec.TagGroup
 mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl =
   Spec.TagGroup
     { tagGroupDescriptor =
@@ -135,7 +134,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                         descriptorName = Nothing,
                         descriptorShortDesc = Nothing
                       },
-                tagValue = encodeToText' samount,
+                tagValue = Just samount,
                 tagDisplay = Just False
               },
           Just $
