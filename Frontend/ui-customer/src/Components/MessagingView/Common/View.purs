@@ -72,7 +72,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Halogen.VDom.DOM.Prop (Prop)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -150,7 +150,7 @@ messageNotificationView push state =
        ]  
     ]
     , separatorView state
-    , if (state.lastMessage.sentBy /= getCurrentUser (state.user.receiver /= "Driver")) || (state.user.receiver == "Driver" && not didDriverMessage FunctionCall) then quickRepliesView push state else dummyView state
+    , if (state.lastMessage.sentBy /= getCurrentUser (state.user.receiver /= "Driver")) || not didReceiverMessage FunctionCall then quickRepliesView push state else dummyView state
     , if ((not $ DS.null state.lastSentMessage.sentBy) && (not $ DS.null state.lastReceivedMessage.sentBy)) then messageView push state state.lastSentMessage else dummyView state
   ]
 
@@ -166,7 +166,7 @@ messagePromtView push state =
   , onClick push $ const $ state.messageReceiverAction
   , visibility $ boolToVisibility $ null state.messages 
   ][ textView $ 
-      [ text $ getString MESSAGE_YOUR_DRIVER
+      [ text $ if state.user.receiver == "Driver" then getString MESSAGE_YOUR_DRIVER else (getString MESSAGE) <> " " <> state.user.userName
       , accessibility ENABLE
       , color Color.white900
       , accessibility DISABLE
@@ -174,7 +174,7 @@ messagePromtView push state =
       , singleLine true
       ] <> FontStyle.body6 TypoGraphy
    , textView $ 
-      [ text $ getString CHECK_IN_WITH_YOUR_DRIVER 
+      [ text $ if state.user.receiver == "Driver" then getString CHECK_IN_WITH_YOUR_DRIVER else getString $ CHECK_IN_WITH_YOUR_EM state.user.userName
       , color Color.white900
       , accessibility DISABLE
       , ellipsize true
@@ -183,7 +183,7 @@ messagePromtView push state =
   ]
 
 chatNotificationMessageView :: forall w action. (action -> Effect Unit) -> MessageNotificationView action -> PrestoDOM ( Effect Unit) w
-chatNotificationMessageView push state = if ((state.user.receiver == "Driver" && not didDriverMessage FunctionCall) && (not $ DS.null state.lastSentMessage.sentBy)) then messageView push state state.lastSentMessage
+chatNotificationMessageView push state = if not didReceiverMessage FunctionCall && (not $ DS.null state.lastSentMessage.sentBy) then messageView push state state.lastSentMessage
                                             else if (not $ DS.null state.lastReceivedMessage.sentBy) then messageView push state state.lastReceivedMessage
                                             else dummyView state
 

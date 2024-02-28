@@ -938,6 +938,7 @@ data Action = NoAction
             | UpdateContacts (Array NewContacts)
             | UpdateChatWithEM Boolean
             | ShareRideAction PopupWithCheckboxController.Action
+            | AllChatsLoaded
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -1191,11 +1192,11 @@ eval (UpdateMessages message sender timeStamp size) state = do
 
 eval LoadMessages state = do
   let allMessages = getChatMessages FunctionCall
-  case (last allMessages) of
+  case last allMessages of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} 
                       else do
                         let currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer" 
-                        if value.sentBy == currentUser then updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = [], lastMessage = value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
+                        if value.sentBy == currentUser then updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = if state.props.isChatWithEMEnabled then getSuggestionsfromKey emChatSuggestion "d6cddbb1a6aee372c0c7f05173da8f95" else [], lastMessage = value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
                         else do
                           let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                               unReadMessages = if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (readMessages < (length allMessages) && state.props.currentStage /= ChatWithDriver)
@@ -1204,7 +1205,12 @@ eval LoadMessages state = do
                               isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
                               showNotification = isChatNotificationDismissed && unReadMessages
                           updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
-      Nothing -> continue state {props {canSendSuggestion = true}}
+      Nothing -> 
+        if state.props.isChatWithEMEnabled then
+            continueWithCmd state [do 
+            pure $ SendQuickMessage "c013253fcbe2fdc50b1c261501de9045"
+            ] 
+          else continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
   if not state.props.chatcallbackInitiated then continue state else do
@@ -1333,6 +1339,13 @@ eval (MessagingViewActionController (MessagingView.SendSuggestion chatSuggestion
     continue state {data {chatSuggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
+eval AllChatsLoaded state = do
+  if state.props.isChatWithEMEnabled then do
+    void $ pure $ sendMessage "c013253fcbe2fdc50b1c261501de9045"
+    continue state
+  else
+    continue state
+
 ------------------------------- ChatService - End --------------------------
 
 eval (MessageExpiryTimer seconds status timerID) state = do
@@ -1340,7 +1353,8 @@ eval (MessageExpiryTimer seconds status timerID) state = do
   if status == "EXPIRED"
     then do
       _ <- pure $ clearTimerWithId timerID
-      if state.data.lastMessage.sentBy /= "Driver" then
+      let currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer" 
+      if state.data.lastMessage.sentBy == currentUser then
       continueWithCmd newState [ do
         pure $ RemoveNotification
       ]

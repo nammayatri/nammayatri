@@ -673,39 +673,50 @@ export const updateRoute = (configObj) => {
     }
   }
 };
-
 export const storeCallBackMessageUpdated = function (cb) {
   return function (chatChannelID) {
     return function (chatUserId) {
       return function (action) {
-        return function () {
-          const callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize) {
-            if (messagesSize == undefined) {
-              messagesSize = "-1"
+        return function (messagesLoadedCallBack) {
+          return function () {
+            const messageLoaded = setTimeout(()=>{
+              cb(messagesLoadedCallBack)();
+            },1000)
+            const callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize) {
+              clearTimeout(messageLoaded);
+              if (messagesSize == undefined) {
+                messagesSize = "-1"
+              }
+              const messageObj = {
+                "message": message,
+                "sentBy": sentBy,
+                "timeStamp": timeStamp,
+                type: "Text",
+                delay: 0
+              }
+              window.chatMessages = window.chatMessages || [];
+              if (sentBy /= window.currentUser) window.didReceiverMessage = true;
+              window.chatMessages.push(messageObj);
+              if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
+                cb(action(message)(sentBy)(timeStamp)(messagesSize))();
+              }
+            });
+
+            window.storeCallBackMessageUpdated = callback;
+            if (JBridge.storeCallBackMessageUpdated) {
+              JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
             }
-            const messageObj = {
-              "message": message,
-              "sentBy": sentBy,
-              "timeStamp": timeStamp,
-              type: "Text",
-              delay: 0
-            }
-            window.chatMessages = window.chatMessages || [];
-            if(sentBy == "Driver") window.didDriverMessage = true;
-            window.chatMessages.push(messageObj);
-            if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
-              cb(action(message)(sentBy)(timeStamp)(messagesSize))();
-            }
-          });
-          window.storeCallBackMessageUpdated = callback;
-          if (JBridge.storeCallBackMessageUpdated) {
-            JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
           }
         };
       };
     };
   };
 };
+
+export const setCurrentUser = function(_id) {
+  window.currentUser = _id
+  return _id;
+}
 
 export const storeKeyBoardCallback = function (cb, action) {
   const keyBoardCallback = function (state) {
@@ -720,7 +731,7 @@ export const getChatMessages = function (string) {
 
 export const clearChatMessages = function () {
   window.chatMessages = undefined;
-  window.didDriverMessage = undefined;
+  window.didReceiverMessage = undefined;
 }
 
 export const dateCallback = function (cb, action) {
@@ -778,7 +789,7 @@ export const startChatListenerService = function () {
 export const stopChatListenerService = function () {
   if (JBridge.stopChatListenerService) {
     window.chatMessages = undefined;
-    window.didDriverMessage = undefined;
+    window.didReceiverMessage = undefined;
     JBridge.stopChatListenerService();
   }
 }

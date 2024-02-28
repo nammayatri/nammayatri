@@ -142,6 +142,7 @@ getTE stringKey =
     WORK -> "పని"
     OTHER -> "ఇతర"
     SAVE -> "సేవ్ చేయండి"
+    CHECK_IN_WITH_YOUR_EM name -> "శీఘ్ర చాట్‌తో " <> name <> "లో చెక్ ఇన్ చేయండి"
     ADD_NEW_ADDRESS -> "కొత్త చిరునామాను జోడించండి"
     SAVED_ADDRESSES -> "సేవ్ చేసిన చిరునామాలు"
     ADDRESSES -> "చిరునామాలు"
