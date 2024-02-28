@@ -654,6 +654,7 @@ getHI stringKey =
         YOU_SENT -> "तुम्हें भेजा"
         MESSAGE_YOUR_DRIVER -> "अपने ड्राइवर को संदेश भेजें?"
         CHECK_IN_WITH_YOUR_DRIVER -> "त्वरित चैट के साथ अपने ड्राइवर के बारे में पता करें"
+        CHECK_IN_WITH_YOUR_EM name -> "त्वरित चैट के साथत्वरित चैट के साथ " <> name <> " पर चेक इन क"
         TRACK_ON_GOOGLE_MAPS -> "वास्तविक समय ट्रैकिंग"
         OTP_EXPIRE_TIMER -> "ओटीपी समाप्ति टाइमर"
         SHOWS_FOR_HOW_LONG_YOUR_OTP_ -> "दिखाता है कि यात्रा शुरू करने के लिए आपका ओटीपी कितने समय तक वैध रहेगा।"

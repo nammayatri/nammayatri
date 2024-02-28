@@ -182,7 +182,7 @@ foreign import getDateAfterNDaysv2 :: Int -> String
 foreign import extractKeyByRegex :: Fn2 String String String
 foreign import getPixels :: Fn1 LazyCheck Number
 foreign import getDeviceDefaultDensity ::Fn1 LazyCheck Number
-foreign import didDriverMessage :: Fn1 LazyCheck Boolean
+foreign import didReceiverMessage :: Fn1 LazyCheck Boolean
 
 foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 

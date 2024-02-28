@@ -654,6 +654,7 @@ getFR stringKey =
         YOU_SENT -> "tu as envoyé"
         MESSAGE_YOUR_DRIVER -> "Envoyez un message à votre chauffeur ?"
         CHECK_IN_WITH_YOUR_DRIVER -> "Enregistrez votre chauffeur avec un chat rapide"
+        CHECK_IN_WITH_YOUR_EM name -> "Enregistrez-vous sur " <> name <> " avec une discussion rapide"
         TRACK_ON_GOOGLE_MAPS -> "Suivre sur Google Maps"
         OTP_EXPIRE_TIMER -> "Minuterie d'expiration OTP"
         SHOWS_FOR_HOW_LONG_YOUR_OTP_ -> "Indique combien de temps votre OTP restera valide pour démarrer le trajet."

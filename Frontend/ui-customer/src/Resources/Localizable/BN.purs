@@ -653,6 +653,7 @@ getBN stringKey =
         YOU_SENT -> "আপনি পাঠিয়েছেন"
         MESSAGE_YOUR_DRIVER -> "আপনার ড্রাইভারকে মেসেজ করবেন?"
         CHECK_IN_WITH_YOUR_DRIVER -> "দ্রুত চ্যাটের সাথে আপনার ড্রাইভারের সাথে চেক ইন করুন"
+        CHECK_IN_WITH_YOUR_EM name -> "দ্রুত চ্যাট করে " <> name <> " এ চেক ইন করুন"
         TRACK_ON_GOOGLE_MAPS -> "রিয়েল টাইম ট্র্যাকিং"
         OTP_EXPIRE_TIMER -> "OTP মেয়াদোত্তীর্ণ টাইমার"
         SHOWS_FOR_HOW_LONG_YOUR_OTP_ -> "রাইড শুরু করার জন্য আপনার ওটিপি কতক্ষণ বৈধ থাকবে তা দেখায়।"
