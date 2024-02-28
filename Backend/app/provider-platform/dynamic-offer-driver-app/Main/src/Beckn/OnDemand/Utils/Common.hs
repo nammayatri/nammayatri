@@ -687,6 +687,14 @@ mapVariantToVehicle variant = do
     Variant.TAXI_PLUS -> CAB
     Variant.AUTO_RICKSHAW -> AUTO_RICKSHAW
 
+mapRideStatus :: DRide.RideStatus -> Enums.FulfillmentState
+mapRideStatus rideStatus = do
+  case rideStatus of
+    DRide.NEW -> Enums.RIDE_ASSIGNED
+    DRide.INPROGRESS -> Enums.RIDE_STARTED
+    DRide.COMPLETED -> Enums.RIDE_ENDED
+    DRide.CANCELLED -> Enums.RIDE_CANCELLED
+
 tfCancellationFee :: Maybe Int -> Maybe Int -> Maybe Spec.Fee
 tfCancellationFee mbAmount mbFeePercent = do
   let amount = fromMaybe 0 mbAmount

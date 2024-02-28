@@ -31,6 +31,7 @@ import qualified Domain.Types.DriverQuote as DQ
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.OnCancel as Reexport
 import qualified Domain.Types.OnCancel as OC
+import Domain.Types.Ride
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -41,6 +42,7 @@ import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import Tools.Error
 
@@ -64,12 +66,13 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
       country = fromMaybe merchant.country mbBapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
+  ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   let vehicleCategory = BUtils.mapVariantToVehicle booking.vehicleVariant
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) becknConfig
+  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) ride.status becknConfig
 
 buildOnCancelReq ::
   (MonadFlow m, EncFlow m r) =>
@@ -85,30 +88,31 @@ buildOnCancelReq ::
   DQ.DriverQuote ->
   Text ->
   OC.OnCancelBuildReq ->
+  RideStatus ->
   DBC.BecknConfig ->
   m Spec.OnCancelReq
-buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) becknConfig = do
+buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig = do
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
   pure $
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
         onCancelReqContext = context,
-        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig rideStatus
       }
 
-buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> DBC.BecknConfig -> Maybe Spec.ConfirmReqMessage
-buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig = do
+buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> DBC.BecknConfig -> RideStatus -> Maybe Spec.ConfirmReqMessage
+buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig rideStatus = do
   Just $
     Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig
+      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig rideStatus
       }
 
-tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> DBC.BecknConfig -> Spec.Order
-tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig = do
+tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> DBC.BecknConfig -> RideStatus -> Spec.Order
+tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig rideStatus = do
   Spec.Order
     { orderId = Just booking.id.getId,
       orderStatus = Just cancelStatus,
-      orderFulfillments = tfFulfillments booking driverQuote customerPhoneNo,
+      orderFulfillments = tfFulfillments booking driverQuote customerPhoneNo rideStatus,
       orderCancellation = tfCancellation cancellationSource,
       orderBilling = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
@@ -120,13 +124,13 @@ tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPho
       orderUpdatedAt = Just booking.updatedAt
     }
 
-tfFulfillments :: DRB.Booking -> DQ.DriverQuote -> Text -> Maybe [Spec.Fulfillment]
-tfFulfillments booking driverQuote customerPhoneNo = do
+tfFulfillments :: DRB.Booking -> DQ.DriverQuote -> Text -> RideStatus -> Maybe [Spec.Fulfillment]
+tfFulfillments booking driverQuote customerPhoneNo rideStatus = do
   let stops = BUtils.mkStops' booking.fromLocation booking.toLocation booking.specialZoneOtpCode
   Just
     [ Spec.Fulfillment
         { fulfillmentId = Just booking.quoteId,
-          fulfillmentState = mkFulfillmentState,
+          fulfillmentState = mkFulfillmentState rideStatus,
           fulfillmentStops = stops,
           fulfillmentType = Just $ BUtils.mkFulfillmentType booking.tripCategory,
           fulfillmentAgent = tfAgent booking driverQuote,
@@ -136,13 +140,13 @@ tfFulfillments booking driverQuote customerPhoneNo = do
         }
     ]
   where
-    mkFulfillmentState =
+    mkFulfillmentState rideStatus' =
       Just $
         Spec.FulfillmentState
           { fulfillmentStateDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just (show Enums.RIDE_CANCELLED),
+                  { descriptorCode = Just $ show (BUtils.mapRideStatus rideStatus'),
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   }

@@ -23,6 +23,7 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import BecknV2.Utils
 import Control.Lens ((%~))
+import Data.Aeson as A
 import qualified Data.List as DL
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -114,8 +115,8 @@ tfItems res =
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DOnInit.OnInitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig = do
-  let amount = fromIntegral (res.estimatedTotalFare.getMoney)
-  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
+  let amount = HighPrecMoney (fromMaybe 0.0 $ A.decode $ A.encode res.estimatedTotalFare.getMoney)
+  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
   Just $ DL.singleton $ OUP.mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID (Just amount) Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
