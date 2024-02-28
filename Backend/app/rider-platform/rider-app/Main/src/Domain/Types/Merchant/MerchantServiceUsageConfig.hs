@@ -51,7 +51,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigD 'Safe
 
