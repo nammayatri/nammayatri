@@ -156,10 +156,6 @@ let hccfg =
 
 let kvConfigUpdateFrequency = +10
 
-let maxMessages
-    : Text
-    = "5000"
-
 let RiderJobType = < CheckPNAndSendSMS | OtherJobTypes >
 
 let jobInfoMapx =
@@ -225,7 +221,6 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
-    , maxMessages
     , incomingAPIResponseTimeout = +15
     , maxShards = +5
     , jobInfoMapx

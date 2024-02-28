@@ -51,7 +51,6 @@ data AppCfg = AppCfg
     hedisClusterCfg :: HedisCfg,
     kvConfigUpdateFrequency :: Int,
     kafkaProducerCfg :: KafkaProducerCfg,
-    maxMessages :: Text,
     loggerConfig :: LoggerConfig,
     dontEnableForDb :: [Text],
     dontEnableForKafka :: [Text],
