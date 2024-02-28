@@ -1364,11 +1364,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1709033790,
-        "narHash": "sha256-zzRk0CzL4elrwX24GIUwdV7E00K0UeW947ATEZbbvLE=",
+        "lastModified": 1709132462,
+        "narHash": "sha256-x1MEqWmtqnGpqQ0lmpeRPnMtZngLFj5vwVZadYtHGbk=",
         "owner": "piyushKumar-1",
         "repo": "haskell_cac_client",
-        "rev": "4e8cb3c3bc7013a7b5d805aa66f1b66864826f95",
+        "rev": "84eace9e6452ff894f8ac7f8723954fa1cde67ed",
         "type": "github"
       },
       "original": {
@@ -3197,16 +3197,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1709112202,
-        "narHash": "sha256-IoM8P3DEUJdPQMqP10VnnUIwDT0kaOQ6EbasYKaZwR0=",
+        "lastModified": 1709112759,
+        "narHash": "sha256-KNFuPeUBhZzkaszOZozVmRBMHQTPcQvdi7MLUu6rHUE=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "1aed2355ea31ad1b2d434bac5ef82b526ad4705a",
+        "rev": "50739f26e34e33ab82fc44d6d8b9403f51ea7588",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "Backend/feat/CACChanges",
+        "ref": "backend/feat/CACChanges",
         "repo": "shared-kernel",
         "type": "github"
       }

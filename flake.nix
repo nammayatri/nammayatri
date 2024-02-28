@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel/Backend/feat/CACChanges";
+      url = "github:nammayatri/shared-kernel/backend/feat/CACChanges";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

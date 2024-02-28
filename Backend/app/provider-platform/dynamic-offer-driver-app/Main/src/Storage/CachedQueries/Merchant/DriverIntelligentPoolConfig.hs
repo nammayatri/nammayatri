@@ -47,6 +47,7 @@ import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
 import qualified System.Environment as SE
+import qualified System.Environment as Se
 import System.Random
 
 getDriverIntelligentPoolConfigFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
@@ -97,9 +98,11 @@ getConfigFromCACStrict merchantOpCityId = do
 
 cacFallbackHelper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig
 cacFallbackHelper id = do
+  mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
+  mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
   tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
   config <- KSQS.findById' $ Text.pack tenant
-  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue
+  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getConfigFromCACStrict id
 
 getDriverIntelligentPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig
