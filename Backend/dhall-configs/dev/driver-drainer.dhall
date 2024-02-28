@@ -55,9 +55,11 @@ let dontEnableForDb = [] : List Text
 
 let dontEnableForKafka = [] : List Text
 
-let maxMessages
-    : Text
-    = "5000"
+let kafkaProperties =
+        [ { propName = "queue.buffering.max.messages", propValue = "5000" }
+        , { propName = "message.max.bytes", propValue = "1000000" }
+        ]
+      : List { propName : Text, propValue : Text }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -72,5 +74,5 @@ in  { esqDBCfg
     , kvConfigUpdateFrequency
     , dontEnableForDb
     , dontEnableForKafka
-    , maxMessages
+    , kafkaProperties
     }
