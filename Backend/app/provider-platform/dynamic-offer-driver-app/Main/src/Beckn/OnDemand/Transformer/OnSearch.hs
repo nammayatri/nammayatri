@@ -94,7 +94,7 @@ tfProviderFulfillments res pricing = do
 
 tfProviderItems :: Domain.Action.Beckn.Search.DSearchRes -> Beckn.OnDemand.Utils.Common.Pricing -> BecknV2.OnDemand.Types.Item
 tfProviderItems res pricing = do
-  let itemDescriptor_ = Nothing
+  let itemDescriptor_ = tfItemDescriptor pricing
       itemFulfillmentIds_ = Just [pricing.pricingId]
       itemId_ = Beckn.ACL.Common.mkItemId res.provider.shortId.getShortId pricing.vehicleVariant & Just
       itemLocationIds_ = Nothing
@@ -117,3 +117,12 @@ tfVehicle pricing = do
   if allNothing
     then Nothing
     else Just returnData
+
+tfItemDescriptor :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Descriptor
+tfItemDescriptor pricing =
+  Just
+    BecknV2.OnDemand.Types.Descriptor
+      { descriptorCode = Just "RIDE",
+        descriptorShortDesc = Just $ show pricing.vehicleVariant,
+        descriptorName = Just $ show pricing.vehicleVariant
+      }

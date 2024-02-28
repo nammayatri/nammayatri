@@ -76,7 +76,8 @@ data BookingAPIEntity = BookingAPIEntity
     sosStatus :: Maybe DSos.SosStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    isValueAddNP :: Bool
+    isValueAddNP :: Bool,
+    serviceTierName :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -167,7 +168,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       updatedAt = booking.updatedAt,
       hasDisability = hasDisability,
       sosStatus = mbSosStatus,
-      isValueAddNP
+      isValueAddNP,
+      serviceTierName = booking.serviceTierName
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
