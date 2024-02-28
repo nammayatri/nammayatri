@@ -3171,11 +3171,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1709097806,
-        "narHash": "sha256-0uo4gPmwrTLXIKz9sijBsNbAl809Jwk9HHATkalOot0=",
+        "lastModified": 1709131423,
+        "narHash": "sha256-jPw127xOTq43mnks2PUM/z7/EYUcpnfqeo9beIaj5Qg=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "94dc657d9a9411972c497806b6b63124cfe8f67d",
+        "rev": "a85e6683a4fdb67600aefc9c6502227fe0941278",
         "type": "github"
       },
       "original": {
