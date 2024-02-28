@@ -356,7 +356,8 @@ instance FromTType' BeamB.Booking Booking where
             estimatedDistance = estimatedDistance,
             estimatedDuration = estimatedDuration,
             updatedAt = updatedAt,
-            initialPickupLocation = initialPickupLocation
+            initialPickupLocation = initialPickupLocation,
+            serviceTierName = serviceTierName
           }
     where
       buildOneWayDetails toLocid = do
@@ -436,7 +437,8 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.estimatedDistance = estimatedDistance,
             BeamB.estimatedDuration = estimatedDuration,
             BeamB.createdAt = createdAt,
-            BeamB.updatedAt = updatedAt
+            BeamB.updatedAt = updatedAt,
+            BeamB.serviceTierName = serviceTierName
           }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

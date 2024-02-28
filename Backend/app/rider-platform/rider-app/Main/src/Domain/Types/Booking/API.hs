@@ -77,7 +77,8 @@ data BookingAPIEntity = BookingAPIEntity
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     isValueAddNP :: Bool,
-    editPickupAttemptsLeft :: Int
+    editPickupAttemptsLeft :: Int,
+    serviceTierName :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -169,7 +170,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       hasDisability = hasDisability,
       sosStatus = mbSosStatus,
       editPickupAttemptsLeft = fromMaybe 0 (activeRide >>= (.allowedEditLocationAttempts)),
-      isValueAddNP
+      isValueAddNP,
+      serviceTierName = booking.serviceTierName
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
