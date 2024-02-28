@@ -54,6 +54,7 @@ import Debug
 import LocalStorage.Cache (getValueFromCache)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Timers (clearTimerWithId)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -103,6 +104,8 @@ data Action
   | PrimaryButtonAC PrimaryButton.Action
   | UpdateCurrentStage FollowRideScreenStage
   | ResetSheetState
+  | MessageExpiryTimer Int String String
+  | AllChatsLoaded
 
 eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState
 eval action state = case action of
@@ -218,7 +221,7 @@ eval action state = case action of
         if STR.null value.message then
           continue state { data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1) }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
         else if value.sentBy == getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys then
-          updateMessagesWithCmd state { data { messages = allMessages, chatSuggestionsList = [], lastMessage = value, lastSentMessage = value }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
+          updateMessagesWithCmd state { data { messages = allMessages, chatSuggestionsList = getSuggestionsfromKey emChatSuggestion "31e3bbf96e4b4208f1328f5b0da57d2e", lastMessage = value, lastSentMessage = value }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
         else do
           let
             readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
@@ -274,6 +277,18 @@ eval action state = case action of
           _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
           pure $ NoAction
       ]
+  MessageExpiryTimer seconds status timerID -> do
+    let newState = state{data{counter = state.data.counter + 1}}
+    if status == "EXPIRED"
+      then do
+        _ <- pure $ clearTimerWithId timerID
+        if state.data.lastMessage.sentBy == (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) then
+        continueWithCmd newState [ do
+          pure $ RemoveNotification
+        ]
+        else continue newState
+    else
+        continue newState
   SendQuickMessage chatSuggestion -> do
     if state.props.canSendSuggestion then do
       _ <- pure $ sendMessage chatSuggestion

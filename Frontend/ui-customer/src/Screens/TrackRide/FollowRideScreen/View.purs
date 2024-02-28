@@ -15,7 +15,8 @@
 module Screens.FollowRideScreen.View where
 
 import Accessor (_lat, _lon)
-import Animation (fadeIn, fadeOut, screenAnimation)
+import Animation
+import Animation.Config
 import Common.Resources.Constants (pickupZoomLevel, zoomLevel)
 import Common.Types.App (LazyCheck(..), Paths)
 import Components.DriverInfoCard.Common.View (addressShimmerView, driverDetailsView, driverInfoShimmer, sourceDestinationView)
@@ -54,7 +55,7 @@ import Presto.Core.Types.Language.Flow (Flow, getState, modifyState)
 import Helpers.Pooling(delay)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..))
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..), SearchResultType(..), Stage(..))
 import Styles.Colors as Color
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -65,6 +66,8 @@ import Storage
 import Components.MessagingView as MessagingView
 import Locale.Utils (getLanguageLocale, languageKey)
 import Common.Resources.Constants (emChatSuggestion)
+import Components.MessagingView.Common.View (messageNotificationView)
+import Components.MessagingView.Common.Types (MessageNotificationView)
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput
 screen initialState globalState =
@@ -85,7 +88,7 @@ screen initialState globalState =
                     Just ride -> do
                       when (initialState.props.isRideStarted && not initialState.props.currentUserOnRide) $ do
                           void $ clearChatMessages
-                          void $ storeCallBackMessageUpdated push ride.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages
+                          void $ storeCallBackMessageUpdated push ride.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages AllChatsLoaded
                           void $ storeCallBackOpenChatScreen push OpenChatScreen
                           void $ startChatListenerService
                           void $ pure $ scrollOnResume push ScrollToBottom
@@ -154,7 +157,8 @@ followingRideView globalState push state =
           [ width MATCH_PARENT
           , height MATCH_PARENT
           ]
-          [ bottomSheetView push state ]
+          [ messageWidgetView push state
+          , bottomSheetView push state ]
       , rideCompletedView push state
       ] <> if state.data.currentStage == ChatWithEM then [messagingView push state] else []
         <> if state.data.currentStage == RideCompletedStage then
@@ -230,6 +234,39 @@ followersListView push state =
               )
           ]
       ]
+
+messageWidgetView :: forall w. (Action -> Effect Unit) -> FollowRideScreenState -> PrestoDOM (Effect Unit) w
+messageWidgetView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ][ (if disableSuggestions state then 
+        PrestoAnim.animationSet[] 
+      else (if state.props.showChatNotification then 
+        PrestoAnim.animationSet [translateYAnimFromTop $ messageInAnimConfig true] 
+      else if state.props.isNotificationExpanded then 
+        PrestoAnim.animationSet [translateYAnimFromTop $ messageOutAnimConfig true] 
+      else PrestoAnim.animationSet[scaleYAnimWithDelay 5000])) $ 
+     linearLayout
+     [ height $ MATCH_PARENT
+     , width MATCH_PARENT
+     , padding $ PaddingHorizontal 8 8
+     , alignParentBottom "true,-1"
+     , gravity BOTTOM
+     , accessibility DISABLE
+     , onAnimationEnd push $ const $ NotificationAnimationEnd
+     , orientation VERTICAL
+     ][ messageNotificationView push (getMessageNotificationViewConfig state)
+      , linearLayout
+        [ height $ V $ ((getPeekHeight state) - if state.props.removeNotification then 0 else 180)
+        , width $ MATCH_PARENT
+        , accessibility DISABLE
+        ][]
+     ]
+  ]
+  where disableSuggestions state = not $ state.data.config.feature.enableChat || state.data.config.feature.enableSuggestions
+
 
 rideCompletedView ::
   forall w.
@@ -331,6 +368,38 @@ followerItem item push =
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
         ]
     ]
+
+getMessageNotificationViewConfig :: FollowRideScreenState -> MessageNotificationView Action
+getMessageNotificationViewConfig state =
+  let config = MessagingView.config
+      driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
+      currentFollower = getCurrentFollower state.data.currentFollower
+      name = fromMaybe currentFollower.mobileNumber currentFollower.name
+  in spy "getMessageNotificationViewConfig FS" {
+    showChatNotification : state.props.showChatNotification
+  , enableChatWidget : state.props.enableChatWidget
+  , isNotificationExpanded :state.props.isNotificationExpanded
+  , currentSearchResultType : ESTIMATES
+  , config : state.data.config
+  , rideStarted : true
+  , lastMessage : state.data.lastMessage
+  , lastSentMessage : state.data.lastSentMessage
+  , lastReceivedMessage : state.data.lastReceivedMessage
+  , removeNotificationAction : RemoveNotification
+  , messageViewAnimationEnd : MessageViewAnimationEnd
+  , messageReceiverAction : MessageEmergencyContact
+  , sendQuickMessageAction : SendQuickMessage
+  , timerCounter : state.data.counter
+  , messageExpiryAction : MessageExpiryTimer
+  , chatSuggestions : getChatSuggestions state
+  , messages : state.data.messages
+  , removeNotification : state.props.removeNotification
+  , currentStage : RideStarted
+  , suggestionKey : emChatSuggestion
+  , user :{ userName : name
+    , receiver : name
+    }
+  }
 
 bottomSheetView ::
   forall w.
@@ -591,8 +660,8 @@ headerView push state =
           ]
           [ imageView
               [ imageWithFallback $ if state.data.config.feature.enableChat && (currentFollower.priority == 0) && state.props.isRideStarted && not state.props.currentUserOnRide then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
-              , height $ V 20
-              , width $ V 20
+              , height $ V state.data.config.driverInfoConfig.callHeight
+              , width $ V state.data.config.driverInfoConfig.callWidth
               ]
           ]
       ]

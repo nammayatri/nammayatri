@@ -1,7 +1,7 @@
 module LocalStorage.Cache where
 
 
-import JBridge (getKeyInSharedPrefKeys, setKeyInSharedPref)
+import JBridge (getKeyInSharedPrefKeys, setKeyInSharedPref, setCurrentUser)
 import Data.Maybe (Maybe(..))
 import Prelude
 import Data.Function.Uncurried (Fn2(..), Fn3(..), runFn2, runFn3)
@@ -19,8 +19,12 @@ getValueFromCache key getIfNothing = do
   case mbValue of
     Nothing -> 
       let value = getIfNothing key
-      in runFn2 setInCache key value
+      in runFn2 setInCache key $ handleUserId value
     Just value -> value
+  where 
+    handleUserId value = if key == "CUSTOMER_ID" 
+        then setCurrentUser value
+        else value
 
 
 setValueToCache :: forall a. String -> a -> (a -> String) -> a

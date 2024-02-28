@@ -367,6 +367,7 @@ data Action = NoAction
             | CustomerSafetyPopupAC PopUpModal.Action
             | UpdateLastLoc Number Number Boolean
             | VehicleNotSupportedAC PopUpModal.Action
+            | AllChatsLoaded
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState

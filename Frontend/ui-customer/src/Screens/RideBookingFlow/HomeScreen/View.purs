@@ -73,7 +73,7 @@ import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -223,7 +223,7 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 1
                 else pure unit
                 push LoadMessages
-                when (not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= QUOTES) $ startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer"
+                when (not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= QUOTES) $ startChatSerivces push initialState.data.driverInfoCardState.bppRideId "Customer" false
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 _ <- pure $ enableMyLocation false
@@ -234,7 +234,7 @@ screen initialState =
                   pure unit
                 else
                   pure unit
-                case spy "contactList ->" initialState.data.contactList of
+                case initialState.data.contactList of
                   Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
                   Just contacts -> validateAndStartChat contacts push initialState
                 pure unit
@@ -4008,18 +4008,17 @@ validateAndStartChat contacts push state = do
     then push RemoveChat
     else do
       push $ UpdateChatWithEM true
-      if (not $ state.props.chatcallbackInitiated) then startChatSerivces push state.data.driverInfoCardState.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else pure unit
+      if (not $ state.props.chatcallbackInitiated) then startChatSerivces push state.data.driverInfoCardState.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true else pure unit
 
 
-startChatSerivces ::  (Action -> Effect Unit) -> String -> String -> Effect Unit
-startChatSerivces push rideId chatUser = do
+startChatSerivces ::  (Action -> Effect Unit) -> String -> String -> Boolean -> Effect Unit
+startChatSerivces push rideId chatUser rideStarted = do
   void $ clearChatMessages
-  void $ storeCallBackMessageUpdated push rideId chatUser UpdateMessages
+  void $ storeCallBackMessageUpdated push rideId chatUser UpdateMessages AllChatsLoaded
   void $ storeCallBackOpenChatScreen push OpenChatScreen
   void $ startChatListenerService
   void $ pure $ scrollOnResume push ScrollToBottom
   push InitializeChat
-  pure unit
 
 safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 safetyAlertPopup push state =

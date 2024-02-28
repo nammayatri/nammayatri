@@ -231,11 +231,11 @@ export const toStringJSON = function (attr) {
   return JSON.stringify(attr);
 };
 
-export const didDriverMessage = function() {
+export const didReceiverMessage = function() {
   try {
-    return window.didDriverMessage || false;
+    return window.didReceiverMessage || false;
   } catch (error) {
-    console.log("Error in didDriverMessage " + error);
+    console.log("Error in didReceiverMessage " + error);
     return false;
   }
 }

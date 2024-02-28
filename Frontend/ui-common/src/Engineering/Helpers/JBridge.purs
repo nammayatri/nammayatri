@@ -178,7 +178,7 @@ foreign import startLocationPollingAPI :: Effect Unit
 foreign import startChatListenerService :: Effect Unit
 foreign import scrollOnResume :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import stopChatListenerService :: Effect Unit
-foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> Effect Unit
+foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> action -> Effect Unit
 foreign import dateCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
 foreign import unregisterDateAndTime :: Effect Unit
 foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
@@ -198,6 +198,7 @@ foreign import firebaseLogEventWithParams :: String -> String -> String -> Effec
 foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
 foreign import firebaseScreenNameLog :: String  -> Effect Unit
 foreign import firebaseUserID :: String  -> Effect Unit
+foreign import setCurrentUser :: forall a. a -> a
 -- foreign import closeApp       :: String -> Effect Unit
 foreign import storeCallBackDriverLocationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import setStoreCallBackPopUp :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
