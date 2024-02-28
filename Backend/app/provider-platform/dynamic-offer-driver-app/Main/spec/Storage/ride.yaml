@@ -64,6 +64,7 @@ Ride:
     driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
     safetyAlertTriggered: Bool
     enableFrequentLocationUpdates: Maybe Bool
+    transactionId: Maybe Text
 
   sqlType:
     id: character(36)

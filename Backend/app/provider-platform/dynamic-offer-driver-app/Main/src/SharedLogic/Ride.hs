@@ -175,7 +175,8 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         isFreeRide = Just ((getId driverId) `elem` transporterConfig.specialDrivers),
         driverGoHomeRequestId = ghrId,
         safetyAlertTriggered = False,
-        enableFrequentLocationUpdates = enableFrequentLocationUpdates
+        enableFrequentLocationUpdates = enableFrequentLocationUpdates,
+        transactionId = Just booking.transactionId
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

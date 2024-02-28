@@ -59,12 +59,15 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     clearInterpolatedPoints :: Id person -> m (),
     expireInterpolatedPoints :: Id person -> m (),
     getInterpolatedPoints :: Id person -> m [LatLong],
-    interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong], [MapsService], Bool),
+    interpolatePointsAndCalculateDistance :: [LatLong] -> Bool -> m (HighPrecMeters, [LatLong], [MapsService], Bool),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> m (),
     updateRouteDeviation :: Id person -> [LatLong] -> m Bool,
-    getTravelledDistance :: Id person -> Meters -> m Meters
+    updateSafetyDeviation :: Id person -> [LatLong] -> m (),
+    checkBatchForDeviation :: Id person -> [LatLong] -> m Bool,
+    getTravelledDistance :: Id person -> Meters -> m Meters,
+    getEstimateSliceDistance :: Id person -> [LatLong] -> m Meters
   }
 
 --------------------------------------------------------------------------------
@@ -95,12 +98,20 @@ processWaypoints ::
   NonEmpty LatLong ->
   m ()
 processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist pickupDropOutsideThreshold waypoints = do
+  prevBatchTwoEndPoints :: Maybe [LatLong] <- Redis.safeGet $ lastTwoOnRidePointsRedisKey driverId
+  let modifiedWaypoints =
+        case prevBatchTwoEndPoints of
+          Just points -> NE.fromList points <> waypoints
+          _ -> waypoints
+  let currentLastTwoPoints = takeLastTwo (toList waypoints)
+  Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
+  _ <- updateSafetyDeviation driverId (toList modifiedWaypoints)
   calculationFailed <- isDistanceCalculationFailed driverId
   if calculationFailed
     then logWarning "Failed to calculate actual distance for this ride, ignoring"
     else wrapDistanceCalculation driverId $ do
       addPoints driverId waypoints
-      recalcDistanceBatches ih ending driverId estDist pickupDropOutsideThreshold waypoints
+      recalcDistanceBatches ih ending driverId estDist pickupDropOutsideThreshold modifiedWaypoints
 
 lastTwoOnRidePointsRedisKey :: Id person -> Text
 lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:DriverId-" <> driverId.getId
@@ -132,14 +143,7 @@ recalcDistanceBatches ::
   NonEmpty LatLong ->
   m ()
 recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pickupDropOutsideThreshold waypoints = do
-  prevBatchTwoEndPoints :: Maybe [LatLong] <- Redis.safeGet $ lastTwoOnRidePointsRedisKey driverId
-  let modifiedWaypoints =
-        case prevBatchTwoEndPoints of
-          Just points -> NE.fromList points <> waypoints
-          _ -> waypoints
-  let currentLastTwoPoints = takeLastTwo (toList waypoints)
-  Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
-  routeDeviation <- updateRouteDeviation driverId (toList modifiedWaypoints)
+  routeDeviation <- updateRouteDeviation driverId (toList waypoints)
   let snapToRoadCallCondition = routeDeviation || pickupDropOutsideThreshold
   if ending
     then do
@@ -164,7 +168,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
       batchLeft <- continueCondition
       if batchLeft
         then do
-          (dist, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h driverId
+          (dist, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h driverId pickupDropOutsideThreshold
           let googleCalled = Google `elem` servicesUsed
               osrmCalled = OSRM `elem` servicesUsed
           if snapCallFailed
@@ -180,28 +184,53 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
         throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
       return currSnapToRoadState
 
+calculateDistanceByCallingSnapToRoad :: (Monad m, Log m) => RideInterpolationHandler person m -> Id person -> [LatLong] -> m (HighPrecMeters, [MapsService], Bool)
+calculateDistanceByCallingSnapToRoad h@RideInterpolationHandler {..} driverId batchwaypoints = do
+  (distance, interpolatedWps, servicesUsed, snapToRoadFailed) <- interpolatePointsAndCalculateDistance batchwaypoints False
+  unless snapToRoadFailed $ do
+    addInterpolatedPointsAndDeleteBatchWaypoints h driverId batchwaypoints interpolatedWps distance
+  pure (distance, servicesUsed, snapToRoadFailed)
+
+calculateDistanceByCallingOSRMWithEstimatedFallBack :: (Monad m, Log m) => RideInterpolationHandler person m -> Id person -> [LatLong] -> m (HighPrecMeters, [MapsService], Bool)
+calculateDistanceByCallingOSRMWithEstimatedFallBack h@RideInterpolationHandler {..} driverId batchwaypoints = do
+  (distance, interpolatedWps, servicesUsed, snapToRoadFailed) <- interpolatePointsAndCalculateDistance batchwaypoints True
+  case snapToRoadFailed of
+    True -> do
+      sliceDist <- getEstimateSliceDistance driverId batchwaypoints
+      addInterpolatedPointsAndDeleteBatchWaypoints h driverId batchwaypoints interpolatedWps (metersToHighPrecMeters sliceDist)
+      pure ((metersToHighPrecMeters sliceDist), servicesUsed, False)
+    False -> do
+      addInterpolatedPointsAndDeleteBatchWaypoints h driverId batchwaypoints interpolatedWps distance
+      pure (distance, servicesUsed, False)
+
 recalcDistanceBatchStep ::
   (Monad m, Log m) =>
   RideInterpolationHandler person m ->
   Id person ->
+  Bool ->
   m (HighPrecMeters, [MapsService], Bool)
-recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
-  batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
-  (distance, interpolatedWps, servicesUsed, snapToRoadFailed) <- interpolatePointsAndCalculateDistance batchWaypoints
-  whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
-    addInterpolatedPoints driverId nonEmptyInterpolatedWps
-  unless snapToRoadFailed $ do
-    logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
-    logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
-    deleteFirstNwaypoints driverId batchSize
-  pure (distance, servicesUsed, snapToRoadFailed)
+recalcDistanceBatchStep h@RideInterpolationHandler {..} driverId pickupDropOutsideThreshold = do
+  batchwaypoints <- getFirstNwaypoints driverId (batchSize + 1)
+  case pickupDropOutsideThreshold of
+    True -> calculateDistanceByCallingSnapToRoad h driverId batchwaypoints
+    False -> do
+      batchDeviation <- checkBatchForDeviation driverId batchwaypoints
+      case batchDeviation of
+        True -> calculateDistanceByCallingSnapToRoad h driverId batchwaypoints
+        False -> calculateDistanceByCallingOSRMWithEstimatedFallBack h driverId batchwaypoints
 
 redisOnRideSnapToRoadKeysCleanup :: (HedisFlow m env) => Id person -> m ()
 redisOnRideSnapToRoadKeysCleanup driverId = do
   Redis.del (lastTwoOnRidePointsRedisKey driverId)
   Redis.del (onRideSnapToRoadStateKey driverId)
 
--------------------------------------------------------------------------
+addInterpolatedPointsAndDeleteBatchWaypoints :: (Monad m, Log m) => RideInterpolationHandler person m -> Id person -> [LatLong] -> [LatLong] -> HighPrecMeters -> m ()
+addInterpolatedPointsAndDeleteBatchWaypoints RideInterpolationHandler {..} driverId batchwaypoints interpolatedWps distance = do
+  logInfo $ mconcat ["points interpolation: input=", show batchwaypoints, "; output=", show interpolatedWps]
+  logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
+  addInterpolatedPoints driverId $ NE.fromList interpolatedWps
+  deleteFirstNwaypoints driverId batchSize
+
 mkRideInterpolationHandler ::
   ( HedisFlow m r,
     HasPrettyLogger m r,
@@ -215,10 +244,13 @@ mkRideInterpolationHandler ::
   Bool ->
   (Id person -> HighPrecMeters -> Int -> Int -> m ()) ->
   (Id person -> [LatLong] -> m Bool) ->
+  (Id person -> [LatLong] -> m ()) ->
+  (Id person -> [LatLong] -> m Bool) ->
   (Id person -> Meters -> m Meters) ->
-  (Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
+  (Id person -> [LatLong] -> m Meters) ->
+  (Bool -> Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation getTravelledDistance snapToRoadCall =
+mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation updateSafetyDeviation checkBatchForDeviation getTravelledDistance getEstimateSliceDistance snapToRoadCall =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -232,11 +264,9 @@ mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation getTrav
       getInterpolatedPoints = getInterpolatedPointsImplementation,
       expireInterpolatedPoints = expireInterpolatedPointsImplementation,
       interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation isEndRide snapToRoadCall,
-      updateDistance,
-      updateRouteDeviation,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
-      getTravelledDistance
+      ..
     }
 
 makeWaypointsRedisKey :: Id person -> Text
@@ -302,14 +332,15 @@ interpolatePointsAndCalculateDistanceImplementation ::
     HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
-  (Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
+  (Bool -> Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
   [LatLong] ->
+  Bool ->
   m (HighPrecMeters, [LatLong], [Maps.MapsService], Bool)
-interpolatePointsAndCalculateDistanceImplementation isEndRide snapToRoadCall wps = do
+interpolatePointsAndCalculateDistanceImplementation isEndRide snapToRoadCall wps isBatchSnap = do
   if isEndRide && isAllPointsEqual wps
     then pure (0, take 1 wps, [], False)
     else do
-      (servicesUsed, res) <- snapToRoadCall $ Maps.SnapToRoadReq {points = wps}
+      (servicesUsed, res) <- snapToRoadCall isBatchSnap (Maps.SnapToRoadReq {points = wps})
       case res of
         Left _ -> pure (0, [], [], True)
         Right response -> pure (response.distance, response.snappedPoints, servicesUsed, False)

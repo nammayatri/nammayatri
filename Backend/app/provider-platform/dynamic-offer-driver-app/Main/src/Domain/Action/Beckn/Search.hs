@@ -256,8 +256,8 @@ handler ValidatedDSearchReq {..} sReq = do
               { points = Just points,
                 ..
               },
-          deviationInfo =
-            DeviationInfo {deviation = False, safetyDeviation = False}
+          routeDeviation = False,
+          safetyDeviation = False
         }
 
 addNearestDriverInfo ::

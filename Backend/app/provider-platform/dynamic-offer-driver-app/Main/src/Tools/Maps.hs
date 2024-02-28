@@ -138,9 +138,10 @@ snapToRoadWithFallback ::
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Bool ->
   SnapToRoadReq ->
   m ([Maps.MapsService], Either String SnapToRoadResp)
-snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback handler
+snapToRoadWithFallback merchantId merchantOperatingCityId isBatchSnap = Maps.snapToRoadWithFallback handler
   where
     handler = Maps.SnapToRoadHandler {..}
 
@@ -149,10 +150,13 @@ snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithF
       pure $ transporterConfig.snapToRoadConfidenceThreshold
 
     getProvidersList = do
-      merchantConfig <- QOMC.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-      let snapToRoadProvidersList = merchantConfig.snapToRoadProvidersList
-      when (null snapToRoadProvidersList) $ throwError $ InternalError ("No snap to road service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
-      pure snapToRoadProvidersList
+      if isBatchSnap
+        then pure [Maps.OSRM]
+        else do
+          merchantConfig <- QOMC.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+          let snapToRoadProvidersList = merchantConfig.snapToRoadProvidersList
+          when (null snapToRoadProvidersList) $ throwError $ InternalError ("No snap to road service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
+          pure snapToRoadProvidersList
 
     getProviderConfig provider = do
       merchantMapsServiceConfig <-
