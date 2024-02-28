@@ -23,7 +23,7 @@
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission
         android:name="android.permission.RECEIVE_SMS"
@@ -130,7 +130,7 @@
         <service
             android:name=".ChatService"
             android:exported="false"
-            android:foregroundServiceType="remoteMessaging"
+            android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
 
         <activity
