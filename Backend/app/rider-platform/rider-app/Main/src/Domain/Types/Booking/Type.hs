@@ -82,7 +82,8 @@ data Booking = Booking
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    serviceTierName :: Maybe Text
   }
   deriving (Generic, Show)
 

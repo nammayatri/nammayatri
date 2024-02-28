@@ -23,7 +23,10 @@ import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
+import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
+import qualified Data.Text as T
+import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -113,7 +116,7 @@ tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPho
       orderBilling = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
       orderItems = tfItems booking merchant,
-      orderPayments = tfPayments booking,
+      orderPayments = tfPayments driverQuote merchant becknConfig,
       orderProvider = Nothing,
       orderQuote = tfQuotation booking,
       orderCreatedAt = Just booking.createdAt,
@@ -192,28 +195,11 @@ mkQuotationBreakup booking =
           quotationBreakupInnerTitle = Just title
         }
 
-tfPayments :: DRB.Booking -> Maybe [Spec.Payment]
-tfPayments booking =
-  Just
-    [ Spec.Payment
-        { paymentCollectedBy = Just $ show Enums.BPP,
-          paymentId = Nothing,
-          paymentParams = mkParams,
-          paymentStatus = Nothing,
-          paymentTags = Nothing,
-          paymentType = Just $ show Enums.ON_FULFILLMENT
-        }
-    ]
-  where
-    mkParams =
-      Just
-        Spec.PaymentParams
-          { paymentParamsAmount = Just $ encodeToText booking.estimatedFare,
-            paymentParamsBankAccountNumber = Nothing,
-            paymentParamsBankCode = Nothing,
-            paymentParamsCurrency = Just "INR",
-            paymentParamsVirtualPaymentAddress = Nothing
-          }
+tfPayments :: DQ.DriverQuote -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
+tfPayments res merchant bppConfig = do
+  let amount = fromIntegral (res.estimatedFare.getMoney)
+  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
+  Just $ L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfItems :: DRB.Booking -> DM.Merchant -> Maybe [Spec.Item]
 tfItems booking merchant = do

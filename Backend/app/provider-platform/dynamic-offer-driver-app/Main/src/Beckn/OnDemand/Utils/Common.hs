@@ -831,12 +831,12 @@ tfItemPrice booking =
       }
 
 tfItemDescriptor :: DBooking.Booking -> MerchantShortId -> Maybe Spec.Descriptor
-tfItemDescriptor booking shortId =
+tfItemDescriptor booking _shortId =
   Just
     Spec.Descriptor
       { descriptorCode = Just "RIDE",
-        descriptorShortDesc = Just $ Common.mkItemId shortId booking.vehicleVariant,
-        descriptorName = Nothing
+        descriptorShortDesc = Just $ show booking.vehicleVariant,
+        descriptorName = Just $ show booking.vehicleVariant
       }
 
 convertEstimateToPricing :: (DEst.Estimate, Maybe NearestDriverInfo) -> Pricing
