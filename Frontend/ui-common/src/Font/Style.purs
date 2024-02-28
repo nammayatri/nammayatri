@@ -179,7 +179,7 @@ h3 typography = [
 
 subHeading1 :: LazyCheck -> forall properties. (Array (Prop properties))
 subHeading1 typography = [
-  textSize FontSize.a_16
+  textSize if (getLanguageFromLocalStore unit) == "TA_IN"  then FontSize.a_13 else FontSize.a_16
 , lineHeight "24"
 ] <> if (getFontType "")  == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
@@ -279,7 +279,7 @@ body6 typography = [
 
 body7 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body7 typography = [
-  textSize FontSize.a_16
+  textSize  if (getLanguageFromLocalStore unit) == "TA_IN" then FontSize.a_14 else FontSize.a_16
 , lineHeight "20"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
