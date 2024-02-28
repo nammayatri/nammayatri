@@ -596,8 +596,11 @@ homeScreenFlow = do
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES updatedState -> do
       if updatedState.data.source == getString STR.CURRENT_LOCATION then do
-        PlaceName address <- getPlaceName updatedState.props.sourceLat updatedState.props.sourceLong HomeScreenData.dummyLocation
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing updatedState.props.sourceLat updatedState.props.sourceLong } })
+        fullAddress <- getPlaceName updatedState.props.sourceLat updatedState.props.sourceLong HomeScreenData.dummyLocation true
+        case fullAddress of
+          Just (PlaceName address) -> do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing updatedState.props.sourceLat updatedState.props.sourceLong } })
+          Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN   
       else
         pure unit
       (GlobalState globalState) <- getState
@@ -1109,6 +1112,23 @@ homeScreenFlow = do
                                                   }) srcSpecialLocation.gates
             if (sourceServiceabilityResp.serviceable ) then do
               let cityName = getCityNameFromCode sourceServiceabilityResp.city
+              (GlobalState currentState) <- getState
+              fullAddress <- getPlaceName currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong HomeScreenData.dummyLocation false
+              case fullAddress of
+                Just (PlaceName address) -> do
+                  modifyScreenState $ HomeScreenStateType 
+                    (\homeScreen -> 
+                      homeScreen
+                        { data
+                            { source = address.formattedAddress 
+                            , sourceAddress = encodeAddress address.formattedAddress [] Nothing currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong 
+                            }
+                        , props
+                            { isSrcServiceable = true
+                            }
+                        }
+                    )
+                Nothing -> pure unit
               void $ pure $ setCleverTapUserProp [{key : "Customer Location", value : unsafeToForeign $ show cityName}]
               setValueToLocalStore CUSTOMER_LOCATION $ show cityName
               modifyScreenState $ HomeScreenStateType 
@@ -1160,7 +1180,6 @@ homeScreenFlow = do
             { locateOnMapLocation
               { sourceLat = sourceLat
               , sourceLng = sourceLong
-              , source = getString STR.CURRENT_LOCATION
               }
             , sourceLat = sourceLat
             , sourceLong = sourceLong
@@ -1232,23 +1251,26 @@ homeScreenFlow = do
         (GlobalState globalState) <- getState
         let state = globalState.homeScreen
         if isMoreThan20Meters || cachedLocation == "" then do
-          PlaceName placeDetails <- getPlaceName lat lon gateAddress
-          let currentLocationItem = getCurrentLocationItem placeDetails state lat lon
-          void $ liftFlowBT $ logEvent logField_ "ny_user_placename_api_lom_onDrag"
-          modifyScreenState $ HomeScreenStateType (\homeScreen ->
-          homeScreen {
-            data {
-              destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
-              selectedLocationListItem = currentLocationItem, 
-              source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source,
-              sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
-                Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
-                _ , _-> encodeAddress homeScreen.data.source [] state.props.sourcePlaceId lat lon,
-              destinationAddress = case state.props.isSource,(state.props.currentStage /= ConfirmingLocation) of
-                Just false , true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
-                _ , _ -> encodeAddress homeScreen.data.destination [] state.props.destinationPlaceId lat lon
-            }
-            })
+          fullAddress <- getPlaceName lat lon gateAddress true
+          case fullAddress of 
+            Just (PlaceName placeDetails) -> do
+              let currentLocationItem = getCurrentLocationItem placeDetails state lat lon
+              void $ liftFlowBT $ logEvent logField_ "ny_user_placename_api_lom_onDrag"
+              modifyScreenState $ HomeScreenStateType (\homeScreen ->
+              homeScreen {
+                data {
+                  destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
+                  selectedLocationListItem = currentLocationItem, 
+                  source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source,
+                  sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
+                    Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
+                    _ , _-> encodeAddress homeScreen.data.source [] state.props.sourcePlaceId lat lon,
+                  destinationAddress = case state.props.isSource,(state.props.currentStage /= ConfirmingLocation) of
+                    Just false , true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
+                    _ , _ -> encodeAddress homeScreen.data.destination [] state.props.destinationPlaceId lat lon
+                }
+                })
+            Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN   
         else do
           void $ liftFlowBT $ logEvent logField_ "ny_user_placename_cache_lom_onDrag"
           modifyScreenState $ HomeScreenStateType (\homeScreen ->
@@ -1298,14 +1320,17 @@ homeScreenFlow = do
               }
             })
         if isMoreThan20Meters then do
-          PlaceName address <- getPlaceName lat lon gateAddress
-          void $ liftFlowBT $ logEvent logField_ "ny_user_placename_api_cpu_onDrag"
-          modifyScreenState $ HomeScreenStateType (\homeScreen ->
-          homeScreen {
-            data {
-              source = address.formattedAddress ,
-              sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon }
-            })
+          fullAddress <- getPlaceName lat lon gateAddress true
+          case fullAddress of
+            Just (PlaceName address) -> do
+              void $ liftFlowBT $ logEvent logField_ "ny_user_placename_api_cpu_onDrag"
+              modifyScreenState $ HomeScreenStateType (\homeScreen ->
+              homeScreen {
+                data {
+                  source = address.formattedAddress ,
+                  sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon }
+                })
+            Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
         else do
           void $ liftFlowBT $ logEvent logField_ "ny_user_placename_cache_cpu_onDrag"
           modifyScreenState $ HomeScreenStateType (\homeScreen ->
@@ -2270,13 +2295,16 @@ addNewAddressScreenFlow input = do
         liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybe "" sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "AddAddressPin"}
         addNewAddressScreenFlow ""
       else do
-        PlaceName address <- getPlaceName lat lon gateAddress
-        modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{  data  { locSelectedFromMap = address.formattedAddress
-                                                                                                              , latSelectedFromMap = lat
-                                                                                                              , lonSelectedFromMap = lon
-                                                                                                              }
-                                                                                                      , props { isServiceable = isServiceable }
-                                                                                                      } )
+        fullAddress <- getPlaceName lat lon gateAddress true
+        case fullAddress of
+          Just (PlaceName address) -> do 
+            modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{  data  { locSelectedFromMap = address.formattedAddress
+                                                                                                                  , latSelectedFromMap = lat
+                                                                                                                  , lonSelectedFromMap = lon
+                                                                                                                  }
+                                                                                                          , props { isServiceable = isServiceable }
+                                                                                                          } )
+          Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
         addNewAddressScreenFlow ""
     GO_TO_FAVOURITES -> do
       void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
@@ -2710,23 +2738,26 @@ getPlaceCoordinates address =
 isAddressFieldsNothing :: Address -> Boolean
 isAddressFieldsNothing address = all isNothing [address.area, address.state, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward, address.placeId]
 
-getPlaceName :: Number -> Number -> Location -> FlowBT String PlaceName
-getPlaceName lat long location = do
+getPlaceName :: Number -> Number -> Location -> Boolean -> FlowBT String (Maybe PlaceName)
+getPlaceName lat long location getApiResponse = do
   case location.address of
     Just address -> do
       let addressComponent = mkAddressComponent location "sublocality"
-      pure $ mkPlaceName lat long address (Just addressComponent)
+      pure $ Just $ mkPlaceName lat long address (Just addressComponent)
     Nothing -> do
       let address = runFn2 getLocationNameV2 lat long
       config <- getAppConfigFlowBT appConfig
       logField_ <- lift $ lift $ getLogFields
       if address /= "NO_LOCATION_FOUND" && config.geoCoder.enableLLtoAddress then do
         liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_found"
-        pure $ mkPlaceName lat long address Nothing
+        pure $ Just $ mkPlaceName lat long address Nothing
       else do
-        (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long $ EHC.getMapsLanguageFormat $ getLanguageLocale languageKey)
-        liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_fallback"
-        pure $ (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
+        if getApiResponse then do
+          (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long $ EHC.getMapsLanguageFormat $ getLanguageLocale languageKey)
+          liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_fallback"
+          pure $ Just $ (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
+        else do
+          pure Nothing
   where 
     mkPlaceName :: Number -> Number -> String -> Maybe AddressComponents -> PlaceName
     mkPlaceName lat long address addressComponent = 
@@ -2838,8 +2869,11 @@ updateSourceLocation _ = do
                       Just val -> Just val.tag
                       Nothing -> Just ""
   when (disabled == Just "BLIND_LOW_VISION" ) $ do
-    PlaceName address <- getPlaceName currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong HomeScreenData.dummyLocation
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong } })
+    fullAddress <- getPlaceName currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong HomeScreenData.dummyLocation true
+    case fullAddress of
+      Just (PlaceName address) -> do 
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong } })
+      Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
     pure unit
   pure unit 
 
@@ -3413,11 +3447,14 @@ searchLocationFlow = do
           pickUpPoint = filter ( \item -> (item.place == state.data.defaultGate)) pickUpPoints
           gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoint)
       when (isDistMoreThanThreshold ) do  
-        PlaceName address <- getPlaceName lat lon gateAddress 
-        let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing lat lon , metroInfo : Nothing, stationCode : ""}
-        modifyScreenState 
-          $ SearchLocationScreenStateType 
-              (\ slsState -> slsState { data  {latLonOnMap = updatedAddress, confirmLocCategory = ""} }) 
+        fullAddress <- getPlaceName lat lon gateAddress true
+        case fullAddress of
+          Just (PlaceName address) -> do
+            let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing lat lon , metroInfo : Nothing, stationCode : ""}
+            modifyScreenState 
+              $ SearchLocationScreenStateType 
+                  (\ slsState -> slsState { data  {latLonOnMap = updatedAddress, confirmLocCategory = ""} }) 
+          Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
       searchLocationFlow
 
     specialLocFlow :: String -> Array Location -> String -> Number -> Number -> FlowBT String Unit
