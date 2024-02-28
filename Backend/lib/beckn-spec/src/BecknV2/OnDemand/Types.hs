@@ -100,6 +100,7 @@ import qualified Data.Text as T
 import Data.Time
 import Data.UUID (UUID)
 import GHC.Generics (Generic)
+import Kernel.Types.TimeRFC339 (UTCTimeRFC3339)
 import Prelude
 
 -- | Describes the acknowledgement sent in response to an API call. If the implementation uses HTTP/S, then Ack must be returned in the same session. Every API call to a BPP must be responded to with an Ack whether the BPP intends to respond with a callback or not. This has one property called &#x60;status&#x60; that indicates the status of the Acknowledgement.
@@ -524,7 +525,7 @@ data Context = Context
     -- | This is a unique value which persists during a request / callback cycle. Since beckn protocol APIs are asynchronous, BAPs need a common value to match an incoming callback from a BPP to an earlier call. This value can also be used to ignore duplicate messages coming from the BPP. It is recommended to generate a fresh message_id for every new interaction. When sending unsolicited callbacks, BPPs must generate a new message_id.
     contextMessageId :: Maybe UUID,
     -- | Time of request generation in RFC3339 format
-    contextTimestamp :: Maybe UTCTime,
+    contextTimestamp :: Maybe UTCTimeRFC3339,
     -- | This is a unique value which persists across all API calls from `search` through `confirm`. This is done to indicate an active user session across multiple requests. The BPPs can use this value to push personalized recommendations, and dynamic offerings related to an ongoing transaction despite being unaware of the user active on the BAP.
     contextTransactionId :: Maybe UUID,
     -- | The duration in ISO8601 format after timestamp for which this message holds valid
