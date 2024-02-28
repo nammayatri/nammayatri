@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/fix/adds-derivation-for-timeRFC339";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
