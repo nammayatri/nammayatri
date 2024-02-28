@@ -19,12 +19,13 @@ import qualified Beckn.OnDemand.Utils.Common as Utils hiding (mkStops)
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
+import Data.Aeson as A
 import qualified Data.List as L
-import qualified Data.Text as T
 import Domain.Action.Beckn.Init as DInit
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
+import Kernel.Utils.Common
 
 mkOnInitMessageV2 :: DInit.InitRes -> DBC.BecknConfig -> Spec.ConfirmReqMessage
 mkOnInitMessageV2 res becknConfig =
@@ -67,8 +68,8 @@ tfFulfillments res =
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
-  let amount = fromIntegral (res.booking.estimatedFare.getMoney)
-  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
+  let amount = HighPrecMoney (fromMaybe 0.0 $ A.decode $ A.encode res.booking.estimatedFare.getMoney)
+  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
   Just $ L.singleton $ mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
