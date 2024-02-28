@@ -118,7 +118,8 @@ instance FromTType' BeamE.Estimate Estimate where
             specialLocationTag = specialLocationTag,
             updatedAt = updatedAt,
             createdAt = createdAt,
-            validTill = validTill
+            validTill = validTill,
+            serviceTierName = serviceTierName
           }
 
 instance ToTType' BeamE.Estimate Estimate where
@@ -155,5 +156,6 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.specialLocationTag = specialLocationTag,
         BeamE.updatedAt = updatedAt,
         BeamE.createdAt = createdAt,
-        BeamE.validTill = validTill
+        BeamE.validTill = validTill,
+        BeamE.serviceTierName = serviceTierName
       }

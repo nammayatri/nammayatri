@@ -231,3 +231,8 @@ makeLatLong location = do
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
   return $ Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG item.itemTags
+
+getDescriptorInfo :: MonadFlow m => Spec.Item -> m (Maybe Text)
+getDescriptorInfo item = do
+  let serviceTierName = item.itemDescriptor >>= (.descriptorName)
+  return serviceTierName

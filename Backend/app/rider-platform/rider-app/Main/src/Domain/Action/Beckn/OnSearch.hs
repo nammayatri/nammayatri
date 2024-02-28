@@ -106,7 +106,8 @@ data EstimateInfo = EstimateInfo
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong],
     specialLocationTag :: Maybe Text,
-    validTill :: UTCTime
+    validTill :: UTCTime,
+    serviceTierName :: Maybe Text
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -273,6 +274,7 @@ buildEstimate providerInfo now searchRequest EstimateInfo {..} = do
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
         estimatedDistance = searchRequest.distance,
+        serviceTierName = serviceTierName,
         estimatedDuration = searchRequest.estimatedRideDuration,
         device = searchRequest.device,
         createdAt = now,
@@ -324,6 +326,7 @@ buildQuote requestId providerInfo now searchRequest QuoteInfo {..} = do
         quoteDetails = quoteDetails',
         merchantId = searchRequest.merchantId,
         merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+        serviceTierName = Nothing,
         ..
       }
 
