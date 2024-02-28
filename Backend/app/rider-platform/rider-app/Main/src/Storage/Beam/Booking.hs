@@ -57,7 +57,8 @@ data BookingT f = BookingT
     specialLocationTag :: B.C f (Maybe Text),
     isScheduled :: B.C f (Maybe Bool),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    serviceTierName :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

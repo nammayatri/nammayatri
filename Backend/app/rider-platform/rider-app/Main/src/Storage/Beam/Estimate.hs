@@ -56,7 +56,8 @@ data EstimateT f = EstimateT
     specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    validTill :: B.C f UTCTime
+    validTill :: B.C f UTCTime,
+    serviceTierName :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
