@@ -19,7 +19,6 @@ import Prelude ((<>),show, (==))
 import Data.Maybe (maybe, Maybe(..))
 import Services.Config (getBaseUrl)
 
-
 triggerOTP :: String -> String
 triggerOTP dummyString = (getBaseUrl "dummy1") <> "/auth"
 
@@ -43,9 +42,6 @@ serviceability dummyString = (getBaseUrl "6") <> "/serviceability/ride"
 
 locServiceability :: String -> String
 locServiceability serviceabilityType = (getBaseUrl "7") <> "/serviceability/" <> serviceabilityType
-
-serviceabilityDest :: String -> String
-serviceabilityDest dummyString = (getBaseUrl "8") <> "/serviceability/destination"
 
 sendIssue :: String -> String
 sendIssue dummyString = (getBaseUrl "9") <> "/support/sendIssue"
@@ -248,14 +244,8 @@ getMetroBookingList dummy = (getBaseUrl "52") <> "/frfs/booking/list"
 retryMetrTicketPayment :: String -> String
 retryMetrTicketPayment quoteId = (getBaseUrl "53") <> "/frfs/quote/" <> quoteId <> "/payment/retry"
 
-addStop :: String -> String
-addStop rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> "/addStop"
-
-editStop :: String -> String
-editStop rideBookingId = (getBaseUrl "48") <> "/rideBooking/" <> rideBookingId <> "/editStop"
-
 rentalSearch :: String -> String
 rentalSearch dummy = (getBaseUrl "49") <> "/rental/search"
 
-addOrEditStop :: Boolean -> String -> String 
-addOrEditStop isEdit rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> if isEdit then "/editStop" else "/addStop" 
+changeStop :: String -> Boolean -> String 
+changeStop rideBookingId isEdit = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> if isEdit then "/editStop" else "/addStop" 

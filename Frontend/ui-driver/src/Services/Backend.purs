@@ -58,6 +58,9 @@ import Types.ModifyScreenState (modifyScreenState)
 import Foreign.Object (empty)
 import Locale.Utils
 
+unwrapResponse :: forall a. a -> a
+unwrapResponse x = x
+
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
     _ <- pure $ printLog "dummy" dummy
@@ -277,8 +280,6 @@ startRide :: String -> StartRideReq -> Flow GlobalState (Either ErrorResponse St
 startRide productId payload = do
         headers <- getHeaders "" false
         withAPIResult (EP.startRide productId) unwrapResponse $ callAPI headers ((StartRideRequest productId payload))
-    where
-        unwrapResponse (x) = x
 
 makeStartRideReq :: String -> Number -> Number -> String -> StartRideReq
 makeStartRideReq otp lat lon ts = StartRideReq {
@@ -359,8 +360,6 @@ getDriverInfoApi payload = do
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)
     --  _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after effetct" (liftEffect $ (getValueToLocalStoreNew REGISTERATION_TOKEN))
      withAPIResult (EP.getDriverInfo "") unwrapResponse $ callAPI headers (GetDriverInfoReq { })
-    where
-        unwrapResponse (x) = x
 
 --------------------------------- getAllRcDataBT ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -413,8 +412,6 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
 getRideHistoryReq limit offset onlyActive status day = do
         headers <- getHeaders "" true
         withAPIResult (EP.getRideHistory limit offset onlyActive status day) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day)
-    where
-        unwrapResponse (x) = x
 
 
 getRideHistoryReqBT :: String -> String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
@@ -429,8 +426,6 @@ getRideHistoryReqBT limit offset onlyActive status day= do
 getRideSummaryListReq dateList = do
         headers <- getHeaders "" true
         withAPIResult (EP.getRidesSummaryList dateList) unwrapResponse $ callAPI headers (GetRidesSummaryListReq dateList)
-    where
-        unwrapResponse (x) = x
 
 
 getRideSummaryListReqBT :: Array String -> FlowBT String GetRidesSummaryListResp
@@ -596,14 +591,10 @@ getCorrespondingErrorMessage errorPayload = do
 registerDriverRC payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.registerDriverRC "") unwrapResponse $ callAPI headers payload
-    where
-        unwrapResponse (x) = x
 
 makeRcActiveOrInactive payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.makeRcActiveOrInactive "") unwrapResponse $ callAPI headers payload
-    where
-        unwrapResponse (x) = x
 
 deleteRc :: DeleteRcReq -> Flow GlobalState (Either ErrorResponse DeleteRcResp)
 deleteRc payload = do
@@ -654,8 +645,6 @@ registerDriverDLBT payload = do
 registerDriverDL payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.registerDriverDL "") unwrapResponse $ callAPI headers payload
-    where
-        unwrapResponse (x) = x
 
 makeDriverDLReq :: String -> String -> Maybe String -> String -> String -> DriverDLReq
 makeDriverDLReq dlNumber dob dateOfIssue imageIdFront imageIdBack = DriverDLReq
@@ -679,8 +668,6 @@ validateImageBT payload = do
 validateImage payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.validateImage "") unwrapResponse $ callAPI headers payload
-    where
-        unwrapResponse (x) = x
 
 makeValidateImageReq :: String -> String -> ValidateImageReq
 makeValidateImageReq image imageType= ValidateImageReq
@@ -700,8 +687,6 @@ driverRegistrationStatusBT payload = do
 referDriver payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.referDriver "") unwrapResponse $ callAPI headers payload
-    where
-        unwrapResponse (x) = x
 
 makeReferDriverReq :: String -> ReferDriverReq
 makeReferDriverReq referralNumber = ReferDriverReq
@@ -783,8 +768,6 @@ makeLinkReferralCodeReq  referralCode  referralLinkPassword = LinkReferralCodeRe
 linkReferralCode payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.linkReferralCode "") unwrapResponse $ callAPI headers payload
-    where
-        unwrapResponse (x) = x
 
 ---------------------------------------- getPerformance ---------------------------------------------
 getPerformanceBT :: GetPerformanceReq -> FlowBT String GetPerformanceRes
@@ -924,8 +907,6 @@ currentDateAndTimeBT _ = do
 otpRide dummyRideOtp payload = do
         headers <- getHeaders "" false
         withAPIResult (EP.otpRide dummyRideOtp) unwrapResponse $ callAPI headers ((OTPRideRequest payload))
-    where
-        unwrapResponse (x) = x
 
 makeOTPRideReq :: String -> Number -> Number -> String -> OTPRideReq
 makeOTPRideReq otp lat lon ts = OTPRideReq {
@@ -972,8 +953,6 @@ leaderBoard request = do
             withAPIResult (EP.leaderBoardDaily date) unwrapResponse (callAPI headers request)
         (WeeklyRequest fromDate toDate) ->
             withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
-    where
-        unwrapResponse (x) = x
 
 driverProfileSummary :: String -> Flow GlobalState (Either ErrorResponse DriverProfileSummaryRes)
 driverProfileSummary lazy = do
@@ -984,15 +963,11 @@ createPaymentOrder :: String -> Flow GlobalState (Either ErrorResponse CreateOrd
 createPaymentOrder dummy = do
     headers <- getHeaders "" true
     withAPIResult (EP.createOrder dummy) unwrapResponse $ callAPI headers (CreateOrderReq dummy)
-    where
-        unwrapResponse (x) = x
 
 paymentOrderStatus :: String -> Flow GlobalState (Either ErrorResponse OrderStatusRes)
 paymentOrderStatus orderId = do
     headers <- getHeaders "" false
     withAPIResult (EP.orderStatus orderId) unwrapResponse $ callAPI headers (OrderStatusReq orderId)
-    where
-        unwrapResponse (x) = x
 
 
 getPaymentHistory :: String -> String -> Maybe String -> Flow GlobalState (Either ErrorResponse GetPaymentHistoryResp)
@@ -1047,15 +1022,11 @@ getKioskLocations :: String -> Flow GlobalState (Either ErrorResponse KioskLocat
 getKioskLocations dummy = do
     headers <- getHeaders "" false
     withAPIResult (EP.getKioskLocations "") unwrapResponse $ callAPI headers (KioskLocationReq "")
-    where
-        unwrapResponse (x) = x
 
 getUiPlans :: String -> Flow GlobalState (Either ErrorResponse UiPlansResp)
 getUiPlans dummy = do
     headers <- getHeaders "" false
     withAPIResult (EP.getUiPlans "") unwrapResponse $ callAPI headers (UiPlansReq "")
-    where
-        unwrapResponse (x) = x
 
 getUiPlansBT :: String -> FlowBT String UiPlansResp
 getUiPlansBT dummy = do
@@ -1070,8 +1041,6 @@ getCurrentPlan :: String -> Flow GlobalState (Either ErrorResponse GetCurrentPla
 getCurrentPlan driverId = do
     headers <- getHeaders "" false
     withAPIResult (EP.getCurrentPlan driverId) unwrapResponse $ callAPI headers (GetCurrentPlanReq driverId)
-    where
-        unwrapResponse (x) = x
 
 
 subscribePlan :: String  -> Flow GlobalState (Either ErrorResponse SubscribePlanResp)
@@ -1085,8 +1054,6 @@ paymentDues :: String -> Flow GlobalState (Either ErrorResponse PaymentDuesResp)
 paymentDues dummy = do
     headers <- getHeaders "" false
     withAPIResult (EP.paymentDues "") unwrapResponse $ callAPI headers (PaymentDuesReq "")
-    where
-        unwrapResponse (x) = x
 
 selectPlan :: String  -> Flow GlobalState (Either ErrorResponse SelectPlanResp)
 selectPlan planId = do
@@ -1099,15 +1066,11 @@ resumeMandate :: String -> Flow GlobalState (Either ErrorResponse ResumeMandateR
 resumeMandate driverId = do
     headers <- getHeaders "" false
     withAPIResult (EP.resumeMandate driverId) unwrapResponse $ callAPI headers (ResumeMandateReq driverId)
-    where
-        unwrapResponse (x) = x
 
 suspendMandate :: String -> Flow GlobalState (Either ErrorResponse SuspendMandateResp)
 suspendMandate _ = do
     headers <- getHeaders "" false
     withAPIResult (EP.suspendMandate "") unwrapResponse $ callAPI headers (SuspendMandateReq "")
-    where
-        unwrapResponse (x) = x
 
 postRideFeedback :: String ->  Int -> String -> Flow GlobalState (Either ErrorResponse PostRideFeedbackResp)
 postRideFeedback rideId rating feedback = do 
@@ -1140,8 +1103,6 @@ cleardues :: String -> Flow GlobalState (Either ErrorResponse ClearDuesResp)
 cleardues _ = do
     headers <- getHeaders "" false
     withAPIResult (EP.cleardues "") unwrapResponse $ callAPI headers (ClearDuesReq "")
-    where
-        unwrapResponse (x) = x
 
 ----------------------------------------------autoComplete-------------------------------------------------
 autoComplete :: String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse AutoCompleteResp)

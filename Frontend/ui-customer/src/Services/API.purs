@@ -29,8 +29,9 @@ import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Foreign (ForeignError(..), fail)
 import Foreign.Class (class Decode, class Encode, decode, encode)
-import Foreign.Generic (decodeJSON)
-import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
+import Foreign.Generic
+import Foreign.Generic.Class
+import Prelude
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Types.EndPoint as EP
@@ -474,14 +475,11 @@ instance encodeGeometry :: Encode Geometry where encode = defaultEncode
 
 -------- For RideSearch -----------
 
-newtype SearchReq = SearchReq {
-  contents :: ContentType ,
-  fareProductType :: String
-}
+data SearchRequest
+  = OneWay OneWaySearchRequest
+  | Rental RentalSearchRequest
 
-data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq
-
-newtype OneWaySearchReq = OneWaySearchReq {
+newtype OneWaySearchRequest = OneWaySearchRequest {
   origin :: SearchReqLocation,
   destination :: SearchReqLocation,
   isReallocationEnabled :: Maybe Boolean,
@@ -489,14 +487,17 @@ newtype OneWaySearchReq = OneWaySearchReq {
 }
 
 newtype SearchReqLocation = SearchReqLocation {
-    gps :: LatLong
-  , address :: LocationAddress
-  }
-
-newtype LatLong = LatLong {
-  lat :: Number,
-  lon :: Number
+  gps :: LatLong,
+  address :: LocationAddress
 }
+
+newtype LatLong = LatLong { lat :: Number, lon :: Number }
+
+-- Updated smart constructor.
+mkLatLong :: Maybe Number -> Maybe Number -> Maybe LatLong
+mkLatLong (Just lat) (Just lon)
+  | lat >= -90.0 && lat <= 90.0 && lon >= -180.0 && lon <= 180.0 = Just $ LatLong { lat: lat, lon: lon }
+mkLatLong _ _ = Nothing
 
 newtype SearchRes = SearchRes {
   searchId :: String,
@@ -516,7 +517,7 @@ newtype LocationAddress = LocationAddress {
   placeId :: Maybe String
 }
 
-newtype RentalSearchReq = RentalSearchReq {
+newtype RentalSearchRequest = RentalSearchRequest {
   origin :: SearchReqLocation,
   stops :: Maybe (Array SearchReqLocation),
   estimatedRentalDistance :: Int,
@@ -524,24 +525,46 @@ newtype RentalSearchReq = RentalSearchReq {
   startTime :: String
 }
 
-derive instance genericContentType :: Generic ContentType _
-instance standardEncodeContentType :: StandardEncode ContentType where
-  standardEncode (OneWaySearchRequest body) = standardEncode body
-  standardEncode (RentalSearchRequest body) = standardEncode body
-instance showContentType :: Show ContentType where show = genericShow
-instance decodeContentType :: Decode ContentType
-  where
-    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (fail $ ForeignError "Unknown response")
-instance encodeContentType  :: Encode ContentType where
-  encode (OneWaySearchRequest body) = encode body
-  encode (RentalSearchRequest body) = encode body
 
-derive instance genericRentalSearchReq :: Generic RentalSearchReq _
-derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _
-instance standardEncodeRentalSearchReq :: StandardEncode RentalSearchReq where standardEncode (RentalSearchReq body) = standardEncode body
-instance showRentalSearchReq :: Show RentalSearchReq where show = genericShow
-instance decodeRentalSearchReq :: Decode RentalSearchReq where decode = defaultDecode
-instance encodeRentalSearchReq  :: Encode RentalSearchReq where encode = defaultEncode
+searchTransformOptions :: Options
+searchTransformOptions = defaultOptions
+  { sumEncoding = TaggedObject ({ 
+      tagFieldName: "fareProductType"
+      , contentsFieldName: "contents"
+      , constructorTagTransform: \tag -> case tag of
+          "OneWay" -> "ONE_WAY"
+          "Rental" -> "RENTAL"
+          _ -> tag
+    })
+  }
+
+instance makeSearchReq :: RestEndpoint SearchRequest SearchRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.searchReq "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = encode req
+
+derive instance genericSearchRequest :: Generic SearchRequest _
+instance showSearchRequest :: Show SearchRequest where show = genericShow
+instance standardEncodeSearchRequest :: StandardEncode SearchRequest where
+  standardEncode = genericEncode searchTransformOptions
+instance encodeSearchRequest :: Encode SearchRequest where
+  encode = genericEncode searchTransformOptions
+instance decodeSearchRequest :: Decode SearchRequest where
+  decode = genericDecode searchTransformOptions
+
+derive instance genericOneWaySearchReq :: Generic OneWaySearchRequest _
+derive instance newtypeOneWaySearchReq :: Newtype OneWaySearchRequest _
+instance standardEncodeOneWaySearchReq :: StandardEncode OneWaySearchRequest where standardEncode (OneWaySearchRequest body) = standardEncode body
+instance showOneWaySearchReq :: Show OneWaySearchRequest where show = genericShow
+instance decodeOneWaySearchReq :: Decode OneWaySearchRequest where decode = defaultDecode
+instance encodeOneWaySearchReq :: Encode OneWaySearchRequest where encode = defaultEncode
+
+derive instance genericRentalSearchReq :: Generic RentalSearchRequest _
+derive instance newtypeRentalSearchReq :: Newtype RentalSearchRequest _
+instance standardEncodeRentalSearchReq :: StandardEncode RentalSearchRequest where standardEncode (RentalSearchRequest body) = standardEncode body
+instance showRentalSearchReq :: Show RentalSearchRequest where show = genericShow
+instance decodeRentalSearchReq :: Decode RentalSearchRequest where decode = defaultDecode
+instance encodeRentalSearchReq  :: Encode RentalSearchRequest where encode = defaultEncode
 
 derive instance genericLocationAddress :: Generic LocationAddress _
 derive instance newtypeLocationAddress :: Newtype LocationAddress _
@@ -549,18 +572,6 @@ instance standardEncodeLocationAddress :: StandardEncode LocationAddress where s
 instance showLocationAddress :: Show LocationAddress where show = genericShow
 instance decodeLocationAddress :: Decode LocationAddress where decode = defaultDecode
 instance encodeLocationAddress  :: Encode LocationAddress where encode = defaultEncode
-
-instance makeSearchReq :: RestEndpoint SearchReq SearchRes where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.searchReq "") headers reqBody Nothing
- decodeResponse = decodeJSON
- encodeRequest req = encode req
-
-derive instance genericSearchReq :: Generic SearchReq _
-derive instance newtypeSearchReq :: Newtype SearchReq _
-instance standardEncodeSearchReq :: StandardEncode SearchReq where standardEncode (SearchReq body) = standardEncode body
-instance showSearchReq :: Show SearchReq where show = genericShow
-instance decodeSearchReq :: Decode SearchReq where decode = defaultDecode
-instance encodeSearchReq:: Encode SearchReq where encode = defaultEncode
 
 derive instance genericLatLong :: Generic LatLong _
 derive instance newtypeLatLong :: Newtype LatLong _
@@ -582,13 +593,6 @@ instance standardEncodeSearchReqLocation :: StandardEncode SearchReqLocation whe
 instance showSearchReqLocation :: Show SearchReqLocation where show = genericShow
 instance decodeSearchReqLocation :: Decode SearchReqLocation where decode = defaultDecode
 instance encodeSearchReqLocation :: Encode SearchReqLocation where encode = defaultEncode
-
-derive instance genericOneWaySearchReq :: Generic OneWaySearchReq _
-derive instance newtypeOneWaySearchReq :: Newtype OneWaySearchReq _
-instance standardEncodeOneWaySearchReq :: StandardEncode OneWaySearchReq where standardEncode (OneWaySearchReq body) = standardEncode body
-instance showOneWaySearchReq :: Show OneWaySearchReq where show = genericShow
-instance decodeOneWaySearchReq :: Decode OneWaySearchReq where decode = defaultDecode
-instance encodeOneWaySearchReq :: Encode OneWaySearchReq where encode = defaultEncode
 
 ----- For rideSearch/{searchId}/results
 
@@ -1688,6 +1692,10 @@ newtype DestinationServiceabilityReq = DestinationServiceabilityReq
 
 data ServiceabilityType = ORIGIN | DESTINATION
 
+instance showServiceabilityType :: Show ServiceabilityType where
+  show ORIGIN = "origin"
+  show DESTINATION = "destination"
+
 newtype ServiceabilityReq = ServiceabilityReq
   { location  :: LatLong
   }
@@ -1721,18 +1729,22 @@ newtype GatesInfo = GatesInfo {
 }
 
 
-data ServiceabilityRequest = ServiceabilityRequest String ServiceabilityReq 
+data ServiceabilityRequest = ServiceabilityRequest ServiceabilityType ServiceabilityReq 
 
 instance makeServiceabilityReq :: RestEndpoint ServiceabilityRequest ServiceabilityRes where 
-    makeRequest reqBody@(ServiceabilityRequest serviceabilityType rqBody) headers = defaultMakeRequest POST (EP.locServiceability serviceabilityType) headers reqBody Nothing
+    makeRequest reqBody@(ServiceabilityRequest serviceabilityType rqBody) headers = defaultMakeRequest POST (EP.locServiceability $ show serviceabilityType) headers reqBody Nothing
     decodeResponse = decodeJSON
-    encodeRequest (ServiceabilityRequest serviceabilityType req) = defaultEncode req
-
+    encodeRequest (ServiceabilityRequest _ req) = defaultEncode req
 
 derive instance genericServiceabilityRequest :: Generic ServiceabilityRequest _
-instance standardEncodeServiceabilityRequest :: StandardEncode ServiceabilityRequest where standardEncode (ServiceabilityRequest serviceabilityType req) = standardEncode req
+instance standardEncodeServiceabilityRequest :: StandardEncode ServiceabilityRequest where standardEncode (ServiceabilityRequest _ req) = standardEncode req
 instance decodeServiceabilityRequest :: Decode ServiceabilityRequest where decode = defaultDecode
 instance encodeServiceabilityRequest :: Encode ServiceabilityRequest where encode = defaultEncode
+
+derive instance genericServiceabilityType :: Generic ServiceabilityType _
+instance standardEncodeServiceabilityType :: StandardEncode ServiceabilityType where standardEncode req = standardEncode req
+instance decodeServiceabilityType :: Decode ServiceabilityType where decode = defaultDecode
+instance encodeServiceabilityType :: Encode ServiceabilityType where encode = defaultEncode
 
 derive instance genericServiceabilityReq :: Generic ServiceabilityReq _
 derive instance newtypeServiceabilityReq:: Newtype ServiceabilityReq _
@@ -3365,34 +3377,18 @@ instance showRetryMetrTicketPaymentResp :: Show RetryMetrTicketPaymentResp where
 instance decodeRetryMetrTicketPaymentResp :: Decode RetryMetrTicketPaymentResp where decode = defaultDecode
 instance encodeRetryMetrTicketPaymentResp  :: Encode RetryMetrTicketPaymentResp where encode = defaultEncode
 ----------------------- ################### ADD OR EDIT STOP ####################### ----------------------------
-data AddStopRequest = AddStopRequest String AddStopReq
-
-data EditStopRequest = EditStopRequest String EditStopReq
-
-newtype AddStopReq = AddStopReq
- {  address :: LocationAddress,
-    gps :: LatLong
- }
-
-newtype EditStopReq = EditStopReq
-  {  address :: LocationAddress,
-      gps :: LatLong
-  }
-
 newtype StopReq = StopReq
   { address :: LocationAddress,
     gps :: LatLong
   }
 
 newtype StopRes = StopRes 
-  { 
-    result :: String
-  }
+  { result :: String }
 
 data StopRequest = StopRequest String Boolean StopReq 
 
 instance makeStopReq :: RestEndpoint StopRequest StopRes where 
-    makeRequest reqBody@(StopRequest rideBookingId isEdit rqBody) headers = defaultMakeRequest POST (EP.addOrEditStop isEdit rideBookingId) headers reqBody Nothing
+    makeRequest reqBody@(StopRequest rideBookingId isEdit rqBody) headers = defaultMakeRequest POST (EP.changeStop rideBookingId isEdit) headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest (StopRequest rideBookingId isEdit rqBody) = defaultEncode rqBody
 
@@ -3414,97 +3410,3 @@ derive instance genericStopRequest :: Generic StopRequest _
 instance standardEncodeStopRequest :: StandardEncode StopRequest where standardEncode (StopRequest id isEdit req) = standardEncode req
 instance decodeStopRequest :: Decode  StopRequest where decode = defaultDecode
 instance encodeStopRequest :: Encode StopRequest where encode = defaultEncode
-
-newtype AddStopRes = AddStopRes { 
-  result :: String 
-  }
-
-newtype EditStopRes = EditStopRes { 
-  result :: String 
-  }
-
-derive instance genericEditStopReq :: Generic EditStopReq _
-instance showEditStopReq        :: Show EditStopReq where show     = genericShow
-instance standardEncodeEditStopReq :: StandardEncode EditStopReq where standardEncode (EditStopReq res) = standardEncode res
-instance decodeEditStopReq         :: Decode EditStopReq where decode = defaultDecode
-instance encodeEditStopReq         :: Encode EditStopReq where encode = defaultEncode
-
-derive instance genericAddStopReq :: Generic AddStopReq _ 
-instance showAddStopReq :: Show AddStopReq where show = genericShow 
-instance standardEncodeAddStopReq :: StandardEncode AddStopReq where standardEncode (AddStopReq req) = standardEncode req
-instance decodeAddStopReq :: Decode  AddStopReq where decode = defaultDecode
-instance encodeAddStopReq :: Encode AddStopReq where encode = defaultEncode
-
-derive instance genericAddStopRequest :: Generic AddStopRequest _ 
-instance standardEncodeAddStopRequest :: StandardEncode AddStopRequest where standardEncode (AddStopRequest id req) = standardEncode req
-instance decodeAddStopRequest :: Decode  AddStopRequest where decode = defaultDecode
-instance encodeAddStopRequest :: Encode AddStopRequest where encode = defaultEncode
-
-
-derive instance genericEditStopRequest :: Generic EditStopRequest _ 
-instance standardEncodeEditStopRequest :: StandardEncode EditStopRequest where standardEncode (EditStopRequest id req) = standardEncode req
-instance decodeEditStopRequest :: Decode  EditStopRequest where decode = defaultDecode
-instance encodeEditStopRequest :: Encode EditStopRequest where encode = defaultEncode
-
-derive instance genericEditStopRes :: Generic EditStopRes _ 
-instance standardEncodeEditStopRes :: StandardEncode EditStopRes where standardEncode (EditStopRes req) = standardEncode req
-instance decodeEditStopRes :: Decode  EditStopRes where decode = defaultDecode
-instance encodeEditStopRes :: Encode EditStopRes where encode = defaultEncode
-
-derive instance genericAddStopRes :: Generic AddStopRes _ 
-instance standardEncodeAddStopRes :: StandardEncode AddStopRes where standardEncode (AddStopRes req) = standardEncode req
-instance decodeAddStopRes :: Decode  AddStopRes where decode = defaultDecode
-instance encodeAddStopRes :: Encode AddStopRes where encode = defaultEncode
-
-instance makeAddStopReq :: RestEndpoint AddStopRequest AddStopRes where
-  makeRequest reqBody@(AddStopRequest bookingId (AddStopReq rqBody)) headers = defaultMakeRequest POST (EP.addStop bookingId ) headers reqBody Nothing
-  decodeResponse    = decodeJSON
-  encodeRequest = standardEncode
-
-instance makeEditStopReq :: RestEndpoint EditStopRequest EditStopRes where 
-  makeRequest reqBody@(EditStopRequest bookingId (EditStopReq rqBody)) headers = defaultMakeRequest POST (EP.editStop bookingId ) headers reqBody Nothing
-  decodeResponse    = decodeJSON
-  encodeRequest = standardEncode  
-
-
-
---------------------------------------------------- rentalSearch ----------------------------------------------------
-
--- newtype RentalSearchReq = RentalSearchReq
---   { origin :: LocationAddress
---   , stops :: Maybe (Array LocationAddress)
---   , isSpecialLocation :: Maybe Boolean
---   , startTime :: String
---   , estimatedRentalDistance :: String
---   , estimatedRentalDuration :: String
---   }
-
--- newtype RentalSearchRes = RentalSearchRes
---   { searchId :: String
---   , startTime :: String
---   , distance :: String
---   , duration :: String
---   , shortestRouteInfo :: String
---   , stops :: Array LocationAddress
---   , origin :: LocationAddress
---   , now :: String
---   }
-
--- instance makeRentalSearchReq :: RestEndpoint RentalSearchReq RentalSearchRes where
---   makeRequest reqBody headers = defaultMakeRequest POST (EP.rentalSearch "") headers reqBody Nothing
---   decodeResponse = decodeJSON
---   encodeRequest req = standardEncode req
-
--- derive instance genericRentalSearchReq :: Generic RentalSearchReq _
--- derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _
--- instance standardEncodeRentalSearchReq :: StandardEncode RentalSearchReq where standardEncode (RentalSearchReq reqBody) = standardEncode reqBody
--- instance showRentalSearchReq :: Show RentalSearchReq where show = genericShow
--- instance decodeRentalSearchReq :: Decode RentalSearchReq where decode = defaultDecode
--- instance encodeRentalSearchReq :: Encode RentalSearchReq where encode = defaultEncode
-
--- derive instance genericRentalSearchRes :: Generic RentalSearchRes _
--- derive instance newtypeRentalSearchRes :: Newtype RentalSearchRes _
--- instance standardEncodeRentalSearchRes :: StandardEncode RentalSearchRes where standardEncode (RentalSearchRes reqBody) = standardEncode reqBody
--- instance showRentalSearchRes :: Show RentalSearchRes where show = genericShow
--- instance decodeRentalSearchRes :: Decode RentalSearchRes where decode = defaultDecode
--- instance encodeRentalSearchRes :: Encode RentalSearchRes where encode = defaultEncode

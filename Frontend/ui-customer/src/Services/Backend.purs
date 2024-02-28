@@ -23,7 +23,7 @@ import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), Feed
 import ConfigProvider as CP
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe)
+import Data.Array
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
@@ -40,7 +40,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
+import Prelude
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
 import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..))
@@ -60,6 +60,9 @@ import Helpers.API (callApiBT)
 import Debug(spy)
 import Screens.Types (FareProductType(..)) as FPT
 import Services.API (ServiceabilityType(..)) as ServiceabilityType
+
+unwrapResponse :: forall a. a -> a
+unwrapResponse x = x
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -189,8 +192,6 @@ triggerSignatureBasedOTP :: SignatureAuthData → Flow GlobalState (Either Error
 triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
     Headers headers <- getHeaders "" false
     withAPIResult (EP.triggerSignatureOTP "") unwrapResponse $ callAPI (Headers (headers <> [Header "x-sdk-authorization" signatureAuthData.signature])) (TriggerSignatureOTPReq signatureAuthData.authData)
-    where
-        unwrapResponse (x) = x
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
 
@@ -233,8 +234,6 @@ verifyTokenBT payload token = do
 verifyToken payload token = do
     headers <- getHeaders (payload ^. _deviceToken) false
     withAPIResult (EP.verifyToken token) unwrapResponse $  callAPI headers (VerifyTokenRequest token payload)
-    where
-        unwrapResponse (x) = x
 
 makeVerifyOTPReq :: String -> String -> VerifyTokenReq
 makeVerifyOTPReq otp defaultId =
@@ -322,7 +321,7 @@ placeDetailsBT (PlaceDetailsReq id) = do
 
 
 ------------------------------------------------------------------------ RideSearchBT Function ----------------------------------------------------------------------------------------
-rideSearchBT :: SearchReq -> FlowBT String SearchRes
+rideSearchBT :: SearchRequest -> FlowBT String SearchRes
 rideSearchBT payload = do
     headers <- getHeaders' "" true
     withAPIResultBT (EP.searchReq "") identity handleError (lift $ lift $ callAPI headers payload)
@@ -337,55 +336,20 @@ rideSearchBT payload = do
             void $ pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
             BackT $ pure GoBack
 
-
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime =
-    let appConfig = CP.getAppConfig CP.appConfig
-    in  SearchReq 
-        { "contents" : OneWaySearchRequest 
-            ( OneWaySearchReq
-                { "startTime" : Just startTime
-                , "destination" : SearchReqLocation 
-                    { "gps" : LatLong 
-                        { "lat" : dlat 
-                        , "lon" : dlong
-                        }
-                    , "address" : (LocationAddress desAdd)
-                    }
-                , "origin" : SearchReqLocation 
-                    { "gps" : LatLong 
-                        { "lat" : slat 
-                        , "lon" : slong
-                        }
-                    , "address" : (LocationAddress srcAdd)
-                    }
-                , "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
-                }
-            )
-        , "fareProductType" : "ONE_WAY"
-        }
-
-
 ------------------------------------------------------------------------ GetQuotes Function -------------------------------------------------------------------------------------------
 getQuotes searchId = do
         headers <- getHeaders "" true
         withAPIResult (EP.getQuotes searchId) unwrapResponse $ callAPI headers (GetQuotesReq searchId)
-    where
-        unwrapResponse (x) = x
 
 ------------------------------------------------------------------------ RideConfirm Function ---------------------------------------------------------------------------------------
 rideConfirm quoteId = do
         headers <- getHeaders "" false
         withAPIResult (EP.confirmRide quoteId) unwrapResponse $ callAPI headers (ConfirmRequest quoteId)
-    where
-        unwrapResponse (x) = x
 
-addOrEditStop :: String -> StopReq -> Boolean -> Flow GlobalState (Either ErrorResponse StopRes)
-addOrEditStop bookingId req isEdit = do 
+changeStop :: String -> StopReq -> Boolean -> Flow GlobalState (Either ErrorResponse StopRes)
+changeStop bookingId req isEdit = do
     headers <- getHeaders "" false
-    withAPIResult (EP.addOrEditStop isEdit bookingId) unwrapResponse $ callAPI headers (StopRequest bookingId isEdit req)
-    where
-        unwrapResponse (x) = x
+    withAPIResult (EP.changeStop bookingId isEdit) unwrapResponse $ callAPI headers (StopRequest bookingId isEdit req)
 
 ------------------------------------------------------------------------ SelectEstimateBT Function ------------------------------------------------------------------------------------
 
@@ -400,8 +364,6 @@ selectEstimateBT payload estimateId = do
 selectEstimate payload estimateId = do
         headers <- getHeaders "" false
         withAPIResult (EP.selectEstimate estimateId) unwrapResponse $ callAPI headers (SelectEstimateReq estimateId payload)
-    where
-        unwrapResponse (x) = x
 
 makeEstimateSelectReq :: Boolean -> Maybe Int -> DEstimateSelect
 makeEstimateSelectReq isAutoAssigned tipForDriver= DEstimateSelect {
@@ -414,15 +376,11 @@ makeEstimateSelectReq isAutoAssigned tipForDriver= DEstimateSelect {
 selectList estimateId = do
         headers <- getHeaders "" true
         withAPIResult (EP.selectList estimateId) unwrapResponse $ callAPI headers (SelectListReq estimateId)
-    where
-        unwrapResponse (x) = x
 
 ------------------------------------------------------------------------ RideBooking Function -----------------------------------------------------------------------------------------
 rideBooking bookingId = do
         headers <- getHeaders "" true
         withAPIResult (EP.ridebooking bookingId) unwrapResponse $ callAPI headers (RideBookingReq bookingId)
-    where
-        unwrapResponse (x) = x
 
 ------------------------------------------------------------------------ CancelRideBT Function ----------------------------------------------------------------------------------------
 cancelRideBT :: CancelReq -> String -> FlowBT String CancelRes
@@ -482,15 +440,11 @@ rideBookingBT bookingId = do
 rideBookingList limit offset onlyActive = do
         headers <- getHeaders "" true
         withAPIResult (EP.rideBookingList limit offset onlyActive Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing)
-    where
-        unwrapResponse (x) = x
 
 
 rideBookingListWithStatus limit offset status = do
         headers <- getHeaders "" true
         withAPIResult (EP.rideBookingList limit offset "false" (Just status))  unwrapResponse $ callAPI headers (RideBookingListReq limit offset "false" (Just status))
-    where
-        unwrapResponse (x) = x
 
 getProfileBT :: String -> FlowBT String GetProfileRes
 getProfileBT _  = do
@@ -504,8 +458,6 @@ getProfileBT _  = do
 updateProfile (UpdateProfileReq payload) = do
         headers <- getHeaders "" false
         withAPIResult (EP.profile "") unwrapResponse $ callAPI headers (UpdateProfileReq payload)
-    where
-        unwrapResponse (x) = x
 
 mkUpdateProfileRequest :: LazyCheck -> UpdateProfileReq
 mkUpdateProfileRequest _ =
@@ -672,14 +624,10 @@ getDriverLocationBT rideId = do
 getDriverLocation rideId = do
         headers <- getHeaders "" false
         withAPIResult (EP.getCurrentLocation rideId) unwrapResponse $ callAPI headers (GetDriverLocationReq rideId)
-    where
-        unwrapResponse (x) = x
 
 getRoute routeState payload = do
     headers <- getHeaders "" true
     withAPIResult (EP.getRoute routeState) unwrapResponse $  callAPI headers (RouteReq routeState payload)
-    where
-        unwrapResponse (x) = x
 
 addSavedLocationBT :: SavedReqLocationAPIEntity -> FlowBT String AddLocationResp
 addSavedLocationBT payload = do
@@ -700,8 +648,6 @@ getSavedLocationBT payload = do
 getSavedLocationList payload = do
         headers <- getHeaders "" true
         withAPIResult (EP.savedLocation "") unwrapResponse $ callAPI headers (SavedLocationReq)
-    where
-        unwrapResponse (x) = x
 
 deleteSavedLocationBT :: DeleteSavedLocationReq -> FlowBT String DeleteSavedLocationRes
 deleteSavedLocationBT (DeleteSavedLocationReq tag) = do
@@ -810,14 +756,8 @@ makeSendIssueReq email bookingId reason description nightSafety = SendIssueReq {
 locServiceabilityBT :: ServiceabilityReq -> ServiceabilityType.ServiceabilityType -> FlowBT String ServiceabilityRes
 locServiceabilityBT req serviceabilityType = do
     headers <- getHeaders' "" true
-    withAPIResultBT (EP.locServiceability (getServiceabilityType serviceabilityType)) identity errorHandler (lift $ lift $ callAPI headers (ServiceabilityRequest (getServiceabilityType serviceabilityType) req))
+    withAPIResultBT (EP.locServiceability $ show serviceabilityType) identity errorHandler (lift $ lift $ callAPI headers (ServiceabilityRequest serviceabilityType req))
     where
-    getServiceabilityType :: ServiceabilityType.ServiceabilityType -> String
-    getServiceabilityType serviceabilityType = case serviceabilityType of
-        ServiceabilityType.ORIGIN -> "origin"
-        ServiceabilityType.DESTINATION -> "destination"
-        _ -> "origin"
-
     errorHandler (errorPayload) =  do
             BackT $ pure GoBack
 
@@ -851,8 +791,6 @@ flowStatusBT dummy = do
 notifyFlowEvent requestBody = do
     headers <- getHeaders "" false
     withAPIResult (EP.notifyFlowEvent "") unwrapResponse $ callAPI headers requestBody
-    where
-        unwrapResponse (x) = x
 
 notifyFlowEventBT :: NotifyFlowEventReq -> FlowBT String NotifyFlowEventRes
 notifyFlowEventBT requestBody = do
@@ -869,8 +807,6 @@ makeNotifyFlowEventReq event = NotifyFlowEventReq { "event" : event }
 cancelEstimate estimateId = do
     headers <- getHeaders "" false
     withAPIResult (EP.cancelEstimate estimateId) unwrapResponse $ callAPI headers (CancelEstimateReq estimateId)
-    where
-        unwrapResponse (x) = x
 
 cancelEstimateBT :: String -> FlowBT String CancelEstimateRes
 cancelEstimateBT estimateId = do
@@ -1121,15 +1057,11 @@ updateEmergencySettings :: UpdateEmergencySettingsReq -> Flow GlobalState (Eithe
 updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
         headers <- getHeaders "" false
         withAPIResult (EP.updateEmergencySettings "") unwrapResponse $ callAPI headers (UpdateEmergencySettingsReq payload)
-    where
-        unwrapResponse (x) = x
 
 markRideAsSafe :: String -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
 markRideAsSafe sosId= do
         headers <- getHeaders "" false
         withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId)
-    where
-        unwrapResponse (x) = x
 
 getSosDetails :: String -> FlowBT String GetSosDetailsRes
 getSosDetails rideId = do
@@ -1142,8 +1074,6 @@ getSosDetails rideId = do
 sendSafetySupport req = do
         headers <- getHeaders "" true
         withAPIResult (EP.safetySupport "") unwrapResponse $ callAPI headers req
-    where
-        unwrapResponse (x) = x
 
 makeAskSupportRequest :: String -> Boolean -> String -> AskSupportReq
 makeAskSupportRequest bId isSafe description = AskSupportReq{
@@ -1156,15 +1086,11 @@ createMockSos :: String -> Flow GlobalState (Either ErrorResponse CreateMockSosR
 createMockSos dummy = do
         headers <- getHeaders "" false
         withAPIResult (EP.createMockSos "") unwrapResponse $ callAPI headers (CreateMockSosReq "")
-    where
-        unwrapResponse (x) = x
 
 shareRide :: ShareRideReq -> Flow GlobalState (Either ErrorResponse ShareRideRes)
 shareRide (ShareRideReq req) = do
         headers <- getHeaders "" false
         withAPIResult (EP.shareRide "") unwrapResponse $ callAPI headers (ShareRideReq req)
-    where
-        unwrapResponse (x) = x
 
 getFollowRide :: String -> Flow GlobalState (Either ErrorResponse FollowRideRes)
 getFollowRide _ = do
@@ -1256,29 +1182,6 @@ getMetroStatusBT bookingId = do
           errorHandler _ = do
                 BackT $ pure GoBack
 
-
-  
-addStop :: String -> AddStopReq -> FlowBT String AddStopRes
-addStop bookingId req = (callApiBT (AddStopRequest bookingId req))
-
-makeAddStopReq :: Number -> Number -> Address -> AddStopReq
-makeAddStopReq lat lon stop  = AddStopReq{
-    "address" :  (LocationAddress stop),
-    "gps" : LatLong {
-        "lat" : lat ,
-        "lon" : lon
-        }
-    }
-
-makeEditStopReq :: Number -> Number -> Address -> EditStopReq
-makeEditStopReq lat lon stop  = EditStopReq{
-    "address" :  (LocationAddress stop),
-    "gps" : LatLong {
-        "lat" : lat ,
-        "lon" : lon
-        }
-    }
-
 makeStopReq :: Number -> Number -> Address -> StopReq
 makeStopReq lat lon stop  = StopReq{
     "address" :  (LocationAddress stop),
@@ -1288,28 +1191,57 @@ makeStopReq lat lon stop  = StopReq{
         }
     }
 
-mkRentalSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Int -> Int -> SearchReq
-mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalDistance estimatedRentalDuration =
+mkSearchLocation :: LatLong -> Address -> SearchReqLocation
+mkSearchLocation latLong address = do
+    SearchReqLocation {
+        gps: latLong,
+        address: (LocationAddress address)
+    }
+
+makeOneWaySearchReq :: SearchReqLocation -> SearchReqLocation -> String -> SearchRequest
+makeOneWaySearchReq origin destination startTime = do
     let appConfig = CP.getAppConfig CP.appConfig
-    in  SearchReq { "contents" : RentalSearchRequest (
-                                        RentalSearchReq {
-                                                "stops" : if dlat == 0.0 then Nothing else 
-                                                    (Just [SearchReqLocation {
-                                                           "gps" : LatLong {
-                                                               "lat" : dlat ,
-                                                               "lon" : dlong
-                                                               },
-                                                           "address" : (LocationAddress desAdd)
-                                                  }]), 
-                                                  "origin" : SearchReqLocation {
-                                                   "gps" : LatLong {
-                                                               "lat" : slat ,
-                                                               "lon" : slong
-                                                   },"address" : (LocationAddress srcAdd)
-                                                  },
-                                                  "startTime" : startTime,
-                                                  "estimatedRentalDistance" : estimatedRentalDistance,
-                                                  "estimatedRentalDuration" : estimatedRentalDuration
-                                                 }),
-                    "fareProductType" : "RENTAL"
-                   }
+    let oneWayReq =
+            OneWaySearchRequest
+                { startTime : Just startTime,
+                  destination : destination,
+                  origin : origin,
+                  isReallocationEnabled : Just appConfig.feature.enableReAllocation
+                }
+    OneWay oneWayReq 
+
+mkRentalSearchReq :: SearchReqLocation -> Maybe SearchReqLocation -> String -> Int -> Int -> SearchRequest
+mkRentalSearchReq origin mbDestination startTime estimatedRentalDistance estimatedRentalDuration = do
+    let rentalReq = 
+            RentalSearchRequest
+                { stops: singleton <$> mbDestination,
+                  origin: origin,
+                  startTime: startTime,
+                  estimatedRentalDistance: estimatedRentalDistance,
+                  estimatedRentalDuration: estimatedRentalDuration
+                }
+    Rental rentalReq
+
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> SearchRequest
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime = do
+    let appConfig = CP.getAppConfig CP.appConfig
+    let oneWayReq =
+            OneWaySearchRequest
+                { "startTime" : Just startTime
+                , "destination" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : dlat 
+                        , "lon" : dlong
+                        }
+                    , "address" : (LocationAddress desAdd)
+                    }
+                , "origin" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : slat 
+                        , "lon" : slong
+                        }
+                    , "address" : (LocationAddress srcAdd)
+                    }
+                , "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                }
+    OneWay oneWayReq 

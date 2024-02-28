@@ -497,16 +497,6 @@ specialLocation = SpecialLocation{
      "locationName" : ""
  }
 
-dummyLocation :: Location
-dummyLocation = {
-   place : "",
-   lat : 0.0,
-   lng : 0.0,
-   address : Nothing,
-   city : Nothing
- }
-
-
 dummyRideBooking :: RideBookingRes
 dummyRideBooking = RideBookingRes
   {
