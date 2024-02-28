@@ -1528,12 +1528,8 @@ getCity req = do
         [] -> do
           pure Nothing
         (g : _) -> pure $ Just g
-  let mbCity = (.city) <$> geometry
-  pure $
-    GetCityResp
-      { city = (\city -> if city == Context.TamilNaduCities then "Tamil Nadu" else show city) <$> mbCity,
-        status = APISuccess.Success
-      }
+  let city = (.city) <$> geometry
+  pure $ GetCityResp {city = show <$> city, status = APISuccess.Success}
 
 planMaxRides :: Plan -> Maybe Int
 planMaxRides plan = do
