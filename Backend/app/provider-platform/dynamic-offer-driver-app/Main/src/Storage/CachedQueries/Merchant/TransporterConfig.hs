@@ -140,10 +140,10 @@ parsingMiddleware km =
               x -> x
           )
           newObject''
-      fcmUrl = fromMaybe (error "fcmURL missing ") (valueToType <$> (DAKM.lookup "fcmUrl" newObject'))
-      fcmServiceAccount = fromMaybe (error "fcmServiceAccount missing ") (valueToText <$> (DAKM.lookup "fcmServiceAccount" newObject'))
-      fcmTokenKeyPrefix = fromMaybe (error "fcmTokenKeyPrefix missing ") (valueToText <$> (DAKM.lookup "fcmTokenKeyPrefix" newObject'))
-      fcmConfig = FCM.FCMConfig fcmUrl fcmServiceAccount fcmTokenKeyPrefix
+      fcmUrl = valueToType <$> (DAKM.lookup "fcmUrl" newObject')
+      fcmServiceAccount = valueToText <$> (DAKM.lookup "fcmServiceAccount" newObject')
+      fcmTokenKeyPrefix = valueToText <$> (DAKM.lookup "fcmTokenKeyPrefix" newObject')
+      fcmConfig = FCM.FCMConfig <$> fcmUrl <*> fcmServiceAccount <*> fcmTokenKeyPrefix
       newObject = KP.foldr DAKM.delete newObject' ["fcmUrl", "fcmServiceAccount", "fcmTokenKeyPrefix"]
    in DAKM.insert "fcmConfig" (toJSON fcmConfig) newObject
 
