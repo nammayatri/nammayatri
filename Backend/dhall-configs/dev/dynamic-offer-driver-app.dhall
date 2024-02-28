@@ -215,10 +215,6 @@ let jobInfoMapx =
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
-let maxMessages
-    : Text
-    = "5000"
-
 let modelNamesMap =
       [ { mapKey = "MARUTI ALTO (Some random verioning)"
         , mapValue = "MARUTI ALTO"
@@ -301,7 +297,6 @@ in  { esqDBCfg
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
-    , maxMessages
     , modelNamesMap
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap
