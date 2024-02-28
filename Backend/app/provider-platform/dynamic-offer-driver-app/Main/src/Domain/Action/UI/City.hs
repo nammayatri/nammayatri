@@ -19,6 +19,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity (..))
 import Environment
 import EulerHS.Prelude hiding (id, state)
+import Kernel.Types.Beckn.City (City (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -35,7 +36,7 @@ listCities mId = do
       return $
         DTC.CityRes
           { code = city,
-            name = show city,
+            name = if city == TamilNaduCities then "Tamil Nadu" else show city, -- TODO :: RemoveThisMapping Later
             subscription = transporterConfig.subscription,
             ..
           }
