@@ -41,6 +41,7 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.GoHomeConfig as Queries
+import qualified System.Environment ()
 import qualified System.Environment as Se
 import System.Random
 import Tools.Error (GenericError (..))
@@ -112,9 +113,11 @@ getGoHomeConfigFromCACStrict id' toss = do
 
 createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
 createThroughConfigHelper id' toss = do
+  mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
+  mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
   tenant <- liftIO (Se.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
   config <- KSQS.findById' $ Text.pack tenant
-  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue
+  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getGoHomeConfigFromCACStrict id' toss
 
 getGoHomeConfigFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig

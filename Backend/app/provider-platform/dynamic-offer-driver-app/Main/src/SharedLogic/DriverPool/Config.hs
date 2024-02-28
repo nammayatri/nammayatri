@@ -33,6 +33,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import qualified System.Environment as SE
+import qualified System.Environment as Se
 import System.Random
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
@@ -109,9 +110,11 @@ getConfigFromCACStrict merchantOpCityId mbvt dist = do
 
 helper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
 helper merchantOpCityId mbvt dist = do
+  mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
+  mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
   tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
   config <- KSQS.findById' $ Text.pack tenant
-  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue
+  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getConfigFromCACStrict merchantOpCityId mbvt dist
 
 getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
