@@ -85,7 +85,7 @@ tfItemDescriptor res =
     Spec.Descriptor
       { descriptorCode = Just "RIDE", -- TODO : maybe make Enum for it?
         descriptorShortDesc = Just $ Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant,
-        descriptorName = Nothing
+        descriptorName = Just $ show res.booking.vehicleVariant
       }
 
 tfItemPrice :: DInit.InitRes -> Maybe Spec.Price

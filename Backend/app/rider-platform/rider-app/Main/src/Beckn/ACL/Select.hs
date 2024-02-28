@@ -20,11 +20,15 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import BecknV2.OnDemand.Utils.Payment
 import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
+import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Select as DSelect
+import Domain.Types
+import Domain.Types.BecknConfig
 import qualified Domain.Types.Location as Location
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -42,30 +46,30 @@ buildSelectReqV2 ::
 buildSelectReqV2 dSelectRes = do
   endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
   isValueAddNP <- CQVNP.isValueAddNP dSelectRes.providerId
-  let message = buildSelectReqMessage dSelectRes endLoc isValueAddNP
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle dSelectRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dSelectRes.variant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  let message = buildSelectReqMessage dSelectRes endLoc isValueAddNP bapConfig
       messageId = dSelectRes.estimate.bppEstimateId.getId
       transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle dSelectRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dSelectRes.variant) >>= fromMaybeM (InternalError "Beckn Config not found")
   ttlInInt <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")
   let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
       ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
   context <- ContextV2.buildContextV2 Context.SELECT Context.MOBILITY messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city dSelectRes.merchant.country (Just ttlToISO8601Duration)
   pure $ Spec.SelectReq {selectReqContext = context, selectReqMessage = message}
 
-buildSelectReqMessage :: DSelect.DSelectRes -> Location.Location -> Bool -> Spec.ConfirmReqMessage
-buildSelectReqMessage res endLoc isValueAddNP =
+buildSelectReqMessage :: DSelect.DSelectRes -> Location.Location -> Bool -> BecknConfig -> Spec.ConfirmReqMessage
+buildSelectReqMessage res endLoc isValueAddNP bapConfig =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder res endLoc isValueAddNP
+    { confirmReqMessageOrder = tfOrder res endLoc isValueAddNP bapConfig
     }
 
-tfOrder :: DSelect.DSelectRes -> Location.Location -> Bool -> Spec.Order
-tfOrder res endLoc isValueAddNP =
+tfOrder :: DSelect.DSelectRes -> Location.Location -> Bool -> BecknConfig -> Spec.Order
+tfOrder res endLoc isValueAddNP bapConfig =
   let orderBilling = Nothing
       orderCancellation = Nothing
       orderCancellationTerms = Nothing
       orderId = Nothing
-      orderPayments = Nothing
+      orderPayments = tfPayments res bapConfig
       orderProvider = Nothing
       orderQuote = Nothing
       orderStatus = Nothing
@@ -230,3 +234,9 @@ tfPrice res =
       priceMinimumValue = Nothing
       priceOfferedValue = Nothing
    in Spec.Price {..}
+
+tfPayments :: DSelect.DSelectRes -> BecknConfig -> Maybe [Spec.Payment]
+tfPayments res bapConfig = do
+  let amount = fromIntegral (res.estimate.estimatedFare.getMoney)
+  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
+  Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID (Just amount) Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee

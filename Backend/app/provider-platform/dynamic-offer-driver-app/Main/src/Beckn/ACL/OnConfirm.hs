@@ -90,7 +90,7 @@ tfItems :: DConfirm.DConfirmResp -> Maybe [Spec.Item]
 tfItems res =
   Just
     [ Spec.Item
-        { itemDescriptor = Nothing,
+        { itemDescriptor = tfItemDescriptor res,
           itemFulfillmentIds = Just [res.booking.quoteId],
           itemId = Just $ Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant,
           itemLocationIds = Nothing,
@@ -203,4 +203,13 @@ tfCancellationTerms becknConfig =
       { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
         cancellationTermFulfillmentState = Nothing,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
+      }
+
+tfItemDescriptor :: DConfirm.DConfirmResp -> Maybe Spec.Descriptor
+tfItemDescriptor res =
+  Just
+    Spec.Descriptor
+      { descriptorCode = Just "RIDE",
+        descriptorShortDesc = Just $ show res.booking.vehicleVariant,
+        descriptorName = Just $ show res.booking.vehicleVariant
       }

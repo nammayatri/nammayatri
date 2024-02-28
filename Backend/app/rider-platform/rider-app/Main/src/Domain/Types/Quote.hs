@@ -49,7 +49,8 @@ data Quote = Quote
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
-    validTill :: UTCTime
+    validTill :: UTCTime,
+    serviceTierName :: Maybe Text
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -81,7 +82,8 @@ data QuoteAPIEntity = QuoteAPIEntity
     agencyCompletedRidesCount :: Maybe Int,
     createdAt :: UTCTime,
     isValueAddNP :: Bool,
-    validTill :: UTCTime
+    validTill :: UTCTime,
+    serviceTierName :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
