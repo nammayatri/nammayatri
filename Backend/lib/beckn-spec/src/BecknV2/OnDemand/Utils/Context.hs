@@ -28,6 +28,7 @@ import qualified Kernel.Prelude as KP
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import qualified Kernel.Types.Error as Error
+import Kernel.Types.TimeRFC339 (UTCTimeRFC3339 (..))
 import Kernel.Utils.Common
 
 showContextAction :: Context.Action -> Maybe Text
@@ -68,7 +69,7 @@ buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri c
         contextKey = Nothing,
         contextLocation = buildContextLocation city country,
         contextMessageId = UUID.fromText messageId,
-        contextTimestamp = now,
+        contextTimestamp = UTCTimeRFC3339 <$> now,
         contextTransactionId = UUID.fromText =<< transactionId,
         contextTtl = ttl,
         contextVersion = Just "2.0.0"
