@@ -308,7 +308,7 @@ tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
 tfCancellationTerms becknConfig =
   L.singleton
     Spec.CancellationTerm
-      { cancellationTermCancellationFee = BUtils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
+      { cancellationTermCancellationFee = BUtils.tfCancellationFee becknConfig.cancellationFeeAmount,
         cancellationTermFulfillmentState = BUtils.tfFulfillmentState Enums.RIDE_CANCELLED,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
