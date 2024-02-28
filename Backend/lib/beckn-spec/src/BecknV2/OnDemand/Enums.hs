@@ -61,6 +61,7 @@ data FulfillmentState -- shrey00 : check if we have any other custom on-us only 
   | RIDE_ASSIGNED
   | RIDE_ENROUTE_PICKUP
   | RIDE_ARRIVED_PICKUP
+  | NEW -- Custom type only used for on-us transaction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentStatus

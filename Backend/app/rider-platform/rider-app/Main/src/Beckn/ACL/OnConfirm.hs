@@ -58,10 +58,9 @@ buildOnConfirmReqV2 req isValueAddNP = do
             fulf >>= (.fulfillmentStops) >>= Utils.getStartLocation >>= (.stopAuthorization)
               >>= \auth -> if auth.authorizationType == Just (show Enums.OTP) then auth.authorizationToken else Nothing
 
-      let fulfState = fulf >>= (.fulfillmentState) >>= (.fulfillmentStateDescriptor) >>= (.descriptorCode)
-      let isRideAssigned = fulfState == Just (show Enums.RIDE_ASSIGNED)
+      let isDriverDetailsPresent = fulf >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & isJust
 
-      if isRideAssigned
+      if isDriverDetailsPresent
         then do
           let driverImage = fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
               driverMobileCountryCode = Just "+91" -- TODO: check how to get countrycode via ONDC

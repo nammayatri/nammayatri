@@ -17,6 +17,7 @@ module Beckn.ACL.OnConfirm (buildOnConfirmMessageV2) where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Enums
+import qualified BecknV2.OnDemand.Enums as Enum
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
@@ -26,9 +27,9 @@ import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
 
-bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Text
-bookingStatusCode (DConfirm.DriverQuote _ _) = Just "TRIP_ASSIGNED" -- TODO: refactor it like so case match is not needed
-bookingStatusCode _ = Just "NEW"
+bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
+bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED -- TODO: refactor it like so case match is not needed
+bookingStatusCode _ = Just Enum.NEW
 
 buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Spec.ConfirmReqMessage
 buildOnConfirmMessageV2 res pricing becknConfig = do
@@ -69,13 +70,13 @@ tfFulfillments res =
     ]
   where
     mkFulfillmentState Nothing = Nothing
-    mkFulfillmentState stateCode =
+    mkFulfillmentState (Just stateCode) =
       Just $
         Spec.FulfillmentState
           { fulfillmentStateDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = stateCode,
+                  { descriptorCode = Just $ show stateCode,
                     descriptorShortDesc = Nothing,
                     descriptorName = Nothing
                   }
