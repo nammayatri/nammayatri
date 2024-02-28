@@ -117,25 +117,7 @@ data OrderStatus
   | ACTIVE
   | COMPLETE
   | CANCELLED
-  deriving (Eq, Generic, Read)
-
-instance Show OrderStatus where
-  show SOFT_CANCEL = "SOFT-CANCEL"
-  show CONFIRM_CANCEL = "CONFIRM-CANCEL"
-  show ACTIVE = "ACTIVE"
-  show COMPLETE = "COMPLETE"
-  show CANCELLED = "CANCELLED"
-
-instance ToJSON OrderStatus where
-  toJSON = genericToJSON constructorsWithHyphens
-
-instance FromJSON OrderStatus where
-  parseJSON (String "SOFT-CANCEL") = return SOFT_CANCEL
-  parseJSON (String "CONFIRM-CANCEL") = return CONFIRM_CANCEL
-  parseJSON (String "ACTIVE") = return ACTIVE
-  parseJSON (String "COMPLETE") = return COMPLETE
-  parseJSON (String "CANCELLED") = return CANCELLED
-  parseJSON wrongVal = typeMismatch "Invalid OrderStatus" wrongVal
+  deriving (Eq, Generic, Read, Show, FromJSON, ToJSON)
 
 data QuoteBreakupTitle
   = -- ..quote.breakup.title
@@ -156,7 +138,6 @@ data QuoteBreakupTitle
   | CGST
   | PLATFORM_FEE -- should this be in quote breakup?
   | TIME_BASED_FARE
-  | CUSTOMER_CANCELLATION_DUES
   | DIST_BASED_FARE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 

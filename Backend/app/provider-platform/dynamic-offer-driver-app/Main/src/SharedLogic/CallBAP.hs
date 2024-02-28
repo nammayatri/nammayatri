@@ -50,6 +50,7 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
+import Data.Coerce (coerce)
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
@@ -60,10 +61,12 @@ import Domain.Action.UI.DriverOnboarding.AadhaarVerification
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
+import Domain.Types.Common
 import qualified Domain.Types.DriverOnboarding.Image as DIT
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
@@ -85,6 +88,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -454,7 +458,13 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
   logDebug $ "on_select ttl request driver:-" <> show driverQuote.validTill
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapVariantToVehicle driverQuote.vehicleVariant) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapVariantToVehicle driverQuote.vehicleVariant))
-  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter)
+  farePolicy <-
+    Redis.get (SFP.makeFarePolicyByEstOrQuoteIdKey driverQuote.estimateId.getId) >>= \case
+      Nothing -> do
+        logWarning $ "Fare Policy Not Found for estimateId " <> show driverQuote.estimateId
+        return Nothing
+      Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>

@@ -41,6 +41,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QPerson
@@ -124,7 +125,11 @@ confirm DConfirmReq {..} = do
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderPhone <- mapM decrypt person.mobileNumber
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  riderPhone <-
+    if isValueAddNP
+      then mapM decrypt person.mobileNumber
+      else pure $ Just booking.primaryExophone
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId

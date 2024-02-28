@@ -34,6 +34,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.FareParameters as Params
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy as Policy
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Location as DLoc
@@ -695,14 +696,13 @@ mapRideStatus rideStatus = do
     DRide.COMPLETED -> Enums.RIDE_ENDED
     DRide.CANCELLED -> Enums.RIDE_CANCELLED
 
-tfCancellationFee :: Maybe Int -> Maybe Int -> Maybe Spec.Fee
-tfCancellationFee mbAmount mbFeePercent = do
+tfCancellationFee :: Maybe Int -> Maybe Spec.Fee
+tfCancellationFee mbAmount = do
   let amount = fromMaybe 0 mbAmount
-      feePercent = fromMaybe 0 mbFeePercent
   Just
     Spec.Fee
       { feeAmount = mkPrice amount,
-        feePercentage = Just $ encodeToText feePercent
+        feePercentage = Nothing
       }
   where
     mkPrice amount =
@@ -812,8 +812,11 @@ mkQuotationBreakup booking =
 
 type MerchantShortId = Text
 
-tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Pricing -> Maybe [Spec.Item]
-tfItems booking shortId pricing =
+tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.Item]
+tfItems booking shortId estimatedDistance mbFarePolicy = do
+  let itemTags = case mbFarePolicy of
+        Nothing -> Nothing
+        farePolicy -> mkRateCardTag estimatedDistance farePolicy
   Just
     [ Spec.Item
         { itemDescriptor = tfItemDescriptor booking shortId,
@@ -822,7 +825,7 @@ tfItems booking shortId pricing =
           itemLocationIds = Nothing,
           itemPaymentIds = Nothing,
           itemPrice = tfItemPrice booking,
-          itemTags = mkRateCardTag pricing
+          itemTags
         }
     ]
 
@@ -942,10 +945,9 @@ mkGeneralInfoTag pricing =
             tagValue = Just $ show . double2Int . realToFrac $ distanceToNearestDriver
           }
 
-mkRateCardTag :: Maybe Pricing -> Maybe [Spec.TagGroup]
-mkRateCardTag Nothing = Nothing
-mkRateCardTag (Just pricing) = do
-  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups mkValue mkRateCardBreakupItem pricing.estimatedDistance) pricing.farePolicy
+mkRateCardTag :: Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
+mkRateCardTag estimatedDistance farePolicy = do
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups mkValue mkRateCardBreakupItem estimatedDistance) farePolicy
       farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
   Just $
     List.singleton $
