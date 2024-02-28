@@ -179,7 +179,8 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates clientId = do
         safetyAlertTriggered = False,
         enableFrequentLocationUpdates = enableFrequentLocationUpdates,
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
-        vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned
+        vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
+        transactionId = Just booking.transactionId
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

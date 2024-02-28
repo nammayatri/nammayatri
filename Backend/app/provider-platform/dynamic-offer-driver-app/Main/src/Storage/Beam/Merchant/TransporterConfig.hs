@@ -152,7 +152,8 @@ data TransporterConfigT f = TransporterConfigT
     considerDriversForSearch :: B.C f Bool,
     dlNumberVerification :: B.C f (Maybe Bool),
     pastDaysRideCounter :: B.C f Int,
-    placeNameCacheExpiryDays :: B.C f (Maybe Int)
+    placeNameCacheExpiryDays :: B.C f (Maybe Int),
+    enableEstimateSlicing :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

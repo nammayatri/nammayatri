@@ -288,5 +288,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.variantsToEnableForSubscription = variantsToEnableForSubscription,
         BeamTC.dlNumberVerification = dlNumberVerification,
         BeamTC.pastDaysRideCounter = pastDaysRideCounter,
-        BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays
+        BeamTC.placeNameCacheExpiryDays = placeNameCacheExpiryDays,
+        BeamTC.enableEstimateSlicing = enableEstimateSlicing
       }

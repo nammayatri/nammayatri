@@ -72,6 +72,7 @@ Ride:
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
     rideEndedBy: Maybe RideEndedBy
+    transactionId: Maybe Text
 
   sqlType:
     id: character(36)

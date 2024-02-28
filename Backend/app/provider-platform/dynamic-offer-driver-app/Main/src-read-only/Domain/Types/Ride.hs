@@ -54,6 +54,7 @@ data Ride = Ride
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     trackingUrl :: Kernel.Types.Common.BaseUrl,
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     traveledDistance :: Kernel.Types.Common.HighPrecMeters,
     tripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

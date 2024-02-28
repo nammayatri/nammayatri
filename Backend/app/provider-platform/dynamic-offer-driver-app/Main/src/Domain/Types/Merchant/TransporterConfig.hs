@@ -179,7 +179,8 @@ data TransporterConfigD u = TransporterConfig
     considerDriversForSearch :: Bool,
     dlNumberVerification :: Maybe Bool,
     pastDaysRideCounter :: Int,
-    placeNameCacheExpiryDays :: Maybe Int
+    placeNameCacheExpiryDays :: Maybe Int,
+    enableEstimateSlicing :: Maybe Bool
   }
   deriving (Generic, Show)
 

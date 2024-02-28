@@ -1,0 +1,1 @@
+alter table atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_estimate_slicing INT;

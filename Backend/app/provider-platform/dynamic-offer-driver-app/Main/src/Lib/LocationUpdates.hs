@@ -19,11 +19,10 @@ module Lib.LocationUpdates
   )
 where
 
+import Data.List (elemIndex)
 import Data.Time hiding (secondsToNominalDiffTime)
-import Domain.Types.Booking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
@@ -48,17 +47,6 @@ import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Maps as TMaps
 
-getDeviationForPoint :: LatLong -> [LatLong] -> Meters
-getDeviationForPoint pt estimatedRoute =
-  highPrecMetersToMeters (minimum $ map (distanceBetweenInMeters pt) estimatedRoute)
-
-getMaxDeviation :: [LatLong] -> [LatLong] -> Meters -> Meters -> Meters -> Meters
-getMaxDeviation _ [] _ _ acc = acc
-getMaxDeviation estimatedRoute (pt : batchWaypoints) pt1 pt2 acc = do
-  let currDeviation = getDeviationForPoint pt estimatedRoute
-      currentWindowDeviation = min pt1 (min pt2 currDeviation)
-  getMaxDeviation estimatedRoute batchWaypoints pt2 currDeviation (max acc currentWindowDeviation)
-
 isWithinTolerance :: LatLong -> [LatLong] -> Meters -> Bool
 isWithinTolerance pt estimatedRoute routeDeviationThreshold = do
   let minDistance = highPrecMetersToMeters (minimum $ map (distanceBetweenInMeters pt) estimatedRoute)
@@ -75,114 +63,90 @@ checkForDeviation routeDeviationThreshold estimatedRoute (pt : batchWaypoints) d
       then checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
       else checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints (deviationCount + 1)
 
-updateDeviation :: TransporterConfig -> Bool -> Maybe Ride -> [LatLong] -> Flow Bool
-updateDeviation _ _ Nothing _ = do
-  logInfo "No ride found to check deviation"
-  return False
-updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = do
-  let rideId = ride.id
-  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  (alreadyDeviated, safetyAlertAlreadyTriggered) <- getDeviationAndSafetyDetails ride
-  if safetyAlertAlreadyTriggered && alreadyDeviated
-    then do
-      logInfo $ "Safety alert and deviation already triggered for rideId: " <> getId rideId
-      return True
-    else do
-      let routeDeviationThreshold = transportConfig.routeDeviationThreshold
-          nightSafetyRouteDeviationThreshold = transportConfig.nightSafetyRouteDeviationThreshold
-          key = multipleRouteKey booking.transactionId
-          oldKey = multipleRouteKey rideId.getId
-          shouldPerformSafetyCheck = safetyCheckEnabled && not safetyAlertAlreadyTriggered
-      oldMultipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get oldKey
-      whenJust oldMultipleRoutes $ \allRoutes -> do
-        Redis.setExp key allRoutes 3600
-        Redis.del oldKey
-      multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get key
-      case multipleRoutes of
-        Just routes -> do
-          isRouteDeviated <- checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking shouldPerformSafetyCheck
-          updateRouteDeviationDetails isRouteDeviated alreadyDeviated
-        Nothing -> do
-          isRouteDeviated <- checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking
-          updateRouteDeviationDetails isRouteDeviated alreadyDeviated
-  where
-    updateRouteDeviationDetails :: Bool -> Bool -> Flow Bool
-    updateRouteDeviationDetails isRouteDeviated alreadyDeviated = do
-      when (isRouteDeviated && not alreadyDeviated) $ do
-        logInfo $ "Deviation detected for rideId: " <> getId ride.id
-        QRide.updateDriverDeviatedFromRoute ride.id True
-      return isRouteDeviated
-
-    getDeviationAndSafetyDetails rideDetails = do
-      let alreadyDeviated = fromMaybe False rideDetails.driverDeviatedFromRoute
-      return (alreadyDeviated, rideDetails.safetyAlertTriggered)
-
-checkMultipleRoutesForDeviation :: [RI.RouteAndDeviationInfo] -> [LatLong] -> Meters -> Meters -> Ride -> Booking -> Bool -> Flow Bool
-checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking safetyCheckEnabled = do
-  let rideId = ride.id
-  logInfo $ "Checking for deviation in multiple routes for rideId: " <> getId rideId
-  let updatedRoutesInfo = map checkRouteForDeviation routes
-  logInfo $ "Updated routes info for rideId: " <> getId rideId <> " is: " <> show updatedRoutesInfo
-  setExp (multipleRouteKey booking.transactionId) updatedRoutesInfo 14400
-  fork "Performing safety check" $
-    when (safetyCheckEnabled && all (\route -> RI.safetyDeviation $ RI.deviationInfo route) updatedRoutesInfo) $ performSafetyCheck ride booking
-  return $ all (\route -> RI.deviation $ RI.deviationInfo route) updatedRoutesInfo
-  where
-    checkRouteForDeviation :: RI.RouteAndDeviationInfo -> RI.RouteAndDeviationInfo
-    checkRouteForDeviation route@RI.RouteAndDeviationInfo {..} =
-      case routeInfo.points of
-        Nothing -> route
-        Just points ->
-          if not safetyCheckEnabled
-            then
-              route
-                { RI.deviationInfo =
-                    RI.DeviationInfo
-                      { deviation =
-                          deviationInfo.deviation || checkForDeviation routeDeviationThreshold points batchWaypoints 0,
-                        safetyDeviation = False
-                      }
-                }
-            else do
-              case (deviationInfo.safetyDeviation, deviationInfo.deviation) of
-                (True, _) -> route
-                (False, True) -> do
-                  let isSafetyDeviated = checkForDeviation nightSafetyRouteDeviationThreshold points batchWaypoints 0
-                  route
-                    { RI.deviationInfo =
-                        RI.DeviationInfo
-                          { deviation = True,
-                            safetyDeviation = isSafetyDeviated
-                          }
-                    }
-                (False, False) -> do
-                  let deviation = getMaxDeviation points batchWaypoints 0 0 0
-                  route
-                    { RI.deviationInfo =
-                        RI.DeviationInfo
-                          { deviation = deviation >= routeDeviationThreshold,
-                            safetyDeviation = deviation >= nightSafetyRouteDeviationThreshold
-                          }
-                    }
-
-checkForDeviationInSingleRoute :: [LatLong] -> Meters -> Meters -> Ride -> Booking -> Flow Bool
-checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking = do
-  let rideId = ride.id
-  logInfo $ "Checking for deviation in single route for rideId: " <> getId rideId
-  let key = searchRequestKey booking.transactionId
-  mbRouteInfo :: Maybe RI.RouteInfo <- Redis.get key
-  case mbRouteInfo of
-    Just routeInfo -> do
-      let multipleRoutesEntity =
-            [ RI.RouteAndDeviationInfo
-                { routeInfo = routeInfo,
-                  deviationInfo = RI.DeviationInfo {deviation = False, safetyDeviation = False}
-                }
-            ]
-      checkMultipleRoutesForDeviation multipleRoutesEntity batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking False
+getTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Ride -> m Text
+getTransactionId ride =
+  case ride.transactionId of
+    Just tid -> return tid
     Nothing -> do
-      logWarning $ "Ride route info not found for rideId: " <> getId rideId
+      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      return booking.transactionId
+
+updateSafetyDeviation :: Meters -> Bool -> Maybe Ride -> [LatLong] -> Flow ()
+updateSafetyDeviation _ _ Nothing _ = logInfo "No ride found to check deviation"
+updateSafetyDeviation safetyThreshold safetyCheckEnabled (Just ride) batchWaypoints = do
+  when safetyCheckEnabled $ do
+    let rideId = ride.id
+    transactionId <- getTransactionId ride
+    multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get $ multipleRouteKey transactionId
+    case multipleRoutes of
+      Just routes -> do
+        let updatedRoutes = map checkRouteForSafetyDeviation routes
+        let isSafetyDeviated = all (\route -> RI.safetyDeviation route) updatedRoutes
+        Redis.setExp (multipleRouteKey transactionId) updatedRoutes 14400
+        fork "Performing safety check" $ do
+          when isSafetyDeviated $ performSafetyCheck ride
+      Nothing -> do
+        logError $ "Multiple routes not found for rideid: " <> getId rideId
+  where
+    checkRouteForSafetyDeviation routeAndDeviationInfo =
+      case routeAndDeviationInfo.routeInfo.points of
+        Nothing -> routeAndDeviationInfo
+        Just points ->
+          routeAndDeviationInfo
+            { RI.safetyDeviation = routeAndDeviationInfo.safetyDeviation || (checkForDeviation safetyThreshold points batchWaypoints 0)
+            }
+
+updateRouteDeviation :: Meters -> Maybe Ride -> [LatLong] -> Flow Bool
+updateRouteDeviation _ Nothing _ = do
+  logError "No ride found to check deviation"
+  return False
+updateRouteDeviation routeDeviationThreshold (Just ride) batchWaypoints = do
+  let rideId = ride.id
+  transactionId <- getTransactionId ride
+  multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get $ multipleRouteKey transactionId
+  case multipleRoutes of
+    Just routes ->
+      case ride.driverDeviatedFromRoute of
+        Just True -> return True
+        _ -> do
+          let updatedRoutes = map checkRouteForDeviation routes
+          let isDeviated = all (\route -> RI.routeDeviation route) updatedRoutes
+          Redis.setExp (multipleRouteKey transactionId) updatedRoutes 14400
+          when isDeviated $ do
+            QRide.updateDriverDeviatedFromRoute rideId True
+          return isDeviated
+    Nothing -> do
+      logError $ "Multiple routes not found for rideid: " <> getId rideId
       return False
+  where
+    checkRouteForDeviation routeAndDeviationInfo =
+      case routeAndDeviationInfo.routeInfo.points of
+        Nothing -> routeAndDeviationInfo
+        Just points ->
+          routeAndDeviationInfo
+            { RI.routeDeviation = routeAndDeviationInfo.routeDeviation || (checkForDeviation routeDeviationThreshold points batchWaypoints 0)
+            }
+
+checkBatchForDeviation :: Meters -> Maybe Ride -> [LatLong] -> Flow Bool
+checkBatchForDeviation _ Nothing _ = do
+  logError "No ride found to check deviation"
+  return False
+checkBatchForDeviation routeDeviationThreshold (Just ride) batchWaypoints = do
+  let rideId = ride.id
+  transactionId <- getTransactionId ride
+  multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get $ multipleRouteKey transactionId
+  case multipleRoutes of
+    Just routes -> do
+      let isDeviated = all (\route -> checkBatch route) routes
+      return isDeviated
+    Nothing -> do
+      logError $ "Multiple routes not found for rideid: " <> getId rideId
+      return False
+  where
+    checkBatch routeAndDeviationInfo =
+      case routeAndDeviationInfo.routeInfo.points of
+        Nothing -> False
+        Just points -> checkForDeviation routeDeviationThreshold points batchWaypoints 0
 
 getTravelledDistance :: Maybe Ride -> Meters -> Flow Meters
 getTravelledDistance Nothing _ = do
@@ -190,12 +154,12 @@ getTravelledDistance Nothing _ = do
   return 0
 getTravelledDistance (Just ride) estimatedDistance = do
   let rideId = ride.id
-  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  let key = multipleRouteKey booking.transactionId
+  transactionId <- getTransactionId ride
+  let key = multipleRouteKey transactionId
   multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get key
   case multipleRoutes of
     Just routes -> do
-      let undeviatedRoute = find (not . RI.deviation . RI.deviationInfo) routes
+      let undeviatedRoute = find (not . RI.routeDeviation) routes
       case undeviatedRoute of
         Just route -> do
           let distance = RI.distance $ RI.routeInfo route
@@ -206,6 +170,106 @@ getTravelledDistance (Just ride) estimatedDistance = do
     Nothing -> do
       logInfo $ "MultipleRoutes not found for ride" <> show rideId
       return estimatedDistance
+
+getEstimateSliceDistance :: Maybe Ride -> [LatLong] -> Meters -> Flow Meters
+getEstimateSliceDistance Nothing batchWaypoints _ = do
+  logError "No ride found to get sliced estimated distance"
+  return $ highPrecMetersToMeters $ getRouteLinearLength batchWaypoints
+getEstimateSliceDistance (Just ride) batchWaypoints routeDeviationThreshold =
+  if (length batchWaypoints) <= 2
+    then do
+      return $ highPrecMetersToMeters $ getRouteLinearLength batchWaypoints
+    else do
+      let rideId = ride.id
+      transactionId <- getTransactionId ride
+      let key = multipleRouteKey transactionId
+      multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.get key
+      case multipleRoutes of
+        Just routes -> checkDeviationAndGetDistance routes
+        Nothing -> do
+          logError $ "MultipleRoutes not found for ride" <> show rideId
+          return $ highPrecMetersToMeters $ getRouteLinearLength batchWaypoints
+  where
+    checkDeviationAndGetDistance [] = do
+      logError "Returning route linear length, no route matched"
+      return $ highPrecMetersToMeters $ getRouteLinearLength batchWaypoints
+    checkDeviationAndGetDistance (route : rs) = do
+      case route.routeInfo.points of
+        Just pts -> do
+          let deviated = checkForDeviation routeDeviationThreshold pts batchWaypoints 0
+          if deviated
+            then checkDeviationAndGetDistance rs
+            else do
+              return $ getFinalDistance pts
+        Nothing -> checkDeviationAndGetDistance rs
+    getFinalDistance pts =
+      let firstWaypoint = head batchWaypoints
+          lastWayPoint = head (reverse batchWaypoints)
+          sliceStartIndex = getNearestPointIndex firstWaypoint pts
+          sliceEndIndex = getNearestPointIndex lastWayPoint pts
+          slicedDistance = getSlicedDistance (sliceStartIndex + 1) (sliceEndIndex -1) pts
+       in if slicedDistance == 0
+            then highPrecMetersToMeters $ getRouteLinearLength batchWaypoints
+            else
+              let valueS = getSliceDistanceCorrection sliceStartIndex firstWaypoint pts True
+                  valueE = getSliceDistanceCorrection sliceEndIndex lastWayPoint pts False
+               in slicedDistance + valueS + valueE
+
+getNearestPointIndex :: LatLong -> [LatLong] -> Int
+getNearestPointIndex pt routePoints =
+  let distanceList = map (\currPoint -> distanceBetweenInMeters currPoint pt) routePoints
+      nearestIndex = elemIndex (minimum distanceList) distanceList
+   in (fromMaybe (-1) nearestIndex) --safe fromMaybe because we are searching minimum element in the list
+
+--What is there are two nearest points to start and end point?
+--So the slice can be different route than what driver might have travelled on
+--To solve this we can invalide estimate route points starting se to get more accurate and correct near point
+
+getSlicedDistance :: Int -> Int -> [LatLong] -> Meters
+getSlicedDistance startIndex endIndex routePoints =
+  let lengthOfRoute = length routePoints
+      isIndexInRange = (isWithinIndexRange startIndex lengthOfRoute) && (isWithinIndexRange endIndex lengthOfRoute)
+   in if startIndex >= endIndex || not isIndexInRange
+        then 0
+        else highPrecMetersToMeters $ getRouteLinearLength (sliceIt startIndex endIndex routePoints)
+  where
+    sliceIt startind endind xs = take (endind - startind + 1) (drop startind xs)
+    isWithinIndexRange ind lengthOfObject = (ind >= 0) && (ind < lengthOfObject)
+
+getSliceDistanceCorrection :: Int -> LatLong -> [LatLong] -> Bool -> Meters
+getSliceDistanceCorrection index waypoint routePoints isStartPoint
+  | index == 0 = getCorrectionValue index (index + 1)
+  | index == ((length routePoints) - 1) = getCorrectionValue index (index -1)
+  | otherwise =
+    let valueLeft = getCorrectionValue index (index -1)
+        valueRight = getCorrectionValue index (index + 1)
+     in (max valueLeft valueRight)
+  where
+    getCorrectionValue sInd eInd =
+      let (startPoint, endPoint) = ((routePoints !! sInd), (routePoints !! eInd))
+          (isPointPerpendicular, intersectionPoint) = checkPerpendicular startPoint endPoint waypoint
+       in if not isPointPerpendicular
+            then 0
+            else
+              if isStartPoint
+                then highPrecMetersToMeters $ (distanceBetweenInMeters intersectionPoint startPoint) + (distanceBetweenInMeters startPoint (routePoints !! (sInd + 1)))
+                else highPrecMetersToMeters $ (distanceBetweenInMeters intersectionPoint startPoint) + (distanceBetweenInMeters startPoint (routePoints !! (sInd - 1)))
+
+-- Ref: https://www.geeksforgeeks.org/point-of-intersection-of-two-lines-formula/
+-- Here we are checking if the waypoint is perpendicular on the line being formed by startpoint and endpoint
+-- Product of slope of two perpendicular lines is -1
+checkPerpendicular :: LatLong -> LatLong -> LatLong -> (Bool, LatLong)
+checkPerpendicular startpoint endpoint waypoint =
+  let (x1, y1, x2, y2, x3, y3) = (startpoint.lat, startpoint.lon, endpoint.lat, endpoint.lon, waypoint.lat, waypoint.lon)
+      m = (x2 - x1) / (y2 - y1)
+      m' = (-1.0) / m
+      (a1, b1, c1, a2, b2, c2) = (- m, 1.0, m * x1 - y1, - m', 1, m' * x3 - y3)
+      x4 = (b1 * c2 - b2 * c1) / (c1 * a2 - c2 * a1)
+      y4 = (c1 * a2 - c2 * a1) / (a1 * b2 - a2 * b1)
+      intersectionPoint = LatLong x4 y4
+      distanceSumStartIntersectionEnd = highPrecMetersToMeters $ (distanceBetweenInMeters startpoint intersectionPoint) + (distanceBetweenInMeters endpoint intersectionPoint)
+      distanceStartEnd = highPrecMetersToMeters $ distanceBetweenInMeters startpoint endpoint
+   in if abs (distanceSumStartIntersectionEnd - distanceStartEnd) <= 10 then (True, intersectionPoint) else (False, intersectionPoint)
 
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
@@ -223,17 +287,30 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       (\driverId tollCharges -> void (QRide.updateTollCharges driverId tollCharges))
       ( \driverId batchWaypoints -> do
           ride <- QRide.getActiveByDriverId driverId
-          updateDeviation transportConfig enableNightSafety ride batchWaypoints
+          updateRouteDeviation transportConfig.routeDeviationThreshold ride batchWaypoints
       )
       (TollsDetector.getTollChargesOnRoute merchantOpCityId)
+      ( \driverId batchWaypoints -> do
+          ride <- QRide.getActiveByDriverId driverId
+          updateSafetyDeviation transportConfig.nightSafetyRouteDeviationThreshold enableNightSafety ride batchWaypoints
+      )
+      ( \driverId batchWaypoints -> do
+          ride <- QRide.getActiveByDriverId driverId
+          checkBatchForDeviation transportConfig.routeDeviationThreshold ride batchWaypoints
+      )
       ( \driverId estimatedDistance -> do
           ride <- QRide.getActiveByDriverId driverId
           getTravelledDistance ride estimatedDistance
       )
       transportConfig.recomputeIfPickupDropNotOutsideOfThreshold
+      transportConfig.enableEstimateSlicing
+      ( \driverId batchWaypoints -> do
+          ride <- QRide.getActiveByDriverId driverId
+          getEstimateSliceDistance ride batchWaypoints transportConfig.routeDeviationThreshold
+      )
       snapToRoad'
   where
-    snapToRoadWithService req = do
+    snapToRoadWithService _ req = do
       resp <- TMaps.snapToRoad merchantId merchantOpCityId req
       return ([Google], Right resp)
 
@@ -259,16 +336,17 @@ whenWithLocationUpdatesLock driverId f = do
   where
     lockKey = "DriverLocationUpdate:DriverId-" <> driverId.getId
 
-performSafetyCheck :: Ride -> Booking -> Flow ()
-performSafetyCheck ride booking = do
+performSafetyCheck :: Ride -> Flow ()
+performSafetyCheck ride = do
   let rideId = ride.id
   logInfo $ "Performing safety check for rideId: " <> getId rideId
   when (not ride.safetyAlertTriggered) $ do
+    booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
     riderId <-
       booking.riderId
         & fromMaybeM (BookingFieldNotPresent "riderId")
-    riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound ride.id.getId)
-    void $ QRide.updateSafetyAlertTriggered ride.id
+    riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
+    void $ QRide.updateSafetyAlertTriggered rideId
     when riderDetails.nightSafetyChecks $ do
       driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
