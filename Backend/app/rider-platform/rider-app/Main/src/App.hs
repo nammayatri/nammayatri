@@ -113,7 +113,7 @@ runRiderApp' appCfg = do
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
         if kvConfigs.useCAC
           then do
-            _ <- liftIO $ CC.forkOS $ createCAC appCfg
+            _ <- liftIO $ CC.forkIO $ createCAC appCfg
             logInfo "Starting rider app using configs from CAC."
           else logInfo "Starting rider app using configs from DB."
         -- Load FRFS BAPs

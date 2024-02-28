@@ -115,6 +115,7 @@ dependencies:
   - singletons
   - singletons-th
   - pureMD5
+  - lens-aeson
 
 ghc-options:
   - -fwrite-ide-info
