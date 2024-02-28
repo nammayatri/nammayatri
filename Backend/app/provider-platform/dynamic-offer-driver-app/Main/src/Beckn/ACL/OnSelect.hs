@@ -26,6 +26,7 @@ import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.DriverQuote as DQuote
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
@@ -53,16 +54,17 @@ mkOnSelectMessageV2 ::
   Bool ->
   DBC.BecknConfig ->
   DM.Merchant ->
+  Maybe FarePolicyD.FullFarePolicy ->
   DOnSelectReq ->
   Spec.OnSelectReqMessage
-mkOnSelectMessageV2 isValueAddNP bppConfig merchant req@DOnSelectReq {..} = do
+mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectReq {..} = do
   let fulfillments = [mkFulfillmentV2 req driverQuote isValueAddNP]
   let paymentV2 = mkPaymentV2 bppConfig merchant driverQuote
   Spec.OnSelectReqMessage $
     Just
       Spec.Order
         { orderFulfillments = Just fulfillments,
-          orderItems = Just $ map (\fulf -> mkItemV2 fulf driverQuote transporterInfo isValueAddNP) fulfillments,
+          orderItems = Just $ map (\fulf -> mkItemV2 fulf driverQuote transporterInfo isValueAddNP mbFarePolicy) fulfillments,
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           orderPayments = Just [paymentV2],
           orderProvider = mkProvider bppConfig,
@@ -145,28 +147,17 @@ mkAgentTagList quote =
                 descriptorShortDesc = Nothing
               },
         tagValue = (\rating -> Just $ show $ rating.getCenti) =<< quote.driverRating
-      },
-    Spec.Tag
-      { tagDisplay = Just False,
-        tagDescriptor =
-          Just
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tags.DURATION_TO_PICKUP_IN_S,
-                descriptorName = Just "Agent Duration to Pickup in Seconds",
-                descriptorShortDesc = Nothing
-              },
-        tagValue = Just $ show $ quote.durationToPickup.getSeconds
       }
   ]
 
-mkItemV2 :: Spec.Fulfillment -> DQuote.DriverQuote -> TransporterInfo -> Bool -> Spec.Item
-mkItemV2 fulfillment quote provider isValueAddNP = do
+mkItemV2 :: Spec.Fulfillment -> DQuote.DriverQuote -> TransporterInfo -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Spec.Item
+mkItemV2 fulfillment quote provider isValueAddNP mbFarePolicy = do
   let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
   Spec.Item
     { itemId = Just $ Common.mkItemId provider.merchantShortId.getShortId quote.vehicleVariant,
       itemFulfillmentIds = Just [fulfillmentId],
       itemPrice = Just $ mkPriceV2 quote,
-      itemTags = Just . L.singleton =<< mkItemTagsV2 quote isValueAddNP,
+      itemTags = mkItemTagsV2 quote isValueAddNP mbFarePolicy,
       itemDescriptor = mkItemDescriptor quote,
       itemLocationIds = Nothing,
       itemPaymentIds = Nothing
@@ -192,42 +183,68 @@ mkPriceV2 quote =
       priceComputedValue = Nothing
     }
 
-mkItemTagsV2 :: DQuote.DriverQuote -> Bool -> Maybe Spec.TagGroup
-mkItemTagsV2 quote isValueAddNP
-  | not isValueAddNP = Nothing
-  | otherwise =
-    Just $
-      Spec.TagGroup
+mkItemTagsV2 :: DQuote.DriverQuote -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.TagGroup]
+mkItemTagsV2 quote isValueAddNP mbFarePolicy = do
+  case mbFarePolicy of
+    Nothing -> mkGeneralInfoTag quote isValueAddNP
+    Just fullFarePolicy -> do
+      let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
+      mkGeneralInfoTag quote isValueAddNP <> Utils.mkRateCardTag Nothing (Just farePolicy)
+
+mkGeneralInfoTag :: DQuote.DriverQuote -> Bool -> Maybe [Spec.TagGroup]
+mkGeneralInfoTag quote isValueAddNP =
+  Just
+    [ Spec.TagGroup
         { tagGroupDisplay = Just False,
           tagGroupDescriptor = Just $ Spec.Descriptor (Just $ show Tags.GENERAL_INFO) (Just "General Info") Nothing,
-          tagGroupList = Just $ mkItemTagList quote
+          tagGroupList = mkItemTagList quote isValueAddNP
         }
+    ]
 
-mkItemTagList :: DQuote.DriverQuote -> [Spec.Tag]
-mkItemTagList quote =
-  [ Spec.Tag
-      { tagDisplay = (\_ -> Just False) =<< quote.specialLocationTag,
-        tagDescriptor =
-          Just
-            Spec.Descriptor
-              { descriptorCode = (\_ -> Just $ show Tags.SPECIAL_LOCATION_TAG) =<< quote.specialLocationTag,
-                descriptorName = (\_ -> Just "Special Zone Tag") =<< quote.specialLocationTag,
-                descriptorShortDesc = Nothing
-              },
-        tagValue = quote.specialLocationTag
-      },
-    Spec.Tag
-      { tagDisplay = Just False,
-        tagDescriptor =
-          Just
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
-                descriptorName = Just "Distance To Nearest Driver In Meters",
-                descriptorShortDesc = Nothing
-              },
-        tagValue = Just $ show $ quote.distanceToPickup.getMeters
-      }
-  ]
+mkItemTagList :: DQuote.DriverQuote -> Bool -> Maybe [Spec.Tag]
+mkItemTagList quote isValueAddNP =
+  Just
+    [ Spec.Tag
+        { tagDisplay = Just False,
+          tagDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
+                  descriptorName = Just "Distance To Nearest Driver In Meters",
+                  descriptorShortDesc = Nothing
+                },
+          tagValue = Just $ show $ quote.distanceToPickup.getMeters
+        },
+      Spec.Tag
+        { tagDisplay = Just False,
+          tagDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.ETA_TO_NEAREST_DRIVER_MIN,
+                  descriptorName = Just "Agent Duration to Pickup in Seconds",
+                  descriptorShortDesc = Nothing
+                },
+          tagValue = Just $ show $ (quote.durationToPickup.getSeconds `div` 60)
+        }
+    ]
+    <> mkSpecialLocationTag quote isValueAddNP
+
+mkSpecialLocationTag :: DQuote.DriverQuote -> Bool -> Maybe [Spec.Tag]
+mkSpecialLocationTag _ False = Nothing
+mkSpecialLocationTag quote True =
+  Just
+    [ Spec.Tag
+        { tagDisplay = (\_ -> Just False) =<< quote.specialLocationTag,
+          tagDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = (\_ -> Just $ show Tags.SPECIAL_LOCATION_TAG) =<< quote.specialLocationTag,
+                  descriptorName = (\_ -> Just "Special Zone Tag") =<< quote.specialLocationTag,
+                  descriptorShortDesc = Nothing
+                },
+          tagValue = quote.specialLocationTag
+        }
+    ]
 
 mkQuoteV2 :: DQuote.DriverQuote -> UTCTime -> Spec.Quotation
 mkQuoteV2 quote now = do

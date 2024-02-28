@@ -168,7 +168,7 @@ getQuoteValidTill contextTime time = do
 
 getPickupDurationV2 :: Maybe [Spec.TagGroup] -> Maybe Int
 getPickupDurationV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.AGENT_INFO Tag.DURATION_TO_PICKUP_IN_S tagGroups
+  tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.ETA_TO_NEAREST_DRIVER_MIN tagGroups
   readMaybe $ T.unpack tagValue
 
 getDistanceToNearestDriverV2 :: Maybe [Spec.TagGroup] -> Maybe Meters

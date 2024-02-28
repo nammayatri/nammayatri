@@ -25,6 +25,7 @@ import qualified Data.List as L
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import Kernel.Prelude
 import Kernel.Utils.Common
 
@@ -32,21 +33,24 @@ bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
 bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED -- TODO: refactor it like so case match is not needed
 bookingStatusCode _ = Just Enum.NEW
 
-buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Spec.ConfirmReqMessage
-buildOnConfirmMessageV2 res pricing becknConfig = do
+buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
+buildOnConfirmMessageV2 res pricing becknConfig mbFarePolicy = do
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder res pricing becknConfig
+    { confirmReqMessageOrder = tfOrder res pricing becknConfig mbFarePolicy
     }
 
-tfOrder :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Spec.Order
-tfOrder res pricing bppConfig = do
+tfOrder :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
+tfOrder res pricing bppConfig mbFarePolicy = do
+  let farePolicy = case mbFarePolicy of
+        Nothing -> Nothing
+        Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms bppConfig,
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
-      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId (Just pricing),
+      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy,
       orderPayments = tfPayments res bppConfig,
       orderProvider = Nothing,
       orderQuote = Utils.tfQuotation res.booking,
@@ -127,7 +131,7 @@ tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
 tfCancellationTerms becknConfig =
   L.singleton
     Spec.CancellationTerm
-      { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
+      { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount,
         cancellationTermFulfillmentState = Nothing,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
