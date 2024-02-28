@@ -22,7 +22,7 @@ data TicketBookingService = TicketBookingService
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService,
-    status :: Domain.Types.TicketBookingService.ServiceStatus,
+    status :: ServiceStatus,
     ticketBookingId :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,
     ticketServiceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -31,7 +31,6 @@ data TicketBookingService = TicketBookingService
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ServiceStatus = Pending | Failed | Confirmed | Verified
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ServiceStatus = Pending | Failed | Confirmed | Verified deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceStatus))

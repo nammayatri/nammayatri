@@ -17,7 +17,7 @@ data FRFSTicket = FRFSTicket
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket,
     qrData :: Kernel.Prelude.Text,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    status :: Domain.Types.FRFSTicket.FRFSTicketStatus,
+    status :: FRFSTicketStatus,
     ticketNumber :: Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -27,7 +27,6 @@ data FRFSTicket = FRFSTicket
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketStatus = ACTIVE | EXPIRED | USED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSTicketStatus = ACTIVE | EXPIRED | USED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketStatus))

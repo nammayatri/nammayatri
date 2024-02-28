@@ -17,7 +17,7 @@ data FRFSTrip = FRFSTrip
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     stationCode :: Kernel.Prelude.Text,
     stationName :: Kernel.Prelude.Text,
-    stationType :: Domain.Types.FRFSTrip.StationType,
+    stationType :: StationType,
     stopSequence :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
@@ -26,7 +26,6 @@ data FRFSTrip = FRFSTrip
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data StationType = START | END | TRANSIT | INTERMEDIATE
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data StationType = START | END | TRANSIT | INTERMEDIATE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''StationType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''StationType))

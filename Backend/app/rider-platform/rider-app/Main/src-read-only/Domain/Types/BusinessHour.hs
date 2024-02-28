@@ -12,7 +12,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data BusinessHour = BusinessHour
-  { btype :: Domain.Types.BusinessHour.BusinessHourType,
+  { btype :: BusinessHourType,
     categoryId :: [Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory],
     id :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -22,7 +22,6 @@ data BusinessHour = BusinessHour
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BusinessHourType = Slot Kernel.Prelude.TimeOfDay | Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BusinessHourType = Slot Kernel.Prelude.TimeOfDay | Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BusinessHourType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BusinessHourType))

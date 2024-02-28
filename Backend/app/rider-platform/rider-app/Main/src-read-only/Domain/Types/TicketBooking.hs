@@ -23,7 +23,7 @@ data TicketBooking = TicketBooking
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
-    status :: Domain.Types.TicketBooking.BookingStatus,
+    status :: BookingStatus,
     ticketPlaceId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     updatedAt :: Kernel.Prelude.UTCTime,
     visitDate :: Data.Time.Calendar.Day,
@@ -31,9 +31,8 @@ data TicketBooking = TicketBooking
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BookingStatus = Pending | Failed | Booked
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BookingStatus = Pending | Failed | Booked deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingStatus))
 
-$(mkHttpInstancesForEnum ''BookingStatus)
+$(mkHttpInstancesForEnum (''BookingStatus))

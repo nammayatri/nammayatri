@@ -15,7 +15,7 @@ data EventTracker = EventTracker
     entity :: Kernel.Prelude.Text,
     entityFieldName :: Kernel.Prelude.Text,
     entityPrimaryId :: Kernel.Prelude.Text,
-    eventName :: Domain.Types.EventTracker.EventName,
+    eventName :: EventName,
     fromState :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.EventTracker.EventTracker,
     reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -27,7 +27,6 @@ data EventTracker = EventTracker
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data EventName = DRIVER_FEE_AUTO_PAY_TO_MANUAL | AUTO_PAY_STATUS_TOGGLE | SERVICE_USAGE_CHARGE_TOGGLE
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data EventName = DRIVER_FEE_AUTO_PAY_TO_MANUAL | AUTO_PAY_STATUS_TOGGLE | SERVICE_USAGE_CHARGE_TOGGLE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EventName)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EventName))

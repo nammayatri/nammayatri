@@ -19,7 +19,7 @@ data SpecialOccasion = SpecialOccasion
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     entityId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion,
-    specialDayType :: Domain.Types.SpecialOccasion.SpecialDayType,
+    specialDayType :: SpecialDayType,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -27,7 +27,6 @@ data SpecialOccasion = SpecialOccasion
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SpecialDayType = Open | Closed
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SpecialDayType = Open | Closed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SpecialDayType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SpecialDayType))

@@ -19,7 +19,7 @@ data Station = Station
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     name :: Kernel.Prelude.Text,
-    vehicleType :: Domain.Types.Station.FRFSVehicleType,
+    vehicleType :: FRFSVehicleType,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -27,9 +27,8 @@ data Station = Station
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSVehicleType = METRO | BUS
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data FRFSVehicleType = METRO | BUS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSVehicleType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSVehicleType))
 
-$(mkHttpInstancesForEnum ''FRFSVehicleType)
+$(mkHttpInstancesForEnum (''FRFSVehicleType))

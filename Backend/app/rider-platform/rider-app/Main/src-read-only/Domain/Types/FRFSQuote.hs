@@ -15,7 +15,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data FRFSQuote = FRFSQuote
-  { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+  { _type :: FRFSQuoteType,
     bppItemId :: Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
@@ -39,7 +39,6 @@ data FRFSQuote = FRFSQuote
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSQuoteType))

@@ -32,7 +32,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     stationsJson :: Kernel.Prelude.Text,
-    status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
+    status :: FRFSTicketBookingStatus,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Domain.Types.Station.FRFSVehicleType,
@@ -43,7 +43,6 @@ data FRFSTicketBooking = FRFSTicketBooking
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingStatus))

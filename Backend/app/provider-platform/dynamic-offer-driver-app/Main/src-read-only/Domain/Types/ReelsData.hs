@@ -58,12 +58,9 @@ data ReelButtonConfig = ReelButtonConfig
     textColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     textSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, (Eq), (Ord), (Read))
 
-data ReelRowButtonConfig = ReelRowButtonConfig
-  { row :: [Domain.Types.ReelsData.ReelButtonConfig]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
+data ReelRowButtonConfig = ReelRowButtonConfig {row :: [Domain.Types.ReelsData.ReelButtonConfig]} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, (Eq), (Ord), (Read))
 
 data ReelVideoThresholdConfig = ReelVideoThresholdConfig
   { endThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -73,10 +70,10 @@ data ReelVideoThresholdConfig = ReelVideoThresholdConfig
     sendCallbackAfterEverySecondEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     startThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, (Eq), (Ord), (Read))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReelButtonConfig)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReelButtonConfig))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReelRowButtonConfig)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReelRowButtonConfig))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReelVideoThresholdConfig)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReelVideoThresholdConfig))

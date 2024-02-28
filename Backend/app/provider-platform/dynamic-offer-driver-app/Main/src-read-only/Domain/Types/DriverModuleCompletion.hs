@@ -23,18 +23,16 @@ data DriverModuleCompletion = DriverModuleCompletion
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     ratingAtTheTimeOfCompletion :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     startedAt :: Kernel.Prelude.UTCTime,
-    status :: Domain.Types.DriverModuleCompletion.ModuleCompletionStatus,
+    status :: ModuleCompletionStatus,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ModuleCompletionEntity = QUIZ | VIDEO
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ModuleCompletionEntity = QUIZ | VIDEO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ModuleCompletionStatus = MODULE_NOT_YET_STARTED | MODULE_ONGOING | MODULE_COMPLETED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ModuleCompletionStatus = MODULE_NOT_YET_STARTED | MODULE_ONGOING | MODULE_COMPLETED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionEntity)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionEntity))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionStatus))

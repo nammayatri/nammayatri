@@ -15,11 +15,10 @@ data LmsModuleVideoInformation = LmsModuleVideoInformation
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     rank :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
-    videoStatus :: Domain.Types.LmsModuleVideoInformation.VideoStatus
+    videoStatus :: VideoStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data VideoStatus = ACTIVE | INACTIVE
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data VideoStatus = ACTIVE | INACTIVE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VideoStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VideoStatus))

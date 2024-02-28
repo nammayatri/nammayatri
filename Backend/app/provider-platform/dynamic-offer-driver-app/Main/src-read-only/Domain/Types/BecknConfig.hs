@@ -12,10 +12,10 @@ import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data BecknConfig = BecknConfig
-  { cancellationFeeAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cancellationFeeAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationFeePercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    collectedBy :: Domain.Types.BecknConfig.PaymentCollectedBy,
+    collectedBy :: PaymentCollectedBy,
     domain :: Kernel.Prelude.Text,
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
@@ -27,7 +27,7 @@ data BecknConfig = BecknConfig
     subscriberId :: Kernel.Prelude.Text,
     subscriberUrl :: Servant.Client.Core.BaseUrl,
     uniqueKeyId :: Kernel.Prelude.Text,
-    vehicleCategory :: Domain.Types.BecknConfig.VehicleCategory,
+    vehicleCategory :: VehicleCategory,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -35,12 +35,10 @@ data BecknConfig = BecknConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data PaymentCollectedBy = BAP | BPP
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PaymentCollectedBy = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VehicleCategory = CAB | AUTO_RICKSHAW | METRO
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data VehicleCategory = CAB | AUTO_RICKSHAW | METRO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentCollectedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleCategory)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleCategory))

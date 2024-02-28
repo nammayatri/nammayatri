@@ -13,14 +13,14 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data LmsModule = LmsModule
-  { category :: Domain.Types.LmsModule.LmsCategory,
+  { category :: LmsCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     duration :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     languagesAvailableForQuiz :: [Kernel.External.Types.Language],
     languagesAvailableForVideos :: [Kernel.External.Types.Language],
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
-    moduleCompletionCriteria :: Domain.Types.LmsModule.ModuleCompletionCriteria,
+    moduleCompletionCriteria :: ModuleCompletionCriteria,
     noOfVideos :: Kernel.Prelude.Int,
     rank :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -29,12 +29,10 @@ data LmsModule = LmsModule
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data LmsCategory = Safety | Financial | Training
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data LmsCategory = Safety | Financial | Training deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Kernel.Prelude.Int
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LmsCategory)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''LmsCategory))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionCriteria)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionCriteria))
