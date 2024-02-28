@@ -107,3 +107,28 @@ tfProvider uiConfirm = do
       providerFulfillments = Nothing
 
   BecknV2.OnDemand.Types.Provider {..}
+
+tfCustomer :: SharedLogic.Confirm.DConfirmRes -> Maybe BecknV2.OnDemand.Types.Customer
+tfCustomer res =
+  Just $
+    BecknV2.OnDemand.Types.Customer
+      { customerContact = mkContact,
+        customerPerson = mkPerson
+      }
+  where
+    mkContact =
+      Just $
+        BecknV2.OnDemand.Types.Contact
+          { contactPhone = res.riderPhone
+          -- handling of passing virtual number at UIconfirm domain handler.
+          }
+
+    mkPerson = do
+      riderName <- res.riderName
+      return $
+        BecknV2.OnDemand.Types.Person
+          { personId = Nothing,
+            personImage = Nothing,
+            personName = Just riderName,
+            personTags = Nothing
+          }

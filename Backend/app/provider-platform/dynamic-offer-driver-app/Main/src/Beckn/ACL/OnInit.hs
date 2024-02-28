@@ -24,24 +24,28 @@ import qualified Data.List as L
 import Domain.Action.Beckn.Init as DInit
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import Kernel.Prelude
 import Kernel.Utils.Common
 
-mkOnInitMessageV2 :: DInit.InitRes -> DBC.BecknConfig -> Spec.ConfirmReqMessage
-mkOnInitMessageV2 res becknConfig =
+mkOnInitMessageV2 :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
+mkOnInitMessageV2 res becknConfig mbFarePolicy =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder res becknConfig
+    { confirmReqMessageOrder = tfOrder res becknConfig mbFarePolicy
     }
 
-tfOrder :: DInit.InitRes -> DBC.BecknConfig -> Spec.Order
-tfOrder res becknConfig =
+tfOrder :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
+tfOrder res becknConfig mbFarePolicy = do
+  let farePolicy = case mbFarePolicy of
+        Nothing -> Nothing
+        Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
-      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing,
+      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy,
       orderPayments = tfPayments res becknConfig,
       orderProvider = tfProvider becknConfig,
       orderQuote = Utils.tfQuotation res.booking,
@@ -55,7 +59,7 @@ tfFulfillments res =
   Just
     [ Spec.Fulfillment
         { fulfillmentAgent = Nothing,
-          fulfillmentCustomer = Nothing,
+          fulfillmentCustomer = tfCustomer res,
           fulfillmentId = Just res.booking.quoteId,
           fulfillmentState = Nothing,
           fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation Nothing,
@@ -101,7 +105,23 @@ tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
 tfCancellationTerms becknConfig =
   L.singleton
     Spec.CancellationTerm
-      { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount becknConfig.cancellationFeePercentage,
+      { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount,
         cancellationTermFulfillmentState = Nothing,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
+      }
+
+tfCustomer :: DInit.InitRes -> Maybe Spec.Customer
+tfCustomer res =
+  return $
+    Spec.Customer
+      { customerContact = Nothing,
+        customerPerson = do
+          riderName <- res.booking.riderName
+          Just $
+            Spec.Person
+              { personId = Nothing,
+                personImage = Nothing,
+                personName = Just riderName,
+                personTags = Nothing
+              }
       }

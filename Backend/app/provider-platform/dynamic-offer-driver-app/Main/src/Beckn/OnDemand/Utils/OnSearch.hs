@@ -82,5 +82,5 @@ mkPayment merchant bppConfig = do
 
 mkItemTags :: CUtils.Pricing -> [Spec.TagGroup]
 mkItemTags pricing = do
-  let rateCardTag = CUtils.mkRateCardTag (Just pricing) & fromMaybe []
+  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance pricing.farePolicy & fromMaybe []
   rateCardTag <> [CUtils.mkGeneralInfoTag pricing]

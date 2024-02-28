@@ -66,7 +66,7 @@ tfOrder res endLoc isValueAddNP =
       orderCancellationTerms = Nothing
       orderId = Nothing
       orderPayments = Nothing
-      orderProvider = Nothing
+      orderProvider = Just $ tfProvider res
       orderQuote = Nothing
       orderStatus = Nothing
       startLoc = res.searchRequest.fromLocation
@@ -234,3 +234,13 @@ tfPrice res =
       priceMinimumValue = Nothing
       priceOfferedValue = Nothing
    in Spec.Price {..}
+
+tfProvider :: DSelect.DSelectRes -> Spec.Provider
+tfProvider res =
+  let providerDescriptor = Nothing
+      providerFulfillments = Nothing
+      providerItems = Nothing
+      providerLocations = Nothing
+      providerPayments = Nothing
+      providerId = Just res.providerId
+   in Spec.Provider {..}

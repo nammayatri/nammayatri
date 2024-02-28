@@ -72,7 +72,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateCaption = show Enums.FIXED_GOVERNMENT_RATE
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
 
-      customerCancellationDuesCaption = show Enums.CUSTOMER_CANCELLATION_DUES
+      customerCancellationDuesCaption = show Enums.CANCELLATION_CHARGES
       customerCancellationDues = mkBreakupItem customerCancellationDuesCaption (mkPrice $ round fareParams.customerCancellationDues)
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
