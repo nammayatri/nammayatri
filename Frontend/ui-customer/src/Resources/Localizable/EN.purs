@@ -654,6 +654,7 @@ getEN stringKey =
         YOU_SENT -> "You Sent"
         MESSAGE_YOUR_DRIVER -> "Message your Driver?"
         CHECK_IN_WITH_YOUR_DRIVER -> "Check in on your driver with a quick chat"
+        CHECK_IN_WITH_YOUR_EM name -> "Check in on " <> name <> " with a quick chat"
         TRACK_ON_GOOGLE_MAPS -> "Real Time Tracking" 
         OTP_EXPIRE_TIMER -> "OTP Expire Timer"
         SHOWS_FOR_HOW_LONG_YOUR_OTP_ -> "Shows for how long your OTP will remain valid to start the ride."

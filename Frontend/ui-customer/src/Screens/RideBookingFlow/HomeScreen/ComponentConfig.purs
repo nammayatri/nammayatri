@@ -1821,30 +1821,37 @@ getSelectedEstimatesObject dummy =
 
 getChatSuggestions :: ST.HomeScreenState -> Array String
 getChatSuggestions state = do
-  let didDriverMessage = HU.didDriverMessage FunctionCall
+  let didReceiverMessage = HU.didReceiverMessage FunctionCall
       lastMessage = DA.last state.data.messages
       currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) JB.getKeyInSharedPrefKeys) else "Customer"
-      canShowSuggestions = case lastMessage of 
-                            Just value -> (value.sentBy /= currentUser) || ((not state.props.isChatWithEMEnabled) && not didDriverMessage)
-                            Nothing -> true
+      canShowSuggestions = case lastMessage of
+        Just value -> (value.sentBy /= currentUser) || ((not state.props.isChatWithEMEnabled) && not didReceiverMessage)
+        Nothing -> true
       isAtPickup = (metersToKm state.data.driverInfoCardState.distance (state.props.currentStage == RideStarted)) == getString AT_PICKUP
   if (DA.null state.data.chatSuggestionsList) && canShowSuggestions && state.props.canSendSuggestion then
-    if state.props.isChatWithEMEnabled 
-      then do
-        let hideInitial = not $ DA.null state.data.messages
-        if hideInitial 
-          then state.data.chatSuggestionsList
-          else getSuggestionsfromKey emChatSuggestion "d6cddbb1a6aee372c0c7f05173da8f95"
+    if state.props.isChatWithEMEnabled then do
+      let hideInitial = not $ DA.null state.data.messages
+      if didReceiverMessage && hideInitial then
+        getSuggestionsfromKey emChatSuggestion "d6cddbb1a6aee372c0c7f05173da8f95"
+      else if hideInitial then
+        state.data.chatSuggestionsList
       else
-        if didDriverMessage && (not $ DA.null state.data.messages) then
-          if isAtPickup then getSuggestionsfromKey chatSuggestion "customerDefaultAP" else getSuggestionsfromKey chatSuggestion "customerDefaultBP"
-        else 
-        if isAtPickup then getSuggestionsfromKey chatSuggestion "customerInitialAP" else do
-            let hideInitial = not (DA.null state.data.messages) && not didDriverMessage
-            if (DA.null state.data.messages) && (EHC.getExpiryTime state.data.driverInfoCardState.createdAt true) > 30 then getSuggestionsfromKey chatSuggestion "customerInitialBP" --"customerInitialBP3" --TODO Revert during suggestions update
-            else if hideInitial then getSuggestionsfromKey chatSuggestion "customerInitialBP" --"customerInitialBP2" --TODO Revert during suggestions update
-            else getSuggestionsfromKey chatSuggestion "customerInitialBP" --"customerInitialBP1" --TODO Revert during suggestions update
-  else state.data.chatSuggestionsList
+        getSuggestionsfromKey emChatSuggestion "d6cddbb1a6aee372c0c7f05173da8f95"
+    else if didReceiverMessage && (not $ DA.null state.data.messages) then
+      if isAtPickup then getSuggestionsfromKey chatSuggestion "customerDefaultAP" else getSuggestionsfromKey chatSuggestion "customerDefaultBP"
+    else if isAtPickup then
+      getSuggestionsfromKey chatSuggestion "customerInitialAP"
+    else do
+      let hideInitial = not (DA.null state.data.messages) && not didReceiverMessage
+      if (DA.null state.data.messages) && (EHC.getExpiryTime state.data.driverInfoCardState.createdAt true) > 30 then
+        getSuggestionsfromKey chatSuggestion "customerInitialBP" --"customerInitialBP3" --TODO Revert during suggestions update
+      else if hideInitial then
+        getSuggestionsfromKey chatSuggestion "customerInitialBP" --"customerInitialBP2" --TODO Revert during suggestions update
+      else
+        getSuggestionsfromKey chatSuggestion "customerInitialBP" --"customerInitialBP1" --TODO Revert during suggestions update
+  else
+    state.data.chatSuggestionsList
+
 
 locationTagBarConfig :: ST.HomeScreenState -> LocationTagBar.LocationTagBarConfig
 locationTagBarConfig state  = let 

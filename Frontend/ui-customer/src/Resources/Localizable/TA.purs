@@ -672,6 +672,7 @@ getTA stringKey =
     MESSAGE_YOUR_DRIVER -> "உங்கள் டிரைவருக்கு செய்தி அனுப்பவா?"
     CHECK_IN_WITH_YOUR_DRIVER -> "விரைவு அரட்டை மூலம் உங்கள் டிரைவரைச் சரிபார்க்கவும்"
     TRACK_ON_GOOGLE_MAPS -> "நேரலை கண்காணிப்பு"
+    CHECK_IN_WITH_YOUR_EM name -> "விரைவான அரட்டை மூலம் " <> name <> " உடன் இணையுங்கள்"
     OTP_EXPIRE_TIMER -> "OTP காலாவதி டைமர்"
     SHOWS_FOR_HOW_LONG_YOUR_OTP_ -> "சவாரியைத் தொடங்க உங்கள் OTP எவ்வளவு காலம் செல்லுபடியாகும் என்பதைக் காட்டுகிறது."
     IF_YOUR_OTP_EXPIRES_ -> "உங்கள் OTP காலாவதியானால், நீங்கள் மீண்டும் முன்பதிவு செய்ய வேண்டும்."

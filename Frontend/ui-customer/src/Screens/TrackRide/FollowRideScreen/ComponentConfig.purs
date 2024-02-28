@@ -143,12 +143,16 @@ getPeekHeight _ =
 getChatSuggestions :: FollowRideScreenState -> Array String
 getChatSuggestions state = do 
   let lastMessage = DA.last state.data.messages
+      didEmMessage = didReceiverMessage Common.FunctionCall
       canShowSuggestions = case lastMessage of 
                             Just value -> (value.sentBy /= (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys))
                             Nothing -> true
-  if (DA.null state.data.chatSuggestionsList) && canShowSuggestions && state.props.canSendSuggestion 
+  if (DA.null state.data.chatSuggestionsList) && state.props.canSendSuggestion 
     then do 
       let hideInitial = not $ DA.null state.data.messages
-      if hideInitial 
-        then state.data.chatSuggestionsList 
-        else getSuggestionsfromKey emChatSuggestion "31e3bbf96e4b4208f1328f5b0da57d2e" else state.data.chatSuggestionsList
+      if didEmMessage && hideInitial then
+        getSuggestionsfromKey emChatSuggestion "31e3bbf96e4b4208f1328f5b0da57d2e"
+      else if hideInitial 
+        then state.data.chatSuggestionsList
+        else getSuggestionsfromKey emChatSuggestion "31e3bbf96e4b4208f1328f5b0da57d2e"
+    else state.data.chatSuggestionsList

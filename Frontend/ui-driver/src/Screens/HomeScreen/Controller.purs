@@ -371,6 +371,7 @@ data Action = NoAction
             | UpdateLastLoc Number Number Boolean
             | VehicleNotSupportedAC PopUpModal.Action
             | DriverStats DriverProfileStatsResp
+            | AllChatsLoaded
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState

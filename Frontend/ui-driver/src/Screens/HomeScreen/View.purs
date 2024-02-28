@@ -159,7 +159,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
                                 if (not initialState.props.chatcallbackInitiated) then do
                                   _ <- JB.clearChatMessages
-                                  _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
+                                  _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages AllChatsLoaded
                                   _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
                                   _ <- JB.startChatListenerService
                                   _ <- pure $ JB.scrollOnResume push ScrollToBottom
