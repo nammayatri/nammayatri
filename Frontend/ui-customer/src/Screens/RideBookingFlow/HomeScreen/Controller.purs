@@ -772,6 +772,7 @@ data ScreenOutput = LogoutUser
                   | GoToReportSafetyIssue HomeScreenState
                   | GoToMyMetroTickets HomeScreenState
                   | GoToMetroTicketBookingFlow HomeScreenState
+                  | GoToSafetyEducation HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -939,6 +940,7 @@ data Action = NoAction
             | UpdateChatWithEM Boolean
             | ShareRideAction PopupWithCheckboxController.Action
             | AllChatsLoaded
+            | GoToSafetyEducationScreen
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -1039,13 +1041,18 @@ eval (BannerCarousel (BannerCarousel.OnClick idx)) state =
           BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
           BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
           BannerCarousel.Remote link -> do
-            void $ openUrlInApp link
-            pure NoAction
+            if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link  -- To be removed after deep links are added in iOS
+              then pure GoToSafetyEducationScreen
+            else do
+              void $ openUrlInApp link
+              pure NoAction
           _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
 
 eval (MetroTicketBannerClickAC Banner.OnClick) state =  exit $ GoToMetroTicketBookingFlow state
+
+eval GoToSafetyEducationScreen state = exit $ GoToSafetyEducation state
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -1852,7 +1859,7 @@ eval ShareRide state = do
   continueWithCmd state
         [ do
             let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "journey/?id="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
+            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "t?i="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
             void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]

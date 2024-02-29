@@ -3494,6 +3494,8 @@ followRideBar push followers customWidth addSafePadding =
     [ textView
         [ text $ getFollowersTitle
         , color Color.white900
+        , weight 1.0
+        , gravity CENTER
         ]
     , imageView
       [ height $ V 16

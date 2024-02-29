@@ -287,3 +287,9 @@ _peopleCategories = lens (unwrap >>> _.peopleCategories) (\oldRec newVal -> wrap
 
 _createdAt :: forall a b c. Newtype a { createdAt :: b | c } => Lens' a b
 _createdAt = lens (unwrap >>> _.createdAt) (\oldRec newVal -> wrap ((unwrap oldRec) { createdAt = newVal }))
+
+_isSafetyCenterDisabled :: forall a b c. Newtype a { isSafetyCenterDisabled :: b | c } => Lens' a b
+_isSafetyCenterDisabled = lens (unwrap >>> _.isSafetyCenterDisabled) (\oldRec newVal -> wrap ((unwrap oldRec) { isSafetyCenterDisabled = newVal }))
+
+_deepLinkJSON :: forall a b c. Newtype a { deepLinkJSON :: b | c } => Lens' a b
+_deepLinkJSON = lens (unwrap >>> _.deepLinkJSON) (\oldRec newVal -> wrap ((unwrap oldRec) { deepLinkJSON = newVal }))
