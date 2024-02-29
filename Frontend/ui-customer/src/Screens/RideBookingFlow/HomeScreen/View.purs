@@ -83,7 +83,7 @@ import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, 
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, modifyState, getState)
 import Helpers.Pooling (delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), scrollBarY,adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
@@ -253,6 +253,9 @@ screen initialState =
                 pure unit
               ReAllocated ->
                 void $ launchAff $ flowRunner defaultGlobalState $ reAllocateConfirmation push initialState ReAllocate 3000.0
+              ShortDistance -> do 
+                when (initialState.props.suggestedRideFlow || initialState.props.isRepeatRide) $ push $ ShortDistanceActionController PopUpModal.OnButton2Click
+
               _ -> pure unit
             if ((initialState.props.sourceLat /= (-0.1)) && (initialState.props.sourceLong /= (-0.1))) then do
               case initialState.props.sourceLat, initialState.props.sourceLong of
@@ -393,7 +396,7 @@ view push state =
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
             , if state.props.currentStage == PickUpFarFromCurrentLocation then (pickUpFarFromCurrLocView push state) else emptyTextView state
             , if state.props.currentStage == DistanceOutsideLimits then (distanceOutsideLimitsView push state) else emptyTextView state
-            , if state.props.currentStage == ShortDistance then (shortDistanceView push state) else emptyTextView state
+            , if state.props.currentStage == ShortDistance && (not state.props.suggestedRideFlow) && (not state.props.isRepeatRide)then (shortDistanceView push state) else emptyTextView state
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
             , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
             , if state.props.showShareAppPopUp && state.data.config.feature.enableShareApp then shareAppPopUp push state else emptyTextView state
@@ -3072,6 +3075,7 @@ homeScreenViewV2 push state =
                               , width MATCH_PARENT
                               , padding $ PaddingBottom 70
                               , nestedScrollView true
+                              , scrollBarY false
                               ][ linearLayout
                                   [ width $ V (screenWidth unit)
                                   , height WRAP_CONTENT
@@ -3191,7 +3195,7 @@ whereToButtonView push state  =
         linearLayout
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , padding $ Padding 16 16 0 16
+          , margin $ if os == "IOS" then Margin 16 16 0 0 else MarginLeft 16
           , gravity CENTER_VERTICAL
           , accessibilityHint "Menu Button"
           , visibility $ boolToVisibility state.props.isHomescreenExpanded
@@ -3199,52 +3203,19 @@ whereToButtonView push state  =
           , rippleColor Color.rippleShade
           ][ imageView
             [ height $ V 20
-            , width $ if state.props.isHomescreenExpanded then V 20 else V 0
-            , gravity CENTER_VERTICAL
+            , width $ V 20 
+            , visibility $ boolToVisibility state.props.isHomescreenExpanded
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_menu_dark"
             ]
           , linearLayout
                 [ width $ V 1
                 , height $ V 20
-                , margin $ if state.props.isHomescreenExpanded then MarginLeft 12 else MarginLeft 0 
-                , gravity CENTER_VERTICAL
+                , margin $ MarginLeft 12
+                , visibility $ boolToVisibility state.props.isHomescreenExpanded
                 , background Color.grey900
                 ][]
           ] 
-          
-        , PrestoAnim.animationSet
-          [ translateInXAnim
-              (if os == "IOS" 
-                then
-                  animConfig
-                        { fromX = 20
-                        , toX = 0
-                        , duration = 300
-                        , ifAnim = not state.props.isHomescreenExpanded 
-                        }
-                else
-                  animConfig
-                    { fromX =  10
-                    , toX =  0
-                    , duration = 300
-                    , ifAnim = not state.props.isHomescreenExpanded 
-                    })
-          , translateOutXAnim
-              (if os == "IOS" 
-                then
-                  animConfig
-                        { toX =  20
-                        , duration = 300
-                        , ifAnim = state.props.isHomescreenExpanded 
-                        }
-                else
-                  animConfig
-                        { toX = 5
-                        , duration = 300
-                        , ifAnim = state.props.isHomescreenExpanded 
-                        })
-          ]
-          $ linearLayout
+        , linearLayout
           [ height WRAP_CONTENT
           , weight 1.0
           , onClick push $ const WhereToClick
@@ -3261,7 +3232,7 @@ whereToButtonView push state  =
               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
               , height $ V 20
               , width $ V 20
-              , margin (Margin 5 5 5 5)
+              , margin $ MarginHorizontal 5 6
               , accessibility DISABLE
               , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
               , gravity BOTTOM
@@ -3272,7 +3243,6 @@ whereToButtonView push state  =
                 , text $ getString WHERE_TO
                 , color Color.black900
                 ] <> FontStyle.subHeading1 TypoGraphy
-
           ]
       ]
     where

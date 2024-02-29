@@ -308,7 +308,8 @@ initData = {
           , destManuallyMoved : false
           , autoCompleteType : Nothing
         }
-    }
+  , suggestedRideFlow : false
+  }
 }
 
 dummySearchLocationModelProps = {

@@ -86,6 +86,7 @@ import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AccelerateInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
@@ -1404,69 +1405,74 @@ public class MobilityCommonBridge extends HyperBridge {
             polyline = setRouteCustomTheme(polylineOptions, animateColor, style, polylineWidth);
             PolylineOptions overlayPolylineOptions = new PolylineOptions();
             overlayPolylines = setRouteCustomTheme(overlayPolylineOptions, animateColor, style, polylineWidth);
-            int drawDuration = polylineAnimationConfigObject.optInt("draw", 700);
+            int drawDuration = polylineAnimationConfigObject.optInt("draw", 400);
             int fadeDuration = polylineAnimationConfigObject.optInt("fade", 1000);
             int delayDuration = polylineAnimationConfigObject.optInt("delay", 200);
 
-            polylineAnimatorSet =  new AnimatorSet();
-
-            polylineDrawingAnimator = ValueAnimator.ofInt(0, 100);
-            polylineDrawingAnimator.setDuration(drawDuration);
-            polylineDrawingAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-
-            try{
+            if(polylineDrawingAnimator == null || !polylineDrawingAnimator.isRunning() ){
+                polylineDrawingAnimator = ValueAnimator.ofInt(0, 100);
+                polylineDrawingAnimator.setDuration(drawDuration);
+                polylineDrawingAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
                 polylineDrawingAnimator.addUpdateListener(animation -> {
-                    if(polyline != null){
-                        List<LatLng> foregroundPoints = polyline.getPoints();
-                        Collections.reverse(foregroundPoints);
-                        int percentageValue = (int) animation.getAnimatedValue();
-                        int pointCount = foregroundPoints.size();
-                        int countToBeRemoved = (int) (pointCount * (percentageValue / 100.0f));
-                        List<LatLng> subListToBeRemoved = foregroundPoints.subList(0, countToBeRemoved);
-                        subListToBeRemoved.clear();
-                        polyline.setColor(animateColor);
-                        if(overlayPolylines != null){
-                            overlayPolylines.setColor(staticColor);
-                            overlayPolylines.setPoints(foregroundPoints);
+                    try{
+                        if(polyline != null){
+                            List<LatLng> foregroundPoints = polyline.getPoints();
+                            Collections.reverse(foregroundPoints);
+                            float percentageValue = (int) animation.getAnimatedValue();
+
+                            int pointCount = foregroundPoints.size();
+                            int countToBeRemoved = (int) (pointCount * (percentageValue / 100.0f));
+                            List<LatLng> subListToBeRemoved = foregroundPoints.subList(0, countToBeRemoved);
+                            subListToBeRemoved.clear();
+                            if (polyline.getColor() != animateColor)
+                                polyline.setColor(animateColor);
+                            if(overlayPolylines != null){
+                                if (overlayPolylines.getColor() != staticColor)
+                                    overlayPolylines.setColor(staticColor);
+                                overlayPolylines.setPoints(foregroundPoints);
+                            }
                         }
+                    }catch(Exception e){
+                        e.printStackTrace();
                     }
                 });
-            }catch(Exception e){
-                e.printStackTrace();
             }
 
-
-            polylineColorFadingAnimator = ValueAnimator.ofObject(new ArgbEvaluator(), animateColor, staticColor);
-            polylineColorFadingAnimator.setInterpolator(new AccelerateInterpolator());
-            polylineColorFadingAnimator.setDuration(fadeDuration);
-
-            try {
+            if(polylineColorFadingAnimator == null || !polylineColorFadingAnimator.isRunning() ){
+                polylineColorFadingAnimator = ValueAnimator.ofObject(new ArgbEvaluator(), animateColor, staticColor);
+                polylineColorFadingAnimator.setInterpolator(new AccelerateInterpolator());
+                polylineColorFadingAnimator.setDuration(fadeDuration);
                 polylineColorFadingAnimator.addUpdateListener(animator ->  {
-                    if(polyline != null)
-                        polyline.setColor((int) animator.getAnimatedValue());
+                    try {
+                        int color = (int) animator.getAnimatedValue();
+                        if(polyline != null && polyline.getColor() != color)
+                            polyline.setColor(color);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 });
-            } catch (Exception e) {
-                e.printStackTrace();
             }
 
-            polylineAnimatorSet.playSequentially(polylineDrawingAnimator, polylineColorFadingAnimator);
-            polylineAnimatorSet.setStartDelay(delayDuration);
-            try{
+            if( polylineAnimatorSet == null || !polylineAnimatorSet.isRunning()){
+                polylineAnimatorSet = new AnimatorSet();
+                polylineAnimatorSet.playSequentially(polylineDrawingAnimator, polylineColorFadingAnimator);
+                polylineAnimatorSet.setStartDelay(delayDuration);
+                polylineAnimatorSet.start();
                 polylineAnimatorSet.addListener(new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationEnd(Animator animation) {
-                        if(isAnimationNeeded)
-                            polylineAnimatorSet.start();
+                        try{
+                            if(isAnimationNeeded && polylineAnimatorSet!=null)
+                                polylineAnimatorSet.start();
+                        }catch(Exception e){
+                            e.printStackTrace();
+                        }
                     }
                 });
-            }catch(Exception e){
-                e.printStackTrace();
             }
-            polylineAnimatorSet.start();
         }catch (Exception e){
             e.printStackTrace();
         }
-
     }
     @JavascriptInterface
     public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName, final String mapRouteConfig) {
@@ -1773,6 +1779,7 @@ public class MobilityCommonBridge extends HyperBridge {
             removeOnMapUpdate();
             if (polylineAnimatorSet != null) {
                 polylineAnimatorSet.cancel();
+                polylineAnimatorSet = null;
             }
             if (polyline != null) {
                 polyline.remove();

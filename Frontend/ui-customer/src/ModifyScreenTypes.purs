@@ -126,6 +126,7 @@ updateRepeatRideDetails state = do
     , isBanner = globalState.homeScreen.props.isBanner
     , sosBannerType = globalState.homeScreen.props.sosBannerType 
     , followsRide = globalState.homeScreen.props.followsRide
+    , suggestedRideFlow = globalState.homeScreen.props.suggestedRideFlow
     }
     })
 
