@@ -209,3 +209,6 @@ homeScreen = do
     GoToMyMetroTickets updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKETS)
+    GoToSafetyEducation updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_SAFETY_EDUCATION)

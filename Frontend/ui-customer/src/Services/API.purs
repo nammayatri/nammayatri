@@ -1253,6 +1253,7 @@ newtype GetProfileRes = GetProfileRes
   , hasCompletedSafetySetup :: Maybe Boolean
   , hasCompletedMockSafetyDrill :: Maybe Boolean
   , followsRide :: Maybe Boolean
+  , isSafetyCenterDisabled :: Maybe Boolean
   }
 
 

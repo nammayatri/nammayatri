@@ -1207,7 +1207,17 @@ export const openNavigation = function (dlat) {
         const config = window.appConfig.navigationAppConfig;
         const isIOS = window.__OS === "IOS";
         const platformConfig = isIOS ? config.ios : config.android;
-        const query = mode == "WALK" ? platformConfig.walkQuery : platformConfig.query;
+        let query ;
+        switch (mode) {
+          case "WALK":
+            query = platformConfig.walkQuery;
+            break;
+          case "DIRECTION": 
+            query = platformConfig.directionQuery;
+            break;
+          default:
+            query = platformConfig.query;
+        }
         if (isIOS) {
           return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
         } else {
@@ -1976,7 +1986,12 @@ export const getExtendedPath = function (path) {
 
 export const setMapPaddingImpl = function (left, topPadding, right, bottom) {
   if (JBridge.setMapPadding) {
-    JBridge.setMapPadding(left, topPadding, right, bottom);
+    if (window.__OS == "IOS") {
+      JBridge.setMapPadding(left, topPadding, right, bottom);
+    }
+    else {
+      JBridge.setMapPadding(window.Android.dpToPx(left), window.Android.dpToPx(topPadding), window.Android.dpToPx(right), window.Android.dpToPx(bottom));
+    }
   }
 }
 

@@ -33,14 +33,13 @@ import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), Sos(..), SosFlow(..), RideShareOptions(..))
 import Services.Config (getSupportNumber)
+import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 
 instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId = case action of
-    BackPressed -> trackAppBackPress appId (getScreen NAMMASAFETY_SCREEN)
-    _ -> trackAppScreenRender appId "screen" (getScreen NAMMASAFETY_SCREEN)
+  performLog = defaultPerformLog
 
 data ScreenOutput
   = GoBack NammaSafetyScreenState
