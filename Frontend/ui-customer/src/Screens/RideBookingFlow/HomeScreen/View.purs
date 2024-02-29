@@ -796,7 +796,7 @@ recenterButtonView push state =
                 ( \action -> do
                     _ <- push action
                     _ <- getCurrentPosition push UpdateCurrentLocation
-                    _ <- pure $ logEvent state.data.logField "ny_user_recenter_btn_click"
+                    _ <- logEvent state.data.logField "ny_user_recenter_btn_click"
                     pure unit
                 )
                 (const $ RecenterCurrentLocation)
@@ -2521,6 +2521,10 @@ getEstimate action flowStatusAction count duration push state = do
           _ <- pure $ printLog "api Results " response
           let (GetQuotesRes resp) = response
           if not (null resp.quotes) || not (null resp.estimates) then do
+            if not (null resp.quotes) then do
+              void $ liftFlow $ logEvent state.data.logField "ny_user_spl_zone_estimates"
+            else do
+              void $ liftFlow $ logEvent state.data.logField "ny_user_estimates"
             doAff do liftEffect $ push $ action response
             pure unit
           else do
@@ -2534,7 +2538,7 @@ getEstimate action flowStatusAction count duration push state = do
           let errResp = err.response
               codeMessage = decodeError errResp.errorMessage "errorMessage"
           if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
-            -- _ <- pure $ logEvent state.data.logField "ny_fs_active_booking_found_on_search"
+            -- _ <- logEvent state.data.logField "ny_fs_active_booking_found_on_search"
             void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
             doAff do liftEffect $ push $ flowStatusAction
           else do
@@ -2739,7 +2743,7 @@ confirmRide action count duration push state = do
             willRideListNull = if fareProductType == "OneWaySpecialZoneAPIDetails" then true else false
         if  status == resp.status && (willRideListNull || not (null resp.rideList)) then do
             doAff do liftEffect $ push $ action response
-            -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
+            -- _ <- logEvent state.data.logField "ny_user_ride_assigned"
             pure unit
         else do
             void $ delay $ Milliseconds duration
@@ -3468,7 +3472,7 @@ mapView push state idTag =
                 ( \action -> do
                     _ <- push action
                     _ <- getCurrentPosition push UpdateCurrentLocation
-                    _ <- pure $ logEvent state.data.logField "ny_user_recenter_btn_click"
+                    _ <- logEvent state.data.logField "ny_user_recenter_btn_click"
                     pure unit
                 )
                 (const $ RecenterCurrentLocation)
