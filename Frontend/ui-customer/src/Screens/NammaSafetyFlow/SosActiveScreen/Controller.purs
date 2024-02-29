@@ -28,14 +28,13 @@ import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Services.API (GetEmergencySettingsRes)
+import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 
 instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId = case action of
-    BackPressed -> trackAppBackPress appId (getScreen NAMMASAFETY_SCREEN)
-    _ -> trackAppScreenRender appId "screen" (getScreen NAMMASAFETY_SCREEN)
+  performLog = defaultPerformLog
 
 data ScreenOutput
   = GoBack NammaSafetyScreenState
@@ -76,6 +75,8 @@ eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixI
 
 eval (SafetyHeaderAction (Header.BackClicked)) state = continueWithCmd state [ pure BackPressed ]
 
+eval (SafetyHeaderAction (Header.LearnMoreClicked)) state = exit $ GoToEducationScreen state
+
 eval (BackPressed) state =
   if state.props.showCallPolice then
     continue state { props { showCallPolice = false } }
@@ -100,8 +101,6 @@ eval CallPolice state = do
   exit $ UpdateAction state "Called Police"
 
 eval (MarkRideAsSafe PrimaryButtonController.OnClick) state = exit $ UpdateAsSafe state
-
-eval LearnMoreClicked state = exit $ GoToEducationScreen state
 
 eval (SelectedCurrentLocation _ _ name) state = continue state { data { currentLocation = name } }
 

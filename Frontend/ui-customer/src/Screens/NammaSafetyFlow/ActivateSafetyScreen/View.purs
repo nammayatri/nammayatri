@@ -54,7 +54,7 @@ screen initialState =
                   lift $ lift $ doAff do liftEffect $ push $ UpdateEmergencySettings response
                   when (initialState.data.sosType /= Just Police)
                     $ do
-                        if elem initialState.data.sosId ["", "mock-sos"] then do
+                        if elem initialState.data.sosId [ "", "mock-sos" ] then do
                           (GetSosDetailsRes sosDetails) <- Remote.getSosDetails initialState.data.rideId
                           case sosDetails.sos of
                             Just sos -> do
@@ -104,7 +104,7 @@ view push state =
                 true, _ -> Header.testSafetyHeaderView (push <<< SafetyHeaderAction)
                 _, true -> emptyTextView
                 false, false -> Header.view (push <<< SafetyHeaderAction) headerConfig
-            , case state.props.confirmTestDrill, state.props.triggeringSos, state.props.showCallPolice of
+            , case state.props.confirmTestDrill, state.props.triggeringSos, (state.props.showCallPolice || state.props.isSafetyCenterDisabled) of
                 true, _, _ -> confirmSafetyDrillView state push
                 _, _, true -> dialPoliceView state push
                 false, true, _ -> triggeringSosView state push
@@ -448,9 +448,10 @@ otherActionsView state push =
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
           ]
-            <> if state.props.showTestDrill 
-                then [] 
-                else [ onClick push $ const $ if state.data.config.feature.enableCustomerSupportForSafety then CallSupport else ShowSafetyIssueView ]
+            <> if state.props.showTestDrill then
+                []
+              else
+                [ onClick push $ const $ if state.data.config.feature.enableCustomerSupportForSafety then CallSupport else ShowSafetyIssueView ]
         )
         [ imageWithTextView
             $ if state.data.config.feature.enableCustomerSupportForSafety then
@@ -658,7 +659,7 @@ triggeringSosView state push =
     ]
     [ sosButtonView state push false
     , disclaimerView state push
-    , warningView state
+    , warningView (getString SOS_WILL_BE_DISABLED) (not state.props.showTestDrill) true
     , dismissSoSButtonView state push
     ]
 
@@ -707,25 +708,26 @@ confirmSafetyDrillView state push =
     , PrimaryButton.view (push <<< StartTestDrill) $ startTestDrillButtonConfig state
     ]
 
-warningView :: forall w. NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
-warningView state =
+warningView :: forall w. String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+warningView text' visibility' useMargin =
   linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , gravity CENTER
-    , padding $ PaddingVertical 12 12
-    , margin $ Margin 16 16 16 0
-    , cornerRadius 8.0
-    , background Color.redOpacity20
-    , visibility $ boolToVisibility $ not state.props.showTestDrill
-    ]
+    ( [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , padding $ PaddingVertical 12 12
+      , cornerRadius 8.0
+      , background Color.redOpacity20
+      , visibility $ boolToVisibility visibility'
+      ]
+        <> if useMargin then [ margin $ Margin 16 16 16 0 ] else [ margin $ MarginTop 16 ]
+    )
     [ imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_alert_triangle_white"
         , height $ V 16
         , width $ V 16
         ]
     , textView
-        $ [ text $ getString SOS_WILL_BE_DISABLED
+        $ [ text text'
           , margin $ MarginLeft 8
           , color Color.white900
           ]
@@ -741,92 +743,99 @@ dialPoliceView state push =
     , padding $ PaddingHorizontal 16 16
     ]
     [ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , stroke $ "1," <> Color.black700
-        , background Color.blackOpacity12
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
         , orientation VERTICAL
-        , margin $ MarginVertical 16 16
-        , padding $ Padding 16 16 16 16
-        , cornerRadius 12.0
         ]
         [ linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER_VERTICAL
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , stroke $ "1," <> Color.black700
+            , background Color.blackOpacity12
+            , orientation VERTICAL
+            , margin $ MarginVertical 16 16
+            , padding $ Padding 16 16 16 16
+            , cornerRadius 12.0
             ]
-            [ imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_map_pin_white"
-                , height $ V 24
-                , width $ V 24
-                , margin $ MarginRight 10
+            [ linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER_VERTICAL
+                ]
+                [ imageView
+                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_map_pin_white"
+                    , height $ V 24
+                    , width $ V 24
+                    , margin $ MarginRight 10
+                    ]
+                , linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    ]
+                    [ textView
+                        $ [ text $ getString YOUR_CURRENT_LOCATION
+                          , color Color.white900
+                          ]
+                        <> FontStyle.subHeading1 TypoGraphy
+                    , textView
+                        $ [ text state.data.currentLocation
+                          , color Color.white900
+                          , margin $ MarginTop 4
+                          ]
+                        <> FontStyle.paragraphText TypoGraphy
+                    ]
                 ]
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , orientation VERTICAL
+                , gravity CENTER_VERTICAL
+                , margin $ MarginTop 16
                 ]
-                [ textView
-                    $ [ text $ getString YOUR_CURRENT_LOCATION
-                      , color Color.white900
-                      ]
-                    <> FontStyle.subHeading1 TypoGraphy
-                , textView
-                    $ [ text state.data.currentLocation
-                      , color Color.white900
-                      , margin $ MarginTop 4
-                      ]
-                    <> FontStyle.paragraphText TypoGraphy
+                [ imageView
+                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_vehicle_details"
+                    , height $ V 24
+                    , width $ V 24
+                    , margin $ MarginRight 10
+                    ]
+                , linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    ]
+                    [ textView
+                        $ [ text $ getString YOUR_VEHICLE_INFO
+                          , color Color.white900
+                          ]
+                        <> FontStyle.subHeading1 TypoGraphy
+                    , textView
+                        $ [ text state.data.vehicleDetails
+                          , color Color.white900
+                          , margin $ MarginTop 4
+                          ]
+                        <> FontStyle.paragraphText TypoGraphy
+                    ]
                 ]
-            ]
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER_VERTICAL
-            , margin $ MarginTop 16
-            ]
-            [ imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_vehicle_details"
-                , height $ V 24
-                , width $ V 24
-                , margin $ MarginRight 10
-                ]
+            , separatorView Color.black500 $ Margin 16 16 16 16
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
-                , orientation VERTICAL
+                , gravity CENTER_VERTICAL
                 ]
-                [ textView
-                    $ [ text $ getString YOUR_VEHICLE_INFO
-                      , color Color.white900
-                      ]
-                    <> FontStyle.subHeading1 TypoGraphy
+                [ imageView
+                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
+                    , height $ V 24
+                    , width $ V 24
+                    , margin $ MarginRight 5
+                    ]
                 , textView
-                    $ [ text state.data.vehicleDetails
-                      , color Color.white900
-                      , margin $ MarginTop 4
+                    $ [ text $ getString POLICE_VIEW_INSTRUCTION
+                      , color Color.black500
                       ]
-                    <> FontStyle.paragraphText TypoGraphy
+                    <> FontStyle.tags TypoGraphy
                 ]
             ]
-        , separatorView Color.black500 $ Margin 16 16 16 16
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER_VERTICAL
-            ]
-            [ imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
-                , height $ V 24
-                , width $ V 24
-                , margin $ MarginRight 5
-                ]
-            , textView
-                $ [ text $ getString POLICE_VIEW_INSTRUCTION
-                  , color Color.black500
-                  ]
-                <> FontStyle.tags TypoGraphy
-            ]
+        , warningView (getString SAFETY_CENTER_IS_DISABLED) state.props.isSafetyCenterDisabled false
         ]
     , linearLayout
         [ height WRAP_CONTENT

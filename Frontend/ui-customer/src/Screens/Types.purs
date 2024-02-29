@@ -786,6 +786,7 @@ type HomeScreenStateProps =
   , rideSearchProps :: RideSearchProps
   , selectedEstimateHeight :: Int
   , suggestedRideFlow :: Boolean
+  , isSafetyCenterDisabled :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -2008,7 +2009,9 @@ type NammaSafetyScreenProps =  {
   shouldCallAutomatically :: Boolean,
   fromDeepLink :: Boolean,
   showRideShareOptionsPopup :: Boolean,
-  showVideoView :: Boolean
+  showVideoView :: Boolean,
+  isSafetyCenterDisabled :: Boolean,
+  fromBannerLink :: Boolean
 }
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 

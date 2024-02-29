@@ -192,6 +192,7 @@ import LocalStorage.Cache (clearCache)
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldMap)
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
+import Screens.FollowRideScreen.Controller (deleteDismisedMockDrills)
 
 import Services.FlowCache as FlowCache
 
@@ -241,7 +242,14 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
             modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen{props{confirmTestDrill = true}})
             hideSplashAndCallFlow activateSafetyScreenFlow
           "sedu" -> do
-            modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen{props{fromDeepLink = true}})
+            case globalPayload ^. _payload ^._deepLinkJSON of
+              Just (Common.QueryParam queryParam) -> do
+                if isJust queryParam.option then do
+                  let videoList = RC.safetyBannerVideoConfigData (DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION) $ fetchLanguage $ getLanguageLocale languageKey
+                  modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { data { videoList = videoList}, props{showVideoView = true, educationViewIndex = Just 0, fromBannerLink = true}})
+                else 
+                  modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen{props{fromDeepLink = true}})
+              _ -> pure unit
             hideSplashAndCallFlow safetyEducationFlow
           "mt" -> hideSplashAndCallFlow metroTicketBookingFlow
           _ -> if skipDefaultCase then pure unit else currentFlowStatus
@@ -323,7 +331,9 @@ currentFlowStatus = do
                           }
                         , props { isBanner = false
                           , sosBannerType = sosBannerType
-                          , followsRide = fromMaybe false (response ^. _followsRide)}
+                          , followsRide = fromMaybe false (response ^. _followsRide)
+                          , isSafetyCenterDisabled = fromMaybe false (response ^. _isSafetyCenterDisabled)
+                        }
                         }          
                         
     getUpdateToken :: String -> FlowBT String Unit --TODO:: Move this to common library
@@ -1525,6 +1535,7 @@ homeScreenFlow = do
                     , showTestDrill = false
                     , showShimmer = true
                     , confirmTestDrill = showtestDrill
+                    , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
                     }
                   , data
                     { rideId = rideId
@@ -1553,7 +1564,7 @@ homeScreenFlow = do
       contacts <- getFormattedContacts 
       let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       if null contacts then do
-        void $ pure $ shareTextMessage "" $ getString $ STR.TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "journey/?id="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
+        void $ pure $ shareTextMessage "" $ getString $ STR.TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "t?i="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
         void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
       else do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{contactList = Just contacts}, props{showShareRide = true}})
@@ -1581,6 +1592,10 @@ homeScreenFlow = do
     GO_TO_MY_METRO_TICKETS -> do
       modifyScreenState $ MetroMyTicketsScreenStateType (\state -> state { props {entryPoint = ST.HomeScreenToMetroMyTickets}})
       metroMyTicketsFlow
+    GO_TO_SAFETY_EDUCATION -> do
+      let videoList = RC.safetyBannerVideoConfigData (DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION) $ fetchLanguage $ getLanguageLocale languageKey
+      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { data { videoList = videoList}, props{showVideoView = true, educationViewIndex = Just 0, fromBannerLink = true}})
+      safetyEducationFlow
     _ -> homeScreenFlow
 
 updateFollower :: Boolean -> Boolean -> Maybe String -> FlowBT String Unit
@@ -1592,7 +1607,9 @@ updateFollower callFollowersApi callInitUi eventType = do
   setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
   void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
   let currentFollowerName = getMockFollowerName ""
-      currentFollower = Arr.find (\follower -> DS.contains (Pattern currentFollowerName) (fromMaybe "" follower.name) ) followers
+      currentFollower = if isJust eventType then 
+                          Arr.find (\follower -> DS.contains (Pattern currentFollowerName) (fromMaybe "" follower.name) ) followers
+                        else Nothing
   modifyScreenState 
     $ FollowRideScreenStateType 
       (\followRideScreen -> 
@@ -1613,6 +1630,7 @@ updateFollower callFollowersApi callInitUi eventType = do
           currentUserOnRide = elem allState.homeScreen.props.currentStage [RideAccepted, RideStarted],
           isMock = elem  eventType [Just "SOS_MOCK_DRILL", Just "SOS_MOCK_DRILL_NOTIFY"]}
         })
+  when (eventType == Just "SOS_MOCK_DRILL") $ liftFlowBT $ deleteDismisedMockDrills currentFollower
   followRideScreenFlow callInitUi
   where
     getFollowers allState = 
@@ -1652,7 +1670,7 @@ followRideScreenFlow callInitUI = do
               sourceLng = (resp^._lon)
               destLat =  ride.destinationLat
               destLng =  ride.destinationLng
-          void $ pure $ openNavigation sourceLat sourceLng "DRIVE"
+          void $ pure $ openNavigation sourceLat sourceLng "DIRECTION"
           followRideScreenFlow false
 
 
@@ -2843,7 +2861,9 @@ updateUserInfoToState state =
               , props { 
                   isBanner = state.props.isBanner
                 , sosBannerType = state.props.sosBannerType 
-                , followsRide = state.props.followsRide}
+                , followsRide = state.props.followsRide
+                , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                }
               }
         )
 
@@ -3771,12 +3791,12 @@ sosActiveFlow = do
 safetyEducationFlow :: FlowBT String Unit
 safetyEducationFlow = do
   let videoList = RC.safetyVideoConfigData (DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION) $ fetchLanguage $ getLanguageLocale languageKey
-  modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { data { videoList = videoList}})
+  modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { data { videoList = if null safetyScreen.data.videoList then videoList else safetyScreen.data.videoList }})
   void $ pure $ cleverTapCustomEvent "ny_user_safety_learn_more_clicked"
   flow <- UI.safetyEducationScreen
   case flow of
     SafetyEducationScreen.Refresh _ -> safetyEducationFlow
-    SafetyEducationScreen.GoToHomeScreen _ -> homeScreenFlow
+    SafetyEducationScreen.GoToHomeScreen _ -> currentFlowStatus
     _ -> safetyEducationFlow
   pure unit
 

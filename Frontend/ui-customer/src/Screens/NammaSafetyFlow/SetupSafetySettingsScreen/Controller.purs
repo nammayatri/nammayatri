@@ -29,18 +29,13 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactList
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), RideShareOptions(..))
+import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 
 instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId = case action of
-    StepsHeaderModelAC _ -> trackAppActionClick appId (getScreen NAMMASAFETY_SCREEN) "steps_header_modal" "backpressed"
-    BackPressed -> trackAppBackPress appId (getScreen NAMMASAFETY_SCREEN)
-    GoToNextStep act -> case act of
-      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen NAMMASAFETY_SCREEN) "next_step_onboard" "primary button"
-      PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen NAMMASAFETY_SCREEN) "no_action" "primary button"
-    _ -> trackAppScreenRender appId "screen" (getScreen NAMMASAFETY_SCREEN)
+  performLog = defaultPerformLog
 
 data ScreenOutput
   = GoBack NammaSafetyScreenState

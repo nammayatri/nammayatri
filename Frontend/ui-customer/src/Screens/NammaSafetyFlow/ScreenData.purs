@@ -69,6 +69,8 @@ initData =
       , fromDeepLink : false
       , showRideShareOptionsPopup : false
       , showVideoView : false
+      , isSafetyCenterDisabled : false
+      , fromBannerLink : false
       }
   }
 

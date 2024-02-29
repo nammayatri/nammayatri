@@ -309,7 +309,8 @@ initData = {
           , autoCompleteType : Nothing
         }
     , selectedEstimateHeight : 0
-  , suggestedRideFlow : false
+    , suggestedRideFlow : false
+    , isSafetyCenterDisabled : false
   }
 }
 
