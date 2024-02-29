@@ -3770,16 +3770,15 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1709131575,
+        "lastModified": 1709211951,
         "narHash": "sha256-tnTg/kD8B8dAwU/Pn5ytiEPu6s3iLTERmJgYraODmQg=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "baccc30fb2703687ac5669d0e0dd3b85e71df326",
+        "rev": "8c3fd8199d8c6110820aa388bdd005477c4d960c",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/fix/adds-derivation-for-timeRFC339",
         "repo": "shared-kernel",
         "type": "github"
       }
