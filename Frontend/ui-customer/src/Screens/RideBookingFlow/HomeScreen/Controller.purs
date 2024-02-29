@@ -85,7 +85,7 @@ import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
-import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, DecodeAddress(..))
+import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, DecodeAddress(..), emergencyContactInitialChatSuggestionId)
 import Constants (defaultDensity)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
@@ -773,6 +773,7 @@ data ScreenOutput = LogoutUser
                   | GoToReportSafetyIssue HomeScreenState
                   | GoToMyMetroTickets HomeScreenState
                   | GoToMetroTicketBookingFlow HomeScreenState
+                  | GoToSafetyEducation HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -940,6 +941,7 @@ data Action = NoAction
             | UpdateChatWithEM Boolean
             | ShareRideAction PopupWithCheckboxController.Action
             | AllChatsLoaded
+            | GoToSafetyEducationScreen
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -1040,13 +1042,18 @@ eval (BannerCarousel (BannerCarousel.OnClick idx)) state =
           BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
           BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
           BannerCarousel.Remote link -> do
-            void $ openUrlInApp link
-            pure NoAction
+            if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link  -- To be removed after deep links are added in iOS
+              then pure GoToSafetyEducationScreen
+            else do
+              void $ openUrlInApp link
+              pure NoAction
           _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
 
 eval (MetroTicketBannerClickAC Banner.OnClick) state =  exit $ GoToMetroTicketBookingFlow state
+
+eval GoToSafetyEducationScreen state = exit $ GoToSafetyEducation state
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -1197,7 +1204,7 @@ eval LoadMessages state = do
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} 
                       else do
                         let currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer" 
-                        if value.sentBy == currentUser then updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = if state.props.isChatWithEMEnabled then getSuggestionsfromKey emChatSuggestion "d6cddbb1a6aee372c0c7f05173da8f95" else [], lastMessage = value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
+                        if value.sentBy == currentUser then updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = if state.props.isChatWithEMEnabled then getSuggestionsfromKey emChatSuggestion emergencyContactInitialChatSuggestionId else [], lastMessage = value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
                         else do
                           let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                               unReadMessages = if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (readMessages < (length allMessages) && state.props.currentStage /= ChatWithDriver)
@@ -1855,7 +1862,7 @@ eval ShareRide state = do
   continueWithCmd state
         [ do
             let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "journey/?id="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
+            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "t?i="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
             void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]

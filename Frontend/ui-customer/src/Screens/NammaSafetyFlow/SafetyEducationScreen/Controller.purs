@@ -24,14 +24,13 @@ import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import JBridge (releaseYoutubeView, switchYoutubeVideo)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
+import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 
 instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId = case action of
-    BackPressed -> trackAppBackPress appId (getScreen NAMMASAFETY_SCREEN)
-    _ -> trackAppScreenRender appId "screen" (getScreen NAMMASAFETY_SCREEN)
+  performLog = defaultPerformLog
 
 data ScreenOutput
   = GoBack NammaSafetyScreenState
@@ -52,9 +51,11 @@ eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixI
 eval (BackPressed) state =
   if state.props.showVideoView then do
     void $ pure $ releaseYoutubeView unit
-    continue state { props { showVideoView = false } }
+    if state.props.fromBannerLink then
+      exit $ GoToHomeScreen state{data { videoList = [] }, props{ fromBannerLink = false, showVideoView = false, educationViewIndex = Nothing }}
+    else continue state { props { showVideoView = false } }
   else if isNothing state.props.educationViewIndex then do
-    let newState = state { props { fromDeepLink = false } }
+    let newState = state { data { videoList = [] }, props { fromDeepLink = false } }
     case state.props.fromDeepLink of
       true -> exit $ GoToHomeScreen newState
       false -> exit $ GoBack newState
@@ -84,7 +85,7 @@ eval (YoutubeVideoStatus status) state = do
             }
           [ pure $ ChangeEducationViewIndex newIndex ]
       else
-        continue state { props { educationViewIndex = Nothing } }
+        continueWithCmd state [ pure BackPressed ]
     Nothing -> continue state
   else
     continue state

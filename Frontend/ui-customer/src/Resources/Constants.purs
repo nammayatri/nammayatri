@@ -310,3 +310,7 @@ ticketCamId = "d8f47b42-50a5-4a97-8dda-e80a3633d7ab"
 
 maxImageUploadInIssueReporting :: Int  
 maxImageUploadInIssueReporting = 3 
+
+-- Id for emergency contact initial chat suggestion on remote config
+emergencyContactInitialChatSuggestionId :: String
+emergencyContactInitialChatSuggestionId = "d6cddbb1a6aee372c0c7f05173da8f95"

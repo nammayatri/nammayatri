@@ -1031,3 +1031,4 @@ data STR
   | MESSAGE_FROM String
   | RIDE_CANCELLED
   | TRACK_RIDE_STRING String String String String
+  | SAFETY_CENTER_IS_DISABLED

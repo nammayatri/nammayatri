@@ -64,7 +64,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.Constants (getKmMeter)
+import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..))
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
@@ -1832,11 +1832,11 @@ getChatSuggestions state = do
     if state.props.isChatWithEMEnabled then do
       let hideInitial = not $ DA.null state.data.messages
       if didReceiverMessage && hideInitial then
-        getSuggestionsfromKey emChatSuggestion "d6cddbb1a6aee372c0c7f05173da8f95"
+        getSuggestionsfromKey emChatSuggestion emergencyContactInitialChatSuggestionId
       else if hideInitial then
         state.data.chatSuggestionsList
       else
-        getSuggestionsfromKey emChatSuggestion "d6cddbb1a6aee372c0c7f05173da8f95"
+        getSuggestionsfromKey emChatSuggestion emergencyContactInitialChatSuggestionId
     else if didReceiverMessage && (not $ DA.null state.data.messages) then
       if isAtPickup then getSuggestionsfromKey chatSuggestion "customerDefaultAP" else getSuggestionsfromKey chatSuggestion "customerDefaultBP"
     else if isAtPickup then

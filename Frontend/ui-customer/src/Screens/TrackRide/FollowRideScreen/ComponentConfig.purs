@@ -126,20 +126,6 @@ getCurrentFollower = fromMaybe dummyFollower
 getFollowerName :: Followers -> FollowRideScreenState -> String
 getFollowerName currentFollower state = if state.data.currentStage == MockFollowRide then getMockFollowerName "" else (fromMaybe currentFollower.mobileNumber currentFollower.name)
 
-getPeekHeight :: FollowRideScreenState -> Int
-getPeekHeight _ =
-  let
-    srcDestViewBounds = runFn1 getLayoutBounds $ getNewIDWithTag "FollowRideSourceDestinationView"
-
-    headerViewBounds = runFn1 getLayoutBounds $ getNewIDWithTag "FollowRideHeaderView"
-
-    finalHeight = srcDestViewBounds.height + headerViewBounds.height
-
-    requiredPeekHeight = getDefaultPixelSize finalHeight
-  in
-    if requiredPeekHeight < 300 then 300 else requiredPeekHeight
-
-
 getChatSuggestions :: FollowRideScreenState -> Array String
 getChatSuggestions state = do 
   let lastMessage = DA.last state.data.messages
