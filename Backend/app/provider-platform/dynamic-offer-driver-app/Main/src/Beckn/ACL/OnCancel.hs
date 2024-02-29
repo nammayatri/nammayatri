@@ -25,7 +25,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
-import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
@@ -201,9 +200,9 @@ mkQuotationBreakup booking =
 
 tfPayments :: DQ.DriverQuote -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res merchant bppConfig = do
-  let amount = fromIntegral (res.estimatedFare.getMoney)
-  let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
-  Just $ L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID (Just amount) Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  let amount = Just $ show res.estimatedFare.getMoney
+  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
+  Just $ L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfItems :: DRB.Booking -> DM.Merchant -> Maybe [Spec.Item]
 tfItems booking merchant = do

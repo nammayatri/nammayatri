@@ -67,7 +67,7 @@ tfOrderBilling mbPhoneNumber = do
 tfOrderFulfillments :: SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> BecknV2.OnDemand.Types.Fulfillment
 tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP = do
   let fulfillmentAgent_ = Nothing
-  let fulfillmentCustomer_ = Nothing
+  let fulfillmentCustomer_ = tfCustomer uiConfirm
   let fulfillmentId_ = mbBppFullfillmentId
   let fulfillmentState_ = Nothing
   let fulfillmentStops_ = Beckn.OnDemand.Utils.Init.mkStops uiConfirm.fromLoc uiConfirm.toLoc Nothing
