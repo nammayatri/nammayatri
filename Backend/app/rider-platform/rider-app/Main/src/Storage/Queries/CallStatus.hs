@@ -39,7 +39,7 @@ findById (Id callStatusId) = findOneWithKV [Se.Is BeamCS.id $ Se.Eq callStatusId
 findByCallSid :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCS.callId $ Se.Eq callSid]
 
-updateCallStatus :: MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
+updateCallStatus :: (MonadFlow m, EsqDBFlow m r) => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
   updateWithKV
     [ Se.Set BeamCS.conversationDuration conversationDuration,
@@ -48,7 +48,7 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
     ]
     [Se.Is BeamCS.id (Se.Eq callId)]
 
-updateCallStatusInformation :: MonadFlow m => Id CallStatus -> Maybe (Id Ride) -> Maybe Text -> Maybe Call.CallService -> Maybe Text -> m ()
+updateCallStatusInformation :: (MonadFlow m, EsqDBFlow m r) => Id CallStatus -> Maybe (Id Ride) -> Maybe Text -> Maybe Call.CallService -> Maybe Text -> m ()
 updateCallStatusInformation (Id callStatusId) rideId merchantId callService dtmfNumberUsed =
   updateWithKV
     [ Se.Set BeamCS.merchantId merchantId,

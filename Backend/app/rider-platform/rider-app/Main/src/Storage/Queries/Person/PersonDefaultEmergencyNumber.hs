@@ -27,13 +27,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonDefaultEmergencyNumber as BeamPDEN
 
-create :: MonadFlow m => PersonDefaultEmergencyNumber -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => PersonDefaultEmergencyNumber -> m ()
 create = createWithKV
 
-createMany :: MonadFlow m => [PersonDefaultEmergencyNumber] -> m ()
+createMany :: (MonadFlow m, EsqDBFlow m r) => [PersonDefaultEmergencyNumber] -> m ()
 createMany = traverse_ create
 
-replaceAll :: MonadFlow m => Id Person -> [PersonDefaultEmergencyNumber] -> m ()
+replaceAll :: (MonadFlow m, EsqDBFlow m r) => Id Person -> [PersonDefaultEmergencyNumber] -> m ()
 replaceAll (Id personId) pdenList = do
   deleteWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
   createMany pdenList

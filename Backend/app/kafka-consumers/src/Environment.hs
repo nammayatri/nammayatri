@@ -19,6 +19,7 @@ import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Streaming.Kafka.Producer.Types as KT
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Flow (FlowR)
@@ -121,7 +122,10 @@ data AppEnv = AppEnv
     coreMetrics :: Metrics.CoreMetricsContainer,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)
 
@@ -131,6 +135,9 @@ buildAppEnv AppCfg {..} consumerType = do
   version <- lookupDeploymentVersion
   hedisEnv <- connectHedis hedisCfg id
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let kafkaProducerForART = Nothing
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

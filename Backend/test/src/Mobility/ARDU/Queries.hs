@@ -33,13 +33,13 @@ import "dynamic-offer-driver-app" Storage.Beam.Booking as BeamB
 --       ]
 --     where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
 
-updateBapUrl :: MonadFlow m => BaseUrl -> Id DBooking.Booking -> m ()
+updateBapUrl :: (MonadFlow m, EsqDBFlow m r) => BaseUrl -> Id DBooking.Booking -> m ()
 updateBapUrl bapUrl (K.Id bookingId) =
   updateWithKV
     [Se.Set bapUri $ showBaseUrl bapUrl]
     [Se.Is BeamB.id $ Se.Eq bookingId]
 
-updateBapUrlWithFake :: MonadFlow m => Id DBooking.Booking -> m ()
+updateBapUrlWithFake :: (MonadFlow m, EsqDBFlow m r) => Id DBooking.Booking -> m ()
 updateBapUrlWithFake = updateBapUrl fakeUrl
 
 fakeUrl :: BaseUrl

@@ -30,7 +30,7 @@ import Tools.Auth
 run :: Env -> Application
 run = withModifiedEnv' $ \modifiedEnv ->
   BU.run appAPI API.handler context modifiedEnv
-    & logRequestAndResponse modifiedEnv
+    & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
     & addServantInfo modifiedEnv.appEnv.version appAPI
     & hashBodyForSignature

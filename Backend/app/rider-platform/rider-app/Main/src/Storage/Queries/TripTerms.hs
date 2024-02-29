@@ -24,7 +24,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.TripTerms as BeamTT
 
-createTripTerms :: MonadFlow m => TripTerms -> m ()
+createTripTerms :: (MonadFlow m, EsqDBFlow m r) => TripTerms -> m ()
 createTripTerms = createWithKV
 
 findById'' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id TripTerms -> m (Maybe TripTerms)

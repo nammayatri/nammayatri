@@ -72,14 +72,14 @@ updateReferralInfo customerNumberHash merchantId referralId driverId = do
     ]
     [Se.And [Se.Is BeamRD.mobileNumberHash (Se.Eq customerNumberHash), Se.Is BeamRD.merchantId (Se.Eq $ getId merchantId)]]
 
-updateNightSafetyChecks :: MonadFlow m => Id RiderDetails -> Bool -> m ()
+updateNightSafetyChecks :: (MonadFlow m, EsqDBFlow m r) => Id RiderDetails -> Bool -> m ()
 updateNightSafetyChecks (Id riderId) nightSafetyChecks = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamRD.nightSafetyChecks nightSafetyChecks, Se.Set BeamRD.updatedAt now]
     [Se.Is BeamRD.id (Se.Eq riderId)]
 
-updateCancellationDues :: MonadFlow m => Id RiderDetails -> HighPrecMoney -> m ()
+updateCancellationDues :: (MonadFlow m, EsqDBFlow m r) => Id RiderDetails -> HighPrecMoney -> m ()
 updateCancellationDues riderId dues = do
   now <- getCurrentTime
   updateOneWithKV
@@ -88,7 +88,7 @@ updateCancellationDues riderId dues = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId.getId)]
 
-updateDisputeChancesUsed :: MonadFlow m => Id RiderDetails -> Int -> m ()
+updateDisputeChancesUsed :: (MonadFlow m, EsqDBFlow m r) => Id RiderDetails -> Int -> m ()
 updateDisputeChancesUsed riderId disputeChancesUsed = do
   now <- getCurrentTime
   updateOneWithKV
@@ -97,7 +97,7 @@ updateDisputeChancesUsed riderId disputeChancesUsed = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId.getId)]
 
-updateDisputeChancesUsedAndCancellationDues :: MonadFlow m => Id RiderDetails -> Int -> HighPrecMoney -> m ()
+updateDisputeChancesUsedAndCancellationDues :: (MonadFlow m, EsqDBFlow m r) => Id RiderDetails -> Int -> HighPrecMoney -> m ()
 updateDisputeChancesUsedAndCancellationDues riderId disputeChancesUsed dues = do
   now <- getCurrentTime
   updateOneWithKV

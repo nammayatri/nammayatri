@@ -43,7 +43,7 @@ findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamM.subscriberId $ Se.E
 findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
 findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
-update :: MonadFlow m => Merchant -> m ()
+update :: (MonadFlow m, EsqDBFlow m r) => Merchant -> m ()
 update org = do
   now <- getCurrentTime
   updateOneWithKV

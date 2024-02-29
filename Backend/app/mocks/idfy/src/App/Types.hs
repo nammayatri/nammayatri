@@ -16,6 +16,7 @@ module App.Types where
 
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
@@ -57,7 +58,10 @@ data AppEnv = AppEnv
     longDurationRetryCfg :: RetryCfg,
     accountId :: AccountId,
     apiKey :: ApiKey,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)
 
@@ -68,6 +72,9 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let kafkaProducerForART = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

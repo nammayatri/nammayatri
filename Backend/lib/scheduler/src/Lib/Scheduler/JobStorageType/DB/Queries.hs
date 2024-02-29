@@ -26,7 +26,7 @@ import Data.Time as T hiding (getCurrentTime)
 import Kernel.Beam.Functions (FromTType'' (..), ToTType'' (..), createWithKVScheduler, findAllWithKVScheduler, findAllWithOptionsKVScheduler, findOneWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Types.Common (Log, MonadFlow, MonadTime (getCurrentTime))
+import Kernel.Types.Common (EsqDBFlow, Log, MonadFlow, MonadTime (getCurrentTime))
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
@@ -141,7 +141,7 @@ getReadyTask :: (MonadThrow m, Log m) => m [(AnyJob t, BS.ByteString)]
 getReadyTask = throwError (InvalidRequest "Not defined for Db_Based Scheduler") $> []
 
 updateStatus ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r) =>
   JobStatus ->
   Id AnyJob ->
   m ()

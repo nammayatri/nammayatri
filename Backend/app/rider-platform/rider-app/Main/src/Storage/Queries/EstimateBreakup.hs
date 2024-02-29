@@ -25,7 +25,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 
-create :: MonadFlow m => EstimateBreakup -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => EstimateBreakup -> m ()
 create = createWithKV
 
 findAllByEstimateIdT :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m [EstimateBreakup]

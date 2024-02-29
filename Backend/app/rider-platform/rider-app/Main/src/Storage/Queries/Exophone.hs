@@ -33,7 +33,7 @@ import qualified Sequelize as Se
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
 
-create :: MonadFlow m => Exophone -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => Exophone -> m ()
 create = createWithKV
 
 findAllMerchantOperatingCityIdsByPhone :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [Id DMOC.MerchantOperatingCity]
@@ -53,7 +53,7 @@ findAllExophones = findAllWithKV [Se.Is BeamE.merchantOperatingCityId $ Se.Not $
 findByMerchantOperatingCityIdAndService :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> CallService -> m [Exophone]
 findByMerchantOperatingCityIdAndService merchantOperatingCityId service = findAllWithKV [Se.And [Se.Is BeamE.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId, Se.Is BeamE.callService $ Se.Eq service]]
 
-updateAffectedPhones :: MonadFlow m => [Text] -> m ()
+updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r) => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
   dbConf <- getMasterBeamConfig
@@ -76,7 +76,7 @@ updateAffectedPhones primaryPhones = do
                 B.||?. B.sqlBool_ (B.concat_ [B.val_ indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
           )
 
-deleteByMerchantOperatingCityId :: MonadFlow m => Id DMOC.MerchantOperatingCity -> m ()
+deleteByMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
 deleteByMerchantOperatingCityId (Id merchantOperatingCityId) = deleteWithKV [Se.Is BeamE.merchantOperatingCityId (Se.Eq merchantOperatingCityId)]
 
 instance FromTType' BeamE.Exophone Exophone where

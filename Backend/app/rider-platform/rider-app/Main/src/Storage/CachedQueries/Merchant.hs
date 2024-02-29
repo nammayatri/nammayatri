@@ -94,7 +94,7 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 makeSubscriberIdKey :: ShortId Subscriber -> Text
 makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
 
-update :: MonadFlow m => Merchant -> m ()
+update :: (MonadFlow m, EsqDBFlow m r) => Merchant -> m ()
 update = Queries.update
 
 -- Use only for backward compatibility

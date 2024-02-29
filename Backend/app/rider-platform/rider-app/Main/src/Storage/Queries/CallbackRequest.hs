@@ -23,7 +23,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Storage.Beam.CallbackRequest as BeamCR
 
-create :: MonadFlow m => CallbackRequest -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => CallbackRequest -> m ()
 create = createWithKV
 
 instance FromTType' BeamCR.CallbackRequest CallbackRequest where

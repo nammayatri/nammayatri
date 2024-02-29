@@ -32,6 +32,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
+import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -104,7 +105,10 @@ data AppEnv = AppEnv
     slackEnv :: SlackEnv,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     cacheConfig :: CacheConfig,
-    kafkaProducerTools :: KafkaProducerTools
+    kafkaProducerTools :: KafkaProducerTools,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)
 
@@ -120,6 +124,9 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let modifierFunc = ("dashboard:" <>)
   let nonCriticalModifierFunc = ("dashboard:non-critical:" <>)
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis hedisCfg modifierFunc
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
   hedisClusterEnv <-

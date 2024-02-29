@@ -19,7 +19,7 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersRentalDetails as BeamFPRD
 
-create :: MonadFlow m => Domain.FullFareParametersRentalDetails -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => Domain.FullFareParametersRentalDetails -> m ()
 create = createWithKV
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FareParameters -> m (Maybe Domain.FullFareParametersRentalDetails)

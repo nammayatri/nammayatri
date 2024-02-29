@@ -90,7 +90,10 @@ data HandlerEnv = HandlerEnv
     nwAddress :: BaseUrl,
     isBecknSpecVersion2 :: Bool,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
-    schedulerType :: SchedulerType
+    schedulerType :: SchedulerType,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)
 
@@ -106,6 +109,9 @@ buildHandlerEnv HandlerCfg {..} = do
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

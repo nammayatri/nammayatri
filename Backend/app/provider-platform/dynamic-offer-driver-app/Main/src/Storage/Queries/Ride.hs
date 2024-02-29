@@ -377,7 +377,7 @@ instance BeamBackend.BeamSqlBackend be => B.HasSqlEqualityCheck be Common.Bookin
 instance BeamBackend.HasSqlValueSyntax be String => BeamBackend.HasSqlValueSyntax be Common.BookingStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-updateSafetyAlertTriggered :: MonadFlow m => Id Ride -> m ()
+updateSafetyAlertTriggered :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> m ()
 updateSafetyAlertTriggered rideId = do
   updateOneWithKV
     [ Se.Set BeamR.safetyAlertTriggered True

@@ -15,6 +15,7 @@
 module Environment where
 
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
@@ -23,6 +24,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
 import Lib.GoogleConfig (GoogleCfgUnencrypted)
+import System.Environment (lookupEnv)
 import Tools.Metrics
 
 data AppCfg = AppCfg
@@ -45,7 +47,10 @@ data AppEnv = AppEnv
     mockDataPath :: FilePath,
     googleCfg :: Maybe GoogleCfgUnencrypted,
     version :: DeploymentVersion,
-    snapToRoadIdentityMode :: Bool
+    snapToRoadIdentityMode :: Bool,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)
 
@@ -57,6 +62,9 @@ buildAppEnv AppCfg {..} = do
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let kafkaProducerForART = Nothing
   isShuttingDown <- mkShutdown
   return $ AppEnv {..}
 

@@ -25,10 +25,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as BeamR
 
-create :: MonadFlow m => DR.Rating -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => DR.Rating -> m ()
 create = createWithKV
 
-updateRating :: MonadFlow m => Id Rating -> Id Person -> Int -> Maybe Text -> Maybe Bool -> m ()
+updateRating :: (MonadFlow m, EsqDBFlow m r) => Id Rating -> Id Person -> Int -> Maybe Text -> Maybe Bool -> m ()
 updateRating (Id ratingId) (Id riderId) newRatingValue newFeedbackDetails wasOfferedAssistance = do
   now <- getCurrentTime
   updateOneWithKV

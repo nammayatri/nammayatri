@@ -57,6 +57,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalClusterEnv <-
@@ -70,6 +71,8 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
   consumerId <- G.generateGUIDTextIO
+  let requestId = Nothing
+      shouldLogRequestId = False
   let cacheConfig = CacheConfig {configsExpTime = 0}
   let schedulerEnv = SchedulerEnv {cacheConfig, ..}
   when (tasksPerIteration <= 0) $ do

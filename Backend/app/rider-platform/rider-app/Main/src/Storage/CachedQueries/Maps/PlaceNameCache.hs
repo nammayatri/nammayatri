@@ -19,7 +19,7 @@ import Domain.Types.Maps.PlaceNameCache
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Utils.Common (CacheFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.Maps.PlaceNameCache as Queries
 
 findPlaceByPlaceId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m [PlaceNameCache]
@@ -34,7 +34,7 @@ findPlaceByGeoHash geoHash =
     Just a -> return a
     Nothing -> cachedPlaceByGeoHash geoHash /=<< Queries.findPlaceByGeoHash geoHash
 
-create :: MonadFlow m => PlaceNameCache -> m ()
+create :: (CacheFlow m r, Esq.EsqDBFlow m r) => PlaceNameCache -> m ()
 create = Queries.create
 
 -- test with empty list

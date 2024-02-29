@@ -29,7 +29,7 @@ import qualified Storage.Beam.Issue as BeamI
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.Person ()
 
-insertIssue :: MonadFlow m => Issue -> m ()
+insertIssue :: (MonadFlow m, EsqDBFlow m r) => Issue -> m ()
 insertIssue = createWithKV
 
 findByCustomerId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
@@ -109,14 +109,14 @@ instance ToTType' BeamI.Issue Issue where
         BeamI.updatedAt = updatedAt
       }
 
-updateIssueStatus :: MonadFlow m => Text -> Domain.IssueStatus -> m ()
+updateIssueStatus :: (MonadFlow m, EsqDBFlow m r) => Text -> Domain.IssueStatus -> m ()
 updateIssueStatus ticketId status = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamI.status status, Se.Set BeamI.updatedAt now]
     [Se.Is BeamI.ticketId (Se.Eq (Just ticketId))]
 
-updateTicketId :: MonadFlow m => Id Issue -> Text -> m ()
+updateTicketId :: (MonadFlow m, EsqDBFlow m r) => Id Issue -> Text -> m ()
 updateTicketId issueId ticketId = do
   now <- getCurrentTime
   updateOneWithKV

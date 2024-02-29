@@ -54,5 +54,5 @@ clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchanOperatingCityId = do
   Hedis.del (makeMerchantOperatingCityIdKey merchanOperatingCityId)
 
-updateMerchantServiceUsageConfig :: MonadFlow m => MerchantServiceUsageConfig -> m ()
+updateMerchantServiceUsageConfig :: (CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig

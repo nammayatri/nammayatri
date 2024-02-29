@@ -17,10 +17,11 @@ module Lib.Payment.Domain.Types.PaymentOrder where
 
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
-import Kernel.Prelude
-import Kernel.Types.Common
+import Kernel.Prelude hiding (show)
+import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Lib.Payment.Domain.Types.Common
+import Prelude (Show (..))
 
 data PaymentOrderE e = PaymentOrder
   { id :: Id PaymentOrder,
@@ -56,6 +57,9 @@ data PaymentOrderE e = PaymentOrder
     updatedAt :: UTCTime
   }
   deriving (Generic)
+
+instance Show (PaymentOrderE 'AsEncrypted) where
+  show = show
 
 data PaymentOrderAPIEntity = PaymentOrderAPIEntity
   { id :: Id PaymentOrder,

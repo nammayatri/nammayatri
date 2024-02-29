@@ -29,7 +29,7 @@ import qualified Storage.Beam.LocationMapping as BeamLM
 latestTag :: Text
 latestTag = "LATEST"
 
-create :: MonadFlow m => LocationMapping -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> m ()
 create = createWithKV
 
 countOrders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m Int
@@ -72,12 +72,12 @@ updatePastMappingVersions entityId order = do
   traverse_ incrementVersion mappings
 
 -- This function is not correct, need to correct it later
-incrementVersion :: MonadFlow m => LocationMapping -> m ()
+incrementVersion :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> m ()
 incrementVersion mapping = do
   newVersion <- getNewVersion mapping
   updateVersion mapping.id newVersion
 
-getNewVersion :: MonadFlow m => LocationMapping -> m Text
+getNewVersion :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> m Text
 getNewVersion mapping =
   case T.splitOn "-" mapping.version of
     ["v", versionNum] -> do
@@ -87,7 +87,7 @@ getNewVersion mapping =
       pure $ "v-" <> T.pack (show (oldVersionInt + 1))
     _ -> pure "v-1"
 
-updateVersion :: MonadFlow m => Id LocationMapping -> Text -> m ()
+updateVersion :: (MonadFlow m, EsqDBFlow m r) => Id LocationMapping -> Text -> m ()
 updateVersion id version = do
   now <- getCurrentTime
   updateWithKV

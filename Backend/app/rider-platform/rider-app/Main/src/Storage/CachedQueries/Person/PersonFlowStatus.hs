@@ -21,10 +21,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Storage.Queries.Person.PersonFlowStatus as Queries
 
-create :: MonadFlow m => PersonFlowStatus -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => PersonFlowStatus -> m ()
 create = Queries.create
 
 getStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m (Maybe FlowStatus)
@@ -33,13 +33,13 @@ getStatus personId =
     Just a -> return a
     Nothing -> flip whenJust (cachedStatus personId) /=<< Queries.getStatus personId
 
-updateStatus :: MonadFlow m => Id Person -> FlowStatus -> m ()
+updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Person -> FlowStatus -> m ()
 updateStatus = Queries.updateStatus
 
-deleteByPersonId :: MonadFlow m => Id Person -> m ()
+deleteByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 deleteByPersonId = Queries.deleteByPersonId
 
-updateToIdleMultiple :: MonadFlow m => [Id Person] -> UTCTime -> m ()
+updateToIdleMultiple :: (MonadFlow m, EsqDBFlow m r) => [Id Person] -> UTCTime -> m ()
 updateToIdleMultiple = Queries.updateToIdleMultiple
 
 cachedStatus :: CacheFlow m r => Id Person -> FlowStatus -> m ()
@@ -51,6 +51,6 @@ cachedStatus personId flowStatus = do
 makeFlowStatusKey :: Id Person -> Text
 makeFlowStatusKey personId = "CachedQueries:Person:FlowStatus-" <> personId.getId
 
-clearCache :: MonadFlow m => CacheFlow m r => Id Person -> m ()
+clearCache :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 clearCache personId = do
   Hedis.del (makeFlowStatusKey personId)

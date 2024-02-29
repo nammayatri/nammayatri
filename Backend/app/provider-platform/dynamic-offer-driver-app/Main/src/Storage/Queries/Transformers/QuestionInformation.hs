@@ -23,7 +23,7 @@ import Tools.Error
 convertOptionsToTable :: [Domain.Types.QuestionInformation.OptionEntity] -> Data.Aeson.Value
 convertOptionsToTable = Data.Aeson.toJSON
 
-getOptionsFromTable :: MonadFlow m => Data.Aeson.Value -> m [Domain.Types.QuestionInformation.OptionEntity]
+getOptionsFromTable :: (MonadFlow m, EsqDBFlow m r) => Data.Aeson.Value -> m [Domain.Types.QuestionInformation.OptionEntity]
 getOptionsFromTable options = valueToMaybe options >>= fromMaybeM NotAbleToDecodeTheOptionsInLms
 
 valueToMaybe :: (MonadFlow m, FromJSON Domain.Types.QuestionInformation.OptionEntity) => Data.Aeson.Value -> m (Maybe [Domain.Types.QuestionInformation.OptionEntity])

@@ -35,7 +35,7 @@ import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
 
-createDetails :: MonadFlow m => QuoteDetails -> m ()
+createDetails :: (MonadFlow m, EsqDBFlow m r) => QuoteDetails -> m ()
 createDetails = \case
   OneWayDetails _ -> pure ()
   RentalDetails rentalDetails -> QueryRD.createRentalDetails rentalDetails
@@ -43,16 +43,16 @@ createDetails = \case
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
   InterCityDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
 
-createQuote :: MonadFlow m => Quote -> m ()
+createQuote :: (MonadFlow m, EsqDBFlow m r) => Quote -> m ()
 createQuote = createWithKV
 
-create :: MonadFlow m => Quote -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => Quote -> m ()
 create quote = do
   traverse_ QTT.createTripTerms (quote.tripTerms)
   _ <- createDetails (quote.quoteDetails)
   createQuote quote
 
-createMany :: MonadFlow m => [Quote] -> m ()
+createMany :: (MonadFlow m, EsqDBFlow m r) => [Quote] -> m ()
 createMany = traverse_ create
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Quote -> m (Maybe Quote)
