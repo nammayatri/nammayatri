@@ -224,7 +224,7 @@ mkItemTagList quote isValueAddNP =
                   descriptorName = Just "Agent Duration to Pickup in Seconds",
                   descriptorShortDesc = Nothing
                 },
-          tagValue = Just $ show $ (quote.durationToPickup.getSeconds `div` 60)
+          tagValue = Just . show $ quote.durationToPickup.getSeconds `div` 60
         }
     ]
     <> mkSpecialLocationTag quote isValueAddNP
