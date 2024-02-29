@@ -68,9 +68,6 @@ ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offe
 ALTER TABLE atlas_driver_offer_bpp.ride
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
 
-ALTER TABLE atlas_driver_offer_bpp.exophone
-ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city (id);
-
 -- UPDATING VALUES OF MERCHANT_OPERATING_CITY_ID FOR CONFIG TABLES
 UPDATE atlas_driver_offer_bpp.go_home_config
 SET merchant_operating_city_id = merchant_operating_city.id

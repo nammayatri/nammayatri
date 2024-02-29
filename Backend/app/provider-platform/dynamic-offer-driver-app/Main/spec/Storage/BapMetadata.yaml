@@ -1,0 +1,38 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  HighPrecMoney: Kernel.Types.Common
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Text: Data.Text
+  BaseUrl: Servant.Client.Core
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
+
+BapMetadata:
+  tableName: bap_metadata
+
+  fields:
+    id : Id BapMetadata
+    name : Text
+    logoUrl : BaseUrl
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  beamType:
+    logoUrl: Text
+
+  toTType:
+    logoUrl: showBaseUrl|I
+
+  fromTType:
+    logoUrl: parseBaseUrl|MI
+
+
+  excludedFields: [merchantOperatingCityId, merchantId]

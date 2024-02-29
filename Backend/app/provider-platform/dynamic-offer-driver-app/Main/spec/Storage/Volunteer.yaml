@@ -1,0 +1,28 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+
+Volunteer:
+  tableName: volunteer
+
+  fields:
+    id : Id Volunteer
+    place : Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByPlace:
+      kvFunction: findAllWithKV
+      where: place

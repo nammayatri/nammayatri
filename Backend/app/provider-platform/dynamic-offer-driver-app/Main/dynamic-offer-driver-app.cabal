@@ -202,7 +202,6 @@ library
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp
-      Domain.Types.BapMetadata
       Domain.Types.Beckn.Status
       Domain.Types.BlackListOrg
       Domain.Types.Booking
@@ -211,13 +210,11 @@ library
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
-      Domain.Types.CancellationReason
       Domain.Types.City
       Domain.Types.Coins.CoinHistory
       Domain.Types.Coins.CoinsConfig
       Domain.Types.Coins.PurchaseHistory
       Domain.Types.Common
-      Domain.Types.DailyStats
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
       Domain.Types.DriverBlockReason
@@ -235,9 +232,7 @@ library
       Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Types.DriverPlan
       Domain.Types.DriverQuote
-      Domain.Types.DriverReferral
       Domain.Types.DriverStats
-      Domain.Types.Exophone
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.DriverExtraFeeBounds
@@ -276,15 +271,12 @@ library
       Domain.Types.Message.Message
       Domain.Types.Message.MessageReport
       Domain.Types.Message.MessageTranslation
-      Domain.Types.MetaData
       Domain.Types.Notification
       Domain.Types.OnCancel
       Domain.Types.OnUpdate
       Domain.Types.Person
       Domain.Types.Plan
-      Domain.Types.PlanTranslation
       Domain.Types.Quote
-      Domain.Types.Rating
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
       Domain.Types.Ride
@@ -295,10 +287,8 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
-      Domain.Types.Translations
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
-      Domain.Types.Volunteer
       Domain.Types.WhiteListOrg
       Environment
       Lib.DriverCoins.Coins
@@ -356,7 +346,6 @@ library
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
-      Storage.Beam.BapMetadata
       Storage.Beam.BecknRequest
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
@@ -365,12 +354,10 @@ library
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
-      Storage.Beam.CancellationReason
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
       Storage.Beam.Coins.PurchaseHistory
       Storage.Beam.Common
-      Storage.Beam.DailyStats
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Beam.DriverBlockReason
@@ -386,9 +373,7 @@ library
       Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
       Storage.Beam.DriverPlan
       Storage.Beam.DriverQuote
-      Storage.Beam.DriverReferral
       Storage.Beam.DriverStats
-      Storage.Beam.Exophone
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
       Storage.Beam.FareParameters.FareParametersRentalDetails
@@ -433,14 +418,11 @@ library
       Storage.Beam.Message.Message
       Storage.Beam.Message.MessageReport
       Storage.Beam.Message.MessageTranslation
-      Storage.Beam.MetaData
       Storage.Beam.Notification
       Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Plan
-      Storage.Beam.PlanTranslation
       Storage.Beam.Quote
-      Storage.Beam.Rating
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
       Storage.Beam.Ride.Table
@@ -451,9 +433,7 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
       Storage.Beam.SystemConfigs
-      Storage.Beam.Translations
       Storage.Beam.Vehicle
-      Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.BecknConfig
@@ -492,7 +472,6 @@ library
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.DriverEdaKafka
       Storage.Clickhouse.DriverFee
-      Storage.Queries.BapMetadata
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
@@ -501,11 +480,9 @@ library
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationCharges
-      Storage.Queries.CancellationReason
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.Coins.PurchaseHistory
-      Storage.Queries.DailyStats
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation
@@ -525,9 +502,9 @@ library
       Storage.Queries.DriverPlan
       Storage.Queries.DriverQuote
       Storage.Queries.DriverQuote.Internal
-      Storage.Queries.DriverReferral
+      Storage.Queries.DriverReferralExtra
       Storage.Queries.DriverStats
-      Storage.Queries.Exophone
+      Storage.Queries.ExophoneExtra
       Storage.Queries.FareParameters
       Storage.Queries.FareParameters.FareParametersProgressiveDetails
       Storage.Queries.FareParameters.FareParametersRentalDetails
@@ -569,7 +546,6 @@ library
       Storage.Queries.Message.Message
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
-      Storage.Queries.MetaData
       Storage.Queries.Notification
       Storage.Queries.Person
       Storage.Queries.Person.GetNearestDrivers
@@ -577,9 +553,8 @@ library
       Storage.Queries.Person.GetNearestGoHomeDrivers
       Storage.Queries.Person.Internal
       Storage.Queries.Plan
-      Storage.Queries.PlanTranslation
       Storage.Queries.Quote
-      Storage.Queries.Rating
+      Storage.Queries.RatingExtra
       Storage.Queries.RegistrationToken
       Storage.Queries.RegistryMapFallback
       Storage.Queries.Ride
@@ -589,12 +564,12 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
-      Storage.Queries.Translations
+      Storage.Queries.TranslationsExtra
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
-      Storage.Queries.Volunteer
       Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
       Tools.Auth
@@ -620,57 +595,93 @@ library
       API.Action.UI.SpecialLocation
       API.Types.UI.LmsModule
       API.Types.UI.Reels
+      Domain.Types.BapMetadata
       Domain.Types.BecknConfig
+      Domain.Types.CancellationReason
+      Domain.Types.DailyStats
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
+      Domain.Types.DriverReferral
       Domain.Types.Estimate
       Domain.Types.EventTracker
+      Domain.Types.Exophone
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsModule
       Domain.Types.LmsModuleTranslation
       Domain.Types.LmsModuleVideoInformation
       Domain.Types.LmsVideoTranslation
       Domain.Types.MerchantState
+      Domain.Types.MetaData
       Domain.Types.ModuleCompletionInformation
+      Domain.Types.PlanTranslation
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
+      Domain.Types.Rating
       Domain.Types.ReelsData
       Domain.Types.SubscriptionConfig
+      Domain.Types.Translations
       Domain.Types.ValueAddNP
+      Domain.Types.Volunteer
+      Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
+      Storage.Beam.CancellationReason
+      Storage.Beam.DailyStats
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPoolConfig
+      Storage.Beam.DriverReferral
       Storage.Beam.Estimate
       Storage.Beam.EventTracker
+      Storage.Beam.Exophone
       Storage.Beam.InterCityTravelCities
       Storage.Beam.LmsModule
       Storage.Beam.LmsModuleTranslation
       Storage.Beam.LmsModuleVideoInformation
       Storage.Beam.LmsVideoTranslation
       Storage.Beam.MerchantState
+      Storage.Beam.MetaData
       Storage.Beam.ModuleCompletionInformation
+      Storage.Beam.PlanTranslation
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
+      Storage.Beam.Rating
       Storage.Beam.ReelsData
       Storage.Beam.SubscriptionConfig
+      Storage.Beam.Translations
       Storage.Beam.ValueAddNP
+      Storage.Beam.Volunteer
+      Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
+      Storage.Queries.CancellationReason
+      Storage.Queries.DailyStats
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPoolConfig
+      Storage.Queries.DriverReferral
       Storage.Queries.Estimate
       Storage.Queries.EventTracker
+      Storage.Queries.Exophone
       Storage.Queries.InterCityTravelCities
       Storage.Queries.LmsModule
       Storage.Queries.LmsModuleTranslation
       Storage.Queries.LmsModuleVideoInformation
       Storage.Queries.LmsVideoTranslation
       Storage.Queries.MerchantState
+      Storage.Queries.MetaData
       Storage.Queries.ModuleCompletionInformation
+      Storage.Queries.OrphanInstances.CancellationReason
+      Storage.Queries.OrphanInstances.DriverReferral
+      Storage.Queries.OrphanInstances.Exophone
+      Storage.Queries.OrphanInstances.Rating
+      Storage.Queries.OrphanInstances.Translations
+      Storage.Queries.OrphanInstances.Volunteer
+      Storage.Queries.PlanTranslation
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
+      Storage.Queries.Rating
       Storage.Queries.ReelsData
       Storage.Queries.SubscriptionConfig
+      Storage.Queries.Translations
       Storage.Queries.ValueAddNP
+      Storage.Queries.Volunteer
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:

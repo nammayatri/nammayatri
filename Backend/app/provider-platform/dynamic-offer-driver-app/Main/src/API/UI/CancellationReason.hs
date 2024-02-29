@@ -20,7 +20,6 @@ module API.UI.CancellationReason
 where
 
 import qualified Domain.Action.UI.CancellationReason as DCancellationReason
-import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -41,7 +40,7 @@ type API =
 handler :: FlowServer API
 handler = list
 
-type CancellationReasonListRes = [SCR.CancellationReasonAPIEntity]
+type CancellationReasonListRes = [DCancellationReason.CancellationReasonAPIEntity]
 
 list :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler CancellationReasonListRes
 list _ = withFlowHandlerAPI DCancellationReason.list
