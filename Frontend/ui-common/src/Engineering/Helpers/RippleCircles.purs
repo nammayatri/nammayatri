@@ -81,6 +81,10 @@ removeSOSRipples _ = do
   void $ runEffectFn1 removeGroundOverlay groundOverlayConfig{id = "SOSDangerOverlay"}
   void $ pure $ removeMarker "ny_ic_red_circle"
 
+removeSafeOverlay :: String -> Effect Unit
+removeSafeOverlay _ = do
+  void $ runEffectFn1 removeGroundOverlay groundOverlayConfig{id = "SOSSafeOverlay"}
+
 circleRippleConfig :: CircleRippleConfig
 circleRippleConfig = {
   delay : 100

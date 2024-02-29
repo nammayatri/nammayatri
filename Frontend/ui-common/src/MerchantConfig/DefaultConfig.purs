@@ -46,10 +46,12 @@ defaultNavigationAppConfig = {
         query : "google.navigation:q=%f,%f"
       , packageName : "com.google.android.apps.maps"
       , walkQuery : "google.navigation:q=%f,%f&mode=w"
+      , directionQuery : "http://maps.google.com?saddr=&daddr=%f,%f&dirflg=d"
       }
     , ios : {
         query : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
       , walkQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=w"
+      , directionQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
       , packageName : ""
       }
     }

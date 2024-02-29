@@ -1,7 +1,7 @@
 module Resources.Localizable.EN where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
@@ -1021,3 +1021,4 @@ getEN stringKey =
         MESSAGE_FROM name -> "Message from " <> name
         RIDE_CANCELLED -> "Ride Cancelled"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Hey,\n\nI am riding with " <> appName <>" Driver " <> driverName <> "! Track this ride on: " <> trackLink <> "\n\nVehicle number: " <> vehicleNumber
+        SAFETY_CENTER_IS_DISABLED -> "SOS feature is disabled as it was misused thrice"

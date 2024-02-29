@@ -22,7 +22,7 @@ import Components.DriverInfoCard.Common.View (addressShimmerView, driverDetailsV
 import Constants.Configs (getPolylineAnimationConfig)
 import Data.Array (any, head, length, mapWithIndex, (!!), notElem, elem)
 import Data.Either (Either(..))
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried (runFn2, runFn1)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Debug (spy)
@@ -30,17 +30,17 @@ import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap, safeMarginTopWithDefault, screenWidth, safeMarginBottomWithDefault, safeMarginTop)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer, makeNumber)
-import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig, startChatListenerService, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, clearChatMessages, getKeyInSharedPrefKeys, scrollOnResume)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer, makeNumber, getDefaultPixelSize)
+import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig, startChatListenerService, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, clearChatMessages, getKeyInSharedPrefKeys, scrollOnResume, setMapPadding, getLayoutBounds)
 import Mobility.Prelude (boolToVisibility)
 import Prelude
-import PrestoDOM (PrestoDOM, Screen, BottomSheetState(..), onAnimationEnd, onBackPressed, onClick)
+import PrestoDOM (PrestoDOM, Screen, BottomSheetState(..), onAnimationEnd, onBackPressed, onClick, afterRender)
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout, frameLayout, imageView, linearLayout, relativeLayout, scrollView, textView)
 import PrestoDOM.Properties (alignParentBottom, accessibility, alpha, background, clickable, color, cornerRadii, cornerRadius, enableShift, gradient, gravity, height, id, imageWithFallback, margin, orientation, padding, peakHeight, stroke, sheetState, text, visibility, weight, width)
 import PrestoDOM.Types.DomAttributes (Accessiblity(..), Corners(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..))
-import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval, isMockDrill, localDelay, getPoint)
+import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval, isMockDrill, localDelay, getPoint, getPeekHeight, getSosStatus)
 import Screens.FollowRideScreen.ScreenData (mockDriverInfo, mockDriverLocation, mockRoute)
-import Screens.FollowRideScreen.Config (SOSOverlayConfig, genericHeaderConfig, getCurrentFollower, getDriverDetails, getFollowerName, getPeekHeight, getSosOverlayConfig, getTripDetails, primaryButtonConfig, getChatSuggestions)
+import Screens.FollowRideScreen.Config (SOSOverlayConfig, genericHeaderConfig, getCurrentFollower, getDriverDetails, getFollowerName, getSosOverlayConfig, getTripDetails, primaryButtonConfig, getChatSuggestions)
 import Services.API (GetDriverLocationResp(..), GetRouteResp(..), LatLong(..), RideBookingRes(..), Route(..), Snapped(..))
 import Services.Backend (TrackingType(..), drawMapRoute, getDriverLocation, getRoute, getRouteMarkers, makeGetRouteReq, normalRoute, rideBooking, walkCoordinate, walkCoordinates)
 import Types.App (GlobalState(..), defaultGlobalState)
@@ -65,6 +65,9 @@ import Storage
 import Components.MessagingView as MessagingView
 import Locale.Utils (getLanguageLocale, languageKey)
 import Common.Resources.Constants (emChatSuggestion)
+import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
+import Foreign (unsafeToForeign)
+
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput
 screen initialState globalState =
@@ -79,6 +82,10 @@ screen initialState globalState =
               FollowingRide -> do
                 _ <- pure $ enableMyLocation false
                 let currentFollower = getCurrentFollower initialState.data.currentFollower
+                logEventWithMultipleParams initialState.data.logField "ny_user_following_ride" 
+                  $ [ { key : "BookingId", value : unsafeToForeign $ currentFollower.bookingId},
+                      { key : "FollowerId", value : unsafeToForeign $ getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys }
+                    ]
                 when (currentFollower.priority == 0 && not initialState.props.chatCallbackInitiated) $ do
                   case initialState.data.driverInfoCardState of
                     Nothing -> pure unit
@@ -412,7 +419,7 @@ bottomSheetView push state =
             ]
         ]
     ]
-
+    
 messagingView :: forall w. (Action -> Effect Unit) -> FollowRideScreenState -> PrestoDOM (Effect Unit) w
 messagingView push state = 
   relativeLayout
@@ -446,7 +453,7 @@ sosOverlayView push config =
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , gravity CENTER
-              , onClick push $ const BackPressed
+              , onClick push $ const DismissOverlay
               , padding $ Padding 5 5 5 5
               ]
               [ imageView
@@ -664,7 +671,7 @@ driverLocationTracking push action duration id routeState = do
                 Right respBooking -> do
                   updateSosStatus respBooking
                   liftFlow $ push $ action respBooking
-                  when ((getPeekHeight state) == 300) $ liftFlow $ push $ UpdatePeekHeight
+                  when ((getPeekHeight state) == 156) $ liftFlow $ push $ UpdatePeekHeight
                 Left err -> pure unit
         (GlobalState gs) <- getState
         let
@@ -707,7 +714,7 @@ driverLocationTracking push action duration id routeState = do
             $ globalState
                 { followRideScreen
                   { data
-                    { sosStatus = resp.sosStatus
+                    { sosStatus = getSosStatus resp.sosStatus resp.id
                     }
                   }
                 }
@@ -753,7 +760,7 @@ driverLocationTracking push action duration id routeState = do
               point = { lat: srcLat, lng: srcLon }
             addSosMarkers state.data.sosStatus point
             liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ride.destination specialLocationTag
-            liftFlow $ animateCamera srcLat srcLon 17.0 "ZOOM"
+            liftFlow $ animateCamera srcLat srcLon 16.0 "ZOOM"
             void $ delay $ Milliseconds duration
             void
               $ modifyState \(GlobalState globalState) ->
@@ -804,7 +811,7 @@ driverLocationTracking push action duration id routeState = do
       case mbPoint of
         Just point -> addSosMarkers state.data.sosStatus point
         Nothing -> pure unit
-      liftFlow $ animateCamera srcLat srcLon 17.0 "ZOOM"
+      liftFlow $ animateCamera srcLat srcLon 16.0 "ZOOM"
       void $ delay $ Milliseconds duration
       driverLocationTracking push action duration id routeState
     else do
@@ -897,7 +904,7 @@ updateMockData push state id = defaultMockInviteFlow id state
     void $ runExceptT $ runBackT $ drawMapRoute srcLat srcLon dstLat dstLon (normalRoute "") "NORMAL" (getString if showRipples then SOS_LOCATION else PICKUP) (getString DROP) route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig) { autoZoom = false }
     when showRipples $ do
       liftFlow $ addAndUpdateSOSRipples srcPoint
-    liftFlow $ animateCamera srcLat srcLon 17.0 "ZOOM"
+    liftFlow $ animateCamera srcLat srcLon 16.0 "ZOOM"
 
 
 messagingViewConfig :: FollowRideScreenState -> MessagingView.Config
@@ -906,6 +913,7 @@ messagingViewConfig state = let
   driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
   currentFollower = getCurrentFollower state.data.currentFollower
   name = fromMaybe currentFollower.mobileNumber currentFollower.name
+  srcAndDstBounds = runFn1 getLayoutBounds $ getNewIDWithTag "FollowRideSourceDestinationView"
   in MessagingView.config {
     userConfig
     { userName = name
@@ -929,7 +937,7 @@ messagingViewConfig state = let
   , driverRating = show $ driverInfoCard.rating
   , fareAmount = show $ driverInfoCard.price
   , config = state.data.config
-  , peekHeight = getPeekHeight state
+  , peekHeight = getPeekHeight state + getDefaultPixelSize srcAndDstBounds.height
   , otp = driverInfoCard.otp
   , suggestionKey = emChatSuggestion
   }

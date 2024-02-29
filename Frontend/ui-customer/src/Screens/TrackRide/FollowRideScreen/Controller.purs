@@ -15,14 +15,14 @@
 module Screens.FollowRideScreen.Controller where
 
 import Accessor (_lat, _lon)
-import Data.Array (elem, last, length, filter)
-import Data.Function.Uncurried (runFn3)
+import Data.Array (elem, last, length, filter, delete, notElem)
+import Data.Function.Uncurried (runFn3, runFn1)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText, updateIdMap, flowRunner, liftFlow)
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion)
-import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService, getKeyInSharedPrefKeys, toast)
+import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService, getKeyInSharedPrefKeys, toast, getLayoutBounds, setMapPadding)
 import Prelude
 import PrestoDOM (BottomSheetState(..), Eval, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
 import Screens.HomeScreen.Transformer (getDriverInfo, getSpecialTag)
@@ -37,8 +37,8 @@ import Data.Lens ((^.))
 import Data.String as STR
 import Effect.Aff (Milliseconds(..), launchAff)
 import Engineering.Helpers.LogEvent (logEvent)
-import Engineering.Helpers.RippleCircles (addAndUpdateRideSafeOverlay, addAndUpdateSOSRipples, addNavigateMarker, removeSOSRipples)
-import Helpers.Utils (performHapticFeedback)
+import Engineering.Helpers.RippleCircles (addAndUpdateRideSafeOverlay, addAndUpdateSOSRipples, addNavigateMarker, removeSOSRipples, removeSafeOverlay)
+import Helpers.Utils (performHapticFeedback, getDefaultPixelSize)
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import Presto.Core.Types.Language.Flow (Flow, delay, getState, modifyState)
@@ -51,9 +51,11 @@ import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
 import Screens.FollowRideScreen.ScreenData (mockDriverInfo, mockDriverLocation, mockRoute)
 import Effect (Effect(..))
 import Debug
-import LocalStorage.Cache (getValueFromCache)
+import LocalStorage.Cache (getValueFromCache, setValueToCache)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Storage (getValueToLocalStore)
+import DecodeUtil (stringifyJSON, decodeForeignObject, parseJSON)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -108,14 +110,30 @@ eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideSc
 eval action state = case action of
   BackPressed -> do 
     case state.data.currentStage of
-      ChatWithEM -> continue state{data{currentStage = FollowingRide}}
+      ChatWithEM -> continueWithCmd state{data{currentStage = FollowingRide}}
+        [ do
+            void $ launchAff $ flowRunner defaultGlobalState $ do
+              liftFlow $ void $ setMapPadding 0 0 0 $ (getPeekHeight state)
+            pure NoAction
+        ]
       _ -> do
         _ <- pure $ clearAudioPlayer ""
-        if isMockDrill state 
-          then void $ pure $ removeSOSAlarmStatus "mock_drill"
-          else pure unit
         let newState = state { data { emergencyAudioStatus = COMPLETED },props{ startMapAnimation = false} }
         updateAndExit newState $ Exit newState
+  DismissOverlay -> do
+    if isMockDrill state 
+      then do
+        let currentFollower = fromMaybe dummyFollower state.data.currentFollower
+        void $ pure $ removeSOSAlarmStatus currentFollower.bookingId
+        void $ pure $ clearAudioPlayer ""
+        void $ pure $ updateMockDrillsDismissed state
+        continueWithCmd state{data{sosStatus = Nothing, emergencyAudioStatus = COMPLETED}, props{isMock = false, startMapAnimation = false}}[
+          do
+            void $ removeSOSRipples ""
+            void $ removeSafeOverlay ""
+            pure NoAction
+        ]
+    else continueWithCmd state [ pure BackPressed]
   UpdatePeekHeight -> continue state { data { counter = state.data.counter + 1 } }
   UpdateCurrentStage stage -> continue state{data{currentStage = stage}}
   NotificationListener notification -> 
@@ -133,6 +151,7 @@ eval action state = case action of
           else exit $ RestartTracking state{data{emergencyAudioStatus = COMPLETED}, props{isMock = isMock}}
       "SOS_MOCK_DRILL" -> startAudioPlayerCmd [do
           push <- getPushFn Nothing "FollowRideScreen"
+          void $ pure $ deleteDismisedMockDrills state.data.currentFollower
           void $ launchAff $ flowRunner defaultGlobalState $ do
             liftFlow $ addAndUpdateSOSRipples $ getPoint mockDriverLocation
             liftFlow $ push $ UpdateMockSOSStatus $ Just MockPending
@@ -183,13 +202,12 @@ eval action state = case action of
   UpdateStatus (RideBookingRes resp) -> do
     let
       driverInfoCardState = getDriverInfo Nothing (RideBookingRes resp) false
-
       newState =
         state
           { data
             { driverInfoCardState = Just driverInfoCardState
             , zoneType = getSpecialTag resp.specialLocationTag
-            , sosStatus = resp.sosStatus
+            , sosStatus = getSosStatus resp.sosStatus resp.id
             }
           , props
             { isRideStarted = driverInfoCardState.status == "INPROGRESS"
@@ -251,16 +269,19 @@ eval action state = case action of
   MessageEmergencyContact -> do
     case state.data.currentFollower of
         Nothing -> continue state
-        Just follower -> 
+        Just follower -> do
           if state.data.config.feature.enableChat && follower.priority == 0 && state.props.isRideStarted && not state.props.currentUserOnRide then do
             if not state.props.chatCallbackInitiated then continue state else do
               _ <- pure $ performHapticFeedback unit
               _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
               let allMessages = getChatMessages FunctionCall
-              continueWithCmd state {data{messages = allMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do pure $ ResetSheetState]
+              continueWithCmd state {data{messages = allMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do 
+                void $ launchAff $ flowRunner defaultGlobalState $ updateMapPadding state
+                pure $ ResetSheetState]
           else 
             continueWithCmd state
               [ do
+                  void $ launchAff $ flowRunner defaultGlobalState $ updateMapPadding state
                   pure $ MessagingViewAC (MessagingView.Call)
               ]
   ScrollToBottom -> do
@@ -361,6 +382,9 @@ canStartAudioPlayer state =
       status = state.data.emergencyAudioStatus
   in (status == STOPPED && checkCurrentFollower currentFollower) || (status == RESTARTED)
 
+getMockSosAlarmStatus :: String -> Array String
+getMockSosAlarmStatus key = decodeForeignObject (parseJSON (getKeyInSharedPrefKeys key)) []
+
 checkCurrentFollower :: ST.Followers -> Boolean
 checkCurrentFollower follower = do
   let alarmStatus = getSosAlarmStatus sosAlarmStatus
@@ -380,3 +404,45 @@ getPoint (GetDriverLocationResp resp) = { lat: resp ^. _lat, lng: resp ^. _lon }
 
 localDelay :: Number -> Flow GlobalState Unit
 localDelay seconds = void $ delay $ Milliseconds seconds
+
+updateMockDrillsDismissed :: FollowRideScreenState -> Effect Unit
+updateMockDrillsDismissed state = do
+  let mockDrillsDismissed = getValueFromCache "MOCK_SOS_FOR_RIDES" getMockSosAlarmStatus
+      currentFollower = fromMaybe dummyFollower state.data.currentFollower
+  if notElem currentFollower.bookingId mockDrillsDismissed then
+    void $ pure $ setValueToCache "MOCK_SOS_FOR_RIDES" (mockDrillsDismissed <> [currentFollower.bookingId]) stringifyJSON
+  else pure unit
+
+deleteDismisedMockDrills :: Maybe ST.Followers -> Effect Unit
+deleteDismisedMockDrills follower = do
+  let mockDrillsDismissed = getValueFromCache "MOCK_SOS_FOR_RIDES" getMockSosAlarmStatus
+      currentFollower = fromMaybe dummyFollower follower
+  if elem currentFollower.bookingId mockDrillsDismissed then
+    void $ pure $ setValueToCache "MOCK_SOS_FOR_RIDES" (delete currentFollower.bookingId mockDrillsDismissed) stringifyJSON
+  else pure unit
+  
+
+updateMapPadding :: FollowRideScreenState -> Flow GlobalState Unit
+updateMapPadding state = do
+      let 
+        srcAndDstBounds = runFn1 getLayoutBounds $ getNewIDWithTag "FollowRideSourceDestinationView"
+      liftFlow $ void $ setMapPadding 0 0 0 $ getPeekHeight state + getDefaultPixelSize srcAndDstBounds.height + 150
+  
+getPeekHeight :: FollowRideScreenState -> Int
+getPeekHeight _ =
+  let
+    headerViewBounds = runFn1 getLayoutBounds $ getNewIDWithTag "FollowRideHeaderView"
+    requiredPeekHeight = getDefaultPixelSize $ headerViewBounds.height
+  in
+    if requiredPeekHeight < 156 then 156 else requiredPeekHeight
+
+getSosStatus :: Maybe SosStatus -> String -> Maybe SosStatus
+getSosStatus status id = 
+    case status of 
+      _ | elem status [Just MockResolved, Just MockPending] -> do
+        let mockDrillsDismissed = getValueFromCache "MOCK_SOS_FOR_RIDES" getMockSosAlarmStatus
+        if elem id mockDrillsDismissed 
+          then Nothing
+          else status
+      _ -> status
+  

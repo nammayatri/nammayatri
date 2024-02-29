@@ -15,7 +15,7 @@
 
 module Common.Types.App where
 
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show, ($))
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 import Data.Generic.Rep (class Generic)
@@ -32,6 +32,7 @@ import Control.Monad.Except.Trans (ExceptT)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
 import Control.Transformers.Back.Trans (BackT)
 import Data.Maybe (Maybe(..))
+import DecodeUtil (parseJSON)
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
@@ -127,7 +128,12 @@ newtype Payload = Payload
   , show_splash :: Maybe Boolean
   , view_param :: Maybe String
   , deeplinkOptions :: Maybe DeeplinkOptions
+  , deepLinkJSON :: Maybe QueryParam
   }
+
+newtype QueryParam = QueryParam {
+  option :: Maybe String
+}
 
 newtype DeeplinkOptions = DeeplinkOptions {
     parent_view :: Maybe Boolean
@@ -154,6 +160,11 @@ derive instance newDeeplinkOptions :: Newtype DeeplinkOptions _
 derive instance genericDeeplinkOptions :: Generic DeeplinkOptions _
 instance decodeDeeplinkOptions :: Decode DeeplinkOptions where decode = defaultDecode
 instance encodeDeeplinkOptions :: Encode DeeplinkOptions where encode = defaultEncode
+
+derive instance genericQueryParam :: Generic QueryParam _
+derive instance newQueryParam :: Newtype QueryParam _
+instance decodeQueryParam :: Decode QueryParam where decode body = defaultDecode $ parseJSON body
+instance encodeQueryParam :: Encode QueryParam where encode = defaultEncode
 
 type OptionButtonList = {
     reasonCode :: String,

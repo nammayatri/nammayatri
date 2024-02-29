@@ -14,7 +14,7 @@ foreign import getFromWindowString :: Fn3 String (Maybe String) (String -> (Mayb
 foreign import setInWindow :: Fn2 String String String
 foreign import setAnyInWindow ::forall a. Fn2 String a a
 -- JSON Utils
-foreign import parseJSON :: String -> Foreign
+foreign import parseJSON :: forall a. a -> Foreign
 foreign import stringifyJSON :: forall a. Fn1 a String
 
 decodeForeignObject :: forall a. Decode a => Foreign -> a -> a

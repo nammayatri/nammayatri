@@ -1025,3 +1025,4 @@ getFR stringKey =
         MESSAGE_FROM name -> "Message de " <> name
         RIDE_CANCELLED -> "Trajet annulé"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Salut,\n\nJe suis en train de rouler avec le chauffeur " <> driverName <> " de " <> appName <> "! Suivez ce trajet sur : " <> trackLink <> "\n\nNuméro de véhicule : " <> vehicleNumber
+        SAFETY_CENTER_IS_DISABLED -> "La fonction SOS est désactivée car elle a été utilisée de manière abusive trois fois"

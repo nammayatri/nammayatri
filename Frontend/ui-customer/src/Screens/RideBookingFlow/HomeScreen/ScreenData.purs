@@ -308,6 +308,7 @@ initData = {
           , destManuallyMoved : false
           , autoCompleteType : Nothing
         }
+    , isSafetyCenterDisabled : false
     }
 }
 

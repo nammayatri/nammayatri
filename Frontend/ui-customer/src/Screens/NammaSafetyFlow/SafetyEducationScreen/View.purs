@@ -17,7 +17,6 @@ import PrestoDOM (Gradient(..), Gravity(..), ImageUrl(..), Length(..), Margin(..
 import Screens.Types (NammaSafetyScreenState)
 import Common.Types.App (LazyCheck(..))
 import Data.Function.Uncurried (runFn5)
-import Debug (spy) 
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
@@ -32,6 +31,8 @@ import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.Components.HelperViews as HV
 import Screens.NammaSafetyFlow.SafetyEducationScreen.Controller (Action(..), ScreenOutput, eval)
 import Styles.Colors as Color
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -39,13 +40,7 @@ screen initialState =
   , view: view
   , name: "SafetyEducationScreen"
   , globalEvents: []
-  , eval:
-      \action state -> do
-        let
-          _ = spy "SafetyEducationScreen action " action
-        let
-          _ = spy "SafetyEducationScreen state " state
-        eval action state
+  , eval
   }
 
 view :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
@@ -60,7 +55,7 @@ view push state =
         , padding padding'
         ]
         [ Header.view (push <<< SafetyHeaderAction) headerConfig
-        ,  linearLayout
+        , linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
@@ -68,8 +63,10 @@ view push state =
             [ if Mb.isJust state.props.educationViewIndex then
                 if state.props.showVideoView then
                   videoView push state
-                else descriptionView push state
-              else aboutNammaSafetyView state push
+                else
+                  descriptionView push state
+              else
+                aboutNammaSafetyView state push
             ]
         ]
   where
@@ -77,41 +74,46 @@ view push state =
 
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
-  headerConfig = (Header.config Language) { title = if Mb.isJust state.props.educationViewIndex && not state.props.showVideoView
-                                                       then "" 
-                                                       else getString LEARN_ABOUT_NAMMA_SAFETY,
-                                            headerVisiblity = boolToVisibility $ not state.props.showVideoView
-                                          }
+  headerConfig =
+    (Header.config Language)
+      { title =
+        if Mb.isJust state.props.educationViewIndex && not state.props.showVideoView then
+          ""
+        else
+          getString LEARN_ABOUT_NAMMA_SAFETY
+      , headerVisiblity = boolToVisibility $ not state.props.showVideoView
+      }
 
 aboutNammaSafetyView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 aboutNammaSafetyView state push =
-  relativeLayout
+  Keyed.relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
     , visibility $ boolToVisibility $ Mb.isNothing state.props.educationViewIndex
     ]
-    [ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        ]
-        [ textView
-            [ text $ getString LEARN_ABOUT_SAFETY_MODE
-            , width MATCH_PARENT
-            , height WRAP_CONTENT
-            , color Color.black700
-            , background Color.blue600
-            , gravity LEFT
-            , padding $ Padding 12 16 12 16
-            ]
-        , linearLayout
+    [ Tuple "aboutNammaSafetyView"
+        $ linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
             ]
-            (DA.mapWithIndex (\index item -> cardView item index push) state.data.videoList)
-        ]
+            [ textView
+                [ text $ getString LEARN_ABOUT_SAFETY_MODE
+                , width MATCH_PARENT
+                , height WRAP_CONTENT
+                , color Color.black700
+                , background Color.blue600
+                , gravity LEFT
+                , padding $ Padding 12 16 12 16
+                ]
+            , linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                ]
+                (DA.mapWithIndex (\index item -> cardView item index push) state.data.videoList)
+            ]
     ]
 
 cardView :: RC.SafetyVideoConfig -> Int -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -154,99 +156,101 @@ cardView cardData index push =
 
 videoView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 videoView push state =
-  relativeLayout
+  Keyed.relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , background Color.black900
     , visibility $ boolToInvisibility $ Mb.isJust state.props.educationViewIndex
     ]
-    [ linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ]
-        [ linearLayout
-            [ height WRAP_CONTENT
+    [ Tuple "aboutNammaSafetyVideoView"
+        $ linearLayout
+            [ height MATCH_PARENT
             , width MATCH_PARENT
-            , background Color.black900
-            , gravity CENTER_VERTICAL
-            ]
-            [ imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_white"
-                , height $ V 40
-                , width $ V 40
-                , padding $ Padding 8 8 8 8
-                , margin $ Margin 8 8 8 8
-                , onClick push $ const BackPressed
-                , rippleColor Color.rippleShade
-                , cornerRadius 20.0
-                ]
-            , textView
-                $ [ text $ getString LEARN_ABOUT_NAMMA_SAFETY
-                  , color Color.white900
-                  , gravity LEFT
-                  , weight 1.0
-                  ]
-                <> FontStyle.h3 TypoGraphy
-            ]
-        , PrestoAnim.animationSet [ triggerOnAnimationEnd true ]
-            $ linearLayout
-                [ width MATCH_PARENT
-                , height MATCH_PARENT
-                , background Color.black900
-                , cornerRadius 8.0
-                , gravity CENTER_VERTICAL
-                , id $ EHC.getNewIDWithTag "SafetyYoutubeVideoView"
-                , onAnimationEnd
-                    ( \_ -> do
-                        void $ pure $ runFn5 JB.setYoutubePlayer (EHC.getYoutubeData { videoId = viewConfig.videoId, videoType = "PORTRAIT_VIDEO", videoHeight = 1500, showFullScreen = true, showSeekBar = false, hideFullScreenButton = true }) (EHC.getNewIDWithTag "SafetyYoutubeVideoView") "PAUSED" push YoutubeVideoStatus
-                    )
-                    (const NoAction)
-                ]
-                []
-        ]
-    , relativeLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ]
-        [ linearLayout
-            [ height $ V 200
-            , width MATCH_PARENT
-            , alignParentBottom "true,-1"
-            , gradient $ Linear gradientAngle [ Color.transparent, "#269F9F9F", Color.black ]
-            ]
-            []
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , alignParentBottom "true,-1"
-            , gravity CENTER_VERTICAL
-            , padding $ Padding 16 16 16 16
+            , orientation VERTICAL
             ]
             [ linearLayout
                 [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , weight 1.0
+                , width MATCH_PARENT
+                , background Color.black900
+                , gravity CENTER_VERTICAL
                 ]
-                [ textView
-                    $ [ text viewConfig.title
+                [ imageView
+                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_white"
+                    , height $ V 40
+                    , width $ V 40
+                    , padding $ Padding 8 8 8 8
+                    , margin $ Margin 8 8 8 8
+                    , onClick push $ const BackPressed
+                    , rippleColor Color.rippleShade
+                    , cornerRadius 20.0
+                    ]
+                , textView
+                    $ [ text $ getString LEARN_ABOUT_NAMMA_SAFETY
                       , color Color.white900
                       , gravity LEFT
-                      , width WRAP_CONTENT
-                      , margin $ MarginRight 12
+                      , weight 1.0
                       ]
-                    <> FontStyle.h1 TypoGraphy
+                    <> FontStyle.h3 TypoGraphy
                 ]
+            , PrestoAnim.animationSet [ triggerOnAnimationEnd true ]
+                $ linearLayout
+                    [ width MATCH_PARENT
+                    , height MATCH_PARENT
+                    , background Color.black900
+                    , cornerRadius 8.0
+                    , gravity CENTER_VERTICAL
+                    , id $ EHC.getNewIDWithTag "SafetyYoutubeVideoView"
+                    , onAnimationEnd
+                        ( \_ -> do
+                            void $ pure $ runFn5 JB.setYoutubePlayer (EHC.getYoutubeData { videoId = viewConfig.videoId, videoType = "PORTRAIT_VIDEO", videoHeight = 1500, showFullScreen = true, showSeekBar = false, hideFullScreenButton = true }) (EHC.getNewIDWithTag "SafetyYoutubeVideoView") "PAUSED" push YoutubeVideoStatus
+                        )
+                        (const NoAction)
+                    ]
+                    []
+            ]
+    , Tuple "aboutNammaSafetyVideoViewBottom"
+        $ relativeLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            [ linearLayout
+                [ height $ V 200
+                , width MATCH_PARENT
+                , alignParentBottom "true,-1"
+                , gradient $ Linear gradientAngle [ Color.transparent, "#269F9F9F", Color.black ]
+                ]
+                []
             , linearLayout
                 [ height WRAP_CONTENT
-                , width WRAP_CONTENT
+                , width MATCH_PARENT
+                , alignParentBottom "true,-1"
+                , gravity CENTER_VERTICAL
+                , padding $ Padding 16 16 16 16
                 ]
-                [ arrowButtonView false 20 (index > 0) push false $ ChangeEducationViewIndex (index - 1)
-                , arrowButtonView true 0 (index < DA.length state.data.videoList - 1) push false $ ChangeEducationViewIndex (index + 1)
+                [ linearLayout
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , weight 1.0
+                    ]
+                    [ textView
+                        $ [ text viewConfig.title
+                          , color Color.white900
+                          , gravity LEFT
+                          , width WRAP_CONTENT
+                          , margin $ MarginRight 12
+                          ]
+                        <> FontStyle.h1 TypoGraphy
+                    ]
+                , linearLayout
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    ]
+                    [ arrowButtonView false 20 (index > 0) push false $ ChangeEducationViewIndex (index - 1)
+                    , arrowButtonView true 0 (index < DA.length state.data.videoList - 1) push false $ ChangeEducationViewIndex (index + 1)
+                    ]
                 ]
             ]
-        ]
     ]
   where
   index = Mb.fromMaybe (-1) state.props.educationViewIndex
@@ -292,100 +296,107 @@ getSafePadding =
 
 descriptionView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 descriptionView push state =
-  relativeLayout
+  Keyed.relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     ]
-    [ scrollView
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        ]
-        [ linearLayout
+    [ Tuple "aboutNammaSafetyDescriptionView"
+        $ scrollView
             [ width MATCH_PARENT
             , height MATCH_PARENT
-            , orientation VERTICAL
             ]
-            [ relativeLayout
+            [ linearLayout
                 [ width MATCH_PARENT
-                , height WRAP_CONTENT
-                , gravity CENTER_VERTICAL
-                , onClick push $ const $ ShowVideoView true
+                , height MATCH_PARENT
+                , orientation VERTICAL
                 ]
-                [ imageView
-                    [ if EHC.os == "IOS" then imageUrl videoCoverImage
-                      else imageUrlWithFallback $ ListImageUrl videoCoverImage viewConfig.videoId
-                    , height $ V 250
-                    , width MATCH_PARENT
+                [ relativeLayout
+                    [ width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , gravity CENTER_VERTICAL
+                    , onClick push $ const $ ShowVideoView true
+                    ]
+                    [ imageView
+                        [ if EHC.os == "IOS" then
+                            imageUrl videoCoverImage
+                          else
+                            imageUrlWithFallback $ ListImageUrl videoCoverImage viewConfig.videoId
+                        , height $ V 250
+                        , width MATCH_PARENT
+                        ]
+                    , linearLayout
+                        [ width MATCH_PARENT
+                        , height $ V 250
+                        , gravity CENTER
+                        ]
+                        [ imageView
+                            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_play_btn"
+                            , height $ V 40
+                            , width $ V 40
+                            ]
+                        ]
                     ]
                 , linearLayout
                     [ width MATCH_PARENT
-                    , height $ V 250
-                    , gravity CENTER
+                    , height WRAP_CONTENT
+                    , orientation VERTICAL
+                    , padding $ Padding 16 16 16 16
                     ]
-                    [ imageView 
-                      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_play_btn"
-                      , height $ V 40
-                      , width $ V 40
-                      ]
-                    ]
-                ]
-            , linearLayout
-                [ width MATCH_PARENT
-                , height WRAP_CONTENT
-                , orientation VERTICAL
-                , padding $ Padding 16 16 16 16
-                ]
-                ( map
-                    ( \(RC.DescriptionComponent item) ->
-                        let
-                          decodedFontStyle = Mb.fromMaybe FontStyle.Tags $ FontStyle.decodeFontStyle $ unsafeToForeign item.fontStyle
-                        in
-                          linearLayout
-                            [ height WRAP_CONTENT
-                            , width MATCH_PARENT
-                            , gravity CENTER_VERTICAL
-                            ]
-                            [ textView
-                                $ [ text "•"
-                                  , visibility $ boolToVisibility item.isBullet
-                                  , margin $ Margin 0 item.marginTop 8 0
-                                  , width WRAP_CONTENT
-                                  , height WRAP_CONTENT
-                                  ] <> FontStyle.getFontStyle decodedFontStyle TypoGraphy
-                            , textView
-                                $ [ textFromHtml item.text
-                                  , height WRAP_CONTENT
-                                  , color item.color
-                                  , gravity LEFT
-                                  , margin $ Margin item.marginLeft item.marginTop 0 0
-                                  , padding $ PaddingVertical 3 3
-                                  , weight 1.0
-                                  ]
-                                <> FontStyle.getFontStyle decodedFontStyle TypoGraphy
-                            ]
+                    ( map
+                        ( \(RC.DescriptionComponent item) ->
+                            let
+                              decodedFontStyle = Mb.fromMaybe FontStyle.Tags $ FontStyle.decodeFontStyle $ unsafeToForeign item.fontStyle
+                            in
+                              linearLayout
+                                [ height WRAP_CONTENT
+                                , width MATCH_PARENT
+                                , gravity CENTER_VERTICAL
+                                ]
+                                [ textView
+                                    $ [ text "•"
+                                      , visibility $ boolToVisibility item.isBullet
+                                      , margin $ Margin 0 item.marginTop 8 0
+                                      , width WRAP_CONTENT
+                                      , height WRAP_CONTENT
+                                      ]
+                                    <> FontStyle.getFontStyle decodedFontStyle TypoGraphy
+                                , textView
+                                    $ [ textFromHtml item.text
+                                      , height WRAP_CONTENT
+                                      , color item.color
+                                      , gravity LEFT
+                                      , margin $ Margin item.marginLeft item.marginTop 0 0
+                                      , padding $ PaddingVertical 3 3
+                                      , weight 1.0
+                                      ]
+                                    <> FontStyle.getFontStyle decodedFontStyle TypoGraphy
+                                ]
+                        )
+                        viewConfig.description
                     )
-                    viewConfig.description
-                )
+                ]
             ]
-        ]
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , alignParentBottom "true,-1"
-        , gravity CENTER_VERTICAL
-        , padding $ Padding 16 16 16 16
-        ]
-        [ HV.layoutWithWeight
-        , linearLayout
+    , Tuple "aboutNammaSafetyDescriptionViewBottom"
+        $ linearLayout
             [ height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width MATCH_PARENT
+            , alignParentBottom "true,-1"
+            , gravity CENTER_VERTICAL
+            , padding $ Padding 16 16 16 16
             ]
-            [ arrowButtonView false 20 (index > 0) push true $ ChangeEducationViewIndex (index - 1)
-            , arrowButtonView true 0 (index < DA.length state.data.videoList - 1) push true $ ChangeEducationViewIndex (index + 1)
+            [ HV.layoutWithWeight
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                ]
+                [ arrowButtonView false 20 (index > 0) push true $ ChangeEducationViewIndex (index - 1)
+                , arrowButtonView true 0 (index < DA.length state.data.videoList - 1) push true $ ChangeEducationViewIndex (index + 1)
+                ]
             ]
-        ]
     ]
   where
   index = Mb.fromMaybe (-1) state.props.educationViewIndex
+
   viewConfig = Mb.fromMaybe { videoId: "", title: "", coverImageUrl: "", description: [] } (state.data.videoList DA.!! index)
+
   videoCoverImage = EHC.getImageUrl "" viewConfig.videoId
