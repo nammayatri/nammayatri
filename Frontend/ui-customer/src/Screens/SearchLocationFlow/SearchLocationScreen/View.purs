@@ -17,10 +17,10 @@ module Screens.SearchLocationScreen.View where
 
 import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig)
+import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, findPlaceConfig, locUnserviceableConfig, InfoState(..), metroStationsArray)
 import Components.InputView as InputView
 import Effect (Effect)
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps)
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station)
 import Styles.Colors as Color
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd)
@@ -52,12 +52,15 @@ import Data.Maybe (isNothing, maybe, Maybe(..), isJust ) as MB
 import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom) as EHC
 import Data.String (length, null, take) as DS
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Animation (translateYAnimFromTop, fadeInWithDelay)
 import PrestoDOM.Animation as PrestoAnim
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Helpers.CommonView (emptyTextView)
+import Data.Maybe as MB
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -483,14 +486,6 @@ footerArray state =
             ]
             else [{action : SetLocationOnMap, text : getString SELECT_LOCATION_ON_MAP, buttonType : "SetLocationOnMap", imageName : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"}]
 
--- getDataBasedActionType :: SearchLocationActionType -> {imageUrl :: String, text :: String, action :: Action}
--- getDataBasedActionType actionType = 
---   case actionType of 
---     SearchLocationAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
---     AddingStopAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
---     MetroStationSelectionAction -> {imageUrl : "ny_ic_metro_map", text : "See Metro Map", action : MetroRouteMapAction}
-
-
 searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 searchLocationView push state globalProps = let
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage  || currentStageOn state PredictionSelectedFromHome 
@@ -509,20 +504,6 @@ searchLocationView push state globalProps = let
         , infoView $ findPlaceConfig state
         , infoView $ locUnserviceableConfig state 
         , predictionsView push state globalProps]
-  where 
-
-    findPlaceConfig :: SearchLocationScreenState -> InfoState
-    findPlaceConfig state = { descImg : "ny_ic_empty_suggestions"
-      , viewVisibility : boolToVisibility $ DA.null state.data.locationList 
-      , headerText : "getString" -- (WELCOME_TEXT "WELCOME_TEXT") <> "!"
-      , descText : getString START_TYPING_TO_SEARCH_PLACES}
-
-    locUnserviceableConfig :: SearchLocationScreenState -> InfoState
-    locUnserviceableConfig state = 
-      {descImg : "ny_ic_location_unserviceable"
-      , viewVisibility : boolToVisibility $ state.props.locUnserviceable
-      , headerText : getString LOCATION_UNSERVICEABLE
-      , descText : getString $ CURRENTLY_WE_ARE_LIVE_IN_ "CURRENTLY_WE_ARE_LIVE_IN_"}
 
 locationTagsView :: forall w. SearchLocationScreenState -> (Action -> Effect Unit) -> GlobalProps -> PrestoDOM (Effect Unit) w
 locationTagsView state push globalProps = 
@@ -536,8 +517,12 @@ locationTagsView state push globalProps =
     
 predictionsView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 predictionsView push state globalProps = let 
-  viewVisibility = boolToVisibility $ (not DA.null state.data.locationList) && (not state.props.locUnserviceable)
+  viewVisibility = boolToVisibility $ 
+    case state.props.actionType of 
+      MetroStationSelectionAction -> not $ DA.null state.data.updatedMetroStations
+      _ -> (not DA.null state.data.locationList) && (not state.props.locUnserviceable)
   headerText = if state.props.isAutoComplete then (getString SEARCH_RESULTS)
+                else if state.props.actionType == MetroStationSelectionAction then "Metro Stations"
                 else 
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
@@ -558,7 +543,7 @@ predictionsView push state globalProps = let
               , color Color.black700
               , margin $ MarginVertical 14 8
               ] <> FontStyle.body3 TypoGraphy
-          , predictionArrayView state.data.locationList
+          , predictionArrayView $ if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
           , footerView
         ]
       ]
@@ -579,37 +564,6 @@ predictionsView push state globalProps = let
         ](  DA.mapWithIndex 
               (\index item -> locationListItemView item index ) 
               if (DA.null locList && state.props.actionType /= MetroStationSelectionAction) then globalProps.cachedSearches else locList )
-
-    -- metroStationsArray:: Array Station -> Array LocationListItemState
-    -- metroStationsArray metroStations = 
-    --   map (\item -> { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
-    --           , postfixImageUrl : ""
-    --           , postfixImageVisibility : false
-    --           , title : item.stationName
-    --           , subTitle : ""
-    --           , placeId : MB.Nothing
-    --           , lat : MB.Nothing
-    --           , lon : MB.Nothing
-    --           , description : ""
-    --           , tag : item.stationCode -- Needs refactor
-    --           , tagType : MB.Nothing
-    --           , cardType : MB.Nothing
-    --           , address : ""
-    --           , tagName : ""
-    --           , isEditEnabled : true
-    --           , savedLocation : ""
-    --           , placeName : ""
-    --           , isClickable : true
-    --           , alpha : 1.0
-    --           , fullAddress : dummyAddress
-    --           , locationItemType : MB.Nothing
-    --           , distance : MB.Nothing
-    --           , showDistance : MB.Just false
-    --           , actualDistance : MB.Nothing
-    --           , frequencyCount : MB.Nothing
-    --           , recencyDate : MB.Nothing
-    --           , locationScore : MB.Nothing
-    --           }) metroStations
 
     locationListItemView :: LocationListItemState -> Int -> PrestoDOM (Effect Unit) w
     locationListItemView item index = let 
@@ -712,13 +666,6 @@ infoView  item =
             ] <> FontStyle.body3 LanguageStyle
         ]
     ]
-
-type InfoState = {
-  descImg :: String,
-  viewVisibility :: Visibility,
-  headerText :: String,
-  descText :: String
-}
 
 currentStageOn :: SearchLocationScreenState ->  SearchLocationStage -> Boolean
 currentStageOn state stage  = 

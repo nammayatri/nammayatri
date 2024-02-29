@@ -21,6 +21,7 @@ import Components.SeparatorView.View as SeparatorView
 import Components.LocationTagBarV2 as LTB
 import Components.InputView as InputView
 import Components.MenuButton as MenuButton
+import Components.LocationListItem as LocationListItem
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
 import MerchantConfig.Types as MT
@@ -28,16 +29,19 @@ import Prelude ((==), (<>), ($), (/=), (>), (||), map, not)
 import Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
-import Data.Maybe(isJust, maybe, Maybe(..)) as MB
+import Data.Maybe as MB
 import Helpers.Utils as HU
 import Data.String as DS
+import Data.Array as DA
 import Prelude (show, (&&))
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Components.PopUpModal as PopUpModal
 import Language.Types (STR(..))
 import Common.Types.App (LazyCheck(..))
 import PrestoDOM.Types.DomAttributes as PTD
 import Mobility.Prelude (boolToVisibility)
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
 import Screens 
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
@@ -132,41 +136,6 @@ confirmLocBtnConfig state =
   in confirmLocBtnConfig'
 
 mapInputViewConfig :: ST.SearchLocationScreenState -> Boolean -> InputView.InputViewConfig
--- mapInputViewConfig state isEditable = let 
---     getInputView = getInputViewConfigBasedOnActionType state.props.actionType
---     config = InputView.config 
---     inputViewConfig' = config
---       { headerText = MB.maybe ("Trip Details") ( \ currTextField -> if currTextField == ST.SearchLocPickup then "Edit Pickup" else "Add Stop") state.props.focussedTextField,
---       headerVisibility =  getInputView.headerVisibility,
---         imageLayoutMargin = getInputView.imageLayoutMargin,
---         inputView = map 
---           ( \item -> 
---             { margin : item.margin
---             , padding : Padding 8 7 8 7 
---             , textValue : item.textValue
---             , height : WRAP_CONTENT
---             , isFocussed : item.isFocussed
---             , id : show item.id
---             , placeHolder : item.placeHolder 
---             , canClearText : (item.canClearText  || state.props.canClearText ) && item.isFocussed
---             , isEditable : isEditable && item.isEditable
---             , isClickable : item.isEditable
---             , prefixImage : { 
---                 imageName : item.prefixImageName,
---                 height : V 15,
---                 width : V 15 ,
---                 padding : Padding 0 0 0 0 }
---             , stroke : ((if item.isFocussed then "1," else "0,") <> Color.yellow900)
---             , imageSeparator : separatorConfig 
---             , clearTextIcon : { 
---                 imageName : (state.appConfig.searchLocationConfig.clearTextImage) ,
---                 height : V 19,
---                 width : V 19 ,
---                 padding : PaddingVertical 10 2 }
---             , cornerRadius : 4.0
---             } 
---           ) 
---           (inputViewArray state)
 mapInputViewConfig state isEditable = 
   let 
     getInputView = getInputViewConfigBasedOnActionType state.props.actionType
@@ -191,35 +160,6 @@ mapInputViewConfig state isEditable =
       , inputView = map (\item -> transformInputViewArray item) (inputViewArray state)
       }
   in inputViewConfig'
-
--- inputViewArray state = 
---   let 
---     srcLoc = MB.maybe "" (_.address) state.data.srcLoc 
---     destLoc = MB.maybe "" (_.address) state.data.destLoc
---     addressOnMap = state.data.latLonOnMap.address
---     pickUpFocussed = state.props.focussedTextField == MB.Just ST.SearchLocPickup 
---     dropLocFocussed = state.props.focussedTextField == MB.Just ST.SearchLocDrop 
---     getInputView = getInputViewConfigBasedOnActionType state.props.actionType
---   in 
---     [ { textValue : if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc
---       , isFocussed : pickUpFocussed
---       , prefixImageName : getInputView.srcPrefixImageName
---       , margin : getInputView.inputViewMargin
---       , placeHolder : getInputView.srcPlaceHolder
---       , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
---       , id : ST.SearchLocPickup
---       , isEditable : not $ (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
---       } ,
---       { textValue : if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc
---       , isFocussed : dropLocFocussed
---       , prefixImageName : getInputView.destPrefixImageName
---       , margin : MarginTop 8
---       , placeHolder : getInputView.destPlaceHolder
---       , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
---       , id : ST.SearchLocDrop
---       , isEditable : true
---       }
---     ]
 
   where
     transformInputViewArray item = 
@@ -369,3 +309,60 @@ locUnserviceablePopUpConfig state = let
     }
   }
   in popUpConfig'
+
+findPlaceConfig :: ST.SearchLocationScreenState -> InfoState
+findPlaceConfig state = 
+  let appName = MB.fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" MB.Nothing MB.Just
+  in { 
+    descImg : "ny_ic_empty_suggestions"
+  , viewVisibility : boolToVisibility $ 
+                      case state.props.actionType of 
+                          ST.MetroStationSelectionAction -> DA.null state.data.updatedMetroStations
+                          _ -> DA.null state.data.locationList
+  , headerText : (getVarString WELCOME_TEXT [appName] ) <> "!"
+  , descText : getString START_TYPING_TO_SEARCH_PLACES}
+  
+locUnserviceableConfig :: ST.SearchLocationScreenState -> InfoState
+locUnserviceableConfig state = 
+  {descImg : "ny_ic_location_unserviceable"
+  , viewVisibility : boolToVisibility $ state.props.locUnserviceable
+  , headerText : getString LOCATION_UNSERVICEABLE
+  , descText : getString $ CURRENTLY_WE_ARE_LIVE_IN_ "CURRENTLY_WE_ARE_LIVE_IN_"}
+
+type InfoState = {
+  descImg :: String,
+  viewVisibility :: Visibility,
+  headerText :: String,
+  descText :: String
+}
+
+metroStationsArray:: Array ST.Station -> Array ST.LocationListItemState
+metroStationsArray metroStations = 
+  map (\item -> { prefixImageUrl : HU.fetchImage HU.FF_ASSET "ny_ic_loc_grey"
+          , postfixImageUrl : ""
+          , postfixImageVisibility : false
+          , title : item.stationName
+          , subTitle : ""
+          , placeId : MB.Nothing
+          , lat : MB.Nothing
+          , lon : MB.Nothing
+          , description : ""
+          , tag : item.stationCode -- Needs refactor
+          , tagType : MB.Nothing
+          , cardType : MB.Nothing
+          , address : ""
+          , tagName : ""
+          , isEditEnabled : true
+          , savedLocation : ""
+          , placeName : ""
+          , isClickable : true
+          , alpha : 1.0
+          , fullAddress : LocationListItem.dummyAddress
+          , locationItemType : MB.Nothing
+          , distance : MB.Nothing
+          , showDistance : MB.Just false
+          , actualDistance : MB.Nothing
+          , frequencyCount : MB.Nothing
+          , recencyDate : MB.Nothing
+          , locationScore : MB.Nothing
+          }) metroStations
