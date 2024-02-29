@@ -22,13 +22,11 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.Utils
 import Control.Lens ((%~))
-import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Location as Location
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
-import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
@@ -88,54 +86,13 @@ tfFulfillment res startLoc endLoc =
       fulfillmentCustomer = Nothing
       fulfillmentId = Just res.estimate.bppEstimateId.getId
       fulfillmentType = Just $ show Enums.DELIVERY
-      fulfillmentStops = mkStops startLoc endLoc
+      fulfillmentStops = UCommon.mkStops' startLoc (Just endLoc)
       fulfillmentVehicle = tfVehicle res
    in Spec.Fulfillment
         { fulfillmentStops = fulfillmentStops,
           fulfillmentVehicle = Just fulfillmentVehicle,
           ..
         }
-
-mkStops :: Location.Location -> Location.Location -> Maybe [Spec.Stop]
-mkStops origin destination =
-  let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
-      destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
-   in Just
-        [ Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Just $ UCommon.mkAddress origin.address,
-                      locationAreaCode = origin.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing origin.address.city,
-                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                      locationGps = A.decode $ A.encode originGps,
-                      locationState = Just $ Spec.State origin.address.state,
-                      locationId = Nothing,
-                      locationUpdatedAt = Nothing
-                    },
-              stopType = Just $ show Enums.START,
-              stopAuthorization = Nothing,
-              stopTime = Nothing
-            },
-          Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Just $ UCommon.mkAddress destination.address,
-                      locationAreaCode = destination.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing destination.address.city,
-                      locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                      locationGps = A.decode $ A.encode destinationGps,
-                      locationState = Just $ Spec.State destination.address.state,
-                      locationId = Nothing,
-                      locationUpdatedAt = Nothing
-                    },
-              stopType = Just $ show Enums.END,
-              stopAuthorization = Nothing,
-              stopTime = Nothing
-            }
-        ]
 
 tfVehicle :: DSelect.DSelectRes -> Spec.Vehicle
 tfVehicle res =
