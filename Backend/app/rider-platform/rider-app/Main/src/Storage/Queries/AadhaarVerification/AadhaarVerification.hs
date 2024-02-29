@@ -26,7 +26,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.AadhaarVerification.AadhaarVerification as BeamAV
 
-create :: MonadFlow m => AadhaarVerification -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => AadhaarVerification -> m ()
 create = createWithKV
 
 findByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe AadhaarVerification)
@@ -48,10 +48,10 @@ findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId
     ]
     [Se.Is BeamAV.personId (Se.Eq $ getId personId)]
 
-deleteByPersonId :: MonadFlow m => Id Person -> m ()
+deleteByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamAV.personId (Se.Eq personId)]
 
-updatePersonImagePath :: MonadFlow m => Id Person -> Text -> m ()
+updatePersonImagePath :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m ()
 updatePersonImagePath (Id personId) imagePath =
   updateOneWithKV
     [Se.Set BeamAV.personImagePath (Just imagePath)]

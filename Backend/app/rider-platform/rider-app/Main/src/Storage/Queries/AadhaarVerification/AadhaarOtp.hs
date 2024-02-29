@@ -25,16 +25,16 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.AadhaarVerification.AadhaarOtpReq as BeamAOR
 import qualified Storage.Beam.AadhaarVerification.AadhaarOtpVerify as BeamAOV
 
-createForGenerate :: MonadFlow m => AadhaarOtpReq -> m ()
+createForGenerate :: (MonadFlow m, EsqDBFlow m r) => AadhaarOtpReq -> m ()
 createForGenerate = createWithKV
 
-createForVerify :: MonadFlow m => AadhaarOtpVerify -> m ()
+createForVerify :: (MonadFlow m, EsqDBFlow m r) => AadhaarOtpVerify -> m ()
 createForVerify = createWithKV
 
-deleteByPersonIdForGenerate :: MonadFlow m => Id Person -> m ()
+deleteByPersonIdForGenerate :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 deleteByPersonIdForGenerate personId = deleteWithKV [Se.Is BeamAOR.personId (Se.Eq (getId personId))]
 
-deleteByPersonIdForVerify :: MonadFlow m => Id Person -> m ()
+deleteByPersonIdForVerify :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 deleteByPersonIdForVerify personId = deleteWithKV [Se.Is BeamAOV.personId (Se.Eq (getId personId))]
 
 instance FromTType' BeamAOR.AadhaarOtpReq AadhaarOtpReq where

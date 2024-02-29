@@ -19,7 +19,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RentalDetails as BeamRS
 
-createRentalDetails :: MonadFlow m => RentalDetails -> m ()
+createRentalDetails :: (MonadFlow m, EsqDBFlow m r) => RentalDetails -> m ()
 createRentalDetails = createWithKV
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RentalDetails -> m (Maybe RentalDetails)

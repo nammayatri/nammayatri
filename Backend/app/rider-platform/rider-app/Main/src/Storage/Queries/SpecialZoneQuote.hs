@@ -24,7 +24,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialZoneQuote as BeamSZQ
 
-createSpecialZoneQuote :: MonadFlow m => SpecialZoneQuote -> m ()
+createSpecialZoneQuote :: (MonadFlow m, EsqDBFlow m r) => SpecialZoneQuote -> m ()
 createSpecialZoneQuote = createWithKV
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)

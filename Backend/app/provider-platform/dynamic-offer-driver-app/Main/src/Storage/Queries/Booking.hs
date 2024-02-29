@@ -86,7 +86,7 @@ updateStatus rbId rbStatus = do
     [Se.Set BeamB.status rbStatus, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateStop :: MonadFlow m => Id Booking -> Maybe Text -> m ()
+updateStop :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Text -> m ()
 updateStop bookingId stopLocationId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -95,7 +95,7 @@ updateStop bookingId stopLocationId = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-updateStopArrival :: MonadFlow m => Id Booking -> m ()
+updateStopArrival :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> m ()
 updateStopArrival bookingId = do
   now <- getCurrentTime
   updateOneWithKV

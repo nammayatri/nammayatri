@@ -29,7 +29,7 @@ import Tools.Auth
 run :: Env -> Application
 run = withModifiedEnv' $ \modifiedEnv ->
   BU.run driverOfferAPI driverOfferServer context modifiedEnv
-    & logRequestAndResponse modifiedEnv
+    & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
     & addServantInfo modifiedEnv.appEnv.version driverOfferAPI
     & hashBodyForSignature

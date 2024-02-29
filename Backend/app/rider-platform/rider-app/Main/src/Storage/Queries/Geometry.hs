@@ -29,7 +29,7 @@ import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry.Geometry as BeamG
 import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 
-create :: MonadFlow m => Geometry -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => Geometry -> m ()
 create = createWithKV
 
 findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m [Geometry]

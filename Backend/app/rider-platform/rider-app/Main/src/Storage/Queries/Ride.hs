@@ -49,7 +49,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.Person ()
 import Tools.Error
 
-createRide' :: MonadFlow m => Ride -> m ()
+createRide' :: (MonadFlow m, EsqDBFlow m r) => Ride -> m ()
 createRide' = createWithKV
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
@@ -75,7 +75,7 @@ data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   }
   deriving (Generic, B.Database be)
 
-updateStatus :: MonadFlow m => Id Ride -> RideStatus -> m ()
+updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
   now <- getCurrentTime
   updateOneWithKV
@@ -84,7 +84,7 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateTrackingUrl :: MonadFlow m => Id Ride -> BaseUrl -> m ()
+updateTrackingUrl :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> BaseUrl -> m ()
 updateTrackingUrl rideId url = do
   now <- getCurrentTime
   updateOneWithKV
@@ -93,7 +93,7 @@ updateTrackingUrl rideId url = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateRideRating :: MonadFlow m => Id Ride -> Int -> m ()
+updateRideRating :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Int -> m ()
 updateRideRating rideId rideRating = do
   now <- getCurrentTime
   updateOneWithKV
@@ -108,7 +108,7 @@ findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
 findByBPPRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPRide -> m (Maybe Ride)
 findByBPPRideId bppRideId_ = findOneWithKV [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
 
-updateMultiple :: MonadFlow m => Id Ride -> Ride -> m ()
+updateMultiple :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
   now <- getCurrentTime
   updateOneWithKV
@@ -136,7 +136,7 @@ findLatestCompletedRide riderId = do
   booking <- findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId] (Se.Desc BeamB.createdAt) Nothing Nothing
   findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-updateDriverArrival :: MonadFlow m => Id Ride -> Maybe UTCTime -> m ()
+updateDriverArrival :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe UTCTime -> m ()
 updateDriverArrival rideId arrivalTime = do
   now <- getCurrentTime
   updateOneWithKV
@@ -145,7 +145,7 @@ updateDriverArrival rideId arrivalTime = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateSafetyCheckStatus :: MonadFlow m => Id Ride -> Maybe Bool -> m ()
+updateSafetyCheckStatus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe Bool -> m ()
 updateSafetyCheckStatus rideId status = do
   updateOneWithKV
     [ Se.Set BeamR.safetyCheckStatus status
@@ -191,7 +191,7 @@ findStuckRideItems merchant moCity bookingIds now = do
 
     mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
 
-cancelRides :: MonadFlow m => [Id Ride] -> UTCTime -> m ()
+cancelRides :: (MonadFlow m, EsqDBFlow m r) => [Id Ride] -> UTCTime -> m ()
 cancelRides rideIds now =
   updateWithKV
     [ Se.Set BeamR.status Ride.CANCELLED,
@@ -353,7 +353,7 @@ countRidesFromDateToNowByRiderId riderId date = do
 findRideByRideShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
-updateEditLocationAttempts :: MonadFlow m => Id Ride -> Maybe Int -> m ()
+updateEditLocationAttempts :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe Int -> m ()
 updateEditLocationAttempts rideId attempts = do
   now <- getCurrentTime
   updateOneWithKV

@@ -19,6 +19,7 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
@@ -27,6 +28,7 @@ import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Shutdown
+import System.Environment (lookupEnv)
 import Tools.Metrics
 
 type Flow = FlowR AppEnv
@@ -87,7 +89,10 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)
 
@@ -100,6 +105,9 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   let modifierFunc = (driverAppName <>)
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let kafkaProducerForART = Nothing
   hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
   hedisNonCriticalEnv <- Redis.connectHedis hedisNonCriticalCfg modifierFunc
   hedisClusterEnv <-

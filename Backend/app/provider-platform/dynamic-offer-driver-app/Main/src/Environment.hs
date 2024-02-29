@@ -209,7 +209,10 @@ data AppEnv = AppEnv
     incomingAPIResponseTimeout :: Int,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
-    _version :: Text
+    _version :: Text,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)
 
@@ -238,6 +241,9 @@ buildAppEnv cfg@AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let kafkaProducerForART = Just kafkaProducerTools
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer

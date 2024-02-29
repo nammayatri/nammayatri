@@ -22,7 +22,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Storage.Beam.OnSearchEvent as BeamOSE
 
-create :: MonadFlow m => OnSearchEvent -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => OnSearchEvent -> m ()
 create = createWithKV
 
 instance FromTType' BeamOSE.OnSearchEvent OnSearchEvent where

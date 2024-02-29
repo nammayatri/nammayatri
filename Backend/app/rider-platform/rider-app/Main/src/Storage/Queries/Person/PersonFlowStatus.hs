@@ -31,23 +31,23 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonFlowStatus as BeamPFS
 
-create :: MonadFlow m => DPFS.PersonFlowStatus -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => DPFS.PersonFlowStatus -> m ()
 create = createWithKV
 
 getStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe DPFS.FlowStatus)
 getStatus (Id personId) = findOneWithKV [Se.Is BeamPFS.personId $ Se.Eq personId] <&> (DPFS.flowStatus <$>)
 
-updateStatus :: MonadFlow m => Id Person -> DPFS.FlowStatus -> m ()
+updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Person -> DPFS.FlowStatus -> m ()
 updateStatus (Id personId) flowStatus = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamPFS.flowStatus flowStatus, Se.Set BeamPFS.updatedAt now]
     [Se.Is BeamPFS.personId $ Se.Eq personId]
 
-deleteByPersonId :: MonadFlow m => Id Person -> m ()
+deleteByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamPFS.personId $ Se.Eq personId]
 
-updateToIdleMultiple :: MonadFlow m => [Id Person] -> UTCTime -> m ()
+updateToIdleMultiple :: (MonadFlow m, EsqDBFlow m r) => [Id Person] -> UTCTime -> m ()
 updateToIdleMultiple personIds now =
   updateWithKV
     [Se.Set BeamPFS.flowStatus DPFS.IDLE, Se.Set BeamPFS.updatedAt now]

@@ -27,16 +27,16 @@ import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
 import qualified Storage.Queries.TripTerms as QTT
 
-createEstimate :: MonadFlow m => Estimate -> m ()
+createEstimate :: (MonadFlow m, EsqDBFlow m r) => Estimate -> m ()
 createEstimate = createWithKV
 
-create :: MonadFlow m => Estimate -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => Estimate -> m ()
 create estimate = do
   _ <- traverse_ QTT.createTripTerms estimate.tripTerms
   _ <- createEstimate estimate
   traverse_ QEB.create estimate.estimateBreakupList
 
-createMany :: MonadFlow m => [Estimate] -> m ()
+createMany :: (MonadFlow m, EsqDBFlow m r) => [Estimate] -> m ()
 createMany = traverse_ create
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m (Maybe Estimate)
@@ -48,7 +48,7 @@ findAllBySRId (Id searchRequestId) = findAllWithKV [Se.Is BeamE.requestId $ Se.E
 findByBPPEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPEstimate -> m (Maybe Estimate)
 findByBPPEstimateId (Id bppEstimateId_) = findOneWithKV [Se.Is BeamE.bppEstimateId $ Se.Eq bppEstimateId_]
 
-updateStatus :: MonadFlow m => Id Estimate -> EstimateStatus -> m ()
+updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Estimate -> EstimateStatus -> m ()
 updateStatus (Id estimateId) status_ = do
   now <- getCurrentTime
   updateOneWithKV
@@ -60,7 +60,7 @@ updateStatus (Id estimateId) status_ = do
 getStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m (Maybe EstimateStatus)
 getStatus (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId] <&> (DE.status <$>)
 
-updateStatusByRequestId :: MonadFlow m => Id SearchRequest -> EstimateStatus -> m ()
+updateStatusByRequestId :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> EstimateStatus -> m ()
 updateStatusByRequestId (Id searchId) status_ = do
   now <- getCurrentTime
   updateWithKV

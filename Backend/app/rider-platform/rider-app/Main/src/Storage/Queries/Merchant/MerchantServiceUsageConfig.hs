@@ -36,7 +36,7 @@ create = createWithKV
 findByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantOperatingCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamMSUC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-updateMerchantServiceUsageConfig :: MonadFlow m => MerchantServiceUsageConfig -> m ()
+updateMerchantServiceUsageConfig :: (MonadFlow m, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   now <- getCurrentTime
   updateWithKV

@@ -53,7 +53,7 @@ import qualified Storage.Queries.Quote ()
 import qualified Storage.Queries.TripTerms as QTT
 import Tools.Error
 
-createBooking' :: MonadFlow m => Booking -> m ()
+createBooking' :: (MonadFlow m, EsqDBFlow m r) => Booking -> m ()
 createBooking' = createWithKV
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
@@ -81,7 +81,7 @@ createBooking booking = do
   void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
   create booking
 
-updateStatus :: MonadFlow m => Id Booking -> BookingStatus -> m ()
+updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
   updateOneWithKV
@@ -90,7 +90,7 @@ updateStatus rbId rbStatus = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateBPPBookingId :: MonadFlow m => Id Booking -> Id BPPBooking -> m ()
+updateBPPBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Id BPPBooking -> m ()
 updateBPPBookingId rbId bppRbId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -99,7 +99,7 @@ updateBPPBookingId rbId bppRbId = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateOtpCodeBookingId :: MonadFlow m => Id Booking -> Text -> m ()
+updateOtpCodeBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Text -> m ()
 updateOtpCodeBookingId rbId otp = do
   now <- getCurrentTime
   updateOneWithKV
@@ -196,7 +196,7 @@ findBookingIdAssignedByEstimateId (Id estimateId) = do
   booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]
   return $ listToMaybe $ Domain.id <$> booking
 
-updatePaymentInfo :: MonadFlow m => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
+updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime
   updateOneWithKV
@@ -208,7 +208,7 @@ updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = 
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updatePaymentUrl :: MonadFlow m => Id Booking -> Text -> m ()
+updatePaymentUrl :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Text -> m ()
 updatePaymentUrl bookingId paymentUrl = do
   now <- getCurrentTime
   updateOneWithKV
@@ -267,7 +267,7 @@ findAllCancelledBookingIdsByRider (Id riderId) =
     ]
     <&> (Domain.id <$>)
 
-cancelBookings :: MonadFlow m => [Id Booking] -> UTCTime -> m ()
+cancelBookings :: (MonadFlow m, EsqDBFlow m r) => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =
   updateWithKV
     [ Se.Set BeamB.status CANCELLED,
@@ -441,7 +441,7 @@ instance ToTType' BeamB.Booking Booking where
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
-buildLocation :: MonadFlow m => DBBL.BookingLocation -> m DL.Location
+buildLocation :: (MonadFlow m, EsqDBFlow m r) => DBBL.BookingLocation -> m DL.Location
 buildLocation DBBL.BookingLocation {..} =
   return $
     DL.Location

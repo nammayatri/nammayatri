@@ -557,7 +557,7 @@ updateStatusByIds status driverFeeIds now = do
         [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
   fork "set bad recovery date" $ do updateBadDebtRecoveryDate status driverFeeIds
 
-updateFeeTypeByIds :: MonadFlow m => FeeType -> [Id DriverFee] -> UTCTime -> m ()
+updateFeeTypeByIds :: (MonadFlow m, EsqDBFlow m r) => FeeType -> [Id DriverFee] -> UTCTime -> m ()
 updateFeeTypeByIds feeType driverFeeIds now =
   updateWithKV
     [ Se.Set BeamDF.feeType feeType,
@@ -882,7 +882,7 @@ updateAmountPaidByCoins driverFeeId mbAmountPaidByCoin = do
     [Se.Set BeamDF.amountPaidByCoin mbAmountPaidByCoin]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
-updateBadDebtDateAllDriverFeeIds :: (MonadFlow m, CacheFlow m r) => Id Merchant -> [Id DriverFee] -> TransporterConfig -> m ()
+updateBadDebtDateAllDriverFeeIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> [Id DriverFee] -> TransporterConfig -> m ()
 updateBadDebtDateAllDriverFeeIds merchantId driverFeeIds transporterConfig = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let lastDayOfPreviousMonth = getLastDayOfMonth now
@@ -895,7 +895,7 @@ updateBadDebtDateAllDriverFeeIds merchantId driverFeeIds transporterConfig = do
         ]
     ]
 
-updateBadDebtRecoveryDate :: (MonadFlow m, CacheFlow m r) => DriverFeeStatus -> [Id DriverFee] -> m ()
+updateBadDebtRecoveryDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverFeeStatus -> [Id DriverFee] -> m ()
 updateBadDebtRecoveryDate status driverFeeIds = do
   utcNow <- getCurrentTime
   when (status `elem` [COLLECTED_CASH, CLEARED]) $ do

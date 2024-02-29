@@ -20,7 +20,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Person.PersonDisability as BeamPD hiding (Id)
 
-create :: MonadFlow m => Domain.PersonDisability -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => Domain.PersonDisability -> m ()
 create = createWithKV
 
 findByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Domain.PersonDisability)
@@ -37,7 +37,7 @@ updateDisabilityByPersonId (Id personId) disabilityId tag description = do
     ]
     [Se.Is BeamPD.personId (Se.Eq personId)]
 
-deleteByPersonId :: MonadFlow m => Id Person -> m ()
+deleteByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamPD.personId (Se.Eq personId)]
 
 instance FromTType' BeamPD.PersonDisability Domain.PersonDisability where

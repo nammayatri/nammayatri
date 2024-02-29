@@ -29,7 +29,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import qualified Storage.Beam.Common as BeamCommon
 
-create :: MonadFlow m => BookingCancellationReason -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => BookingCancellationReason -> m ()
 create = createWithKV
 
 findByRideBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe BookingCancellationReason)

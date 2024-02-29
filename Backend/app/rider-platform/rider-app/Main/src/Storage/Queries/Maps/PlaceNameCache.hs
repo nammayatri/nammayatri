@@ -29,7 +29,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 
-create :: MonadFlow m => PlaceNameCache -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => PlaceNameCache -> m ()
 create = createWithKV
 
 findPlaceByPlaceId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [PlaceNameCache]

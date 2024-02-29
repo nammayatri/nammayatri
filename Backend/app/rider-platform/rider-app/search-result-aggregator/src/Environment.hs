@@ -17,11 +17,13 @@ module Environment where
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster)
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
+import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -57,7 +59,10 @@ data AppEnv = AppEnv
     hedisClusterEnv :: HedisEnv,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    shouldLogRequestId :: Bool,
+    requestId :: Maybe Text,
+    kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)
 
@@ -70,6 +75,9 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let kafkaProducerForART = Nothing
   -- let riderAppNonCriticalPrefix = riderAppPrefix
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg riderAppPrefix
   hedisNonCriticalClusterEnv <-

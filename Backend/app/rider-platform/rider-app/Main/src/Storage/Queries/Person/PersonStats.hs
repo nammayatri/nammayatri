@@ -25,7 +25,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Person.PersonStats as BeamPS hiding (Id)
 
-create :: MonadFlow m => Domain.PersonStats -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => Domain.PersonStats -> m ()
 create = createWithKV
 
 findByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Domain.PersonStats)
