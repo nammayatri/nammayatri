@@ -21,6 +21,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import BecknV2.OnDemand.Utils.Payment
 import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
@@ -28,7 +29,9 @@ import qualified Data.List as List
 import Data.Maybe
 import qualified Data.Text as T
 import Domain.Action.Beckn.Search
+import Domain.Types
 import Domain.Types.BecknConfig
+import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DCT
 import qualified Domain.Types.Common as DTC
@@ -39,6 +42,7 @@ import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy as Policy
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as DQuote
@@ -983,3 +987,18 @@ buildRateCardTags RateCardBreakupItem {..} = do
             },
       tagValue = Just value
     }
+
+tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
+tfCancellationTerms becknConfig =
+  List.singleton
+    Spec.CancellationTerm
+      { cancellationTermCancellationFee = tfCancellationFee becknConfig.cancellationFeeAmount,
+        cancellationTermFulfillmentState = Nothing,
+        cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
+      }
+
+tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
+tfPayments booking transporter bppConfig = do
+  let amount = Just $ show booking.estimatedFare.getMoney
+  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
+  Just $ List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
