@@ -244,13 +244,17 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         if (path.size() == 0) {
                             LatLng destination = destMarker.getPosition();
                             animateMarkerNew(src, destination, currMarker);
-                            polyline.remove();
-                            if(overlayPolylines != null)
+                            if(overlayPolylines != null) {
                                 overlayPolylines.remove();
+                                overlayPolylines = null;
+                            }
                             if(polylineAnimatorSet != null){
                                 polylineAnimatorSet.cancel();
+                                polylineAnimatorSet = null;
                             }
+                            polyline.remove();
                             polyline = null;
+
                             currMarker.setAnchor(0.5f, 0);
                             mapUpdate.isMapMoved = false;
                             mapUpdate.isMapIdle = true;

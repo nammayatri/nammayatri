@@ -784,6 +784,7 @@ type HomeScreenStateProps =
   , showBookingPreference :: Boolean
   , safetyAlertType :: Maybe SafetyAlertType
   , rideSearchProps :: RideSearchProps
+  , suggestedRideFlow :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

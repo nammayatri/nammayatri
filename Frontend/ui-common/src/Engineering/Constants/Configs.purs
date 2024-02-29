@@ -20,6 +20,6 @@ androidPolylineAnimationConfig :: PolylineAnimationConfig
 androidPolylineAnimationConfig = {
     color : shadowGray
   , draw : 700 -- millisecond
-  , fade : 1000 -- millisecond
-  , delay : 200 -- millisecond
+  , fade : 0 -- millisecond
+  , delay : 1000 -- millisecond
 }
