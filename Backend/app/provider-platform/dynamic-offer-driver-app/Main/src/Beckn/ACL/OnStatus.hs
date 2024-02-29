@@ -35,15 +35,24 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as Ride
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
+import Data.Coerce (coerce)
 import Domain.Types.Beckn.Status as DStatus
+import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.Common
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Beckn.Common as Common
+import qualified SharedLogic.FarePolicy as SFP
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import Storage.Queries.DriverQuote as QDQ
 
 buildOnStatusMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
@@ -160,8 +169,19 @@ buildOnStatusReqV2 merchant booking req = do
       city = fromMaybe merchant.city booking.bapCity
       country = fromMaybe merchant.country booking.bapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  -- bppConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
-  buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req
+  mbDriverQuote <- QDQ.findById $ Id booking.quoteId
+  farePolicy <- case mbDriverQuote of
+    Nothing -> do
+      logWarning $ "Driver Quote Not Found for quoteId " <> show booking.quoteId
+      return Nothing
+    Just driverQuote ->
+      Redis.get (SFP.makeFarePolicyByEstOrQuoteIdKey driverQuote.estimateId.getId) >>= \case
+        Nothing -> do
+          logWarning $ "Fare Policy Not Found for estimateId " <> show driverQuote.estimateId
+          return Nothing
+        Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req farePolicy bppConfig
 
 buildOnStatusReqV2' ::
   (MonadFlow m, EncFlow m r) =>
@@ -174,10 +194,12 @@ buildOnStatusReqV2' ::
   Context.Country ->
   DRB.Booking ->
   DStatus.OnStatusBuildReq ->
+  Maybe FarePolicyD.FullFarePolicy ->
+  DBC.BecknConfig ->
   m Spec.OnStatusReq
-buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req = do
+buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req mbFarePolicy bppConfig = do
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
-  message <- mkOnStatusMessageV2 req
+  message <- mkOnStatusMessageV2 req mbFarePolicy bppConfig
   pure $
     Spec.OnStatusReq
       { onStatusReqError = Nothing,
@@ -188,16 +210,18 @@ buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country 
 mkOnStatusMessageV2 ::
   (MonadFlow m, EncFlow m r) =>
   DStatus.OnStatusBuildReq ->
+  Maybe FarePolicyD.FullFarePolicy ->
+  DBC.BecknConfig ->
   m (Maybe Spec.ConfirmReqMessage)
-mkOnStatusMessageV2 res = do
-  order <- tfOrder res
+mkOnStatusMessageV2 res mbFarePolicy bppConfig = do
+  order <- tfOrder res mbFarePolicy bppConfig
   pure . Just $
     Spec.ConfirmReqMessage
       { confirmReqMessageOrder = order
       }
 
-tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> m Spec.Order
-tfOrder (DStatus.NewBookingBuildReq {bookingId}) =
+tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfOrder (DStatus.NewBookingBuildReq {bookingId}) _ becknConfig =
   pure
     Spec.Order
       { orderId = Just bookingId.getId,
@@ -205,19 +229,19 @@ tfOrder (DStatus.NewBookingBuildReq {bookingId}) =
         orderFulfillments = Nothing,
         orderBilling = Nothing,
         orderCancellation = Nothing,
-        orderCancellationTerms = Nothing,
+        orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
         orderItems = Nothing,
         orderPayments = Nothing,
-        orderProvider = Nothing,
+        orderProvider = Common.tfProvider becknConfig,
         orderQuote = Nothing,
         orderCreatedAt = Nothing,
         orderUpdatedAt = Nothing --------To do keep booking created and updated time
       }
-tfOrder (DStatus.RideAssignedReq req) = Common.tfAssignedReqToOrder req
-tfOrder (DStatus.RideStartedReq req) = Common.tfStartReqToOrder req
-tfOrder (DStatus.RideCompletedReq req) = Common.tfCompleteReqToOrder req
-tfOrder (DStatus.BookingCancelledReq req) = Common.tfCancelReqToOrder req
-tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) = do
+tfOrder (DStatus.RideAssignedReq req) mbFarePolicy becknConfig = Common.tfAssignedReqToOrder req mbFarePolicy becknConfig
+tfOrder (DStatus.RideStartedReq req) mbFarePolicy becknConfig = Common.tfStartReqToOrder req mbFarePolicy becknConfig
+tfOrder (DStatus.RideCompletedReq req) mbFarePolicy becknConfig = Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
+tfOrder (DStatus.BookingCancelledReq req) _ becknConfig = Common.tfCancelReqToOrder req becknConfig
+tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) _ becknConfig = do
   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
   let Common.BookingDetails {driver, vehicle, booking, ride, isValueAddNP} = bookingDetails
   let image = Nothing
@@ -234,10 +258,10 @@ tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDe
               { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
               },
         orderBilling = Nothing,
-        orderCancellationTerms = Nothing,
+        orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
         orderItems = Nothing,
-        orderPayments = Nothing,
-        orderProvider = Nothing,
+        orderPayments = Utils.tfPayments booking bookingDetails.merchant becknConfig,
+        orderProvider = Common.tfProvider becknConfig,
         orderQuote = Nothing,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
