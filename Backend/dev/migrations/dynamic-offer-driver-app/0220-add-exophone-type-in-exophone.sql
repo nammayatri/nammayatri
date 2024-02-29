@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.exophone ADD COLUMN exophone_type varchar(255) DEFAULT 'CALL_RIDE' NOT NULL;

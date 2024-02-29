@@ -1,0 +1,49 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+
+Rating:
+  tableName: rating
+
+  fields:
+    id : Id Rating
+    rideId : Id Ride
+    driverId : Id Person
+    ratingValue : Int
+    feedbackDetails : Maybe Text
+    wasOfferedAssistance : Maybe Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    isSafe : Maybe Bool
+    issueId : Maybe Text
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
+
+  queries:
+    findRatingForRide:
+      kvFunction: findOneWithKV
+      where:
+        eq: [rideId]
+
+    findAllRatingsForPerson:
+      kvFunction: findAllWithKV
+      where:
+        eq: [driverId]
+
+    updateRating:
+      kvFunction: updateOneWithKV
+      params: [ratingValue, feedbackDetails , updatedAt, isSafe, issueId, wasOfferedAssistance]
+      where:
+        and: [id, driverId]
+
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

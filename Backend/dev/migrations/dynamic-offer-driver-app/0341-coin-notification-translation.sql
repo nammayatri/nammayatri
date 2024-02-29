@@ -1,12 +1,3 @@
-CREATE TABLE atlas_driver_offer_bpp.translations (
-    id VARCHAR(36) PRIMARY KEY,
-    message_key text NOT NULL,
-    language text NOT NULL,
-    message text NOT NULL,
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
-);
-
 INSERT INTO atlas_driver_offer_bpp.translations (id, message_key, language, message, created_at, updated_at)
 SELECT
     id,

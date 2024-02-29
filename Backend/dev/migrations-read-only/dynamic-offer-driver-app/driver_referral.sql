@@ -1,0 +1,8 @@
+CREATE TABLE atlas_driver_offer_bpp.driver_referral ();
+
+ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN driver_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN linked_at timestamp with time zone NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN referral_code character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD PRIMARY KEY ( referral_code, driver_id);

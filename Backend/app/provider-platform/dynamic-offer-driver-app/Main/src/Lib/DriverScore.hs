@@ -136,6 +136,7 @@ updateDailyStats driverId merchantOpCityId ride = do
   case ds of
     Nothing -> do
       id <- generateGUIDText
+      now <- getCurrentTime
       let dailyStatsOfDriver' =
             DDS.DailyStats
               { id = id,
@@ -143,7 +144,9 @@ updateDailyStats driverId merchantOpCityId ride = do
                 totalEarnings = fromMaybe 0 ride.fare,
                 numRides = 1,
                 totalDistance = fromMaybe 0 ride.chargeableDistance,
-                merchantLocalDate = utctDay localTime
+                merchantLocalDate = utctDay localTime,
+                createdAt = now,
+                updatedAt = now
               }
       SQDS.create dailyStatsOfDriver'
     Just dailyStats -> do
@@ -151,7 +154,7 @@ updateDailyStats driverId merchantOpCityId ride = do
           numRides = dailyStats.numRides + 1
           totalDistance = dailyStats.totalDistance + fromMaybe 0 ride.chargeableDistance
           merchantLocalDate = utctDay localTime
-      SQDS.updateByDriverId driverId totalEarnings numRides totalDistance merchantLocalDate
+      SQDS.updateByDriverId totalEarnings numRides totalDistance driverId merchantLocalDate
 
 createDriverStat :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> m DS.DriverStats
 createDriverStat driverId = do

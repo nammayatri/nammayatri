@@ -68,7 +68,9 @@ createDriverReferral (driverId, _, merchantOpCityId) isDashboard ReferralLinkReq
         D.DriverReferral
           { referralCode = Id rc,
             driverId = cast driverId,
-            linkedAt = now
+            linkedAt = now,
+            createdAt = now,
+            updatedAt = now
           }
 
 generateReferralCode ::
@@ -100,7 +102,9 @@ generateReferralCode (driverId, _, _) = do
         D.DriverReferral
           { referralCode = Id rc,
             driverId = cast driverId,
-            linkedAt = now
+            linkedAt = now,
+            createdAt = now,
+            updatedAt = now
           }
     formatReferralCode rc =
       let len = length rc

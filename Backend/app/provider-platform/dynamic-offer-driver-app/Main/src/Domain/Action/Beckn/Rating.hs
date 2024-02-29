@@ -67,7 +67,7 @@ handler merchantId req ride = do
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating rideRating.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance
+      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance rideRating.id driverId
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
   calculateAverageRating driverId merchant.minimumDriverRatesCount

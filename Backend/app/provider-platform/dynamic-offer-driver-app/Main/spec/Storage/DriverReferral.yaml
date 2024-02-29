@@ -1,0 +1,34 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Money: Kernel.Types.Common
+
+DriverReferral:
+  tableName: driver_referral
+
+  fields:
+    referralCode : Id DriverReferral
+    driverId : Id Person
+    linkedAt : UTCTime
+
+  constraints:
+    referralCode: PrimaryKey
+    driverId: SecondaryKey
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  queries:
+    findByRefferalCode:
+      kvFunction: findOneWithKV
+      where: referralCode
+
+    findById:
+      kvFunction: findOneWithKV
+      where: driverId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

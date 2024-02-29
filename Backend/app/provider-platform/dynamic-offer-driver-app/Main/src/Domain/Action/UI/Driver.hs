@@ -750,7 +750,7 @@ updateMetaData ::
   m APISuccess
 updateMetaData (personId, _, _) req = do
   void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
+  QMeta.updateMetaData req.device req.deviceOS req.deviceDateTime req.appPermissions personId
   return Success
 
 makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> m DriverInformationRes

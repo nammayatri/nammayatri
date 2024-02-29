@@ -51,10 +51,10 @@ SubscriptionConfig:
         and: [merchantOperatingCityId, serviceName]
 
   default :
-    allow_manual_payment_links : "false"
-    send_deep_link : "false"
-    send_in_app_fcm_notifications : "false"
-    allow_due_addition : "false"
-    payment_service_name : "'Payment_Juspay'"
-    is_triggered_at_end_ride : "true"
-    allow_driver_fee_calc_schedule : "false"
+    allowManualPaymentLinks : "false"
+    sendDeepLink : "false"
+    sendInAppFcmNotifications : "false"
+    allowDueAddition : "false"
+    paymentServiceName : "'Payment_Juspay'"
+    isTriggeredAtEndRide : "true"
+    allowDriverFeeCalcSchedule : "false"

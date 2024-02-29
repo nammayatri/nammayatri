@@ -1,0 +1,37 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Money: Kernel.Types.Common
+
+DailyStats:
+  tableName: daily_stats
+
+  fields:
+    id : Text
+    driverId : Id Person
+    totalEarnings : Money
+    numRides : Int
+    totalDistance : Meters
+    merchantLocalDate : Day
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  queries:
+    findByDriverIdAndDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateByDriverId:
+      kvFunction: updateOneWithKV
+      params: [totalEarnings, numRides, totalDistance]
+      where:
+        and: [driverId, merchantLocalDate]
