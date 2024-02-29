@@ -52,4 +52,4 @@ decodeReq reqBS =
         Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
 
 gpsToText :: Gps.Gps -> Maybe Text
-gpsToText Gps.Gps {..} = Just $ (T.pack $ printf "%.6f" lat) <> ", " <> (T.pack $ printf "%.6f" lon)
+gpsToText Gps.Gps {..} = Just $ T.pack (printf "%.6f" lat) <> ", " <> T.pack (printf "%.6f" lon)
