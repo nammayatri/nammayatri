@@ -138,7 +138,8 @@ data QuoteInfo = QuoteInfo
     itemId :: Text,
     descriptions :: [Text],
     specialLocationTag :: Maybe Text,
-    validTill :: UTCTime
+    validTill :: UTCTime,
+    serviceTierName :: Maybe Text
   }
 
 data QuoteDetails
@@ -322,7 +323,6 @@ buildQuote requestId providerInfo now searchRequest QuoteInfo {..} = do
         quoteDetails = quoteDetails',
         merchantId = searchRequest.merchantId,
         merchantOperatingCityId = searchRequest.merchantOperatingCityId,
-        serviceTierName = Nothing,
         ..
       }
 
