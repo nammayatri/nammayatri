@@ -23,13 +23,23 @@ import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
+import Data.Coerce (coerce)
 import qualified Data.List as List
+import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.Common
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.OnUpdate as OU
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Beckn.Common
+import qualified SharedLogic.FarePolicy as SFP
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import Storage.Queries.DriverQuote as QDQ
 
 buildOnUpdateReqV2 ::
   (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
@@ -45,7 +55,19 @@ buildOnUpdateReqV2 ::
   m Spec.OnUpdateReq
 buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req = do
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
-  message <- mkOnUpdateMessageV2 req
+  mbDriverQuote <- QDQ.findById $ Id booking.quoteId
+  farePolicy <- case mbDriverQuote of
+    Nothing -> do
+      logWarning $ "Driver Quote Not Found for quoteId " <> show booking.quoteId
+      return Nothing
+    Just driverQuote ->
+      Redis.get (SFP.makeFarePolicyByEstOrQuoteIdKey driverQuote.estimateId.getId) >>= \case
+        Nothing -> do
+          logWarning $ "Fare Policy Not Found for estimateId " <> show driverQuote.estimateId
+          return Nothing
+        Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+  becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  message <- mkOnUpdateMessageV2 req farePolicy becknConfig
   pure $
     Spec.OnUpdateReq
       { onUpdateReqError = Nothing,
@@ -56,9 +78,11 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country b
 mkOnUpdateMessageV2 ::
   (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   OU.OnUpdateBuildReq ->
+  Maybe FarePolicyD.FullFarePolicy ->
+  DBC.BecknConfig ->
   m (Maybe Spec.ConfirmReqMessage)
-mkOnUpdateMessageV2 req = do
-  order <- buildOnUpdateReqOrderV2 req
+mkOnUpdateMessageV2 req mbFarePolicy becknConfig = do
+  order <- buildOnUpdateReqOrderV2 req mbFarePolicy becknConfig
   pure . Just $
     Spec.ConfirmReqMessage
       { confirmReqMessageOrder = order
@@ -67,17 +91,24 @@ mkOnUpdateMessageV2 req = do
 buildOnUpdateReqOrderV2 ::
   (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   OU.OnUpdateBuildReq ->
+  Maybe FarePolicyD.FullFarePolicy ->
+  DBC.BecknConfig ->
   m Spec.Order
-buildOnUpdateReqOrderV2 req' = case req' of
-  OU.RideAssignedBuildReq req -> Common.tfAssignedReqToOrder req
-  OU.RideStartedBuildReq req -> Common.tfStartReqToOrder req
-  OU.RideCompletedBuildReq req -> Common.tfCompleteReqToOrder req
-  OU.BookingCancelledBuildReq req -> Common.tfCancelReqToOrder req
-  OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req
+buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
+  OU.RideAssignedBuildReq req -> Common.tfAssignedReqToOrder req mbFarePolicy becknConfig
+  OU.RideStartedBuildReq req -> Common.tfStartReqToOrder req mbFarePolicy becknConfig
+  OU.RideCompletedBuildReq req -> Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
+  OU.BookingCancelledBuildReq req -> Common.tfCancelReqToOrder req becknConfig
+  OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req mbFarePolicy becknConfig
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let previousCancellationReasonsTags = Utils.mkPreviousCancellationReasonsTags cancellationSource
     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False (Just $ show Event.ESTIMATE_REPETITION) isValueAddNP -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+    let itemTags = case mbFarePolicy of
+          Nothing -> Nothing
+          Just fullFarePolicy -> do
+            let farePolicy = Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
+            Utils.mkRateCardTag Nothing farePolicy
     pure $
       Spec.Order
         { orderId = Just booking.id.getId,
@@ -91,12 +122,12 @@ buildOnUpdateReqOrderV2 req' = case req' of
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags = Nothing
+                  itemTags
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,
           orderCancellationTerms = Nothing,
-          orderPayments = Nothing,
+          orderPayments = Utils.tfPayments booking bookingDetails.merchant becknConfig,
           orderProvider = Nothing,
           orderQuote = Nothing,
           orderStatus = Nothing,
