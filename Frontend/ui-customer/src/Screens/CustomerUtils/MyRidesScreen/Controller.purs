@@ -20,7 +20,7 @@ import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (union, (!!), length, filter, unionBy, head, all, null, sortWith, reverse)
+import Data.Array (union, (!!), length, filter, unionBy, head, all, null, sortWith, reverse, any)
 import Data.Int (fromString, round, toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -171,9 +171,9 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
   case status of
     "success" -> do
                   let bufferCardDataPrestoList = ((myRideListTransformerProp (rideList ^. _list)))
-                  let bufferCardData = myRideListTransformer state (rideList  ^. _list)
+                      bufferCardData = myRideListTransformer state (rideList  ^. _list)
+                      loaderBtnDisabled = if(length (rideList ^. _list )== 0) then true else false
                   _ <- pure $ setRefreshing "2000031" false
-                  let loaderBtnDisabled = if(length (rideList ^. _list )== 0) then true else false
                   continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true}}
     "listCompleted" -> continue state {data{loadMoreText = false}}
     _ -> continue state{props{receivedResponse = true, apiFailure = true, loadMoreDisabled = true}}
@@ -188,7 +188,7 @@ eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController Prima
 eval _ state = continue state
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
-myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED") || item.status == (toPropValue "REALLOCATED"))) (map (\(RideBookingRes ride) -> {
+myRideListTransformerProp listRes =  filter (\item -> (any (_ == item.status) [(toPropValue "COMPLETED"), (toPropValue "CANCELLED"), (toPropValue "REALLOCATED")])) (map (\(RideBookingRes ride) -> {
     date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source : toPropValue (decodeAddress (Booking ride.fromLocation)),
@@ -205,7 +205,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     rideEndTime : toPropValue (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
     vehicleNumber : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
     rideId : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
-    status : toPropValue (if ride.status == "COMPLETED" then "COMPLETED" else "CANCELLED"),
+    status : toPropValue (if ride.status == "REALLOCATED" then "CANCELLED" else ride.status),
     rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
     alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
     zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone"
@@ -213,7 +213,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED" || item.status == "REALLOCATED")) (map (\(RideBookingRes ride) ->
+myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) ["COMPLETED", "CANCELLED", "REALLOCATED"])) (map (\(RideBookingRes ride) ->
   let
     fares = getFares ride.fareBreakup
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
@@ -239,7 +239,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
     vehicleNumber : (rideDetails.vehicleNumber),
     rideId : (rideDetails.id),
-    status : if ride.status == "COMPLETED" then "COMPLETED" else "CANCELLED",
+    status : if ride.status == "REALLOCATED" then "CANCELLED" else ride.status,
     shortRideId : (rideDetails.shortRideId),
     bookingId : ride.id,
     rideEndTimeUTC : fromMaybe "" (ride.rideEndTime),
