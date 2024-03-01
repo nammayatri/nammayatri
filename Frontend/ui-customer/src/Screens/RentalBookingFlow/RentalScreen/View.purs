@@ -349,7 +349,7 @@ descriptionView push state description =
           currency = getCurrency appConfig
       in case description of
           BookingTime -> if toShowTitle then getString BOOKING_ON <> " " <> EHC.convertUTCtoISC startTimeUTC "Do" <> " " <> EHC.convertUTCtoISC startTimeUTC "MMM" <> ", " <> EHC.convertUTCtoISC startTimeUTC "hh" <> ":" <> EHC.convertUTCtoISC startTimeUTC "mm" <> " " <> EHC.convertUTCtoISC startTimeUTC "a" <> " (" <> baseDuration <> "hrs)" else getString FINAL_FARE_DESCRIPTION
-          BookingDistance -> if toShowTitle then getString INCLUDED_KMS <> show state.data.rentalBookingData.baseDistance else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> " " <> currency <> (show selectedQuote.fareDetails.plannedPerKmRate) <> "/km."
+          BookingDistance -> if toShowTitle then getString INCLUDED_KMS <> show state.data.rentalBookingData.baseDistance else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> " " <> currency <> (show selectedQuote.fareDetails.perExtraKmRate) <> "/km."
           BaseFare -> if toShowTitle then getString BASE_FARE <> maybe "" (\quote -> quote.quoteDetails.price) activeQuote else getString ADDITIONAL_CHARGES_DESCRIPTION
           TollFee -> if toShowTitle then getString TOLLS_AND_PARKING_FEES else getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED
 

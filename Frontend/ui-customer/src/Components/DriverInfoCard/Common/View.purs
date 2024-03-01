@@ -242,7 +242,9 @@ getVehicleImage variant vehicleDetail city = do
         case (getMerchant FunctionCall) of
           YATRISATHI -> case variant of
                           "SUV" -> "ny_ic_suv_concept"
-                          _     -> "ny_ic_sedan_concept"
+                          "TAXI" -> "ic_white_taxi"
+                          "TAXI_PLUS" -> "ny_ic_sedan_white"
+                          _     -> "ny_ic_sedan_white"
           _          -> "ic_white_taxi"
     where 
       mkAutoImage :: City -> String

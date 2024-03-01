@@ -260,7 +260,7 @@ rentalRateCardConfig state =
           }
         , additionalStrings = [
             {key : "FINAL_FARE_DESCRIPTION", val : (getString FINAL_FARE_DESCRIPTION)}
-          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION) <> " " <> currency <> (show state.fareDetails.plannedPerKmRate) <> "/km."}
+          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION) <> " " <> currency <> (show state.fareDetails.perExtraKmRate) <> "/km."}
           , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> (show state.fareDetails.nightShiftCharge))}
           , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
           ]
