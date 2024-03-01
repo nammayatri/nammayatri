@@ -523,7 +523,6 @@ export const updatePushInIdMap = function (key, flag) {
 }
 export const resetIdMap = function () {
   idMap = {};
-  return;
 }
 
 export const getValueFromIdMap = function (key) {
