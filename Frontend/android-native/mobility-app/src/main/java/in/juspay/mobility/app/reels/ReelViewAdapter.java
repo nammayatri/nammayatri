@@ -575,11 +575,12 @@ public class ReelViewAdapter extends RecyclerView.Adapter<ReelViewAdapter.ViewHo
                         Toast.makeText(context, "Something went wrong. Please try again later!", Toast.LENGTH_SHORT).show();
                         ((Activity) context).finish();
                     }else{
-                        currentExoplayerPlaying.exoPlayer.seekTo(currentExoplayerPlaying.exoPlayer.getDuration());
-                        currentExoplayerPlaying.exoPlayer.play();
+                        Toast.makeText(context, "Something went wrong. Please try again!", Toast.LENGTH_SHORT).show();
+                        currentExoplayerPlaying.exoPlayer.pause();
+                        currentExoplayerPlaying.exoPlayer.seekTo(0);
+                        reelPauseButton.setVisibility(View.VISIBLE);
                     }
                 }
-
 
                 @Override
                 public void onPositionDiscontinuity(@NonNull Player.PositionInfo oldPosition, @NonNull Player.PositionInfo newPosition, int reason) {

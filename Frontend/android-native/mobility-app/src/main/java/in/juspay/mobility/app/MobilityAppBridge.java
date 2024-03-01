@@ -522,6 +522,9 @@ public class MobilityAppBridge extends HyperBridge {
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
 
+        SharedPreferences sharedPrefs = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        sharedPrefs.edit().putString("ANOTHER_ACTIVITY_LAUNCHED", "true").apply();
+
         ReelController.registerCallback(new ReelController.ReelControllerCallback() {
             @Override
             public void sendJsCallBack(String javascript) {

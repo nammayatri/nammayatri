@@ -230,7 +230,7 @@ quizQuestionBodyView push state =
       , width MATCH_PARENT
       , scrollBarY false
       , background Color.white900
-      , visibility $ if state.props.showShimmer then GONE else VISIBLE
+      , visibility $ boolToVisibility ( not state.props.showShimmer )
       ][ linearLayout
         [ width $ MATCH_PARENT
         , height $ WRAP_CONTENT
@@ -257,7 +257,7 @@ quizQuestionView push state eQuestion =
   ,  frameLayout
      [ width $ V questionInfo.width
      , height $ V questionInfo.height
-     , visibility $ if questionInfo.questionImageVisible then VISIBLE else GONE
+     , visibility $ boolToVisibility questionInfo.questionImageVisible
      , margin $ MarginTop 16
      ][   linearLayout
           [ width $ MATCH_PARENT
@@ -282,7 +282,7 @@ quizQuestionView push state eQuestion =
             ([width $ V questionInfo.width
             , height $ V questionInfo.height
             , layoutGravity "center"
-            , visibility $ if questionInfo.questionImageVisible then VISIBLE else GONE
+            , visibility $ boolToVisibility questionInfo.questionImageVisible
             ] <>  if (state.props.isConfirming || state.props.isConfirmed) then [imageUrlWithFallback $ ListImageUrl questionInfo.questionImage eQuestion.questionId] 
                   else if (not state.props.animationVisibilty) then [imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_background"]
                   else [imageUrlWithFallback $ ListImageUrl questionInfo.questionImage eQuestion.questionId] )
@@ -395,7 +395,7 @@ textOptionPill push state eQuestion optionText optionId options isInGrid isFirst
      , width $ V 20
      , height $ V 20
      , margin $ MarginLeft 15
-     , visibility $ if (textOptionInfo.imageVisible && (not isInGrid)) then VISIBLE else GONE
+     , visibility $ boolToVisibility (textOptionInfo.imageVisible && (not isInGrid))
      ]
   ]
 
@@ -467,12 +467,16 @@ primaryButtonBodyView push state =
   ]
   where 
    optionNotSelected = 
-     let previousHistoryPresentForCurrentQuestion = maybe false (\question -> not (question.previousHistory == Nothing)) (state.data.questions !! state.props.currentQuestionIndex)
+     let previousHistoryPresentForCurrentQuestion = maybe false (\question -> getValidatedPreviousHistoryEnabled question) (state.data.questions !! state.props.currentQuestionIndex)
      in  (state.props.isRetryEnabled || not previousHistoryPresentForCurrentQuestion) && (state.props.currentQuestionSelectedOptionsData.selectedSingleOption == Nothing) && (null state.props.currentQuestionSelectedOptionsData.selectedMultipleOptions)
+   
+   getValidatedPreviousHistoryEnabled question = case question.previousHistory of
+     Nothing -> false
+     Just (API.LmsQuizHistory history) -> history.status == API.CORRECT
 
 buttonView :: forall w. (Action -> Effect Unit) -> LmsQuizScreenState -> PrestoDOM (Effect Unit) w
 buttonView push state =
-  let buttonConfig = spy "HELLO" getButtonVisibility
+  let buttonConfig = getButtonVisibility
   in
   Keyed.linearLayout
   [ width MATCH_PARENT
@@ -507,7 +511,7 @@ buttonView push state =
                                                 Nothing -> defaultButtonVisibility {confirmButtonVisilbe = true}
                                                 Just (API.LmsQuizHistory history) -> case history.status of
                                                                                         API.CORRECT -> defaultButtonVisibility {nextButtonVisible = true}
-                                                                                        API.INCORRECT -> defaultButtonVisibility {retryButtonVisible = true, nextButtonVisible = true}
+                                                                                        API.INCORRECT -> defaultButtonVisibility {confirmButtonVisilbe = true}
                                   Just (API.QuestionConfirmRes validationResponse) -> case validationResponse.validation of
                                                                                         API.CORRECT_ANSWER -> defaultButtonVisibility {nextButtonVisible = true}
                                                                                         API.INCORRECT_ANSWER -> defaultButtonVisibility {retryButtonVisible = true, nextButtonVisible = true}
@@ -534,7 +538,7 @@ quizBodyShimmerView push state =
   , orientation VERTICAL
   , margin $ Margin 16 16 16 16
   , background Color.white900
-  , visibility $ if state.props.showShimmer then VISIBLE else GONE
+  , visibility $ boolToVisibility state.props.showShimmer
   ][ linearLayout
      [ width MATCH_PARENT
      , height WRAP_CONTENT
@@ -569,7 +573,7 @@ quizCompletedView push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , visibility if state.props.showShimmer then GONE else VISIBLE
+  , visibility $ boolToVisibility (not  state.props.showShimmer )
   , clickable false
   , background Color.white900
   ][  imageView
@@ -577,7 +581,7 @@ quizCompletedView push state =
       , height $ V (screenHeight unit)
       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_sunburst"
       , layoutGravity "center"
-      , visibility $ if isPassed then VISIBLE else GONE
+      , visibility $ boolToVisibility isPassed
       ]
   ,   relativeLayout
       [ width $ MATCH_PARENT
@@ -645,7 +649,7 @@ getOptionsInfoAccordingToOptionsList :: String -> Boolean ->  Array OptionEntity
 getOptionsInfoAccordingToOptionsList optionId isImageOption options = case (find (\(OptionEntity option) -> option.optionId == optionId) options) of
                                                           Nothing -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : false}
                                                           Just (OptionEntity option) -> if option.isCorrect then {backgroundColor : Color.greenOpacity10, strokeWidth : if isImageOption then 3 else 1, strokeColor : Color.green900, imageVisible : true, isClickable : false}
-                                                                         else {backgroundColor : Color.red900Alpha16, strokeWidth : if isImageOption then 3 else 1, strokeColor : Color.red900, imageVisible : false, isClickable : false}
+                                                                         else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : false}
 
 getOptionsInfoAccordingToValidationRes :: LmsQuizScreenState -> LmsQuestion -> String -> Boolean -> Array OptionEntity -> {backgroundColor :: String, strokeWidth :: Int, strokeColor :: String, imageVisible :: Boolean, isClickable :: Boolean}
 getOptionsInfoAccordingToValidationRes state eQuestion optionId isImageOption options =
@@ -664,8 +668,11 @@ getOptionInfoAccordingToPreviousHistory :: LmsQuizScreenState -> LmsQuestion -> 
 getOptionInfoAccordingToPreviousHistory state eQuestion optionId isImageOption options = 
   case eQuestion.previousHistory of
     Nothing -> getOptionInfoAccordingToCurrentSelectedOptions  state optionId isImageOption eQuestion
-    Just (API.LmsQuizHistory history) -> if optionId `elem` history.selectedOptions then getOptionsInfoAccordingToOptionsList optionId isImageOption options
-                                          else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : false}
+    Just (API.LmsQuizHistory history) ->  case history.status of
+                                            API.CORRECT -> 
+                                                  if optionId `elem` history.selectedOptions then getOptionsInfoAccordingToOptionsList optionId isImageOption options
+                                                  else {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : false}
+                                            API.INCORRECT -> {backgroundColor : Color.white900, strokeWidth : 1, strokeColor : Color.grey900, imageVisible : false,  isClickable : true}
 
 getOptionInfoAccordingToCurrentSelectedOptions :: LmsQuizScreenState -> String -> Boolean -> LmsQuestion ->  {backgroundColor :: String, strokeWidth :: Int, strokeColor :: String, imageVisible :: Boolean, isClickable :: Boolean}
 getOptionInfoAccordingToCurrentSelectedOptions state optionId isImageOption eQuestion = 
