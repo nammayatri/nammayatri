@@ -135,6 +135,7 @@ baseAppFlow baseFlow event = do
     liftFlowBT $ Events.initMeasuringDuration "Flow.baseAppFlow"
     liftFlowBT $ setEventTimestamp "baseAppFlow"
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
+    liftFlowBT $ runEffectFn1 EHC.resetIdMap ""
     -- checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
     checkTimeSettings
     cacheAppParameters versionCode baseFlow

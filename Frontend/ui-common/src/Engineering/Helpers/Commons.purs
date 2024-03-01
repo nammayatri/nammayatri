@@ -98,6 +98,7 @@ foreign import getFutureDate :: String -> Int -> String
 foreign import setEventTimestamp :: String -> Effect Unit
 foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
 foreign import updateIdMap :: EffectFn1 String CarouselHolderData
+foreign import resetIdMap :: EffectFn1 String Unit
 foreign import updatePushInIdMap :: Fn2 String Boolean Unit
 foreign import getValueFromIdMap :: EffectFn1 String CarouselHolderData
 foreign import getRandomID :: Int -> String

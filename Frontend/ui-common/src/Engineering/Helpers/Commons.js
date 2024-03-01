@@ -11,7 +11,7 @@ function getLanguageLocale (){
   return window.languageKey;
 }
 
-const idMap = {};
+let idMap = {};
 
 export const getOs = function () {
   if (window.__OS) {
@@ -520,6 +520,10 @@ export const updatePushInIdMap = function (key, flag) {
   if (idMap[key]) {
     idMap[key]["shouldPush"] = flag;
   }
+}
+export const resetIdMap = function () {
+  idMap = {};
+  return;
 }
 
 export const getValueFromIdMap = function (key) {
