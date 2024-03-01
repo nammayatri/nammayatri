@@ -702,15 +702,15 @@ mapRideStatus rideStatus = do
     DRide.CANCELLED -> Enums.RIDE_CANCELLED
 
 tfCancellationFee :: Maybe Int -> Maybe Spec.Fee
-tfCancellationFee mbAmount = do
-  let amount = fromMaybe 0 mbAmount
+tfCancellationFee Nothing = Nothing
+tfCancellationFee amount = do
   Just
     Spec.Fee
       { feeAmount = mkPrice amount,
         feePercentage = Nothing
       }
   where
-    mkPrice amount =
+    mkPrice amount' =
       Just
         Spec.Price
           { priceComputedValue = Nothing,
@@ -718,7 +718,7 @@ tfCancellationFee mbAmount = do
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
             priceOfferedValue = Nothing,
-            priceValue = Just $ encodeToText amount
+            priceValue = Just $ encodeToText amount'
           }
 
 tfFulfillmentState :: Enums.FulfillmentState -> Maybe Spec.FulfillmentState
@@ -818,10 +818,7 @@ mkQuotationBreakup booking =
 type MerchantShortId = Text
 
 tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.Item]
-tfItems booking shortId estimatedDistance mbFarePolicy = do
-  let itemTags = case mbFarePolicy of
-        Nothing -> Nothing
-        farePolicy -> mkRateCardTag estimatedDistance farePolicy
+tfItems booking shortId estimatedDistance mbFarePolicy =
   Just
     [ Spec.Item
         { itemDescriptor = tfItemDescriptor booking shortId,
@@ -830,7 +827,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy = do
           itemLocationIds = Nothing,
           itemPaymentIds = Nothing,
           itemPrice = tfItemPrice booking,
-          itemTags
+          itemTags = mkRateCardTag estimatedDistance mbFarePolicy
         }
     ]
 

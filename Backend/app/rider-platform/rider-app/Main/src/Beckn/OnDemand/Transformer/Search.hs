@@ -118,10 +118,7 @@ tfPerson customerLanguage disabilityTag mbPhoneNumber = do
   let personId_ = Nothing
       personImage_ = Nothing
       personName_ = Nothing
-      personTags_ =
-        if isJust customerLanguage || isJust disabilityTag
-          then Beckn.OnDemand.Utils.Search.mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber
-          else Nothing
+      personTags_ = Beckn.OnDemand.Utils.Search.mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber
       returnData = BecknV2.OnDemand.Types.Person {personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing

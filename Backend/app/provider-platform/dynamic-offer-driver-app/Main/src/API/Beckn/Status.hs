@@ -47,20 +47,17 @@ status ::
   Status.StatusReqV2 ->
   FlowHandler AckResponse
 status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
-  (dStatusReq, callbackUrl) <- do
-    txnId <- Utils.getTransactionId reqV2.statusReqContext
-    Utils.withTransactionIdLogTag txnId $ do
-      logTagInfo "Status APIV2 Flow" "Reached"
-      dStatusReq <- ACL.buildStatusReqV2 subscriber reqV2
-      let context = reqV2.statusReqContext
-      callbackUrl <- Utils.getContextBapUri context
-      pure (dStatusReq, callbackUrl)
-
-  dStatusRes <- DStatus.handler transporterId dStatusReq
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  onStautusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info
-  Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStautusReq.onStatusReqContext) $
-    pure onStautusReq
+  txnId <- Utils.getTransactionId reqV2.statusReqContext
+  Utils.withTransactionIdLogTag txnId $ do
+    logTagInfo "Status APIV2 Flow" "Reached"
+    dStatusReq <- ACL.buildStatusReqV2 subscriber reqV2
+    let context = reqV2.statusReqContext
+    callbackUrl <- Utils.getContextBapUri context
+    dStatusRes <- DStatus.handler transporterId dStatusReq
+    internalEndPointHashMap <- asks (.internalEndPointHashMap)
+    onStautusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info
+    Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStautusReq.onStatusReqContext) $
+      pure onStautusReq
 
 errHandler :: Spec.Context -> BecknAPIError -> Spec.OnStatusReq
 errHandler context (BecknAPIError err) =

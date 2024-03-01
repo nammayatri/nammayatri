@@ -57,7 +57,7 @@ tfQuotesInfo provider fulfillments validTill item = do
   estimatedFare_ <- Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
   estimatedTotalFare_ <- Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
   itemId_ <- Beckn.OnDemand.Utils.OnSearch.getItemId item
-  serviceTierName_ <- Beckn.OnDemand.Utils.OnSearch.getDescriptorInfo item
+  let serviceTierName_ = Beckn.OnDemand.Utils.OnSearch.getDescriptorInfo item
   specialLocationTag_ <- Beckn.OnDemand.Utils.OnSearch.buildSpecialLocationTag item
   vehicleVariant_ <- Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
   quoteOrEstId_ <- Beckn.OnDemand.Utils.OnSearch.getQuoteFulfillmentId item
@@ -81,5 +81,4 @@ tfQuotesInfo provider fulfillments validTill item = do
       totalFareRange_ <- Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item
       waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item
       estimateBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildEstimateBreakupList item
-      let serviceTierName_ = Beckn.OnDemand.Utils.OnSearch.getDescriptorInfo item
       pure $ Left $ Domain.Action.Beckn.OnSearch.EstimateInfo {bppEstimateId = bppEstimateId_, descriptions = descriptions_, discount = discount_, driversLocation = driversLocation_, estimateBreakupList = estimateBreakupList_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, nightShiftInfo = nightShiftInfo_, specialLocationTag = specialLocationTag_, totalFareRange = totalFareRange_, vehicleVariant = vehicleVariant_, waitingCharges = waitingCharges_, validTill, serviceTierName = serviceTierName_}

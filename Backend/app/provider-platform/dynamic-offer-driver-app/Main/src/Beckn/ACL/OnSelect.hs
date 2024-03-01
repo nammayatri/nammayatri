@@ -185,11 +185,8 @@ mkPriceV2 quote =
 
 mkItemTagsV2 :: DQuote.DriverQuote -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.TagGroup]
 mkItemTagsV2 quote isValueAddNP mbFarePolicy = do
-  case mbFarePolicy of
-    Nothing -> mkGeneralInfoTag quote isValueAddNP
-    Just fullFarePolicy -> do
-      let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
-      mkGeneralInfoTag quote isValueAddNP <> Utils.mkRateCardTag Nothing (Just farePolicy)
+  let farePolicyTag = Utils.mkRateCardTag Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+  mkGeneralInfoTag quote isValueAddNP <> farePolicyTag
 
 mkGeneralInfoTag :: DQuote.DriverQuote -> Bool -> Maybe [Spec.TagGroup]
 mkGeneralInfoTag quote isValueAddNP =
