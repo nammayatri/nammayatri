@@ -32,7 +32,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans as App
-import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem)
+import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq)
 import Data.Array as Arr
 import Data.Either (Either(..), either)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
@@ -2486,6 +2486,10 @@ fetchAndModifyLocationLists savedLocationResp = do
             sourceLong
             <= thresholdDist
       
+      locationEquality :: LocationListItemState -> LocationListItemState -> Boolean
+      locationEquality a b = a.lat == b.lat && a.lon == b.lon
+
+
       getMapValuesArray :: forall k v. Map.Map k v -> Array v
       getMapValuesArray = foldMap singleton
 
@@ -2512,9 +2516,9 @@ fetchAndModifyLocationLists savedLocationResp = do
             topTripDestinatiions = map (\item -> getLocationFromTrip Destination item state.props.sourceLat state.props.sourceLong) topValues
             
             recentSearchesWithoutSuggested =  differenceOfLocationLists recents suggestedDestinationsArr
-            topTripDestinatiionsWoutSuggested = differenceOfLocationLists (differenceOfLocationLists topTripDestinatiions suggestedDestinationsArr) savedLocationWithHomeOrWorkTag 
+            topTripDestinatiionsWoutSuggested = differenceOfLocationLists (differenceOfLocationLists topTripDestinatiions suggestedDestinationsArr) savedLocationWithHomeOrWorkTag
             smartSuggestions = if null suggestedDestinationsArr then topTripDestinatiionsWoutSuggested else suggestedDestinationsArr
-            sugestedFinalList =  smartSuggestions <> (Arr.take (suggestionsConfig.locationsToBeStored - (length smartSuggestions)) recentSearchesWithoutSuggested)
+            sugestedFinalList =  nubByEq locationEquality $ smartSuggestions <> (Arr.take (suggestionsConfig.locationsToBeStored - (length smartSuggestions)) recentSearchesWithoutSuggested)
             
 
             updateFavIcon = 
