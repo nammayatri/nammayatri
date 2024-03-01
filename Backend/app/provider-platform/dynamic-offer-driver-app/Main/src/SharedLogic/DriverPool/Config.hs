@@ -14,13 +14,24 @@
 
 module SharedLogic.DriverPool.Config where
 
+import qualified Client.Main as CM
+import Control.Lens.Combinators
+import Control.Lens.Fold
+import Data.Aeson as DA
+import qualified Data.Aeson.Key as DAK
+import qualified Data.Aeson.KeyMap as DAKM
+import Data.Aeson.Lens
+import qualified Data.HashMap.Strict as HashMap
+import Data.Text as Text hiding (find)
+import qualified Domain.Types.Cac as DTC
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Language as L (getOption)
+import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
-import Kernel.Prelude
+import Kernel.Prelude as KP
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Cac
 import Kernel.Types.Common
@@ -55,123 +66,14 @@ getSearchDriverPoolConfig merchantOpCityId mbDist = do
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
   findDriverPoolConfig configs vehicle tripCategory distance
 
-getDriverPoolConfigFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
-getDriverPoolConfigFromDB merchantOpCityId Nothing dist = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  getDefaultDriverPoolConfig configs dist
-getDriverPoolConfigFromDB merchantOpCityId (Just vehicle) dist = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
-  case configs of
-    [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
-    _ ->
-      case mbApplicableConfig of
-        Just applicableConfig -> return applicableConfig
-        Nothing -> getDefaultDriverPoolConfig configs dist
-
--- dropDriverPoolConfig :: Key -> Key
--- dropDriverPoolConfig text =
---   -- DAK.fromText $ Text.drop 10 (Text.pack $ show text)
---   case Text.stripPrefix "driverPoolConfig:" (DAK.toText text) of
---     Just a -> DAK.fromText a
---     Nothing -> text
-
-stringValueToObject :: [(Key, Value)] -> [(Key, Value)]
-stringValueToObject [] = []
-stringValueToObject ((k, v) : xs) =
-  case DAK.toText k of
-    "distanceBasedBatchSplit" -> ("distanceBasedBatchSplit", toJSON ((readWithInfo' v) :: [BatchSplitByPickupDistance])) : stringValueToObject xs
-    _ -> (k, v) : stringValueToObject xs
-
-getConfigFromCACStrict :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
-getConfigFromCACStrict merchantOpCityId mbvt dist = do
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))
-  logDebug $ "the context value is " <> show dpcCond
-  tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
-  gen <- newStdGen
-  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-  config <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
-  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
-      res'' = stringValueToObject res'
-      res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverPoolConfig)
-  maybe (error "error in fetching the context value driverPoolConfig: ") pure res
-
--- initializeCACThroughConfig :: (CacheFlow m r, EsqDBFlow m r) => m ()
--- initializeCACThroughConfig = do
---   host <- liftIO $ SE.lookupEnv "CAC_HOST"
---   interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
---   interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
---   tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
---   config <- KSQS.findById' $ Text.pack tenant
---   status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
---   case status of
---     0 -> pure ()
---     _ -> error $ "error in creating the client for tenant" <> Text.pack tenant <> " retrying again"
-
-helper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
-helper merchantOpCityId mbvt dist = do
-  mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
-  mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
-  tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
-  config <- KSQS.findById' $ Text.pack tenant
-  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
-  getConfigFromCACStrict merchantOpCityId mbvt dist
-
-getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Variant.Variant -> Meters -> m DriverPoolConfig
-getDriverPoolConfigFromCAC merchantOpCityId mbvt dist = do
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))
-  tenant <- liftIO (SE.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
-  gen <- newStdGen
-  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-  contextValue <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
-  let res' = (contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
-      res'' = stringValueToObject res'
-      res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverPoolConfig)
-
-  maybe (helper merchantOpCityId mbvt dist) pure res
-
--- case contextValue of
---   Left err -> do
---     host <- liftIO $ SE.lookupEnv "CAC_HOST"
---     interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
---     let interval = case interval' of
---           Just a -> fromMaybe 10 (readMaybe a)
---           Nothing -> 10
---     logError $ Text.pack "error in fetching the context value " <> Text.pack err
---     config <- KSQS.findById' $ Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)
---     case config of
---       Just c -> do
---         logDebug $ "config value from db for tenant" <> show c
---         status <- liftIO $ CM.createClientFromConfig (fromMaybe "driver_offer_bpp_v2" tenant) interval (Text.unpack c.configValue) (fromMaybe "http://localhost:8080" host)
---         case status of
---           0 -> do
---             logDebug $ "client created for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
---             getDriverPoolConfig merchantOpCityId mbvt dist
---           _ -> error $ "error in creating the client for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant <> " retrying again"
---       Nothing -> error $ "error in fetching the config value from db for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
---   Right contextValue' -> do
---     logDebug $ "the fetched context value is " <> show contextValue'
---     --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
---     valueHere <- buildDpcType contextValue'
---     logDebug $ "the build context value is1 " <> show valueHere
---     return valueHere
--- where
---   buildDpcType cv =
---     -- pure $ fromJSONShy (ShyValue (Object cv))
---     case DAT.parse jsonToDriverPoolConfig cv of
---       Success dpc -> pure dpc
---       Error err -> do
---         logError $ pack "error in parsing the context value for driverpoolConfig " <> pack err
---         getDriverPoolConfigFromDB merchantOpCityId mbvt dist
-
-getDriverPoolConfig ::
+getDriverPoolConfigFromDB ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
   Variant.Variant ->
   DTC.TripCategory ->
   Maybe Meters ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId vehicle tripCategory mbDist = do
+getDriverPoolConfigFromDB merchantOpCityId vehicle tripCategory mbDist = do
   let distance = fromMaybe 0 mbDist
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
   let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) (show tripCategory) distance) configs
@@ -185,6 +87,90 @@ getDriverPoolConfig merchantOpCityId vehicle tripCategory mbDist = do
           case alternativeConfigs of
             Just cfg -> return cfg
             Nothing -> findDriverPoolConfig configs Nothing "All" distance
+
+readWithInfo :: (Read a, Show a) => Value -> a
+readWithInfo s = case s of
+  String str -> case KP.readMaybe (Text.unpack str) of
+    Just val -> val
+    Nothing -> error . Text.pack $ "Failed to parse: " ++ Text.unpack str
+  Number scientific -> case KP.readMaybe (show scientific) of
+    Just val -> val
+    Nothing -> error . Text.pack $ "Failed to parse: " ++ show scientific
+  _ -> error $ "Not able to parse value" <> show s
+
+stringValueToObject :: [(Key, Value)] -> [(Key, Value)]
+stringValueToObject [] = []
+stringValueToObject ((k, v) : xs) =
+  case DAK.toText k of
+    "distanceBasedBatchSplit" -> ("distanceBasedBatchSplit", toJSON ((readWithInfo v) :: [BatchSplitByPickupDistance])) : stringValueToObject xs
+    _ -> (k, v) : stringValueToObject xs
+
+getConfigFromCACStrict :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> m DriverPoolConfig
+getConfigFromCACStrict merchantOpCityId mbvt tripCategory dist = do
+  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "variant", DA.String (Text.pack (show mbvt))), (pack "tripCategory", DA.String (Text.pack (show tripCategory))), (pack "tripDistance", DA.String (Text.pack (show dist)))])
+  logDebug $ "the context value is " <> show dpcCond
+  tenant <- liftIO (SE.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  gen <- newStdGen
+  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+  config <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
+  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
+      res'' = stringValueToObject res'
+      res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverPoolConfig)
+  maybe (error "error in fetching the context value driverPoolConfig: ") pure res
+
+helper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> m DriverPoolConfig
+helper merchantOpCityId mbvt tripCategory dist = do
+  mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
+  mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
+  tenant <- liftIO (SE.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  config <- KSQS.findById' $ Text.pack tenant
+  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
+  getConfigFromCACStrict merchantOpCityId mbvt tripCategory dist
+
+getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> m DriverPoolConfig
+getDriverPoolConfigFromCAC merchantOpCityId mbvt tripCategory dist = do
+  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "variant", DA.String (Text.pack (show mbvt))), (pack "tripCategory", DA.String (Text.pack (show tripCategory))), (pack "tripDistance", DA.String (Text.pack (show dist)))])
+  tenant <- liftIO (SE.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  gen <- newStdGen
+  let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
+  contextValue <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
+  let res' = (contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
+      res'' = stringValueToObject res'
+      res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverPoolConfig)
+  maybe (helper merchantOpCityId mbvt tripCategory dist) pure res
+
+getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> m DriverPoolConfig
+getConfigFromInMemory id mbvt tripCategory dist = do
+  tenant <- liftIO $ Se.lookupEnv "TENANT"
+  dpc <- L.getOption DTC.DriverPoolConfig
+  isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
+  bool
+    ( maybe
+        ( getDriverPoolConfigFromCAC id mbvt tripCategory dist
+            >>= ( \config -> do
+                    L.setOption DTC.DriverPoolConfig config
+                    pure config
+                )
+        )
+        pure
+        dpc
+    )
+    (getDriverPoolConfigFromCAC id mbvt tripCategory dist)
+    isExp
+
+getDriverPoolConfig ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id MerchantOperatingCity ->
+  Variant.Variant ->
+  DTC.TripCategory ->
+  Maybe Meters ->
+  m DriverPoolConfig
+getDriverPoolConfig merchantOpCityId vehicle tripCategory mbDist = do
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
+  case useCACConfig of
+    False -> getDriverPoolConfigFromDB merchantOpCityId vehicle tripCategory mbDist
+    True -> getConfigFromInMemory merchantOpCityId vehicle tripCategory $ fromMaybe 0 mbDist
 
 filterByDistAndDveh :: Maybe Variant.Variant -> Text -> Meters -> DriverPoolConfig -> Bool
 filterByDistAndDveh vehicle tripCategory dist cfg =

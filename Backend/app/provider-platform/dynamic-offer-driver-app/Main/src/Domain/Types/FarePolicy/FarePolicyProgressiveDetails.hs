@@ -19,10 +19,13 @@ module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
 where
 
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
+import qualified Data.Aeson as DA
 import Data.Aeson.Key as DAK
 import Data.Aeson.Types
+import qualified Data.ByteString.Lazy as BL
 import Data.List.NonEmpty
 import Data.Text as Text
+import qualified Data.Text.Encoding as DTE
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
 import Kernel.Prelude
@@ -72,6 +75,11 @@ readWithInfo' msg s = case s of
   Null -> Nothing
   _ -> error . Text.pack $ "Failed to parse: for key: mes " <> msg <> " and value: " ++ show s
 
+valueToType :: FromJSON a => Value -> Maybe a
+valueToType value = case value of
+  String str -> DA.decode (BL.fromStrict (DTE.encodeUtf8 (replaceSingleQuotes str)))
+  _ -> error $ "Not able to parse value" <> show value
+
 jsonToWaitingChargeInfo :: Object -> Parser (Maybe WaitingChargeInfo)
 jsonToWaitingChargeInfo k = do
   waitingCharge <- readWithInfo' "farePolicyProgressiveDetails:waitingCharge" <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:waitingCharge")
@@ -101,7 +109,7 @@ jsonToFPProgressiveDetails id k = do
     <*> (jsonToFPProgressiveDetailsPerExtraKmRateSection' k id)
     <*> ((readWithInfo "farePolicyProgressiveDetails:deadKmFare" <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:deadKmFare")) :: (Parser Money))
     <*> (jsonToWaitingChargeInfo k)
-    <*> ((readWithInfo' "farePolicyProgressiveDetails:nightShiftCharge" <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:nightShiftCharge")) :: (Parser (Maybe NightShiftCharge)))
+    <*> ((valueToType <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:nightShiftCharge")) :: (Parser (Maybe NightShiftCharge)))
 
 -- Error e -> error "FromLocation not found with error " <> show e
 

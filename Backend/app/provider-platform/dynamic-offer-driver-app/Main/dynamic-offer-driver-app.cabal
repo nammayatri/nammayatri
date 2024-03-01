@@ -208,6 +208,7 @@ library
       Domain.Types.Booking.BookingLocation
       Domain.Types.BookingCancellationReason
       Domain.Types.BusinessEvent
+      Domain.Types.Cac
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
       Domain.Types.City
@@ -312,9 +313,9 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
-      SharedLogic.Cac
       SharedLogic.Beckn.Common
       SharedLogic.Booking
+      SharedLogic.Cac
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.DeleteDriver
@@ -569,6 +570,7 @@ library
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
       Storage.Queries.WhiteListOrg
+      Test
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH

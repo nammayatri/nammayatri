@@ -40,24 +40,27 @@ readWithInfo :: (Read a, Show a) => String -> Value -> a
 readWithInfo mes s = case s of
   String str -> case KP.readMaybe (Text.unpack str) of
     Just val -> val
-    Nothing -> error . Text.pack $ "Failed to parse: for key: mes " <> mes <> " and value: " ++ Text.unpack str
+    Nothing -> error . Text.pack $ "Failed to parse: for key: " <> mes <> " and value: " ++ Text.unpack str
   Number scientific -> case KP.readMaybe (show scientific) of
     Just val -> val
-    Nothing -> error . Text.pack $ "Failed to parse: for key: mes " <> mes <> " and value: " ++ show scientific
+    Nothing -> error . Text.pack $ "Failed to parse: for key: " <> mes <> " and value: " ++ show scientific
   _ -> error $ "Not able to parse value" <> show s
 
-listToType :: FromJSON a => Value -> [a]
-listToType value =
-  case value of
-    String str ->
-      let val = replaceSingleQuotes $ str
-       in case DA.decode (BL.fromStrict (DTE.encodeUtf8 val)) of
-            Just a -> a
-            Nothing -> error $ "Not able to parse value" <> show val
-    _ -> error $ "Not able to parse value" <> show value
+listToType :: FromJSON a => Maybe Value -> [a]
+listToType val' =
+  case val' of
+    Nothing -> []
+    Just value ->
+      case value of
+        String str ->
+          let val = replaceSingleQuotes $ str
+           in case DA.decode (BL.fromStrict (DTE.encodeUtf8 val)) of
+                Just a -> a
+                Nothing -> error $ "Not able to parse value" <> show val
+        _ -> error $ "Not able to parse value" <> show value
 
-jsonToDriverExtraFeeBounds :: Object -> String -> Parser [DriverExtraFeeBounds]
-jsonToDriverExtraFeeBounds k key = listToType <$> (k .: DAK.fromText (Text.pack ("farePolicyDriverExtraFeeBounds:" <> key)))
+jsonToDriverExtraFeeBounds :: Object -> String -> Parser ([DriverExtraFeeBounds])
+jsonToDriverExtraFeeBounds k key = listToType <$> (k .:? DAK.fromText (Text.pack ("farePolicyDriverExtraFeeBounds:" <> key)))
 
 findDriverExtraFeeBoundsByDistance :: Meters -> NonEmpty DriverExtraFeeBounds -> DriverExtraFeeBounds
 findDriverExtraFeeBoundsByDistance dist driverExtraFeeBoundsList = do

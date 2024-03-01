@@ -3796,16 +3796,18 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1709647927,
-        "narHash": "sha256-Pz/U6TqPJ+zDD5iv9jzvPXSqJo+Octu7k7TlKpXal+A=",
+        "lastModified": 1709562144,
+        "narHash": "sha256-SA7UyvWwua3zyH/GdWLUBR/7eYxhkzh+GATmVgI8t5o=",
+        "lastModified": 1709192574,
+        "narHash": "sha256-GWctucFQVQ6UYpv9uDsHf6v/We05CbGPu43kjy+hcdE=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "811d1eb6e2c5f13ac4d16e1e20b68e4100ecafce",
+        "rev": "dcbd1b0139f814d61b6bcabff13b55164b3caa0f",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/feat/CACChanges",
+        "ref": "Backend/feat/CACChanges-rebase",
         "repo": "shared-kernel",
         "type": "github"
       }

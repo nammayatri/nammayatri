@@ -49,15 +49,11 @@ import Tools.Error (GenericError (..))
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
 create = Queries.create
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
-create = Queries.create
-
-
 -- getGoHomeConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
 -- getGoHomeConfig id toss = do
 --   confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id))]
 --   logDebug $ "goHomeConfig Cond: " <> show confCond
---   tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
+--   tenant <- liftIO $ Se.lookupEnv "TENANT"
 --   context' <- liftIO $ CM.evalExperiment (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
 --   logDebug $ "goHomeConfig: " <> show context'
 --   ans <- case context' of
@@ -95,7 +91,7 @@ create = Queries.create
 --   host <- liftIO $ Se.lookupEnv "CAC_HOST"
 --   interval' <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
 --   interval <- pure $ fromMaybe 10 (readMaybe =<< interval')
---   tenant <- liftIO (Se.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+--   tenant <- liftIO (Se.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
 --   config <- KSQS.findById' $ Text.pack tenant
 --   status <- liftIO $ CM.createClientFromConfig tenant interval (Text.unpack config.configValue) (fromMaybe "http://localhost:8080" host)
 --   case status of
@@ -105,7 +101,7 @@ create = Queries.create
 getGoHomeConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
 getGoHomeConfigFromCACStrict id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id'))]
-  tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
+  tenant <- liftIO $ Se.lookupEnv "TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
   let res8 = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (\k -> Text.isPrefixOf "goHomeConfig:" (DAK.toText k))))
       res9 = (DA.Object $ DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
@@ -115,7 +111,7 @@ createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id M
 createThroughConfigHelper id' toss = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
-  tenant <- liftIO (Se.lookupEnv "DRIVER_TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  tenant <- liftIO (Se.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
   config <- KSQS.findById' $ Text.pack tenant
   _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getGoHomeConfigFromCACStrict id' toss
@@ -123,7 +119,7 @@ createThroughConfigHelper id' toss = do
 getGoHomeConfigFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
 getGoHomeConfigFromCAC id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id'))]
-  tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
+  tenant <- liftIO $ Se.lookupEnv "TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
   let res8 = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (\k -> Text.isPrefixOf "goHomeConfig:" (DAK.toText k))))
       res9 = (DA.Object $ DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
@@ -147,7 +143,7 @@ findByMerchantOpCityId id (Just personId) = do
   case useCACConfig of
     False -> getGoHomeConfigFromDB id
     True -> do
-      tenant <- liftIO $ Se.lookupEnv "DRIVER_TENANT"
+      tenant <- liftIO $ Se.lookupEnv "TENANT"
       isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
       case isExp of
         True -> do
