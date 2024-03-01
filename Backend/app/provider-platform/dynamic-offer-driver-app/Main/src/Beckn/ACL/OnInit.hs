@@ -46,7 +46,7 @@ tfOrder res becknConfig mbFarePolicy = do
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy,
       orderPayments = tfPayments res becknConfig,
-      orderProvider = tfProvider becknConfig,
+      orderProvider = Utils.tfProvider becknConfig,
       orderQuote = Utils.tfQuotation res.booking,
       orderStatus = Nothing,
       orderCreatedAt = Just res.booking.createdAt,
@@ -74,18 +74,6 @@ tfPayments res bppConfig = do
   let amount = Just $ show res.booking.estimatedFare.getMoney
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
   Just $ L.singleton $ mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
-
-tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
-tfProvider becknConfig =
-  return $
-    Spec.Provider
-      { providerDescriptor = Nothing,
-        providerFulfillments = Nothing,
-        providerId = Just $ becknConfig.subscriberId,
-        providerItems = Nothing,
-        providerLocations = Nothing,
-        providerPayments = Nothing
-      }
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do
