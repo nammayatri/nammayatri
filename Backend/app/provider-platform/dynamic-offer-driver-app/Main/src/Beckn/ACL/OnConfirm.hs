@@ -51,7 +51,7 @@ tfOrder res pricing bppConfig mbFarePolicy = do
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy,
       orderPayments = tfPayments res bppConfig,
-      orderProvider = tfProvider bppConfig,
+      orderProvider = Utils.tfProvider bppConfig,
       orderQuote = Utils.tfQuotation res.booking,
       orderStatus = Just "ACTIVE",
       orderCreatedAt = Just res.booking.createdAt,
@@ -153,15 +153,3 @@ tfAgent res =
                   }
           }
     Nothing -> Nothing
-
-tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
-tfProvider becknConfig =
-  return $
-    Spec.Provider
-      { providerDescriptor = Nothing,
-        providerFulfillments = Nothing,
-        providerId = Just $ becknConfig.subscriberId,
-        providerItems = Nothing,
-        providerLocations = Nothing,
-        providerPayments = Nothing
-      }
