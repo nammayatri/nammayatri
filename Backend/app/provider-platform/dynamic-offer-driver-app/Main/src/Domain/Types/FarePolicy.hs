@@ -25,8 +25,8 @@ import Data.List.NonEmpty
 import Data.Text as Text
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport hiding (replaceSingleQuotes)
-import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport hiding (listToType, readWithInfo, replaceSingleQuotes)
-import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
+import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport hiding (listToType, readWithInfo, replaceSingleQuotes, valueToType)
+import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport hiding (listToType, readWithInfo, readWithInfo')
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport hiding (listToType, readWithInfo, replaceSingleQuotes)
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant
@@ -70,16 +70,16 @@ jsonToFarePolicy :: Object -> String -> Parser (Maybe FarePolicy)
 jsonToFarePolicy k key = do
   -- fullDEFB <- jsonToFullDriverExtraFeeBounds key k
   fDEFB <- jsonToDriverExtraFeeBounds k key
-  id <- (readWithInfo "farePolicy:id" <$> (k .: DAK.fromText (Text.pack "farePolicy:id"))) :: Parser (Id FarePolicy)
-  serviceCharge <- (readWithInfo' "farePolicy:serviceCharge" <$> (k .: DAK.fromText (Text.pack "farePolicy:serviceCharge"))) :: Parser (Maybe Money)
-  farePolicyType <- (readWithInfo "farePolicy:farePolicyType" <$> (k .: DAK.fromText (Text.pack "farePolicy:farePolicyType"))) :: Parser FarePolicyType
+  id <- pure (Id (Text.pack key))
+  serviceCharge <- (readWithInfo' "farePolicy:serviceCharge" <$> (k .: DAK.fromText (Text.pack "farePolicy:serviceCharge")))
+  farePolicyType <- (readWithInfo "farePolicy:farePolicyType" <$> (k .: DAK.fromText (Text.pack "farePolicy:farePolicyType")))
   nightShiftBounds <- jsontToNightShiftBounds k
   allowedTripDistanceBounds <- jsonToAllowedTripDistanceBounds k
-  govtCharges <- (readWithInfo' "farePolicy:govtCharges" <$> (k .: DAK.fromText (Text.pack "farePolicy:govtCharges"))) :: Parser (Maybe Double)
+  govtCharges <- (readWithInfo' "farePolicy:govtCharges" <$> (k .: DAK.fromText (Text.pack "farePolicy:govtCharges")))
   perMinuteRideExtraTimeCharge <- (readWithInfo' "farePolicy:perMinuteRideExtraTimeCharge" <$> (k .: DAK.fromText (Text.pack "farePolicy:perMinuteRideExtraTimeCharge"))) :: Parser (Maybe HighPrecMoney)
-  description <- (readWithInfo' "farePolicy:description" <$> (k .: DAK.fromText (Text.pack "farePolicy:description"))) :: Parser (Maybe Text)
-  createdAt <- (readWithInfo "farePolicy:createdAt" <$> (k .: DAK.fromText (Text.pack "farePolicy:createdAt"))) :: Parser UTCTime
-  updatedAt <- (readWithInfo "farePolicy:updatedAt" <$> (k .: DAK.fromText (Text.pack "farePolicy:updatedAt"))) :: Parser UTCTime
+  description <- (readWithInfo' "farePolicy:description" <$> (k .: DAK.fromText (Text.pack "farePolicy:description")))
+  createdAt <- (readWithInfo "farePolicy:createdAt" <$> (k .: DAK.fromText (Text.pack "farePolicy:createdAt")))
+  updatedAt <- (readWithInfo "farePolicy:updatedAt" <$> (k .: DAK.fromText (Text.pack "farePolicy:updatedAt")))
   mFarePolicyDetails <- case farePolicyType of
     Progressive -> do
       mFPPD <- jsonToFPProgressiveDetails key k
@@ -89,7 +89,9 @@ jsonToFarePolicy k key = do
       case val of
         Just fpsd -> pure $ Just (SlabsDetails fpsd)
         Nothing -> pure Nothing
-
+    Rental -> do
+      mFPRD <- jsonToFPRentalDetails key k
+      pure $ Just (RentalDetails mFPRD)
   case mFarePolicyDetails of
     Just farePolicyDetails -> do
       return . Just $

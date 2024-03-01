@@ -786,7 +786,7 @@ notifyStopModification ::
   StopReq ->
   m ()
 notifyStopModification merchantOpCityId personId mbDeviceToken entityData = do
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just personId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = if entityData.isEdit then FCM.EDIT_STOP else FCM.ADD_STOP

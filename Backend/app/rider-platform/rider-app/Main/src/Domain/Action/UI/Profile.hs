@@ -38,8 +38,8 @@ import qualified Data.Aeson.KeyMap as DAKM
 import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
-import Domain.Types.Booking.Type as DBooking
 import qualified Data.Text as T
+import Domain.Types.Booking.Type as DBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN

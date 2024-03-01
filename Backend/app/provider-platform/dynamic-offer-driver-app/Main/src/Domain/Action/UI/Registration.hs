@@ -304,7 +304,7 @@ verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard = do
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig

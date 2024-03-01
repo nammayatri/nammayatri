@@ -758,7 +758,7 @@ updateFPPerExtraKmRate _ _ farePolicyId startDistance req = do
 
 updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 updateFarePolicy _ _ farePolicyId req = do
-  farePolicy <- CQFP.findById farePolicyId Nothing >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  farePolicy <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
   CQFP.update' updatedFarePolicy
   CQFP.clearCacheById farePolicyId
@@ -818,7 +818,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newFareProducts <- mapM (buildFareProduct newOperatingCity.id) fareProducts
 
   -- go home config
-  goHomeConfig <- CQGHC.findByMerchantOpCityId baseOperatingCityId
+  goHomeConfig <- CQGHC.findByMerchantOpCityId baseOperatingCityId Nothing
   newGoHomeConfig <- buildGoHomeConfig newOperatingCity.id goHomeConfig
 
   -- leader board configs
@@ -850,7 +850,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newOnboardingDocumentConfigs <- mapM (buildNewOnboardingDocumentConfig newOperatingCity.id) onboardingDocumentConfigs
 
   -- transporter config
-  transporterConfig <- CQTC.findByMerchantOpCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+  transporterConfig <- CQTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
   newTransporterConfig <- buildTransporterConfig newOperatingCity.id transporterConfig
 
   -- geometry

@@ -100,11 +100,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1709551861,
+        "lastModified": 1709629737,
         "narHash": "sha256-eqA8yQHZUg6zcPIv8BbWsD82V1eACycQVg4xHW+u3TY=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "bfa1b885d24dd88759266a405b395735b99c63cf",
+        "rev": "c7866a6b385b8735479b24edc960cc6d043184d8",
         "type": "github"
       },
       "original": {
@@ -3766,11 +3766,11 @@
     },
     "services-flake_2": {
       "locked": {
-        "lastModified": 1708407362,
-        "narHash": "sha256-MtA8Q1XiJAeoUkjTH8jvYeW2JDG2M+amWHZLGZU1YBk=",
+        "lastModified": 1709843710,
+        "narHash": "sha256-BP9Bp725C6Cp3k4YZfNbvPiRm6+3s5SCCPKOPyFpGZY=",
         "owner": "juspay",
         "repo": "services-flake",
-        "rev": "dafaeb048d0445ef87f3a29c114161168c095896",
+        "rev": "218fa6cc9a875c20def622e974fb4e0f391b3b6d",
         "type": "github"
       },
       "original": {
@@ -3796,16 +3796,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1709707046,
-        "narHash": "sha256-Hfa7n1BgLBtcDcga/eSxMyMVWcaA92OfiZs8vr8Zi9Y=",
+        "lastModified": 1709705977,
+        "narHash": "sha256-5qjm8nB2gZdF30Ns9+bN2PwC3RsWrIVZKuPXbBWX6X0=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "a4788cc044abaccb4df297f77d9094766f4ff663",
+        "rev": "46ee888738032aa250d4e5eaf834658ebb654f07",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/feat/CACChanges",
+        "ref": "Backend/feat/CACChanges-rebase",
         "repo": "shared-kernel",
         "type": "github"
       }

@@ -252,6 +252,7 @@ valueToTextList :: Value -> [Text]
 valueToTextList val =
   case val of
     String text -> KP.map strip . splitOn "," $ text
+    Null -> []
     _ -> error $ "Not a string or array" <> (show val)
 
 -- getFCMConfig :: KM.KeyMap Value -> FCMConfig

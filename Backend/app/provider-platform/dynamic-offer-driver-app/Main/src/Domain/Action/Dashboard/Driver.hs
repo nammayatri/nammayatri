@@ -1091,7 +1091,7 @@ toggleDriverSubscriptionByService ::
   Flow ()
 toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanToAssign toToggle vehicleNo = do
   (autoPayStatus, driverPlan) <- DTPlan.getSubcriptionStatusWithPlan serviceName driverId
-  transporterConfig <- SCT.findByMerchantOpCityId mOpCityId >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   if toToggle
     then do
       planToAssign <- getPlanId mbPlanToAssign
@@ -1851,7 +1851,7 @@ setServiceChargeEligibleFlagInDriverPlan merchantShortId opCity driverId req = d
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   let serviceName = mapServiceName req.serviceName
   driverPlan <- QDP.findByDriverIdWithServiceName personId serviceName
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let mbEnableServiceUsageCharge = driverPlan <&> (.enableServiceUsageCharge)
   when (mbEnableServiceUsageCharge /= Just req.serviceChargeEligibility) $ do
     QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName personId req.serviceChargeEligibility serviceName

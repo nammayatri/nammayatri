@@ -28,9 +28,11 @@ import Data.Aeson.Types as DAT
 import Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text as Text
+import qualified Domain.Types.Cac as DTC
 import Domain.Types.Common
 import Domain.Types.FarePolicy
 import EulerHS.Language as L (getOption)
+import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Hedis
@@ -47,7 +49,7 @@ findFarePolicyFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FareP
 findFarePolicyFromCAC id toss = do
   fp <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "farePolicyId", DA.String (getId id))]
   logDebug $ "the context value is " <> show fp
-  tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
+  tenant <- liftIO $ SE.lookupEnv "TENANT"
   contextValue <- liftIO $ CM.evalExperiment (fromMaybe "test" tenant) fp toss
   case contextValue of
     Left err -> do
@@ -73,14 +75,27 @@ findFarePolicyFromCAC id toss = do
         Success a -> return a
         DAT.Error err -> error $ pack "error in parsing the context value for farepolicy " <> pack err
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Maybe Text -> m (Maybe FarePolicy)
-findById id txnId = do
+getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> m (Maybe FarePolicy)
+getConfigFromInMemory id toss = do
+  fp <- L.getOption DTC.FarePolicy
+  maybe
+    ( findFarePolicyFromCAC id toss
+        >>= ( \config -> do
+                L.setOption DTC.FarePolicy (fromJust config)
+                pure config
+            )
+    )
+    (pure . Just)
+    fp
+
+findById :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Id FarePolicy -> m (Maybe FarePolicy)
+findById txnId id = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCAC) systemConfigs
   ( if useCACConfig
       then
         ( do
-            tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
+            tenant <- liftIO $ SE.lookupEnv "TENANT"
             isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
             if isExp && isJust txnId
               then do
@@ -92,7 +107,7 @@ findById id txnId = do
                     let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
                     logDebug $ "the toss value is for farePolicy " <> show toss
                     _ <- cacheToss (fromJust txnId) toss
-                    findFarePolicyFromCAC id toss
+                    getConfigFromInMemory id toss
               else findFarePolicyFromCAC id 1
         )
       else
