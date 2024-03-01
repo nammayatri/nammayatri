@@ -45,7 +45,7 @@ import JBridge (showDateTimePicker, toast)
 import Language.Strings (getVarString)
 import Language.Types (STR(..)) as STR
 import Log (trackAppActionClick)
-import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>), (/=), discard, void, (||), not, min, (-), max)
+import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>), (/=), discard, void, (||), not, min, (-), max, compare, Ordering(..))
 import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
@@ -59,6 +59,7 @@ import Data.Maybe (fromMaybe)
 import Data.Int as INT
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
+import Data.String as DS
 
 instance showAction :: Show Action where
   show _ = ""
@@ -127,7 +128,8 @@ eval BackpressAction state = genericBackPressed state
 eval (GetRentalQuotes (GetQuotesRes quoteRes)) state = do 
   let quoteList = getQuotesTransformer quoteRes.quotes state.data.config.estimateAndQuoteConfig
       filteredQuoteList = (getFilteredQuotes quoteRes.quotes state.data.config.estimateAndQuoteConfig)
-      rentalsQuoteList = (DA.mapWithIndex (\index quote -> 
+      sortedByFare = DA.sortBy compareByFare filteredQuoteList
+      rentalsQuoteList =  (DA.mapWithIndex (\index quote -> 
     let quoteDetails = transformQuote quote index 
         currIndex = index 
         activeIndex = 0 
@@ -141,8 +143,7 @@ eval (GetRentalQuotes (GetQuotesRes quoteRes)) state = do
               _ -> dummyFareQuoteDetails
           _  -> dummyFareQuoteDetails
     in { quoteDetails : quoteDetails, index : currIndex, activeIndex : 0 , fareDetails : fareDetails}
-    ) filteredQuoteList)
-  let _ = spy "rentalsQuoteList GetRentalQuotes" rentalsQuoteList
+    ) sortedByFare)
   continue state { data{rentalsQuoteList = rentalsQuoteList}, props{showShimmer = false, showPrimaryButton = if state.data.currentStage == RENTAL_SELECT_VARIANT then not (DA.null rentalsQuoteList) else true}}
   where 
     transFormQuoteDetails quoteDetails = 
@@ -154,7 +155,16 @@ eval (GetRentalQuotes (GetQuotesRes quoteRes)) state = do
         , plannedPerKmRate : fromMaybe 0 quoteDetails.plannedPerKmRate 
         , baseFare : quoteDetails.baseFare
         }
-      
+
+    compareByFare :: OfferRes -> OfferRes -> Ordering
+    compareByFare quote1 quote2 = 
+        case quote1, quote2 of 
+          RentalQuotes body1, RentalQuotes body2 -> 
+            let (QuoteAPIEntity quoteEntity1) = body1.onRentalCab
+                (QuoteAPIEntity quoteEntity2) = body2.onRentalCab
+            in compare quoteEntity1.estimatedFare quoteEntity2.estimatedFare
+          _ , _ -> EQ
+
 
 eval (CheckFlowStatusAction) state = continue state{data{currentStage = RENTAL_SELECT_PACKAGE}, props{showShimmer = false, showPrimaryButton = false}}
 
@@ -169,7 +179,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state =
     RENTAL_SELECT_VARIANT -> do 
       let selectedRentalQuote = fromMaybe (dummyRentalQuote) $ DA.head $ DA.filter (\item -> item.activeIndex == item.index) state.data.rentalsQuoteList
       continue state { data { currentStage = RENTAL_CONFIRMATION }
-        , props { farePerKm = show (selectedRentalQuote.fareDetails.plannedPerKmRate)}}
+        , props { farePerKm = show (selectedRentalQuote.fareDetails.perExtraKmRate)}}
     RENTAL_CONFIRMATION -> exit $ OnRentalRideConfirm state
     _ -> continue state
 

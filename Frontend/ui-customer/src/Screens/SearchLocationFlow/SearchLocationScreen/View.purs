@@ -48,16 +48,18 @@ import Types.App (defaultGlobalState)
 import Debug(spy)
 import Control.Monad.Free (runFree)
 import Helpers.Utils (fetchAndUpdateCurrentLocation)
-import Data.Maybe (isNothing, maybe, Maybe(..), isJust ) as MB
+import Data.Maybe as MB
 import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom, safeMarginTop) as EHC
 import Data.String (length, null, take) as DS
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Animation (translateYAnimFromTop, fadeInWithDelay)
 import PrestoDOM.Animation as PrestoAnim
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Helpers.CommonView (emptyTextView)
+import DecodeUtil (getAnyFromWindow)
+import Data.Function.Uncurried (runFn3)
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -433,7 +435,7 @@ locateOnMapFooterView push state = let
               in
               linearLayout
                 [ height WRAP_CONTENT
-                , gravity CENTER_HORIZONTAL
+                , gravity CENTER_VERTICAL
                 , weight 1.0] $ 
                 [ linearLayout
                   [ height WRAP_CONTENT
@@ -517,9 +519,12 @@ searchLocationView push state globalProps = let
   where 
 
     findPlaceConfig :: SearchLocationScreenState -> InfoState
-    findPlaceConfig state = { descImg : "ny_ic_empty_suggestions"
+    findPlaceConfig state = let 
+      appName = MB.fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" MB.Nothing MB.Just
+      in
+      { descImg : "ny_ic_empty_suggestions"
       , viewVisibility : boolToVisibility $ DA.null state.data.locationList 
-      , headerText : "getString" -- (WELCOME_TEXT "WELCOME_TEXT") <> "!"
+      , headerText : getVarString WELCOME_TEXT [appName] -- (WELCOME_TEXT "WELCOME_TEXT") <> "!"
       , descText : getString START_TYPING_TO_SEARCH_PLACES}
 
     locUnserviceableConfig :: SearchLocationScreenState -> InfoState

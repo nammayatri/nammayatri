@@ -134,7 +134,8 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
         const timeInHHMMFormat = hours + " : " + minutes;
         cb(action(timerID)(timeInHHMMFormat)(mins))();
       });
-      JBridge.startCountUpTimerV2(startingTime.toString(), interval, timerId, callbackIOS);
+      const updatedStartingTime = startingTime * 60;
+      JBridge.startCountUpTimerV2(updatedStartingTime.toString(), interval, timerId, callbackIOS);
     }
     else if (JBridge.startCountUpTimer) {
       const callbackIOS = callbackMapper.map(function (timerID, sec) {

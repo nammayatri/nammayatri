@@ -367,6 +367,7 @@
       "ny_ic_red_warning_with_red_circle_bg" : true,
       "ny_ic_referral" : true,
       "ny_ic_rental" : true,
+      "ny_ic_rental_banner" : true,
       "ny_ic_rental_booking" : true,
       "ny_ic_rental_hourly_charge" : true,
       "ny_ic_repeat_trip" : true,
@@ -389,6 +390,7 @@
       "ny_ic_sedan_ac_side" : true,
       "ny_ic_sedan_concept" : true,
       "ny_ic_sedan_concept_quote_list" : true,
+      "ny_ic_sedan_white" : true,
       "ny_ic_select_offer" : true,
       "ny_ic_selected_icon" : true,
       "ny_ic_selected_zone_pickup_marker_yellow" : true,
@@ -494,7 +496,6 @@
       "rounded_corner_background" : true,
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
-      "widget_close_gradient" : true,
-      "ny_ic_rental_banner" : true
+      "widget_close_gradient" : true
    }
 }

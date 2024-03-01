@@ -198,7 +198,7 @@ sliderView push state =
           [ text "2 hr"
           , color Color.white900
           ] <> FontStyle.body1 TypoGraphy
-      , Anim.screenAnimationFadeInOut $
+      , PrestoAnim.animationSet [Anim.fadeIn true] $
           linearLayout
             [ height $ V 35
             , weight 1.0
@@ -303,34 +303,69 @@ chooseVehicleView push state =
       ) (state.data.rentalsQuoteList))
 
 fareBreakupView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
-fareBreakupView push state =
-  linearLayout
-    [ height MATCH_PARENT
+fareBreakupView push state = let 
+  currency = getCurrency appConfig
+  selectedQuote = maybe dummyRentalQuote identity (fetchSelectedQuote state.data.rentalsQuoteList)
+  in 
+  relativeLayout
+    [height MATCH_PARENT
     , width MATCH_PARENT
-    , orientation VERTICAL
-    , background Color.white900
-    ]
-      [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-      , separatorView push state
-      , linearLayout
-        [ height WRAP_CONTENT
+    ][  linearLayout
+        [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , margin $ MarginVertical 16 32
-        ] $ map ( 
-            \quote -> let
-              item = quote.quoteDetails
-              in if (item.index == item.activeIndex) then ChooseVehicle.view (\action -> pure unit) (item{showStroke = false, showInfo = false}) else emptyTextView 
-            ) state.data.rentalsQuoteList
-      , linearLayout 
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , margin $ MarginHorizontal 16 16
-        ]
-        (map (\item -> 
-          descriptionView push state (item)
-        ) [BookingTime, BookingDistance, BaseFare, TollFee])
+        , background Color.white900
+        , margin $ MarginBottom 80
+        ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+          , separatorView push state
+          , scrollView
+            [ height WRAP_CONTENT
+            , background Color.white900
+            , width MATCH_PARENT
+            ][  linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ][  linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    , margin $ MarginVertical 16 32
+                    ] $ map ( 
+                        \quote -> let
+                          item = quote.quoteDetails
+                          in if (item.index == item.activeIndex) then ChooseVehicle.view (\action -> pure unit) (item{showStroke = false, showInfo = false}) else emptyTextView 
+                        ) state.data.rentalsQuoteList
+                  , linearLayout 
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    , margin $ MarginHorizontal 16 16
+                    ]
+                    (map (\item -> 
+                      descriptionView push state (item)
+                    ) [BookingTime, BookingDistance, BaseFare, TollFee])
+                  , linearLayout 
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation HORIZONTAL
+                    , margin $ MarginBottom 32
+                    , padding $ PaddingHorizontal 16 16
+                    ]
+                    [ textView $ [
+                        text $ getString NOTE <> ": "
+                      , color Color.black900
+                      ] <> FontStyle.body3 TypoGraphy
+                      , textView $ [
+                          text $ getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge)
+                        , width MATCH_PARENT
+                        , height WRAP_CONTENT
+                      ] <> FontStyle.body3 TypoGraphy
+                    ]
+                  ]
+              
+              ]
+          ]
       , noteAndPrimaryButtonView push state
       ]
 
@@ -365,40 +400,22 @@ descriptionView push state description =
           currency = getCurrency appConfig
       in case description of
           BookingTime -> if toShowTitle then getString BOOKING_ON <> " " <> EHC.convertUTCtoISC startTimeUTC "Do" <> " " <> EHC.convertUTCtoISC startTimeUTC "MMM" <> ", " <> EHC.convertUTCtoISC startTimeUTC "hh" <> ":" <> EHC.convertUTCtoISC startTimeUTC "mm" <> " " <> EHC.convertUTCtoISC startTimeUTC "a" <> " (" <> baseDuration <> "hrs)" else getString FINAL_FARE_DESCRIPTION
-          BookingDistance -> if toShowTitle then getString INCLUDED_KMS <> show state.data.rentalBookingData.baseDistance else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> " " <> currency <> (show selectedQuote.fareDetails.plannedPerKmRate) <> "/km."
+          BookingDistance -> if toShowTitle then getString INCLUDED_KMS <> show state.data.rentalBookingData.baseDistance else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> " " <> currency <> (show selectedQuote.fareDetails.perExtraKmRate) <> "/km."
           BaseFare -> if toShowTitle then getString BASE_FARE <> maybe "" (\quote -> quote.quoteDetails.price) activeQuote else getString ADDITIONAL_CHARGES_DESCRIPTION
           TollFee -> if toShowTitle then getString TOLLS_AND_PARKING_FEES else getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED
 
 noteAndPrimaryButtonView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
-noteAndPrimaryButtonView push state = let 
-  currency = getCurrency appConfig
-  selectedQuote = maybe dummyRentalQuote identity (fetchSelectedQuote state.data.rentalsQuoteList)
-  in 
+noteAndPrimaryButtonView push state = 
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
+    , alignParentBottom "true,-1"
     , orientation VERTICAL
-    , gravity BOTTOM
-    , margin $ Margin 16 0 16 14
+    , padding $ Padding 16 16 16 16
+    , stroke $ "1," <> Color.grey900
+    , background Color.white900
     , onClick push $ const NoAction
-    ][ linearLayout 
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation HORIZONTAL
-      , margin $ MarginBottom 32
-      ]
-      [ textView $ [
-          text $ getString NOTE <> ": "
-        , color Color.black900
-        ] <> FontStyle.body3 TypoGraphy
-        , textView $ [
-            text $ getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge)
-          , width MATCH_PARENT
-          , height WRAP_CONTENT
-        ] <> FontStyle.body3 TypoGraphy
-      ]
-    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
-    ]
+    ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
 
 separatorView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 separatorView push state =

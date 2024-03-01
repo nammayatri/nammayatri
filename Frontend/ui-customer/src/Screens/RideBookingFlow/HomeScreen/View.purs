@@ -242,6 +242,17 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 -- _ <- pure $ enableMyLocation false
+                if(not initialState.props.chatcallbackInitiated && not initialState.props.isSpecialZone && initialState.data.fareProductType == FPT.RENTAL) then do
+                  _ <- clearChatMessages
+                  _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
+                  _ <- storeCallBackOpenChatScreen push OpenChatScreen
+                  _ <- startChatListenerService
+                  _ <- pure $ scrollOnResume push ScrollToBottom
+                  push InitializeChat
+                  pure unit
+                else
+                  pure unit
+                void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
@@ -249,7 +260,8 @@ screen initialState =
                   pure unit
                 else
                   pure unit
-                _ <- push RemoveChat
+                when (initialState.data.fareProductType /= FPT.RENTAL) $ do 
+                  void $ push RemoveChat
                 pure unit
                 if initialState.data.fareProductType == FPT.RENTAL then 
                   void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ))/60) "1" "RideDurationTimer" push (RideDurationTimer)
@@ -3587,7 +3599,7 @@ pickupLocationView push state =
 
 mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
 mapView push state idTag = 
-  let mapDimensions = getMapDimensions state
+  let mapDimensions = spy "MapDimensions Fetched -> " $ getMapDimensions state
   in
   PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
   relativeLayout
@@ -3689,8 +3701,9 @@ getMapDimensions state =
                     getMapHeight state
                   else if (isHomeScreenView state) then
                     V (getHeightFromPercent 27)
-                  else
-                    MATCH_PARENT
+                  else if (state.data.fareProductType == FPT.RENTAL) then 
+                    V (screenHeight unit - 100)
+                  else MATCH_PARENT 
       mapWidth =  if state.props.currentStage /= HomeScreen then MATCH_PARENT else V ((screenWidth unit)-32)
   in {height : mapHeight, width : mapWidth}
 
@@ -4131,7 +4144,7 @@ rentalBanner push state =
     , width MATCH_PARENT
     , padding $ Padding 8 0 8 28
     , visibility $ boolToVisibility $ (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) 
-    , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
+    , gradient if os == "IOS" then (Linear 270.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
     ][  if state.props.showShimmer then 
           textView[]
           else Banner.view (push <<< RentalBannerAction) (rentalBannerConfig state) ]
@@ -4296,64 +4309,7 @@ referralPopUp push state =
   , background Color.blackLessTrans
   ][PopUpModal.view (push <<< PopUpModalReferralAction) (referralPopUpConfig state)]
   
-endOTPView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-endOTPView push state =
-  linearLayout
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , cornerRadius if os == "IOS" then 18.0 else 32.0
-  , background Color.white900
-  , gravity CENTER
-  , clickable true
-  , accessibility DISABLE
-  , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-  , visibility $ boolToVisibility $ any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.INTER_CITY] && state.props.currentStage == RideStarted
-  , margin $ MarginRight 4
-  ]
-  [ textView $
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , accessibilityHint $ "O T P : " <> (DS.replaceAll (DS.Pattern "") (DS.Replacement " ")  state.data.driverInfoCardState.otp) 
-    , accessibility ENABLE
-    , text $ getString END_OTP
-    , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
-    , color Color.black700
-    ] <> FontStyle.body22 TypoGraphy
-  , linearLayout 
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , background Color.grey700
-    , onClick push $ const ShowEndOTP
-    , visibility $ boolToVisibility $ not state.props.showEndOTP
-    , margin $ Margin 4 4 4 4
-    , padding $ Padding 8 4 8 4
-    , cornerRadius 16.0
-    , rippleColor Color.rippleShade
-    ]
-    [ imageView 
-      [ gravity CENTER_VERTICAL
-      , height $ V 22
-      , width $ V 22
-      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
-      ] 
-    ]
-  , linearLayout
-    [ height $ WRAP_CONTENT
-    , width $ WRAP_CONTENT
-    , cornerRadius 16.0
-    , visibility $ boolToVisibility state.props.showEndOTP
-    ]
-    [ PrestoAnim.animationSet [translateInXAnim $ endOTPAnimConfig state]
-      $ textView $ 
-      [ text $ state.data.driverInfoCardState.otp 
-      , color Color.black900
-      , cornerRadius if os == "IOS" then 12.0 else 16.0
-      , padding $ Padding 8 4 8 6
-      , margin $ Margin 0 4 4 4
-      , background Color.grey700
-      ] <> FontStyle.body22 TypoGraphy
-    ]
-  ]
+
 
 createRouteHelper routeState startLat startLon endLat endLon = do
   if (startLat /= 0.0 && startLon /= 0.0 && endLat /= 0.0 && endLon /= 0.0) then do

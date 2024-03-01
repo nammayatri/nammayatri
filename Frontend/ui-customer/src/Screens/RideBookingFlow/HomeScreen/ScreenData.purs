@@ -173,6 +173,7 @@ initData = {
     , canScheduleRide : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
+    , stageBeforeChatScreen : RideAccepted
     , showCallPopUp : false
     , sourceLat : 0.0
     , isSource : Nothing

@@ -978,6 +978,7 @@ export const differenceBetweenTwoUTC = function (date1, date2) {
   if (isNaN(diffInSeconds)){
     return 0;
   }
+  console.log("differenceBetweenTwoUTC", date1, " ", date2, " " , diffInSeconds);
   return diffInSeconds;
 }
 
@@ -1448,7 +1449,8 @@ export const removeAllPolylines = function (str) {
 }
 
 export const removeAllPolylinesAndMarkers = function (array, unit) {
-  const stringifiedArray = JSON.stringify(array)
+  const stringifiedArray = JSON.stringify(array);
+  console.log("removeAllPolylinesAndMarkers"+ stringifiedArray);
   window.JBridge.removeAllPolylines(stringifiedArray);
   return unit;
 }
