@@ -232,7 +232,7 @@ tfOrder (DStatus.NewBookingBuildReq {bookingId}) _ becknConfig =
         orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
         orderItems = Nothing,
         orderPayments = Nothing,
-        orderProvider = Common.tfProvider becknConfig,
+        orderProvider = Utils.tfProvider becknConfig,
         orderQuote = Nothing,
         orderCreatedAt = Nothing,
         orderUpdatedAt = Nothing --------To do keep booking created and updated time
@@ -261,7 +261,7 @@ tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, bookingDe
         orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
         orderItems = Nothing,
         orderPayments = Utils.tfPayments booking bookingDetails.merchant becknConfig,
-        orderProvider = Common.tfProvider becknConfig,
+        orderProvider = Utils.tfProvider becknConfig,
         orderQuote = Nothing,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt

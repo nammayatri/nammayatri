@@ -25,7 +25,6 @@ module Beckn.ACL.Common.Order
     tfCompleteReqToOrder,
     tfCancelReqToOrder,
     tfArrivedReqToOrder,
-    tfProvider,
   )
 where
 
@@ -239,7 +238,7 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig = do
         Nothing -> Nothing
         Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
       items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy
-      payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig
+      payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing isDriverBirthDay isFreeRide (Just $ show EventEnum.RIDE_ASSIGNED) isValueAddNP
   pure
     Spec.Order
@@ -251,7 +250,7 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig = do
         orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
         orderItems = items,
         orderPayments = Just [payment],
-        orderProvider = tfProvider becknConfig,
+        orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
@@ -263,7 +262,7 @@ tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
       personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripStartLocation else Nothing
       odometerTag = if isValueAddNP then Utils.mkOdometerTagGroupV2 ((.value) <$> ride.startOdometerReading) else Nothing
       arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
-      payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig
+      payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
       quote = Utils.tfQuotation booking
       farePolicy = case mbFarePolicy of
         Nothing -> Nothing
@@ -280,7 +279,7 @@ tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
         orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
         orderItems = items,
         orderPayments = Just [payment],
-        orderProvider = tfProvider becknConfig,
+        orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
@@ -298,7 +297,7 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
         Nothing -> Nothing
         Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
   let items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy
-  let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig
+  let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
   pure $
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -310,7 +309,7 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
         orderCancellation = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
         orderItems = items,
-        orderProvider = tfProvider becknConfig,
+        orderProvider = Utils.tfProvider becknConfig,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
       }
@@ -325,7 +324,7 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
     Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False (Just $ show EventEnum.RIDE_CANCELLED) isValueAddNP
   let payment = case bookingDetails of
         Nothing -> Nothing
-        Just bookingDetails' -> Just $ L.singleton $ UtilsOU.mkPaymentParams Nothing Nothing bookingDetails'.merchant becknConfig
+        Just bookingDetails' -> Just $ L.singleton $ UtilsOU.mkPaymentParams Nothing Nothing bookingDetails'.merchant becknConfig booking
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -340,7 +339,7 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
         orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
         orderItems = Nothing,
         orderPayments = payment,
-        orderProvider = tfProvider becknConfig,
+        orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
@@ -350,7 +349,7 @@ tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DDriverArrivedReq ->
 tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
   let BookingDetails {..} = bookingDetails
   let quote = Utils.tfQuotation booking
-  let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig
+  let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
   let driverArrivedInfoTags = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 arrivalTime else Nothing
   let farePolicy = case mbFarePolicy of
         Nothing -> Nothing
@@ -366,21 +365,9 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
         orderCancellationTerms = Just $ Utils.tfCancellationTerms becknConfig,
         orderItems = items,
         orderPayments = Just [payment],
-        orderProvider = tfProvider becknConfig,
+        orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
         orderStatus = Just $ show EventEnum.ACTIVE,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
-      }
-
-tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
-tfProvider becknConfig =
-  return $
-    Spec.Provider
-      { providerDescriptor = Nothing,
-        providerFulfillments = Nothing,
-        providerId = Just $ becknConfig.subscriberId,
-        providerItems = Nothing,
-        providerLocations = Nothing,
-        providerPayments = Nothing
       }
