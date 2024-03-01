@@ -234,9 +234,7 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig = do
   let Common.BookingDetails {..} = bookingDetails
       arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
       quote = Utils.tfQuotation booking
-      farePolicy = case mbFarePolicy of
-        Nothing -> Nothing
-        Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
+      farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy
       payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing isDriverBirthDay isFreeRide (Just $ show EventEnum.RIDE_ASSIGNED) isValueAddNP
@@ -264,9 +262,7 @@ tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
       arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
       payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
       quote = Utils.tfQuotation booking
-      farePolicy = case mbFarePolicy of
-        Nothing -> Nothing
-        Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
+      farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
       items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> odometerTag) personTag False False (Just $ show EventEnum.RIDE_STARTED) isValueAddNP
   pure
@@ -293,9 +289,7 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   distanceTagGroup <- if isValueAddNP then UtilsOU.mkDistanceTagGroup ride else return Nothing
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> distanceTagGroup) personTag False False (Just $ show EventEnum.RIDE_ENDED) isValueAddNP
   quote <- UtilsOU.mkRideCompletedQuote ride fareParams
-  let farePolicy = case mbFarePolicy of
-        Nothing -> Nothing
-        Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
+  let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   let items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy
   let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
   pure $
@@ -322,9 +316,7 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
     let image = Nothing
     let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
     Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False (Just $ show EventEnum.RIDE_CANCELLED) isValueAddNP
-  let payment = case bookingDetails of
-        Nothing -> Nothing
-        Just bookingDetails' -> Just $ L.singleton $ UtilsOU.mkPaymentParams Nothing Nothing bookingDetails'.merchant becknConfig booking
+  let payment = fmap (\bd -> L.singleton $ UtilsOU.mkPaymentParams Nothing Nothing bd.merchant becknConfig booking) bookingDetails
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -348,13 +340,11 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
 tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DDriverArrivedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
   let BookingDetails {..} = bookingDetails
-  let quote = Utils.tfQuotation booking
-  let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
-  let driverArrivedInfoTags = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 arrivalTime else Nothing
-  let farePolicy = case mbFarePolicy of
-        Nothing -> Nothing
-        Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
-  let items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy
+      quote = Utils.tfQuotation booking
+      payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
+      driverArrivedInfoTags = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 arrivalTime else Nothing
+      farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
+      items = Utils.tfItems booking merchant.shortId.getShortId Nothing farePolicy
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing driverArrivedInfoTags Nothing False False (Just $ show EventEnum.RIDE_ARRIVED_PICKUP) isValueAddNP
   pure $
     Spec.Order

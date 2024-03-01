@@ -104,11 +104,6 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
     let BookingDetails {..} = bookingDetails
     let previousCancellationReasonsTags = Utils.mkPreviousCancellationReasonsTags cancellationSource
     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False (Just $ show Event.ESTIMATE_REPETITION) isValueAddNP -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
-    let itemTags = case mbFarePolicy of
-          Nothing -> Nothing
-          Just fullFarePolicy -> do
-            let farePolicy = Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
-            Utils.mkRateCardTag Nothing farePolicy
     pure $
       Spec.Order
         { orderId = Just booking.id.getId,
@@ -122,7 +117,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
                   itemLocationIds = Nothing,
                   itemPaymentIds = Nothing,
                   itemPrice = Nothing,
-                  itemTags
+                  itemTags = Utils.mkRateCardTag Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
                 },
           orderBilling = Nothing,
           orderCancellation = Nothing,
