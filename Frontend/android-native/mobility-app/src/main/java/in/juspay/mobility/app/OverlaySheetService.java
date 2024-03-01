@@ -20,6 +20,8 @@ import android.content.pm.ActivityInfo;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.location.Address;
+import android.location.Geocoder;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
@@ -80,6 +82,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -245,15 +249,28 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.sourcePinCode.setText(model.getSourcePinCode().trim());
                 holder.sourcePinCode.setVisibility(View.VISIBLE);
             } else {
-                holder.sourceAddress.setMaxLines(2);
-                holder.sourcePinCode.setVisibility(View.GONE);
+                String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
+                if(pincode != null){
+                    holder.sourcePinCode.setText(pincode);
+                    holder.sourcePinCode.setVisibility(View.VISIBLE);
+                }else {
+                    holder.sourceAddress.setMaxLines(2);
+                    holder.sourcePinCode.setVisibility(View.GONE);
+                }
             }
             if (model.getDestinationPinCode() != null && model.getDestinationPinCode().trim().length() > 0) {
                 holder.destinationPinCode.setText(model.getDestinationPinCode());
                 holder.destinationPinCode.setVisibility(View.VISIBLE);
             } else {
-                holder.destinationAddress.setMaxLines(2);
-                holder.destinationPinCode.setVisibility(View.GONE);
+                String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
+                if(pincode != null){
+                    holder.destinationPinCode.setText(pincode);
+                    holder.destinationPinCode.setVisibility(View.VISIBLE);
+                }else {
+                    holder.destinationAddress.setMaxLines(2);
+                    holder.destinationPinCode.setVisibility(View.GONE);
+                }
+
             }
             if (model.getspecialLocationTag() != null) {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
@@ -426,6 +443,31 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             Toast.makeText(getApplicationContext(), getString(R.string.test_request_successful), Toast.LENGTH_SHORT).show();
         });
     }
+    private String getPincodeFromRR(double latitude, double longitude) {
+        try {
+            Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+            if ( geocoder.isPresent() && addresses != null && addresses.size() > 0) {
+                Address address = addresses.get(0);
+                return matchRegex(address.getAddressLine(0), "\\b\\d{6}\\b");
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    };
+
+    private static String matchRegex(String input, String regexPattern) {
+        Pattern pattern = Pattern.compile(regexPattern);
+        Matcher matcher = pattern.matcher(input);
+        if (matcher.find()) {
+            return matcher.group();
+        } else {
+            return null;
+        }
+    }
 
     private void removeCard(int position) {
         try {
@@ -576,6 +618,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
+                    double srcLat = rideRequestBundle.getDouble("srcLat");
+                    double srcLng = rideRequestBundle.getDouble("srcLng");
+                    double destLat = rideRequestBundle.getDouble("destLat");
+                    double destLng = rideRequestBundle.getDouble("destLng");
+                   
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
 
@@ -604,7 +651,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             disabilityTag,
                             isTranslated,
                             gotoTag,
-                            driverPickUpCharges);
+                            driverPickUpCharges,
+                            srcLat,
+                            srcLng,
+                            destLat,
+                            destLng);
 
                     if (floatyView == null) {
                         startTimer();
@@ -659,8 +710,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         LayoutInflater inflater = ((LayoutInflater) getApplicationContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view, null);
         TextView merchantLogo = floatyView.findViewById(R.id.merchantLogo);
+        String appName = "";
+        try{
+            appName = getApplicationInfo().loadLabel(getPackageManager()).toString();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         if (key != null && key.equals("yatrisathiprovider")){
-        merchantLogo.setText("yatri\nsathi");
+            merchantLogo.setText("yatri\nsathi");
             ImageView merchantLogoIcon = (ImageView) floatyView.findViewById(R.id.merchantLogoIcon);
             LinearLayout.LayoutParams  layoutParams = new LinearLayout.LayoutParams(100,100);
             layoutParams.rightMargin = 12;
@@ -670,7 +727,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             merchantLogo.setText("Yatri Driver");
         } else if (key != null && key.equals("passcultureprovider")) {
             merchantLogo.setText("Alliance Taxis");
+        } else if (appName.contains("Mana")) {
+            merchantLogo.setText("mana\nyatri");
         }
+
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
         View dismissLoader = progressDialog.findViewById(R.id.loaderOverlay);

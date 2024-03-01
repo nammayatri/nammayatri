@@ -104,6 +104,12 @@ public class RideRequestActivity extends AppCompatActivity {
             }
             SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
+  
+            double srcLat = rideRequestBundle.getDouble("srcLat");
+            double srcLng = rideRequestBundle.getDouble("srcLng");
+            double destLat = rideRequestBundle.getDouble("destLat");
+            double destLng = rideRequestBundle.getDouble("destLng");
+                    
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     (df.format(distanceTobeCovered / 1000)),
                     (df.format(Integer.parseInt(durationToPickup)/ 60)),
@@ -128,9 +134,11 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getBoolean("disabilityTag"),
                     rideRequestBundle.getBoolean("isTranslated"),
                     rideRequestBundle.getBoolean("gotoTag"),
-                    rideRequestBundle.getInt("driverPickUpCharges")
-            );
-
+                    rideRequestBundle.getInt("driverPickUpCharges"),
+                    srcLat,
+                    srcLng,
+                    destLat,
+                    destLng);
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));

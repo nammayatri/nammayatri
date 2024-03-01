@@ -169,7 +169,11 @@ public class NotificationUtils {
                     sheetData.putString("durationToPickup", entity_payload.getString("durationToPickup"));
                     sheetData.putInt("distanceTobeCovered", entity_payload.getInt("distance"));
                     sheetData.putString("sourceArea", addressPickUp.getString("area"));
-                    sheetData.putString("destinationArea", addressDrop.getString("area"));
+                    sheetData.putString("destinationArea", addressDrop.has("area") && !addressDrop.isNull("area") ? addressDrop.getString("area") : "");
+                    sheetData.putDouble("srcLat", addressPickUp.has("lat") && !addressPickUp.isNull("lat") ? addressPickUp.getDouble("lat"): null);
+                    sheetData.putDouble("srcLng", addressPickUp.has("lon") && !addressPickUp.isNull("lon") ? addressPickUp.getDouble("lon"): null);
+                    sheetData.putDouble("destLat", addressDrop.has("lat") && !addressDrop.isNull("lat") ? addressDrop.getDouble("lat"): null);
+                    sheetData.putDouble("destLng", addressDrop.has("lon") && !addressDrop.isNull("lon") ? addressDrop.getDouble("lon"): null);
                     sheetData.putString("addressPickUp", addressPickUp.getString("full_address"));
                     sheetData.putString("addressDrop", addressDrop.getString("full_address"));
                     sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.optInt("driverMinExtraFee", 0) : 10);

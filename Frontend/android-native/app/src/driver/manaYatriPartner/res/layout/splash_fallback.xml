@@ -37,7 +37,7 @@
             android:layout_height="match_parent"
             android:gravity="bottom"
             android:orientation="vertical"
-            android:paddingBottom="0dp">
+            android:paddingBottom="20dp">
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -46,8 +46,8 @@
                 android:orientation="horizontal">
 
                 <ImageView
-                    android:layout_width="300dp"
-                    android:layout_height="120dp"
+                    android:layout_width="350dp"
+                    android:layout_height="65dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_powered_by_" />
             </LinearLayout>

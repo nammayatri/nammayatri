@@ -26,6 +26,7 @@ public class SheetModel {
     private final Boolean disabilityTag;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated;
+    private double srcLat, srcLng, destLat, destLng;
 
     public SheetModel(String pickUpDistance,
                       String distanceToBeCovered,
@@ -51,8 +52,16 @@ public class SheetModel {
                       Boolean disabilityTag,
                       Boolean isTranslated,
                       Boolean gotoTag,
-                      int driverPickUpCharges){
+                      int driverPickUpCharges,
+                      double srcLat,
+                      double srcLng,
+                      double destLat,
+                      double destLng){
 
+        this.srcLat = srcLat;
+        this.srcLng = srcLng;
+        this.destLat = destLat;
+        this.destLng = destLng;
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
         this.sourceArea = sourceArea;
@@ -240,5 +249,21 @@ public class SheetModel {
 
     public int getDriverPickUpCharges() { 
         return driverPickUpCharges;
+    }
+    
+    public double getSrcLat() {
+        return srcLat;
+    }
+
+    public double getSrcLng() {
+        return srcLng;
+    }
+
+    public double getDestLat() {
+        return destLat;
+    }
+
+    public double getDestLng() {
+        return destLng;
     }
 }

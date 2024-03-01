@@ -41,3 +41,4 @@
      public void println(%);
      public void println(**);
  }
+ -dontwarn in.juspay.hypertrident.TridentBridge

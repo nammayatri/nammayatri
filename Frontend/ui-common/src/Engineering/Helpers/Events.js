@@ -22,6 +22,7 @@ const nestJSON = function (original) {
 export const initMeasuringDuration = function (key) {
   return function () {
     try {
+      window.events = window.events || {};
       if (typeof window.events[key] === "undefined")
         window.events[key] = new Date();
     } catch (error) {
@@ -33,6 +34,7 @@ export const initMeasuringDuration = function (key) {
 export const endMeasuringDuration = function (key) {
   return function () {
     try {
+      window.events = window.events || {};
       if (typeof window.events[key] === "object")
         window.events[key] =
           new Date().getTime() - window.events[key].getTime();
