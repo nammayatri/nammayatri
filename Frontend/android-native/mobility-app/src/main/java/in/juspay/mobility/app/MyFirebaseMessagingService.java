@@ -528,7 +528,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
         String key = getString(R.string.service);
         String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
-        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(getApplicationContext()) && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(getApplicationContext()) && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "true").equals("true") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
             widgetService.putExtra("payload", payload != null ? payload.toString() : null);
             widgetService.putExtra("data", data != null ? data.toString() : null);
