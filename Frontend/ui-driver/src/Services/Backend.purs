@@ -57,6 +57,7 @@ import Types.ModifyScreenState (modifyScreenState)
 import Types.ModifyScreenState (modifyScreenState)
 import Foreign.Object (empty)
 import Locale.Utils
+import Data.Boolean (otherwise)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -199,10 +200,12 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
     }
     where 
         mkOperatingCity :: String -> Maybe String
-        mkOperatingCity operatingCity = 
-            if DA.any (_ == operatingCity) [ "__failed", "--"] then Nothing
-            else if operatingCity == "Puducherry" then Just "Pondicherry"
-            else Just operatingCity
+        mkOperatingCity operatingCity
+            | operatingCity `DA.elem` ["__failed", "--"] = Nothing
+            | operatingCity == "Puducherry"          = Just "Pondicherry"
+            | operatingCity == "Tamil nadu"          = Just "TamilNaduCities"
+            | otherwise                              = Just operatingCity
+
         mkLatLon :: String -> Maybe Number
         mkLatLon latlon = 
             if latlon == "0.0" 

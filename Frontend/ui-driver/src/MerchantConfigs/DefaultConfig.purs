@@ -267,7 +267,25 @@ config =
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig
-            }--, For future use
+            },
+            {
+              cityName : "TamilNaduCities",
+              mapImage : "ny_ic_tamilnadu_map",
+              cityCode :  "std:0422",
+              showSubscriptions : false,
+              cityLat : 11.1271,
+              cityLong : 78.6569,
+              supportNumber : "08069724899",
+              languageKey : "TA_IN",
+              showDriverReferral : true,
+              showCustomerReferral : true,
+              uploadRCandDL : false,
+              enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image_old",
+              registration : registrationConfig
+            }
+            
+            --, For future use
             -- {
             --   cityName : "Madurai",
             --   mapImage : "ny_ic_madurai_map",
