@@ -1611,7 +1611,7 @@ chooseVehicleConfig state = let
   selectedEstimates = state.data.selectedEstimatesObject
   isSingleEstimate = selectedEstimates.vehicleVariant == "AUTO_RICKSHAW" && ((DA.length state.data.specialZoneQuoteList) == 1)
   chooseVehicleConfig' = config
-    { vehicleImage = if isSingleEstimate then "ny_ic_single_estimate_auto" else "ny_ic_auto_quote_list"
+    { vehicleImage = if isSingleEstimate then (fetchImage FF_ASSET "ny_ic_single_estimate_auto") else "ny_ic_auto_quote_list"
     , isSelected = true
     , vehicleVariant = selectedEstimates.vehicleVariant
     , vehicleType = selectedEstimates.vehicleType
