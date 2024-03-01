@@ -70,9 +70,7 @@ buildOnCancelMessageV2 ::
   Maybe Text ->
   m Spec.OnCancelReq
 buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) mbMsgId = do
-  msgId <- case mbMsgId of
-    Just a -> return a
-    Nothing -> generateGUID
+  msgId <- maybe generateGUID return mbMsgId
   let bppId = getShortId $ merchant.subscriberId
       city = fromMaybe merchant.city mbBapCity
       country = fromMaybe merchant.country mbBapCountry
@@ -224,12 +222,7 @@ tfPayments res merchant bppConfig = do
   Just $ L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfItems :: DRB.Booking -> DM.Merchant -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.Item]
-tfItems booking merchant mbFarePolicy = do
-  let itemTags = case mbFarePolicy of
-        Nothing -> Nothing
-        Just fullFarePolicy -> do
-          let farePolicy = Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
-          BUtils.mkRateCardTag Nothing farePolicy
+tfItems booking merchant mbFarePolicy =
   Just
     [ Spec.Item
         { itemDescriptor = Nothing,
@@ -238,7 +231,7 @@ tfItems booking merchant mbFarePolicy = do
           itemLocationIds = Nothing,
           itemPaymentIds = Nothing,
           itemPrice = tfItemPrice booking,
-          itemTags
+          itemTags = BUtils.mkRateCardTag Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
         }
     ]
 

@@ -111,6 +111,7 @@ mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
             }
 
 mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Maybe Text -> Maybe [Spec.TagGroup]
+mkCustomerInfoTags Nothing Nothing _ = Nothing
 mkCustomerInfoTags customerLanguage disabilityTag _ =
   Just
     [ Spec.TagGroup

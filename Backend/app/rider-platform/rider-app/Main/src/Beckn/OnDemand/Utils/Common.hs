@@ -305,6 +305,4 @@ mapVariantToVehicle variant = do
     VehVar.AUTO_RICKSHAW -> AUTO_RICKSHAW
 
 getServiceTierName :: Spec.Item -> Maybe Text
-getServiceTierName item = do
-  let serviceTierName = item.itemDescriptor >>= (.descriptorName)
-  serviceTierName
+getServiceTierName item = item.itemDescriptor >>= (.descriptorName)
