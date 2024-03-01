@@ -1002,3 +1002,15 @@ tfPayments booking transporter bppConfig = do
   let amount = Just $ show booking.estimatedFare.getMoney
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
   Just $ List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+
+tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
+tfProvider becknConfig =
+  return $
+    Spec.Provider
+      { providerDescriptor = Nothing,
+        providerFulfillments = Nothing,
+        providerId = Just $ becknConfig.subscriberId,
+        providerItems = Nothing,
+        providerLocations = Nothing,
+        providerPayments = Nothing
+      }
