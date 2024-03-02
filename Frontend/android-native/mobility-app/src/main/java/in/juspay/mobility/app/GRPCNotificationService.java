@@ -18,6 +18,7 @@ import androidx.core.app.NotificationCompat;
 
 import com.google.android.gms.location.LocationServices;
 
+import java.util.Map;
 import java.util.Timer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +35,11 @@ import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.StreamObserver;
 
-public class GRPCNotificationService extends Service {
+interface ErrorListener {
+    void onError(Throwable t);
+}
+
+public class GRPCNotificationService extends Service implements ErrorListener {
     private static NotificationGrpc.NotificationStub asyncStub;
     private ManagedChannel channel;
     private String token;
@@ -67,18 +72,15 @@ public class GRPCNotificationService extends Service {
     /* Initialize channel and connection for bi-directional notification streaming */
     private void initialize() {
         channel = ManagedChannelBuilder.forAddress("beta.beckn.uat.juspay.net", 50051)
-            .intercept(new GRPCNotificationHeaderInterceptor(token))
-            .keepAliveTime(15, TimeUnit.SECONDS)
-            .enableRetry()
-            .build();
+                .intercept(new GRPCNotificationHeaderInterceptor(token))
+                .keepAliveTime(20, TimeUnit.SECONDS)
+                .keepAliveTimeout(5, TimeUnit.SECONDS)
+                .keepAliveWithoutCalls(true)
+                .maxRetryAttempts(10)
+                .enableRetry()
+                .build();
         asyncStub = NotificationGrpc.newStub(channel);
         startGRPCNotificationService();
-
-        // Add a termination listener to the channel
-//        channel.notifyWhenStateChanged(ConnectivityState.SHUTDOWN, () -> {
-//            Log.e("GRPC", "[Shutdown]: Reconnecting...");
-//            initialize();
-//        });
     }
 
     /* Creating channel for sticky notification */
@@ -108,8 +110,8 @@ public class GRPCNotificationService extends Service {
     }
 
     // This method starts the GRPC Notification Service
-    private static void startGRPCNotificationService() {
-        GRPCNotificationResponseObserver notificationResponseObserver = new GRPCNotificationResponseObserver();
+    private void startGRPCNotificationService() {
+        GRPCNotificationResponseObserver notificationResponseObserver = new GRPCNotificationResponseObserver(this);
         StreamObserver<NotificationAck> notificationRequestObserver = asyncStub.streamPayload(notificationResponseObserver);
         notificationResponseObserver.startGRPCNotification(notificationRequestObserver);
     }
@@ -130,6 +132,13 @@ public class GRPCNotificationService extends Service {
             super.finalize();
         }
     }
+
+    @Override
+    public void onError(Throwable t) {
+        Log.e("GRPC", "[Retrying]");
+        closeChannel();
+        initialize();
+    }
 }
 
 /***
@@ -139,6 +148,11 @@ public class GRPCNotificationService extends Service {
  * ***/
 class GRPCNotificationResponseObserver implements StreamObserver<NotificationPayload> {
     private StreamObserver<NotificationAck> notificationRequestObserver;
+    private final ErrorListener errorListener;
+
+    public GRPCNotificationResponseObserver(ErrorListener errorListener) {
+        this.errorListener = errorListener;
+    }
 
     /***
      * This method is responsible for initiating the connection to the server ( initially the acknowledgement will be sent for a random notification id )'''
@@ -161,6 +175,7 @@ class GRPCNotificationResponseObserver implements StreamObserver<NotificationPay
     @Override
     public void onError(Throwable t) {
         Log.e("GRPC", "[Error] : " + t.toString());
+        errorListener.onError(t);
     }
 
     @Override
