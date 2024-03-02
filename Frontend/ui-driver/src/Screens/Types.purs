@@ -1084,7 +1084,6 @@ type HomeScreenProps =  {
   accountBlockedPopup :: Boolean,
   showCoinsPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
-  tobeLogged :: Boolean,
   safetyAudioAutoPlay :: Boolean,
   vehicleNSPopup :: Boolean
  }
@@ -1771,8 +1770,7 @@ type GlobalProps = {
   driverInformation :: Maybe GetDriverInfoResp,
   driverRideStats :: Maybe DriverProfileStatsResp,
   callScreen :: ScreenName,
-  gotoPopupType :: GoToPopUpType,
-  addTimestamp :: Boolean
+  gotoPopupType :: GoToPopUpType
 }
 
 --------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------

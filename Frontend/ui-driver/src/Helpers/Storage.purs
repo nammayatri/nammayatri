@@ -126,6 +126,9 @@ data KeyStore = USER_NAME
                 | T_AND_C_VERSION
                 | NIGHT_SAFETY_POP_UP
                 | REFERRER_URL
+                | ACTIVE_RIDE_RESPONSE
+                | DRIVER_PROFILE_RESPONSE
+                | DRIVER_PROFILE_STATS_RESPONSE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

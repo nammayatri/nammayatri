@@ -14,7 +14,8 @@
 -}
 
 module Screens.EnterMobileNumberScreen.Handler where
-import Engineering.Helpers.BackTrack (getState)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Engineering.Helpers.Commons (markPerformance)
 import Prelude (bind, pure, ($), (<$>),discard)
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Storage (KeyStore(..), setValueToLocalStore)
@@ -28,6 +29,7 @@ import Types.ModifyScreenState (modifyScreenState)
 enterMobileNumber :: FlowBT String ENTER_MOBILE_NUMBER_SCREEN_OUTPUT
 enterMobileNumber = do
   (GlobalState state) <- getState
+  liftFlowBT $ markPerformance "ENTER_MOBILE_NUMBER_SCREEN"
   act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state.mobileNumberScreen
   case act of
     GoBack -> do 

@@ -2,12 +2,12 @@ import { callbackMapper as PrestoCallbackMapper } from "presto-ui";
 
 const { JBridge, Android } = window;
 
-function getLanguageLocale (){
+function getLanguageLocale() {
   if (!window.languageKey) {
     const locale = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
     window.languageKey = locale;
     return locale;
-  } 
+  }
   return window.languageKey;
 }
 
@@ -20,44 +20,80 @@ export const getOs = function () {
   return "ANDROID";
 };
 
-const trackAPICalls = function(statusCode,url, apiStartTime){
-  if(typeof window.__trackAPICalls == "function"){
-    try{
-      window.__trackAPICalls(url,apiStartTime,Date.now(),statusCode?statusCode:"0");
-    } catch (error){
-      console.error("Error while invoking " + window.__trackAPICalls + " function in Tracker.js \n",error.toString());
+const trackAPICalls = function (statusCode, url, apiStartTime) {
+  if (typeof window.__trackAPICalls == "function") {
+    try {
+      window.__trackAPICalls(
+        url,
+        apiStartTime,
+        Date.now(),
+        statusCode ? statusCode : "0"
+      );
+    } catch (error) {
+      console.error(
+        "Error while invoking " +
+          window.__trackAPICalls +
+          " function in Tracker.js \n",
+        error.toString()
+      );
     }
   } else {
-    console.error(window.__trackAPICalls+" is not a function in Tracker.js");
+    console.error(window.__trackAPICalls + " is not a function in Tracker.js");
   }
-}
+};
 
-const getEncodedData = function(data) {
-  if (window.__OS == "IOS"){
-    return  btoa(unescape(encodeURIComponent(data)));
+const getEncodedData = function (data) {
+  if (window.__OS == "IOS") {
+    return btoa(unescape(encodeURIComponent(data)));
   }
   return data;
-}
+};
 
-export const getNewIDWithTag = function(tag){
-  window.__usedID = window.__usedID || {}
-  window.__usedID[tag] = window.__usedID[tag] || "" + window.createPrestoElement().__id;
+export const getNewIDWithTag = function (tag) {
+  window.__usedID = window.__usedID || {};
+  window.__usedID[tag] =
+    window.__usedID[tag] || "" + window.createPrestoElement().__id;
   return window.__usedID[tag];
-}
+};
 
 export const callAPI = function () {
-  return window.JBridge.callAPI(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6] )
-}
+  return window.JBridge.callAPI(
+    arguments[0],
+    encodeURI(arguments[1]),
+    getEncodedData(arguments[2]),
+    getEncodedData(arguments[3]),
+    arguments[4],
+    arguments[5],
+    arguments[6]
+  );
+};
 
 export const callAPIWithOptions = function () {
   if (typeof window.JBridge.callAPIWithOptions == "function") {
-    return window.JBridge.callAPIWithOptions(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6], arguments[7]);
+    return window.JBridge.callAPIWithOptions(
+      arguments[0],
+      encodeURI(arguments[1]),
+      getEncodedData(arguments[2]),
+      getEncodedData(arguments[3]),
+      arguments[4],
+      arguments[5],
+      arguments[6],
+      arguments[7]
+    );
   } else {
-    return window.JBridge.callAPI(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[7]);
+    return window.JBridge.callAPI(
+      arguments[0],
+      encodeURI(arguments[1]),
+      getEncodedData(arguments[2]),
+      getEncodedData(arguments[3]),
+      arguments[4],
+      arguments[5],
+      arguments[7]
+    );
   }
-}
+};
 
-export const callbackMapper = PrestoCallbackMapper.map
+export const callbackMapper = PrestoCallbackMapper.map;
 
 export const atobImpl = function (value) {
   try {
@@ -65,32 +101,34 @@ export const atobImpl = function (value) {
   } catch (e) {
     return value;
   }
-}
+};
 
-export const getWindowVariable = function(key) {
-  return function(just) {
-    return function(nothing) {
-      return function() {
-        if(typeof window !== "undefined" && typeof window[key] !== "undefined") {
+export const getWindowVariable = function (key) {
+  return function (just) {
+    return function (nothing) {
+      return function () {
+        if (
+          typeof window !== "undefined" &&
+          typeof window[key] !== "undefined"
+        ) {
           return just(window[key]);
         } else {
           return nothing;
         }
-      }
-    }
-  }
-}
+      };
+    };
+  };
+};
 
-export const setWindowVariableImpl = function(key) {
-  return function(value) {
-    return function() {
-      if(typeof window !== "undefined") {
-        window[key] =value;
+export const setWindowVariableImpl = function (key) {
+  return function (value) {
+    return function () {
+      if (typeof window !== "undefined") {
+        window[key] = value;
       }
-        
-    }
-  }
-}
+    };
+  };
+};
 
 export const callSahay = function (request) {
   return function (_error, success) {
@@ -99,12 +137,19 @@ export const callSahay = function (request) {
       const resJson = JSON.parse(response);
 
       if (reqJson.event != resJson.event) {
-        console.error("callSahay", "Got response for different event", "Expected", reqJson.event, "Received", resJson.event);
+        console.error(
+          "callSahay",
+          "Got response for different event",
+          "Expected",
+          reqJson.event,
+          "Received",
+          resJson.event
+        );
       }
 
       console.warn("callSahay", "Got response", response);
       success(response);
-    }
+    };
 
     console.warn("callSahay", "Sending payload", request);
     window.JBridge.processWithSdk(request);
@@ -113,63 +158,61 @@ export const callSahay = function (request) {
   };
 };
 
-export const screenWidth = function(){
+export const screenWidth = function () {
   return screen.width;
-}
+};
 
-export const screenHeight = function(){
+export const screenHeight = function () {
   return screen.height;
-}
+};
 
-export const getDeviceHeight = function(){
-  try{
-    if(window.__OS == "IOS" && JBridge.getDeviceHeight) return parseInt(JBridge.getDeviceHeight());
-    return JSON.parse(JBridge.getSessionInfo()).screen_height
-  }
-  catch(e){
+export const getDeviceHeight = function () {
+  try {
+    if (window.__OS == "IOS" && JBridge.getDeviceHeight)
+      return parseInt(JBridge.getDeviceHeight());
+    return JSON.parse(JBridge.getSessionInfo()).screen_height;
+  } catch (e) {
     console.log("error in getDeviceHeight", e);
     return -1;
   }
-}
+};
 
-export const getScreenPpi = function(){
-  try{
+export const getScreenPpi = function () {
+  try {
     return Math.round(JSON.parse(JBridge.getSessionInfo()).screen_ppi);
-  }
-  catch(e){
+  } catch (e) {
     console.log("error in getScreenPpi", e);
     return -1;
   }
-}
-
+};
 
 export const safeMarginTopImpl = function () {
   try {
     if (parent.__DEVICE_DETAILS && parent.__DEVICE_DETAILS.safe_area_frame) {
-      return parent.__DEVICE_DETAILS.safe_area_frame.y
+      return parent.__DEVICE_DETAILS.safe_area_frame.y;
     }
-  } catch(e){
+  } catch (e) {
     console.log("error in safeMarginTopImpl", e);
   }
 
   return 0;
-}
+};
 
 export const safeMarginBottomImpl = function () {
-  try{
+  try {
     const d = parent.__DEVICE_DETAILS;
     if (!d || !d.safe_area_frame) {
       return 0;
     }
-    return (d.screen_height - d.safe_area_frame.height - d.safe_area_frame.y);
-  } catch(e){
+    return d.screen_height - d.safe_area_frame.height - d.safe_area_frame.y;
+  } catch (e) {
     return 0;
-  } 
-}
+  }
+};
 
-export const getVersionByKey = function(key){
+export const getVersionByKey = function (key) {
   return window.version[key] || "";
-}
+};
 
 function setTextImpl(id, text, pos) {
   if (window.__OS === "ANDROID") {
@@ -178,55 +221,58 @@ function setTextImpl(id, text, pos) {
     cmd += "get_view->setSelection:i_" + pos + ";";
     Android.runInUI(cmd, null);
   } else {
-    Android.runInUI({id: id, text: text});
-    Android.runInUI({id: id, cursorPosition: pos});
+    Android.runInUI({ id: id, text: text });
+    Android.runInUI({ id: id, cursorPosition: pos });
   }
 }
 
 export const setText = function (id) {
   return function (text) {
     setTextImpl(id, text, text.length);
-  }
-}
+  };
+};
 
 export const getExpiryTime = function (str1) {
   return function (reverse) {
     try {
       const expiry = new Date(str1);
       const current = new Date();
-      let diff = (expiry.getTime() - current.getTime())/ 1000;
-      if (reverse)
-      {
-        diff = (current.getTime() - expiry.getTime())/ 1000;
+      let diff = (expiry.getTime() - current.getTime()) / 1000;
+      if (reverse) {
+        diff = (current.getTime() - expiry.getTime()) / 1000;
       }
-      diff = (Math.round(diff));
-      if (diff >= 0)
-        return (diff);
-      else
-        return 0;
+      diff = Math.round(diff);
+      if (diff >= 0) return diff;
+      else return 0;
     } catch (err) {
       console.log("error in getExpiryTime " + err);
     }
   };
 };
 
-export const getCurrentTimeStamp = function () {
-  return new Date()
+export const markPerformance = function (str) {
+  return function () {
+    try {
+      console.log("APP_PERF " + str + " : ", new Date().getTime());
+    } catch(err) {
+      console.log("Catch in APP_PERF markPerformance : ", err)
+    }
+  }
 };
 
 export const getCurrentUTC = function (str) {
   return new Date().toISOString();
 };
 
-export const getDateFromObj = function (obj){
+export const getDateFromObj = function (obj) {
   const date = new Date(`${obj.month} ${obj.date}, ${obj.year}`);
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = date.getFullYear();
-  return  yyyy + "-" + mm + "-" + dd;
-}
+  return yyyy + "-" + mm + "-" + dd;
+};
 
-function getFormattedLanguage(language){
+function getFormattedLanguage(language) {
   if (language == "EN_US") return "en-us";
   else if (language == "HI_IN") return "hi-in";
   else if (language == "KN_IN") return "kn-in";
@@ -243,10 +289,17 @@ export const getPastDays = function (count) {
     for (let i = 0; i < count; i++) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const obj = { utcDate: d.toISOString(), date: d.getDate(), month: d.toLocaleString(getFormattedLanguage(language), { month: "short" }), year: d.getFullYear() };
+      const obj = {
+        utcDate: d.toISOString(),
+        date: d.getDate(),
+        month: d.toLocaleString(getFormattedLanguage(language), {
+          month: "short",
+        }),
+        year: d.getFullYear(),
+      };
       result.push(obj);
     }
-    console.log(language, getFormattedLanguage(language))
+    console.log(language, getFormattedLanguage(language));
     console.log(result);
     return result.reverse();
   } catch (e) {
@@ -256,7 +309,7 @@ export const getPastDays = function (count) {
 
 export const getPastWeeks = function (count) {
   try {
-    const result = []
+    const result = [];
     const currentDate = new Date();
     while (currentDate.getDay() != 0) {
       currentDate.setDate(currentDate.getDate() - 1);
@@ -268,9 +321,19 @@ export const getPastWeeks = function (count) {
       const dEnd = new Date(currentDate);
       dStart.setDate(dStart.getDate() - 7 * (i + 1));
       dEnd.setDate(dEnd.getDate() - (7 * i + 1));
-      const obj = { utcStartDate: dStart.toISOString(), startDate: dStart.getDate(), utcEndDate: dEnd.toISOString(), endDate: dEnd.getDate(),
-        startMonth: dStart.toLocaleString(getFormattedLanguage(language), { month: "short" }), endMonth: dEnd.toLocaleString(getFormattedLanguage(language), { month: "short" }) }
-      result.push(obj)
+      const obj = {
+        utcStartDate: dStart.toISOString(),
+        startDate: dStart.getDate(),
+        utcEndDate: dEnd.toISOString(),
+        endDate: dEnd.getDate(),
+        startMonth: dStart.toLocaleString(getFormattedLanguage(language), {
+          month: "short",
+        }),
+        endMonth: dEnd.toLocaleString(getFormattedLanguage(language), {
+          month: "short",
+        }),
+      };
+      result.push(obj);
     }
     console.log(result);
     return result.reverse();
@@ -281,10 +344,18 @@ export const getPastWeeks = function (count) {
 
 export const getDayName = function (dateString) {
   const date = new Date(dateString);
-  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const daysOfWeek = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
   const dayOfWeek = date.getDay();
   return daysOfWeek[dayOfWeek];
-}
+};
 
 export const getFutureDate = function (startDate) {
   return function (noOfDays) {
@@ -302,59 +373,59 @@ export const getFutureDate = function (startDate) {
 
 function formatDates(date, format, language) {
   const mappings = {
-    "h": () => {
+    h: () => {
       let hours = date.getHours();
       hours = hours % 12 || 12;
       return `${hours}`;
     },
-    "hh": () => {
+    hh: () => {
       let hours = ("0" + date.getHours()).slice(-2);
       hours = hours % 12 || 12;
       return `${hours}`;
     },
-    "HH": () => {
+    HH: () => {
       const hours = ("0" + date.getHours()).slice(-2);
       return `${hours}`;
     },
-    "a": () => {
+    a: () => {
       const hours = date.getHours();
       const ampm = hours < 12 ? "am" : "pm";
       return `${ampm}`;
     },
-    "A": () => {
+    A: () => {
       const hours = date.getHours();
       const ampm = hours < 12 ? "AM" : "PM";
       return `${ampm}`;
     },
-    "mm": () => {
+    mm: () => {
       const minutes = ("0" + date.getMinutes()).slice(-2);
       return `${minutes}`;
     },
-    "ss": () => {
+    ss: () => {
       const seconds = ("0" + date.getSeconds()).slice(-2);
       return `${seconds}`;
     },
-    "DD": () => {
+    DD: () => {
       const day = ("0" + date.getDate()).slice(-2);
       return `${day}`;
     },
-    "MM": () => {
+    MM: () => {
       const month = ("0" + (date.getMonth() + 1)).slice(-2);
       return `${month}`;
     },
-    "YYYY": () => {
+    YYYY: () => {
       const year = date.getFullYear();
       return `${year}`;
     },
-    "YY": () => {
+    YY: () => {
       const year = ("" + date.getFullYear()).slice(-2);
       return `${year}`;
     },
-    "D": () => {
+    D: () => {
       const day = date.getDate();
       return `${day}`;
     },
-    "Do": () => {
+    Do: () => {
       const day = date.getDate();
       let daySuffix;
       if (day === 1 || day === 21 || day === 31) {
@@ -368,27 +439,48 @@ function formatDates(date, format, language) {
       }
       return `${day}${daySuffix}`;
     },
-    "MMM": () => {
+    MMM: () => {
       const month = date.toLocaleDateString(language, { month: "short" });
       return `${month}`;
     },
-    "MMMM": () => {
+    MMMM: () => {
       const month = date.toLocaleDateString(language, { month: "long" });
       return `${month}`;
     },
-    "ddd": () => {
+    ddd: () => {
       const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       const weekday = weekdays[date.getDay()];
       return `${weekday}`;
     },
-    "dddFull": () => {
-      const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    dddFull: () => {
+      const weekdays = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ];
       const weekday = weekdays[date.getDay()];
       return `${weekday}`;
     },
-    "llll": () => {
+    llll: () => {
       const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
       const weekday = weekdays[date.getDay()];
       const day = date.getDate();
       const month = months[date.getMonth()];
@@ -398,8 +490,8 @@ function formatDates(date, format, language) {
       const ampm = hours < 12 ? "AM" : "PM";
       const minutes = ("0" + date.getMinutes()).slice(-2);
       return `${weekday}, ${month} ${day}, ${year} ${hours}:${minutes} ${ampm}`;
-    }
-  }
+    },
+  };
 
   const reg = /(:| |\/|-|,)/g;
   const arr = format.split(reg);
@@ -421,12 +513,14 @@ export const formatCurrencyWithCommas = function (amount) {
     return "";
   }
   return amount.toLocaleString("en-IN");
-}
+};
 
-export const camelCaseToSentenceCase = function(string) {
+export const camelCaseToSentenceCase = function (string) {
   const result = string.replace(/([A-Z])/g, " $1");
-  return (result.substring(0, 1).toUpperCase() + result.substring(1).toLowerCase());
-}
+  return (
+    result.substring(0, 1).toUpperCase() + result.substring(1).toLowerCase()
+  );
+};
 
 export const convertUTCtoISC = function (str) {
   return function (format) {
@@ -438,16 +532,25 @@ export const convertUTCtoISC = function (str) {
 };
 
 export const convertUTCTimeToISTTimeinHHMMSS = function (utcTime) {
-
   const utcDate = new Date(`1970-01-01T${utcTime}Z`);
-  return (String(utcDate.getHours()).padStart(2, "0") + ":" + String(utcDate.getMinutes()).padStart(2, "0") + ":" + String(utcDate.getSeconds()).padStart(2, "0"));
+  return (
+    String(utcDate.getHours()).padStart(2, "0") +
+    ":" +
+    String(utcDate.getMinutes()).padStart(2, "0") +
+    ":" +
+    String(utcDate.getSeconds()).padStart(2, "0")
+  );
 };
 
 export const getFormattedDate = function (str) {
   const date = new Date(str);
   const language = getLanguageLocale();
-  return formatDates(new Date(date),"MMMM Do, YYYY", getFormattedLanguage(language));
-}
+  return formatDates(
+    new Date(date),
+    "MMMM Do, YYYY",
+    getFormattedLanguage(language)
+  );
+};
 
 export const getVideoID = function (url) {
   try {
@@ -455,64 +558,58 @@ export const getVideoID = function (url) {
       return "";
     }
     let ID = "";
-    const updatedURL = url.replace(/(>|<)/gi, "").split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/)/);
+    const updatedURL = url
+      .replace(/(>|<)/gi, "")
+      .split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/)/);
     if (updatedURL[2] !== undefined) {
       ID = updatedURL[2].split(/[^0-9a-z_-]/i);
       ID = ID[0];
-    }
-    else {
+    } else {
       if (updatedURL[1] == /shorts/) {
         ID = updatedURL[2];
-      }else {
+      } else {
         ID = updatedURL;
       }
     }
     return ID;
-  }catch (e) {
+  } catch (e) {
     console.log("error in getVideoID " + e);
   }
-}
+};
 
 export const getImageUrl = function (url) {
   return function (videoId_) {
     try {
       console.log("url", url, videoId_);
       const videoId = url == "" ? videoId_ : getVideoID(url);
-      return ("https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg");
-    }catch (e) {
+      return "https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg";
+    } catch (e) {
       console.log("error in getImageUrl " + e);
     }
-  }
+  };
 };
 
-export const setEventTimestamp = function(string){
-  return function(){
-    if (!window.flowTimeStampObject[string]){
-      window.flowTimeStampObject[string] = Date.now() - window.prevTimeStamp;
-      window.prevTimeStamp = Date.now();
-    }
-  }
-}
-
-export const getTimeStampObject = function(){
-  return function(){
-    const keyValuePairArray = Object.keys(window.flowTimeStampObject).map(function(key) {
-      return {
-        key: key,
-        value: window.flowTimeStampObject[key]
-      };
-    });
+export const getTimeStampObject = function () {
+  return function () {
+    const keyValuePairArray = Object.keys(window.flowTimeStampObject).map(
+      function (key) {
+        return {
+          key: key,
+          value: window.flowTimeStampObject[key],
+        };
+      }
+    );
     return keyValuePairArray;
-  }
-}
+  };
+};
 
-export const getRandomID = function(max) {
+export const getRandomID = function (max) {
   const id = Math.floor(Math.random() * max) + 1;
-  return id.toString(); 
-}
+  return id.toString();
+};
 
 export const updateIdMap = function (key) {
-  idMap[key] = {id : getRandomID(10000), shouldPush: true};
+  idMap[key] = { id: getRandomID(10000), shouldPush: true };
   return idMap[key];
 };
 
@@ -520,12 +617,12 @@ export const updatePushInIdMap = function (key, flag) {
   if (idMap[key]) {
     idMap[key]["shouldPush"] = flag;
   }
-}
+};
 
 export const getValueFromIdMap = function (key) {
-  let val = idMap[key]; 
+  let val = idMap[key];
   if (!val) {
-    idMap[key] = {id : getRandomID(10000), shouldPush: true};
+    idMap[key] = { id: getRandomID(10000), shouldPush: true };
     val = idMap[key];
   }
   return val;
@@ -534,4 +631,4 @@ export const getValueFromIdMap = function (key) {
 export const isTrue = function (a) {
   const bool = true;
   return a.toString() === bool.toString();
-}
+};

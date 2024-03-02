@@ -41,6 +41,14 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDeco
 import PaymentPage
 import Services.EndPoints as EP
 
+type BaseAPIResponse = {
+  driverProfile :: GetDriverInfoResp,
+  driverProfileStats :: DriverProfileStatsResp,
+  activeRideList :: GetRidesHistoryResp
+}
+
+----------------------------------------------------------------------------------------
+
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
 instance decodeErrorPayloadWrapper :: Decode ErrorPayloadWrapper

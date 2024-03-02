@@ -36,7 +36,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 34
         versionCode 1
         versionName "1.0.0"
@@ -241,6 +241,7 @@ dependencies {
     implementation "in.juspay:hyperqr:$jpSDKversion"
     implementation "in.juspay:hypersmshandler:$jpSDKversion"
     implementation project(path: ':mobility-app')
+    implementation project(path: ':mobility-sdk')
     compileOnly project(path: ':mobility-common')
     nyDriverImplementation project(path: ':mobility-driver')
     myDriverImplementation project(path: ':mobility-driver')

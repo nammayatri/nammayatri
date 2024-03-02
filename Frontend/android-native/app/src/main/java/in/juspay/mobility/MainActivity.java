@@ -13,7 +13,6 @@ import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 
-import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -34,6 +33,7 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -45,10 +45,10 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.fragment.app.FragmentActivity;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
-import com.airbnb.lottie.LottieDrawable;
 import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
@@ -70,15 +70,20 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.Vector;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import in.juspay.hypersdk.core.PaymentConstants;
@@ -98,6 +103,8 @@ import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
 import in.juspay.mobility.common.Utils;
+import in.juspay.mobility.common.services.MobilityAPIResponse;
+import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.services.HyperServices;
 
 
@@ -117,7 +124,10 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("StaticFieldLeak")
     private static InAppNotification inAppNotification;
     ShowNotificationCallBack inappCallBack;
+    private CompletableFuture<JSONObject> initFutureTask;
     long onCreateTimeStamp = 0;
+    private String baseUrl = "https://api.sandbox.beckn.juspay.in/dev/dobpp/ui";
+
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
@@ -268,47 +278,135 @@ public class MainActivity extends AppCompatActivity {
         return query_params;
     }
 
+    private String getActiveRide() {
+            String rideListUrl = baseUrl + "/driver/ride/list?limit=1&offset=0&onlyActive=true";
+            try {
+                MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+                Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
+                MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(rideListUrl, baseHeaders, null, "GET", false);
+                return apiResponse.getResponseBody();
+            } catch (Exception error) {
+                Log.d(LOG_TAG, "Catch in getActiveRide : " + error);
+            }
+            return null;
+    }
+
+    private String getDriverProfile() {
+        String rideListUrl = baseUrl + "/driver/profile";
+        try {
+            MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+            Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
+            MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(rideListUrl, baseHeaders, null, "GET", false);
+            return apiResponse.getResponseBody();
+        } catch (Exception error) {
+            Log.d(LOG_TAG, "Catch in getDriverProfile : " + error);
+        }
+        return null;
+    }
+
+    private String getDriverProfileStats() {
+        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd",new Locale("en","US"));
+        f.setTimeZone(TimeZone.getTimeZone("IST"));
+        String currTime = f.format(new Date());
+        String rideListUrl = baseUrl + "/driver/profile/stats?day=" + currTime;
+        try {
+            MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+            Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
+            MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(rideListUrl, baseHeaders, null, "GET", false);
+            return apiResponse.getResponseBody();
+        } catch (Exception error) {
+            Log.d(LOG_TAG, "Catch in getDriverProfile : " + error);
+        }
+        return null;
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     @AddTrace(name = "onCreateTrace", enabled = true /* optional */)
     protected void onCreate(Bundle savedInstanceState) {
+        Log.i("APP_PERF", "ON_CREATE_START : " + System.currentTimeMillis());
         onCreateTimeStamp = System.currentTimeMillis();
-        Vector<String> res = handleDeepLinkIfAvailable(getIntent());
-        Vector<String> notificationDeepLinkVector = notificationTypeHasDL(getIntent());
-        String viewParam = null, deepLinkJson =null;
-        if (res!=null ){
-            viewParam = res.get(0);
-            deepLinkJson = res.get(1);
-        }
-        else if (notificationDeepLinkVector != null) {
-            viewParam = notificationDeepLinkVector.get(0);
-            deepLinkJson = notificationDeepLinkVector.get(1);
-        }
-
         super.onCreate(savedInstanceState);
-        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         context = getApplicationContext();
-        boolean isMigrated = migrateLocalStore(context);
-        String clientId = context.getResources().getString(R.string.client_id);
         activity = this;
-        sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
+
+        initFutureTask = CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<String> getActiveRideTask = CompletableFuture.supplyAsync(this::getActiveRide);
+            CompletableFuture<String> getDriverProfileTask = CompletableFuture.supplyAsync(this::getDriverProfile);
+            CompletableFuture<String> getDriverProfileStatsTask = CompletableFuture.supplyAsync(this::getDriverProfileStats);
+
+            Vector<String> res = handleDeepLinkIfAvailable(getIntent());
+            Vector<String> notificationDeepLinkVector = notificationTypeHasDL(getIntent());
+
+            String viewParam = null, deepLinkJson =null;
+            if (res!=null ){
+                viewParam = res.get(0);
+                deepLinkJson = res.get(1);
+            }
+            else if (notificationDeepLinkVector != null) {
+                viewParam = notificationDeepLinkVector.get(0);
+                deepLinkJson = notificationDeepLinkVector.get(1);
+            }
+
+            sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
+
+            WebView.setWebContentsDebuggingEnabled(true);
+
+            if (MERCHANT_TYPE.equals("DRIVER")) {
+                widgetService = new Intent(this, WidgetService.class);
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                if (sharedPref != null) {
+                    Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
+                }
+            }
+            MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+            MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
+            mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
+            Log.i("APP_PERF", "ON_CREATE_TO_INIT_update remote configs : " + System.currentTimeMillis());
+
+            updateConfigURL();
+            Log.i("APP_PERF", "ON_CREATE_TO_INIT : " + System.currentTimeMillis());
+
+            JSONObject results = new JSONObject();
+            try {
+                String[] allTaskResp = CompletableFuture.allOf(
+                                getActiveRideTask, getDriverProfileTask, getDriverProfileStatsTask)
+                        .thenApply(voidResult -> new String[]{
+                                getActiveRideTask.join(),
+                                getDriverProfileTask.join(),
+                                getDriverProfileStatsTask.join()
+                        }).get();
+
+                String activeRide = allTaskResp[0];
+                String driverProfile = allTaskResp[1];
+                String driverProfileStats = allTaskResp[2];
+
+                results.put("viewParam", viewParam);
+                results.put("deepLinkJson", deepLinkJson);
+
+                JSONObject apiResponse = new JSONObject();
+
+                SharedPreferences sharedPref = context.getSharedPreferences(context.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
+                String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+                if (!token.equals("null") && !token.equals("__failed")) {
+                    apiResponse.put("activeRide", activeRide);
+                    apiResponse.put("driverProfile", driverProfile);
+                    apiResponse.put("driverProfileStats", driverProfileStats);
+                }
+
+                results.put("apiResponse", apiResponse);
+            } catch (ExecutionException | InterruptedException | JSONException e) {
+                e.printStackTrace();
+            }
+            return results;
+        });
+
+        initApp();
+
         handleSplashScreen();
 
-        WebView.setWebContentsDebuggingEnabled(true);
-
-        if (MERCHANT_TYPE.equals("DRIVER")) {
-            widgetService = new Intent(this, WidgetService.class);
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            if (sharedPref != null) {
-                Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
-            }
-        }
-        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
-        MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
-        mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
-
-        updateConfigURL();
-        initApp(viewParam, deepLinkJson);
+        boolean isMigrated = migrateLocalStore(context);
+        String clientId = context.getResources().getString(R.string.client_id);
 
         mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
         initNotificationChannel();
@@ -511,9 +609,12 @@ public class MainActivity extends AppCompatActivity {
             }
     }
 
-    private void initApp(String viewParam, String deepLinkJSON) {
+    private void initApp() {
         long initiateTimeStamp = System.currentTimeMillis();
+        Log.i("APP_PERF", "INIT_APP_START : " + System.currentTimeMillis());
         hyperServices = new HyperServices(this, findViewById(R.id.cl_dui_container));
+//        hyperServices = new MobilityServices(this);
+        Log.i("APP_PERF", "INIT_APP_HYPER_SERVICE_END : " + System.currentTimeMillis());
         final JSONObject json = new JSONObject();
         JSONObject payload = new JSONObject();
 
@@ -522,9 +623,6 @@ public class MainActivity extends AppCompatActivity {
             json.put("service", getService());
             json.put("betaAssets", false);
             payload = getInnerPayload("initiate");
-            if (viewParam != null) payload.put("viewParam", viewParam);
-            if (viewParam != null) payload.put("view_param", viewParam);
-            if (deepLinkJSON != null) payload.put("deepLinkJSON", deepLinkJSON);
             payload.put("onCreateTimeStamp", onCreateTimeStamp);
             payload.put("initiateTimeStamp" , initiateTimeStamp);
             json.put(PaymentConstants.PAYLOAD, payload);
@@ -532,6 +630,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         mFirebaseAnalytics.logEvent("ny_hyper_initiate",null);
+        Log.i("APP_PERF", "INIT_HYPER_SERVICE : " + System.currentTimeMillis());
         hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
             @Override
             public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
@@ -542,14 +641,33 @@ public class MainActivity extends AppCompatActivity {
                     case "initiate_result":
                         try {
                             JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
-                            innerPayload.put("action", "process");
-                            if (getIntent() != null) setNotificationData(innerPayload, getIntent());
-                            json.put(PaymentConstants.PAYLOAD, innerPayload);
-                        } catch (JSONException e) {
+                            initFutureTask.thenAccept(result -> {
+                                try {
+                                    String viewParam = result.optString("viewParam"), deepLinkJSON = result.optString("deepLinkJson");
+                                    JSONObject apiResponse = result.getJSONObject("apiResponse");
+
+                                    innerPayload.put("action", "process");
+                                    innerPayload.put("viewParam", viewParam);
+                                    innerPayload.put("view_param", viewParam);
+                                    innerPayload.put("deepLinkJSON", deepLinkJSON);
+
+                                    if (apiResponse.length() > 0) {
+                                        innerPayload.put("apiResponse", apiResponse);
+                                    }
+
+//                                    if (getIntent() != null)
+//                                        setNotificationData(innerPayload, getIntent());
+                                    json.put(PaymentConstants.PAYLOAD, innerPayload);
+                                    mFirebaseAnalytics.logEvent("ny_hyper_process", null);
+                                    Log.i("APP_PERF", "INIT_HYPER_SERVICE_INITIATE_RESULT : " + System.currentTimeMillis());
+                                    hyperServices.process(json);
+                                } catch (JSONException e) {
+                                    Log.e(LOG_TAG, e.toString());
+                                }
+                            });
+                        }   catch (JSONException e) {
                             Log.e(LOG_TAG, e.toString());
                         }
-                        mFirebaseAnalytics.logEvent("ny_hyper_process",null);
-                        hyperServices.process(json);
                         break;
                     case "hide_loader":
                     case "hide_splash":
@@ -566,7 +684,7 @@ public class MainActivity extends AppCompatActivity {
                         mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
                         hyperServices.terminate();
                         hyperServices = null;
-                        initApp(null,null);
+                        initApp();
                         break;
                     case "in_app_notification":
                         String title = jsonObject.optString("title");
@@ -587,7 +705,8 @@ public class MainActivity extends AppCompatActivity {
                                 minimizeApp(context);
                             }
                         } catch (Exception ignored) {
-                        } break;
+                        }
+                        break;
                     case "log_stream":
                         JSONObject payload;
                         try {
@@ -617,6 +736,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+        Log.i("APP_PERF", "INIT_HYPER_SERVICE_END : " + String.valueOf(System.currentTimeMillis()));
     }
 
     public void showAlertForUpdate() {
@@ -636,7 +756,7 @@ public class MainActivity extends AppCompatActivity {
             mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
             hyperServices.terminate();
             hyperServices = null;
-            initApp(null, null);
+            initApp();
         });
         runOnUiThread(() -> {
             AlertDialog alertDialog = builder.create();

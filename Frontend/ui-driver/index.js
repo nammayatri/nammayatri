@@ -1,6 +1,10 @@
+console.log("APP_PERF INDEX_BUNDLE_START : ", new Date().getTime());
 import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
+import * as purescript from "./output/Main";
+import { loadAppConfig } from "./output/ConfigProvider/index.js";
+import { handleLogStream } from "./output/Engineering.Helpers.LogEvent/index.js";
 
 window.events = {};
 try {
@@ -13,6 +17,7 @@ window.flowTimeStampObject = {};
 const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
 window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT"];
 
+console.log("APP_PERF INDEX_FIREBASE_LOG_PARAMS_START : ", new Date().getTime());
 if (window.JBridge.firebaseLogEventWithParams){  
   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
     return blackListFunctions.indexOf(fnName) == -1
@@ -36,6 +41,7 @@ if (window.JBridge.firebaseLogEventWithParams){
       };
     });
 }
+console.log("APP_PERF INDEX_FIREBASE_LOG_PARAMS_END : ", new Date().getTime());
 
 function guid() {
   function s4() {
@@ -47,13 +53,6 @@ function guid() {
     s4() + "-" + s4() + s4() + s4();
 }
 
-
-function loadConfig() {
-  const config = require("./output/ConfigProvider/index.js");
-  config.loadAppConfig("");
-}
-
-
 window.session_id = guid();
 window.version = window.version || {};
 window.version["app"] = __VERSION__;
@@ -62,7 +61,10 @@ const refreshThreshold = 300;
 console.warn("Hello World");
 const JBridge = window.JBridge;
 const JOS = window.JOS;
-loadConfig();
+
+console.log("APP_PERF INDEX_LOAD_CONFIG_START : ", new Date().getTime());
+loadAppConfig("");
+console.log("APP_PERF INDEX_LOAD_CONFIG_END : ", new Date().getTime());
 
 window.isObject = function (object) {
   return (typeof object == "object");
@@ -96,7 +98,7 @@ const logger = function()
 
   return pub;
 }();
-
+console.log("APP_PERF INDEX_LOGGER_END : ", new Date().getTime());
 
 function setManualEvents(eventName, callbackFunction) {
   window[eventName] = (!isUndefined(window[eventName])) ? window[eventName] : {};
@@ -124,9 +126,7 @@ if (!window.__OS) {
   }
   window.__OS = getOS();
 }
-
-const purescript = require("./output/Main");
-
+console.log("APP_PERF INDEX_BUNDLE_OS_END : ", new Date().getTime());
 
 function callInitiateResult () {
   const payload = {
@@ -141,6 +141,7 @@ function callInitiateResult () {
     event: "jp_consuming_backpress",
     payload: { jp_consuming_backpress: true }
   }
+  console.log("APP_PERF INDEX_BUNDLE_INITIATE_RESULT : ", new Date().getTime());
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
@@ -182,6 +183,7 @@ window.onMerchantEvent = function (_event, payload) {
   const appName = clientPaylod.payload.appName;
   window.appName = appName;
   if (_event == "initiate") {
+    console.log("APP_PERF INDEX_BUNDLE_INITIATE_START : ", new Date().getTime());
     if (clientId == "yatriprovider") {
       window.merchantID = "YATRI"
     } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider"){
@@ -221,6 +223,7 @@ window.onMerchantEvent = function (_event, payload) {
     } catch (err) {}
     callInitiateResult();
   } else if (_event == "process") {
+    console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
     const parsedPayload = JSON.parse(payload);
@@ -269,14 +272,18 @@ window.onMerchantEvent = function (_event, payload) {
         if (!checkForReferral(parsedPayload.payload.viewParamNewIntent, "REFERRAL_NEW_INTENT")) {
           purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
         }
-      } else{
-        purescript.main(makeEvent("", ""))();
+      } else if (parsedPayload.payload.apiResponse) {
+        console.log("PERFFF IS HEREEE");
+        purescript.main(makeEvent("", ""))(parsedPayload.payload.apiResponse)();
+      } else {
+        purescript.main(makeEvent("", ""))(null)();
       }
     }
   } else {
     console.error("unknown event: ", event);
   }
 }
+console.log("APP_PERF INDEX_BUNDLE_END_ON_MERCHANT : ", new Date().getTime());
 
 window.callUICallback = function () {
   const getCurrTime = () => (new Date()).getTime()
@@ -410,9 +417,8 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
     case "process_result":
       if (window.processCallBack) window.processCallBack(0)(jsonPayload)();
       break;
-    case "log_stream":
-      const logs = require("./output/Engineering.Helpers.LogEvent/index.js");
-      logs.handleLogStream(payload.payload);
+    case "log_stream":      
+      handleLogStream(payload.payload);
       break;
     default:
       console.log("Unknown Event");
@@ -440,3 +446,4 @@ if (sessionInfo.package_name.includes("debug")) {
 } else {
   logger.disableLogger();
 }
+console.log("APP_PERF INDEX_BUNDLE_END : ", new Date().getTime());

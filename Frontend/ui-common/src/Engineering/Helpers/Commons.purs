@@ -84,7 +84,7 @@ foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
 foreign import convertUTCTimeToISTTimeinHHMMSS :: String -> String
-foreign import getCurrentTimeStamp :: Unit -> Number
+foreign import markPerformance :: String -> Effect Unit
 foreign import getDateFromObj :: Fn1 DateObj String
 foreign import getFormattedDate :: Fn1 String String
 foreign import formatCurrencyWithCommas :: String -> String
@@ -95,7 +95,6 @@ foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
 foreign import getDayName :: String -> String
 foreign import getFutureDate :: String -> Int -> String
-foreign import setEventTimestamp :: String -> Effect Unit
 foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
 foreign import updateIdMap :: EffectFn1 String CarouselHolderData
 foreign import updatePushInIdMap :: Fn2 String Boolean Unit

@@ -15,7 +15,8 @@
 
 module Screens.EnterOTPScreen.Handler where
 
-import Engineering.Helpers.BackTrack (getState)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Engineering.Helpers.Commons (markPerformance)
 import Prelude (bind, pure, ($), (<$>), discard)
 import Screens.EnterOTPScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
@@ -28,6 +29,7 @@ import Types.ModifyScreenState (modifyScreenState)
 enterOTP :: FlowBT String ENTER_OTP_SCREEN_OUTPUT
 enterOTP = do
   (GlobalState state) <- getState
+  liftFlowBT $ markPerformance "ENTER_OTP_SCREEN"
   act <- lift $ lift $ runScreen $ EnterOTPScreen.screen state.enterOTPScreen
   case act of
     GoBack updatedState  -> do 

@@ -208,7 +208,6 @@ initData = {
         accountBlockedPopup : false,
         showCoinsPopup : false,
         isStatsModelExpanded : false,
-        tobeLogged : false,
         safetyAudioAutoPlay : false,
         vehicleNSPopup : false
     }
