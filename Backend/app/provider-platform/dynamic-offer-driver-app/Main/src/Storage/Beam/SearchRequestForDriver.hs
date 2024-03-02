@@ -16,22 +16,13 @@
 
 module Storage.Beam.SearchRequestForDriver where
 
-import Data.ByteString
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverInformation as D
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
-import EulerHS.Types
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
-
-extractValue :: KVDBAnswer [ByteString] -> [ByteString]
-extractValue (Right value) = value
-extractValue _ = []
-
-searchReqestForDriverkey :: Text -> Text
-searchReqestForDriverkey prefix = "searchRequestForDriver_" <> prefix
 
 data SearchRequestForDriverT f = SearchRequestForDriverT
   { id :: B.C f Text,

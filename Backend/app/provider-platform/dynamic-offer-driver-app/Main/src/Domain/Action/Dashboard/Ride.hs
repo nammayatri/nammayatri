@@ -62,7 +62,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
-import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.DriverQuote as DQ
@@ -260,7 +259,6 @@ rideInfo merchantId merchantOpCityId reqRideId = do
     if ride.status == DRide.CANCELLED
       then runInReplica $ QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user
       else pure Nothing
-  driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByEntityId rideId
   let cancellationReason =
         (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
@@ -308,7 +306,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         cancelledTime,
         cancelledBy,
         cancellationReason,
-        driverInitiatedCallCount,
+        driverInitiatedCallCount = -1,
         scheduledAt = Just booking.startTime,
         tripCategory = castTripCategory booking.tripCategory,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
