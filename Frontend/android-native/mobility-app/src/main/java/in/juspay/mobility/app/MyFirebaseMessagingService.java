@@ -142,6 +142,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 if (info.fromCleverTap) {
                     new CTFcmMessageHandler().createNotification(getApplicationContext(), remoteMessage);
                 } else {
+                    payload.put("notification_id", remoteMessage.getData().get("notification_id"));
                     payload.put("notification_type", remoteMessage.getData().get("notification_type"));
                     payload.put("entity_ids", remoteMessage.getData().get("entity_ids"));
                     payload.put("entity_type", remoteMessage.getData().get("entity_type"));
@@ -227,7 +228,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                         case NotificationTypes.CLEARED_FARE:
                             sharedPref.edit().putString(getString(R.string.CLEAR_FARE), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
+                            NotificationUtils.showAllocationNotification(this, payload, entity_payload, "FCM");
                             startWidgetService("CLEAR_FARE", payload, entity_payload);
                             break;
 
@@ -287,7 +288,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                         case NotificationTypes.CANCELLED_SEARCH_REQUEST:
                             sharedPref.edit().putString(getString(R.string.CANCELLED_SEARCH_REQUEST), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
+                            NotificationUtils.showAllocationNotification(this, payload, entity_payload, "FCM");
                             startWidgetService("CLEAR_FARE", payload, entity_payload);
                             break;
 
@@ -314,7 +315,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 } else
                                     sharedPref.edit().putString(storage_key, storage_value).apply();
                             }
-                            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
+                            NotificationUtils.showAllocationNotification(this, payload, entity_payload, "FCM");
                             break;
 
                         case NotificationTypes.CALL_API:
@@ -433,7 +434,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
             startWidgetService(null, payload, entity_payload);
         } else {
-            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
+            NotificationUtils.showAllocationNotification(this, payload, entity_payload, "FCM");
         }
     }
 
