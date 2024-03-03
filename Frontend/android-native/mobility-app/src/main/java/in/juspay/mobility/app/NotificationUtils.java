@@ -64,6 +64,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -76,6 +77,7 @@ public class NotificationUtils {
 
     private static final String LOG_TAG = "LocationServices";
     private static final String TAG = "NotificationUtils";
+    private static final String PROCESSED_NOTIFICATIONS_KEY = "PROCESSED_NOTIFICATIONS";
     public static final String GENERAL_NOTIFICATION = "GENERAL_NOTIFICATION";
     public static final String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
     public static final String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";
@@ -97,6 +99,7 @@ public class NotificationUtils {
     public static MediaPlayer mediaPlayer;
     public static Bundle lastRideReq = new Bundle();
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
+    private static final Object lock = new Object();
 
     public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);
@@ -106,8 +109,46 @@ public class NotificationUtils {
         callBack.remove(notificationCallback);
     }
     public static int chatNotificationId = 18012023;
-    public static void showAllocationNotification(Context context, JSONObject data, JSONObject entity_payload) {
+    public static void showAllocationNotification(Context context, JSONObject data, JSONObject entity_payload, String source) {
         try {
+            SharedPreferences sharedPref = context.getSharedPreferences(
+                    context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+
+            synchronized (lock) {
+                String notificationId = data.getString("notification_id");
+
+                // Retrieve the stored JSONObject from SharedPreferences
+                String processedNotificationsJson = sharedPref.getString(PROCESSED_NOTIFICATIONS_KEY, "{}");
+                JSONObject processedNotifications = new JSONObject(processedNotificationsJson);
+
+                // Check if the notification_id exists in processedNotifications
+                if (!processedNotifications.has(notificationId)) {
+                    Log.i("ShowAllocationNotification Reached - [" + source + "]", notificationId);
+
+                    // If it doesn't exist, add it with the current timestamp
+                    processedNotifications.put(notificationId, System.currentTimeMillis());
+                }
+
+                // Get the current time in milliseconds
+                long currentTimeMillis = System.currentTimeMillis();
+
+                // Iterate over the keys of processedNotifications
+                Iterator<String> keysIterator = processedNotifications.keys();
+                while (keysIterator.hasNext()) {
+                    String key = keysIterator.next();
+                    long notificationProcessTime = processedNotifications.optLong(key);
+
+                    // Check if the timestamp is more than 1 hour older than the current time
+                    if (currentTimeMillis - notificationProcessTime > TimeUnit.HOURS.toMillis(1)) {
+                        // Remove the key-value pair from processedNotifications
+                        keysIterator.remove();
+                    }
+                }
+
+                // Save the updated JSONObject back to SharedPreferences
+                sharedPref.edit().putString(PROCESSED_NOTIFICATIONS_KEY, processedNotifications.toString()).apply();
+            }
+
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
             f.setTimeZone(TimeZone.getTimeZone("IST"));
             String currTime = f.format(new Date());
@@ -118,8 +159,7 @@ public class NotificationUtils {
                 MyFirebaseMessagingService.clearedRideRequest.remove(data.getString("entity_ids"));
                 return;
             }
-            SharedPreferences sharedPref = context.getSharedPreferences(
-                    context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("In_if_in_notification before");
                 Bundle params = new Bundle();

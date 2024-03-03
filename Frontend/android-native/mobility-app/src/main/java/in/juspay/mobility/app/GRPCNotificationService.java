@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -18,7 +19,11 @@ import androidx.core.app.NotificationCompat;
 
 import com.google.android.gms.location.LocationServices;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Map;
+import java.util.Objects;
 import java.util.Timer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -35,11 +40,12 @@ import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.StreamObserver;
 
-interface ErrorListener {
+interface NotificationListener {
     void onError(Throwable t);
+    void onMessage(NotificationPayload notification);
 }
 
-public class GRPCNotificationService extends Service implements ErrorListener {
+public class GRPCNotificationService extends Service implements NotificationListener {
     private static NotificationGrpc.NotificationStub asyncStub;
     private ManagedChannel channel;
     private String token;
@@ -139,6 +145,30 @@ public class GRPCNotificationService extends Service implements ErrorListener {
         closeChannel();
         initialize();
     }
+
+    @Override
+    public void onMessage(NotificationPayload notification) {
+        Log.e("GRPC", "[Processing]");
+
+        try {
+            JSONObject entity_payload = new JSONObject(notification.getEntity().getData());
+            JSONObject payload = new JSONObject();
+            String notificationType = notification.getCategory();
+
+            payload.put("notification_id", notification.getId());
+            payload.put("notification_type", notification.getCategory());
+            payload.put("entity_ids", notification.getEntity().getId());
+            payload.put("show_notification", Objects.equals(notification.getShow(), "SHOW") ? "true" : "false");
+
+            switch (notificationType) {
+                case "NEW_RIDE_AVAILABLE":
+                    NotificationUtils.showAllocationNotification(this, payload, entity_payload, "GRPC");
+                    break;
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
 }
 
 /***
@@ -148,10 +178,10 @@ public class GRPCNotificationService extends Service implements ErrorListener {
  * ***/
 class GRPCNotificationResponseObserver implements StreamObserver<NotificationPayload> {
     private StreamObserver<NotificationAck> notificationRequestObserver;
-    private final ErrorListener errorListener;
+    private final NotificationListener notificationListener;
 
-    public GRPCNotificationResponseObserver(ErrorListener errorListener) {
-        this.errorListener = errorListener;
+    public GRPCNotificationResponseObserver(NotificationListener notificationListener) {
+        this.notificationListener = notificationListener;
     }
 
     /***
@@ -164,18 +194,16 @@ class GRPCNotificationResponseObserver implements StreamObserver<NotificationPay
     }
 
     @Override
-    public void onNext(NotificationPayload value) {
-        Log.i("GRPC", "[Message] : " + value.toString());
-        /***
-         * Here we receive the message, we need to process the data here.
-         */
-        this.notificationRequestObserver.onNext(NotificationAck.newBuilder().setId(value.getId()).build());
+    public void onNext(NotificationPayload notification) {
+        Log.i("GRPC", "[Message] : " + notification.toString());
+        this.notificationRequestObserver.onNext(NotificationAck.newBuilder().setId(notification.getId()).build());
+        notificationListener.onMessage(notification);
     }
 
     @Override
     public void onError(Throwable t) {
         Log.e("GRPC", "[Error] : " + t.toString());
-        errorListener.onError(t);
+        notificationListener.onError(t);
     }
 
     @Override
