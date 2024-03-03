@@ -1,11 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
-import qualified Data.ByteString as BS
-import qualified Data.Yaml as Yaml
+--import qualified Data.ByteString as BS
+import Data.List (isSuffixOf)
+--import qualified Data.Yaml as Yaml
 import Kernel.Prelude
 import qualified NammaDSL.App as NammaDSL
 import System.Directory
-import System.Environment (getArgs)
+import System.Environment (getArgs, setEnv)
 import System.FilePath
 
 findGitRoot :: FilePath -> IO (Maybe FilePath)
@@ -20,49 +23,68 @@ findGitRoot dir = do
             then return Nothing -- No more directories to check
             else findGitRoot parent
 
-sqlOutputPathPrefix :: FilePath
-sqlOutputPathPrefix = "Backend" </> "dev" </> "migrations-read-only"
+-- applyDirectory :: FilePath -> (FilePath -> IO ()) -> IO ()
+-- applyDirectory dirPath processFile = do
+--   exists <- doesDirectoryExist dirPath
+--   when exists $ do
+--     files <- listDirectory dirPath
+--     let yamlFiles = filter (\file -> takeExtension file `elem` [".yaml", ".yml"]) files
+--     mapM_ (processFile . (dirPath </>)) yamlFiles
 
-rideAppName :: FilePath
-rideAppName = "rider-app"
+-- data Apps = DriverApp | RiderApp deriving (Generic, FromJSON, Show)
 
-driverAppName :: FilePath
-driverAppName = "dynamic-offer-driver-app"
+-- data LibraryPaths = LibraryPaths
+--   { libPath :: FilePath,
+--     usedIn :: [Apps]
+--   }
+--   deriving (Generic, FromJSON, Show)
 
-riderAppDatabaseName :: String
-riderAppDatabaseName = "atlas_app"
+-- getFilePathsForConfiguredApps :: FilePath -> IO [LibraryPaths]
+-- getFilePathsForConfiguredApps rootDir = do
+--   contents <- BS.readFile $ rootDir </> "Backend/dslLibs.yaml"
+--   case Yaml.decodeEither' contents of
+--     Left err -> error $ show err
+--     Right yml -> return yml
 
-driverAppDatabaseName :: String
-driverAppDatabaseName = "atlas_driver_offer_bpp"
+processSpecFolders :: Bool -> FilePath -> IO ()
+processSpecFolders isGenAll specFolderPath = do
+  contents <- listDirectory specFolderPath
+  forM_ contents $ \entry -> do
+    let entryPath = specFolderPath </> entry
+    isDirectory <- doesDirectoryExist entryPath
+    when isDirectory $ do
+      let isSpecDir = "/spec" `isSuffixOf` entryPath
+      if isSpecDir
+        then do
+          let apiFolderPath = entryPath </> "API"
+              storageFolderPath = entryPath </> "Storage"
+              configPath = entryPath </> "dsl-config.dhall"
+          apiContents <- doesDirectoryExist apiFolderPath >>= bool (pure []) (listDirectory apiFolderPath)
+          storageContents <- doesDirectoryExist storageFolderPath >>= bool (pure []) (listDirectory storageFolderPath)
+          isConfigExists <- doesFileExist configPath
+          if not isConfigExists
+            then do
+              putStrLn' "33" ("Skipping as Config file not found at " ++ configPath)
+            else do
+              forM_ apiContents $
+                \inputFile -> do
+                  let inputFilePath = apiFolderPath </> inputFile
+                  fileState <- NammaDSL.getFileState inputFilePath
+                  putStrLn $ show fileState ++ " " ++ inputFile
+                  when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
+                    NammaDSL.runApiGenerator configPath inputFilePath
 
-riderAppPath :: FilePath
-riderAppPath = "Backend" </> "app" </> "rider-platform" </> rideAppName </> "Main"
+              forM_ storageContents $
+                \inputFile -> do
+                  let inputFilePath = storageFolderPath </> inputFile
+                  fileState <- NammaDSL.getFileState inputFilePath
+                  putStrLn $ show fileState ++ " " ++ inputFile
+                  when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
+                    NammaDSL.runStorageGenerator configPath inputFilePath
+        else processSpecFolders isGenAll entryPath
 
-driverAppPath :: FilePath
-driverAppPath = "Backend" </> "app" </> "provider-platform" </> driverAppName </> "Main"
-
-applyDirectory :: FilePath -> (FilePath -> IO ()) -> IO ()
-applyDirectory dirPath processFile = do
-  exists <- doesDirectoryExist dirPath
-  when exists $ do
-    files <- listDirectory dirPath
-    let yamlFiles = filter (\file -> takeExtension file `elem` [".yaml", ".yml"]) files
-    mapM_ (processFile . (dirPath </>)) yamlFiles
-
-data Apps = DriverApp | RiderApp deriving (Generic, FromJSON, Show)
-
-data LibraryPaths = LibraryPaths
-  { libPath :: FilePath,
-    usedIn :: [Apps]
-  }
-  deriving (Generic, FromJSON, Show)
-
-getFilePathsForConfiguredApps :: FilePath -> IO [LibraryPaths]
-getFilePathsForConfiguredApps rootDir = do
-  contents <- BS.readFile $ rootDir </> "Backend/dslLibs.yaml"
-  case Yaml.decodeEither' contents of
-    Left err -> error $ show err
-    Right yml -> return yml
+putStrLn' :: String -> String -> IO ()
+putStrLn' colorCode text = putStrLn $ "\x1b[" ++ colorCode ++ "m" ++ text ++ "\x1b[0m"
 
 main :: IO ()
 main = do
@@ -71,50 +93,19 @@ main = do
   currentDir <- getCurrentDirectory
   maybeGitRoot <- findGitRoot currentDir
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
+  setEnv "GIT_ROOT_PATH" (show rootDir)
+  putStrLn' "32" ("Root dir: " ++ rootDir)
+  processSpecFolders generateAllSpecs rootDir
 
-  processApp generateAllSpecs riderAppDatabaseName rootDir riderAppPath rideAppName
-  processApp generateAllSpecs driverAppDatabaseName rootDir driverAppPath driverAppName
-  paths <- getFilePathsForConfiguredApps rootDir
-  mapM_
-    ( \libPaths ->
-        mapM_
-          ( \lib -> do
-              let (databaseName, appName) =
-                    case lib of
-                      DriverApp -> (driverAppDatabaseName, driverAppName)
-                      RiderApp -> (riderAppDatabaseName, riderAppDatabaseName)
-              processApp generateAllSpecs databaseName rootDir libPaths.libPath appName
-          )
-          libPaths.usedIn
-    )
-    paths
-  where
-    processApp :: Bool -> String -> FilePath -> FilePath -> FilePath -> IO ()
-    processApp isGenAll dbName rootDir appPath appName = do
-      applyDirectory (rootDir </> appPath </> "spec" </> "Storage") (processStorageDSL isGenAll dbName rootDir appPath appName)
-      applyDirectory (rootDir </> appPath </> "spec" </> "API") (processAPIDSL isGenAll rootDir appPath)
-
-    processStorageDSL isGenAll dbName' rootDir appPath appName inputFile = do
-      fileState <- NammaDSL.getFileState inputFile
-      putStrLn $ show fileState ++ " " ++ inputFile
-      when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $ do
-        let readOnlySrc = rootDir </> appPath </> "src-read-only/"
-        let src = rootDir </> appPath </> "src"
-        let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
-
-        NammaDSL.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
-        NammaDSL.mkBeamQueries (readOnlySrc </> "Storage/Queries") (Just (src </> "Storage/Queries")) inputFile
-        NammaDSL.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
-        NammaDSL.mkSQLFile (Just dbName') readOnlyMigration inputFile
-
-    processAPIDSL isGenAll rootDir appPath inputFile = do
-      fileState <- NammaDSL.getFileState inputFile
-      putStrLn $ show fileState ++ " " ++ inputFile
-      when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $ do
-        let readOnlySrc = rootDir </> appPath </> "src-read-only/"
-        let src = rootDir </> appPath </> "src"
-
-        -- NammaDSL.mkFrontendAPIIntegration (readOnlySrc </> "Domain/Action") inputFile
-        NammaDSL.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
-        NammaDSL.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
-        NammaDSL.mkDomainHandler (src </> "Domain/Action/UI") inputFile
+-- What about Library apps ? --TODO
+-- mapM_
+--   ( \libPaths ->
+--       mapM_
+--         ( \lib -> do
+--             let (databaseName, appName) =
+--                   case lib of
+--                     DriverApp -> (driverAppDatabaseName, driverAppName)
+--                     RiderApp -> (riderAppDatabaseName, riderAppDatabaseName)
+--             processApp generateAllSpecs databaseName rootDir libPaths.libPath appName
+--         )
+--         libPaths.usedIn

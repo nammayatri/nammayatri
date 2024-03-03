@@ -1,0 +1,107 @@
+let rootDir = env:GIT_ROOT_PATH
+
+let outputPrefixReadOnly =
+          rootDir
+      ++  "/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only/"
+
+let outputPrefix =
+          rootDir
+      ++  "/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/"
+
+let migrationPath =
+      rootDir ++ "/Backend/dev/migrations-read-only/dynamic-offer-driver-app/"
+
+let outputPath =
+      { _apiRelatedTypes = outputPrefixReadOnly ++ "API/Types/UI"
+      , _beamQueries = outputPrefixReadOnly ++ "Storage/Queries"
+      , _extraBeamQueries = outputPrefix ++ "Storage/Queries/"
+      , _beamTable = outputPrefixReadOnly ++ "Storage/Beam"
+      , _domainHandler = outputPrefix ++ "Domain/Action/UI"
+      , _domainType = outputPrefixReadOnly ++ "Domain/Types"
+      , _servantApi = outputPrefixReadOnly ++ "API/Action/UI"
+      , _sql = migrationPath
+      , _purescriptFrontend = ""
+      }
+
+let GeneratorType =
+      < SERVANT_API
+      | API_TYPES
+      | DOMAIN_HANDLER
+      | BEAM_QUERIES
+      | BEAM_TABLE
+      | DOMAIN_TYPE
+      | SQL
+      | PURE_SCRIPT_FRONTEND
+      >
+
+let DefaultImports =
+      { _qualifiedImports : List Text
+      , _simpleImports : List Text
+      , _generationType : GeneratorType
+      }
+
+let defaultTypeImportMapper =
+      [ { _1 = "Text", _2 = "Kernel.Prelude" }
+      , { _1 = "Maybe", _2 = "Kernel.Prelude" }
+      , { _1 = "Double", _2 = "Kernel.Prelude" }
+      , { _1 = "TimeOfDay", _2 = "Kernel.Prelude" }
+      , { _1 = "Day", _2 = "Data.Time.Calendar" }
+      , { _1 = "Int", _2 = "Kernel.Prelude" }
+      , { _1 = "Bool", _2 = "Kernel.Prelude" }
+      , { _1 = "Id", _2 = "Kernel.Types.Id" }
+      , { _1 = "ShortId", _2 = "Kernel.Types.Id" }
+      , { _1 = "UTCTime", _2 = "Kernel.Prelude" }
+      , { _1 = "Meters", _2 = "Kernel.Types.Common" }
+      , { _1 = "HighPrecMeters", _2 = "Kernel.Types.Common" }
+      , { _1 = "Kilometers", _2 = "Kernel.Types.Common" }
+      , { _1 = "HighPrecMoney", _2 = "Kernel.Types.Common" }
+      , { _1 = "Seconds", _2 = "Kernel.Types.Common" }
+      ]
+
+let extraDefaultFields =
+      [ { _1 = "merchantId", _2 = "Maybe (Id Merchant)" }
+      , { _1 = "merchantOperatingCityId"
+        , _2 = "Maybe (Id MerchantOperatingCity)"
+        }
+      , { _1 = "createdAt", _2 = "UTCTime" }
+      , { _1 = "updatedAt", _2 = "UTCTime" }
+      ]
+
+let sqlMapper =
+      [ { _1 = "\\[Text\\]", _2 = "text[]" }
+      , { _1 = "Text", _2 = "text" }
+      , { _1 = "\\[Id ", _2 = "text[]" }
+      , { _1 = "Id ", _2 = "character varying(36)" }
+      , { _1 = "\\[ShortId ", _2 = "text[]" }
+      , { _1 = "ShortId ", _2 = "character varying(36)" }
+      , { _1 = "Int", _2 = "integer" }
+      , { _1 = "Double", _2 = "double precision" }
+      , { _1 = "HighPrecMoney", _2 = "double precision" }
+      , { _1 = "Money", _2 = "integer" }
+      , { _1 = "Bool", _2 = "boolean" }
+      , { _1 = "UTCTime", _2 = "timestamp with time zone" }
+      , { _1 = "TimeOfDay", _2 = "time without time zone" }
+      , { _1 = "Day", _2 = "date" }
+      , { _1 = "Seconds", _2 = "integer" }
+      , { _1 = "Kilometers", _2 = "integer" }
+      , { _1 = "Meters", _2 = "integer" }
+      ]
+
+in  { _output = outputPath
+    , _storageConfig =
+      { _dbName = "atlas_driver_offer_bpp"
+      , _sqlTypeMapper = sqlMapper
+      , _extraDefaultFields = extraDefaultFields
+      }
+    , _defaultImports = [] : List DefaultImports
+    , _defaultTypeImportMapper = defaultTypeImportMapper
+    , _generate =
+      [ GeneratorType.DOMAIN_TYPE
+      , GeneratorType.BEAM_TABLE
+      , GeneratorType.BEAM_QUERIES
+      , GeneratorType.DOMAIN_HANDLER
+      , GeneratorType.SERVANT_API
+      , GeneratorType.API_TYPES
+      , GeneratorType.SQL
+      ]
+    }
