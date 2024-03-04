@@ -101,10 +101,14 @@ tfCustomer :: DInit.InitRes -> Maybe Spec.Customer
 tfCustomer res =
   return $
     Spec.Customer
-      { customerContact = Nothing,
+      { customerContact =
+          Just
+            Spec.Contact
+              { contactPhone = Just res.riderPhoneNumber
+              },
         customerPerson = do
-          riderName <- res.booking.riderName
-          Just $
+          riderName <- res.riderName
+          Just
             Spec.Person
               { personId = Nothing,
                 personImage = Nothing,
