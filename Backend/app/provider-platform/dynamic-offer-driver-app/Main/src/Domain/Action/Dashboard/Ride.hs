@@ -314,7 +314,8 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         driverDeviatedFromRoute = ride.driverDeviatedFromRoute,
         vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
         nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
-        lastStopLocation = mkLocationAPIEntity <$> lastStopLoc
+        lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
+        endOtp = ride.endOtp
       }
 
 calculateLocations ::

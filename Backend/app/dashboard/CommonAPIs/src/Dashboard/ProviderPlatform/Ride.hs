@@ -263,7 +263,8 @@ data RideInfoRes = RideInfoRes
     driverDeviatedFromRoute :: Maybe Bool,
     vehicleVariant :: Maybe Variant,
     nextStopLocation :: Maybe LocationAPIEntity,
-    lastStopLocation :: Maybe LocationAPIEntity
+    lastStopLocation :: Maybe LocationAPIEntity,
+    endOtp :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
