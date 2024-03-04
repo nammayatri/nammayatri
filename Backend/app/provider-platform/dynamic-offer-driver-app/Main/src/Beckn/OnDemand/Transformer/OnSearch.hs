@@ -99,7 +99,7 @@ tfProviderItems res pricing = do
       itemId_ = Beckn.ACL.Common.mkItemId res.provider.shortId.getShortId pricing.vehicleVariant & Just
       itemLocationIds_ = Nothing
       itemPaymentIds_ = Nothing
-      itemTags_ = Just $ Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing
+      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing
       itemPrice_ = tfItemPrice pricing
   BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
