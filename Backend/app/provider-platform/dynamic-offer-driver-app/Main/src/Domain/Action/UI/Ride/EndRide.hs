@@ -87,7 +87,8 @@ data EndRideResp = EndRideResp
 data DriverEndRideReq = DriverEndRideReq
   { endRideOtp :: Maybe Text,
     point :: LatLong,
-    requestor :: DP.Person,
+    merchantId :: Id DM.Merchant,
+    requestorId :: Id DP.Person,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     odometer :: Maybe DRide.OdometerReading
@@ -175,7 +176,7 @@ driverEndRide ::
   DriverEndRideReq ->
   m EndRideResp
 driverEndRide handle rideId req = do
-  withLogTag ("requestorId-" <> req.requestor.id.getId)
+  withLogTag ("requestorId-" <> req.driverId.getId)
     . endRide handle rideId
     $ DriverReq req
 
@@ -225,7 +226,6 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
   case req of
     DriverReq driverReq -> do
-      let requestor = driverReq.requestor
       when (DTC.isEndOtpRequired booking.tripCategory) $ do
         case driverReq.endRideOtp of
           Just endRideOtp -> do
@@ -233,9 +233,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           Nothing -> pure ()
       -- throwError $ EndRideOtpRequired (show booking.tripCategory)
       uiDistanceCalculation rideOld.id driverReq.uiDistanceCalculationWithAccuracy driverReq.uiDistanceCalculationWithoutAccuracy
-      case requestor.role of
-        DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
-        _ -> throwError AccessDenied
+      unless (req.requestorId == driverId) $ throwError NotAnExecutor
     DashboardReq dashboardReq -> do
       unless (booking.providerId == dashboardReq.merchantId && booking.merchantOperatingCityId == dashboardReq.merchantOperatingCityId) $ throwError (RideDoesNotExist rideOld.id.getId)
     CronJobReq cronJobReq -> do
