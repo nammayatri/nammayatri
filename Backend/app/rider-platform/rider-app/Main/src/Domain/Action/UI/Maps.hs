@@ -22,13 +22,13 @@ module Domain.Action.UI.Maps
     autoComplete,
     getPlaceDetails,
     getPlaceName,
+    makeAutoCompleteKey,
     AutoCompleteType (..),
   )
 where
 
 import qualified Data.Geohash as DG
 import Data.Text (pack)
-import qualified Domain.Types.AutoCompleteData as DTA
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -37,15 +37,17 @@ import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.Person as CQP
-import qualified Storage.Queries.AutoCompleteData as QAutoCompleteData
 import Tools.Error
+import Tools.Event
 import qualified Tools.Maps as Maps
 
 data AutoCompleteType = PICKUP | DROP deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
@@ -62,7 +64,10 @@ data AutoCompleteReq = AutoCompleteReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
-autoComplete :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> AutoCompleteReq -> m Maps.AutoCompleteResp
+makeAutoCompleteKey :: Text -> Text -> Text
+makeAutoCompleteKey token typeOfSearch = "Analytics-RiderApp-AutoComplete-Data" <> token <> "|" <> typeOfSearch
+
+autoComplete :: (ServiceFlow m r, EventStreamFlow m r) => (Id DP.Person, Id DMerchant.Merchant) -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete (personId, merchantId) AutoCompleteReq {..} = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
@@ -75,29 +80,18 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
         when autoCompleteDataCollectionCondition $ do
           let token = fromMaybe "" sessionToken
           let typeOfSearch = fromMaybe DROP autoCompleteType
-          currentRecord <- QAutoCompleteData.findBySessionTokenAndSearchType token (show typeOfSearch)
+          let key = makeAutoCompleteKey token (show typeOfSearch)
+          currentRecord :: Maybe AutoCompleteEventData <- Redis.safeGet key
+          now <- getCurrentTime
           case currentRecord of
             Just record -> do
               let currentSting = record.autocompleteInputs
-              QAutoCompleteData.updateInputById (currentSting <> "|" <> input) record.id
+              let updatedRecord = AutoCompleteEventData (currentSting <> "|" <> input) record.customerId record.id record.isLocationSelectedOnMap record.searchRequestId record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.createdAt now
+              triggerAutoCompleteEvent updatedRecord
             Nothing -> do
-              now <- getCurrentTime
               uid <- generateGUID
-              let autoCompleteData =
-                    DTA.AutoCompleteData
-                      { autocompleteInputs = input,
-                        customerId = personId,
-                        id = uid,
-                        isLocationSelectedOnMap = Nothing,
-                        searchRequestId = Nothing,
-                        searchType = show typeOfSearch,
-                        sessionToken = token,
-                        merchantId = Just merchantId,
-                        merchantOperatingCityId = Just merchantOperatingCityId,
-                        createdAt = now,
-                        updatedAt = now
-                      }
-              QAutoCompleteData.create autoCompleteData
+              let autoCompleteData = AutoCompleteEventData input personId uid Nothing Nothing (show typeOfSearch) token merchantId merchantOperatingCityId now now
+              triggerAutoCompleteEvent autoCompleteData
   Maps.autoComplete
     merchantId
     merchantOperatingCityId

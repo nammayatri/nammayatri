@@ -54,6 +54,8 @@ let eventType =
       | Quotes
       | Estimate
       | ExophoneData
+      | AutoCompleteData
+      | RouteCollection
       >
 
 let httpClientOptions = { timeoutMs = +2000 }

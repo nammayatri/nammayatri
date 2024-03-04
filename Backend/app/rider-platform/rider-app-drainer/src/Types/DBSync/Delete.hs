@@ -15,7 +15,6 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as PaymentOrder
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as PaymentTransaction
 import Sequelize
 import qualified "rider-app" Storage.Beam.AppInstalls as AppInstalls
-import qualified "rider-app" Storage.Beam.AutoCompleteData as AutoCompleteData
 import qualified "rider-app" Storage.Beam.BecknRequest as BecknRequest
 import qualified "rider-app" Storage.Beam.BlackListOrg as BlackListOrg
 import qualified "rider-app" Storage.Beam.Booking as Booking
@@ -42,7 +41,6 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantPaymentMethod as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
-import qualified "rider-app" Storage.Beam.NextBillionData as NextBillionData
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment ()
 import qualified "rider-app" Storage.Beam.Person as Person
@@ -107,8 +105,6 @@ data DeleteModel
   | BecknRequestDelete
   | LocationDelete
   | LocationMappingDelete
-  | NextBillionDataDelete
-  | AutoCompleteDataDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -159,8 +155,6 @@ getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
 getTagDelete LocationDelete = "LocationOptions"
 getTagDelete LocationMappingDelete = "LocationMappingOptions"
-getTagDelete NextBillionDataDelete = "NextBillionDataOptions"
-getTagDelete AutoCompleteDataDelete = "AutoCompleteDataOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
@@ -210,8 +204,6 @@ parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
 parseTagDelete "LocationOptions" = return LocationDelete
 parseTagDelete "LocationMappingOptions" = return LocationMappingDelete
-parseTagDelete "NextBillionDataOptions" = return NextBillionDataDelete
-parseTagDelete "AutoCompleteDataOptions" = return AutoCompleteDataDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -262,8 +254,6 @@ data DBDeleteObject
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
   | LocationDeleteOptions DeleteModel (Where Postgres Location.LocationT)
   | LocationMappingDeleteOptions DeleteModel (Where Postgres LocationMapping.LocationMappingT)
-  | NextBillionDataDeleteOptions DeleteModel (Where Postgres NextBillionData.NextBillionDataT)
-  | AutoCompleteDataDeleteOptions DeleteModel (Where Postgres AutoCompleteData.AutoCompleteDataT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -414,9 +404,3 @@ instance FromJSON DBDeleteObject where
       LocationMappingDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ LocationMappingDeleteOptions deleteModel whereClause
-      NextBillionDataDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ NextBillionDataDeleteOptions deleteModel whereClause
-      AutoCompleteDataDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ AutoCompleteDataDeleteOptions deleteModel whereClause
