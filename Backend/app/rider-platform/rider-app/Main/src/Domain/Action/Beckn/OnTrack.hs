@@ -15,36 +15,68 @@
 module Domain.Action.Beckn.OnTrack
   ( onTrack,
     OnTrackReq (..),
+    TrackingLocation (..),
     validateRequest,
   )
 where
 
+import qualified Beckn.OnDemand.Utils.Common as Common
 import Domain.Types.Ride
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Functions as B
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 data OnTrackReq = OnTrackReq
   { bppRideId :: Id BPPRide,
-    trackUrl :: BaseUrl
+    trackUrl :: Maybe BaseUrl,
+    trackingLocation :: Maybe TrackingLocation
   }
+
+data TrackingLocation = TrackingLocation
+  { gps :: Gps.Gps,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data ValidatedOnTrackReq = ValidatedOnTrackReq
   { bppRideId :: Id BPPRide,
-    trackUrl :: BaseUrl,
-    ride :: Ride
+    trackUrl :: Maybe BaseUrl,
+    ride :: Ride,
+    isValueAddNP :: Bool,
+    trackingLocation :: Maybe TrackingLocation
   }
 
 onTrack :: (CacheFlow m r, EsqDBFlow m r) => ValidatedOnTrackReq -> m ()
-onTrack ValidatedOnTrackReq {..} = void $ QRide.updateTrackingUrl ride.id trackUrl
+onTrack ValidatedOnTrackReq {..} = do
+  if isValueAddNP
+    then do
+      whenJust trackUrl $ \trackUrl' -> do
+        void $ QRide.updateTrackingUrl ride.id trackUrl'
+    else do
+      whenJust trackingLocation $ \trackingLocation' -> do
+        void $ Hedis.setExp (Common.mkRideTrackingRedisKey ride.id.getId) trackingLocation' 10
 
-validateRequest :: (CacheFlow m r, EsqDBFlow m r) => OnTrackReq -> m ValidatedOnTrackReq
+validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnTrackReq -> m ValidatedOnTrackReq
 validateRequest OnTrackReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> bppRideId.getId)
-  return $
-    ValidatedOnTrackReq
-      { ..
-      }
+  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  if isValueAddNP && isNothing trackUrl
+    then throwError $ InvalidRequest "TrackUrl is required for ValueAddNP"
+    else
+      if not isValueAddNP && isNothing trackingLocation
+        then throwError $ InvalidRequest "TrackingLocation is required for non ValueAddNP"
+        else
+          return $
+            ValidatedOnTrackReq
+              { ..
+              }

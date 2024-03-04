@@ -14,6 +14,7 @@
 
 module Beckn.ACL.OnTrack (buildOnTrackReq, buildOnTrackReqV2) where
 
+import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
 import qualified Beckn.Types.Core.Taxi.OnTrack as OnTrack
 import qualified BecknV2.OnDemand.Types as Spec
@@ -40,12 +41,11 @@ buildOnTrackReq req = do
     Redis.del key
     return $
       DOnTrack.OnTrackReq
-        { trackUrl = message.tracking.url,
+        { trackUrl = Just message.tracking.url,
+          trackingLocation = Nothing,
           ..
         }
   where
-    -- trackingLocation = Nothing,
-
     key = "Track:bppRideId:" <> req.context.message_id
 
 handleError ::
@@ -74,29 +74,30 @@ buildOnTrackReqV2 req = do
     let messageId = UUID.toText messageUuid
     bppRideId <- Redis.get (key messageId) >>= fromMaybeM (InternalError "Track:bppRideId not found.")
     Redis.del $ key messageId
-    case parsedData of
-      Left err -> do
-        logTagError "on_track req" $ "on_track error: " <> show err
-        pure Nothing
-      Right trackUrl ->
+    message <- req.onTrackReqMessage & fromMaybeM (InvalidRequest "Missing message object")
+    let trackUrl =
+          message.onTrackReqMessageTracking.trackingUrl
+            >>= parseBaseUrl
+    trackingLocation <- case message.onTrackReqMessageTracking.trackingLocation of
+      Nothing -> return Nothing
+      Just loc -> do
+        trackingLocationGPS <- loc.locationGps & fromMaybeM (InvalidRequest "Invalid Tracking Location GPS")
+        parsedGPS <- Common.parseGPS trackingLocationGPS
+        trackingLocationUpdatedAt <- loc.locationUpdatedAt & fromMaybeM (InvalidRequest "Invalid Tracking Location UpdatedAt")
         return $
           Just $
-            DOnTrack.OnTrackReq
-              { trackUrl = trackUrl,
-                ..
+            DOnTrack.TrackingLocation
+              { gps = parsedGPS,
+                updatedAt = trackingLocationUpdatedAt
               }
+    return $
+      Just $
+        DOnTrack.OnTrackReq
+          { trackUrl = trackUrl,
+            ..
+          }
   where
     key messageId = "Track:bppRideId:" <> messageId
-    parsedData :: Either Text BaseUrl
-    parsedData = do
-      message <- req.onTrackReqMessage & maybe (Left "Missing on_track message") Right
-
-      trackUrl <-
-        message.onTrackReqMessageTracking.trackingUrl
-          >>= parseBaseUrl
-          & maybe (Left "Missing tracking url") Right
-
-      Right trackUrl
 
 handleErrorV2 ::
   (MonadFlow m) =>
