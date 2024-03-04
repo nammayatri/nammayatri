@@ -37,4 +37,4 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_get_started"
   exit MobileNumberScreen
 
-eval _ state = continue state
+eval _ state = updateState state

@@ -218,4 +218,4 @@ eval CallSupport state = do
   void $ pure $ JB.showDialer (getSupportNumber "") false
   continue state
 
-eval _ state = continue state
+eval _ state = updateState state

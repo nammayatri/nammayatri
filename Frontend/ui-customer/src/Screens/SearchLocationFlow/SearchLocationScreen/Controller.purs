@@ -255,7 +255,7 @@ eval BackPressed state = do
  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
   else continue state
 
-eval _ state = continue state
+eval _ state = updateState state
 
 
 autoCompleteAPI state inputStr inputType = do

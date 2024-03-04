@@ -141,7 +141,7 @@ eval (TicketQRRendered id text) state  =
     pure $ NoAction
   ]
 
-eval _ state = continue state
+eval _ state = updateState state
 
 
 shareImageMessageConfig :: String ->  Common.ShareImageConfig 

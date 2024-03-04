@@ -129,4 +129,4 @@ eval AfterRender state = continue state {props {triggerUIUpdate = not state.prop
 
 eval ListExpandAinmationEnd state = continue state {props {showIssueOptions = false }}
 
-eval _ state = continue state
+eval _ state = updateState state

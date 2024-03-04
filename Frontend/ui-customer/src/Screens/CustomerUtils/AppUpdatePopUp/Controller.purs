@@ -59,7 +59,7 @@ eval OnAccept state = do
 eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
 eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
 eval AfterRender state = continue state
-eval _ state = continue state
+eval _ state = updateState state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpState -> Props (Effect Unit)
 overrides _ push state = [] 

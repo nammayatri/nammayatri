@@ -51,4 +51,4 @@ data ScreenOutput = GoToHomeScreen | GoToSearchLocationScreen
 eval :: Action -> RideScheduledScreenState -> Eval Action ScreenOutput RideScheduledScreenState
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit GoToHomeScreen
 eval (AddFirstStop _) _ = exit GoToSearchLocationScreen
-eval _ state = continue state
+eval _ state = updateState state

@@ -97,4 +97,4 @@ eval (EmailEditTextActionController (PrimaryEditText.TextChanged id a)) state = 
 eval (DescriptionEditTextActionController (PrimaryEditText.TextChanged id a)) state = continue state{data {description = a},props{btnActive = if ((length state.data.subject > 0 )&& (length state.data.email > 0) && (length a > 0) && (validateEmail state.data.email)) then true else false}}
     
 
-eval _ state = continue state
+eval _ state = updateState state

@@ -82,7 +82,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit, updateState)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, DecodeAddress(..))
 import Constants (defaultDensity)
@@ -987,11 +987,15 @@ eval (UpdateRepeatTrips rideList) state = do
         
 eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}}
 
-eval (Scroll item) state = do
-  let sheetState = if item == state.props.currSlideIndex then state.props.isHomescreenExpanded
-                   else item > state.props.currSlideIndex
-      updatedState = state { props { isHomescreenExpanded = sheetState, currSlideIndex = item } }
-  continue updatedState
+eval (Scroll val) state = do
+  if ((state.props.currSlideIndex < truncate 1 val) && not state.props.isHomescreenExpanded) || ((state.props.currSlideIndex > truncate 1 val) && state.props.isHomescreenExpanded) 
+    then do
+      let item = truncate 1 val
+          sheetState = if item == state.props.currSlideIndex then state.props.isHomescreenExpanded
+                      else item > state.props.currSlideIndex
+          updatedState = state { props { isHomescreenExpanded = sheetState, currSlideIndex = item } }
+      continue updatedState
+    else updateState state
 
 eval ReAllocate state =
   if isLocalStageOn ReAllocated then do
@@ -2653,7 +2657,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
                       driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)}}
   continue newState
 
-eval _ state = continue state
+eval _ state = updateState state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =

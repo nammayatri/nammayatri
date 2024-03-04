@@ -105,4 +105,4 @@ eval LearnMoreClicked state = exit $ GoToEducationScreen state
 
 eval (SelectedCurrentLocation _ _ name) state = continue state { data { currentLocation = name } }
 
-eval _ state = continue state
+eval _ state = updateState state

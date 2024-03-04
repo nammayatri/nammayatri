@@ -77,4 +77,4 @@ eval BackPressed state =
     HomeScreenToMetroMyTickets -> exit GoToHomeScreen
     MetroTicketBookingToMetroMyTickets -> exit GoToMetroBooking
 
-eval _ state = continue state
+eval _ state = updateState state

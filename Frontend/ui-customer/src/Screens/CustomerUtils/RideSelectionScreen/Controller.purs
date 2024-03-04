@@ -168,7 +168,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
 
 eval Refresh state = updateAndExit state{props{ receivedResponse = false, loaderButtonVisibility = false }} $  RefreshScreen state
 
-eval _ state = continue state
+eval _ state = updateState state
 
 getTitle :: String -> String
 getTitle category  = 

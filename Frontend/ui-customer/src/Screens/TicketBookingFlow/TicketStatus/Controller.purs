@@ -92,4 +92,4 @@ eval (Copy text) state = continueWithCmd state [ do
     pure NoAction
   ]
 
-eval _ state = continue state
+eval _ state = updateState state

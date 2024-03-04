@@ -319,5 +319,5 @@ eval (FetchIssueListApiCall issueList) state = do
          updatedResolvedIssueList = getUpdatedIssueList ["CLOSED", "NOT_APPLICABLE"] apiIssueList
          updatedOngoingIssueList =  getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] apiIssueList
      continue state {data {issueList =apiIssueList, resolvedIssueList =  updatedResolvedIssueList , ongoingIssueList =  updatedOngoingIssueList}, props {needIssueListApiCall = false}}
-eval _ state = continue state
+eval _ state = updateState state
 

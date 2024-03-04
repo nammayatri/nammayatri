@@ -17,7 +17,7 @@ module Screens.AboutUsScreen.Controller where
 
 import Prelude (class Show, pure, unit, bind, void, ($), discard)
 import Screens.Types (AboutUsScreenState)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import PrestoDOM (Eval, continue, exit, continueWithCmd, updateState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
@@ -61,4 +61,4 @@ eval BackPressed state =
       continue state
     else exit $ GoToHomeScreen
 
-eval _ state = continue state
+eval _ state = updateState state

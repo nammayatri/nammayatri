@@ -188,4 +188,4 @@ eval (ShareTripOptionPopup (PopupWithCheckboxController.ToggleSelect index)) sta
     Just option -> continue state { data { shareOptionCurrent = option.type } }
     Nothing -> continue state
 
-eval _ state = continue state
+eval _ state = updateState state

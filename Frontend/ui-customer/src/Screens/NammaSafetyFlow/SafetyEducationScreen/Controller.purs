@@ -91,4 +91,4 @@ eval (YoutubeVideoStatus status) state = do
 
 eval (ShowVideoView val) state = continue state { props { showVideoView = val } }
 
-eval _ state = continue state
+eval _ state = updateState state

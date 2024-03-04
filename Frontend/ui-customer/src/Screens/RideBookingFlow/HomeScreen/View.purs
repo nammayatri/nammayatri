@@ -3044,15 +3044,7 @@ homeScreenViewV2 push state =
                   , halfExpandedRatio 0.99
                   , sheetState state.props.homeScreenSheetState
                   , enableShift false
-                  , onSlide 
-                    ( \action -> do
-                        case action of 
-                          Scroll val -> if ((state.props.currSlideIndex < truncate 1 val) && not state.props.isHomescreenExpanded) || ((state.props.currSlideIndex > truncate 1 val) && state.props.isHomescreenExpanded) then push (Scroll (truncate 1 val)) 
-                                        else pure unit 
-                          _ -> push action
-                        pure unit
-                        )
-                    (Scroll)
+                  , onSlide push Scroll
                   ][ relativeLayout
                       [ width MATCH_PARENT
                       , height MATCH_PARENT

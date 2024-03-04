@@ -173,7 +173,7 @@ eval (SpecialAssistanceListAC action) state = case action of
     updateAndExit newState $ GoHome newState
   _ -> continue state
 
-eval _ state = continue state
+eval _ state = updateState state
 
 
 getBtnActive :: AccountSetUpScreenState -> Boolean

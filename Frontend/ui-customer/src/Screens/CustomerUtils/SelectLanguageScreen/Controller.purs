@@ -82,4 +82,4 @@ eval BackPressed state =
       continue state
     else exit $ GoToHomeScreen
 
-eval _ state = continue state
+eval _ state = updateState state

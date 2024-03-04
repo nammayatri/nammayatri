@@ -67,4 +67,4 @@ eval (UpdatePlacesData placesData) state = do
   let API.TicketPlaceResponse ticketPlaceResp = placesData
   continue state { data { placeInfoArray = ticketPlaceResp} }
 
-eval _ state = continue state
+eval _ state = updateState state

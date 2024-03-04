@@ -280,7 +280,7 @@ eval (PrimaryEditTextAC (PrimaryEditText.TextChanged id input)) state = do
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   void $ pure $ hideKeyboardOnNavigation true
   updateAndExit state $ AddLocation state
-eval _ state = continue state
+eval _ state = updateState state
 
 validateSearchInput :: AddNewAddressScreenState -> String -> Eval Action ScreenOutput AddNewAddressScreenState
 validateSearchInput state searchString =

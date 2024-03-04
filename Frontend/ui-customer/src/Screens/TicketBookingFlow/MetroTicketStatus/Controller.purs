@@ -131,5 +131,5 @@ eval (CountDown seconds status timerID) state = do
     else do
       continue $ state { data { timerId = timerID } }
 
-eval _ state = continue state
+eval _ state = updateState state
 

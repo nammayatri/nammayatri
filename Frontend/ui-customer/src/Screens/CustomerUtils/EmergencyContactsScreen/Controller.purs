@@ -232,7 +232,7 @@ eval (ContactListAction (ContactsList.ContactCardClicked index)) state = do
 
 eval (ContactListAction (ContactsList.AddContacts)) state = continueWithCmd state [pure AddContacts]
 
-eval _ state = continue state
+eval _ state = updateState state
 
 startsWith :: String -> String -> Boolean
 startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)

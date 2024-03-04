@@ -194,7 +194,7 @@ eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state {props{showAccessibilityPopUp = false}}
 
-eval _ state = continue state
+eval _ state = updateState state
 
 
 checkError :: String -> Maybe String -> String -> Maybe ErrorType

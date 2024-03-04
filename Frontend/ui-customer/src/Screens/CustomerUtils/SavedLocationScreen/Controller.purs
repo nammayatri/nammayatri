@@ -145,7 +145,7 @@ eval (ErrorModalAC (ErrorModalController.PrimaryButtonActionController PrimaryBu
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_add_favourite_click_error_model"
   updateAndExit state $ AddLocation state
 
-eval _ state = continue state
+eval _ state = updateState state
 
 
 

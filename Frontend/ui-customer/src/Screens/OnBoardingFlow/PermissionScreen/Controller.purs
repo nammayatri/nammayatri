@@ -101,4 +101,4 @@ eval RequestLocation state = do
 
 eval Reload state = updateAndExit state $ Refresh
   
-eval _ state = continue state
+eval _ state = updateState state

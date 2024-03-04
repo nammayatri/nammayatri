@@ -97,4 +97,4 @@ eval BackPressed state = do
   if state.isExpandReference then continue state{ isExpandReference = not state.isExpandReference }
     else exit GoToHome
 
-eval _ state = continue state
+eval _ state = updateState state

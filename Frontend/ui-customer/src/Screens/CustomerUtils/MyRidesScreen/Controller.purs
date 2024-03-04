@@ -185,7 +185,7 @@ eval (ErrorModalActionController (ErrorModal.PrimaryButtonActionController Prima
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ BookRide
 
 
-eval _ state = continue state
+eval _ state = updateState state
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED") || item.status == (toPropValue "REALLOCATED"))) (map (\(RideBookingRes ride) -> {

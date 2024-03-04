@@ -241,7 +241,7 @@ eval (SetPhoneNumber number )state = continue state {props { editTextVal = numbe
 eval ContinueCommand state = exit $ GoToOTP state{data{timer = 30, timerID = ""},props = state.props{btnActiveOTP = false, resendEnable = false}}
 eval AfterRender state = continue state
 
-eval _ state = continue state
+eval _ state = updateState state
 
 isValidPrefixMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
 isValidPrefixMobileNumber resp = (resp == MVR.ValidPrefix || resp == MVR.Valid)
