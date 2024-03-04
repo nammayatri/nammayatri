@@ -165,7 +165,7 @@ tfFulfillments booking driverQuote customerPhoneNo rideStatus mbVehicle = do
           { fulfillmentStateDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just $ show (BUtils.mapRideStatus rideStatus'),
+                  { descriptorCode = Just . show $ BUtils.mapRideStatus rideStatus',
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   }
@@ -218,8 +218,8 @@ mkQuotationBreakup booking =
 tfPayments :: DQ.DriverQuote -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res merchant bppConfig = do
   let amount = Just $ show res.estimatedFare.getMoney
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  Just $ L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
+  Just . L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfItems :: DRB.Booking -> DM.Merchant -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.Item]
 tfItems booking merchant mbFarePolicy =
@@ -248,7 +248,7 @@ tfItemPrice booking =
       }
 
 tfVehicle :: Maybe DVeh.Vehicle -> Maybe Spec.Vehicle
-tfVehicle mbVehicle = do
+tfVehicle mbVehicle =
   mbVehicle >>= \vehicle -> do
     let (category, variant) = BUtils.castVariant vehicle.variant
     Just $

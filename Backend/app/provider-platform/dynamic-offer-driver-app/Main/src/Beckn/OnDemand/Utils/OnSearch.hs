@@ -80,7 +80,7 @@ mkPayment merchant bppConfig = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
-mkItemTags :: CUtils.Pricing -> [Spec.TagGroup]
+mkItemTags :: CUtils.Pricing -> Maybe [Spec.TagGroup]
 mkItemTags pricing = do
-  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance pricing.farePolicy & fromMaybe []
-  rateCardTag <> [CUtils.mkGeneralInfoTag pricing]
+  let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance pricing.farePolicy
+  rateCardTag <> (List.singleton <$> CUtils.mkGeneralInfoTagGroup pricing)

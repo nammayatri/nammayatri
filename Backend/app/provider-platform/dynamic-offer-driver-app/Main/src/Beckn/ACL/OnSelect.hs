@@ -12,7 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnSelect where
+module Beckn.ACL.OnSelect
+  ( mkOnSelectMessageV2,
+    DOnSelectReq (..),
+    TransporterInfo (..),
+  )
+where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -21,7 +26,6 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
 import BecknV2.Utils
-import qualified Data.List as L
 import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
@@ -29,6 +33,7 @@ import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified EulerHS.Prelude as Prelude
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
 import Kernel.Utils.Common
@@ -92,7 +97,7 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
 
 mkPaymentV2 :: DBC.BecknConfig -> DM.Merchant -> DQuote.DriverQuote -> Spec.Payment
 mkPaymentV2 bppConfig merchant driverQuote = do
-  let amount = Just $ show (driverQuote.estimatedFare.getMoney)
+  let amount = Just $ show driverQuote.estimatedFare.getMoney
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
@@ -121,34 +126,41 @@ mkAgentPersonV2 quote isValueAddNP =
     { personId = Nothing,
       personImage = Nothing,
       personName = Just quote.driverName,
-      personTags =
-        if isValueAddNP
-          then Just . L.singleton $ mkAgentTagsV2 quote
-          else Nothing
+      personTags = if isValueAddNP then Just $ mkAgentTagsV2 quote else Nothing
     }
 
-mkAgentTagsV2 :: DQuote.DriverQuote -> Spec.TagGroup
+mkAgentTagsV2 :: DQuote.DriverQuote -> [Spec.TagGroup]
 mkAgentTagsV2 quote =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor = Just $ Spec.Descriptor (Just $ show Tags.AGENT_INFO) (Just "Agent Info") Nothing,
-      tagGroupList = Just $ mkAgentTagList quote
-    }
-
-mkAgentTagList :: DQuote.DriverQuote -> [Spec.Tag]
-mkAgentTagList quote =
-  [ Spec.Tag
-      { tagDisplay = (\_ -> Just False) =<< quote.driverRating,
-        tagDescriptor =
+  [ Spec.TagGroup
+      { tagGroupDisplay = Just False,
+        tagGroupDescriptor =
           Just
             Spec.Descriptor
-              { descriptorCode = (\_ -> Just $ show Tags.RATING) =<< quote.driverRating,
-                descriptorName = (\_ -> Just "Agent Rating") =<< quote.driverRating,
+              { descriptorCode = Just $ show Tags.AGENT_INFO,
+                descriptorName = Just "Agent Info",
                 descriptorShortDesc = Nothing
               },
-        tagValue = (\rating -> Just $ show $ rating.getCenti) =<< quote.driverRating
+        tagGroupList = mkDriverRatingTag quote
       }
   ]
+
+mkDriverRatingTag :: DQuote.DriverQuote -> Maybe [Spec.Tag]
+mkDriverRatingTag quote
+  | isNothing quote.driverRating = Nothing
+  | otherwise =
+    Just
+      [ Spec.Tag
+          { tagDisplay = Just False,
+            tagDescriptor =
+              Just
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.RATING,
+                    descriptorName = Just "Agent Rating",
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = show . (.getCenti) <$> quote.driverRating
+          }
+      ]
 
 mkItemV2 :: Spec.Fulfillment -> DQuote.DriverQuote -> TransporterInfo -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Spec.Item
 mkItemV2 fulfillment quote provider isValueAddNP mbFarePolicy = do
@@ -193,55 +205,66 @@ mkGeneralInfoTag quote isValueAddNP =
   Just
     [ Spec.TagGroup
         { tagGroupDisplay = Just False,
-          tagGroupDescriptor = Just $ Spec.Descriptor (Just $ show Tags.GENERAL_INFO) (Just "General Info") Nothing,
-          tagGroupList = mkItemTagList quote isValueAddNP
-        }
-    ]
-
-mkItemTagList :: DQuote.DriverQuote -> Bool -> Maybe [Spec.Tag]
-mkItemTagList quote isValueAddNP =
-  Just
-    [ Spec.Tag
-        { tagDisplay = Just False,
-          tagDescriptor =
+          tagGroupDescriptor =
             Just
               Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
-                  descriptorName = Just "Distance To Nearest Driver In Meters",
+                { descriptorCode = Just $ show Tags.GENERAL_INFO,
+                  descriptorName = Just "General Info",
                   descriptorShortDesc = Nothing
                 },
-          tagValue = Just $ show $ quote.distanceToPickup.getMeters
-        },
-      Spec.Tag
-        { tagDisplay = Just False,
-          tagDescriptor =
-            Just
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.ETA_TO_NEAREST_DRIVER_MIN,
-                  descriptorName = Just "Agent Duration to Pickup in Seconds",
-                  descriptorShortDesc = Nothing
-                },
-          tagValue = Just . show $ quote.durationToPickup.getSeconds `div` 60
+          tagGroupList =
+            Just $
+              distanceToNearestDriverTag
+                ++ etaToNearestDriverTag
+                ++ specialLocationTag
         }
     ]
-    <> mkSpecialLocationTag quote isValueAddNP
+  where
+    distanceToNearestDriverTag =
+      [ Spec.Tag
+          { tagDisplay = Just False,
+            tagDescriptor =
+              Just
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
+                    descriptorName = Just "Distance To Nearest Driver In Meters",
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just $ show quote.distanceToPickup.getMeters
+          }
+      ]
+    etaToNearestDriverTag =
+      [ Spec.Tag
+          { tagDisplay = Just False,
+            tagDescriptor =
+              Just
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.ETA_TO_NEAREST_DRIVER_MIN,
+                    descriptorName = Just "Agent Duration to Pickup in Seconds",
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just . show $ quote.durationToPickup.getSeconds `div` 60
+          }
+      ]
+    specialLocationTag = maybe [] Prelude.id (mkSpecialLocationTag quote isValueAddNP)
 
 mkSpecialLocationTag :: DQuote.DriverQuote -> Bool -> Maybe [Spec.Tag]
-mkSpecialLocationTag _ False = Nothing
-mkSpecialLocationTag quote True =
-  Just
-    [ Spec.Tag
-        { tagDisplay = (\_ -> Just False) =<< quote.specialLocationTag,
-          tagDescriptor =
-            Just
-              Spec.Descriptor
-                { descriptorCode = (\_ -> Just $ show Tags.SPECIAL_LOCATION_TAG) =<< quote.specialLocationTag,
-                  descriptorName = (\_ -> Just "Special Zone Tag") =<< quote.specialLocationTag,
-                  descriptorShortDesc = Nothing
-                },
-          tagValue = quote.specialLocationTag
-        }
-    ]
+mkSpecialLocationTag quote isValueAddNP
+  | isNothing quote.specialLocationTag || not isValueAddNP = Nothing
+  | otherwise =
+    Just
+      [ Spec.Tag
+          { tagDisplay = Just False,
+            tagDescriptor =
+              Just
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.SPECIAL_LOCATION_TAG,
+                    descriptorName = Just "Special Zone Tag",
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = quote.specialLocationTag
+          }
+      ]
 
 mkQuoteV2 :: DQuote.DriverQuote -> UTCTime -> Spec.Quotation
 mkQuoteV2 quote now = do
