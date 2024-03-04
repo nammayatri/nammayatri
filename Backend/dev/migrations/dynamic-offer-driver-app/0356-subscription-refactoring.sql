@@ -36,6 +36,11 @@ Alter table atlas_driver_offer_bpp.plan add column service_name Text NOT NULL DE
 Alter table atlas_driver_offer_bpp.plan add column based_on_entity Text NOT NULL DEFAULT  'RIDE';
 Alter table atlas_driver_offer_bpp.plan drop CONSTRAINT plan_pkey;
 Alter table atlas_driver_offer_bpp.plan add PRIMARY KEY(id, service_name, payment_mode);
+
+--------- alter in subscription config -----
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN generic_job_reschedule_time SET DATA TYPE integer USING generic_job_reschedule_time::integer;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN payment_link_job_time SET DATA TYPE integer USING payment_link_job_time::integer;
+
 ---------- insert in subscription config -----
 insert into atlas_driver_offer_bpp.subscription_config (allow_manual_payment_links, payment_link_channel, payment_link_job_time, generic_job_reschedule_time, use_overlay_service, generic_batch_size_for_jobs, deep_link_expiry_time_in_minutes, max_retry_count, service_name,send_in_app_fcm_notifications , allow_due_addition, payment_service_name,send_deep_link, merchant_id, merchant_operating_city_id, allow_driver_fee_calc_schedule, is_triggered_at_end_ride , created_at, updated_at)
 select false, 'WHATSAPP', 21600, 60, true, 30, 15, 4, 'YATRI_SUBSCRIPTION', true, true, 'Payment_Juspay' , false, m.merchant_id, m.id, false, true,now(), now()
