@@ -54,7 +54,7 @@ search ::
   SignatureAuthResult ->
   Search.SearchReqV2 ->
   FlowHandler AckResponse
-search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) reqV2 = withFlowHandlerBecknAPI $ do
+search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandlerBecknAPI $ do
   transactionId <- Utils.getTransactionId reqV2.searchReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "SearchV2 API Flow" "Reached"
@@ -74,7 +74,6 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
       fork "search request processing" $
         Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
           dSearchRes <- DSearch.handler validatedSReq dSearchReq
-          let callbackUrl = gateway.subscriber_url
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
           isValueAddNP_ <- VNP.isValueAddNP dSearchReq.bapId
@@ -84,7 +83,7 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
               let context' = onSearchReq.onSearchReqContext
               logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
               void $
-                Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 callbackUrl internalEndPointHashMap (errHandler context') $ do
+                Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
                   pure onSearchReq
             else pure ()
   pure Ack

@@ -53,7 +53,7 @@ data AuthorizationType
   | QR -- not used in on-us
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data FulfillmentState -- shrey00 : check if we have any other custom on-us only codes
+data FulfillmentState
   = -- ..fulfillments.state.descriptor.code -- same enums are used in cancellation_terms
     RIDE_CANCELLED
   | RIDE_ENDED
