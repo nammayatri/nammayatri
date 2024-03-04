@@ -29,7 +29,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
-bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED -- TODO: refactor it like so case match is not needed
+bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED
 bookingStatusCode _ = Just Enum.NEW
 
 buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
@@ -65,7 +65,7 @@ tfFulfillments res =
         { fulfillmentAgent = tfAgent res,
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = Just res.booking.quoteId,
-          fulfillmentState = mkFulfillmentState $ bookingStatusCode res.quoteType,
+          fulfillmentState = mkFulfillmentState <$> bookingStatusCode res.quoteType,
           fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode,
           fulfillmentTags = Nothing,
           fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
@@ -73,25 +73,23 @@ tfFulfillments res =
         }
     ]
   where
-    mkFulfillmentState Nothing = Nothing
-    mkFulfillmentState (Just stateCode) =
-      Just $
-        Spec.FulfillmentState
-          { fulfillmentStateDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show stateCode,
-                    descriptorShortDesc = Nothing,
-                    descriptorName = Nothing
-                  }
-          }
+    mkFulfillmentState stateCode =
+      Spec.FulfillmentState
+        { fulfillmentStateDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show stateCode,
+                  descriptorShortDesc = Nothing,
+                  descriptorName = Nothing
+                }
+        }
 
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
   let amount = Just $ show res.booking.estimatedFare.getMoney
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  Just $ L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
+  Just . L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
 tfVehicle res = do

@@ -50,6 +50,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
+import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
 import Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
@@ -684,7 +685,7 @@ replaceEmpty :: Maybe Text -> Maybe Text
 replaceEmpty string = if string == Just "" then Nothing else string
 
 mapVariantToVehicle :: Variant.Variant -> VehicleCategory
-mapVariantToVehicle variant = do
+mapVariantToVehicle variant =
   case variant of
     Variant.SEDAN -> CAB
     Variant.HATCHBACK -> CAB
@@ -694,7 +695,7 @@ mapVariantToVehicle variant = do
     Variant.AUTO_RICKSHAW -> AUTO_RICKSHAW
 
 mapRideStatus :: DRide.RideStatus -> Enums.FulfillmentState
-mapRideStatus rideStatus = do
+mapRideStatus rideStatus =
   case rideStatus of
     DRide.NEW -> Enums.RIDE_ASSIGNED
     DRide.INPROGRESS -> Enums.RIDE_STARTED
@@ -706,7 +707,7 @@ tfCancellationFee Nothing = Nothing
 tfCancellationFee amount = do
   Just
     Spec.Fee
-      { feeAmount = mkPrice amount,
+      { feeAmount = mkPrice,
         feePercentage = Nothing
       }
   where
@@ -821,7 +822,7 @@ tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePoli
 tfItems booking shortId estimatedDistance mbFarePolicy =
   Just
     [ Spec.Item
-        { itemDescriptor = tfItemDescriptor booking shortId,
+        { itemDescriptor = tfItemDescriptor booking,
           itemFulfillmentIds = Just [booking.quoteId],
           itemId = Just $ Common.mkItemId shortId booking.vehicleVariant,
           itemLocationIds = Nothing,
@@ -843,8 +844,8 @@ tfItemPrice booking =
         priceValue = Just $ encodeToText booking.estimatedFare
       }
 
-tfItemDescriptor :: DBooking.Booking -> MerchantShortId -> Maybe Spec.Descriptor
-tfItemDescriptor booking _shortId =
+tfItemDescriptor :: DBooking.Booking -> Maybe Spec.Descriptor
+tfItemDescriptor booking =
   Just
     Spec.Descriptor
       { descriptorCode = Just "RIDE",
@@ -898,10 +899,12 @@ convertBookingToPricing DBooking.Booking {..} =
       ..
     }
 
-mkGeneralInfoTag :: Pricing -> Spec.TagGroup
-mkGeneralInfoTag pricing =
-  let specialLocationTag = pricing.specialLocationTag
-   in Spec.TagGroup
+mkGeneralInfoTagGroup :: Pricing -> Maybe Spec.TagGroup
+mkGeneralInfoTagGroup pricing
+  | isNothing pricing.specialLocationTag && isNothing pricing.distanceToNearestDriver = Nothing
+  | otherwise =
+    Just $
+      Spec.TagGroup
         { tagGroupDisplay = Just False,
           tagGroupDescriptor =
             Just
@@ -910,16 +913,13 @@ mkGeneralInfoTag pricing =
                   descriptorName = Just "Information",
                   descriptorShortDesc = Nothing
                 },
-          tagGroupList =
-            Just $
-              specialLocationTagSingleton specialLocationTag
-                ++ distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
+          tagGroupList = specialLocationTagSingleton pricing.specialLocationTag <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
         }
   where
     specialLocationTagSingleton specialLocationTag
-      | isNothing specialLocationTag = []
+      | isNothing specialLocationTag = Nothing
       | otherwise =
-        List.singleton $
+        Just . List.singleton $
           Spec.Tag
             { tagDisplay = Just True,
               tagDescriptor =
@@ -931,29 +931,28 @@ mkGeneralInfoTag pricing =
                     },
               tagValue = specialLocationTag
             }
-
-    distanceToNearestDriverTagSingleton Nothing = []
-    distanceToNearestDriverTagSingleton (Just distanceToNearestDriver) =
-      List.singleton $
-        Spec.Tag
-          { tagDisplay = Just False,
-            tagDescriptor =
-              Just
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
-                    descriptorName = Just "Distance To Nearest Driver Meter",
-                    descriptorShortDesc = Nothing
-                  },
-            tagValue = Just $ show . double2Int . realToFrac $ distanceToNearestDriver
-          }
+    distanceToNearestDriverTagSingleton distanceToNearestDriver
+      | isNothing distanceToNearestDriver = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.DISTANCE_TO_NEAREST_DRIVER_METER,
+                      descriptorName = Just "Distance To Nearest Driver Meter",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show . double2Int . realToFrac <$> distanceToNearestDriver
+            }
 
 mkRateCardTag :: Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
 mkRateCardTag estimatedDistance farePolicy = do
-  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups mkValue mkRateCardBreakupItem estimatedDistance) farePolicy
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance) farePolicy
       farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
   Just $
-    List.singleton $
-      Spec.TagGroup
+    [ Spec.TagGroup
         { tagGroupDisplay = Just False,
           tagGroupDescriptor =
             Just
@@ -964,15 +963,13 @@ mkRateCardTag estimatedDistance farePolicy = do
                 },
           tagGroupList = Just farePolicyBreakupsTags
         }
-
-mkValue :: Text -> Text
-mkValue a = a
+    ]
 
 mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
 mkRateCardBreakupItem = RateCardBreakupItem
 
 buildRateCardTags :: RateCardBreakupItem -> Spec.Tag
-buildRateCardTags RateCardBreakupItem {..} = do
+buildRateCardTags RateCardBreakupItem {..} =
   Spec.Tag
     { tagDisplay = Just False,
       tagDescriptor =
@@ -997,8 +994,8 @@ tfCancellationTerms becknConfig =
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig = do
   let amount = Just $ show booking.estimatedFare.getMoney
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  Just $ List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
+  Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
 tfProvider becknConfig =

@@ -73,7 +73,7 @@ tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
   let amount = Just $ show res.booking.estimatedFare.getMoney
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  Just $ L.singleton $ mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  Just . L.singleton $ mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do
