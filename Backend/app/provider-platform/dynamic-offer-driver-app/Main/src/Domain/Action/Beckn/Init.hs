@@ -57,7 +57,9 @@ data InitReq = InitReq
     bapCountry :: Context.Country,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    bppSubscriberId :: Maybe Text
+    bppSubscriberId :: Maybe Text,
+    riderPhoneNumber :: Text,
+    mbRiderName :: Maybe Text
   }
 
 data ValidatedInitQuote = ValidatedQuote DQ.Quote | ValidatedEstimate DDQ.DriverQuote DST.SearchTry
@@ -73,7 +75,9 @@ data InitRes = InitRes
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     driverName :: Maybe Text,
     driverId :: Maybe Text,
-    bppSubscriberId :: Maybe Text
+    bppSubscriberId :: Maybe Text,
+    riderPhoneNumber :: Text,
+    riderName :: Maybe Text
   }
 
 handler ::
@@ -89,6 +93,8 @@ handler merchantId req validatedReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
   let searchRequest = validatedReq.searchRequest
+      riderName = req.mbRiderName
+      riderPhoneNumber = req.riderPhoneNumber
   (mbPaymentMethod, paymentUrl) <- fetchPaymentMethodAndUrl searchRequest.merchantOperatingCityId
   (booking, driverName, driverId) <-
     case validatedReq.quote of
