@@ -33,7 +33,6 @@ import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
-import qualified EulerHS.Prelude as Prelude
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
 import Kernel.Utils.Common
@@ -126,23 +125,25 @@ mkAgentPersonV2 quote isValueAddNP =
     { personId = Nothing,
       personImage = Nothing,
       personName = Just quote.driverName,
-      personTags = if isValueAddNP then Just $ mkAgentTagsV2 quote else Nothing
+      personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing
     }
 
-mkAgentTagsV2 :: DQuote.DriverQuote -> [Spec.TagGroup]
-mkAgentTagsV2 quote =
-  [ Spec.TagGroup
-      { tagGroupDisplay = Just False,
-        tagGroupDescriptor =
-          Just
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tags.AGENT_INFO,
-                descriptorName = Just "Agent Info",
-                descriptorShortDesc = Nothing
-              },
-        tagGroupList = mkDriverRatingTag quote
-      }
-  ]
+mkAgentTagsV2 :: DQuote.DriverQuote -> Maybe [Spec.TagGroup]
+mkAgentTagsV2 quote = do
+  ratingTag <- mkDriverRatingTag quote
+  Just
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.AGENT_INFO,
+                  descriptorName = Just "Agent Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList = Just ratingTag
+        }
+    ]
 
 mkDriverRatingTag :: DQuote.DriverQuote -> Maybe [Spec.Tag]
 mkDriverRatingTag quote
@@ -216,7 +217,7 @@ mkGeneralInfoTag quote isValueAddNP =
             Just $
               distanceToNearestDriverTag
                 ++ etaToNearestDriverTag
-                ++ specialLocationTag
+                ++ mkSpecialLocationTag
         }
     ]
   where
@@ -246,25 +247,21 @@ mkGeneralInfoTag quote isValueAddNP =
             tagValue = Just . show $ quote.durationToPickup.getSeconds `div` 60
           }
       ]
-    specialLocationTag = maybe [] Prelude.id (mkSpecialLocationTag quote isValueAddNP)
-
-mkSpecialLocationTag :: DQuote.DriverQuote -> Bool -> Maybe [Spec.Tag]
-mkSpecialLocationTag quote isValueAddNP
-  | isNothing quote.specialLocationTag || not isValueAddNP = Nothing
-  | otherwise =
-    Just
-      [ Spec.Tag
-          { tagDisplay = Just False,
-            tagDescriptor =
-              Just
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.SPECIAL_LOCATION_TAG,
-                    descriptorName = Just "Special Zone Tag",
-                    descriptorShortDesc = Nothing
-                  },
-            tagValue = quote.specialLocationTag
-          }
-      ]
+    mkSpecialLocationTag
+      | isNothing quote.specialLocationTag || not isValueAddNP = []
+      | otherwise =
+        [ Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.SPECIAL_LOCATION_TAG,
+                      descriptorName = Just "Special Zone Tag",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = quote.specialLocationTag
+            }
+        ]
 
 mkQuoteV2 :: DQuote.DriverQuote -> UTCTime -> Spec.Quotation
 mkQuoteV2 quote now = do

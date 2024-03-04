@@ -23,25 +23,20 @@ import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 
-type API =
-  SignatureAuth 'Domain.MOBILITY "X-Gateway-Authorization"
-    :> OnSearch.OnSearchAPIV2
+type API = OnSearch.OnSearchAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onSearch
 
 onSearch ::
   SignatureAuthResult ->
-  SignatureAuthResult ->
   OnSearch.OnSearchReqV2 ->
   FlowHandler AckResponse
-onSearch _ _ reqV2 = withFlowHandlerBecknAPI do
+onSearch _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logInfo $ "OnSearch received:-" <> show reqV2
