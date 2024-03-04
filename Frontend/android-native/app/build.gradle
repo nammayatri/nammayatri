@@ -224,7 +224,7 @@ android {
 }
 
 ext {
-    jpSDKversion = '2.1.25-nammayatri.02'
+    jpSDKversion = '2.1.25-nammayatri.04'
 }
 
 def cameraxVersion = "1.1.0-alpha05"
