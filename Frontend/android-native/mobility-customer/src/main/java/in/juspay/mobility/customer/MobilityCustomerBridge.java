@@ -636,6 +636,14 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         textView.setText(selectedRide.getString("destination"));
         textView = invoiceLayout.findViewById(R.id.referenceText);
         textView.setText(selectedRide.getString("referenceString"));
+        if(selectedRide.getString("destination").equals(""))
+        {
+            invoiceLayout.findViewById(R.id.destination).setVisibility(View.GONE);
+            invoiceLayout.findViewById(R.id.rideEndTime).setVisibility(View.GONE);
+            invoiceLayout.findViewById(R.id.destRedCircle).setVisibility(View.GONE);
+            invoiceLayout.findViewById(R.id.dashedLine).setVisibility(View.GONE);
+        }
+
         JuspayLogger.d(OTHERS, "PDF Document view updated and returning the view");
         return invoiceLayout;
     }
