@@ -30,7 +30,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array (union, (!!), filter, length)
 import Data.Int (ceil)
 import Data.Int (fromString, toNumber)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as NUM
 import Data.Show (show)
 import Data.String (Pattern(..), split)
@@ -43,9 +43,9 @@ import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import PrestoDOM (Eval, ScrollState(..), continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Resource.Constants (decodeAddress, tripDatesCount)
+import Resource.Constants (decodeAddress, tripDatesCount, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..))
+import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..), TripType(..))
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -229,7 +229,7 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
       id : toPropValue ride.shortRideId,
       updatedAt : toPropValue ride.updatedAt,
       source : toPropValue (decodeAddress (ride.fromLocation) false),
-      destination : toPropValue (decodeAddress (ride.toLocation) false),
+      destination : toPropValue (maybe "" (\toLocation ->decodeAddress (toLocation) false) ride.toLocation),
       amountColor: toPropValue (case (ride.status) of
                     "COMPLETED" -> Color.black800
                     "CANCELLED" -> Color.red
@@ -277,7 +277,7 @@ rideListResponseTransformer list =
         id : ride.shortRideId,
         updatedAt : ride.updatedAt,
         source : (decodeAddress (ride.fromLocation) false),
-        destination : (decodeAddress (ride.toLocation) false),
+        destination : maybe "" (\toLocation -> decodeAddress toLocation false) ride.toLocation,
         vehicleType : ride.vehicleVariant,
         riderName : fromMaybe "" ride.riderName,
         customerExtraFee : ride.customerExtraFee,
@@ -286,7 +286,8 @@ rideListResponseTransformer list =
         spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag) /= Nothing,
         specialZoneLayoutBackground : specialLocationConfig.backgroundColor,
         specialZoneImage : specialLocationConfig.imageUrl,
-        specialZoneText : specialLocationConfig.text
+        specialZoneText : specialLocationConfig.text,
+        tripType : rideTypeConstructor ride.tripCategory
       }) list
 
 
@@ -323,5 +324,6 @@ dummyCard =  {
     spLocTagVisibility : false,
     specialZoneLayoutBackground : "",
     specialZoneImage : "",
-    specialZoneText : ""
+    specialZoneText : "",
+    tripType : OneWay
   }

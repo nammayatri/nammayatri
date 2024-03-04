@@ -22,6 +22,7 @@ import Common.Types.App as CommonTypes
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
+import Data.Function.Uncurried (runFn2)
 import Components.ErrorModal (primaryButtonConfig)
 import Components.GoToLocationModal as GoToLocationModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
@@ -39,7 +40,7 @@ import Components.StatsModel as StatsModel
 import Data.Array as DA
 import Data.Int (fromString)
 import Data.Int as Int
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust,maybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, chatSuggestion)
@@ -52,7 +53,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+))
+import Prelude (div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
@@ -61,6 +62,7 @@ import Screens.Types as ST
 import Services.API as SA
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
+import Mobility.Prelude (boolToVisibility)
 import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal
 import MerchantConfig.Utils as MU
@@ -77,7 +79,8 @@ rideActionModalConfig state =
   let
   config = RideActionModal.config
   rideActionModalConfig' = config {
-    startRideActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer),
+    startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted ) ),
+    arrivedStopActive = state.props.arrivedAtStop,
     totalDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
     customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
                       then (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) <> " " <> (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 1))
@@ -87,10 +90,18 @@ rideActionModalConfig state =
       titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.source)) DA.!! 0),
       detailText = state.data.activeRide.source
     },
-    destinationAddress {
-      titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.destination)) DA.!! 0),
-      detailText = state.data.activeRide.destination
-    },
+    destinationAddress = (\destination -> {
+      titleText : fromMaybe "" ((DS.split (DS.Pattern ",") destination) DA.!! 0),
+      detailText : destination
+    }) <$> state.data.activeRide.destination,
+    stopAddress = (\stop -> {
+      titleText : fromMaybe "" ((DS.split (DS.Pattern ",") stop) DA.!! 0),
+      detailText : stop
+    }) <$> state.data.activeRide.nextStopAddress,
+    lastStopAddress = (\stop -> {
+      titleText : fromMaybe "" ((DS.split (DS.Pattern ",") stop) DA.!! 0),
+      detailText : stop
+    }) <$> state.data.activeRide.lastStopAddress,
     estimatedRideFare = state.data.activeRide.estimatedFare,
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
@@ -101,7 +112,13 @@ rideActionModalConfig state =
     appConfig = state.data.config,
     waitTimeStatus = state.props.waitTimeStatus,
     waitTimeSeconds = state.data.activeRide.waitTimeSeconds,
-    thresholdTime = state.data.config.waitTimeConfig.thresholdTime
+    thresholdTime = state.data.config.waitTimeConfig.thresholdTime,
+    rideScheduledTime = state.data.activeRide.tripScheduledAt,
+    rideType = state.data.activeRide.tripType,
+    rideStartTimer = state.props.rideStartTimer,
+    tripDuration = (\tripDuration -> (if ( tripDuration / 3600) < 10 then "0" else "") <> (show ( tripDuration / 3600) <> ":") <> (if (tripDuration `mod` 3600) / 60 < 10 then "0" else "") <> show ( (tripDuration `mod` 3600) / 60)  <> " Hr") <$> state.data.activeRide.tripDuration,
+    rideStartTime = state.data.activeRide.tripStartTime,
+    startODOReading = maybe (getValueToLocalStore RIDE_START_ODOMETER_READING) show state.data.activeRide.startOdometerReading
     }
     in rideActionModalConfig'
 
@@ -273,6 +290,55 @@ linkAadhaarPopupConfig state = let
     , height = V 178
     , width = V 204
     }
+  }
+  in popUpConfig'
+
+newStopPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+newStopPopupConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    optionButtonOrientation = "VERTICAL",
+    gravity = CENTER,
+    margin = Margin 16 20 16 20,
+    buttonLayoutMargin = Margin 16 0 16 20 ,
+    primaryText {
+      text = (getString CUSTOMER_ADDED_A_STOP)
+    , margin = Margin 16 24 16 24
+    , textStyle = Heading2
+    , color = Color.black
+    },
+    secondaryText {
+      text = ""
+    , margin = MarginBottom 24
+    , visibility = GONE
+    },
+    option1 {
+      text = (getString NAVIGATE_TO_LOCATION)
+    , margin = Margin 16 0 16 8
+    , background = Color.black900
+    , color = Color.yellow900
+    ,gravity = CENTER
+      , width = MATCH_PARENT
+    },
+    option2 {
+      text = (getString CLOSE)
+    , margin = Margin 16 0 16 8
+    , background = Color.white900
+    , color = Color.black900
+    , strokeColor = Color.white900
+    , gravity = CENTER
+    , width = MATCH_PARENT
+    },
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "customer_added_a_stop"
+    , visibility = VISIBLE
+    , height = V 189
+    , width = V 193
+    , margin = MarginTop 40
+    }
+    ,backgroundClickable = false
+    ,dismissPopup = false
   }
   in popUpConfig'
 
@@ -644,7 +710,7 @@ enterOtpStateConfig state =
         , textStyle = FontStyle.Heading1
       },
       headingConfig {
-        text = getString (ENTER_OTP)
+        text = if state.props.endRideOtpModal then (getString ENTER_END_RIDE_OTP) else getString (ENTER_OTP)
       },
       errorConfig {
         text = if (state.props.otpIncorrect && state.props.wrongVehicleVariant) then (getString OTP_INVALID_FOR_THIS_VEHICLE_VARIANT) else if state.props.otpIncorrect then (getString ENTERED_WRONG_OTP)  else (getString OTP_LIMIT_EXCEEDED),
@@ -659,7 +725,52 @@ enterOtpStateConfig state =
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
       modalType = ST.OTP,
-      enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard
+      enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard,
+      confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint
+      }
+      in inAppModalConfig'
+
+
+enterOdometerReadingConfig :: ST.HomeScreenState -> InAppKeyboardModal.InAppKeyboardModalState
+enterOdometerReadingConfig state = let
+  config' = InAppKeyboardModal.config
+  appConfig = CP.getAppConfig CP.appConfig
+  inAppModalConfig' = config'{
+      otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
+      otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
+      inputTextConfig {
+        text = state.props.odometerValue,
+        focusIndex = state.props.enterOtpFocusIndex,
+        textStyle = FontStyle.Heading1
+      },
+      headingConfig {
+        text = if state.props.endRideOdometerReadingModal then getString ENTER_FINAL_ODO_READING else getString (ENTER_CURRENT_ODOMETER_READING),
+        margin = (MarginLeft 0)
+      },
+      errorConfig {
+        text = getString (ODOMETER_READING_VALIDATION_FAILED),
+        visibility = boolToVisibility $ state.props.endRideOdometerReadingValidationFailed
+      },
+      textBoxConfig {
+        textBoxesArray = [0,1,2,3,4],
+        width = V 42,
+        height = V 46,
+        margin = (Margin 6 0 6 0)
+      },
+      subHeadingConfig {
+        text =  getString (ENTER_THE_LAST_4_DIGITS_OF_ODOMETER),
+        visibility = boolToVisibility $ not state.props.otpAttemptsExceeded,
+        textStyle = FontStyle.Body1,
+        gravity = CENTER
+      },
+      imageConfig {
+        alpha = if DS.length state.props.odometerValue < 4 then 0.5 else 1.0
+      },
+      modalType = ST.ODOMETER,
+      confirmBtnColor = if state.props.endRideOdometerReadingModal then Color.red else Color.darkMint,
+      isDismissable = true,
+      enableDeviceKeyboard = false,
+      odometerReading = state.data.odometerReading
       }
       in inAppModalConfig'
 
@@ -1136,6 +1247,8 @@ getAccessibilityHeaderText state =
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 getRideCompletedConfig state = let 
+  
+  isRentalRide = state.data.activeRide.tripType == ST.Rental
   config = RideCompletedCard.config
   autoPayBanner = state.props.autoPayBanner
   autoPayStatus = state.data.paymentState.autoPayStatus
@@ -1143,12 +1256,13 @@ getRideCompletedConfig state = let
   bannerConfig = autopayBannerConfig state false
   disability = state.data.endRideData.disability /= Nothing
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
-  viewOrderConfig = [ {condition : autoPayBanner == DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
-                      {condition : autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= "", elementView :  RideCompletedCard.QR_VIEW },
-                      {condition : not (autoPayStatus == ACTIVE_AUTOPAY) && state.data.config.subscriptionConfig.enableSubscriptionPopups && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"), elementView :  RideCompletedCard.NO_VPA_VIEW },
-                      {condition : autoPayBanner /= DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
+  viewOrderConfig = [ {condition : (not isRentalRide) && (autoPayBanner == DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
+                      {condition : (not isRentalRide) && (autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= ""), elementView :  RideCompletedCard.QR_VIEW },
+                      {condition : (not isRentalRide) && not (autoPayStatus == ACTIVE_AUTOPAY) && state.data.config.subscriptionConfig.enableSubscriptionPopups && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"), elementView :  RideCompletedCard.NO_VPA_VIEW },
+                      {condition : (not isRentalRide) &&  (autoPayBanner /= DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
                       {condition : disability, elementView :  RideCompletedCard.BADGE_CARD },
-                      {condition : showDriverBottomCard, elementView :  RideCompletedCard.DRIVER_BOTTOM_VIEW}
+                      {condition : showDriverBottomCard, elementView :  RideCompletedCard.DRIVER_BOTTOM_VIEW},
+                      {condition : isRentalRide, elementView : RideCompletedCard.RENTAL_RIDE_VIEW}
                     ]
   pspIcon = (Const.getPspIcon payerVpa)
   config' = config{
@@ -1224,6 +1338,16 @@ getRideCompletedConfig state = let
       text2 = getString PURPLE_RIDE_CHAMPION,
       background = Color.mangolia
     },
+    rentalRideConfig {
+    rideStartODOReading = (maybe (getValueToLocalStore RIDE_START_ODOMETER_READING) show state.data.activeRide.startOdometerReading) <> "Km",
+    rideEndODOReading = (getValueToLocalStore RIDE_END_ODOMETER_READING) <> "Km",
+    baseRideDuration =  (show $ (fromMaybe 0 state.data.activeRide.tripDuration) / 3600) <> " hr " <> (show $ ((fromMaybe 0 state.data.activeRide.tripDuration) `mod` 3600 / 60)) <> " m",
+    baseRideDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
+    actualRideDuration = getActualDuration (fromMaybe (fromMaybe 0 $ Int.fromNumber state.data.activeRide.distance) state.data.endRideData.actualRideDuration),
+    actualRideDistance = show ((fromMaybe 0 state.data.endRideData.actualRideDistance) / 1000) <> " km",
+    startRideOdometerImage = getValueToLocalStore RIDE_START_ODOMETER,
+    endRideOdometerImage = getValueToLocalStore RIDE_END_ODOMETER
+  },  
     showContactSupportPopUp = state.props.showContactSupportPopUp,
     driverUpiQrCard {
       text = getString GET_DIRECTLY_TO_YOUR_BANK_ACCOUNT,
@@ -1247,6 +1371,12 @@ getRideCompletedConfig state = let
     }
   }
   in config'
+
+getActualDuration :: Int -> String
+getActualDuration seconds = 
+  let  hours = seconds `div` 3600
+       minutes = (seconds `mod` 3600) `div` 60
+  in if hours > 0 then (show hours) <> " hr " <> (show minutes) <> " min" else (show minutes) <> " min"
 
 getRatingCardConfig :: ST.HomeScreenState -> RatingCard.RatingCardConfig
 getRatingCardConfig state = RatingCard.ratingCardConfig {

@@ -58,4 +58,12 @@
     <string name="safety_deviation_alert">हमने देखा है कि आपकी यात्रा एक विभिन्न मार्ग पर है। क्या आप अपनी यात्रा में सुरक्षित महसूस कर रहे हैं?</string>
     <string name="everything_okay">सब कुछ ठीक है?</string>
     <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">"हमने देखा है कि आपका ड्राइवर कुछ समय से हिला नहीं है। क्या आप अपनी यात्रा में सुरक्षित महसूस कर रहे हैं?"</string>
+    <string name="customer_edited">ग्राहक ने एक स्टॉप संपादित किया!</string>
+    <string name="customer_added">ग्राहक ने एक स्टॉप जोड़ा!</string>
+    <string name="navigate_to_location">स्थान पर जाएं</string>
+    <string name="close">बंद करें</string>
+    <string name="today">आज</string>
+    <string name="now"> अब</string>
+    <string name="rental"> रेंटल</string>
+    <string name="intercity"> इंटरसिटी</string>
 </resources>

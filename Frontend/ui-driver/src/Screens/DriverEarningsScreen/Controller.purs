@@ -46,7 +46,7 @@ import Language.Types
 import Log
 import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Resource.Constants (decodeAddress)
+import Resource.Constants (decodeAddress, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverEarningsScreen.Transformer (getEventName)
 import Screens.Types (DriverEarningsScreenState, DriverEarningsSubView(..), AnimationState(..), IndividualRideCardState(..), IndividualRideCardState(..), DisabilityType(..))
@@ -485,8 +485,9 @@ rideHistoryItemTransformer (RidesInfo ride) =
     id : ride.shortRideId,
     updatedAt : ride.updatedAt,
     source : (decodeAddress (ride.fromLocation) false),
-    destination : (decodeAddress (ride.toLocation) false),
+    destination : maybe "" (\toLocation -> decodeAddress toLocation false) ride.toLocation,
     vehicleType : ride.vehicleVariant,
+    tripType : rideTypeConstructor ride.tripCategory,
     riderName : fromMaybe "" ride.riderName,
     customerExtraFee : ride.customerExtraFee,
     purpleTagVisibility : isJust ride.disabilityTag,
@@ -509,7 +510,7 @@ earningHistoryItemsListTransformer :: Array RidesInfo -> Array ST.CoinHistoryIte
 earningHistoryItemsListTransformer list =
   ( map
       ( \(RidesInfo ride) ->
-          { destination: Just (decodeAddress (ride.toLocation) false)
+          { destination:  (\toLocation -> decodeAddress toLocation false) <$> ride.toLocation
           , timestamp: ride.createdAt
           , earnings:
               case ride.status of
@@ -680,36 +681,12 @@ dummyRideHistoryItem = RidesInfo {
       vehicleVariant : "",
       estimatedBaseFare : 0,
       vehicleColor : "",
-      tripStartTime : Nothing,
       id : "",
       updatedAt : "",
       riderName : Nothing,
       rideRating : Nothing,
-      tripEndTime : Nothing,
-      fromLocation : LocationInfo {
-        area : Nothing,
-        state : Nothing,
-        country : Nothing,
-        building : Nothing,
-        door : Nothing,
-        street : Nothing,
-        lat : 0.0,
-        city : Nothing,
-        areaCode : Nothing,
-        lon : 0.0
-      },
-      toLocation : LocationInfo {
-        area : Nothing,
-        state : Nothing,
-        country : Nothing,
-        building : Nothing,
-        door : Nothing,
-        street : Nothing,
-        lat : 0.0,
-        city : Nothing,
-        areaCode : Nothing,
-        lon : 0.0
-      },
+      fromLocation : dummyLocationInfo,
+      toLocation : Just dummyLocationInfo,
       estimatedDistance : 0,
       exoPhone : "",
       specialLocationTag : Nothing,
@@ -720,5 +697,30 @@ dummyRideHistoryItem = RidesInfo {
       autoPayStatus : Nothing,
       driverGoHomeRequestId : Nothing,
       isFreeRide : Nothing,
-      enableFrequentLocationUpdates : Nothing
+      enableFrequentLocationUpdates : Nothing,
+      tripCategory : Nothing,
+      tripScheduledAt : Nothing,
+      tripStartTime : Nothing,
+      tripEndTime : Nothing,
+      nextStopLocation : Nothing,
+      lastStopLocation : Nothing,
+      stopLocationId : Nothing,
+      estimatedDuration : Nothing,
+      actualDuration : Nothing,
+      startOdometerReading : Nothing,
+      endOdometerReading : Nothing
+  }
+
+dummyLocationInfo :: LocationInfo
+dummyLocationInfo = LocationInfo {
+      area : Nothing,
+      state : Nothing,
+      country : Nothing,
+      building : Nothing,
+      door : Nothing,
+      street : Nothing,
+      lat : 0.0,
+      city : Nothing,
+      areaCode : Nothing,
+      lon : 0.0
   }

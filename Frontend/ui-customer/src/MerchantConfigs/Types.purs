@@ -216,7 +216,8 @@ type EstimateAndQuoteConfig = {
   enableBookingPreference :: Boolean, 
   textColor :: String,
   showInfoIcon :: Boolean,
-  variantInfo :: VariantConfig
+  variantInfo :: VariantConfig,
+  genericLoaderLottie :: String
 }
 
 type CustomerTip = {

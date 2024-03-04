@@ -334,9 +334,11 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
                           | GO_TO_HELP_AND_SUPPORT_SCREEN
                           | GO_TO_EDIT_GENDER_SCREEN
-                          | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String, ts :: String} HomeScreenState
+                          | GO_TO_START_RIDE {id :: String, otp :: String, startOdometerReading :: String, startOdometerImage :: String, lat :: String, lon :: String, ts :: String} HomeScreenState
                           | GO_TO_CANCEL_RIDE {id :: String, info :: String , reason :: String} HomeScreenState
-                          | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String, ts :: String } HomeScreenState
+                          | GO_TO_ARRIVED_AT_STOP {id :: String, lat :: String , lon :: String, ts :: String } HomeScreenState
+                          | GO_TO_END_RIDE {id :: String, endOtp :: String, endOdometerReading :: String, endOdometerImage :: String, lat :: String , lon :: String, ts :: String } HomeScreenState
+                          | GO_TO_NEW_STOP HomeScreenState
                           | DRIVER_AVAILABILITY_STATUS HomeScreenState DriverStatus
                           | REFRESH_HOME_SCREEN_FLOW
                           | RELOAD HomeScreenState
@@ -389,7 +391,7 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | CHECK_RIDE_FLOW_STATUS
                                     | NOTIFICATION_SCREEN_NAV NAVIGATION_ACTIONS
 
-data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState Boolean | GO_TO_PROFILE
+data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState Boolean | ENABLE_RENTAL_RIDE BookingOptionsScreenState Boolean | GO_TO_PROFILE
 
 data ACKNOWLEDGEMENT_SCREEN_OUTPUT = EXIT_TO_HOME_SCREEN | RETRY_PAYMENT
 

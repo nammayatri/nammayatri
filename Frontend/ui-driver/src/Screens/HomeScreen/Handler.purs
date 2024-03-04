@@ -20,8 +20,7 @@ import Prelude
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..))
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Effect.Aff (Error, makeAff, nonCanceler)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Helpers.Utils (getCurrentLocation, LatLon(..))
@@ -35,7 +34,7 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Engineering.Helpers.Events as Events
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
-import Screens.Types (KeyboardModalType(..))
+import Screens.Types (KeyboardModalType(..),TripType(..))
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Debug
@@ -64,18 +63,29 @@ homeScreen = do
     DriverAvailabilityStatus updatedState status -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS updatedState status)
+    GoToNewStop updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> pure (GO_TO_NEW_STOP updatedState)
     StartRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 700 false false
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: updatedState.data.activeRide.id, otp : updatedState.props.rideOtp , lat : lat , lon : lon , ts :ts} updatedState) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: updatedState.data.activeRide.id, otp : updatedState.props.rideOtp , startOdometerReading : updatedState.props.odometerValue, startOdometerImage : updatedState.props.startRideOdometerImage, lat : lat , lon : lon , ts :ts} updatedState) 
     StartZoneRide  updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 1000 true false
       App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : updatedState.props.rideOtp , lat : lat , lon : lon ,ts :ts}) 
     EndRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700 false false
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon, ts :ts} updatedState)
+      let destLat = if updatedState.data.activeRide.tripType == Rental then fromMaybe updatedState.data.activeRide.src_lat updatedState.data.activeRide.nextStopLat else updatedState.data.activeRide.dest_lat
+          destLon = if updatedState.data.activeRide.tripType == Rental then fromMaybe updatedState.data.activeRide.src_lon updatedState.data.activeRide.nextStopLon else updatedState.data.activeRide.dest_lon
+      LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon destLat destLon 700 false false
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, endOtp : updatedState.props.rideOtp, endOdometerReading :updatedState.props.odometerValue, endOdometerImage: updatedState.props.endRideOdometerImage , lat : lat, lon : lon, ts :ts} updatedState)
+    ArrivedAtStop updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      let destLat = fromMaybe 0.0 updatedState.data.activeRide.nextStopLat
+          destLon = fromMaybe 0.0 updatedState.data.activeRide.nextStopLon
+      LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  destLat destLon 700 false false
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_ARRIVED_AT_STOP {id : updatedState.data.activeRide.id, lat : lat, lon : lon, ts :ts} updatedState)
     SelectListModal updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : updatedState.data.activeRide.id , info : updatedState.data.cancelRideModal.selectedReasonDescription, reason : updatedState.data.cancelRideModal.selectedReasonCode} updatedState)
@@ -125,7 +135,9 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
     EnableGoto updatedState locationId -> do
-      LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700 false true
+      let destLat = updatedState.data.activeRide.dest_lat
+          destLon = updatedState.data.activeRide.dest_lon
+      LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon destLat destLon 700 false true
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ ENABLE_GOTO_API updatedState locationId (lat <> "," <> lon))
     LoadGotoLocations updatedState -> do 
@@ -143,3 +155,6 @@ homeScreen = do
     EarningsScreen updatedState showCoinsView -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV $ GoToEarningsScreen showCoinsView)
+    FetchOdometerReading updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)

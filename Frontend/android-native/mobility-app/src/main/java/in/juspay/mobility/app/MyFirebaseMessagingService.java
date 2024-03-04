@@ -194,6 +194,21 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                     .put("msg",body);
                     NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());
                     switch (notificationType) {
+                        case NotificationTypes.EDIT_STOP:
+                        case NotificationTypes.NEW_STOP_ADDED:
+                            if (remoteMessage.getData().containsKey("entity_data")) {
+                                String entityPayload = remoteMessage.getData().get("entity_data");
+                                if (entityPayload != null){
+                                    JSONObject driverPayloadJsonObject = new JSONObject(entityPayload);
+                                    addUpdateStop(driverPayloadJsonObject);
+                                    if(driverPayloadJsonObject.has("isEdit") && !driverPayloadJsonObject.isNull("isEdit")){
+                                        String stopStatus = driverPayloadJsonObject.optBoolean("isEdit",false) ? "EDIT_STOP" : "ADD_STOP";
+                                        payload.put("stopStatus", stopStatus);
+                                        NotificationUtils.showNotification(this, title, body, payload, null);
+                                    }
+                                }
+                            }
+                            break;
                         case NotificationTypes.DRIVER_NOTIFY:
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
                                 String driverNotification = remoteMessage.getData().get("driver_notification_payload");
@@ -437,6 +452,38 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
+    private void addUpdateStop(JSONObject driverPayloadJsonObject){
+        try {
+            String stopTitle = driverPayloadJsonObject.has("isEdit") && driverPayloadJsonObject.getBoolean("isEdit") ? getString(R.string.customer_edited) : getString(R.string.customer_added); // TODO:: Temporary added until this data comes from backend
+            driverPayloadJsonObject.put("title", stopTitle);
+            driverPayloadJsonObject.put("okButtonText", getString(R.string.navigate_to_location));
+            driverPayloadJsonObject.put("cancelButtonText", getString(R.string.close));
+            driverPayloadJsonObject.put("imageUrl", "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/do_not%2Fadd_stop.png?alt=media&token=063c3661-3cfe-4950-a043-f7f49ed2c7fc");
+            driverPayloadJsonObject.put("titleVisibility", true);
+            driverPayloadJsonObject.put("buttonOkVisibility", true);
+            driverPayloadJsonObject.put("buttonCancelVisibility", true);
+            driverPayloadJsonObject.put("imageVisibility", true);
+            driverPayloadJsonObject.put("buttonLayoutVisibility", true);
+            driverPayloadJsonObject.put("actions", new JSONArray().put("NAVIGATE"));
+            double editLat = Double.NaN;
+            double editLon = Double.NaN;
+            if (driverPayloadJsonObject.has("stop")) {
+                JSONObject stopObject = driverPayloadJsonObject.getJSONObject("stop");
+                if (stopObject.has("lat")) {
+                    editLat = stopObject.getDouble("lat");
+                }
+                if (stopObject.has("lon")) {
+                    editLon = stopObject.getDouble("lon");
+                }
+            }
+            driverPayloadJsonObject.put("editlat", editLat);
+            driverPayloadJsonObject.put("editlon", editLon);
+            showOverlayMessage(driverPayloadJsonObject);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
     private void showOverlayMessage(JSONObject payload) {
         try {
             int delay = payload.optInt("delay", 0);
@@ -615,6 +662,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
     public static class NotificationTypes {
+        public static final String NEW_STOP_ADDED = "ADD_STOP";
+        public static final String EDIT_STOP = "EDIT_STOP";
         public static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         public static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
         public static final String CLEARED_FARE = "CLEARED_FARE";

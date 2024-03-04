@@ -52,4 +52,12 @@
     <string name="safety_deviation_alert">আমরা দেখেছি আপনার রাইডটি একটি বিভিন্ন রুটে আছে। আপনি আপনার ভ্রমণে সুরক্ষিত আছেন?</string>
     <string name="everything_okay">হ্যাঁ, সব ঠিক আছে</string>
     <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">আমরা লক্ষ্য করেছি আপনার চালক একটু সময় ধরে চলেননি। আপনি কি আপনার ভ্রমণে নিরাপদ অনুভূত করছেন?</string>
+    <string name="customer_edited"> গ্রাহক একটি স্টপ সম্পাদনা করেছে!</string>
+    <string name="customer_added"> গ্রাহক একটি স্টপ যোগ করেছে!</string>
+    <string name="navigate_to_location"> অবস্থানে নেভিগেট করুন</string>
+    <string name="close"> বন্ধ করুন</string>
+    <string name="today"> আজ </string>
+    <string name="now"> এখন </string>
+    <string name="rental"> রেন্টাল </string>
+    <string name="intercity"> ইন্টারসিটি </string>
 </resources>

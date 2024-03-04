@@ -16,8 +16,8 @@
 
 module Resources.Localizable.TA where
 
-import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getTA :: STR -> String
 getTA stringKey =
@@ -1039,3 +1039,4 @@ getTA stringKey =
     MESSAGE_FROM name -> name <> " இலிருந்து செய்தி"
     RIDE_CANCELLED -> "சவாரி ரத்து செய்யப்பட்டது"
     TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 ஹாய்,\n\nநான் ரைட் செய்கிறேன் " <> appName <> " டிரைவர் " <> driverName <> "! இந்த சுற்றி டிரைக் செய்யவும்: " <> trackLink <> "\n\nவாகன எண்: " <> vehicleNumber
+    RENTAL_FARE -> "வாடகை கட்டணம்"

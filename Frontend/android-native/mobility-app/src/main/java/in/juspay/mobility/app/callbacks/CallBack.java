@@ -7,6 +7,8 @@ public interface CallBack {
 
     void driverCallBack(String notificationType, String notificationData);
 
+    void addStopCallBack(String newStopLocation);
+
     void chatCallBack(String message, String sentBy, String time, String len);
 
     void inAppCallBack(String onTapAction);

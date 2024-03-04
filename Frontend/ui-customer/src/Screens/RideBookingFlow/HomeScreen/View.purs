@@ -2506,7 +2506,7 @@ lottieLoaderView state push =
     [ id (getNewIDWithTag "lottieLoader")
     , afterRender
         ( \action -> do
-            void $ pure $ startLottieProcess lottieAnimationConfig {speed = 1.5, rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/ny_ic_generic_loader.json", lottieId = (getNewIDWithTag "lottieLoader") }
+            void $ pure $ startLottieProcess lottieAnimationConfig {speed = 1.5, rawJson = state.data.config.estimateAndQuoteConfig.genericLoaderLottie, lottieId = (getNewIDWithTag "lottieLoader") }
             pure unit
         )
         (const LottieLoaderAction)

@@ -203,6 +203,7 @@ config =
       , enableBookingPreference: false
       , textColor: "#6D7280"
       , showInfoIcon : true 
+      , genericLoaderLottie : "ny_ic_generic_loader,https://assets.juspay.in/beckn/nammayatri/user/lottie/ny_ic_generic_loader.json"
       }
   , customerTip : {
       auto : true,

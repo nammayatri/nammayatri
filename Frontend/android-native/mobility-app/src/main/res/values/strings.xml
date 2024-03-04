@@ -61,4 +61,12 @@
     <string name="everything_okay">Everything Okay?</string>
     <string name="app_name" translatable="false">for_compilation</string>
     <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">We noticed your driver hasn\'t moved for a while. Are you feeling safe on your trip?</string>
+    <string name="customer_edited">Customer edited a stop!</string>
+    <string name="customer_added">Customer added a stop!</string>
+    <string name="navigate_to_location">Navigate to location</string>
+    <string name="close">Close</string>
+    <string name="today">Today</string>
+    <string name="now"> Now</string>
+    <string name="rental"> Rental</string>
+    <string name="intercity"> Intercity</string>
 </resources>

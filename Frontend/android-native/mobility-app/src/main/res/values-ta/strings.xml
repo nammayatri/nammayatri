@@ -58,4 +58,12 @@
     <string name="safety_deviation_alert">நாங்கள் உங்கள் சவாரி வேக வழியில் இருக்கிறோம் என்று குறித்துக் குறிப்பிட்டோம். நீங்கள் உங்கள் பயணத்தை பாதுகாக்காதிருக்கிறீர்களா?</string>
     <string name="everything_okay">எல்லாம் சரியாக இருக்கின்றதா?</string>
     <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">எங்களுக்கு உங்கள் ட்ரைவர் சிற்றுண்டி இருக்கவில்லை. உங்கள் பயணத்தில் நீங்கள் பாராட்டப்படுகிறீர்களா?</string>
+    <string name="customer_edited">வாடிக்கையாளர் ஒரு நிலையாண்டை சேர்த்தார்!</string>
+    <string name="customer_added">வாடிக்கையாளர் ஒரு நிலையாண்டை சேர்த்தார்!</string>
+    <string name="navigate_to_location"> இருப்பிடத்திற்கு செல்லவும்</string>
+    <string name="close"> மூடு</string>
+    <string name="today"> இன்று</string>
+    <string name="now"> இப்போது</string>
+    <string name="rental"> வாடகை</string>
+    <string name="intercity"> இடர்நகர</string>
 </resources>

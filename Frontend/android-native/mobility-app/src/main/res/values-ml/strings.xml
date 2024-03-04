@@ -54,5 +54,12 @@
     <string name="safety_deviation_alert">നിനക്ക് കാണാനും ഞങ്ങള്‍ നിനക്ക് വേറെ റൂട്ടില്‍ പോയത് കണ്ടു. നിനക്ക് നിനക്ക് ആപേക്ഷികമായി അനുഭവപ്പെടുന്നുണ്ടോ?</string>
     <string name="everything_okay">എല്ലാം ശരിയാണോ?</string>
     <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">ഞങ്ങൾ കണ്ടുവരുന്നു, നിങ്ങളുടെ ഡ്രൈവർ ചെലവില്ലാത്തതായിരിക്കുന്നു. നിങ്ങൾക്ക് സുരക്ഷിതമായ യാത്ര അനുഭവപ്പെടുന്നുണ്ടോ?</string>
-
+    <string name="customer_edited">ഗ്രാഹകന്‍ ഒരു സ്റ്റോപ്പ് എഡിറ്റ് ചെയ്തു!</string>
+    <string name="customer_added">ഗ്രാഹകന്‍ ഒരു സ്റ്റോപ്പ് ചേർത്തു!</string>
+    <string name="navigate_to_location">സ്ഥാനത്തിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക</string>
+    <string name="close">അടയ്ക്കുക</string>
+    <string name="today">ഇന്ന്</string>
+    <string name="now"> ഇപ്പോള്‍</string>
+    <string name="rental"> റെന്റൽ</string>
+    <string name="intercity"> ഇന്റർസിറ്റി </string>
 </resources>

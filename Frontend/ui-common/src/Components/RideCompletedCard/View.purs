@@ -1,6 +1,6 @@
 module Components.RideCompletedCard.View where
 
-import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..))
+import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..), InfoCardConfig(..))
 
 import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView, rippleColor)
 import Components.Banner.View as Banner
@@ -9,7 +9,7 @@ import Data.Functor (map)
 import PrestoDOM.Animation as PrestoAnim
 import Animation (fadeIn,fadeInWithDelay) as Anim
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -31,6 +31,10 @@ import Mobility.Prelude
 import ConfigProvider
 import Mobility.Prelude (boolToVisibility)
 import Engineering.Helpers.Commons as EHC
+import JBridge(renderBase64Image)
+import Storage (getValueToLocalStore, KeyStore(..))
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -440,6 +444,7 @@ getViewsByOrder config item push =
     NO_VPA_VIEW -> noVpaView config
     BADGE_CARD -> badgeCardView config push
     DRIVER_BOTTOM_VIEW -> driverFareBreakUpView config push
+    RENTAL_RIDE_VIEW -> rentalRideInfoView push config
 
 
 ------------------------------------ (Driver Card 1) rideEndBannerView -------------------------------------------------------------------------------------------------------------------------
@@ -627,7 +632,7 @@ driverFareBreakUpView config push =
                 , lineHeight "20"
                 ]<> FontStyle.body6 LanguageStyle
               ]
-              , if index /= ((length config.driverBottomCard.savedMoney)-1) then horizontalLine else dummyTextView
+              , if index /= ((length config.driverBottomCard.savedMoney)-1) then horizontalLine (Margin 12 8 12 8) Color.almond else dummyTextView
             ]
           ) config.driverBottomCard.savedMoney)
       ]
@@ -683,13 +688,13 @@ commonTextView config push text' color' fontStyle marginTop =
   ] <> fontStyle
 
 
-horizontalLine :: forall w. PrestoDOM (Effect Unit) w 
-horizontalLine = 
+horizontalLine :: forall w. Margin -> String -> PrestoDOM (Effect Unit) w 
+horizontalLine margin' color = 
   linearLayout
           [ height $ V 1
           , width MATCH_PARENT
-          , background Color.almond
-          , margin $ Margin 12 8 12 8 
+          , background color
+          , margin margin'
           ,gravity CENTER
           ][] 
 
@@ -723,3 +728,156 @@ lottieQRView config push =
       , width MATCH_PARENT
       , onAnimationEnd (\_-> void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = config.lottieQRAnim.url , lottieId = (EHC.getNewIDWithTag "QRLottie"), speed = 1.0 , scaleType = "CENTER_CROP"})(const UpiQrRendered)
       ]
+
+rentalRideInfoView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rentalRideInfoView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL 
+  , cornerRadius 8.0
+  , padding $ Padding 16 16 16 16
+  , margin $ MarginVertical 14 24
+  , background Color.white900
+  , stroke $ "2," <> Color.grey800
+  ][  linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation if config.isDriver then HORIZONTAL else VERTICAL
+      ][  infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage1" config.rentalRideTextConfig.rideTime config.rentalRideConfig.actualRideDuration config.rentalRideConfig.baseRideDuration
+        , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage2" config.rentalRideTextConfig.rideDistance config.rentalRideConfig.actualRideDistance config.rentalRideConfig.baseRideDistance
+      ]
+      , horizontalLine (MarginVertical 16 16) Color.grey900
+      , textView $ 
+        [ height WRAP_CONTENT
+        , margin $ MarginBottom 16
+        , width MATCH_PARENT
+        , text $ (config.rentalRideTextConfig.odometerReading) <> ": "
+        , visibility if config.isDriver then VISIBLE else GONE
+        , color Color.black700 
+        ] <> FontStyle.body2 TypoGraphy
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation if config.isDriver then HORIZONTAL else VERTICAL
+        ][  infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage3" config.rentalRideConfig.startRideOdometerImage (config.rentalRideTextConfig.rideStart) (config.rentalRideTextConfig.rideStartedAt) (config.rentalRideConfig.rideStartODOReading)
+          , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage4" config.rentalRideConfig.endRideOdometerImage (config.rentalRideTextConfig.rideEnd) (config.rentalRideTextConfig.rideEndedAt) (config.rentalRideConfig.rideEndODOReading)
+        ]
+    ]
+
+getRentalRideInfoCardOdometerView :: forall w. Config -> String -> String -> String -> String -> String -> (InfoCardConfig)
+getRentalRideInfoCardOdometerView config image renderImage heading heading' subHeading1  = 
+  { id : image, 
+    margin : (MarginBottom 0 ), 
+    height : WRAP_CONTENT, 
+    width : V ((screenWidth unit) / 2) ,
+    image : {
+      visibility : GONE, 
+      height  : V 72, width : V 110, 
+      renderImage : if config.isDriver then (renderImage) else ""
+      } , 
+    heading : {
+      text : if config.isDriver then heading else heading' , 
+      color : Color.black700 , 
+      fontStyle : FontStyle.body1 TypoGraphy, 
+      visibility : VISIBLE
+      }, 
+    subHeading1 : {
+      text :  subHeading1, 
+      color : Color.black800 , 
+      fontStyle : FontStyle.body2 TypoGraphy, 
+      visibility : VISIBLE
+      }, 
+    subHeading2 : {
+      text : "" , 
+      color : Color.black600 , 
+      fontStyle : FontStyle.body2 TypoGraphy, 
+      visibility : GONE
+      }}
+
+getRentalRideInfoCardView :: forall w. Config -> String -> String -> String -> String -> (InfoCardConfig)
+getRentalRideInfoCardView config image heading subHeading1 subHeading2 =
+  { id : image,
+    margin : (MarginBottom 0 ), 
+    height : WRAP_CONTENT, 
+    width : V ((screenWidth unit) / 2) ,
+    image : {
+      visibility : GONE , 
+      height  : V 100, 
+      width : V 100, 
+      renderImage : ""
+      }, 
+    heading : {
+      text : heading, 
+      color : Color.black700, 
+      fontStyle : FontStyle.body1 TypoGraphy, 
+      visibility : VISIBLE
+      }, 
+    subHeading1 : {
+      text : subHeading1, 
+      color : Color.black800, 
+      fontStyle : FontStyle.body2 TypoGraphy, 
+      visibility : VISIBLE
+      }, 
+    subHeading2 : {
+      text : " / " <> subHeading2, 
+      color : Color.black600, 
+      fontStyle : FontStyle.body2 TypoGraphy, 
+      visibility : VISIBLE
+      }}
+
+
+infoCardView :: forall w. Config -> String -> InfoCardConfig -> PrestoDOM (Effect Unit) w
+infoCardView config orientation' infoCardConfig = 
+  linearLayout
+  [ height infoCardConfig.height
+  , weight 1.0
+  , width MATCH_PARENT
+  , margin infoCardConfig.margin
+  , gravity LEFT
+  , orientation if orientation' == "VERTICAL" then VERTICAL else HORIZONTAL
+  ][  PrestoAnim.animationSet [Anim.fadeIn config.isDriver ]$ linearLayout
+    [ width infoCardConfig.image.width
+    , height infoCardConfig.image.height
+    , background Color.black
+    , gravity CENTER
+    , margin $ MarginBottom 8
+    , cornerRadius 4.0
+    , id (getNewIDWithTag infoCardConfig.id)
+    , visibility infoCardConfig.image.visibility
+    , onAnimationEnd
+        ( \action -> do 
+            when (infoCardConfig.image.renderImage /= "") do
+              renderBase64Image infoCardConfig.image.renderImage (getNewIDWithTag (infoCardConfig.id)) true "FIT_CENTER"
+        ) (const NoAction)
+    ][]
+    , textView $
+      [ height WRAP_CONTENT
+      , width  WRAP_CONTENT
+      , text infoCardConfig.heading.text 
+      , color infoCardConfig.heading.color
+      , margin $ MarginBottom 4
+      ] <> infoCardConfig.heading.fontStyle
+    , linearLayout
+      [ weight 1.0
+      , visibility $ boolToVisibility $ orientation' == "HORIZONTAL"
+      , height WRAP_CONTENT][]
+    , linearLayout[
+        height WRAP_CONTENT
+      , width WRAP_CONTENT
+      ][textView $
+        [ height WRAP_CONTENT
+        , width  WRAP_CONTENT
+        , text infoCardConfig.subHeading1.text
+        , color infoCardConfig.subHeading1.color
+        , visibility infoCardConfig.subHeading1.visibility
+        ] <> infoCardConfig.subHeading1.fontStyle
+      , textView $ 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text infoCardConfig.subHeading2.text
+        , color infoCardConfig.subHeading2.color
+        , visibility infoCardConfig.subHeading2.visibility
+        ] <> infoCardConfig.subHeading2.fontStyle
+        ]
+    ]

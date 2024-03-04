@@ -16,6 +16,7 @@
 module Services.API where
 
 import Data.Maybe
+import PaymentPage
 
 import Common.Types.App (Version(..)) as Common
 import Domain.Payments as PP
@@ -38,7 +39,6 @@ import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
-import PaymentPage
 import Services.EndPoints as EP
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
@@ -234,6 +234,7 @@ instance encodeStartRideRequest :: Encode StartRideRequest where encode = defaul
 newtype StartRideReq = StartRideReq
     {
         rideOtp :: String,
+        odometer :: Maybe Odometer,
         point :: Point
     }
 
@@ -250,6 +251,19 @@ newtype Point = Point
     ,   lon :: Number
     ,   ts :: String
     }
+
+newtype Odometer = Odometer 
+  {
+    value :: Number,
+    fileId :: Maybe String
+  }
+
+derive instance genericOdometer :: Generic Odometer _
+derive instance newtypeOdometer :: Newtype Odometer _
+instance standardOdometer :: StandardEncode Odometer where standardEncode (Odometer req) = standardEncode req
+instance showOdometer :: Show Odometer where show = genericShow
+instance decodeOdometer :: Decode Odometer where decode = defaultDecode
+instance encodeOdometer :: Encode Odometer where encode = defaultEncode
 
 derive instance genericPoint :: Generic Point _
 derive instance newtypePoint :: Newtype Point _
@@ -287,6 +301,8 @@ data EndRideRequest = EndRideRequest String EndRideReq
 
 newtype EndRideReq = EndRideReq
     {
+      endRideOtp :: Maybe String,
+      odometer :: Maybe Odometer,
       point :: Point,
       numberOfDeviation :: Maybe Boolean,
       uiDistanceCalculationWithAccuracy :: Int,
@@ -294,6 +310,7 @@ newtype EndRideReq = EndRideReq
     }
 
 newtype EndRideResponse = EndRideResponse {
+  result :: String,
   homeLocationReached :: Maybe Boolean
 }
 
@@ -320,6 +337,32 @@ instance standardEncodeEndRideResponse :: StandardEncode EndRideResponse where s
 instance showEndRideResponse :: Show EndRideResponse where show = genericShow
 instance decodeEndRideResponse :: Decode EndRideResponse where decode = defaultDecode
 instance encodeEndRideResponse :: Encode EndRideResponse where encode = defaultEncode
+
+--------------------------------------------------------Arrived At Stop------------------------------------------------------------------------------------------------------------------------------------------
+-- ArrivedAtStop API request, response types
+data ArrivedAtStopRequest = ArrivedAtStopRequest String LatLong
+
+newtype ArrivedAtStopResponse = ArrivedAtStopResponse {
+  result :: String
+}
+
+instance makeArrivedStopReq :: RestEndpoint ArrivedAtStopRequest ArrivedAtStopResponse where
+    makeRequest reqBody@(ArrivedAtStopRequest rideId (LatLong rqBody)) headers = defaultMakeRequest POST (EP.arrivedAtStop rideId) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericArrivedAtStopRequest :: Generic ArrivedAtStopRequest _
+instance standardEncodeArrivedAtStopRequest :: StandardEncode ArrivedAtStopRequest where standardEncode (ArrivedAtStopRequest rideId req) = standardEncode req
+instance showArrivedAtStopRequest :: Show ArrivedAtStopRequest where show = genericShow
+instance decodeArrivedAtStopRequest :: Decode ArrivedAtStopRequest where decode = defaultDecode
+instance encodeArrivedAtStopRequest :: Encode ArrivedAtStopRequest where encode = defaultEncode
+
+derive instance genericArrivedAtStopResponse :: Generic ArrivedAtStopResponse _
+derive instance newtypeArrivedAtStopResponse :: Newtype ArrivedAtStopResponse _
+instance standardEncodeArrivedAtStopResponse :: StandardEncode ArrivedAtStopResponse where standardEncode (ArrivedAtStopResponse req) = standardEncode req
+instance showArrivedAtStopResponse :: Show ArrivedAtStopResponse where show = genericShow
+instance decodeArrivedAtStopResponse :: Decode ArrivedAtStopResponse where decode = defaultDecode
+instance encodeArrivedAtStopResponse :: Encode ArrivedAtStopResponse where encode = defaultEncode
 
 
 --------------------------------------------------------CANCEL RIDE----------------------------------------------------------------------------------------------------------------------------------------------
@@ -431,6 +474,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , maskedDeviceToken     :: Maybe String
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
+    , canSwitchToRental     :: Boolean
     }
 
 
@@ -529,9 +573,8 @@ newtype RidesInfo = RidesInfo
       updatedAt :: String,
       riderName :: Maybe String,
       rideRating :: Maybe Int,
-      tripEndTime :: Maybe String,
       fromLocation :: LocationInfo,
-      toLocation :: LocationInfo,
+      toLocation :: Maybe LocationInfo,
       estimatedDistance :: Int,
       exoPhone :: String,
       specialLocationTag :: Maybe String,
@@ -542,8 +585,79 @@ newtype RidesInfo = RidesInfo
       autoPayStatus :: Maybe String,
       driverGoHomeRequestId :: Maybe String,
       isFreeRide :: Maybe Boolean,
-      enableFrequentLocationUpdates :: Maybe Boolean
+      enableFrequentLocationUpdates :: Maybe Boolean,
+      tripCategory :: Maybe TripCategory,
+      nextStopLocation :: Maybe StopLocation,
+      lastStopLocation :: Maybe StopLocation,
+      tripEndTime :: Maybe String,
+      stopLocationId :: Maybe String,
+      tripScheduledAt :: Maybe String,
+      estimatedDuration :: Maybe Int,
+      actualDuration :: Maybe Int,
+      startOdometerReading :: Maybe OdometerReading,
+      endOdometerReading :: Maybe OdometerReading
   }
+
+newtype OdometerReading = OdometerReading
+  {
+    value :: Number,
+    fileId :: Maybe String
+  }
+
+derive instance genericOdometerReading :: Generic OdometerReading _
+derive instance newtypeOdometerReading :: Newtype OdometerReading _
+instance standardEncodeOdometerReading :: StandardEncode OdometerReading where standardEncode (OdometerReading req) = standardEncode req
+instance showOdometerReading :: Show OdometerReading where show = genericShow
+instance decodeOdometerReading :: Decode OdometerReading where decode = defaultDecode
+instance encodeOdometerReading :: Encode OdometerReading where encode = defaultEncode
+
+newtype StopLocationAddress = StopLocationAddress
+  { street :: Maybe String,
+    door :: Maybe String,
+    city :: Maybe String,
+    state :: Maybe String,
+    country :: Maybe String,
+    building :: Maybe String,
+    areaCode :: Maybe String,
+    area :: Maybe String,
+    fullAddress :: Maybe String
+  }
+
+derive instance genericStopLocationAddress :: Generic StopLocationAddress _
+derive instance newtypeStopLocationAddress :: Newtype StopLocationAddress _
+instance standardEncodeStopLocationAddress :: StandardEncode StopLocationAddress where standardEncode (StopLocationAddress req) = standardEncode req
+instance showStopLocationAddress :: Show StopLocationAddress where show = genericShow
+instance decodeStopLocationAddress :: Decode StopLocationAddress where decode = defaultDecode
+instance encodeStopLocationAddress :: Encode StopLocationAddress where encode = defaultEncode
+
+newtype StopLocation = StopLocation 
+  { address :: StopLocationAddress,
+    createdAt :: String,
+    id :: String,
+    lat :: Number,
+    lon :: Number,
+    updatedAt :: String
+  }
+
+derive instance genericStopLocation :: Generic StopLocation _
+derive instance newtypeStopLocation :: Newtype StopLocation _
+instance standardEncodeStopLocation :: StandardEncode StopLocation where standardEncode (StopLocation req) = standardEncode req
+instance showStopLocation :: Show StopLocation where show = genericShow
+instance decodeStopLocation :: Decode StopLocation where decode = defaultDecode
+instance encodeStopLocation :: Encode StopLocation where encode = defaultEncode
+
+newtype TripCategory = TripCategory
+    {
+      contents :: String,
+      tag :: String
+    }
+
+derive instance genericTripCategory :: Generic TripCategory _
+derive instance newtypeTripCategory :: Newtype TripCategory _
+instance standardEncodeTripCategory :: StandardEncode TripCategory where standardEncode (TripCategory req) = standardEncode req
+instance showTripCategory :: Show TripCategory where show = genericShow     
+instance decodeTripCategory :: Decode TripCategory where decode = defaultDecode
+instance encodeTripCategory :: Encode TripCategory where encode = defaultEncode
 
 newtype LocationInfo = LocationInfo
       {
@@ -714,6 +828,7 @@ newtype UpdateDriverInfoReq
   , hometown :: Maybe String
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
+  , canSwitchToRental :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
@@ -3560,3 +3675,40 @@ instance standardEncodeSDKEventsResp :: StandardEncode SDKEventsResp where stand
 instance showSDKEventsResp :: Show SDKEventsResp where show = genericShow
 instance decodeSDKEventsResp :: Decode SDKEventsResp where decode = defaultDecode
 instance encodeSDKEventsResp :: Encode SDKEventsResp where encode = defaultEncode
+
+
+data UploadOdometerImageReq = UploadOdometerImageReq String OdometerImage
+
+data OdometerImage = OdometerImage String 
+  
+
+data UploadOdometerImageResp =  UploadOdometerImageResp {
+   fileId :: String 
+  }
+
+
+instance makeUploadOdometerImageReq :: RestEndpoint UploadOdometerImageReq UploadOdometerImageResp where
+  makeRequest reqBody@(UploadOdometerImageReq rideId (OdometerImage rqBody)) headers = defaultMakeRequest POST (EP.uploadOdometerImage rideId) headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericOdometerImage :: Generic OdometerImage _
+instance standardEncodeOdometerImage :: StandardEncode OdometerImage where standardEncode (OdometerImage id) = standardEncode id
+instance showOdometerImage :: Show OdometerImage where show = genericShow
+instance decodeOdometerImage :: Decode OdometerImage where decode = defaultDecode
+instance encodeOdometerImage :: Encode OdometerImage where encode = defaultEncode
+
+
+derive instance genericUploadOdometerImageReq :: Generic UploadOdometerImageReq _
+instance standardEncodeUploadOdometerImageReq :: StandardEncode UploadOdometerImageReq where standardEncode (UploadOdometerImageReq rideId req) = standardEncode req           
+instance showUploadOdometerImageReq :: Show UploadOdometerImageReq where show = genericShow
+instance decodeUploadOdometerImageReq :: Decode UploadOdometerImageReq where decode = defaultDecode   
+instance encodeUploadOdometerImageReq :: Encode UploadOdometerImageReq where encode = defaultEncode
+
+
+
+derive instance genericUploadOdometerImageResp :: Generic UploadOdometerImageResp _     
+instance standardUploadOdometerImageResp :: StandardEncode UploadOdometerImageResp where standardEncode (UploadOdometerImageResp body) = standardEncode body      
+instance showUploadOdometerImageResp :: Show UploadOdometerImageResp where show = genericShow           
+instance decodeUploadOdometerImageResp :: Decode UploadOdometerImageResp where decode = defaultDecode
+instance encodeUploadOdometerImageResp :: Encode UploadOdometerImageResp where encode = defaultEncode     
