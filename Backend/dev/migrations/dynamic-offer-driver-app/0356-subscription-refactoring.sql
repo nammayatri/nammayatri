@@ -226,8 +226,9 @@ INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequenc
   from atlas_driver_offer_bpp.merchant_operating_city as m;
 
 ------- !!! IMPORTANT :- change dhall for drainer for event tracking table for disabling it for db !!!! -------
+-- make sure ttl is in seconds and added to each table
 update atlas_driver_offer_bpp.system_configs
-set config_value = replace(config_value, '"enableKVForWriteAlso":[', '"enableKVForWriteAlso":[{"nameOfTable":"event_tracker","percentEnable":100},')
+set config_value = replace(config_value, '"enableKVForWriteAlso":[', '"enableKVForWriteAlso":[{"nameOfTable":"event_tracker","percentEnable":100,"redisTtl":18000},')
 where id = 'kv_configs';
 
 update atlas_driver_offer_bpp.system_configs
