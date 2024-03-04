@@ -30,12 +30,28 @@ mkOnTrackMessage res = do
     }
 
 mkOnTrackMessageV2 :: DTrack.DTrackRes -> Spec.OnTrackReqMessage
-mkOnTrackMessageV2 res =
+mkOnTrackMessageV2 res@DTrack.TrackRes {..} = do
+  let trackingUrl = if isValueAddNP then Just $ showBaseUrl res.url else Nothing
+  let trackingLocation =
+        ( \loc ->
+            Just $
+              Spec.Location
+                { locationGps = Just $ (show loc.lat) <> ", " <> show loc.lon,
+                  locationUpdatedAt = Just loc.coordinatesCalculatedAt,
+                  locationAddress = Nothing,
+                  locationAreaCode = Nothing,
+                  locationCity = Nothing,
+                  locationCountry = Nothing,
+                  locationId = Nothing,
+                  locationState = Nothing
+                }
+        )
+          =<< driverLocation
   Spec.OnTrackReqMessage
     { onTrackReqMessageTracking =
         Spec.Tracking
-          { trackingUrl = Just $ showBaseUrl res.url,
+          { trackingUrl,
             trackingStatus = if res.isRideCompleted then Just "INACTIVE" else Just "ACTIVE",
-            trackingLocation = Nothing
+            trackingLocation
           }
     }

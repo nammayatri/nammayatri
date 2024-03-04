@@ -218,13 +218,22 @@ getMessageIdText context = do
   messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
   pure $ T.pack $ show messageUuid
 
+parseGPS :: MonadFlow m => Text -> m Gps.Gps
+parseGPS a =
+  case T.splitOn "," a of
+    [latStr, longStr] -> do
+      lat :: Double <- readMaybe (T.unpack latStr) & fromMaybeM (InvalidRequest $ "Unable to parse GPS :" <> a)
+      lon :: Double <- readMaybe (T.unpack longStr) & fromMaybeM (InvalidRequest $ "Unable to parse GPS :" <> a)
+      return $ Gps.Gps lat lon
+    _ -> throwError . InvalidRequest $ "Unable to parse GPS"
+
 parseLatLong :: MonadFlow m => Text -> m Maps.LatLong
 parseLatLong a =
   case T.splitOn "," a of
-    [latStr, longStr] ->
-      let lat = fromMaybe 0.0 $ readMaybe $ T.unpack latStr
-          lon = fromMaybe 0.0 $ readMaybe $ T.unpack longStr
-       in return $ LatLong lat lon
+    [latStr, longStr] -> do
+      lat :: Double <- readMaybe (T.unpack latStr) & fromMaybeM (InvalidRequest $ "Unable to parse GPS :" <> a)
+      lon :: Double <- readMaybe (T.unpack longStr) & fromMaybeM (InvalidRequest $ "Unable to parse GPS :" <> a)
+      return $ Maps.LatLong lat lon
     _ -> throwError . InvalidRequest $ "Unable to parse LatLong"
 
 getContextBppUri :: MonadFlow m => Spec.Context -> m (Maybe BaseUrl)
@@ -306,3 +315,6 @@ mapVariantToVehicle variant = do
 
 getServiceTierName :: Spec.Item -> Maybe Text
 getServiceTierName item = item.itemDescriptor >>= (.descriptorName)
+
+mkRideTrackingRedisKey :: Text -> Text
+mkRideTrackingRedisKey rideId = "RideTracking:" <> rideId
