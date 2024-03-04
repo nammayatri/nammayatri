@@ -24,10 +24,12 @@ module Domain.Action.UI.Ride
 where
 
 import qualified Beckn.ACL.Update as ACL
+import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
+import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import qualified Domain.Types.Booking.Type as DB
 import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
 import qualified Domain.Types.Location as DL
@@ -42,6 +44,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (HasField)
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -53,6 +56,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQMerchant
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -95,9 +99,11 @@ getDriverLoc ::
   ( CacheFlow m r,
     EncFlow m r,
     EsqDBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     EsqDBReplicaFlow m r,
     HasField "rideCfg" r RideConfig,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasLongDurationRetryCfg r c
   ) =>
   Id SRide.Ride ->
   m GetDriverLocResp
@@ -106,8 +112,19 @@ getDriverLoc rideId = do
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus "Cannot track this ride"
-  res <- CallBPP.callGetDriverLocation ride.trackingUrl
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  res <-
+    if isValueAddNP
+      then CallBPP.callGetDriverLocation ride.trackingUrl
+      else do
+        withLongRetry $ CallBPP.callTrack booking ride
+        trackingLoc :: OnTrack.TrackingLocation <- Redis.get (Common.mkRideTrackingRedisKey ride.id.getId) >>= fromMaybeM (InvalidRequest "Driver location not updated")
+        return $
+          CallBPP.GetLocationRes
+            { currPoint = MapSearch.LatLong {lat = trackingLoc.gps.lat, lon = trackingLoc.gps.lon},
+              lastUpdate = trackingLoc.updatedAt
+            }
   let fromLocation = Maps.getCoordinates booking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
   driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
