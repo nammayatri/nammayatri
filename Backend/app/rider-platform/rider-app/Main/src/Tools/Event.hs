@@ -18,6 +18,7 @@ module Tools.Event where
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Estimate as ES
 import Domain.Types.Merchant
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
@@ -65,6 +66,28 @@ data Payload
         exophoneNumber :: Maybe Text,
         rideId :: Maybe (Id DRide.Ride)
       }
+  | AutoComplete
+      { autocompleteInputs :: Text,
+        customerId :: Id Person,
+        id :: Text,
+        isLocationSelectedOnMap :: Maybe Bool,
+        searchRequestId :: Maybe (Id DSearchRequest.SearchRequest),
+        searchType :: Text,
+        sessionToken :: Text,
+        merchantId :: Id Merchant,
+        merchantOperatingCityId :: Id MerchantOperatingCity,
+        createdAt :: UTCTime,
+        updatedAt :: UTCTime
+      }
+  | RouteCollectionData
+      { mapsProvider :: Maybe Text,
+        routes :: [Text],
+        searchRequestId :: Maybe (Id DSearchRequest.SearchRequest),
+        merchantId :: Id Merchant,
+        merchantOperatingCityId :: Id MerchantOperatingCity,
+        createdAt :: UTCTime,
+        updatedAt :: UTCTime
+      }
   deriving (Show, Eq, Generic, FromJSON, ToSchema)
 
 instance ToJSON Payload where
@@ -103,6 +126,32 @@ data ExophoneEventData = ExophoneEventData
     personId :: Maybe (Id Person),
     exophoneNumber :: Maybe Text
   }
+
+data AutoCompleteEventData = AutoCompleteEventData
+  { autocompleteInputs :: Text,
+    customerId :: Id Person,
+    id :: Text,
+    isLocationSelectedOnMap :: Maybe Bool,
+    searchRequestId :: Maybe (Id DSearchRequest.SearchRequest),
+    searchType :: Text,
+    sessionToken :: Text,
+    merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Show, Eq, Generic, FromJSON)
+
+data RouteDataEvent = RouteDataEvent
+  { mapsProvider :: Maybe Text,
+    routes :: [Text],
+    searchRequestId :: Maybe (Id DSearchRequest.SearchRequest),
+    merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Show, Eq, Generic, FromJSON)
 
 newtype SearchEventData = SearchEventData
   { searchRequest :: DSearchRequest.SearchRequest
@@ -218,3 +267,23 @@ triggerExophoneEvent ExophoneEventData {..} = do
   let exophonePayload = Exophone {..}
   exoevent <- createEvent (getId <$> personId) (maybe "" getId merchantId) ExophoneData RIDER_APP triggeredBy (Just exophonePayload) Nothing Nothing
   triggerEvent exoevent
+
+triggerAutoCompleteEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  AutoCompleteEventData ->
+  m ()
+triggerAutoCompleteEvent AutoCompleteEventData {..} = do
+  let autoCompletePayload = AutoComplete {..}
+  event <- createEvent (Just $ getId autoCompletePayload.customerId) (getId autoCompletePayload.merchantId) AutoCompleteData RIDER_APP System (Just autoCompletePayload) Nothing Nothing
+  triggerEvent event
+
+triggerRouteDataEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  RouteDataEvent ->
+  m ()
+triggerRouteDataEvent RouteDataEvent {..} = do
+  let routePayload = RouteCollectionData {..}
+  event <- createEvent Nothing (getId routePayload.merchantId) RouteCollection RIDER_APP System (Just routePayload) Nothing Nothing
+  triggerEvent event

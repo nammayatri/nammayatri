@@ -69,6 +69,18 @@ let sampleKafkaConfig
     : globalCommon.kafkaConfig
     = { topicName = "rider-app-events-updates", kafkaKey = "rider-app" }
 
+let autoCompleteKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "AutoCompleteData"
+      , kafkaKey = "rider-app-autocomplete-events"
+      }
+
+let routeDataKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "RouteCollection"
+      , kafkaKey = "rider-app-route-data-events"
+      }
+
 let exophoneKafkaConfig
     : globalCommon.kafkaConfig
     = { topicName = "ExophoneData", kafkaKey = "rider-app-exophone-events" }
@@ -116,6 +128,16 @@ let eventStreamMappings =
           [ globalCommon.eventType.RideCreated
           , globalCommon.eventType.SearchRequest
           ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream autoCompleteKafkaConfig
+        , eventTypes = [ globalCommon.eventType.AutoCompleteData ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream routeDataKafkaConfig
+        , eventTypes = [ globalCommon.eventType.RouteCollection ]
         }
       ]
 

@@ -20,6 +20,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.OpenApi hiding (Header)
 import qualified Data.OpenApi as OpenApi hiding (Header)
 import Domain.Action.UI.HotSpot
+import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Action.UI.Serviceability as Serviceability
 import Domain.Types.HotSpot hiding (address, updatedAt)
@@ -30,7 +31,6 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.NextBillionData as DNB
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -46,6 +46,7 @@ import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
 import qualified Kernel.External.Maps.NextBillion.Types as NBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
 import Kernel.Types.Version
@@ -62,8 +63,6 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
-import qualified Storage.Queries.AutoCompleteData as QAutoCompleteData
-import qualified Storage.Queries.NextBillionData as QNB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -273,17 +272,8 @@ search personId req bundleVersion clientVersion device = do
                 DMSC.MapsServiceConfig mapsCfg -> do
                   routeResp <- MapsRoutes.getRoutes True mapsCfg request
                   logInfo $ "MMI route response: " <> show routeResp
-                  let routeData =
-                        DNB.NextBillionData
-                          { mapsProvider = Just $ show MapsK.MMI,
-                            routes = map show routeResp,
-                            searchRequestId = searchRequestId,
-                            merchantId = Just merchant.id,
-                            merchantOperatingCityId = Just merchantOperatingCity.id,
-                            createdAt = now,
-                            updatedAt = now
-                          }
-                  QNB.create routeData
+                  let routeData = RouteDataEvent (Just $ show MapsK.MMI) (map show routeResp) (Just searchRequestId) merchant.id merchantOperatingCity.id now now
+                  triggerRouteDataEvent routeData
                 _ -> logInfo "MapsServiceConfig config not found for MMI"
 
         fork "calling next billion directions api" $ do
@@ -299,10 +289,10 @@ search personId req bundleVersion clientVersion device = do
                     nbFastestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbFastestReq
                     nbShortestRouteResponse <- NextBillion.getRoutesWithExtraParameters msc nbShortestReq
                     logInfo $ "NextBillion route responses: " <> show nbFastestRouteResponse <> "\n" <> show nbShortestRouteResponse
-                    let fastRouteData = DNB.NextBillionData (Just "NB_Fastest") (map show nbFastestRouteResponse) searchRequestId (Just merchant.id) (Just merchantOperatingCity.id) now now
-                    let shortRouteData = DNB.NextBillionData (Just "NB_Shortest") (map show nbShortestRouteResponse) searchRequestId (Just merchant.id) (Just merchantOperatingCity.id) now now
-                    QNB.create fastRouteData
-                    QNB.create shortRouteData
+                    let fastRouteData = RouteDataEvent (Just "NB_Fastest") (map show nbFastestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
+                    let shortRouteData = RouteDataEvent (Just "NB_Shortest") (map show nbShortestRouteResponse) (Just searchRequestId) (merchant.id) (merchantOperatingCity.id) now now
+                    triggerRouteDataEvent fastRouteData
+                    triggerRouteDataEvent shortRouteData
                   _ -> logInfo "No NextBillion config"
               _ -> logInfo "NextBillion route not found"
 
@@ -311,12 +301,18 @@ search personId req bundleVersion clientVersion device = do
             whenJust riderConfig $ \config -> do
               let toCollectData = fromMaybe False config.collectAutoCompleteData
               when toCollectData $ do
-                pickupRecord <- QAutoCompleteData.findBySessionTokenAndSearchType token (show DMaps.PICKUP)
-                dropRecord <- QAutoCompleteData.findBySessionTokenAndSearchType token (show DMaps.DROP)
+                let pickUpKey = makeAutoCompleteKey token (show DMaps.PICKUP)
+                let dropKey = makeAutoCompleteKey token (show DMaps.DROP)
+                pickupRecord :: Maybe AutoCompleteEventData <- Redis.safeGet pickUpKey
+                dropRecord :: Maybe AutoCompleteEventData <- Redis.safeGet dropKey
                 whenJust pickupRecord $ \record -> do
-                  QAutoCompleteData.updateSearchRequestIdAndisLocationSelectedOnMapById (Just searchRequestId) oneWayReq.isSourceManuallyMoved record.id
+                  let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isSourceManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.createdAt now
+                  -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isSourceManuallyMoved, DTA.updatedAt = now}
+                  triggerAutoCompleteEvent updatedRecord
                 whenJust dropRecord $ \record -> do
-                  QAutoCompleteData.updateSearchRequestIdAndisLocationSelectedOnMapById (Just searchRequestId) oneWayReq.isDestinationManuallyMoved record.id
+                  let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isDestinationManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.createdAt now
+                  -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isDestinationManuallyMoved, DTA.updatedAt = now}
+                  triggerAutoCompleteEvent updatedRecord
 
         let distanceWeightage = maybe 70 (.distanceWeightage) riderConfig
             durationWeightage = 100 - distanceWeightage

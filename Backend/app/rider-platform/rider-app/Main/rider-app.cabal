@@ -417,7 +417,6 @@ library
       API.Types.UI.FRFSTicketService
       API.Types.UI.Sos
       API.Types.UI.TicketService
-      Domain.Types.AutoCompleteData
       Domain.Types.BecknConfig
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
@@ -429,7 +428,6 @@ library
       Domain.Types.FRFSTrip
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantState
-      Domain.Types.NextBillionData
       Domain.Types.NotificationSoundsConfig
       Domain.Types.RiderConfig
       Domain.Types.SeatManagement
@@ -445,7 +443,6 @@ library
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Domain.Types.ValueAddNP
-      Storage.Beam.AutoCompleteData
       Storage.Beam.BecknConfig
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
@@ -457,7 +454,6 @@ library
       Storage.Beam.FRFSTrip
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantState
-      Storage.Beam.NextBillionData
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.RiderConfig
       Storage.Beam.SeatManagement
@@ -473,7 +469,6 @@ library
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Beam.ValueAddNP
-      Storage.Queries.AutoCompleteData
       Storage.Queries.BecknConfig
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
@@ -485,7 +480,6 @@ library
       Storage.Queries.FRFSTrip
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantState
-      Storage.Queries.NextBillionData
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.RiderConfig
       Storage.Queries.SeatManagement
