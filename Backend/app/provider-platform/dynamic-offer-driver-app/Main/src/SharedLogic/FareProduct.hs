@@ -10,6 +10,7 @@
 module SharedLogic.FareProduct where
 
 import Data.Time hiding (getCurrentTime)
+import Data.Time.Calendar.WeekDate
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
@@ -114,12 +115,15 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong mToLocationLa
 getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> Variant -> DFareProduct.Area -> m (Maybe DFareProduct.FareProduct)
 getBoundedFareProduct merchantOpCityId tripCategory vehVariant area = do
   fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory vehVariant area
-  now <- utcTimeToDiffTime <$> getCurrentTime
+  currentIstTime <- getLocalCurrentTime 19800
+  let currTimeOfDay = utcTimeToDiffTime currentIstTime
+      currentDay = utctDay currentIstTime
+      (_, _, currentDayOfWeek) = toWeekDate currentDay
   return $
     find
       ( \fp ->
           case fp.timeBounds of
-            DFareProduct.Bounded timeBounds -> isWithin now timeBounds
+            DFareProduct.Bounded timeBounds -> isWithin currTimeOfDay (getPeaksForCurrentDay currentDayOfWeek timeBounds)
             DFareProduct.Unbounded -> False
       )
       fareProducts
@@ -127,3 +131,14 @@ getBoundedFareProduct merchantOpCityId tripCategory vehVariant area = do
     isWithin _ [] = False
     isWithin currTime [(startTime, endTime)] = currTime > (timeOfDayToTime startTime) && currTime < (timeOfDayToTime endTime)
     isWithin currTime ((startTime, endTime) : xs) = (currTime > (timeOfDayToTime startTime) && currTime < (timeOfDayToTime endTime)) || isWithin currTime xs
+
+    getPeaksForCurrentDay currentDayOfWeek peaks =
+      case currentDayOfWeek of
+        1 -> peaks.sunday
+        2 -> peaks.monday
+        3 -> peaks.tuesday
+        4 -> peaks.wednesday
+        5 -> peaks.thursday
+        6 -> peaks.friday
+        7 -> peaks.saturday
+        _ -> peaks.monday -- This case should never come.

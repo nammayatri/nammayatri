@@ -31,31 +31,37 @@ import Lib.Types.SpecialLocation (SpecialLocation (..))
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
-data TimeBound = Bounded [(TimeOfDay, TimeOfDay)] | Unbounded
+data BoundedPeaks = BoundedPeaks
+  { monday :: [(TimeOfDay, TimeOfDay)],
+    tuesday :: [(TimeOfDay, TimeOfDay)],
+    wednesday :: [(TimeOfDay, TimeOfDay)],
+    thursday :: [(TimeOfDay, TimeOfDay)],
+    friday :: [(TimeOfDay, TimeOfDay)],
+    saturday :: [(TimeOfDay, TimeOfDay)],
+    sunday :: [(TimeOfDay, TimeOfDay)]
+  }
+  deriving (Eq, Ord, Generic, Show, Read)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable BoundedPeaks
+
+data TimeBound
+  = Bounded BoundedPeaks
+  | Unbounded
   deriving (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving (PrettyShow) via Showable TimeBound
 
 instance Show TimeBound where
-  show (Bounded intervals) = T.unpack $ T.intercalate "," $ map (\(start, end) -> T.pack (show start ++ "-" ++ show end)) intervals
   show Unbounded = "Unbounded"
+  show (Bounded peaks) = show peaks
 
 instance Read TimeBound where
-  readsPrec _ str =
-    case T.strip $ T.pack str of
-      "Unbounded" -> [(Unbounded, "")]
-      intervalsStr ->
-        case mapMaybe readInterval (T.splitOn "," intervalsStr) of
-          [] -> [(Unbounded, "")]
-          intervals -> [(Bounded intervals, "")]
-    where
-      readInterval interval =
-        case T.splitOn "-" interval of
-          [start, end] -> do
-            case (readMaybe $ T.unpack start, readMaybe $ T.unpack end) of
-              (Just startTime, Just endTime) -> Just (startTime, endTime)
-              _ -> Nothing
-          _ -> Nothing
+  readsPrec _ str
+    | str == "Unbounded" = [(Unbounded, "")]
+    | otherwise =
+      case readMaybe str :: Maybe BoundedPeaks of
+        Just peaks -> [(Bounded peaks, "")]
+        Nothing -> [(Unbounded, "")]
 
 $(mkBeamInstancesForEnum ''TimeBound)
 
