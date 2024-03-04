@@ -711,7 +711,7 @@ tfCancellationFee amount = do
         feePercentage = Nothing
       }
   where
-    mkPrice amount' =
+    mkPrice =
       Just
         Spec.Price
           { priceComputedValue = Nothing,
@@ -719,7 +719,7 @@ tfCancellationFee amount = do
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
             priceOfferedValue = Nothing,
-            priceValue = Just $ encodeToText amount'
+            priceValue = Just $ encodeToText amount
           }
 
 tfFulfillmentState :: Enums.FulfillmentState -> Maybe Spec.FulfillmentState
