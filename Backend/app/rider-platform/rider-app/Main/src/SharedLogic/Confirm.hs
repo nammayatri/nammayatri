@@ -101,6 +101,7 @@ confirm ::
 confirm DConfirmReq {..} = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
+  when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
   fulfillmentId <-
     case quote.quoteDetails of
       DQuote.OneWayDetails _ -> pure Nothing

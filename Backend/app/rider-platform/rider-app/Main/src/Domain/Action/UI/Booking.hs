@@ -14,11 +14,16 @@
 
 module Domain.Action.UI.Booking where
 
+import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Update as ACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
+import BecknV2.Utils
 import Data.OpenApi (ToSchema (..))
+import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Client as DC
+import Domain.Types.CancellationReason
 import Domain.Types.Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.LocationMapping as DLM
@@ -31,11 +36,13 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Maps (LatLong)
+import Kernel.Prelude (intToNominalDiffTime)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Location as QL
@@ -54,11 +61,30 @@ newtype BookingListRes = BookingListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m SRB.BookingAPIEntity
+bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
 bookingStatus bookingId _ = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   logInfo $ "booking: test " <> show booking
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  now <- getCurrentTime
+  confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
+      ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlUtcTime = addDurationToUTCTime booking.createdAt ttlToNominalDiffTime
+  when (booking.status == SRB.NEW && (ttlUtcTime < now)) do
+    dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
+    void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+    throwError $ RideInvalidStatus "Booking Invalid"
   SRB.buildBookingAPIEntity booking booking.riderId
+  where
+    cancelReq =
+      DCancel.CancelReq
+        { reasonCode = CancellationReasonCode "External/Beckn API failure",
+          reasonStage = OnConfirm,
+          additionalInfo = Nothing
+        }
 
 bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> m BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do

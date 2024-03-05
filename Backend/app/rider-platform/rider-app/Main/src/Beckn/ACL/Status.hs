@@ -15,9 +15,11 @@
 
 module Beckn.ACL.Status where
 
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import Domain.Types.Booking.Type (Booking)
@@ -28,6 +30,7 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BecknConfig as QBC
 
 data DStatusReq = DStatusReq
   { booking :: Booking,
@@ -63,7 +66,7 @@ buildStatusReq DStatusReq {..} = do
         }
 
 buildStatusReqV2 ::
-  (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>
   DStatusReq ->
   m Spec.StatusReq
 buildStatusReqV2 DStatusReq {..} = do
@@ -71,6 +74,10 @@ buildStatusReqV2 DStatusReq {..} = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  ttlInInt <- bapConfig.statusTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
   context <-
     ContextV2.buildContextV2
       Context.STATUS
@@ -83,7 +90,7 @@ buildStatusReqV2 DStatusReq {..} = do
       (Just booking.providerUrl)
       city
       merchant.country
-      (Just "PT30S")
+      (Just ttlToISO8601Duration)
 
   pure $
     Spec.StatusReq

@@ -25,3 +25,12 @@ ALTER TABLE atlas_app.beckn_config ADD COLUMN merchant_operating_city_id charact
 ALTER TABLE atlas_app.beckn_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.beckn_config ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.beckn_config ADD COLUMN track_ttl_sec integer ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN status_ttl_sec integer ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN rating_ttl_sec integer ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN cancel_ttl_sec integer ;

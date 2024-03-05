@@ -24,6 +24,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import BecknV2.OnDemand.Utils.Payment
+import BecknV2.Utils
 import qualified Data.List as L
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
@@ -38,6 +39,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
+import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -102,7 +104,10 @@ buildOnCancelReq ::
   Maybe FarePolicyD.FullFarePolicy ->
   m Spec.OnCancelReq
 buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy = do
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
+  ttlInInt <- becknConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttlToISO8601Duration)
   pure $
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
