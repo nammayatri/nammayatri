@@ -15,8 +15,8 @@
 
 module Domain.Types.DriverOnboarding.VehicleRegistrationCertificate where
 
-import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import Domain.Types.IdfyVerification
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Vehicle

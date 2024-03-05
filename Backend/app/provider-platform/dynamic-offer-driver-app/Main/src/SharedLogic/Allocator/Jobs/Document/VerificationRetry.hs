@@ -17,8 +17,8 @@ module SharedLogic.Allocator.Jobs.Document.VerificationRetry
   )
 where
 
-import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import Domain.Types.IdfyVerification
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DTO
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
@@ -30,7 +30,7 @@ import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as QODC
-import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
+import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -49,10 +49,10 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   onboardingDocumentConfig <- QODC.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId (castDoctype verificationReq.docType) >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantOperatingCityId.getId (show verificationReq.docType))
   let maxRetryCount = onboardingDocumentConfig.maxRetryCount
-  if verificationReq.retryCount <= maxRetryCount
+  if (fromMaybe 0 verificationReq.retryCount) <= maxRetryCount
     then do
       documentNumber <- decrypt verificationReq.documentNumber
-      IVQuery.updateStatus verificationReq.requestId "source_down_retried"
+      IVQuery.updateStatus "source_down_retried" verificationReq.requestId
       case verificationReq.docType of
         Image.VehicleRegistrationCertificate -> do
           verifyRes <-
@@ -69,7 +69,7 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 Verification.VerifyDLAsyncReq {dlNumber = documentNumber, dateOfBirth = dob, driverId = person.id.getId}
             mkNewVerificationEntity verificationReq verifyRes.requestId
     else do
-      IVQuery.updateStatus verificationReq.requestId "source_down_failed"
+      IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
     castDoctype :: Image.ImageType -> DTO.DocumentType
@@ -84,7 +84,7 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       let newVerificationReq =
             verificationReq
               { id = newId,
-                retryCount = verificationReq.retryCount + 1,
+                retryCount = Just $ maybe 1 ((+) 1) verificationReq.retryCount,
                 status = "source_down_retrying",
                 requestId,
                 createdAt = now,

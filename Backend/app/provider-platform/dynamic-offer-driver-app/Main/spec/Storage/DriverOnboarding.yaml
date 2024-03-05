@@ -1,0 +1,83 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  EncryptedHashedField: Kernel.External.Encryption
+  Variant: Domain.Types.Vehicle
+  ImageType: Domain.Types.DriverOnboarding.Image
+  Image: Domain.Types.DriverOnboarding.Image
+
+IdfyVerification:
+  tableName: idfy_verification
+
+  fields:
+    id: Id IdfyVerification
+    documentImageId1: Id Image
+    documentImageId2: Maybe (Id Image)
+    driverId: Id Person
+    requestId: Text
+    docType: ImageType
+    status: Text
+    issueDateOnDoc: Maybe UTCTime
+    driverDateOfBirth: Maybe UTCTime
+    documentNumber: EncryptedHashedField e Text
+    imageExtractionValidation: ImageExtractionValidation
+    idfyResponse: Maybe Text
+    multipleRC: Maybe Bool
+    dashboardPassedVehicleVariant: Maybe Variant
+    retryCount: Maybe Int
+    nameOnCard: Maybe Text
+
+  types:
+    ImageExtractionValidation:
+      enum: "Success,Skipped,Failed"
+    VerificationStatus:
+      enum: "PENDING,VALID,INVALID"
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    requestId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findAllByDriverIdAndDocType:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, docType]
+
+    findLatestByDriverIdAndDocType:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [driverId, docType]
+
+    findByRequestId:
+      kvFunction: findOneWithKV
+      where: requestId
+
+    updateResponse:
+      kvFunction: updateWithKV
+      params: [status, idfyResponse]
+      where: requestId
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status]
+      where: requestId
+
+    updateExtractValidationStatus:
+      kvFunction: updateWithKV
+      params: [imageExtractionValidation]
+      where: requestId
+
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: driverId

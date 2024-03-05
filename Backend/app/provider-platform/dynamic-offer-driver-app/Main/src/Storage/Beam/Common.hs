@@ -24,13 +24,13 @@ import Storage.Beam.DriverFee
 import Storage.Beam.DriverInformation
 import Storage.Beam.DriverOnboarding.DriverLicense
 import Storage.Beam.DriverOnboarding.DriverRCAssociation
-import Storage.Beam.DriverOnboarding.IdfyVerification
 import Storage.Beam.DriverOnboarding.Image
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
 import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.Geometry
+import Storage.Beam.IdfyVerification
 import Storage.Beam.Invoice
 import Storage.Beam.Message.Message
 import Storage.Beam.Message.MessageReport

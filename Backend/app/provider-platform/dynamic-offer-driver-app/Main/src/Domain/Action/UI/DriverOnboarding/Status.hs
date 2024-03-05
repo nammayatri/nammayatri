@@ -29,9 +29,9 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
-import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as RC
+import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -49,9 +49,9 @@ import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as SAV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
-import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as IQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.IdfyVerification as IVQuery
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Translations as MTQuery
 
@@ -164,7 +164,7 @@ verificationStatusCheck status language img = do
 
 checkIfInVerification :: Id SP.Person -> Id DMOC.MerchantOperatingCity -> Int -> Image.ImageType -> Language -> Flow (ResponseStatus, Text)
 checkIfInVerification driverId merchantOpCityId onboardingTryLimit docType language = do
-  verificationReq <- IVQuery.findLatestByDriverIdAndDocType driverId docType
+  verificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
   images <- IQuery.findRecentByPersonIdAndImageType driverId merchantOpCityId docType
   verificationStatusWithMessage onboardingTryLimit (length images) verificationReq language
 

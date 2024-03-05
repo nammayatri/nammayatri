@@ -15,8 +15,8 @@
 
 module Domain.Types.DriverOnboarding.DriverLicense where
 
-import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import Domain.Types.IdfyVerification
 import Domain.Types.Person (Person)
 import Kernel.External.Encryption
 import Kernel.Prelude

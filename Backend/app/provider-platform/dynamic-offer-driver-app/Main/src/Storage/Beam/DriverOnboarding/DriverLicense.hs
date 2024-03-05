@@ -17,7 +17,7 @@
 module Storage.Beam.DriverOnboarding.DriverLicense where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
+import qualified Domain.Types.IdfyVerification as Domain
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate ()

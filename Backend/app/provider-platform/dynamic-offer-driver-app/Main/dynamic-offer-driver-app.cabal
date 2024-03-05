@@ -225,7 +225,6 @@ library
       Domain.Types.DriverOnboarding.DriverLicense
       Domain.Types.DriverOnboarding.DriverRCAssociation
       Domain.Types.DriverOnboarding.Error
-      Domain.Types.DriverOnboarding.IdfyVerification
       Domain.Types.DriverOnboarding.Image
       Domain.Types.DriverOnboarding.OperatingCity
       Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
@@ -367,7 +366,6 @@ library
       Storage.Beam.DriverOnboarding.AadhaarVerification
       Storage.Beam.DriverOnboarding.DriverLicense
       Storage.Beam.DriverOnboarding.DriverRCAssociation
-      Storage.Beam.DriverOnboarding.IdfyVerification
       Storage.Beam.DriverOnboarding.Image
       Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
       Storage.Beam.DriverPlan
@@ -494,7 +492,6 @@ library
       Storage.Queries.DriverOnboarding.AadhaarVerification
       Storage.Queries.DriverOnboarding.DriverLicense
       Storage.Queries.DriverOnboarding.DriverRCAssociation
-      Storage.Queries.DriverOnboarding.IdfyVerification
       Storage.Queries.DriverOnboarding.Image
       Storage.Queries.DriverOnboarding.Status
       Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate
@@ -604,6 +601,7 @@ library
       Domain.Types.Estimate
       Domain.Types.EventTracker
       Domain.Types.Exophone
+      Domain.Types.IdfyVerification
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsModule
       Domain.Types.LmsModuleTranslation
@@ -631,6 +629,7 @@ library
       Storage.Beam.Estimate
       Storage.Beam.EventTracker
       Storage.Beam.Exophone
+      Storage.Beam.IdfyVerification
       Storage.Beam.InterCityTravelCities
       Storage.Beam.LmsModule
       Storage.Beam.LmsModuleTranslation
@@ -658,6 +657,7 @@ library
       Storage.Queries.Estimate
       Storage.Queries.EventTracker
       Storage.Queries.Exophone
+      Storage.Queries.IdfyVerification
       Storage.Queries.InterCityTravelCities
       Storage.Queries.LmsModule
       Storage.Queries.LmsModuleTranslation

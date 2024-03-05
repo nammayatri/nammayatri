@@ -43,9 +43,9 @@ import qualified Data.Time as DT
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
 import Domain.Types.DriverOnboarding.Error
-import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
+import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as ODC
@@ -69,10 +69,10 @@ import Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverOnboarding.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
-import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.FleetDriverAssociation as FDVAQ
+import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.Ride as RQuery
 import qualified Storage.Queries.Vehicle as VQuery
@@ -231,7 +231,10 @@ verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegi
             idfyResponse = Nothing,
             multipleRC,
             dashboardPassedVehicleVariant = mbVariant,
-            retryCount = 0,
+            retryCount = Just 0,
+            nameOnCard = Nothing,
+            merchantId = Just person.merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
             createdAt = now,
             updatedAt = now
           }
@@ -239,7 +242,7 @@ verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegi
 onVerifyRC :: Person.Person -> Maybe Domain.IdfyVerification -> VT.RCVerificationResponse -> Flow AckResponse
 onVerifyRC person mbVerificationReq output = do
   if maybe False (\req -> req.imageExtractionValidation == Domain.Skipped && compareRegistrationDates output.registrationDate req.issueDateOnDoc) mbVerificationReq
-    then IVQuery.updateExtractValidationStatus (maybe "" (.requestId) mbVerificationReq) Domain.Failed >> return Ack
+    then IVQuery.updateExtractValidationStatus Domain.Failed (maybe "" (.requestId) mbVerificationReq) >> return Ack
     else do
       now <- getCurrentTime
       id <- generateGUID

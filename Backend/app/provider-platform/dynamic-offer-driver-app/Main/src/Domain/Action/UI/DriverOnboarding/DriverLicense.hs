@@ -29,8 +29,8 @@ import Data.Time (nominalDay)
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
 import Domain.Types.DriverOnboarding.Error
-import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.OnboardingDocumentConfig (OnboardingDocumentConfig)
@@ -53,8 +53,8 @@ import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as QODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
-import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
+import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -99,25 +99,26 @@ verifyDL isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverDLReq 
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   onboardingDocumentConfig <- QODC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound merchantOpCityId.getId (show DTO.DL))
-  when
-    ( isNothing dateOfIssue && onboardingDocumentConfig.checkExtraction
-        && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
-    )
-    $ do
-      image1 <- getImage imageId1
-      image2 <- getImage `mapM` imageId2
-      resp <-
-        Verification.extractDLImage person.merchantId merchantOpCityId $
-          Verification.ExtractImageReq {image1, image2, driverId = person.id.getId}
-      case resp.extractedDL of
-        Just extractedDL -> do
-          let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
-          let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
-          -- disable this check for debugging with mock-idfy
-          cacheExtractedDl person.id extractDLNumber operatingCity
-          unless (extractDLNumber == dlNumber) $
-            throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
-        Nothing -> throwImageError imageId1 ImageExtractionFailed
+  nameOnCard <-
+    if (isNothing dateOfIssue && onboardingDocumentConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard))
+      then do
+        image1 <- getImage imageId1
+        image2 <- getImage `mapM` imageId2
+        resp <-
+          Verification.extractDLImage person.merchantId merchantOpCityId $
+            Verification.ExtractImageReq {image1, image2, driverId = person.id.getId}
+        case resp.extractedDL of
+          Just extractedDL -> do
+            let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
+            let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
+            let nameOnCard = extractedDL.nameOnCard
+            -- disable this check for debugging with mock-idfy
+            cacheExtractedDl person.id extractDLNumber operatingCity
+            unless (extractDLNumber == dlNumber) $
+              throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
+            return nameOnCard
+          Nothing -> throwImageError imageId1 ImageExtractionFailed
+      else return Nothing
   mdriverLicense <- Query.findByDLNumber driverLicenseNumber
 
   case mdriverLicense of
@@ -126,11 +127,11 @@ verifyDL isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverDLReq 
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
       when (driverLicense.verificationStatus == Domain.INVALID) $ throwError DLInvalid
       when (driverLicense.verificationStatus == Domain.VALID) $ throwError DLAlreadyUpdated
-      verifyDLFlow person merchantOpCityId onboardingDocumentConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
+      verifyDLFlow person merchantOpCityId onboardingDocumentConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
       when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
-      verifyDLFlow person merchantOpCityId onboardingDocumentConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
+      verifyDLFlow person merchantOpCityId onboardingDocumentConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -142,8 +143,8 @@ verifyDL isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverDLReq 
         throwError (ImageInvalidType (show Image.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> OnboardingDocumentConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Flow ()
-verifyDLFlow person merchantOpCityId onboardingDocumentConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue = do
+verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> OnboardingDocumentConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Flow ()
+verifyDLFlow person merchantOpCityId onboardingDocumentConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard = do
   now <- getCurrentTime
   let imageExtractionValidation =
         if isNothing dateOfIssue && onboardingDocumentConfig.checkExtraction
@@ -174,7 +175,10 @@ verifyDLFlow person merchantOpCityId onboardingDocumentConfig dlNumber driverDat
             idfyResponse = Nothing,
             multipleRC = Nothing, -- added for backward compatibility
             dashboardPassedVehicleVariant = Nothing,
-            retryCount = 0,
+            retryCount = Just 0,
+            nameOnCard,
+            merchantId = Just person.merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
             createdAt = now,
             updatedAt = now
           }
@@ -197,7 +201,7 @@ onVerifyDL verificationReq output = do
                /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))
            )
         then do
-          _ <- IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed
+          _ <- IVQuery.updateExtractValidationStatus Domain.Failed verificationReq.requestId
           pure Ack
         else do
           now <- getCurrentTime
@@ -205,7 +209,7 @@ onVerifyDL verificationReq output = do
           onboardingDocumentConfig <- QODC.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantOperatingCityId.getId (show DTO.DL))
           mEncryptedDL <- encrypt `mapM` output.id_number
           let mLicenseExpiry = convertTextToUTC (output.t_validity_to <|> output.nt_validity_to)
-          let mDriverLicense = createDL onboardingDocumentConfig person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
+          let mDriverLicense = createDL onboardingDocumentConfig person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard now <$> mEncryptedDL <*> mLicenseExpiry
 
           case mDriverLicense of
             Just driverLicense -> do
@@ -227,20 +231,23 @@ createDL ::
   Id Domain.DriverLicense ->
   Id Image.Image ->
   Maybe (Id Image.Image) ->
+  Maybe Text ->
   UTCTime ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.DriverLicense
-createDL configs driverId output id imageId1 imageId2 now edl expiry = do
+createDL configs driverId output id imageId1 imageId2 nameOnCard now edl expiry = do
   let classOfVehicles = maybe [] (map (.cov)) output.cov_details
   let verificationStatus = validateDLStatus configs expiry classOfVehicles now
+  let verifiedName = (\n -> if '*' `T.elem` n then Nothing else Just n) =<< output.name
+  let driverName = verifiedName <|> nameOnCard
   Domain.DriverLicense
     { id,
       driverId,
       documentImageId1 = imageId1,
       documentImageId2 = imageId2,
       driverDob = convertTextToUTC output.dob,
-      driverName = output.name,
+      driverName,
       licenseNumber = edl,
       licenseExpiry = expiry,
       classOfVehicles,

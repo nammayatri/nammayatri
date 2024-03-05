@@ -25,7 +25,7 @@ import Control.Applicative ((<|>))
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
-import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
+import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
@@ -45,7 +45,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
+import qualified Storage.Queries.IdfyVerification as IVQuery
 import Storage.Queries.Person as QP
 import qualified Tools.Verification as Verification
 
@@ -119,7 +119,7 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
 onVerify resp respDump = do
   verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
-  IVQuery.updateResponse resp.request_id resp.status respDump
+  IVQuery.updateResponse resp.status (Just respDump) resp.request_id
   let resultStatus = getResultStatus resp.result
   if resultStatus == (Just "source_down")
     then do
@@ -143,7 +143,7 @@ onVerify resp respDump = do
 scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
 scheduleRetryVerificationJob verificationReq = do
   maxShards <- asks (.maxShards)
-  let scheduleTime = calculateScheduleTime verificationReq.retryCount
+  let scheduleTime = calculateScheduleTime (fromMaybe 0 verificationReq.retryCount)
   createJobIn @_ @'RetryDocumentVerification scheduleTime maxShards $
     RetryDocumentVerificationJobData
       { requestId = verificationReq.requestId

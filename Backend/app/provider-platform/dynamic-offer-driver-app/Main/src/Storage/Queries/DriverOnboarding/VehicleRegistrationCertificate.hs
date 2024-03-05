@@ -15,8 +15,8 @@
 
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
-import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Vehicle as Vehicle
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

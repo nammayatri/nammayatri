@@ -95,7 +95,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
+import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error

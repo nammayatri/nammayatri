@@ -19,9 +19,9 @@ import qualified Database.Beam as B
 import Domain.Types.DriverInformation
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.DriverOnboarding.DriverRCAssociation
-import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
+import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant.MerchantOperatingCity as CQMOC
 import Domain.Types.Person
@@ -36,14 +36,14 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
 import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamRC
-import qualified Storage.Beam.DriverOnboarding.IdfyVerification as BeamIV
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
+import qualified Storage.Beam.IdfyVerification as BeamIV
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverOnboarding.DriverLicense ()
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation ()
-import qualified Storage.Queries.DriverOnboarding.IdfyVerification ()
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
+import qualified Storage.Queries.IdfyVerification ()
 import qualified Storage.Queries.Person ()
 
 data DriverDocsInfo = DriverDocsInfo
