@@ -191,6 +191,8 @@ homeScreen = do
     GoToNammaSafety updatedState triggerSos showTestDrill -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAMMASAFETY updatedState triggerSos showTestDrill)
+    GoToSafetySettingScreen -> do
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_SAFETY_SETTING_SCREEN)
     SafetySupport updatedState isSafe -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ SAFETY_SUPPORT updatedState isSafe)

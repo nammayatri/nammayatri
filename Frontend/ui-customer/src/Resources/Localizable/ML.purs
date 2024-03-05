@@ -1021,3 +1021,8 @@ getML stringKey =
         CONFIRMING_SELECTED_PROVIDER -> "ഇതിൽ തിരഞ്ഞെടുത്ത ദാതാവിനെ സ്ഥിരീകരിക്കുന്നു: "
         BOOK_TOP_PROVIDER -> "ബുക്ക് ടോപ്പ് പ്രൊവൈഡർ"
         CHOOSE_FROM_PROVIDERS -> "ലഭ്യമായ എല്ലാ ദാതാക്കളിൽ നിന്നും തിരഞ്ഞെടുക്കുക"
+        ADDITIONAL_FEATURES_ON merchantName -> merchantName <> " ഉപയോഗിച്ച് അധിക പ്രയോജനങ്ങൾ അനുഭവിക്കുക"
+        NOTIFY_YOUR_EC -> ""
+        EC_CAN_RESPOND -> ""
+        QUICK_SUPPORT merchantName -> ""
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> ""

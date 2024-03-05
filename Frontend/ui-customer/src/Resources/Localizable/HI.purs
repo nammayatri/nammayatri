@@ -1020,3 +1020,8 @@ getHI stringKey =
         CONFIRMING_SELECTED_PROVIDER -> "चयनित प्रदाता की पुष्टि की जा रही है:"
         BOOK_TOP_PROVIDER -> "बुक टॉप प्रदाता"
         CHOOSE_FROM_PROVIDERS -> "सभी उपलब्ध प्रदाताओं में से चुनें"
+        ADDITIONAL_FEATURES_ON merchantName -> merchantName <> " पर अतिरिक्त सुविधाएं"
+        NOTIFY_YOUR_EC -> ""
+        EC_CAN_RESPOND -> ""
+        QUICK_SUPPORT merchantName -> ""
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> ""

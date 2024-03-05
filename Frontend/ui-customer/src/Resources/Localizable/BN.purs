@@ -1020,3 +1020,8 @@ getBN stringKey =
         CONFIRMING_SELECTED_PROVIDER -> "নির্বাচিত প্রদানকারীকে এতে নিশ্চিত করা হচ্ছে: "
         BOOK_TOP_PROVIDER -> "বুক শীর্ষ প্রদানকারী"
         CHOOSE_FROM_PROVIDERS -> "সমস্ত উপলব্ধ প্রদানকারী থেকে চয়ন করুন"
+        ADDITIONAL_FEATURES_ON merchantName -> merchantName <> " এ অতিরিক্ত বৈশিষ্ট্য"
+        NOTIFY_YOUR_EC -> ""
+        EC_CAN_RESPOND -> ""
+        QUICK_SUPPORT merchantName -> ""
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "" 

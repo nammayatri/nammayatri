@@ -328,7 +328,7 @@ config =
       [ { cityCode : "std:080"
         , cityName : "Bangalore"
         , iopConfig : {
-          enable : false,
+          enable : true,
           autoSelectTime : 8
           }
         , geoCodeConfig :
@@ -348,7 +348,7 @@ defaultCityConfig =
   { cityName : "",
     cityCode : "",
     iopConfig : {
-      enable : false,
+      enable : true,
       autoSelectTime : 8
     },
     geoCodeConfig :

@@ -850,36 +850,6 @@ referralView push state =
       ] <> FontStyle.tags TypoGraphy
     ]
 
-nammaSafetyView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-nammaSafetyView push state =
-  linearLayout
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver]
-  , stroke $ "1," <> Color.grey900
-  , margin $ MarginHorizontal 16 16
-  , cornerRadius 20.0
-  , background Color.white900
-  , accessibility ENABLE
-  , accessibilityHint $ "Safety + : Button : Select to view S O S Options"
-  , gravity CENTER_VERTICAL
-  , clickable true
-  , padding (Padding 12 8 12 8)
-  ][ imageView 
-    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_namma_safety"
-    , width $ V 24
-    , height $ V 24
-    , margin $ MarginRight 4
-    ]
-  , textView $ 
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , color Color.blue900
-    , accessibility DISABLE
-    , text $ getString NAMMA_SAFETY
-    ] <> FontStyle.body1 TypoGraphy
-  ]
-
 sosView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 sosView push state =
   relativeLayout
@@ -914,8 +884,8 @@ sosView push state =
         , shadow $ Shadow 0.1 2.0 10.0 24.0 Color.greyBackDarkColor 0.5
         , background Color.white900
         , cornerRadius 20.0
-        , onClick push $ const OpenEmergencyHelp
-        , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
+        , onClick push $ const (if onUsRide then OpenEmergencyHelp else OpenOffUsSOS)
+        -- , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
         , rippleColor Color.rippleShade
         , padding $ Padding 12 8 12 8
         ]
@@ -939,7 +909,7 @@ sosView push state =
           , accessibilityHint $ "S O S Button, Select to view S O S options"
           , accessibility ENABLE
           , onClick push $ const OpenEmergencyHelp
-          , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
+          -- , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
           ]
       , textView
           $ [ text $ getString SAFETY_CENTER

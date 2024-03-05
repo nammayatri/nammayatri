@@ -128,7 +128,7 @@ driverDetailsView config uid =
           , accessibility DISABLE 
           , alpha if config.providerType == ONUS then 1.0 else 0.5
           ][  imageView
-              [ imageWithFallback (getVehicleImage config.vehicleVariant config.vehicleDetails config.merchantCity)
+              [ imageWithFallback $ (getVehicleImage config.vehicleVariant config.vehicleDetails config.merchantCity)
               , height $ V 125
               , gravity RIGHT
               , width MATCH_PARENT

@@ -38,7 +38,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, spaceSeparatedPascalCase)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.EmergencyContactsScreen.View (getFirstChar, getLastChar)
@@ -52,6 +52,7 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -86,7 +87,7 @@ view push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , background Color.white900
+        , background if state.props.isOffUs then Color.black900 else Color.white900
         , padding padding'
         , onBackPressed push $ const BackPressed
         ]
@@ -101,15 +102,20 @@ view push state =
     else
       (PaddingLeft 0)
 
-  headerConfig = (Header.config Language) { showLearnMore = state.data.hasCompletedSafetySetup }
+  headerConfig = if state.props.isOffUs then 
+    (Header.config Language) { showLearnMore = state.data.hasCompletedSafetySetup, showCrossImage = true, useLightColor = true }
+    else
+      (Header.config Language) { showLearnMore = state.data.hasCompletedSafetySetup }
 
 ------------------------------------- dashboardView -----------------------------------
 dashboardView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 dashboardView state push =
+  let isOffUs = state.props.isOffUs
+  in
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , background Color.white900
+    , background if isOffUs then Color.black900 else Color.white900
     , orientation VERTICAL
     , visibility $ boolToVisibility $ not state.props.showShimmer
     ]
@@ -117,20 +123,172 @@ dashboardView state push =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        ]
-        [ linearLayout
-            [ height $ V 1
-            , width MATCH_PARENT
-            , background Color.greySmoke
-            ]
-            []
-        , nammaSafetyFeaturesView state push showFeatures
-        , userSettingsView state push $ not showFeatures
-        ]
+        ] if isOffUs then 
+          [ nammaSafetyViewOffUs state push
+          , userSettingsView state push $ not showFeatures
+          ]
+          else
+          [ nammaSafetyFeaturesView state push showFeatures
+          , userSettingsView state push $ not showFeatures
+          ]
     ]
   where
   showFeatures = (not state.data.hasCompletedSafetySetup) && (not state.props.onRide)
 
+nammaSafetyViewOffUs :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+nammaSafetyViewOffUs state push =
+  PrestoAnim.animationSet
+    [ fadeIn true
+    ]
+    $ relativeLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , orientation VERTICAL
+        ]
+        [ featuresViewOffUs state push
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , background Color.black900
+            , alignParentBottom "true,-1"
+            ]
+            [ callPoliceView state push CALL_POLICE
+        ]
+        ]
+
+
+callPoliceView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> STR -> forall w. PrestoDOM (Effect Unit) w
+callPoliceView state push text' =
+  linearLayout
+    ( [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , padding $ PaddingVertical 12 12
+      , margin $ Margin 12 12 12 12
+      , cornerRadius 8.0
+      , background Color.redOpacity20
+      ]
+        <> [ rippleColor Color.rippleShade, onClick push $ const $ DialPolice ]
+    )
+    [ imageView
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_police"
+        , height $ V 26
+        , width $ V 26
+        ]
+    , textView
+        $ [ text $ getString text'
+          , gravity CENTER
+          , color Color.white900
+          , margin $ MarginLeft 6
+          ]
+        <> FontStyle.subHeading2 TypoGraphy
+    ]
+
+featuresViewOffUs :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+featuresViewOffUs state push =
+  let merchant = spaceSeparatedPascalCase $ show (getMerchant FunctionCall) -- Need to check other merchants and update logic
+  in
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , layoutGravity "center_vertical"
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , background Color.black900
+        , gravity CENTER
+        , orientation VERTICAL
+        , layoutGravity "center_vertical"
+        , margin $ Margin 16 20 16 6
+        ]
+        [ flexBoxLayout
+          [
+            height MATCH_PARENT
+          , width WRAP_CONTENT
+          , justifyContent JUSTIFY_START
+          , flexDirection COLUMN
+          , flexWrap WRAP
+          , alignItems ALIGN_STRETCH
+          , orientation HORIZONTAL
+          , padding (Padding 10 6 10 6)
+          ][
+            textView
+            $ [ text $ getString (ADDITIONAL_FEATURES_ON merchant)
+              , singleLine false
+              , color Color.white900
+              ]
+            <> FontStyle.subHeading1 TypoGraphy
+          , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , padding $ PaddingHorizontal 16 16
+            , margin $ MarginTop 12
+            , background Color.black800
+            , visibility GONE
+            ]
+            [ imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ic_namma_yatri_logo"
+                , height $ V 20
+                , width $ V 20
+                , margin $ MarginRight 8
+                ]
+            , textView
+                $ [ text "Guaranteed Ride"
+                  , color Color.white900
+                  , weight 1.0
+                  , height WRAP_CONTENT
+                  , singleLine false
+                  ]
+                <> FontStyle.tags TypoGraphy
+            ]
+          ]
+        , linearLayout 
+          [
+            width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , cornerRadius 12.0
+          , stroke $ "1," <> Color.black700
+          , background Color.blackOpacity12
+          ]
+          [ 
+            linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            , cornerRadius 12.0
+            ]
+            [ imageWithTextView (getString NOTIFY_YOUR_EC) true state
+            , imageWithTextView (getString EC_CAN_RESPOND) true state
+            , imageWithTextView (getString $ QUICK_SUPPORT merchant) true state
+            ]
+        , linearLayout
+            [ height $ V 1
+            , width MATCH_PARENT
+            , margin $ Margin 16 12 16 0
+            , background Color.black700
+            ]
+            []
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity CENTER
+            , padding $ PaddingVertical 16 20
+            , onClick push $ const $ GoToEducationView
+            ]
+            [ textView
+                $ [ textFromHtml $ "<u>" <> (getString $ LEARN_ABOUT_APP_SAFETY_FEAT merchant) <> "</u>"
+                  , color Color.blue800
+                  ]
+                <> FontStyle.body1 TypoGraphy
+            ]
+          ]
+        ]
+    ]
 -- ---------------------------------- nammaSafetyFeaturesView -----------------------------------
 nammaSafetyFeaturesView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
 nammaSafetyFeaturesView state push visibility' =
@@ -188,11 +346,11 @@ featuresView state push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             ]
-            [ imageWithTextView (getString AUTOMATIC_CALL_PLACED_TO_EMERGENCY_CONTACTS) true
-            , imageWithTextView (getString $ EMERGENCY_CONTACTS_CAN_FOLLOW "EMERGENCY_CONTACTS_CAN_FOLLOW") true
-            , imageWithTextView (getString GET_OPTIONS_TO_DIRECTLY_CALL_POLICE) true
-            , imageWithTextView (getString $ ALERT_SAFETY_TEAM "ALERT_SAFETY_TEAM") true
-            , imageWithTextView (getString OPTION_TO_REPORT_A_SAFETY_ISSUE) true
+            [ imageWithTextView (getString AUTOMATIC_CALL_PLACED_TO_EMERGENCY_CONTACTS) true state
+            , imageWithTextView (getString $ EMERGENCY_CONTACTS_CAN_FOLLOW "EMERGENCY_CONTACTS_CAN_FOLLOW") true state
+            , imageWithTextView (getString GET_OPTIONS_TO_DIRECTLY_CALL_POLICE) true state
+            , imageWithTextView (getString $ ALERT_SAFETY_TEAM "ALERT_SAFETY_TEAM") true state
+            , imageWithTextView (getString OPTION_TO_REPORT_A_SAFETY_ISSUE) true state
             ]
         , linearLayout
             [ height $ V 1
@@ -217,13 +375,14 @@ featuresView state push =
         ]
     ]
 
-imageWithTextView :: String -> Boolean -> forall w. PrestoDOM (Effect Unit) w
-imageWithTextView text' isActive =
+imageWithTextView :: String -> Boolean -> NammaSafetyScreenState -> forall w. PrestoDOM (Effect Unit) w
+imageWithTextView text' isActive state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ PaddingHorizontal 16 16
     , margin $ MarginTop 12
+    , background if state.props.isOffUs then Color.blackOpacity12 else Color.blue600
     ]
     [ imageView
         [ imageWithFallback $ fetchImage FF_ASSET if isActive then "ny_ic_check" else "ny_ic_ellipse_outline_grey"
@@ -233,7 +392,7 @@ imageWithTextView text' isActive =
         ]
     , textView
         $ [ text text'
-          , color Color.black800
+          , color if state.props.isOffUs then Color.white900 else Color.black800
           , weight 1.0
           , height WRAP_CONTENT
           , singleLine false
@@ -362,8 +521,6 @@ toggleSwitchViewLayout action isActive text' push visibility' marginLeft =
     , toggleSwitchView isActive true action push
     ]
 
-getHeaderTitle :: SafetySetupStage -> String
-getHeaderTitle stage = getString NAMMA_SAFETY
 
 toggleSwitchView :: Boolean -> Boolean -> Action -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 toggleSwitchView isActive visibility' action push =

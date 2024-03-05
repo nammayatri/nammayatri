@@ -243,6 +243,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_REPORT_SAFETY_ISSUE HomeScreenState
                         | GO_TO_MY_METRO_TICKETS
                         | GO_TO_METRO_BOOKING HomeScreenState
+                        | GO_TO_SAFETY_SETTING_SCREEN
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

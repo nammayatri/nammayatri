@@ -1023,3 +1023,8 @@ getKN stringKey =
         CONFIRMING_SELECTED_PROVIDER -> "ಇದರಲ್ಲಿ ಆಯ್ಕೆಮಾಡಿದ ಪೂರೈಕೆದಾರರನ್ನು ದೃಢೀಕರಿಸಲಾಗುತ್ತಿದೆ: "
         BOOK_TOP_PROVIDER -> "ಬುಕ್ ಟಾಪ್ ಪ್ರೊವೈಡರ್"
         CHOOSE_FROM_PROVIDERS -> "ಎಲ್ಲಾ ಲಭ್ಯವಿರುವ ಪೂರೈಕೆದಾರರಿಂದ ಆರಿಸಿ"
+        ADDITIONAL_FEATURES_ON merchantName -> merchantName <> "ನಲ್ಲಿ ಹೆಚ್ಚಿನ ವೈಶಿಷ್ಟ್ಯಗಳು"
+        NOTIFY_YOUR_EC -> ""
+        EC_CAN_RESPOND -> ""
+        QUICK_SUPPORT merchantName -> ""
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> ""

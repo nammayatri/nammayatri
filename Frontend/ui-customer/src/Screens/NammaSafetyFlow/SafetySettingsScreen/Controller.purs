@@ -81,6 +81,7 @@ data Action
   | GoToEducationView
   | StartTestDrill PrimaryButtonController.Action
   | ContactAction ContactCircle.Action
+  | DialPolice
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -164,5 +165,10 @@ eval (StartTestDrill PrimaryButtonController.OnClick) state =
             , showTestDrill = false
             }
           }
+
+eval DialPolice state = do
+   void $ pure $ HU.performHapticFeedback unit
+   pure $ showDialer "112" false
+   continue state
 
 eval _ state = continue state

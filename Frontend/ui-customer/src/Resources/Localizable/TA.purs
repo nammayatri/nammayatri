@@ -1036,3 +1036,8 @@ getTA stringKey =
     CONFIRMING_SELECTED_PROVIDER -> "தேர்ந்தெடுக்கப்பட்ட வழங்குநரை இதில் உறுதிப்படுத்துகிறது: "
     BOOK_TOP_PROVIDER -> "புக் டாப் வழங்குநர்"
     CHOOSE_FROM_PROVIDERS -> "கிடைக்கும் அனைத்து வழங்குநர்களிடமிருந்தும் தேர்வு செய்யவும்"
+    ADDITIONAL_FEATURES_ON merchantName -> "மேலும் அம்சங்கள் " <> merchantName <> " மூலம்"
+    NOTIFY_YOUR_EC -> ""
+    EC_CAN_RESPOND -> ""
+    QUICK_SUPPORT merchantName -> ""
+    LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> ""

@@ -64,6 +64,7 @@ initData =
       , showCallPolice : false
       , shouldCallAutomatically : false
       , fromDeepLink : false
+      , isOffUs : false
       }
   }
 

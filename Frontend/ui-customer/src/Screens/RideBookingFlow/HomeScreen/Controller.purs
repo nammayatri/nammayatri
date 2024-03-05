@@ -771,6 +771,7 @@ data ScreenOutput = LogoutUser
                   | GoToReportSafetyIssue HomeScreenState
                   | GoToMyMetroTickets HomeScreenState
                   | GoToMetroTicketBookingFlow HomeScreenState
+                  | GoToSafetySettingScreen 
 
 data Action = NoAction
             | BackPressed
@@ -896,6 +897,7 @@ data Action = NoAction
             | NotificationAnimationEnd
             | ShareRide
             | OpenEmergencyHelp
+            | OpenOffUsSOS
             | MessageViewAnimationEnd
             | RepeatRide Int Trip
             | Scroll Number
@@ -1813,6 +1815,11 @@ eval OpenEmergencyHelp state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_ic_safety_center_clicked"
   exit $ GoToNammaSafety state true false
 
+eval OpenOffUsSOS state = do
+  _ <- pure $ performHapticFeedback unit
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_ic_safety_center_clicked"
+  exit $ GoToSafetySettingScreen
+
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = continueWithCmd state [pure $ ShareRide]
@@ -2553,11 +2560,15 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelTimer)) sta
 eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (PM.ButtonClick (PrimaryButtonController.OnClick)))) state = do
   void $ pure $ updateLocalStage FindingQuotes
   void $ pure $ clearTimerWithId state.data.iopState.timerId
+  void $ pure $ spy "ButtonClick state" state
+  
   let updatedState = state{props{ currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}, data { iopState { providerSelectionStage = false}}}
+  void $ pure $ spy "ButtonClick updatedState" updatedState
   updateAndExit (updatedState) (GetQuotes updatedState)
 
 eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (PM.FavClick item))) state = do
   let selectedItem = find (\quote -> quote.id == item.id) state.data.specialZoneQuoteList 
+  void $ pure $ spy "quote" selectedItem
   case selectedItem of
     Just quote -> continue state { data { selectedEstimatesObject = quote}}
     _ -> continue state

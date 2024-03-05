@@ -822,7 +822,7 @@ homeScreenFlow = do
           else do
             pure unit
           void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-          void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
+          void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.data.selectedEstimatesObject.id)
           homeScreenFlow
     SELECT_ESTIMATE state -> do
         updateLocalStage SettingPrice
@@ -1543,6 +1543,9 @@ homeScreenFlow = do
       case (triggerSos || showtestDrill) of
         true -> activateSafetyScreenFlow
         false -> safetySettingsFlow
+    GO_TO_SAFETY_SETTING_SCREEN -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props{isOffUs = true } })
+      safetySettingsFlow
     SAFETY_SUPPORT state isSafe -> do
       res <- lift $ lift $ Remote.sendSafetySupport $ Remote.makeAskSupportRequest state.props.bookingId isSafe $ "User need help - Ride on different route"
       case res of

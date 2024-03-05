@@ -94,7 +94,7 @@ providerDetails state push =
   , gravity CENTER
   , cornerRadius 14.0
   , padding $ Padding 5 5 5 5
-  , visibility $ boolToVisibility $ state.data.selectedItem.providerType == ONUS
+  , visibility $ boolToVisibility $ state.data.selectedItem.providerType == OFFUS
   ][  imageView
         [ height $ V 20
         , width $ V 20

@@ -1022,3 +1022,8 @@ getFR stringKey =
         CONFIRMING_SELECTED_PROVIDER -> "Confirmation du fournisseur sélectionné dans : "
         BOOK_TOP_PROVIDER -> "Réservez le meilleur fournisseur"
         CHOOSE_FROM_PROVIDERS -> "Choisissez parmi tous les fournisseurs disponibles"
+        ADDITIONAL_FEATURES_ON merchantName -> "Fonctionnalités supplémentaires sur " <> merchantName
+        NOTIFY_YOUR_EC -> ""
+        EC_CAN_RESPOND -> ""
+        QUICK_SUPPORT merchantName -> ""
+        LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "" 
