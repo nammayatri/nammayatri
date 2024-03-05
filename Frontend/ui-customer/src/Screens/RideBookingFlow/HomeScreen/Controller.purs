@@ -1507,6 +1507,7 @@ eval ShowBookingPreference state = continue state {props {showBookingPreference 
 eval OpenSearchLocation state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ firebaseLogEvent "ny_user_hs_pickup_click"
+  let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.PickupSearch" "true"
   let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
   exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2, findPlaceIllustration = null state.data.locationList}, rideSearchProps{ sessionId = generateSessionId unit } }, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
 
@@ -1678,6 +1679,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
 
 eval WhereToClick state = do
   _ <- pure $ performHapticFeedback unit
+  let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
       updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }, rideSearchProps{sessionId = generateSessionId unit}}, data{source=(getString CURRENT_LOCATION)}}
   exit $ UpdateSavedLocation updateState 
@@ -1956,6 +1958,7 @@ eval (FavouriteLocationModelAC (FavouriteLocationModelController.FavouriteLocati
 
 eval (SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem)) state = if not state.props.isSrcServiceable then continue state else do 
   _ <- pure $ firebaseLogEvent ("ny_user_savedLoc_" <> show savedAddressType)
+  let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.SavedLocation." <> show savedAddressType) "true"
   tagClickEvent savedAddressType arrItem state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem))) state = tagClickEvent savedAddressType arrItem state
@@ -2551,7 +2554,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     }}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
-  let _ = unsafePerformEffect $ Events.addEventData "External.OneClick.SearchId" state.props.searchId
+  let _ = unsafePerformEffect $ Events.addEventData "External.SearchId" state.props.searchId
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   if state.data.currentSearchResultType == QUOTES then  do
     _ <- pure $ updateLocalStage ConfirmingRide

@@ -74,8 +74,9 @@ export const addEventData = function (key) {
           typeof window.events[key] === "undefined" &&
           typeof value !== "undefined" &&
           value !== ""
-        )
-          window.events[key] = value;
+        ) {
+          window.events[key] = { value, timestamp : new Date() };          
+        }
       } catch (error) {
         console.log("Add event data catch block" + error);
       }
