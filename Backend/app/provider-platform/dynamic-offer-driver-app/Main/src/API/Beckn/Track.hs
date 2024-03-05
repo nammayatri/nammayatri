@@ -23,6 +23,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
 import qualified Beckn.Types.Core.Taxi.API.Track as Track
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import BecknV2.Utils
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -39,7 +40,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import Tools.Error (GenericError (InvalidRequest))
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.Queries.Booking as QRB
+import Tools.Error
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -83,7 +86,13 @@ track transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBe
   if isBecknSpecVersion2
     then do
       logTagInfo "track APIV2 Flow" "Sending OnTrack APIV2"
-      context <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
+      booking <- QRB.findById dTrackReq.bookingId >>= fromMaybeM (BookingNotFound dTrackReq.bookingId.getId)
+      let vehicleCategory = Utils.mapVariantToVehicle booking.vehicleVariant
+      bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+      ttlInInt <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl")
+      let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+          ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+      context <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttlToISO8601Duration)
       Callback.withCallback dTrackRes.transporter "TRACK" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
         -- there should be DOnTrack.onTrack, but it is empty anyway
         pure $

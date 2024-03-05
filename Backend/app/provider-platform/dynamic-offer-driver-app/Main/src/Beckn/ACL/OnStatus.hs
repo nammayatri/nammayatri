@@ -35,6 +35,7 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as Ride
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
+import BecknV2.Utils
 import Domain.Types.Beckn.Status as DStatus
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
@@ -170,7 +171,7 @@ buildOnStatusReqV2 merchant booking req = do
   buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req farePolicy bppConfig
 
 buildOnStatusReqV2' ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Context.Action ->
   Context.Domain ->
   Text ->
@@ -184,7 +185,10 @@ buildOnStatusReqV2' ::
   DBC.BecknConfig ->
   m Spec.OnStatusReq
 buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country booking req mbFarePolicy bppConfig = do
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
+  ttlInInt <- bppConfig.onStatusTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttlToISO8601Duration)
   message <- mkOnStatusMessageV2 req mbFarePolicy bppConfig
   pure $
     Spec.OnStatusReq

@@ -29,6 +29,10 @@ BecknConfig:
     onSelectTTLSec: Maybe Int
     onInitTTLSec: Maybe Int
     onConfirmTTLSec: Maybe Int
+    onStatusTTLSec: Maybe Int
+    onUpdateTTLSec: Maybe Int
+    onTrackTTLSec: Maybe Int
+    onCancelTTLSec: Maybe Int
 
   types:
     VehicleCategory:

@@ -40,6 +40,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -79,7 +80,8 @@ data CancelRes = CancelRes
     transactionId :: Text,
     merchant :: DM.Merchant,
     cancelStatus :: Text,
-    city :: Context.City
+    city :: Context.City,
+    vehicleVariant :: DVeh.VehicleVariant
   }
 
 data CancelSearch = CancelSearch
@@ -90,7 +92,8 @@ data CancelSearch = CancelSearch
     searchReqId :: Id SearchRequest,
     sendToBpp :: Bool,
     merchant :: DM.Merchant,
-    city :: Context.City
+    city :: Context.City,
+    vehicleVariant :: DVeh.VehicleVariant
   }
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
@@ -117,6 +120,7 @@ softCancel bookingId _ = do
         transactionId = booking.transactionId,
         merchant = merchant,
         cancelStatus = show Enums.SOFT_CANCEL,
+        vehicleVariant = booking.vehicleVariant,
         ..
       }
 
@@ -167,6 +171,7 @@ cancel bookingId _ req = do
         transactionId = booking.transactionId,
         merchant = merchant,
         cancelStatus = show Enums.CONFIRM_CANCEL,
+        vehicleVariant = booking.vehicleVariant,
         ..
       }
   where
@@ -223,6 +228,7 @@ mkDomainCancelSearch personId estimateId = do
             estimateStatus = estStatus,
             sendToBpp,
             merchant = merchant,
+            vehicleVariant = estimate.vehicleVariant,
             ..
           }
 

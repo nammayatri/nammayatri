@@ -29,6 +29,10 @@ BecknConfig:
     confirmTTLSec: Maybe Int
     confirmBufferTTLSec: Maybe Int
     bapIFSC: Maybe Text
+    statusTTLSec: Maybe Int
+    trackTTLSec: Maybe Int
+    ratingTTLSec: Maybe Int
+    cancelTTLSec: Maybe Int
 
   types:
     VehicleCategory:
