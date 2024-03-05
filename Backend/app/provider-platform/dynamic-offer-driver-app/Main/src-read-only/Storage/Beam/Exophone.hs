@@ -38,6 +38,6 @@ instance B.Table ExophoneT where
 
 type Exophone = ExophoneT Identity
 
-$(enableKVPG ''ExophoneT ['id] [['backupPhone, 'merchantOperatingCityId, 'primaryPhone]])
+$(enableKVPG ''ExophoneT ['id] [['backupPhone], ['merchantOperatingCityId], ['primaryPhone]])
 
 $(mkTableInstances ''ExophoneT "exophone")

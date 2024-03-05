@@ -11,7 +11,7 @@
     };
 
     namma-dsl = {
-      url = "github:nammayatri/namma-dsl/9097be782014920981afeef41e04583a9fe5d06c";
+      url = "github:nammayatri/namma-dsl";
     };
 
     beckn-gateway = {
