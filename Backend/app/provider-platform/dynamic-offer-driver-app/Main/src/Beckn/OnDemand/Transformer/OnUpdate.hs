@@ -23,6 +23,7 @@ import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
+import BecknV2.Utils
 import Data.Coerce (coerce)
 import qualified Data.List as List
 import qualified Domain.Types.BecknConfig as DBC
@@ -31,6 +32,7 @@ import Domain.Types.Common
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.OnUpdate as OU
 import EulerHS.Prelude hiding (id)
+import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -54,7 +56,11 @@ buildOnUpdateReqV2 ::
   OU.OnUpdateBuildReq ->
   m Spec.OnUpdateReq
 buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req = do
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  ttlInInt <- bppConfig.onUpdateTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttlToISO8601Duration)
   mbDriverQuote <- QDQ.findById $ Id booking.quoteId
   farePolicy <- case mbDriverQuote of
     Nothing -> do
@@ -66,8 +72,7 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country b
           logWarning $ "Fare Policy Not Found for estimateId " <> show driverQuote.estimateId
           return Nothing
         Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
-  becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
-  message <- mkOnUpdateMessageV2 req farePolicy becknConfig
+  message <- mkOnUpdateMessageV2 req farePolicy bppConfig
   pure $
     Spec.OnUpdateReq
       { onUpdateReqError = Nothing,

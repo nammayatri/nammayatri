@@ -17,6 +17,10 @@ INSERT INTO
         init_ttl_sec,
         confirm_ttl_sec,
         confirm_buffer_ttl_sec,
+        track_ttl_sec,
+        status_ttl_sec,
+        rating_ttl_sec,
+        cancel_ttl_sec,
         payment_params_json
     )
 VALUES
@@ -37,7 +41,11 @@ VALUES
         120,
         120,
         120,
+        10,
+        30,
+        30,
         120,
+        30,
         '{"bankAccNumber": "xyz@upi","bankCode": "xyz"}'
     ),
     (
@@ -57,6 +65,10 @@ VALUES
         120,
         120,
         120,
+        10,
+        30,
+        30,
         120,
+        30,
         '{"bankAccNumber": "xyz@upi","bankCode": "xyz"}'
     );

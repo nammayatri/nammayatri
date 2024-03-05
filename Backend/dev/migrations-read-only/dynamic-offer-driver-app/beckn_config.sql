@@ -32,3 +32,12 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_select_ttl_sec int
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_search_ttl_sec integer ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_init_ttl_sec integer ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_confirm_ttl_sec integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_track_ttl_sec integer ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_status_ttl_sec integer ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_cancel_ttl_sec integer ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_update_ttl_sec integer ;
