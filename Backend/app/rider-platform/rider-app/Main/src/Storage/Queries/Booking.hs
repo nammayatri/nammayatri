@@ -278,6 +278,7 @@ cancelBookings bookingIds now =
 instance FromTType' BeamB.Booking Booking where
   fromTType' BeamB.BookingT {..} = do
     mappings <- QLM.findByEntityId id
+    logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
     (fl, bookingDetails) <-
       if null mappings
         then do
@@ -305,6 +306,9 @@ instance FromTType' BeamB.Booking Booking where
 
           let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
               toLocId = (.locationId.getId) <$> mbToLocationMapping
+
+          logTagDebug ("bookingId:-" <> id) $ "To Location Mapping:-" <> show mbToLocationMapping
+          logTagDebug ("bookingId:-" <> id) $ "To Location Id:-" <> show toLocId
 
           bookingDetails <- case fareProductType of
             DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
@@ -360,24 +364,27 @@ instance FromTType' BeamB.Booking Booking where
             serviceTierName = serviceTierName
           }
     where
-      buildOneWayDetails toLocid = do
-        toLocation <- maybe (pure Nothing) (QL.findById . Id) toLocid >>= fromMaybeM (InternalError "toLocation is null for one way booking")
+      buildOneWayDetails mbToLocid = do
+        toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
+        toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.OneWayBookingDetails
             { toLocation = toLocation,
               distance = distance'
             }
-      buildInterCityDetails toLocid = do
-        toLocation <- maybe (pure Nothing) (QL.findById . Id) toLocid >>= fromMaybeM (InternalError "toLocation is null for one way booking")
+      buildInterCityDetails mbToLocid = do
+        toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
+        toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.InterCityBookingDetails
             { toLocation = toLocation,
               distance = distance'
             }
-      buildOneWaySpecialZoneDetails toLocid = do
-        toLocation <- maybe (pure Nothing) (QL.findById . Id) toLocid >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
+      buildOneWaySpecialZoneDetails mbToLocid = do
+        toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
+        toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
         pure
           DRB.OneWaySpecialZoneBookingDetails
