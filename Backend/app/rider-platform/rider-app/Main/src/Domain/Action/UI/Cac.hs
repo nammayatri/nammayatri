@@ -26,7 +26,7 @@ import Tools.Error
 getGetUiConfigs :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Int -> Environment.Flow Data.Aeson.Object
 getGetUiConfigs (mbPersonId, _) toss = do
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
+  let useCACConfig = maybe False (\sc -> sc.useCACForFrontend) systemConfigs
   if useCACConfig
     then case mbPersonId of
       Just personId -> do
