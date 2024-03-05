@@ -951,7 +951,7 @@ mkRateCardTag :: Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.Tag
 mkRateCardTag estimatedDistance farePolicy = do
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance) farePolicy
       farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
-  Just $
+  Just
     [ Spec.TagGroup
         { tagGroupDisplay = Just False,
           tagGroupDescriptor =
