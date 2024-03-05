@@ -20,9 +20,11 @@ module Beckn.ACL.Track
   )
 where
 
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Track as Track
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import BecknV2.Utils
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
@@ -34,6 +36,9 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.Queries.Booking as QRB
+import Tools.Error
 
 data TrackBuildReq = TrackBuildReq
   { bppBookingId :: Id DBooking.BPPBooking,
@@ -68,7 +73,9 @@ mkTrackMessage res = Track.TrackMessage res.bppBookingId.getId
 buildTrackReqV2 ::
   ( MonadFlow m,
     HedisFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   TrackBuildReq ->
   m Spec.TrackReq
@@ -77,7 +84,12 @@ buildTrackReqV2 res = do
   Redis.setExp (key messageId) res.bppRideId 1800 --30 mins
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just "PT30S")
+  booking <- QRB.findByBPPBookingId res.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> res.bppBookingId.getId)
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  ttlInInt <- bapConfig.trackTTLSec & fromMaybeM (InternalError "Invalid ttl")
+  let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
+      ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
+  context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country (Just ttlToISO8601Duration)
   pure $ Spec.TrackReq context $ mkTrackMessageV2 res
   where
     key messageId = "Track:bppRideId:" <> messageId

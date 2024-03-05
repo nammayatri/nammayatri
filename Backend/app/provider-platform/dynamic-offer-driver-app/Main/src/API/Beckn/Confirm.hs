@@ -19,6 +19,7 @@ import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import BecknV2.Utils
 import Data.Coerce (coerce)
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types.Common
@@ -32,6 +33,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.TimeRFC339 (convertRFC3339ToUTC)
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
@@ -72,9 +74,12 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
     country <- Utils.getContextCountry context
     isValueAddNP <- CQVAN.isValueAddNP bapId
     dConfirmReq <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
-
+    now <- getCurrentTime
+    confirmTtl <- reqV2.confirmReqContext.contextTtl & fromMaybeM (InvalidRequest "Missing ttl")
+    timestamp <- reqV2.confirmReqContext.contextTimestamp >>= Just . convertRFC3339ToUTC & fromMaybeM (InvalidRequest "Missing timestamp")
+    let validTill = addDurationToUTCTime timestamp (fromJust (parseISO8601Duration confirmTtl))
+    when (validTill < now) $ throwError $ InvalidRequest "Confirm request has expired"
     Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
-      now <- getCurrentTime
       (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
