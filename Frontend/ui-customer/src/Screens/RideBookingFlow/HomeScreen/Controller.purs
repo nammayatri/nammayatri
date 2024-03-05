@@ -1506,6 +1506,7 @@ eval ShowBookingPreference state = continue state {props {showBookingPreference 
 
 eval OpenSearchLocation state = do
   _ <- pure $ performHapticFeedback unit
+  _ <- pure $ firebaseLogEvent "ny_user_hs_pickup_click"
   let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
   exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2, findPlaceIllustration = null state.data.locationList}, rideSearchProps{ sessionId = generateSessionId unit } }, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
 
@@ -1656,7 +1657,6 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
   updateAndExit newState $ LocationSelected (fromMaybe dummyListItem (if state.props.isSource == Just false then state.data.selectedLocationListItem else Nothing)) (state.props.isSource == Just false) newState
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
-    _ <- pure $ spy "state homeScreen" state
     case state.props.currentStage of
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
@@ -1954,7 +1954,9 @@ eval (FavouriteLocationModelAC (FavouriteLocationModelController.FavouriteLocati
       pure $ setText (getNewIDWithTag "DestinationEditText") item.savedLocation
       exit $ LocationSelected item  false newState
 
-eval (SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem)) state = if not state.props.isSrcServiceable then continue state else tagClickEvent savedAddressType arrItem state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
+eval (SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem)) state = if not state.props.isSrcServiceable then continue state else do 
+  _ <- pure $ firebaseLogEvent ("ny_user_savedLoc_" <> show savedAddressType)
+  tagClickEvent savedAddressType arrItem state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem))) state = tagClickEvent savedAddressType arrItem state
 
