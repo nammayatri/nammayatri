@@ -55,7 +55,7 @@ startProducerWithEnv flowRt appCfg appEnv = do
           appCfg.kvConfigUpdateFrequency
       )
         >> L.setOption KafkaConn appEnv.kafkaProducerTools
-        >> L.setOption Tables (KUC.Tables [] [] True)
+        >> L.setOption Tables (KUC.Tables [] [] True False)
     )
   runFlowR flowRt appEnv $ do
     loopGracefully $ bool [PF.runProducer] [PF.runReviver, PF.runProducer] appEnv.runReviver

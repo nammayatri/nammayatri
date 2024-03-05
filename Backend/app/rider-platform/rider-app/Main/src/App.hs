@@ -111,7 +111,7 @@ runRiderApp' appCfg = do
           try QMerchant.loadAllBaps
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
-        if kvConfigs.useCAC
+        if kvConfigs.useCAC || kvConfigs.useCACForFrontend
           then do
             _ <- liftIO $ CC.forkIO $ createCAC appCfg
             logInfo "Starting rider app using configs from CAC."

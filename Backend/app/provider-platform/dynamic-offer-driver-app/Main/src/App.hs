@@ -112,7 +112,7 @@ runDynamicOfferDriverApp' appCfg = do
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
-        if kvConfigs.useCAC
+        if kvConfigs.useCAC || kvConfigs.useCACForFrontend
           then do
             liftIO $ setEnv "CAC_HOST" appCfg.cacConfig.host
             liftIO $ setEnv "CAC_INTERVAL" (show appCfg.cacConfig.interval)
