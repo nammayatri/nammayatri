@@ -153,7 +153,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 mode = dpRes.mode,
                 goHomeRequestId = dpwRes.goHomeReqId,
                 rideFrequencyScore = dpwRes.intelligentScores.rideFrequency,
-                customerCancellationDues = searchReq.customerCancellationDues,
+                customerCancellationDues = fromMaybe 0 searchReq.customerCancellationDues,
                 ..
               }
       pure searchRequestForDriver

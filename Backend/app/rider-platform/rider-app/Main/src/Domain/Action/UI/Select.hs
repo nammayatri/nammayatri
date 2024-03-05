@@ -43,6 +43,7 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Types.Beckn.Context as Context
@@ -56,9 +57,11 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -87,7 +90,9 @@ data DSelectRes = DSelectRes
     customerExtraFee :: Maybe Money,
     merchant :: DM.Merchant,
     city :: Context.City,
-    autoAssignEnabled :: Bool
+    autoAssignEnabled :: Bool,
+    phoneNumber :: Maybe Text,
+    isValueAddNP :: Bool
   }
 
 newtype DSelectResultRes = DSelectResultRes
@@ -141,6 +146,8 @@ select2 personId estimateId req@DSelectReq {..} = do
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   let searchRequestId = estimate.requestId
+  isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
+  phoneNumber <- bool (pure Nothing) getPhoneNo isValueAddNP
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when ((searchRequest.validTill) < now) $
@@ -161,6 +168,10 @@ select2 personId estimateId req@DSelectReq {..} = do
         variant = estimate.vehicleVariant,
         ..
       }
+  where
+    getPhoneNo = do
+      person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      mapM decrypt person.mobileNumber
 
 --DEPRECATED
 selectList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes

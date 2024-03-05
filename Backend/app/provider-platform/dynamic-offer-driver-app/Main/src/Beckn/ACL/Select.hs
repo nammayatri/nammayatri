@@ -66,6 +66,7 @@ buildSelectReqV2 subscriber req = do
     Just [fulfillment] -> pure fulfillment
     _ -> throwError $ InvalidRequest "There should be only one fulfillment"
   estimateIdText <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Missing fulfillment_id")
+  let customerPhoneNum = getCustomerPhoneNumber fulfillment
   pure
     DSelect.DSelectReq
       { messageId = messageId,
@@ -75,7 +76,8 @@ buildSelectReqV2 subscriber req = do
         pickupTime = now,
         autoAssignEnabled = autoAssignEnabled,
         customerExtraFee = customerExtraFee,
-        estimateId = Id estimateIdText
+        estimateId = Id estimateIdText,
+        customerPhoneNum = customerPhoneNum
       }
 
 getCustomerExtraFeeV2 :: Maybe [Spec.TagGroup] -> Maybe Money
@@ -96,3 +98,6 @@ cacheSelectMessageId :: CacheFlow m r => Text -> Text -> m ()
 cacheSelectMessageId messageId transactionId = do
   let msgKey = mkTxnIdKey transactionId
   Hedis.setExp msgKey messageId 3600
+
+getCustomerPhoneNumber :: Spec.Fulfillment -> Maybe Text
+getCustomerPhoneNumber fulfillment = fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone)

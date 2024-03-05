@@ -27,10 +27,12 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 
@@ -42,13 +44,21 @@ data DSelectReq = DSelectReq
     bapUri :: BaseUrl,
     pickupTime :: UTCTime,
     autoAssignEnabled :: Bool,
-    customerExtraFee :: Maybe Money
+    customerExtraFee :: Maybe Money,
+    customerPhoneNum :: Maybe Text
   }
 
 handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
 handler merchant sReq estimate = do
   now <- getCurrentTime
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
+  case sReq.customerPhoneNum of
+    Just number -> do
+      (riderDetails, isNewRider) <- SRD.getRiderDetails merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
+      when isNewRider $ QRD.create riderDetails
+      QSR.updateRiderId searchReq.id riderDetails.id
+    Nothing -> do
+      logWarning "Failed to get rider details as BAP Phone Number is NULL"
   QDQ.setInactiveAllDQByEstId sReq.estimateId now
   when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
 

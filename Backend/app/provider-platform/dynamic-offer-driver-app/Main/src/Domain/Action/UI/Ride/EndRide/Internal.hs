@@ -147,8 +147,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   sendReferralFCM ride booking.providerId mbRiderDetails booking.merchantOperatingCityId
   updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
-
-  when (thresholdConfig.canAddCancellationFee && newFareParams.customerCancellationDues > 0) $ do
+  let customerCancellationDues = fromMaybe 0 newFareParams.customerCancellationDues
+  when (thresholdConfig.canAddCancellationFee && customerCancellationDues > 0) $ do
     case mbRiderDetails of
       Just riderDetails -> do
         id <- generateGUID
@@ -156,7 +156,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
               DCC.CancellationCharges
                 { driverId = cast driverId,
                   rideId = Just ride.id,
-                  cancellationCharges = newFareParams.customerCancellationDues,
+                  cancellationCharges = customerCancellationDues,
                   ..
                 }
         calDisputeChances <-
@@ -165,7 +165,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
               logWarning "Unable to calculate dispute chances used"
               return 0
             else do
-              return $ round $ newFareParams.customerCancellationDues / thresholdConfig.cancellationFee
+              return $ round (customerCancellationDues / thresholdConfig.cancellationFee)
         QRD.updateDisputeChancesUsedAndCancellationDues riderDetails.id (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
 

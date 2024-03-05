@@ -41,7 +41,6 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.TransporterConfig as DTMT
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RideRoute
-import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
@@ -63,7 +62,6 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import SharedLogic.Ride
-import qualified SharedLogic.RiderDetails as SRD
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -72,7 +70,6 @@ import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import Tools.Event
@@ -145,7 +142,6 @@ handler ValidatedDSearchReq {..} sReq = do
   let merchantId = merchant.id
   sessiontoken <- generateGUIDText
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-  (cancellationDues, mbRiderId) <- getCancellationDuesAndRider
 
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration) <-
     case sReq.dropLocation of
@@ -178,13 +174,13 @@ handler ValidatedDSearchReq {..} sReq = do
   (mbSpecialZoneId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneId, mbDefaultDriverExtra)
   let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneId
-  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area cancellationDues mbRiderId
+  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo searchReq.id
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
-  let buildEstimateHelper = buildEstimate searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag cancellationDues
-  let buildQuoteHelper = buildQuote searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag cancellationDues
+  let buildEstimateHelper = buildEstimate searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance specialLocationTag
+  let buildQuoteHelper = buildQuote searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration specialLocationTag
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
   QEst.createMany estimates
   for_ quotes QQuote.create
@@ -251,19 +247,6 @@ handler ValidatedDSearchReq {..} sReq = do
                   includedKm = (timeInHr * det.includedKmPerHr.getKilometers)
                   maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers includedKm) (det.totalAdditionalKmsLimit.getKilometers - includedKm)
                in distInKm - includedKm <= maxAllowed
-
-    getCancellationDuesAndRider =
-      case sReq.customerPhoneNum of
-        Just number -> do
-          now <- getCurrentTime
-          (riderDetails, isNewRider) <- SRD.getRiderDetails merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
-          when isNewRider $ QRD.create riderDetails
-          if transporterConfig.canAddCancellationFee
-            then return (riderDetails.cancellationDues, Just riderDetails.id)
-            else return (0, Just riderDetails.id)
-        Nothing -> do
-          logWarning "Failed to calculate Customer Cancellation Dues as BAP Phone Number is NULL"
-          return (0, Nothing)
 
     createRouteInfo :: Maps.RouteInfo -> RouteAndDeviationInfo
     createRouteInfo Maps.RouteInfo {..} =
@@ -347,10 +330,8 @@ buildSearchRequest ::
   Maybe Seconds ->
   Maybe Text ->
   DFareProduct.Area ->
-  HighPrecMoney ->
-  Maybe (Id RD.RiderDetails) ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area customerCancellationDues mbRiderId = do
+buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -367,10 +348,11 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneId mbDefaultDriverExtra 
         toLocation = mbToLocation,
         estimatedDistance = mbDistance,
         estimatedDuration = mbDuration,
-        riderId = mbRiderId,
+        riderId = Nothing,
         createdAt = now,
         driverDefaultExtraFee = mbDefaultDriverExtra,
         pickupZoneGateId = mbSpecialZoneId,
+        customerCancellationDues = Nothing,
         ..
       }
 
@@ -387,11 +369,10 @@ buildQuote ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Text ->
-  HighPrecMoney ->
   Bool ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag customerCancellationDues nightShiftOverlapChecking fullFarePolicy = do
+buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
     calculateFareParameters
@@ -405,7 +386,7 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
           nightShiftCharge = Nothing,
-          customerCancellationDues = customerCancellationDues,
+          customerCancellationDues = Nothing,
           nightShiftOverlapChecking = nightShiftOverlapChecking,
           estimatedDistance = searchRequest.estimatedDistance,
           estimatedRideDuration = searchRequest.estimatedDuration,
@@ -440,11 +421,10 @@ buildEstimate ::
   Bool ->
   Maybe Meters ->
   Maybe Text ->
-  HighPrecMoney ->
   Bool ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag customerCancellationDues nightShiftOverlapChecking fullFarePolicy = do
+buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
   fareParams <-
     calculateFareParameters
@@ -458,7 +438,7 @@ buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag cu
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
           nightShiftCharge = Nothing,
-          customerCancellationDues = customerCancellationDues,
+          customerCancellationDues = Nothing,
           nightShiftOverlapChecking = nightShiftOverlapChecking,
           estimatedDistance = Nothing,
           estimatedRideDuration = Nothing,

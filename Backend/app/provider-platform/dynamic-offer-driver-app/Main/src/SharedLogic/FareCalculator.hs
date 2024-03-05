@@ -73,7 +73,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
 
       customerCancellationDuesCaption = show Enums.CANCELLATION_CHARGES
-      customerCancellationDues = mkBreakupItem customerCancellationDuesCaption (mkPrice $ round fareParams.customerCancellationDues)
+      customerCancellationDues = mkBreakupItem customerCancellationDuesCaption (mkPrice $ maybe 0 round fareParams.customerCancellationDues)
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
@@ -128,7 +128,7 @@ fareSum fareParams = do
   pureFareSum fareParams
     + fromMaybe 0 fareParams.driverSelectedFare
     + fromMaybe 0 fareParams.customerExtraFee
-    + round fareParams.customerCancellationDues
+    + maybe 0 round fareParams.customerCancellationDues
 
 -- Pure fare without customerExtraFee and driverSelectedFare
 pureFareSum :: FareParameters -> Money
@@ -154,7 +154,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     driverSelectedFare :: Maybe Money,
     customerExtraFee :: Maybe Money,
     nightShiftCharge :: Maybe Money,
-    customerCancellationDues :: HighPrecMoney,
+    customerCancellationDues :: Maybe HighPrecMoney,
     estimatedRideDuration :: Maybe Seconds,
     nightShiftOverlapChecking :: Bool,
     estimatedDistance :: Maybe Meters,
