@@ -83,13 +83,80 @@ let sqlMapper =
       , { _1 = "Meters", _2 = "integer" }
       ]
 
+let defaultImports =
+      [ { _simpleImports =
+          [ "EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common" ]
+        , _qualifiedImports =
+          [ "Domain.Types.Person"
+          , "Kernel.Prelude"
+          , "Control.Lens"
+          , "Domain.Types.Merchant"
+          , "Environment"
+          , "Kernel.Types.Id"
+          ]
+        , _generationType = GeneratorType.SERVANT_API
+        }
+      , { _simpleImports =
+          [ "EulerHS.Prelude hiding (id)"
+          , "Servant"
+          , "Tools.Auth"
+          , "Data.OpenApi (ToSchema)"
+          ]
+        , _qualifiedImports =
+          [ "Kernel.Prelude"
+          , "Domain.Types.Person"
+          , "Domain.Types.Merchant"
+          , "Environment"
+          , "Kernel.Types.Id"
+          ]
+        , _generationType = GeneratorType.API_TYPES
+        }
+      , { _simpleImports =
+          [ "EulerHS.Prelude hiding (id)"
+          , "Servant"
+          , "Tools.Auth"
+          , "Data.OpenApi (ToSchema)"
+          ]
+        , _qualifiedImports =
+          [ "Kernel.Prelude"
+          , "Domain.Types.Person"
+          , "Domain.Types.Merchant"
+          , "Environment"
+          , "Kernel.Types.Id"
+          ]
+        , _generationType = GeneratorType.DOMAIN_HANDLER
+        }
+      , { _simpleImports = [] : List Text
+        , _qualifiedImports = [ "Tools.Beam.UtilsTH" ]
+        , _generationType = GeneratorType.DOMAIN_TYPE
+        }
+      , { _simpleImports =
+          [ "Kernel.Prelude"
+          , "Tools.Beam.UtilsTH"
+          , "Kernel.External.Encryption"
+          ]
+        , _qualifiedImports = [ "Database.Beam as B" ]
+        , _generationType = GeneratorType.BEAM_TABLE
+        }
+      , { _simpleImports =
+          [ "Kernel.Beam.Functions"
+          , "Kernel.Prelude"
+          , "Kernel.External.Encryption"
+          , "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime, fromMaybeM)"
+          , "Kernel.Types.Error"
+          ]
+        , _qualifiedImports = [ "Sequelize as Se" ]
+        , _generationType = GeneratorType.BEAM_QUERIES
+        }
+      ]
+
 in  { _output = outputPath
     , _storageConfig =
       { _dbName = "atlas_app"
       , _sqlTypeMapper = sqlMapper
       , _extraDefaultFields = extraDefaultFields
       }
-    , _defaultImports = [] : List DefaultImports
+    , _defaultImports = defaultImports
     , _defaultTypeImportMapper = defaultTypeImportMapper
     , _generate =
       [ GeneratorType.DOMAIN_TYPE
