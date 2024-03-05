@@ -19,6 +19,7 @@ import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SearchRequest as Domain
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
@@ -73,6 +74,16 @@ updateAutoAssign searchRequestId autoAssignedEnabled =
     [Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled]
     [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
 
+updateRiderId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id SearchRequest ->
+  Id RD.RiderDetails ->
+  m ()
+updateRiderId searchRequestId riderId =
+  updateOneWithKV
+    [Se.Set BeamSR.riderId $ Just $ getId riderId]
+    [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
+
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
     pUrl <- parseBaseUrl bapUri
@@ -98,7 +109,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             riderId = Id <$> riderId,
             merchantOperatingCityId = merchantOpCityId,
             bapUri = pUrl,
-            customerCancellationDues = fromMaybe 0 customerCancellationDues,
+            customerCancellationDues = customerCancellationDues,
             startTime = startTime_,
             isScheduled = fromMaybe False isScheduled,
             validTill = validTill_,
@@ -127,7 +138,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.device = device,
         BeamSR.autoAssignEnabled = autoAssignEnabled,
         BeamSR.specialLocationTag = specialLocationTag,
-        BeamSR.customerCancellationDues = Just customerCancellationDues,
+        BeamSR.customerCancellationDues = customerCancellationDues,
         BeamSR.isReallocationEnabled = isReallocationEnabled,
         BeamSR.messageId = messageId,
         BeamSR.startTime = Just startTime,

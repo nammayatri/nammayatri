@@ -45,7 +45,7 @@ data SearchRequest = SearchRequest
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
-    customerCancellationDues :: HighPrecMoney,
+    customerCancellationDues :: Maybe HighPrecMoney,
     isReallocationEnabled :: Maybe Bool,
     toLocation :: Maybe DLoc.Location,
     estimatedDistance :: Maybe Meters,

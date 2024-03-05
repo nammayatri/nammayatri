@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as UCommonV2
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.OnDemand.Utils.Payment
 import BecknV2.Utils
@@ -34,7 +35,6 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import Tools.Error
 
 buildSelectReqV2 ::
@@ -43,9 +43,8 @@ buildSelectReqV2 ::
   m Spec.SelectReq
 buildSelectReqV2 dSelectRes = do
   endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
-  isValueAddNP <- CQVNP.isValueAddNP dSelectRes.providerId
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle dSelectRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dSelectRes.variant) >>= fromMaybeM (InternalError "Beckn Config not found")
-  let message = buildSelectReqMessage dSelectRes endLoc isValueAddNP bapConfig
+  let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig
       messageId = dSelectRes.estimate.bppEstimateId.getId
       transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
@@ -73,7 +72,7 @@ tfOrder res endLoc isValueAddNP bapConfig =
       orderStatus = Nothing
       startLoc = res.searchRequest.fromLocation
       orderItem = tfOrderItem res isValueAddNP
-      orderFulfillment = tfFulfillment res startLoc endLoc
+      orderFulfillment = tfFulfillment res startLoc endLoc isValueAddNP
       orderCreatedAt = Nothing
       orderUpdatedAt = Nothing
    in Spec.Order
@@ -82,12 +81,12 @@ tfOrder res endLoc isValueAddNP bapConfig =
           ..
         }
 
-tfFulfillment :: DSelect.DSelectRes -> Location.Location -> Location.Location -> Spec.Fulfillment
-tfFulfillment res startLoc endLoc =
+tfFulfillment :: DSelect.DSelectRes -> Location.Location -> Location.Location -> Bool -> Spec.Fulfillment
+tfFulfillment res startLoc endLoc isValueAddNP =
   let fulfillmentAgent = Nothing
       fulfillmentTags = Nothing
       fulfillmentState = Nothing
-      fulfillmentCustomer = Nothing
+      fulfillmentCustomer = if isValueAddNP then tfCustomer res.phoneNumber else Nothing
       fulfillmentId = Just res.estimate.bppEstimateId.getId
       fulfillmentType = Just $ show Enums.DELIVERY
       fulfillmentStops = UCommon.mkStops' startLoc (Just endLoc)
@@ -97,6 +96,16 @@ tfFulfillment res startLoc endLoc =
           fulfillmentVehicle = Just fulfillmentVehicle,
           ..
         }
+
+tfCustomer :: Maybe T.Text -> Maybe Spec.Customer
+tfCustomer mbPhoneNumber = do
+  let customerContact = Just $ Spec.Contact {contactPhone = mbPhoneNumber}
+      customerPerson = Nothing
+      returnData = Spec.Customer {customerContact = customerContact, customerPerson = customerPerson}
+      allNothing = UCommonV2.allNothing returnData
+  if allNothing
+    then Nothing
+    else Just returnData
 
 tfVehicle :: DSelect.DSelectRes -> Spec.Vehicle
 tfVehicle res =
