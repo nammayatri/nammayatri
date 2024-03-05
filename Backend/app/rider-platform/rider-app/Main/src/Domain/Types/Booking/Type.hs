@@ -80,6 +80,7 @@ data Booking = Booking
     tripTerms :: Maybe DTripTerms.TripTerms,
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    numStops :: Int,
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

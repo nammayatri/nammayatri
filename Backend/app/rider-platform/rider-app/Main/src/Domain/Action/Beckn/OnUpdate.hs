@@ -220,7 +220,7 @@ onUpdate = \case
     Notify.notifyOnEstimatedReallocated booking estimate.id
   ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code
   ValidatedStopArrivedReq {..} -> do
-    QRB.updateStop booking Nothing
+    QRB.updateStop booking Nothing True
     Notify.notifyOnStopReached booking ride
 
 validateRequest ::

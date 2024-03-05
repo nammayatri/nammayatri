@@ -54,6 +54,7 @@ data BookingT f = BookingT
     estimatedFare :: B.C f HighPrecMoney,
     estimatedDuration :: B.C f (Maybe Seconds),
     fareParametersId :: B.C f Text,
+    numStops :: B.C f (Maybe Int),
     riderName :: B.C f (Maybe Text),
     paymentUrl :: B.C f (Maybe Text),
     paymentMethodId :: B.C f (Maybe Text),

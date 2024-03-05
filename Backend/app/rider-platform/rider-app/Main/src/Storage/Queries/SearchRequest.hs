@@ -15,8 +15,6 @@
 
 module Storage.Queries.SearchRequest where
 
-import Data.List (sortBy)
-import Data.Ord
 import Data.Text (strip)
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
@@ -97,11 +95,10 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
     bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
     clientVersion' <- mapM readVersion (strip <$> clientVersion)
 
-    fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+    fromLocationMapping <- QLM.getLatestByEntityIdAndOrder id 0 >>= fromMaybeM (FromLocationMappingNotFound id)
     fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
-    mappings <- QLM.findByEntityId id
-    let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    mbToLocationMapping <- QLM.getLatestByEntityIdAndOrder id 1
     toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
 
     merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId

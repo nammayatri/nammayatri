@@ -16,8 +16,6 @@
 
 module Storage.Queries.Booking where
 
-import Data.List (sortBy)
-import Data.Ord
 import qualified Data.Text as T
 import Domain.Types.Booking
 import qualified Domain.Types.Booking.BookingLocation as DBBL
@@ -207,11 +205,11 @@ instance FromTType' BeamB.Booking Booking where
           QLM.create dropLocMapping
           return (pickupLoc, Just dropLoc)
         _ -> do
-          fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+          fromLocationMapping <- QLM.getLatestByEntityIdAndOrder id 0 >>= fromMaybeM (FromLocationMappingNotFound id)
           fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
           tl <- do
-            let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+            mbToLocationMapping <- if maybe True (<= 0) numStops then pure Nothing else QLM.getLatestByEntityIdAndOrder id (fromMaybe 1 numStops)
             maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
 
           return (fl, tl)
@@ -250,6 +248,7 @@ instance FromTType' BeamB.Booking Booking where
                 maxEstimatedDistance = maxEstimatedDistance,
                 estimatedFare = roundToIntegral estimatedFare,
                 estimatedDuration = estimatedDuration,
+                numStops = fromMaybe (if DTC.isRentalTrip tripCategory' && isNothing tl then 0 else 1) numStops,
                 fareParams = fromJust fp, -- This fromJust is safe because of the check above.
                 paymentMethodId = Id <$> paymentMethodId,
                 riderName = riderName,
@@ -301,6 +300,7 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.fareParametersId = getId fareParams.id,
         BeamB.paymentMethodId = getId <$> paymentMethodId,
         BeamB.paymentUrl = paymentUrl,
+        BeamB.numStops = Just numStops,
         BeamB.riderName = riderName,
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt,

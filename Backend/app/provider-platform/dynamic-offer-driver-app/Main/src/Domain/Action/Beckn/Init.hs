@@ -172,6 +172,7 @@ handler merchantId req validatedReq = do
             paymentMethodId = mbPaymentMethodId,
             distanceToPickup = distanceToPickup,
             stopLocationId = (.id) <$> toLocation,
+            numStops = if isJust toLocation then 1 else 0,
             startTime = searchRequest.startTime,
             ..
           }

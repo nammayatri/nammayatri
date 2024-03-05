@@ -54,6 +54,7 @@ data Booking = Booking
     tripCategory :: DTC.TripCategory,
     specialZoneOtpCode :: Maybe Text,
     specialLocationTag :: Maybe Text,
+    numStops :: Int,
     disabilityTag :: Maybe Text,
     area :: Maybe FareProductD.Area,
     providerId :: Id DM.Merchant, -- FIXME merchantId

@@ -16,7 +16,6 @@
 module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
-import Data.List (sortBy)
 import Data.Ord
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
@@ -364,12 +363,12 @@ updateEditLocationAttempts rideId attempts = do
 
 createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m (DLM.LocationMapping, Maybe DLM.LocationMapping)
 createMapping bookingId rideId merchantId merchantOperatingCityId = do
-  fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
+  fromLocationMapping <- QLM.getLatestByEntityIdAndOrder bookingId 0 >>= fromMaybeM (FromLocationMappingNotFound bookingId)
   fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
 
   mbToLocationRideMapping <- do
-    mappings <- QLM.findByEntityId bookingId
-    let mbToLocMap = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId)
+    mbToLocMap <- QLM.getLatestByEntityIdAndOrder bookingId booking.numStops
     (\toLocMap -> SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)) `mapM` mbToLocMap
 
   QLM.create fromLocationRideMapping
@@ -379,14 +378,14 @@ createMapping bookingId rideId merchantId merchantOperatingCityId = do
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
-    (fromLocationMapping, mbToLocationMapping) <-
+    (fromLocationMapping, mbToLocationMapping) <- do
+      booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId)
       if null mappings
         then do
-          void $ QBooking.findById (Id bookingId)
           createMapping bookingId id merchantId merchantOperatingCityId
         else do
-          fromLocationMapping' <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
-          let mbToLocationMapping' = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+          fromLocationMapping' <- QLM.getLatestByEntityIdAndOrder id 0 >>= fromMaybeM (FromLocationMappingNotFound id)
+          mbToLocationMapping' <- QLM.getLatestByEntityIdAndOrder id booking.numStops
           return (fromLocationMapping', mbToLocationMapping')
 
     fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)

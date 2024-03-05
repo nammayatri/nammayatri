@@ -545,12 +545,12 @@ findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ S
 
 createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m (DLM.LocationMapping, Maybe DLM.LocationMapping)
 createMapping bookingId rideId merchantId merchantOperatingCityId = do
-  fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
+  fromLocationMapping <- QLM.getLatestByEntityIdAndOrder bookingId 0 >>= fromMaybeM (FromLocationMappingNotFound bookingId)
   fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId rideId DLM.RIDE merchantId merchantOperatingCityId
 
   mbToLocationRideMapping <- do
-    mappings <- QLM.findByEntityId bookingId
-    let mbToLocMap = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId)
+    mbToLocMap <- QLM.getLatestByEntityIdAndOrder bookingId booking.numStops
     (\toLocMap -> SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE merchantId merchantOperatingCityId) `mapM` mbToLocMap
 
   QLM.create fromLocationRideMapping
@@ -743,14 +743,14 @@ totalEarningsByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
+    booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
     (fromLocationMapping, mbToLocationMapping) <-
       if null mappings
         then do
-          void $ QBooking.findById (Id bookingId)
           createMapping bookingId id (Id <$> merchantId) (Id <$> merchantOperatingCityId)
         else do
-          fromLocationMapping' <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
-          let mbToLocationMapping' = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+          fromLocationMapping' <- QLM.getLatestByEntityIdAndOrder id 0 >>= fromMaybeM (FromLocationMappingNotFound id)
+          mbToLocationMapping' <- QLM.getLatestByEntityIdAndOrder id booking.numStops
           return (fromLocationMapping', mbToLocationMapping')
 
     fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
@@ -759,7 +759,6 @@ instance FromTType' BeamR.Ride Ride where
     tUrl <- parseBaseUrl trackingUrl
     merchant <- case merchantId of
       Nothing -> do
-        booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
         CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
       Just mId -> CQM.findById (Id mId) >>= fromMaybeM (MerchantNotFound mId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing

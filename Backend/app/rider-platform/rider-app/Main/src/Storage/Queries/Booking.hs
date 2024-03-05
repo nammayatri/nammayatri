@@ -218,16 +218,17 @@ updatePaymentUrl bookingId paymentUrl = do
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 -- THIS IS TEMPORARY UNTIL WE HAVE PROPER ADD STOP FEATURE
-updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> m ()
-updateStop booking mbStopLoc = do
+updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> Bool -> m ()
+updateStop booking mbStopLoc isEdit = do
   now <- getCurrentTime
   -- whenJust mbStopLoc $ \stopLoc -> do
   --   void $ whenNothingM_ (QL.findById stopLoc.id) $ QL.create stopLoc
   -- locationMapping <- SLM.buildDropLocationMapping stopLoc.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
   -- QLM.create locationMapping
-
+  let numStops = if isEdit then booking.numStops else booking.numStops + 1
   updateOneWithKV
     [ Se.Set BeamB.stopLocationId ((getId . (.id)) <$> mbStopLoc),
+      Se.Set BeamB.numStops (Just numStops),
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
@@ -300,11 +301,11 @@ instance FromTType' BeamB.Booking Booking where
               DRB.InterCityDetails <$> buildInterCityDetails toLocationId
           return (pickupLoc, bookingDetails)
         else do
-          fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+          fromLocationMapping <- QLM.getLatestByEntityIdAndOrder id 0 >>= fromMaybeM (FromLocationMappingNotFound id)
           fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
-          let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
-              toLocId = (.locationId.getId) <$> mbToLocationMapping
+          mbToLocationMapping <- if maybe True (<= 0) numStops then pure Nothing else QLM.getLatestByEntityIdAndOrder id (fromMaybe 1 numStops)
+          let toLocId = (.locationId.getId) <$> mbToLocationMapping
 
           bookingDetails <- case fareProductType of
             DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
@@ -348,6 +349,7 @@ instance FromTType' BeamB.Booking Booking where
             vehicleVariant = vehicleVariant,
             isScheduled = fromMaybe False isScheduled,
             bookingDetails = bookingDetails,
+            numStops = fromMaybe (if fareProductType == DFF.RENTAL && isNothing toLocationId then 0 else 1) numStops,
             tripTerms = tt,
             merchantId = Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
@@ -435,6 +437,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.specialLocationTag = specialLocationTag,
             BeamB.estimatedDistance = estimatedDistance,
             BeamB.estimatedDuration = estimatedDuration,
+            BeamB.numStops = Just numStops,
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt
           }

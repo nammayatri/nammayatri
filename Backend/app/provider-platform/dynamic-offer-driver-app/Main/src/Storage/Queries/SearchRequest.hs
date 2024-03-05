@@ -15,8 +15,6 @@
 
 module Storage.Queries.SearchRequest where
 
-import Data.List (sortBy)
-import Data.Ord
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest as Domain
@@ -80,11 +78,10 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
     merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant bapCity
 
-    fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+    fromLocationMapping <- QLM.getLatestByEntityIdAndOrder id 0 >>= fromMaybeM (FromLocationMappingNotFound id)
     fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
-    mappings <- QLM.findByEntityId id
-    let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    mbToLocationMapping <- QLM.getLatestByEntityIdAndOrder id 1
     toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
 
     let startTime_ = fromMaybe now startTime

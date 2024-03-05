@@ -59,12 +59,12 @@ findByEntityId entityId =
     ]
     (Just (Se.Desc BeamLM.createdAt))
 
-getLatestStartByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
-getLatestStartByEntityId entityId =
+getLatestByEntityIdAndOrder :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m (Maybe LocationMapping)
+getLatestByEntityIdAndOrder entityId order =
   findOneWithKV
     [ Se.And
         [ Se.Is BeamLM.entityId $ Se.Eq entityId,
-          Se.Is BeamLM.order $ Se.Eq 0,
+          Se.Is BeamLM.order $ Se.Eq order,
           Se.Is BeamLM.version $ Se.Eq latestTag
         ]
     ]

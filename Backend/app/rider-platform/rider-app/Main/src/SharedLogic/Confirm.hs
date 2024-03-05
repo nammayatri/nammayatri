@@ -214,6 +214,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         estimatedDuration = searchRequest.estimatedRideDuration,
         vehicleVariant = quote.vehicleVariant,
         bookingDetails,
+        numStops = if isJust mbToLoc then 1 else 0,
         tripTerms = quote.tripTerms,
         merchantId = searchRequest.merchantId,
         merchantOperatingCityId = searchRequest.merchantOperatingCityId,
