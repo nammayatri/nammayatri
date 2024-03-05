@@ -622,16 +622,15 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1703765920,
-        "narHash": "sha256-1UT2s+1KBb2UtFGdYFZuv/zVQIuJWvnLtvr4iShtBQg=",
+        "lastModified": 1709647267,
+        "narHash": "sha256-zowSX5BTytQYkEbm8VjYOPFnSoQHbRn13FZzgg9X7VI=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "50a9fc56258ceed718a1e84951550821738d83a3",
+        "rev": "81988a8af43d949618c1df6ed0d5eb389e54c22f",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/custom-mapping-and-sqlObject-for-decoupling-drainers",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -3093,16 +3092,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1702897959,
+        "lastModified": 1706179382,
         "narHash": "sha256-uhv/uKOwu1IfFnYyFFB4k5dMrYcorjs1DCd6ehm9ReA=",
-        "owner": "vijaygupta18",
+        "owner": "nammayatri",
         "repo": "haskell-sequelize",
-        "rev": "b109d29f46b611cd5ff7e0d09aead48076871210",
+        "rev": "38a8266d1bfa0ade37aa6b3ded2e1435f6839e7e",
         "type": "github"
       },
       "original": {
-        "owner": "vijaygupta18",
-        "ref": "decouple-drainer-from-app",
+        "owner": "nammayatri",
+        "ref": "backend/decoupled-drainer-changes",
         "repo": "haskell-sequelize",
         "type": "github"
       }
@@ -3171,11 +3170,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1709549705,
-        "narHash": "sha256-JOrW26FiinyF3oE3ZyJj/aKSq9lV9ipViUC/fewas8Y=",
+        "lastModified": 1709651070,
+        "narHash": "sha256-H1quZ29thPf+KLorMRtcgCMqVLPJ4NWGls76StKVSjo=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "38ab580692f761492de1c37a55928d6be7001800",
+        "rev": "ad8ff64b32a94cd116ad08b2faa32f7b451d6faf",
         "type": "github"
       },
       "original": {
