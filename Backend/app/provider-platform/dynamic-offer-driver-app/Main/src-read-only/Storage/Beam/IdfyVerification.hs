@@ -51,6 +51,6 @@ instance B.Table IdfyVerificationT where
 
 type IdfyVerification = IdfyVerificationT Identity
 
-$(enableKVPG ''IdfyVerificationT ['id] [['driverId, 'requestId]])
+$(enableKVPG ''IdfyVerificationT ['id] [['driverId], ['requestId]])
 
 $(mkTableInstances ''IdfyVerificationT "idfy_verification")
