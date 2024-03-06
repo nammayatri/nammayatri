@@ -29,6 +29,7 @@ data Action = Support
             | UpiQrRendered String
             | BannerAction Banner.Action 
             | HelpAndSupportAC
+            | GoToSOS
             
 type Config = {
   isDriver :: Boolean,
@@ -50,7 +51,9 @@ type Config = {
   enableContactSupport :: Boolean,
   isFreeRide :: Boolean,
   needHelpText :: String,
-  lottieQRAnim :: LottieQRAnim
+  lottieQRAnim :: LottieQRAnim,
+  showSafetyCenter :: Boolean,
+  safetyTitle :: String
 }
 
 data Theme = DARK | LIGHT
@@ -70,6 +73,7 @@ config :: Config
 config = {
   isDriver : true,
   isFreeRide : false,
+  showSafetyCenter : false,
   topCard : {
     title : "",
     titleColor : Color.grey900,
@@ -162,7 +166,8 @@ config = {
     visible : false,
     url : ""
   },
-  needHelpText : ""
+  needHelpText : "",
+  safetyTitle : ""
 }
 
 type CustomerIssueCard = {

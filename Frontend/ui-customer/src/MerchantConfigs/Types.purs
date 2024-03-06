@@ -71,6 +71,7 @@ type AppConfigCustomer a =
   , enableSingleEstimate :: Boolean
   , driverLocationPolling :: DriverLocationPollingConfig
   , banners :: Banners
+  , safety :: Safety
   | a
   }
 
@@ -382,4 +383,8 @@ type DriverLocationPollingConfig = {
 
 type Banners = {
   homeScreenSafety :: Boolean
+}
+
+type Safety = {
+  pastRideInterval :: Int
 }

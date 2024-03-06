@@ -22,11 +22,19 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Prelude (map, not, ($), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
+import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..), IndividualRideCardState)
 import Services.API (RideShareOptions(..))
 import Styles.Colors as Color
+import Components.SourceToDestination as SourceToDestination
+import Data.Maybe (Maybe(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(..))
 
 startNSOnboardingButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 startNSOnboardingButtonConfig state =
@@ -219,3 +227,79 @@ labelData =
     , type: NEVER_SHARE
     }
   ]
+
+pastRideSOSConfirmationPopConfig :: NammaSafetyScreenState -> PopUpModal.Config
+pastRideSOSConfirmationPopConfig state = PopUpModal.config
+        { optionButtonOrientation = "VERTICAL"
+        , buttonLayoutMargin = Margin 24 0 24 20
+        , gravity = CENTER
+        , margin = MarginHorizontal 20 20
+        , primaryText
+          { text = "Safety Center"
+          , margin = Margin 16 16 16 10
+          }
+        , secondaryText
+          { text = "If you have issues with your recent ride please select the below option"
+          , margin = MarginHorizontal 16 16
+          }
+        , option1
+          { text = "I need help with my recent ride"
+          , color = Color.black700
+          , background = Color.white900
+          , width = MATCH_PARENT
+          , margin = MarginVertical 20 10
+          , enableRipple = true
+          }
+        , option2
+          { text = "Continue with safety settings"
+          , color = Color.yellow900
+          , background = Color.black900
+          , strokeColor = Color.transparent
+          , width = MATCH_PARENT
+          , margin = MarginBottom 10
+          , enableRipple = true
+          }
+        , cornerRadius = Corners 15.0 true true true true
+        , coverImageConfig
+          { visibility = GONE
+          }
+        }
+
+
+sourceToDestinationConfig :: IndividualRideCardState -> SourceToDestination.Config
+sourceToDestinationConfig ride = SourceToDestination.config {
+      margin = (Margin 0 13 16 0)
+    , width = MATCH_PARENT
+    , lineMargin = (Margin 4 6 0 0)
+    , id = Just $ "PostRideSafetySTDC_" <> ride.rideId
+    , sourceMargin = (Margin 0 0 0 14)
+    , sourceBackground = Color.transparent
+    , sourceImageConfig {
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
+      , margin = (MarginTop 5)
+      }
+    , sourceTextConfig {
+        text = ride.source
+      , padding = (Padding 0 0 0 0)
+      , margin = (Margin 7 0 15 0)
+      , color = Color.white900
+      , textStyle = FontStyle.Body1
+      , ellipsize = true
+      , maxLines = 1
+      }
+    , destinationBackground = Color.transparent
+    , destinationImageConfig {
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
+      , margin = (MarginTop 4)
+      }
+    , destinationTextConfig {
+        text = ride.destination
+      , padding = (Padding 0 0 0 0)
+      , margin = (Margin 7 0 15 0)
+      , color = Color.white900
+      , textStyle = FontStyle.Body1
+      , maxLines = 1
+      , ellipsize = true
+      }
+    , overrideSeparatorCount = 2
+    }

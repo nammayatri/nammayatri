@@ -34,6 +34,7 @@ import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), Sos(..), SosFlow(..), RideShareOptions(..))
 import Services.Config (getSupportNumber)
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
+import Components.SourceToDestination as SourceToDestination
 
 instance showAction :: Show Action where
   show _ = ""
@@ -72,6 +73,8 @@ data Action
   | SelectedCurrentLocation Number Number String
   | GoToEducationView
   | CallSupport
+  | SourceToDestinationAC SourceToDestination.Action
+  | AlertSafetyTeam
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -156,6 +159,8 @@ eval (CountDown seconds status timerID) state = do
     continue $ state { props { timerValue = seconds, timerId = timerID } }
 
 eval TriggerSosCountdown state = continue state { props { triggeringSos = true } }
+
+eval AlertSafetyTeam state = exit $ CreateSos state false
 
 eval (ContactAction (ContactCircle.OnClick index)) state = do
   let

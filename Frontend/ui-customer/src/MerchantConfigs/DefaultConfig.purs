@@ -344,6 +344,9 @@ config =
   banners : {
     homeScreenSafety : false
   }
+  , safety : {
+      pastRideInterval : 15
+  }
 }
 
 defaultCityConfig :: CityConfig
