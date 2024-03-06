@@ -1113,13 +1113,10 @@ updateIssue language issueId req = do
 
 ------------------------------------------------------------------------ SafetyFlow --------------------------------------------------------------------------------
 
-getEmergencySettingsBT :: String -> FlowBT String GetEmergencySettingsRes
-getEmergencySettingsBT _  = do
-        headers <- getHeaders' "" true
-        withAPIResultBT (EP.getEmergencySettings "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetEmergencySettingsReq))
-    where
-    errorHandler (errorPayload) =  do
-        BackT $ pure GoBack
+getEmergencySettings :: String -> Flow GlobalState (Either ErrorResponse GetEmergencySettingsRes)
+getEmergencySettings _  = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.getEmergencySettings "") identity $ callAPI headers (GetEmergencySettingsReq)
 
 updateEmergencySettings :: UpdateEmergencySettingsReq -> Flow GlobalState (Either ErrorResponse UpdateEmergencySettingsRes)
 updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
@@ -1136,13 +1133,10 @@ markRideAsSafe sosId isMock = do
     where
         unwrapResponse (x) = x
 
-getSosDetails :: String -> FlowBT String GetSosDetailsRes
+getSosDetails :: String -> Flow GlobalState (Either ErrorResponse GetSosDetailsRes)
 getSosDetails rideId = do
-        headers <- getHeaders' "" true
-        withAPIResultBT (EP.getSosDetails rideId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetSosDetailsReq rideId))
-    where
-    errorHandler (errorPayload) =  do
-        BackT $ pure GoBack
+        headers <- getHeaders "" true
+        withAPIResult (EP.getSosDetails rideId) identity $ callAPI headers (GetSosDetailsReq rideId)
 
 sendSafetySupport req = do
         headers <- getHeaders "" true
