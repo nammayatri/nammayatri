@@ -9,6 +9,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.DriverPoolConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.UtilsTH
 import qualified Domain.Types.Vehicle.Variant
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -59,3 +60,4 @@ type DriverPoolConfig = DriverPoolConfigT Identity
 $(enableKVPG ''DriverPoolConfigT ['id] [])
 
 $(mkTableInstances ''DriverPoolConfigT "driver_pool_config")
+$(mkCacParseInstance ''DriverPoolConfigT)
