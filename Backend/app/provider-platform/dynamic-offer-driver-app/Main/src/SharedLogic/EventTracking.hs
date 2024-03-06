@@ -56,7 +56,7 @@ trackServiceUsageChargeToggle driverPlan mbReason = do
   TE.triggerEventTrackerEvent eventData
 
 trackAutoPayStatusChange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EventStreamFlow m r) => DDPlan.DriverPlan -> Text -> m ()
-trackAutoPayStatusChange driverPlan fromStatus = do
+trackAutoPayStatusChange driverPlan toStatus = do
   id <- generateGUIDText
   now <- getCurrentTime
   let eventData =
@@ -67,9 +67,9 @@ trackAutoPayStatusChange driverPlan fromStatus = do
             entity = "DriverPlan",
             entityFieldName = "AutoPayStatus",
             entityPrimaryId = driverPlan.driverId.getId,
-            fromState = Just fromStatus,
+            fromState = Just $ show driverPlan.autoPayStatus,
             reason = Nothing,
-            toState = Just $ show driverPlan.autoPayStatus,
+            toState = Just toStatus,
             merchantId = Just driverPlan.merchantId,
             merchantOperatingCityId = Nothing,
             updatedAt = now,
