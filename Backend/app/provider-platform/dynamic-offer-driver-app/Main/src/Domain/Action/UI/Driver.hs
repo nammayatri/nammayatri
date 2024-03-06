@@ -802,8 +802,10 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
+      farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory searchTry.vehicleVariant searchRequest.area searchTry.estimateId (Just searchRequest.transactionId) (Just "transactionId")
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) searchTry.vehicleVariant False isValueAddNP -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      let driverPickUpCharges = extractDriverPickupCharges farePolicy.farePolicyDetails
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) searchTry.vehicleVariant False isValueAddNP driverPickUpCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 

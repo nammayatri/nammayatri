@@ -61,12 +61,13 @@ sendSearchRequestToDrivers ::
   DSR.SearchRequest ->
   DST.SearchTry ->
   Maybe DFP.DriverExtraFeeBounds ->
+  Maybe Money ->
   DriverPoolConfig ->
   [DriverPoolWithActualDistResult] ->
   [Id Driver] ->
   GoHomeConfig ->
   m ()
-sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
+sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPickUpCharges driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   bapMetadata <- CQSM.findById (Id searchReq.bapId)
   validTill <- getSearchRequestValidTill
@@ -97,7 +98,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
             then fromMaybe searchReq $ M.lookup language languageDictionary
             else searchReq
     isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation isValueAddNP
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation isValueAddNP driverPickUpCharges
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
     Notify.sendSearchRequestToDriverNotification searchReq.providerId searchReq.merchantOperatingCityId notificationData
