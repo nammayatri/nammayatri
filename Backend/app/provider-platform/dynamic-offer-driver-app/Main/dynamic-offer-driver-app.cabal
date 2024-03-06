@@ -211,6 +211,7 @@ library
       Domain.Types.BookingCancellationReason
       Domain.Types.BusinessEvent
       Domain.Types.Cac
+      Domain.Types.CacType
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
       Domain.Types.City
@@ -289,6 +290,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.UtilsTH
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Domain.Types.WhiteListOrg
