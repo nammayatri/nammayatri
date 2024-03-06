@@ -225,15 +225,6 @@ INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequenc
   select md5('f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454'|| m.id) :: uuid, m.merchant_id,  'AUTOPAY', 'DAILY', 'DAILY_257.0', 'DAILY UNLIMITED' , 'Enjoy UNLIMITED rides, every day!', 257, 1, false, 1285, 0, 'SUBSCRIPTION',false, false, false, 'YATRI_RENTAL', m.id, 300.0, 0.025, 0.025, 'NONE'
   from atlas_driver_offer_bpp.merchant_operating_city as m;
 
-------- !!! IMPORTANT :- change dhall for drainer for event tracking table for disabling it for db !!!! -------
--- make sure ttl is in seconds and added to each table
-update atlas_driver_offer_bpp.system_configs
-set config_value = replace(config_value, '"enableKVForWriteAlso":[', '"enableKVForWriteAlso":[{"nameOfTable":"event_tracker","percentEnable":100,"redisTtl":18000},')
-where id = 'kv_configs';
-
-update atlas_driver_offer_bpp.system_configs
-set config_value = replace(config_value, '"enableKVForRead":[', '"enableKVForRead":["event_tracker",')
-where id = 'kv_configs';
  ----- driver fee merchantOpCity backfill ----
 
 update atlas_driver_offer_bpp.driver_fee as df

@@ -98,6 +98,12 @@ let exophoneKafkaConfig
       , kafkaKey = "dynamic-offer-driver-exophone-events"
       }
 
+let eventTrackerKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "EventTracker"
+      , kafkaKey = "dynamic-offer-driver-event-tracker-events"
+      }
+
 let sampleLogConfig
     : Text
     = "log-stream"
@@ -136,6 +142,11 @@ let eventStreamMappings =
           [ globalCommon.eventType.RideEnded
           , globalCommon.eventType.RideCancelled
           ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream eventTrackerKafkaConfig
+        , eventTypes = [ globalCommon.eventType.EventTracker ]
         }
       ]
 

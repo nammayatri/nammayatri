@@ -599,7 +599,6 @@ library
       Domain.Types.DriverPoolConfig
       Domain.Types.DriverReferral
       Domain.Types.Estimate
-      Domain.Types.EventTracker
       Domain.Types.Exophone
       Domain.Types.IdfyVerification
       Domain.Types.InterCityTravelCities
@@ -627,7 +626,6 @@ library
       Storage.Beam.DriverPoolConfig
       Storage.Beam.DriverReferral
       Storage.Beam.Estimate
-      Storage.Beam.EventTracker
       Storage.Beam.Exophone
       Storage.Beam.IdfyVerification
       Storage.Beam.InterCityTravelCities
@@ -655,7 +653,6 @@ library
       Storage.Queries.DriverPoolConfig
       Storage.Queries.DriverReferral
       Storage.Queries.Estimate
-      Storage.Queries.EventTracker
       Storage.Queries.Exophone
       Storage.Queries.IdfyVerification
       Storage.Queries.InterCityTravelCities

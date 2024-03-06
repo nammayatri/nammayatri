@@ -43,6 +43,8 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
+import Lib.SessionizerMetrics.Prometheus.Internal
+import Lib.SessionizerMetrics.Types.Event hiding (id)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
@@ -81,6 +83,8 @@ data HandlerEnv = HandlerEnv
     maxNotificationShards :: Int,
     smsCfg :: SmsConfig,
     version :: DeploymentVersion,
+    eventStreamMap :: [EventStreamMap],
+    eventRequestCounter :: EventCounterMetric,
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -104,6 +108,7 @@ buildHandlerEnv HandlerCfg {..} = do
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
+  eventRequestCounter <- registerEventRequestCounterMetric
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)

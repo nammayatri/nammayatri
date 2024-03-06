@@ -67,7 +67,7 @@ data EventStreamMap = EventStreamMap
   }
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
-data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | BookingCreated | BookingCancelled | BookingCompleted | SearchRequest | Quotes | Estimate | ExophoneData | AutoCompleteData | RouteCollection
+data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | BookingCreated | BookingCancelled | BookingCompleted | SearchRequest | Quotes | Estimate | ExophoneData | AutoCompleteData | RouteCollection | EventTracker
   deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToSchema, FromDhall)
 
 instance ToJSON EventType => ToJSON EventType where

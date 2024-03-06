@@ -70,6 +70,21 @@ data Payload
         rideId :: Maybe (Id DRide.Ride)
       }
   | SDK Text
+  | EventTrackerPayLoad
+      { createdAt :: UTCTime,
+        entity :: Text,
+        entityFieldName :: Text,
+        entityPrimaryId :: Text,
+        eventName :: EventName,
+        fromState :: Maybe Text,
+        id :: Text,
+        reason :: Maybe Text,
+        subscriptionServiceName :: Maybe Text,
+        toState :: Maybe Text,
+        merchantId :: Maybe (Id Merchant),
+        merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
+        updatedAt :: UTCTime
+      }
   deriving (Show, Eq, Generic, FromJSON)
 
 instance ToJSON Payload where
@@ -119,6 +134,25 @@ data SDKEventData = SDKEventData
     merchantOperatingCityId :: Id MerchantOperatingCity,
     payload :: Text
   }
+
+data EventTrackerData = EventTrackerData
+  { id :: Text,
+    entity :: Text,
+    entityFieldName :: Text,
+    entityPrimaryId :: Text,
+    eventName :: EventName,
+    fromState :: Maybe Text,
+    reason :: Maybe Text,
+    subscriptionServiceName :: Maybe Text,
+    toState :: Maybe Text,
+    merchantId :: Maybe (Id Merchant),
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+
+data EventName = DRIVER_FEE_AUTO_PAY_TO_MANUAL | AUTO_PAY_STATUS_TOGGLE | SERVICE_USAGE_CHARGE_TOGGLE
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 triggerEstimateEvent ::
   ( EventStreamFlow m r
@@ -230,3 +264,13 @@ triggerExophoneEvent ExophoneEventData {..} = do
   let exophonePayload = Exophone {..}
   exoevent <- createEvent (getId <$> personId) (maybe "" getId merchantId) ExophoneData DYNAMIC_OFFER_DRIVER_APP triggeredBy (Just exophonePayload) Nothing Nothing
   triggerEvent exoevent
+
+triggerEventTrackerEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  EventTrackerData ->
+  m ()
+triggerEventTrackerEvent EventTrackerData {..} = do
+  let eventTrackerPayload = EventTrackerPayLoad {..}
+  event <- createEvent Nothing (maybe "" getId merchantId) EventTracker DYNAMIC_OFFER_DRIVER_APP System (Just eventTrackerPayload) (Just id) (getId <$> merchantOperatingCityId)
+  triggerEvent event

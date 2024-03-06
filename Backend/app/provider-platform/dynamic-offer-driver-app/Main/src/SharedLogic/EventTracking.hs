@@ -5,18 +5,18 @@ module SharedLogic.EventTracking where
 
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverPlan as DDPlan
-import Domain.Types.EventTracker
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Queries.EventTracker
+import Lib.SessionizerMetrics.Types.Event
+import Tools.Event as TE
 
-trackFromAutoPayToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DDF.DriverFee -> m ()
+trackFromAutoPayToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EventStreamFlow m r) => DDF.DriverFee -> m ()
 trackFromAutoPayToManual driverFee = do
-  id <- generateGUID
+  id <- generateGUIDText
   now <- getCurrentTime
   let eventData =
-        EventTracker
+        TE.EventTrackerData
           { eventName = DRIVER_FEE_AUTO_PAY_TO_MANUAL,
             id = id,
             createdAt = now,
@@ -31,14 +31,14 @@ trackFromAutoPayToManual driverFee = do
             updatedAt = now,
             subscriptionServiceName = Just $ show driverFee.serviceName
           }
-  create eventData
+  TE.triggerEventTrackerEvent eventData
 
-trackServiceUsageChargeToggle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DDPlan.DriverPlan -> Maybe Text -> m ()
+trackServiceUsageChargeToggle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EventStreamFlow m r) => DDPlan.DriverPlan -> Maybe Text -> m ()
 trackServiceUsageChargeToggle driverPlan mbReason = do
-  id <- generateGUID
+  id <- generateGUIDText
   now <- getCurrentTime
   let eventData =
-        EventTracker
+        TE.EventTrackerData
           { eventName = SERVICE_USAGE_CHARGE_TOGGLE,
             id = id,
             createdAt = now,
@@ -53,14 +53,14 @@ trackServiceUsageChargeToggle driverPlan mbReason = do
             updatedAt = now,
             subscriptionServiceName = Just $ show driverPlan.serviceName
           }
-  create eventData
+  TE.triggerEventTrackerEvent eventData
 
-trackAutoPayStatusChange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DDPlan.DriverPlan -> Text -> m ()
+trackAutoPayStatusChange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EventStreamFlow m r) => DDPlan.DriverPlan -> Text -> m ()
 trackAutoPayStatusChange driverPlan fromStatus = do
-  id <- generateGUID
+  id <- generateGUIDText
   now <- getCurrentTime
   let eventData =
-        EventTracker
+        TE.EventTrackerData
           { eventName = AUTO_PAY_STATUS_TOGGLE,
             id = id,
             createdAt = now,
@@ -75,4 +75,4 @@ trackAutoPayStatusChange driverPlan fromStatus = do
             updatedAt = now,
             subscriptionServiceName = Just $ show driverPlan.serviceName
           }
-  create eventData
+  TE.triggerEventTrackerEvent eventData
