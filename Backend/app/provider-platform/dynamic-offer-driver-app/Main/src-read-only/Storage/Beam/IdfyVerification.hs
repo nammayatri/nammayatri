@@ -53,4 +53,4 @@ type IdfyVerification = IdfyVerificationT Identity
 
 $(enableKVPG ''IdfyVerificationT ['id] [['driverId, 'requestId]])
 
-$(mkTableInstances ''IdfyVerificationT "idfy_verification")
+$(mkTableInstancesWithTModifier ''IdfyVerificationT "idfy_verification" [("multipleRC", "multiple_r_c")])

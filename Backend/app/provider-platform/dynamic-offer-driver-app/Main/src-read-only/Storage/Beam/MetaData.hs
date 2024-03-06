@@ -34,4 +34,4 @@ type MetaData = MetaDataT Identity
 
 $(enableKVPG ''MetaDataT ['driverId] [])
 
-$(mkTableInstances ''MetaDataT "meta_data")
+$(mkTableInstancesWithTModifier ''MetaDataT "meta_data" [("deviceOS", "device_o_s")])
