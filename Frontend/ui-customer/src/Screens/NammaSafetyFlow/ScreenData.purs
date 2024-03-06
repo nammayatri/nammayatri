@@ -20,6 +20,7 @@ import Engineering.Helpers.Commons as EHC
 import MerchantConfig.DefaultConfig as DC
 import Services.API as API
 import Prelude ((==))
+import ConfigProvider (getAppConfig, appConfig)
 
 initData :: NammaSafetyScreenState
 initData =
@@ -48,7 +49,8 @@ initData =
       , vehicleDetails : "Loading..."
       , videoList : []
       , sosType : Nothing
-      , config : DC.config
+      , config : getAppConfig appConfig
+      , lastRideDetails : Nothing
       }
   , props:
       { setupStage: SetDefaultEmergencyContacts
@@ -68,9 +70,12 @@ initData =
       , shouldCallAutomatically : false
       , fromDeepLink : false
       , showRideShareOptionsPopup : false
+      , showPastRidePopUp : false
       , showVideoView : false
       , isSafetyCenterDisabled : false
       , fromBannerLink : false
+      , checkPastRide : false
+      , reportPastRide : false
       }
   }
 

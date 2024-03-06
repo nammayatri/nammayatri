@@ -79,7 +79,7 @@ import Data.Either (Either(..))
 import Font.Style (Style(..))
 import Services.API as API
 import Data.Lens ((^.))
-import Accessor (_fareBreakup, _description)
+import Accessor (_fareBreakup, _description, _rideEndTime)
 import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
@@ -1660,6 +1660,7 @@ rideCompletedCardConfig state =
       waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
       headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+      isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
   in RideCompletedCard.config {
         isDriver = false,
         customerIssueCard{
@@ -1702,6 +1703,8 @@ rideCompletedCardConfig state =
         },
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.feature.enableSupport,
+        showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide,
+        safetyTitle = getString SAFETY_CENTER,
         needHelpText = getString NEED_HELP
       }
   where 

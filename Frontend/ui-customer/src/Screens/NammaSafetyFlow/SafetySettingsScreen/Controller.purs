@@ -16,7 +16,7 @@ module Screens.NammaSafetyFlow.SafetySettingsScreen.Controller where
 
 import JBridge as JB 
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, discard, map, not, pure, void, ($), (/=), (==))
+import Prelude (class Show, discard, map, not, pure, void, ($), (/=), (==), (/), (<))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..))
 import Components.GenericHeader.Controller as GenericHeaderController
@@ -31,8 +31,13 @@ import Screens.NammaSafetyFlow.ComponentConfig (labelData)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
-import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), RideShareOptions(..))
+import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), RideShareOptions(..), RideBookingListRes(..))
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
+import Engineering.Helpers.Commons (getExpiryTime)
+import Data.Lens ((^.))
+import Accessor (_rideEndTime)
+import Components.PopUpModal as PopUpModal
+import Screens.RideSelectionScreen.Transformer (myRideListTransformer)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -60,6 +65,7 @@ data Action
   | ToggleSwitch SafetySetupStage
   | AddContacts
   | UpdateEmergencySettings GetEmergencySettingsRes
+  | CheckRideListResp RideBookingListRes
   | DisableShimmer
   | ChangeFollowing Int
   | GoToEducationView
@@ -67,6 +73,7 @@ data Action
   | ContactAction ContactCircle.Action
   | ShowShareTripOptions
   | ShareTripOptionPopup PopupWithCheckboxController.Action
+  | PopUpModalAC PopUpModal.Action
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -181,4 +188,20 @@ eval (ShareTripOptionPopup (PopupWithCheckboxController.ToggleSelect index)) sta
     Just option -> continue state { data { shareOptionCurrent = option.type } }
     Nothing -> continue state
 
+eval (PopUpModalAC PopUpModal.OnButton1Click) state = do
+  let newState = state{props{showPastRidePopUp = false, reportPastRide = true}}
+  exit $ GoToActivateSosScreen newState
+
+eval (PopUpModalAC PopUpModal.OnButton2Click) state = continue state{props{showPastRidePopUp = false, checkPastRide = false}}
+
+eval (CheckRideListResp (RideBookingListRes listResp)) state = do
+  let mbResp = DA.head listResp.list
+  case mbResp of
+    Nothing -> continue state
+    Just resp -> do
+      let isRecentRide = getExpiryTime (fromMaybe "" (resp ^. _rideEndTime)) true / 60 < 1500000
+          transformedResp = myRideListTransformer true listResp.list
+          mbRideData = DA.head transformedResp
+      continue state{props{showPastRidePopUp = isRecentRide}, data{lastRideDetails = mbRideData}}
+ 
 eval _ state = continue state

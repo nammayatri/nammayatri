@@ -372,6 +372,9 @@ config =
   , tipDisplayDuration : 10
   , tipsEnabled : true
   , tipEnabledCities : []
+  , safety : {
+      pastRideInterval : 15
+  }
 }
 
 defaultCityConfig :: CityConfig
