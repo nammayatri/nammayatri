@@ -22,6 +22,7 @@ Frontend/package-lock.json
 Frontend/android-native/app/driverProd/debug/output-metadata.json
 Frontend/android-native/app/driverProd/release/output-metadata.json
 Frontend/android-native/package-lock.json
+.idea
 
 # Non-nix bans
 Makefile

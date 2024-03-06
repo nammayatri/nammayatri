@@ -50,7 +50,7 @@ getQuoteFulfillmentId item =
 
 getVehicleVariant :: MonadFlow m => Spec.Provider -> Spec.Item -> m VehicleVariant.VehicleVariant
 getVehicleVariant provider item = do
-  let variant =
+  let variant' =
         item.itemFulfillmentIds >>= listToMaybe
           >>= (\fulfillmentId -> provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId))
           >>= (.fulfillmentVehicle)
@@ -60,11 +60,12 @@ getVehicleVariant provider item = do
           >>= (\fulfillmentId -> provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId))
           >>= (.fulfillmentVehicle)
           >>= (.vehicleCategory)
+  let variant = map T.toUpper variant'
   case (category, variant) of
     (Just "CAB", Just "SEDAN") -> return VehicleVariant.SEDAN
     (Just "CAB", Just "SUV") -> return VehicleVariant.SUV
     (Just "CAB", Just "HATCHBACK") -> return VehicleVariant.HATCHBACK
-    (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> return VehicleVariant.AUTO_RICKSHAW
+    (Just "AUTO_RICKSHAW", _) -> return VehicleVariant.AUTO_RICKSHAW
     (Just "CAB", Just "TAXI") -> return VehicleVariant.TAXI
     (Just "CAB", Just "TAXI_PLUS") -> return VehicleVariant.TAXI_PLUS
     _ -> throwError (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
@@ -84,19 +85,22 @@ getTotalFareRange :: MonadFlow m => Spec.Item -> m Estimate.FareRange
 getTotalFareRange item = do
   minValue <-
     item.itemPrice
-      >>= (.priceMinimumValue)
+      >>= getPriceField (.priceMinimumValue) (.priceValue)
       >>= DecimalValue.valueFromString
-      & fromMaybeM (InvalidRequest "Missing Minimum Value")
+      & fromMaybeM (InvalidBecknSchema $ "Missing Price Value:-" <> show item.itemPrice)
   maxValue <-
     item.itemPrice
-      >>= (.priceMaximumValue)
+      >>= getPriceField (.priceMaximumValue) (.priceValue)
       >>= DecimalValue.valueFromString
-      & fromMaybeM (InvalidRequest "Missing Maximum Value")
+      & fromMaybeM (InvalidBecknSchema $ "Missing Price Value:-" <> show item.itemPrice)
   return $
     Estimate.FareRange
       { Estimate.minFare = Money $ roundToIntegral minValue,
         Estimate.maxFare = Money $ roundToIntegral maxValue
       }
+  where
+    getPriceField :: (Spec.Price -> Maybe Text) -> (Spec.Price -> Maybe Text) -> Spec.Price -> Maybe Text
+    getPriceField f1 f2 price = f1 price <|> f2 price
 
 buildEstimateBreakupList :: MonadFlow m => Spec.Item -> m [OnSearch.EstimateBreakupInfo]
 buildEstimateBreakupList item = do
@@ -104,10 +108,10 @@ buildEstimateBreakupList item = do
     item.itemPrice
       >>= (.priceCurrency)
       & fromMaybeM (InvalidRequest "Missing Currency")
-  tagGroups <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tag Groups")
-  tagGroupRateCard <- find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just (show Tag.FARE_POLICY)) tagGroups & fromMaybeM (InvalidRequest "Missing fare policy") -- consume this from now on
-  tagListRateCard <- tagGroupRateCard.tagGroupList & fromMaybeM (InvalidRequest "Missing Tag List")
-  let breakups = map (buildEstimateBreakUpItem currency) tagListRateCard
+  let tagGroups = item.itemTags
+      tagGroupRateCard = find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just (show Tag.FARE_POLICY)) =<< tagGroups -- consume this from now on
+      tagListRateCard = (.tagGroupList) =<< tagGroupRateCard
+  let breakups = maybe [] (map (buildEstimateBreakUpItem currency)) tagListRateCard
   return (catMaybes breakups)
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
@@ -220,7 +224,7 @@ buildWaitingChargeInfo item = do
 
 getProviderLocation :: MonadFlow m => Spec.Provider -> m [Maps.LatLong]
 getProviderLocation provider = do
-  locations <- provider.providerLocations & fromMaybeM (InvalidRequest "Missing Locations")
+  let locations = provider.providerLocations & fromMaybe []
   mapM makeLatLong locations
 
 makeLatLong :: MonadFlow m => Spec.Location -> m Maps.LatLong

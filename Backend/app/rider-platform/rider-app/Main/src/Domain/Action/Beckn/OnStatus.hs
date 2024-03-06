@@ -89,6 +89,7 @@ data RideCompletedInfo = RideCompletedInfo
 data RideDetails
   = NewBookingDetails
   | RideAssignedDetails DCommon.RideAssignedReq
+  | RideEnroutePickupDetails
   | RideStartedDetails DCommon.RideStartedReq
   | RideCompletedDetails DCommon.RideCompletedReq
   | BookingCancelledDetails DCommon.BookingCancelledReq
@@ -98,8 +99,10 @@ data RideDetails
 data ValidatedRideDetails
   = ValidatedNewBookingDetails
   | ValidatedRideAssignedDetails DCommon.ValidatedRideAssignedReq
+  | ValidatedRideEnroutePickupDetails
   | ValidatedRideStartedDetails DCommon.ValidatedRideStartedReq
   | ValidatedRideCompletedDetails DCommon.ValidatedRideCompletedReq
+  | ValidatedFarePaidDetails DCommon.ValidatedFarePaidReq
   | ValidatedBookingCancelledDetails DCommon.ValidatedBookingCancelledReq
   | ValidatedBookingReallocationDetails ValidatedBookingReallocationReq
   | ValidatedDriverArrivedDetails DCommon.ValidatedDriverArrivedReq
@@ -186,9 +189,13 @@ onStatus req = do
         bookingNewStatus = DB.NEW
         rideNewStatus = DRide.CANCELLED
     ValidatedRideAssignedDetails request -> DCommon.rideAssignedReqHandler request
+    ValidatedRideEnroutePickupDetails -> do
+      logTagInfo "OnStatus" "RIDE_ENROUTE_PICKUP event received"
+      pure ()
     ValidatedDriverArrivedDetails request -> DCommon.driverArrivedReqHandler request
     ValidatedRideStartedDetails request -> DCommon.rideStartedReqHandler request
     ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request
+    ValidatedFarePaidDetails request -> DCommon.farePaidReqHandler request
     ValidatedBookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request
     ValidatedBookingReallocationDetails BookingReallocationReq {bookingDetails, reallocationSource} -> do
       rideEntity <- buildRideEntity booking updateReallocatedRide bookingDetails
@@ -230,6 +237,9 @@ validateRequest req@DOnStatusReq {..} = do
       rideDetails' <- DCommon.validateRideAssignedReq request
       let validatedRideDetails = ValidatedRideAssignedDetails rideDetails'
       return ValidatedOnStatusReq {..}
+    RideEnroutePickupDetails -> do
+      let validatedRideDetails = ValidatedRideEnroutePickupDetails
+      return ValidatedOnStatusReq {..}
     DriverArrivedDetails request -> do
       rideDetails' <- DCommon.validateDriverArrivedReq request
       let validatedRideDetails = ValidatedDriverArrivedDetails rideDetails'
@@ -240,8 +250,13 @@ validateRequest req@DOnStatusReq {..} = do
       return ValidatedOnStatusReq {..}
     RideCompletedDetails request -> do
       rideDetails' <- DCommon.validateRideCompletedReq request
-      let validatedRideDetails = ValidatedRideCompletedDetails rideDetails'
-      return ValidatedOnStatusReq {..}
+      case rideDetails' of
+        Left rideDetails'' -> do
+          let validatedRideDetails = ValidatedRideCompletedDetails rideDetails''
+          return ValidatedOnStatusReq {..}
+        Right rideDetails'' -> do
+          let validatedRideDetails = ValidatedFarePaidDetails rideDetails''
+          return ValidatedOnStatusReq {..}
     BookingCancelledDetails request -> do
       rideDetails' <- DCommon.validateBookingCancelledReq request
       let validatedRideDetails = ValidatedBookingCancelledDetails rideDetails'

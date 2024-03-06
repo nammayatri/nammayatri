@@ -75,7 +75,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
           driverMobileNumber <- fulf >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & maybe (Left "Missing fulfillment.agent.contact.phone in on_confirm") Right
 
           vehicleNumber <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & maybe (Left "Missing fulfillment.vehicle.registration in on_confirm") Right
-          vehicleColor <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleColor) & maybe (Left "Missing fulfillment.vehicle.color in on_confirm") Right
+          let vehicleColor = fulf >>= (.fulfillmentVehicle) >>= (.vehicleColor)
           vehicleModel <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleModel) & maybe (Left "Missing fulfillment.vehicle.model in on_confirm") Right
 
           Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {..}

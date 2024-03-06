@@ -131,6 +131,9 @@ findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
 findByBPPBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPBooking -> m (Maybe Booking)
 findByBPPBookingId (Id bppRbId) = findOneWithKV [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
 
+findByTransactionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Booking)
+findByTransactionId transactionId = findOneWithKV [Se.Is BeamB.transactionId $ Se.Eq transactionId]
+
 findByIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
 
@@ -215,6 +218,15 @@ updatePaymentUrl bookingId paymentUrl = do
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updatePaymentStatus :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> PaymentStatus -> m ()
+updatePaymentStatus rbId paymentStatus = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.paymentStatus (Just paymentStatus),
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 -- THIS IS TEMPORARY UNTIL WE HAVE PROPER ADD STOP FEATURE
 updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> m ()
@@ -361,7 +373,8 @@ instance FromTType' BeamB.Booking Booking where
             estimatedDuration = estimatedDuration,
             updatedAt = updatedAt,
             initialPickupLocation = initialPickupLocation,
-            serviceTierName = serviceTierName
+            serviceTierName = serviceTierName,
+            paymentStatus = paymentStatus
           }
     where
       buildOneWayDetails mbToLocid = do
@@ -446,7 +459,8 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.estimatedDuration = estimatedDuration,
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt,
-            BeamB.serviceTierName = serviceTierName
+            BeamB.serviceTierName = serviceTierName,
+            BeamB.paymentStatus = paymentStatus
           }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

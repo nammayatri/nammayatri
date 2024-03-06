@@ -52,7 +52,7 @@ data Ride = Ride
     trackingUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     traveledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleColor :: Kernel.Prelude.Text,
+    vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
@@ -93,6 +93,6 @@ data RideAPIEntity = RideAPIEntity
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))

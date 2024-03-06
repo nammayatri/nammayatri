@@ -76,6 +76,7 @@ data ValidatedOnUpdateReq
   = OUValidatedRideAssignedReq Common.ValidatedRideAssignedReq
   | OUValidatedRideStartedReq Common.ValidatedRideStartedReq
   | OUValidatedRideCompletedReq Common.ValidatedRideCompletedReq
+  | OUValidatedFarePaidReq Common.ValidatedFarePaidReq
   | OUValidatedBookingCancelledReq Common.ValidatedBookingCancelledReq
   | OUValidatedBookingReallocationReq ValidatedBookingReallocationReq
   | OUValidatedDriverArrivedReq Common.ValidatedDriverArrivedReq
@@ -219,6 +220,7 @@ onUpdate = \case
   OUValidatedRideAssignedReq req -> Common.rideAssignedReqHandler req
   OUValidatedRideStartedReq req -> Common.rideStartedReqHandler req
   OUValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
+  OUValidatedFarePaidReq req -> Common.farePaidReqHandler req
   OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
@@ -264,8 +266,10 @@ validateRequest = \case
     validatedRequest <- Common.validateRideStartedReq req
     return $ OUValidatedRideStartedReq validatedRequest
   OURideCompletedReq req -> do
-    validatedRequest <- Common.validateRideCompletedReq req
-    return $ OUValidatedRideCompletedReq validatedRequest
+    vRequest <- Common.validateRideCompletedReq req
+    case vRequest of
+      Left validatedRequest -> return $ OUValidatedRideCompletedReq validatedRequest
+      Right validatedRequest -> return $ OUValidatedFarePaidReq validatedRequest
   OUBookingCancelledReq req -> do
     validatedRequest <- Common.validateBookingCancelledReq req
     return $ OUValidatedBookingCancelledReq validatedRequest

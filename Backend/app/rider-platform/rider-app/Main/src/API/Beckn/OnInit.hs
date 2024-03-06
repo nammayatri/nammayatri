@@ -47,7 +47,7 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
   Utils.withTransactionIdLogTag transactionId $ do
     mbDOnInitReq <- TaxiACL.buildOnInitReqV2 reqV2
     whenJust mbDOnInitReq $ \onInitReq ->
-      Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
+      Redis.whenWithLockRedis (onInitLockKey onInitReq.bookingId.getId) 60 $
         fork "oninit request processing" $ do
           (onInitRes, booking) <- DOnInit.onInit onInitReq
           handle (errHandler booking) . void . withShortRetry $
@@ -71,4 +71,4 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
         }
 
 onInitLockKey :: Text -> Text
-onInitLockKey id = "Customer:OnInit:BppBookingId-" <> id
+onInitLockKey id = "Customer:OnInit:BookingId-" <> id
