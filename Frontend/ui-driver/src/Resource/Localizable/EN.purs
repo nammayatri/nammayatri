@@ -1,6 +1,7 @@
 module Resources.Localizable.EN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
@@ -1237,3 +1238,15 @@ getEN stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "We are currently live with only Autorickshaws in your city"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "Stay tuned for more updates"
+        THIRD_PARTY_BOOKING -> "Third party booking"
+        SOME_FEATURE_ARE_NOT_AVAILABLE_WITH_THIS_PROVIDER merchant -> "Some " <> merchant <> " Features are not available with this provider."
+        GUARANTEED_RIDE -> "Guaranteed Ride"
+        CUSTOMER_CALLING_AND_MESSAGING -> "Customer Calling & Messaging"
+        WAITING_CHARGES -> "Waiting Charges"
+        CUSTOMER_TIPS -> "Customer Tips"
+        CANCELLATION_CHARGES -> "Cancellation Charges"
+        MERCHANT_COINS merchant -> merchant <> " Coins"
+        MERCHANT_NAME _ -> "Namma Yatri"
+        THIRD_PARTY_RIDES -> "Third Party Rides"
+        THIRD_PARTY_RIDES_ARE_REQUESTED_WITH_BY_A_USERS_FROM_ANOTHER_APP -> "Third party rides are requested with by a users from another app."
+        SOME_FEATURES_MAY_NOT_BE_AVAILABLE -> "Some features may not be available."

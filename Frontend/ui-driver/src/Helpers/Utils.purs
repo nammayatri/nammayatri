@@ -177,7 +177,8 @@ type LabelConfig = {
   secondaryText :: String,
   imageUrl :: String,
   cancelText :: String,
-  cancelConfirmImage :: String
+  cancelConfirmImage :: String,
+  textColor :: String
 }
 
 dummyLabelConfig = { 
@@ -187,7 +188,8 @@ dummyLabelConfig = {
   secondaryText : "",
   imageUrl : "",
   cancelText : "",
-  cancelConfirmImage : ""
+  cancelConfirmImage : "",
+  textColor : Color.white900
 }
 
 otpRule :: Reader.OtpRule
@@ -326,57 +328,61 @@ getRequiredTag :: Maybe String -> Maybe LabelConfig
 getRequiredTag maybeLabel  =
   case maybeLabel of
     Just label -> if DA.any (_ == label) ["Accessibility", "GOTO", "Safety"] then
-                    DA.head (DA.filter (\item -> item.label == label) (rideLabelConfig FunctionCall))
+                    DA.head (DA.filter (\item -> item.label == label) (rideLabelConfig label))
                   else do
                     let arr = DS.split (DS.Pattern "_") label
                     let pickup = fromMaybe "" (arr DA.!! 0)
                     let drop = fromMaybe "" (arr DA.!! 1)
                     let priority = fromMaybe "" (arr DA.!! 2)
-                    DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) (rideLabelConfig FunctionCall))
-
+                    DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) (rideLabelConfig label))
     Nothing    -> Nothing
 
-rideLabelConfig :: LazyCheck -> Array LabelConfig
-rideLabelConfig _ = [
-    { label: "SureMetro_Pickup",
-      backgroundColor : "#2194FF",
-      text : "Metro Pickup",
-      secondaryText : "",
-      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
-      cancelText : "ZONE_CANCEL_TEXT_PICKUP",
-      cancelConfirmImage : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
+rideLabelConfig :: String -> Array LabelConfig
+rideLabelConfig labelName = [
+  dummyLabelConfig
+    { label= "SureMetro_Pickup",
+      backgroundColor = "#2194FF",
+      text = "Metro Pickup",
+      secondaryText = "",
+      imageUrl = "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      cancelText = "ZONE_CANCEL_TEXT_PICKUP",
+      cancelConfirmImage = "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
     },
-    { label : "SureMetro_Drop",
-      backgroundColor : "#2194FF",
-      text : "Metro Drop",
-      secondaryText : "",
-      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
-      cancelText : "ZONE_CANCEL_TEXT_DROP",
-      cancelConfirmImage : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+  dummyLabelConfig
+    { label = "SureMetro_Drop",
+      backgroundColor = "#2194FF",
+      text = "Metro Drop",
+      secondaryText = "",
+      imageUrl = "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      cancelText = "ZONE_CANCEL_TEXT_DROP",
+      cancelConfirmImage = "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
     },
-    { label : "Accessibility",
-      backgroundColor : "#9747FF",
-      text : getString ASSISTANCE_REQUIRED,
-      secondaryText : getString LEARN_MORE,
-      imageUrl : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
-      cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+  dummyLabelConfig
+    { label = "Accessibility",
+      backgroundColor = "#9747FF",
+      text = getString ASSISTANCE_REQUIRED,
+      secondaryText = getString LEARN_MORE,
+      imageUrl = "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
+      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
+      cancelConfirmImage = "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
     },
-    { label : "Safety",
-      backgroundColor : Color.green900,
-      text : getString SAFETY_IS_OUR_RESPONSIBILITY,
-      secondaryText : getString LEARN_MORE,
-      imageUrl : fetchImage FF_ASSET  "ny_ic_user_safety_shield",
-      cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage : fetchImage FF_ASSET  "ic_cancel_prevention"
+  dummyLabelConfig
+    { label = "Safety",
+      backgroundColor = Color.green900,
+      text = getString SAFETY_IS_OUR_RESPONSIBILITY,
+      secondaryText = getString LEARN_MORE,
+      imageUrl = fetchImage FF_ASSET  "ny_ic_user_safety_shield",
+      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
+      cancelConfirmImage = fetchImage FF_ASSET  "ic_cancel_prevention"
     },
-    { label : "GOTO",
-      backgroundColor : "#2C2F3A",
-      text : getString GO_TO,
-      secondaryText : "",
-      imageUrl : "ny_pin_check_white,",
-      cancelText : "GO_TO_CANCELLATION_TITLE",
-      cancelConfirmImage : "ny_ic_gotodriver_zero,"
+  dummyLabelConfig
+    { label = "GOTO",
+      backgroundColor = "#2C2F3A",
+      text = getString GO_TO,
+      secondaryText = "",
+      imageUrl = "ny_pin_check_white,",
+      cancelText = "GO_TO_CANCELLATION_TITLE",
+      cancelConfirmImage = "ny_ic_gotodriver_zero,"
     }
 ]
 

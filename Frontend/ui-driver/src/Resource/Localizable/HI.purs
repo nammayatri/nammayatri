@@ -1,6 +1,7 @@
 module Resources.Localizable.HI where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getHI :: STR -> String
 getHI stringKey =
@@ -1237,3 +1238,15 @@ getHI stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "शून्य कमीशन और असीमित सवारी"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "हम वर्तमान में आपके शहर में केवल ऑटोरिक्शा के साथ रह रहे हैं"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "अधिक अपडेट के लिए बने रहें"
+        THIRD_PARTY_BOOKING -> "तीसरी पार्टी बुकिंग"
+        SOME_FEATURE_ARE_NOT_AVAILABLE_WITH_THIS_PROVIDER merchant -> "कुछ " <> merchant <> " विशेषताएँ इस प्रदाता के साथ उपलब्ध नहीं हैं।"
+        GUARANTEED_RIDE -> "गारंटीड राइड"
+        CUSTOMER_CALLING_AND_MESSAGING -> "ग्राहक कॉलिंग और मैसेजिंग"
+        WAITING_CHARGES -> "प्रतीक्षा शुल्क"
+        CUSTOMER_TIPS -> "ग्राहक सुझाव"
+        CANCELLATION_CHARGES -> "रद्द करने का शुल्क"
+        MERCHANT_COINS merchant -> merchant <> " सिक्के"
+        MERCHANT_NAME _ -> "नम्मा यात्री"
+        THIRD_PARTY_RIDES -> "तृतीय पक्ष की सवारी"
+        THIRD_PARTY_RIDES_ARE_REQUESTED_WITH_BY_A_USERS_FROM_ANOTHER_APP -> "तृतीय पक्ष की सवारी एक अन्य एप्लिकेशन से एक उपयोगकर्ता द्वारा अनुरोधित की जाती है।"
+        SOME_FEATURES_MAY_NOT_BE_AVAILABLE -> "कुछ सुविधाएं उपलब्ध नहीं हो सकती हैं।"

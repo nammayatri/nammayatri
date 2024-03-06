@@ -50,4 +50,5 @@
     <string name="driver_receipt_for_your_ride_is_downloaded">ನಿಮ್ಮ ಸವಾರಿಗಾಗಿ ಚಾಲಕ ರಶೀದಿಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">ನಿಮ್ಮ ಸವಾರಿಗಾಗಿ ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ!!!</string>
     <string name="qr_downloaded">Qr ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ !!!</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"ಯಾವುದೇ ಅತಿರಿಕ್ತ ಹಣ ಇಲ್ಲ. ಯಾವುದೇ ಸೂಚನೆಗಳಿಲ್ಲ. ಯಾವುದೇ ಕಾಯಲು ವೆಚ್ಚಗಳಿಲ್ಲ."</string>
 </resources>

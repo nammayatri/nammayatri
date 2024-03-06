@@ -53,7 +53,9 @@ type Config = {
   gotoTag :: Boolean,
   waitTimeStatus :: ST.TimerStatus,
   waitTimeSeconds :: Int,
-  thresholdTime :: Int
+  thresholdTime :: Int,
+  bookingFromOtherPlatform :: Boolean,
+  bapName :: String
   }
 
 type AddressConfig = {
@@ -87,5 +89,7 @@ config = {
   gotoTag : false,
   waitTimeStatus : ST.NoStatus,
   waitTimeSeconds : -1,
-  thresholdTime : 0
+  thresholdTime : 0,
+  bookingFromOtherPlatform : false,
+  bapName : ""
 }

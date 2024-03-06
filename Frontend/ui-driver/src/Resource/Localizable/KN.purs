@@ -1,6 +1,7 @@
 module Resources.Localizable.KN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getKN :: STR -> String
 getKN stringKey =
@@ -1237,3 +1238,15 @@ getKN stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "ಶೂನ್ಯ ಕಮಿಷನ್,ಅನಿಯಮಿತ ಸವಾರಿಗಳು"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "ನಾವು ಪ್ರಸ್ತುತ ನಿಮ್ಮ ನಗರದಲ್ಲಿ ಆಟೋರಿಕ್ಷಾಗಳೊಂದಿಗೆ ಮಾತ್ರ ಲೈವ್ ಮಾಡುತ್ತಿದ್ದೇವೆ"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "ಹೆಚ್ಚಿನ ನವೀಕರಣಗಳಿಗಾಗಿ ಟ್ಯೂನ್ ಮಾಡಿ"
+        THIRD_PARTY_BOOKING -> "ಮೂರನೇ ತರಗತಿ ಬುಕಿಂಗ್"
+        SOME_FEATURE_ARE_NOT_AVAILABLE_WITH_THIS_PROVIDER merchant -> "ಕೆಲವು " <> merchant <> " ವೈಶಿಷ್ಟ್ಯಗಳು ಈ ಪ್ರದಾತನೊಂದಿಗೆ ಲಭ್ಯವಿಲ್ಲ."
+        GUARANTEED_RIDE -> "ಖಚಿತ ಸವಾರಿ"
+        CUSTOMER_CALLING_AND_MESSAGING -> "ಗ್ರಾಹಕ ಕಾಲಿಂಗ್ ಮತ್ತು ಸಂದೇಶ"
+        WAITING_CHARGES -> "ನಿರೀಕ್ಷಣಾ ಶುಲ್ಕಗಳು"
+        CUSTOMER_TIPS -> "ಗ್ರಾಹಕ ಸಲಹೆಗಳು"
+        CANCELLATION_CHARGES -> "ರದ್ದು ಶುಲ್ಕಗಳು"
+        MERCHANT_COINS merchant -> merchant <> " ನಾಣೆ"
+        MERCHANT_NAME _ -> "ನಮ್ಮ ಯಾತ್ರಿ"
+        THIRD_PARTY_RIDES -> "ಮೂರನೇ ಪಕ್ಷದ ಸವಾರಿಗಳು"
+        THIRD_PARTY_RIDES_ARE_REQUESTED_WITH_BY_A_USERS_FROM_ANOTHER_APP -> "ಮೂರನೇ ಪಕ್ಷದ ಸವಾರಿಗಳು ಇನ್ನೊಂದು ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ಬಳಸಿ ಬೇಡಿಕೆ ಮಾಡಲಾಗುತ್ತದೆ."
+        SOME_FEATURES_MAY_NOT_BE_AVAILABLE -> "ಕೆಲವು ವಿಶೇಷಗಳು ಲಭ್ಯವಿಲ್ಲವೇನೋ ಇರಬಹುದು."

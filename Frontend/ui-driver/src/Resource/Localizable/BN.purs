@@ -1,6 +1,7 @@
 module Resources.Localizable.BN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getBN :: STR -> String
 getBN stringKey =
@@ -1237,3 +1238,15 @@ getBN stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "শূন্য কমিশন, অসীম চালনা"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "আমরা বর্তমানে আপনার শহরে শুধুমাত্র অটোরিকশার সাথে লাইভ করছি"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "আরো আপডেটের জন্য সাথে থাকুন"
+        THIRD_PARTY_BOOKING -> "থার্ড পার্টি বুকিং"
+        SOME_FEATURE_ARE_NOT_AVAILABLE_WITH_THIS_PROVIDER merchant -> "কিছু " <> merchant <> " বৈশিষ্ট্য এই প্রদাতার সাথে উপলব্ধ নেই।"
+        GUARANTEED_RIDE -> "গ্যারান্টিড রাইড"
+        CUSTOMER_CALLING_AND_MESSAGING -> "গ্রাহক কলিং এবং মেসেজিং"
+        WAITING_CHARGES -> "অপেক্ষার খরচ"
+        CUSTOMER_TIPS -> "গ্রাহকের পরামর্শ"
+        CANCELLATION_CHARGES -> "বাতিলের খরচ"
+        MERCHANT_COINS merchant -> merchant <> " কয়েন্স"
+        MERCHANT_NAME _ -> "নম্মা যাত্রী"
+        THIRD_PARTY_RIDES -> "থার্ড পার্টি রাইডস"
+        THIRD_PARTY_RIDES_ARE_REQUESTED_WITH_BY_A_USERS_FROM_ANOTHER_APP -> "থার্ড পার্টি রাইডস অন্য অ্যাপ থেকে ব্যবহারকারীদের দ্বারা অনুরোধ করা হয়"
+        SOME_FEATURES_MAY_NOT_BE_AVAILABLE -> "কিছু বৈশিষ্ট্য উপলব্ধ হতে পারে না।"

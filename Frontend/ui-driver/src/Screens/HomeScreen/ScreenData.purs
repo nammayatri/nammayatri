@@ -58,7 +58,9 @@ initData = {
           rideCreatedAt : "",
           requestedVehicleVariant : Nothing,
           disabilityTag : Nothing,
-          enableFrequentLocationUpdates : false
+          enableFrequentLocationUpdates : false,
+          bapName : "",
+          bookingFromOtherPlatform : false
         },
         cancelRideModal : {
           selectionOptions : [],
@@ -210,7 +212,8 @@ initData = {
         isStatsModelExpanded : false,
         tobeLogged : false,
         safetyAudioAutoPlay : false,
-        vehicleNSPopup : false
+        vehicleNSPopup : false,
+        showInterOperablePopUp : false
     }
 }
 

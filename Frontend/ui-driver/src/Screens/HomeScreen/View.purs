@@ -65,7 +65,7 @@ import Log (printLog)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, textFromHtml)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -155,7 +155,7 @@ screen initialState =
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
-                                if (not initialState.props.chatcallbackInitiated) then do
+                                if (not initialState.props.chatcallbackInitiated && not initialState.data.activeRide.bookingFromOtherPlatform) then do
                                   _ <- JB.clearChatMessages
                                   _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
                                   _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
@@ -223,59 +223,61 @@ view push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT] $ 
   [ relativeLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , background Color.white900
-      , weight 1.0
-      , afterRender
-        (\action -> do
-          void $ Events.endMeasuringDuration "onCreateToHomeScreenRenderDuration"
-          void $ Events.endMeasuringDuration "initAppToHomeScreenRenderDuration"
-          _ <- push action          
-          _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
-          _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
-          _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap
-          pure unit
-        ) (const AfterRender)
-      , onBackPressed push (const BackPressed)
-      ][ Anim.screenAnimationFadeInOut $
-          driverMapsHeaderView push state
-        , rideActionModelView push state
-        ]
-      -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
-      , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
-      , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
-      , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
-      , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
-      , if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else dummyTextView
-      , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
-      , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
-      , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
-      , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
-      , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
-      , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
-      , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
-      , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
-      , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
-      , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
-      , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && state.data.config.subscriptionConfig.enableSubscriptionPopups
-           then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig state) 
-           else linearLayout[visibility GONE][]
-      , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
-          Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
-          Nothing -> linearLayout[visibility GONE][]
-      , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
-      , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && state.data.config.subscriptionConfig.enableSubscriptionPopups)
-          then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
-        else linearLayout[visibility GONE][]
-      , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
-      , if state.props.showCoinsPopup then PopUpModal.view (push <<< CoinsPopupAC) (introducingCoinsPopup state) else dummyTextView
-      , if state.data.driverGotoState.showGoto then gotoListView push state else dummyTextView
-      , if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then gotoRequestPopupView push state else dummyTextView
-      , if showPopups then popupModals push state else dummyTextView
-      , if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup) then blockerPopUpView push state else dummyTextView
-      , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
-      , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.white900
+    , weight 1.0
+    , afterRender
+      (\action -> do
+        void $ Events.endMeasuringDuration "onCreateToHomeScreenRenderDuration"
+        void $ Events.endMeasuringDuration "initAppToHomeScreenRenderDuration"
+        _ <- push action          
+        _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
+        _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
+        _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap
+        pure unit
+      ) (const AfterRender)
+    , onBackPressed push (const BackPressed)
+    ][ Anim.screenAnimationFadeInOut $
+        driverMapsHeaderView push state
+      , rideActionModelView push state
+      , if state.data.activeRide.bookingFromOtherPlatform then RideActionModal.bottomPlatformInfoBar VISIBLE else dummyTextView
+      ]
+    -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
+    , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
+    , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
+    , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
+    , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
+    , if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else dummyTextView
+    , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
+    , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
+    , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
+    , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
+    , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
+    , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
+    , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
+    , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
+    , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
+    , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
+    , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && state.data.config.subscriptionConfig.enableSubscriptionPopups
+         then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig state) 
+         else linearLayout[visibility GONE][]
+    , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
+        Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
+        Nothing -> linearLayout[visibility GONE][]
+    , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
+    , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && state.data.config.subscriptionConfig.enableSubscriptionPopups)
+        then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
+      else linearLayout[visibility GONE][]
+    , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
+    , if state.props.showCoinsPopup then PopUpModal.view (push <<< CoinsPopupAC) (introducingCoinsPopup state) else dummyTextView
+    , if state.data.driverGotoState.showGoto then gotoListView push state else dummyTextView
+    , if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then gotoRequestPopupView push state else dummyTextView
+    , if showPopups then popupModals push state else dummyTextView
+    , if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup) then blockerPopUpView push state else dummyTextView
+    , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
+    , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
+    , if state.props.showInterOperablePopUp then interOperableInfoPopUpView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -285,6 +287,71 @@ view push state =
         state.props.accountBlockedPopup,
         state.props.vehicleNSPopup && not state.props.rcDeactivePopup
       ])
+
+
+interOperableInfoPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+interOperableInfoPopUpView push state =
+  let config = interOperableInfoPopup state
+  in
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.black800
+  ][PopUpModal.view (push <<< PopUpModalInterOperableAction) config{ layout = Just interOperableInfoLayout }]
+
+interOperableInfoLayout :: forall w. PopUpModal.LayoutConfig -> PrestoDOM (Effect Unit) w
+interOperableInfoLayout config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER
+  , margin $ Margin 16 0 16 16
+  , padding $ PaddingVertical 12 24
+  , cornerRadius 12.0
+  , background Color.blue600
+  , orientation VERTICAL
+  ][  interOperableInfo "" "ic_namma_yatri_logo" "Other Apps"
+    , interOperableInfo (getString CUSTOMER_CALLING_AND_MESSAGING) "ny_ic_green_check" "-"
+    , interOperableInfo (getString WAITING_CHARGES) "ny_ic_green_check" "-"
+    , interOperableInfo (getString CUSTOMER_TIPS) "ny_ic_green_check" "-"
+    , interOperableInfo (getString CANCELLATION_CHARGES) "ny_ic_green_check" "-"
+    , interOperableInfo (getString $ MERCHANT_COINS (getString $ MERCHANT_NAME "")) "ny_ic_green_check" "-"
+   ]
+
+interOperableInfo :: forall w. String -> String -> String -> PrestoDOM (Effect Unit) w
+interOperableInfo text1 image1 text2 =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ Padding 12 12 12 0
+  , orientation HORIZONTAL
+  , gravity CENTER
+  ][  textView $
+      [ width $ V ((EHC.screenWidth unit)/3)
+      , height WRAP_CONTENT
+      , color Color.black800
+      , text text1
+      , margin $ MarginRight 5
+      , padding $ PaddingRight 5
+      , gravity RIGHT
+      ] <> FontStyle.body1 TypoGraphy
+    , imageView
+      [ width $ V 20
+      , height $ V 20
+      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET image1
+      , margin $ MarginHorizontal 10 10
+      , weight 1.0
+      ]
+    , textView
+      [ width $ V 30
+      , height WRAP_CONTENT
+      , text text2
+      , textSize FontSize.a_14
+      , gravity CENTER
+      , weight 1.0
+      ]
+   ]
+
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 blockerPopUpView push state = 
@@ -705,7 +772,7 @@ driverDetail push state =
       , cornerRadius 50.0
       , alpha if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])then 0.5 else 1.0
       , margin (Margin 0 10 10 10)
-      , visibility if isJust state.data.activeRide.disabilityTag then GONE else VISIBLE 
+      , visibility if isJust state.data.activeRide.disabilityTag || state.data.activeRide.bookingFromOtherPlatform then GONE else VISIBLE 
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
         ) driverStatusIndicators
@@ -719,11 +786,13 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
   [ weight 1.0
   , height MATCH_PARENT
   , gravity CENTER
-  , visibility if isJust state.data.activeRide.disabilityTag then VISIBLE else GONE
+  , visibility if isJust state.data.activeRide.disabilityTag || state.data.activeRide.bookingFromOtherPlatform then VISIBLE else GONE
   , margin (Margin 10 10 10 10)
   , background accessibilityHeaderconfig.background
   , cornerRadius 50.0
-  , padding (Padding 8 8 8 8)
+  , clickable accessibilityHeaderconfig.clickable
+  , onClick push $ const AccessibilityHeaderAction
+  , padding (Padding 14 8 8 8)
   ][
     imageView
     [ width $ V 25
@@ -739,12 +808,13 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
         [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , padding $ PaddingRight 4
-            , text accessibilityHeaderconfig.primaryText
+            , textFromHtml accessibilityHeaderconfig.primaryText
             , color accessibilityHeaderconfig.textColor
         ] <> FontStyle.body1 TypoGraphy
       , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
+        , visibility if DS.null accessibilityHeaderconfig.secondaryText then GONE else VISIBLE 
         , text accessibilityHeaderconfig.secondaryText
         , color accessibilityHeaderconfig.textColor
         ] <> FontStyle.body4 TypoGraphy

@@ -1,6 +1,7 @@
 module Resources.Localizable.ML where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getML :: STR -> String
 getML stringKey =
@@ -1237,3 +1238,15 @@ getML stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "ഞങ്ങൾ നിലവിൽ നിങ്ങളുടെ നഗരത്തിൽ ഓട്ടോറിക്ഷകളിൽ മാത്രമാണ് താമസിക്കുന്നത്"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "കൂടുതൽ അപ്‌ഡേറ്റുകൾക്കായി കാത്തിരിക്കുക"
+        THIRD_PARTY_BOOKING -> "മൂന്നാം പാർട്ടി ബുക്കിങ്ങ്"
+        SOME_FEATURE_ARE_NOT_AVAILABLE_WITH_THIS_PROVIDER merchant -> "കൊന്നുപോകുന്ന " <> merchant <> " ഫീച്ചറുകൾ ഈ സര്‍വ്വാധികാരിക്ക് ലഭ്യമല്ല."
+        GUARANTEED_RIDE -> "ഉറപ്പായ റൈഡ്"
+        CUSTOMER_CALLING_AND_MESSAGING -> "കസ്റ്റമർ കാഴ്ച്ചപ്പാട് മറ്റ് സന്ദേശങ്ങൾ"
+        WAITING_CHARGES -> "കാത്തിരിക്കൽ ചാർജുകൾ"
+        CUSTOMER_TIPS -> "കസ്റ്റമർ സൂചനകൾ"
+        CANCELLATION_CHARGES -> "റദ്ദാക്കൽ ചാർജുകൾ"
+        MERCHANT_COINS merchant -> merchant <> " നാണയങ്ങൾ"
+        MERCHANT_NAME _ -> "നമ്മ യാത്രി"
+        THIRD_PARTY_RIDES -> "മൂന്നാം പാർട്ടി യാത്രകൾ"
+        THIRD_PARTY_RIDES_ARE_REQUESTED_WITH_BY_A_USERS_FROM_ANOTHER_APP -> "മൂന്നാം പാർട്ടി യാത്രകൾ മറ്റ് ആപ്പിൽ നിന്നുള്ള ഉപയോക്താക്കളാലും അഭ്യർത്ഥിക്കപ്പെടുന്നു."
+        SOME_FEATURES_MAY_NOT_BE_AVAILABLE -> "ചില സവിശേഷതകൾ ലഭ്യമാകാതെ ഉള്ളിടികളുണ്ടാകിയിരിക്കില്ലേക്ക്."

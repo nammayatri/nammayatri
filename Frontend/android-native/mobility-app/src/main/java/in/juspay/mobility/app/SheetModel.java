@@ -24,7 +24,7 @@ public class SheetModel {
 
     private final Boolean disabilityTag;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
-    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated;
+    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, thirdpartyBooking;
 
     public SheetModel(String pickUpDistance,
                       String distanceToBeCovered,
@@ -49,7 +49,8 @@ public class SheetModel {
                       String requestedVehicleVariant,
                       Boolean disabilityTag,
                       Boolean isTranslated,
-                      Boolean gotoTag){
+                      Boolean gotoTag,
+                      Boolean thirdpartyBooking){
 
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
@@ -81,6 +82,7 @@ public class SheetModel {
         this.durationToPickup = durationToPickup;
         this.gotoTag = gotoTag;
         this.isTranslated = isTranslated;
+        this.thirdpartyBooking = thirdpartyBooking;
     }
 
     public boolean isGotoTag() {
@@ -102,6 +104,8 @@ public class SheetModel {
     public int getCustomerTip() {return customerExtraFee;}
 
     public Boolean getDisabilityTag() {return disabilityTag; }
+
+    public Boolean isThirdPartyBooking() {return thirdpartyBooking;}
 
     public void setOfferedPrice(double offeredPrice) {
         this.offeredPrice = offeredPrice;

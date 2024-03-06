@@ -47,5 +47,5 @@
     <string name="message_from_customer">வாடிக்கையாளரிடமிருந்து செய்தி</string>
     <string name="go_to">கோ-டூ</string>
     <string name="call_support">ஆதரவை அழை</string>
-
+    <string name="no_additional_fare_tips_and_waiting_charges">"கூடுதல் கட்டணம் இல்லை. காலிகைகள் இல்லை. காதிரி கட்டணங்கள் இல்லை."</string>
 </resources>

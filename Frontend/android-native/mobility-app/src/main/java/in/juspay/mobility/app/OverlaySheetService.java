@@ -135,6 +135,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
+            if (model.isThirdPartyBooking()) {
+                holder.thirdPartyTag.setVisibility(View.VISIBLE);
+                holder.textIncludesCharges.setText(R.string.no_additional_fare_tips_and_waiting_charges);
+                holder.textIncludesCharges.setTextColor(getColor(R.color.red900));
+            }
             if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
                 String pickupChargesText = model.getCustomerTip() > 0 ?
                         getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
@@ -549,9 +554,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
+                    boolean isThirdPartyBooking = rideRequestBundle.getBoolean("isThirdPartyBooking");;
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
-
                     }
                     SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                             (df.format(distanceTobeCovered / 1000)),
@@ -576,11 +581,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             requestedVehicleVariant,
                             disabilityTag,
                             isTranslated,
-                            gotoTag);
+                            gotoTag,
+                            isThirdPartyBooking);
 
                     if (floatyView == null) {
                         startTimer();
-                        showOverLayPopup(rideRequestBundle);
+                        showOverLayPopup(rideRequestBundle, isThirdPartyBooking);
                     }
                     sheetArrayList.add(sheetModel);
                     sheetAdapter.updateSheetList(sheetArrayList);
@@ -609,7 +615,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     @SuppressLint("InflateParams")
-    private void showOverLayPopup(Bundle rideRequestBundle) {
+    private void showOverLayPopup(Bundle rideRequestBundle, boolean isThirdPartyBooking) {
         if (!Settings.canDrawOverlays(getApplicationContext())) return;
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         int layoutParamsType;
@@ -630,18 +636,23 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         LayoutInflater inflater = ((LayoutInflater) getApplicationContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view, null);
-        TextView merchantLogo = floatyView.findViewById(R.id.merchantLogo);
-        if (key != null && key.equals("yatrisathiprovider")){
-        merchantLogo.setText("yatri\nsathi");
-            ImageView merchantLogoIcon = (ImageView) floatyView.findViewById(R.id.merchantLogoIcon);
-            LinearLayout.LayoutParams  layoutParams = new LinearLayout.LayoutParams(100,100);
-            layoutParams.rightMargin = 12;
-            merchantLogoIcon.setLayoutParams(layoutParams);
-            merchantLogo.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT , ViewGroup.LayoutParams.WRAP_CONTENT ));
-        } else if (key != null && key.equals("yatriprovider")) {
-            merchantLogo.setText("Yatri Driver");
-        } else if (key != null && key.equals("passcultureprovider")) {
-            merchantLogo.setText("Alliance Taxis");
+        if (isThirdPartyBooking) {
+            View merchantBottomTag = floatyView.findViewById(R.id.merchant_bottom_tag);
+            merchantBottomTag.setVisibility(View.GONE);
+        } else {
+            TextView merchantLogo = floatyView.findViewById(R.id.merchantLogo);
+            if (key != null && key.equals("yatrisathiprovider")) {
+                merchantLogo.setText("yatri\nsathi");
+                ImageView merchantLogoIcon = (ImageView) floatyView.findViewById(R.id.merchantLogoIcon);
+                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(100, 100);
+                layoutParams.rightMargin = 12;
+                merchantLogoIcon.setLayoutParams(layoutParams);
+                merchantLogo.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            } else if (key != null && key.equals("yatriprovider")) {
+                merchantLogo.setText("Yatri Driver");
+            } else if (key != null && key.equals("passcultureprovider")) {
+                merchantLogo.setText("Alliance Taxis");
+            }
         }
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);

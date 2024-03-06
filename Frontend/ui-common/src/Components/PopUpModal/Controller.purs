@@ -16,15 +16,17 @@
 module Components.PopUpModal.Controller where
 
 import Common.Styles.Colors as Color
-import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
+import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..), PrestoDOM)
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>))
+import Prelude ((<>), Unit)
 import Data.Maybe as Mb
+import Effect (Effect)
+import Data.Maybe
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -76,7 +78,12 @@ type Config = {
     listViewArray :: Array String,
     coverMediaConfig :: CoverMediaConfig,
     timerId :: String,
-    onlyTopTitle :: Visibility
+    onlyTopTitle :: Visibility,
+    layout :: forall w. Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w)
+}
+
+type LayoutConfig = {
+  visibility :: Visibility
 }
 
 type CoverMediaConfig = {
@@ -452,6 +459,7 @@ config = {
     },
     onlyTopTitle : VISIBLE,
     timerId : ""
+    , layout : Nothing
 }
 
 

@@ -1,6 +1,7 @@
 module Resources.Localizable.TA where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getTA :: STR -> String
 getTA stringKey =
@@ -1237,3 +1238,15 @@ getTA stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "வரம்பற்ற சவாரிகள், கமிஷன் இல்லை"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "நாங்கள் தற்போது உங்கள் நகரத்தில் ஆட்டோரிக்ஷாக்களுடன் மட்டுமே வசிக்கிறோம்"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "மேலும் புதுப்பிப்புகளுக்கு காத்திருங்கள்"
+        THIRD_PARTY_BOOKING -> "மூன்றாம் தரப்பு முதலாவது புத்தகம்"
+        SOME_FEATURE_ARE_NOT_AVAILABLE_WITH_THIS_PROVIDER merchant -> "இந்த வழங்கி உடன் சில " <> merchant <> " அம்சங்கள் கிடைக்கும்."
+        GUARANTEED_RIDE -> "உறுதியான சவாரி"
+        CUSTOMER_CALLING_AND_MESSAGING -> "வாடிக்கையாளர் அழைப்பு மற்றும் செய்திகள்"
+        WAITING_CHARGES -> "காத்திருப்பு கட்டணங்கள்"
+        CUSTOMER_TIPS -> "வாடிக்கையாளர் குறிப்புகள்"
+        CANCELLATION_CHARGES -> "ரத்து கட்டணங்கள்"
+        MERCHANT_COINS merchant -> merchant <> " நாணயங்கள்"
+        MERCHANT_NAME _ -> "நம்ம யாத்ரி"
+        THIRD_PARTY_RIDES -> "மூன்றாம் பகுதியின் ஓட்டுக்கள்"
+        THIRD_PARTY_RIDES_ARE_REQUESTED_WITH_BY_A_USERS_FROM_ANOTHER_APP -> "மூன்றாம் பகுதியின் ஓட்டுக்கள் மற்ற ஒரு செயலி மூலம் பயனர்களால் கேட்கப்படுகின்றன."
+        SOME_FEATURES_MAY_NOT_BE_AVAILABLE -> "சில அம்சங்கள் கிடைக்காதிருக்கலாம்."

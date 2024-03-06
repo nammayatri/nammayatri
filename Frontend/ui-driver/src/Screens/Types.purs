@@ -1030,7 +1030,9 @@ type ActiveRide = {
   requestedVehicleVariant :: Maybe String,
   disabilityTag :: Maybe DisabilityType,
   waitTimeSeconds :: Int,
-  enableFrequentLocationUpdates :: Boolean
+  enableFrequentLocationUpdates :: Boolean,
+  bapName :: String,
+  bookingFromOtherPlatform :: Boolean
 }
 
 type HomeScreenProps =  {
@@ -1086,7 +1088,8 @@ type HomeScreenProps =  {
   isStatsModelExpanded :: Boolean,
   tobeLogged :: Boolean,
   safetyAudioAutoPlay :: Boolean,
-  vehicleNSPopup :: Boolean
+  vehicleNSPopup :: Boolean,
+  showInterOperablePopUp :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER

@@ -126,7 +126,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString("requestedVehicleVariant"),
                     rideRequestBundle.getBoolean("disabilityTag"),
                     rideRequestBundle.getBoolean("isTranslated"),
-                    rideRequestBundle.getBoolean("gotoTag")
+                    rideRequestBundle.getBoolean("gotoTag"),
+                    rideRequestBundle.getBoolean("thirdpartyBooking")
             );
 
             sheetArrayList.add(sheetModel);

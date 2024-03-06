@@ -50,4 +50,6 @@
     <string name="invoice_downloaded">रसीद डाउनलोड!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">आपकी सवारी की रसीद डाउनलोड हो गई है!!!</string>
     <string name="qr_downloaded">QR डाउनलोड!!!</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"कोई अतिरिक्त किराया नहीं। कोई सुझाव नहीं। कोई प्रतीक्षा शुल्क नहीं।"</string>
+
 </resources>

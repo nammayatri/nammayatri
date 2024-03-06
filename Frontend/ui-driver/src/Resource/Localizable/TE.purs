@@ -1,6 +1,7 @@
 module Resources.Localizable.TE where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getTE :: STR -> String
 getTE stringKey =
@@ -1237,3 +1238,17 @@ getTE stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "జీరో కమీషన్, ఉన్లిమితెద్ రైడ్‌లు"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "మేము ప్రస్తుతం మీ నగరంలో ఆటోరిక్షాలతో మాత్రమే ప్రత్యక్ష ప్రసారం చేస్తున్నాము"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "మరిన్ని నవీకరణల కోసం వేచి ఉండండి"
+        THIRD_PARTY_BOOKING -> "మూడవ పార్టీ బుకింగ్"
+        SOME_FEATURE_ARE_NOT_AVAILABLE_WITH_THIS_PROVIDER merchant -> "కొన్ని " <> merchant <> " లక్షణాలు ఈ ప్రొవైడర్‌తో అందుబాటులో ఉన్నాయి."
+        GUARANTEED_RIDE -> "ఖచ్చితంగా చరణ"
+        CUSTOMER_CALLING_AND_MESSAGING -> "వినియోగదారు కాలింగ్ మరియు సందేశాలు"
+        WAITING_CHARGES -> "వెచ్చింపు ధరలు"
+        CUSTOMER_TIPS -> "కస్టమర్ సూచనలు"
+        CANCELLATION_CHARGES -> "రద్దు ధరలు"
+        MERCHANT_COINS merchant -> merchant <> " నాణెలు"
+        MERCHANT_NAME _ -> "నమ్మ యాత్రి"
+        THIRD_PARTY_RIDES -> "మూడువ పార్టీ సవారులు"
+        THIRD_PARTY_RIDES_ARE_REQUESTED_WITH_BY_A_USERS_FROM_ANOTHER_APP -> "మూడువ పార్టీ సవారులు మరొక అనువర్తనం నుండి వాడికి అభ్యర్థించబడుతున్నారు."
+        THIRD_PARTY_RIDES -> "మూడువ పార్టీ సవారులు"
+        THIRD_PARTY_RIDES_ARE_REQUESTED_WITH_BY_A_USERS_FROM_ANOTHER_APP -> "మూడువ పార్టీ సవారులు మరొక అనువర్తనం నుండి వాడికి అభ్యర్థించబడుతున్నారు."
+        SOME_FEATURES_MAY_NOT_BE_AVAILABLE -> "కొన్ని లక్షణాలు అందుకున్నట్లు లభిక్కలేరు."

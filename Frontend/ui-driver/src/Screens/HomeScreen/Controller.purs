@@ -367,7 +367,8 @@ data Action = NoAction
             | CustomerSafetyPopupAC PopUpModal.Action
             | UpdateLastLoc Number Number Boolean
             | VehicleNotSupportedAC PopUpModal.Action
-            
+            | AccessibilityHeaderAction
+            | PopUpModalInterOperableAction PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1088,6 +1089,14 @@ eval (GoToEarningsScreen showCoinsView) state = do
   let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_coins_click_on_homescreen" $ [{key : "CoinBalance", value : unsafeToForeign state.data.coinBalance}]
   exit $ EarningsScreen state showCoinsView
 
+eval AccessibilityHeaderAction state = 
+  if state.data.activeRide.bookingFromOtherPlatform then
+    continue state{ props{ showInterOperablePopUp = true } }
+  else continue state
+
+eval (PopUpModalInterOperableAction PopUpModal.OnButton2Click) state =
+  continue state{ props{ showInterOperablePopUp = false } }
+
 eval _ state = continue state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Effect Unit
@@ -1178,7 +1187,9 @@ activeRideDetail state (RidesInfo ride) =
               Nothing -> if isSafetyRide && (isNothing ride.specialLocationTag) 
                           then Just ST.SAFETY 
                           else Nothing,
-  enableFrequentLocationUpdates : fromMaybe false ride.enableFrequentLocationUpdates
+  enableFrequentLocationUpdates : fromMaybe false ride.enableFrequentLocationUpdates,
+  bapName : ride.bapName,
+  bookingFromOtherPlatform : not ride.isValueAddNP
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList
@@ -1261,10 +1272,11 @@ getPeekHeight state =
       labelLayout =  runFn1 JB.getLayoutBounds $ getNewIDWithTag "rideActionLabelLayout"
       contentLayout = runFn1 JB.getLayoutBounds $ getNewIDWithTag "rideActionLayout"
       pixels = runFn1 HU.getPixels ""
+      platformBanner = if state.data.activeRide.bookingFromOtherPlatform then 45 else 0
       density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
-      currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
+      currentPeekHeight = headerLayout.height  + contentLayout.height + (if (RideActionModal.isSpecialRide (rideActionModalConfig state)) || state.data.activeRide.bookingFromOtherPlatform then (labelLayout.height + 6) else 0)
       requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
-    in if requiredPeekHeight == 0 then 470 else requiredPeekHeight
+    in if requiredPeekHeight == 0 then 470 else requiredPeekHeight + platformBanner
   
 getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
 getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of

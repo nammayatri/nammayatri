@@ -720,5 +720,7 @@ dummyRideHistoryItem = RidesInfo {
       autoPayStatus : Nothing,
       driverGoHomeRequestId : Nothing,
       isFreeRide : Nothing,
-      enableFrequentLocationUpdates : Nothing
+      enableFrequentLocationUpdates : Nothing,
+      bapName : "",
+      isValueAddNP : false
   }
