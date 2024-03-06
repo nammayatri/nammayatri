@@ -96,6 +96,7 @@ public class MobilityCallAPI {
             response.setResponseBody(apiResponseBuilder(responseStream));
             return response;
         }catch (Exception e){
+            e.printStackTrace();
             return defaultResp;
         }
     }
