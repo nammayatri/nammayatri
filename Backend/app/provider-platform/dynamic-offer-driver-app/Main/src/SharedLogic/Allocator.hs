@@ -28,7 +28,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
-import Kernel.Types.Common (Meters, Seconds)
+import Kernel.Types.Common (Meters, Money, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
@@ -65,7 +65,8 @@ instance JobProcessor AllocatorJobType where
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
     estimatedRideDistance :: Maybe Meters,
-    driverExtraFeeBounds :: Maybe DFP.DriverExtraFeeBounds
+    driverExtraFeeBounds :: Maybe DFP.DriverExtraFeeBounds,
+    driverPickUpCharges :: Maybe Money
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

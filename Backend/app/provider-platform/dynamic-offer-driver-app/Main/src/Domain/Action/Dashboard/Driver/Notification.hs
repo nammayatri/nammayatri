@@ -115,6 +115,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           duration = Just (Seconds 300),
           pickupZone = False, -- TODO: make it dynamic ?
           specialZoneExtraTip = Nothing,
+          driverPickUpCharges = Nothing,
           ..
         }
 
