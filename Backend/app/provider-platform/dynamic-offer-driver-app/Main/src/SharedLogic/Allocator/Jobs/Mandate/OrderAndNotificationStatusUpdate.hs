@@ -11,6 +11,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (cast)
 import Kernel.Utils.Common
 import Lib.Scheduler
+import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -27,6 +28,7 @@ notificationAndOrderStatusUpdate ::
     ServiceFlow m r,
     Esq.Transactionable m,
     EncFlow m r,
+    EventStreamFlow m r,
     HasShortDurationRetryCfg r c
   ) =>
   Job 'OrderAndNotificationStatusUpdate ->
