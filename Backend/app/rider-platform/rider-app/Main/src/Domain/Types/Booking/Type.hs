@@ -12,9 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Domain.Types.Booking.Type where
+module Domain.Types.Booking.Type
+  ( module Domain.Types.Booking.Type,
+    PaymentStatus (..),
+  )
+where
 
+import BecknV2.OnDemand.Enums (PaymentStatus (..))
 import Data.Aeson
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Location as DLoc
@@ -54,6 +60,12 @@ $(mkBeamInstancesForEnum ''BookingStatus)
 
 $(mkHttpInstancesForEnum ''BookingStatus)
 
+deriving instance Ord PaymentStatus
+
+$(mkBeamInstancesForEnum ''PaymentStatus)
+
+$(mkHttpInstancesForEnum ''PaymentStatus)
+
 data BPPBooking
 
 data Booking = Booking
@@ -88,7 +100,8 @@ data Booking = Booking
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    serviceTierName :: Maybe Text
+    serviceTierName :: Maybe Text,
+    paymentStatus :: Maybe PaymentStatus
   }
   deriving (Generic, Show)
 

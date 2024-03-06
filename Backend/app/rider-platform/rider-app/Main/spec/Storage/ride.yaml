@@ -63,7 +63,7 @@ Ride:
     driverImage: Maybe Text
     vehicleNumber: Text
     vehicleModel: Text
-    vehicleColor: Text
+    vehicleColor: Maybe Text
     vehicleVariant: VehicleVariant|NoRelation
     otp: Text
     endOtp: Maybe Text
@@ -82,7 +82,7 @@ Ride:
     isFreeRide: Maybe Bool
     createdAt: UTCTime
     updatedAt: UTCTime
-    safetyCheckStatus : Maybe Bool
+    safetyCheckStatus: Maybe Bool
 
   sqlType:
     allowedEditLocationAttempts: int

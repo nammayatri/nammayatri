@@ -44,7 +44,7 @@ tfOrder res becknConfig mbFarePolicy = do
       orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
-      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy,
+      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy (Just res.paymentId),
       orderPayments = tfPayments res becknConfig,
       orderProvider = Utils.tfProvider becknConfig,
       orderQuote = Utils.tfQuotation res.booking,
@@ -73,7 +73,7 @@ tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
   let amount = Just $ show res.booking.estimatedFare.getMoney
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . L.singleton $ mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  Just . L.singleton $ mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount (Just res.paymentId) mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do
@@ -93,7 +93,7 @@ tfCancellationTerms becknConfig =
   L.singleton
     Spec.CancellationTerm
       { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount,
-        cancellationTermFulfillmentState = Nothing,
+        cancellationTermFulfillmentState = Utils.tfFulfillmentState Enums.RIDE_ASSIGNED,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
 

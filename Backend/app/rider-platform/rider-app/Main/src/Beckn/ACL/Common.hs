@@ -154,7 +154,7 @@ parseBookingDetails order msgId = do
   let rating :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.RATING tagGroups
       registeredAt :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.REGISTERED_AT tagGroups
   let driverImage = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
-  vehicleColor <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleColor) & fromMaybeM (InvalidRequest "vehicleColor is not present in RideAssigned Event.")
+  let vehicleColor = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleColor)
   vehicleModel <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel) & fromMaybeM (InvalidRequest "vehicleModel is not present in RideAssigned Event.")
   vehicleNumber <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & fromMaybeM (InvalidRequest "vehicleNumber is not present in RideAssigned Event.")
   pure $
@@ -167,8 +167,8 @@ parseBookingDetails order msgId = do
         ..
       }
 
-parseRideAssignedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.RideAssignedReq
-parseRideAssignedEvent order msgId = do
+parseRideAssignedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> Text -> m Common.RideAssignedReq
+parseRideAssignedEvent order msgId txnId = do
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
   let castToBool mbVar = case T.toLower <$> mbVar of
         Just "true" -> True
@@ -179,6 +179,7 @@ parseRideAssignedEvent order msgId = do
   return
     Common.RideAssignedReq
       { bookingDetails,
+        transactionId = txnId,
         isDriverBirthDay,
         isFreeRide
       }
@@ -189,13 +190,11 @@ parseRideStartedEvent order msgId = do
   stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideStarted Event.")
   start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideStarted Event.")
   let rideStartTime = start.stopTime >>= (.timeTimestamp)
-  let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
+      personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
-  let startOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_ODOMETER_DETAILS Tag.START_ODOMETER_READING tagGroups
-  let tripStartLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
-  let driverArrivalTime :: Maybe UTCTime =
-        readMaybe . T.unpack
-          =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
+      startOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_ODOMETER_DETAILS Tag.START_ODOMETER_READING tagGroups
+      tripStartLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
+      driverArrivalTime :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
   pure $
     Common.RideStartedReq
       { bookingDetails,
@@ -214,7 +213,7 @@ parseDriverArrivedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text ->
 parseDriverArrivedEvent order msgId = do
   bookingDetails <- parseBookingDetails order msgId
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
-  let arrivalTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
+      arrivalTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
   return $
     Common.DriverArrivedReq
       { bookingDetails,
@@ -225,16 +224,17 @@ parseRideCompletedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text ->
 parseRideCompletedEvent order msgId = do
   bookingDetails <- parseBookingDetails order msgId
   fare :: Int <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "quote.price.value is not present in RideCompleted Event.")
-  totalFare :: Int <- order.orderQuote >>= (.quotationPrice) >>= (.priceComputedValue) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "qoute.price.computed_value is not present in RideCompleted Event.")
-  let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+  let totalFare = fare
+      tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
       chargeableDistance :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.CHARGEABLE_DISTANCE tagGroups
       traveledDistance :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.TRAVELED_DISTANCE tagGroups
-  let endOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.END_ODOMETER_READING tagGroups
+      endOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.END_ODOMETER_READING tagGroups
   fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
   fareBreakups <- traverse mkDFareBreakup fareBreakups'
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
-  let tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
-  let rideEndTime = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)
+      tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
+      rideEndTime = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)
+      paymentStatus = order.orderPayments >>= listToMaybe >>= (.paymentStatus) >>= readMaybe . T.unpack
   pure $
     Common.RideCompletedReq
       { bookingDetails,

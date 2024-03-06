@@ -39,3 +39,8 @@ ALTER TABLE atlas_app.ride ADD COLUMN vehicle_model character varying(255) NOT N
 ALTER TABLE atlas_app.ride ADD COLUMN vehicle_number character varying(255) NOT NULL;
 ALTER TABLE atlas_app.ride ADD COLUMN vehicle_variant character varying(60) NOT NULL;
 ALTER TABLE atlas_app.ride ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ALTER COLUMN vehicle_color DROP NOT NULL;

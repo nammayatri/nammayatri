@@ -14,7 +14,6 @@
 
 module Beckn.ACL.OnSelect where
 
-import Beckn.ACL.Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified BecknV2.OnDemand.Tags as Tag
@@ -88,7 +87,7 @@ buildQuoteInfoV2 ::
 buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   fulfillmentType <- fulfillment.fulfillmentType & fromMaybeM (InvalidRequest "Missing fulfillmentType")
   quoteDetails <- case fulfillmentType of
-    "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime
+    "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill
     "RIDE_OTP" -> throwError $ InvalidRequest "select not supported for ride otp trip"
     _ -> throwError $ InvalidRequest "Invalid fulfillmentType"
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
@@ -100,22 +99,18 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
     Left err -> do
       logTagError "on_select req" $ "on_select error: " <> show err
       throwError $ InvalidRequest "Invalid or missing price data"
-    Right (estimatedFare, estimatedTotalFare) -> do
-      validatePrices estimatedFare estimatedTotalFare
-      -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
-      let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
+    Right estimatedFare -> do
       return $
         DOnSelect.QuoteInfo
           { vehicleVariant = vehicleVariant,
             estimatedFare = Money estimatedFare,
-            estimatedTotalFare = Money estimatedTotalFare,
-            discount = Money <$> discount,
+            discount = Nothing,
             serviceTierName = serviceTierName,
             quoteValidTill = validTill,
             ..
           }
   where
-    parsedData :: Spec.Order -> Either Text (Int, Int)
+    parsedData :: Spec.Order -> Either Text Int
     parsedData orderV2 = do
       estimatedFare <-
         orderV2.orderQuote
@@ -124,14 +119,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
           >>= parseInt
           & maybe (Left "Invalid Price") Right
 
-      estimatedTotalFare <-
-        orderV2.orderQuote
-          >>= (.quotationPrice)
-          >>= (.priceOfferedValue)
-          >>= parseInt
-          & maybe (Left "Invalid Offered Price") Right
-
-      Right (estimatedFare, estimatedTotalFare)
+      Right estimatedFare
 
     parseInt :: Text -> Maybe Int
     parseInt = readMaybe . T.unpack
@@ -142,15 +130,16 @@ buildDriverOfferQuoteDetailsV2 ::
   Spec.Fulfillment ->
   Spec.Quotation ->
   UTCTime ->
+  UTCTime ->
   m DOnSelect.DriverOfferQuoteDetails
-buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp = do
+buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
   let agentTags = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personTags)
       itemTags = item.itemTags
       driverName = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personName) & fromMaybe "Driver"
       durationToPickup = getPickupDurationV2 agentTags
       distanceToPickup' = getDistanceToNearestDriverV2 itemTags
       rating = getDriverRatingV2 agentTags
-  validTill <- (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
+  let validTill = (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybe onSelectTtl
   logDebug $ "on_select ttl request rider: " <> show validTill
   bppQuoteId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
   pure $
