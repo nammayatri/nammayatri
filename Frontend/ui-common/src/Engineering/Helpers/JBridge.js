@@ -1189,31 +1189,28 @@ export const translateStringWithTimeout = function (cb) {
   }
 }
 
-export const openNavigation = function (slat) {
-  return function (slong) {
-    return function (dlat) {
-      return function (dlong) {
-        return function (mode) {
-          if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery) {
-            const config = window.appConfig.navigationAppConfig;
-            const isIOS = window.__OS === "IOS";
-            const platformConfig = isIOS ? config.ios : config.android;
-            const query = mode == "WALK" ? platformConfig.walkQuery : platformConfig.query;
-            if (isIOS) {
-              return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
-            } else {
-              const packageName = platformConfig.packageName;
-              return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
-            }
-          } else {
-            // deprecated 
-            return window.JBridge.openNavigation(slat, slong, dlat, dlong);
-          }
-        };
-      };
+export const openNavigation = function (dlat) {
+  return function (dlong) {
+    return function (mode) {
+      if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery) {
+        const config = window.appConfig.navigationAppConfig;
+        const isIOS = window.__OS === "IOS";
+        const platformConfig = isIOS ? config.ios : config.android;
+        const query = mode == "WALK" ? platformConfig.walkQuery : platformConfig.query;
+        if (isIOS) {
+          return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
+        } else {
+          const packageName = platformConfig.packageName;
+          return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
+        }
+      } else {
+        // DEPRECATED -- TODO:: Need to remove this function 
+        return window.JBridge.openNavigation(0.0, 0.0, dlat, dlong);
+      }
     };
   };
 };
+
 
 export const animateCamera = function (lat) {
   return function (lng) {

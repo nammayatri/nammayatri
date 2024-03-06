@@ -1315,7 +1315,7 @@ homeScreenFlow = do
           sourceLng = (resp^._lon)
           destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
           destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-      void $ pure $ openNavigation sourceLat sourceLng destLat destLng "DRIVE"
+      void $ pure $ openNavigation destLat destLng "DRIVE"
       homeScreenFlow
     IN_APP_TRACK_STATUS state -> do
       case state.props.currentStage of
@@ -1652,7 +1652,7 @@ followRideScreenFlow callInitUI = do
               sourceLng = (resp^._lon)
               destLat =  ride.destinationLat
               destLng =  ride.destinationLng
-          void $ pure $ openNavigation 0.0 0.0 sourceLat sourceLng "DRIVE"
+          void $ pure $ openNavigation sourceLat sourceLng "DRIVE"
           followRideScreenFlow false
 
 
@@ -2891,7 +2891,7 @@ placeDetailsFlow = do
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
   where
     openGoogleMaps lat long = do
-      void $ pure $ openNavigation 0.0 0.0 lat long "DRIVE"
+      void $ pure $ openNavigation lat long "DRIVE"
       placeDetailsFlow
  
 ticketStatusFlow :: FlowBT String Unit
@@ -3042,7 +3042,7 @@ ticketListFlow = do
   case flow of
     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
     GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW dstLat1 dstLon2  -> do
-      void $ pure $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
+      void $ pure $ openNavigation dstLat1 dstLon2 "DRIVE"
       ticketListFlow
     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId
@@ -3081,7 +3081,7 @@ ticketListFlow = do
 --   case flow of
 --     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
 --     GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW dstLat1 dstLon2  -> do
---       void $ pure $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
+--       void $ pure $ openNavigation dstLat1 dstLon2 "DRIVE"
 --       zooTicketBookingFlow
 --     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
 --       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId

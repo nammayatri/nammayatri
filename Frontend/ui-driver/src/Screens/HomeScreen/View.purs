@@ -282,8 +282,8 @@ view push state =
       [ state.data.driverGotoState.gotoLocInRange,
         state.data.driverGotoState.goToInfo,
         state.data.driverGotoState.confirmGotoCancel,
-        state.props.accountBlockedPopup,
-        state.props.vehicleNSPopup
+        state.props.accountBlockedPopup
+        -- state.props.vehicleNSPopup
       ])
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

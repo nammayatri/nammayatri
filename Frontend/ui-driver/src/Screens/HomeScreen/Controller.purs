@@ -482,7 +482,7 @@ eval BackPressed state = do
     continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
-  _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
+  _ <- pure $ openNavigation state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   pure NoAction
   ]
@@ -641,7 +641,9 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   let lat = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lat else state.data.activeRide.dest_lat
       lon = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lon else state.data.activeRide.dest_lon
-  void $ pure $ openNavigation 0.0 0.0 lat lon "DRIVE"
+  if getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon lat lon > 200.0
+    then void $ pure $ openNavigation lat lon "DRIVE"
+    else void $ pure $ openUrlInApp $ "https://www.google.com/maps/dir/?api=1&destination="<> show lat <>","<> show lon
   continue state
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
