@@ -669,7 +669,7 @@ public class LocationUpdateService extends Service {
                             baseHeaders.put("vt", vVariant);
                             baseHeaders.put("dm", drMode);
                         } else {
-                            MobilityAPIResponse apiResponse = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
+                            MobilityAPIResponse apiResponse = callAPIHandler.callAPI(baseUrl+"/driver/profile", baseHeaders, "{}","GET");
                             try {
                                 JSONObject resp = new JSONObject(apiResponse.getResponseBody());
                                 if (resp.has("mode")) {
@@ -689,6 +689,7 @@ public class LocationUpdateService extends Service {
                                     updateStorage("VEHICLE_VARIANT", vVariant);
                                 }
                             } catch (JSONException e) {
+                                e.printStackTrace();
                                 Bundle params = new Bundle();
                                 params.putString("error", e.toString());
                                 FirebaseAnalytics.getInstance(context).logEvent("LS_ERROR_GETTING_PROFILE", params);
