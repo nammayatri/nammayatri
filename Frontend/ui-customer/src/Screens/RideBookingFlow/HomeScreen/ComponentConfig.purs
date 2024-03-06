@@ -46,10 +46,12 @@ import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy)
 import Data.Array as DA
 import Data.Either (Either(..))
+import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber)
 import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
+import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
@@ -1212,7 +1214,7 @@ ratingCardViewState state = {
     rating = state.data.ratingViewState.selectedRating, 
     feedbackList = state.data.rideRatingState.feedbackList
   } 
-  , feedbackPillData : customerFeedbackPillData FunctionCall
+  , feedbackPillData : customerFeedbackPillData state
   , primaryButtonConfig : PrimaryButton.config {
     textConfig{
       text = getString SUBMIT_FEEDBACK
@@ -1229,7 +1231,7 @@ ratingCardViewState state = {
   }
   , showProfileImg : true
   , title : getRateYourRideString ( getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
-  , feedbackPlaceHolder : getString HELP_US_WITH_YOUR_FEEDBACK_OPTIONAL
+  , feedbackPlaceHolder : getString ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US
   , showFeedbackPill : true
   , overallFeedbackArray : [(getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE),(getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING)]
   , accessibility : ENABLE
@@ -1278,6 +1280,7 @@ quoteListModelViewState state = let vehicleVariant = case (getSelectedEstimatesO
                                 , progress : state.props.findingQuotesProgress
                                 , appConfig : state.data.config
                                 , vehicleVariant : vehicleVariant
+                                , city : state.props.city
                                 }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1526,7 +1529,7 @@ reportIssueOptions state =
     , subtext : Nothing
     }
   , { reasonCode: "AUTO_BROKEN"
-    , description: getString AUTO_BROKEN
+    , description: getString VEHICLE_BROKEN
     , textBoxRequired : false
     , subtext : Nothing
     }
@@ -1640,6 +1643,7 @@ rideCompletedCardConfig state =
       topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, state.data.config.primaryBackground, topCardConfig.gradient, state.data.config.primaryBackground] else [topCardConfig.background,topCardConfig.background]
       waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
       headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
+      appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
   in RideCompletedCard.config {
         isDriver = false,
         customerIssueCard{
@@ -1676,7 +1680,7 @@ rideCompletedCardConfig state =
         },
         customerBottomCard {
           title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName,
-          subTitle = (getString $ YOUR_FEEDBACK_HELPS_US "YOUR_FEEDBACK_HELPS_US"),
+          subTitle = (getString $ YOUR_FEEDBACK_HELPS_US appName),
           selectedRating = state.data.ratingViewState.selectedRating,
           visible = not state.data.ratingViewState.issueFacedView
         },
@@ -1703,8 +1707,8 @@ getFareUpdatedStr diffInDist waitingChargeApplied = do
     true , true -> getVarString (if shorter then FARE_UPDATED_WITH_CHARGES_SHORTER_DIST else FARE_UPDATED_WITH_CHARGES_LONGER_DIST) [distInKm]
     false, false -> getString FARE_UPDATED
 
-customerFeedbackPillData :: LazyCheck -> Array (Array (Array RatingCard.FeedbackItem)) 
-customerFeedbackPillData lazyCheck = [feedbackPillDataWithRating1 Language, feedbackPillDataWithRating2 Language, feedbackPillDataWithRating3 Language, feedbackPillDataWithRating4 Language, feedbackPillDataWithRating5 Language]
+customerFeedbackPillData :: ST.HomeScreenState -> Array (Array (Array RatingCard.FeedbackItem)) 
+customerFeedbackPillData state = [feedbackPillDataWithRating1 Language, feedbackPillDataWithRating2 Language, feedbackPillDataWithRating3 state, feedbackPillDataWithRating4 state, feedbackPillDataWithRating5 state]
 
 feedbackPillDataWithRating1 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
 feedbackPillDataWithRating1 lazycheck = [
@@ -1728,31 +1732,31 @@ feedbackPillDataWithRating2 lazycheck = [
   {id : "2", text : getString LATE_PICK_UP}]
 ]
 
-feedbackPillDataWithRating3 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating3 lazycheck = [
+feedbackPillDataWithRating3 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating3 state = [
   [{id : "8", text : getString UNPROFESSIONAL_DRIVER},
   {id : "8", text : getString RASH_DRIVING}],
   [{id : "8", text : getString DRIVER_CHARGED_MORE},
-  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  {id : "11", text : if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB}],
   [{id : "3", text : getString TRIP_GOT_DELAYED},
   {id : "3", text : getString FELT_UNSAFE}]
 ]
 
-feedbackPillDataWithRating4 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating4 lazycheck = [
+feedbackPillDataWithRating4 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating4 state = [
   [{id : "9", text : getString POLITE_DRIVER},
   {id : "9", text : getString EXPERT_DRIVING}],
   [{id : "9", text : getString ASKED_FOR_EXTRA_FARE},
-  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  {id : "11", text : if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB}],
   [{id : "4", text : getString TRIP_GOT_DELAYED},
   {id : "4", text : getString SAFE_RIDE}]
 ]
 
-feedbackPillDataWithRating5 :: LazyCheck -> Array (Array RatingCard.FeedbackItem)
-feedbackPillDataWithRating5 lazyCheck = [
+feedbackPillDataWithRating5 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+feedbackPillDataWithRating5 state = [
   [{id : "10", text : getString POLITE_DRIVER},
   {id : "5", text : getString EXPERT_DRIVING}],
-  [{id : "12", text : getString CLEAN_AUTO},
+  [{id : "12", text : if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else getString CLEAN_CAB},
   {id : "10", text : getString ON_TIME}],
   [{id : "10", text : getString SKILLED_NAVIGATOR},
   {id : "5", text : getString SAFE_RIDE}]
@@ -1886,7 +1890,7 @@ safetyAlertConfig state =
   let
     config' = PopUpModal.config
 
-    alertData = getSafetyAlertData state.props.safetyAlertType
+    alertData = getSafetyAlertData state
 
     popUpConfig' =
       config'
@@ -1930,10 +1934,10 @@ safetyAlertConfig state =
   in
     popUpConfig'
 
-getSafetyAlertData :: Maybe ST.SafetyAlertType -> { text :: String, image :: String }
-getSafetyAlertData safetyAlertType = case safetyAlertType of
-  Just ST.DEVIATION ->  { text: getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE, image: "ny_ic_safety_alert_deroute" }
-  Just ST.STATIONARY_VEHICLE -> { text: getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED, image: "ny_ic_safety_alert_stationary" }
+getSafetyAlertData :: ST.HomeScreenState -> { text :: String, image :: String }
+getSafetyAlertData state = case state.props.safetyAlertType of
+  Just ST.DEVIATION ->  { text: getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE, image: if state.data.driverInfoCardState.vehicleVariant /= "AUTO_RICKSHAW" then "ny_ic_safety_alert_deroute_cab" else "ny_ic_safety_alert_deroute_auto" }
+  Just ST.STATIONARY_VEHICLE -> { text: getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED, image: if state.data.driverInfoCardState.vehicleVariant /= "AUTO_RICKSHAW" then "ny_ic_safety_alert_stationary_cab" else "ny_ic_safety_alert_stationary_auto" }
   _ -> { text: "", image: "" }
 
 shareRideConfig :: ST.HomeScreenState -> PopupWithCheckboxController.Config

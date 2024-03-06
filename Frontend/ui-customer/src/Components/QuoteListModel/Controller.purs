@@ -18,7 +18,7 @@ module Components.QuoteListModel.Controller where
 import Components.PrimaryButton as PrimaryButtonController
 import Components.QuoteListItem as QuoteListItemController
 import Data.Maybe (Maybe)
-import Screens.Types (TipViewProps, QuoteListItemState(..))
+import Screens.Types (TipViewProps, QuoteListItemState(..), City(..))
 import MerchantConfig.Types (AppConfig)
 
 data Action = GoBack
@@ -45,4 +45,5 @@ type QuoteListModelState = {
   , progress :: Number
   , appConfig :: AppConfig
   , vehicleVariant :: String
+  , city :: City
 }
