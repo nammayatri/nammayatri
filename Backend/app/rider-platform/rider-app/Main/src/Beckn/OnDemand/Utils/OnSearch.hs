@@ -60,6 +60,7 @@ getVehicleVariant provider item = do
           >>= (\fulfillmentId -> provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId))
           >>= (.fulfillmentVehicle)
           >>= (.vehicleCategory)
+  -- let variant = map T.toUpper variant'
   case (category, variant) of
     (Just "CAB", Just "SEDAN") -> return VehicleVariant.SEDAN
     (Just "CAB", Just "SUV") -> return VehicleVariant.SUV
@@ -84,19 +85,22 @@ getTotalFareRange :: MonadFlow m => Spec.Item -> m Estimate.FareRange
 getTotalFareRange item = do
   minValue <-
     item.itemPrice
-      >>= (.priceMinimumValue)
+      >>= getPriceField (.priceMinimumValue) (.priceValue) -- \p -> maybe p.priceValue Just p.priceMinimumValue
       >>= DecimalValue.valueFromString
-      & fromMaybeM (InvalidRequest "Missing Minimum Value")
+      & fromMaybeM (InvalidBecknSchema $ "Missing Price Value:-" <> show item.itemPrice)
   maxValue <-
     item.itemPrice
-      >>= (.priceMaximumValue)
+      >>= getPriceField (.priceMaximumValue) (.priceValue) -- \p -> maybe p.priceValue Just p.priceMaximumValue
       >>= DecimalValue.valueFromString
-      & fromMaybeM (InvalidRequest "Missing Maximum Value")
+      & fromMaybeM (InvalidBecknSchema $ "Missing Price Value:-" <> show item.itemPrice)
   return $
     Estimate.FareRange
       { Estimate.minFare = Money $ roundToIntegral minValue,
         Estimate.maxFare = Money $ roundToIntegral maxValue
       }
+  where
+    getPriceField :: (Spec.Price -> Maybe Text) -> (Spec.Price -> Maybe Text) -> Spec.Price -> Maybe Text
+    getPriceField f1 f2 price = maybe (f2 price) Just (f1 price)
 
 buildEstimateBreakupList :: MonadFlow m => Spec.Item -> m [OnSearch.EstimateBreakupInfo]
 buildEstimateBreakupList item = do
@@ -220,7 +224,7 @@ buildWaitingChargeInfo item = do
 
 getProviderLocation :: MonadFlow m => Spec.Provider -> m [Maps.LatLong]
 getProviderLocation provider = do
-  locations <- provider.providerLocations & fromMaybeM (InvalidRequest "Missing Locations")
+  let locations = provider.providerLocations & fromMaybe []
   mapM makeLatLong locations
 
 makeLatLong :: MonadFlow m => Spec.Location -> m Maps.LatLong

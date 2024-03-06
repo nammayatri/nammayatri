@@ -1,1 +1,1 @@
-ALTER TABLE atlas_app.merchant ADD COLUMN city text NOT NULL DEFAULT 'Kochi';
+ALTER TABLE atlas_app.merchant ADD COLUMN city text NOT NULL DEFAULT 'Hyderabad';

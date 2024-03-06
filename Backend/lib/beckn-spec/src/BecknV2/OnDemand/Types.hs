@@ -110,7 +110,7 @@ data Ack = Ack
     -- | A list of tags containing any additional information sent along with the Acknowledgement.
     ackTags :: Maybe [TagGroup]
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Ack where
   parseJSON = genericParseJSON optionsAck
@@ -135,7 +135,7 @@ newtype AckMessage = AckMessage
   { -- |
     ackMessageAck :: Ack
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON AckMessage where
   parseJSON = genericParseJSON optionsAckMessage
@@ -161,7 +161,7 @@ data AckResponse = AckResponse
     -- |
     ackResponseMessage :: AckMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON AckResponse where
   parseJSON = genericParseJSON optionsAckResponse
@@ -188,7 +188,7 @@ data Agent = Agent
     -- |
     agentPerson :: Maybe Person
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Agent where
   parseJSON = genericParseJSON optionsAgent
@@ -215,7 +215,7 @@ data Authorization = Authorization
     -- | Type of authorization mechanism used. The allowed values for this field can be published as part of the network policy.
     authorizationType :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Authorization where
   parseJSON = genericParseJSON optionsAuthorization
@@ -242,7 +242,7 @@ data Billing = Billing
     -- | Phone number of the billable entity
     billingPhone :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Billing where
   parseJSON = genericParseJSON optionsBilling
@@ -269,7 +269,7 @@ data CancelReq = CancelReq
     -- |
     cancelReqMessage :: CancelReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON CancelReq where
   parseJSON = genericParseJSON optionsCancelReq
@@ -299,7 +299,7 @@ data CancelReqMessage = CancelReqMessage
     -- |
     cancelReqMessageOrderId :: Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON CancelReqMessage where
   parseJSON = genericParseJSON optionsCancelReqMessage
@@ -325,7 +325,7 @@ newtype Cancellation = Cancellation
   { -- |
     cancellationCancelledBy :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Cancellation where
   parseJSON = genericParseJSON optionsCancellation
@@ -353,7 +353,7 @@ data CancellationTerm = CancellationTerm
     -- | Indicates whether a reason is required to cancel the order
     cancellationTermReasonRequired :: Maybe Bool
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON CancellationTerm where
   parseJSON = genericParseJSON optionsCancellationTerm
@@ -381,7 +381,7 @@ data Catalog = Catalog
     -- |
     catalogProviders :: Maybe [Provider]
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Catalog where
   parseJSON = genericParseJSON optionsCatalog
@@ -408,7 +408,7 @@ data City = City
     -- | Name of the city
     cityName :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON City where
   parseJSON = genericParseJSON optionsCity
@@ -435,7 +435,7 @@ data ConfirmReq = ConfirmReq
     -- |
     confirmReqMessage :: ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON ConfirmReq where
   parseJSON = genericParseJSON optionsConfirmReq
@@ -461,7 +461,7 @@ newtype ConfirmReqMessage = ConfirmReqMessage
   { -- |
     confirmReqMessageOrder :: Order
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON ConfirmReqMessage where
   parseJSON = genericParseJSON optionsConfirmReqMessage
@@ -485,7 +485,7 @@ newtype Contact = Contact
   { -- |
     contactPhone :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Contact where
   parseJSON = genericParseJSON optionsContact
@@ -533,7 +533,7 @@ data Context = Context
     -- | Version of transaction protocol being used by the sender.
     contextVersion :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Context where
   parseJSON = genericParseJSON optionsContext
@@ -571,7 +571,7 @@ data Country = Country
     -- | Name of the country
     countryName :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Country where
   parseJSON = genericParseJSON optionsCountry
@@ -598,7 +598,7 @@ data Customer = Customer
     -- |
     customerPerson :: Maybe Person
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Customer where
   parseJSON = genericParseJSON optionsCustomer
@@ -627,7 +627,7 @@ data Descriptor = Descriptor
     -- |
     descriptorShortDesc :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Descriptor where
   parseJSON = genericParseJSON optionsDescriptor
@@ -653,7 +653,7 @@ newtype Domain = Domain
   { -- | Standard code representing the domain. The standard is usually published as part of the network policy. Furthermore, the network facilitator should also provide a mechanism to provide the supported domains of a network.
     domainCode :: Maybe Value
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Domain where
   parseJSON = genericParseJSON optionsDomain
@@ -681,7 +681,7 @@ data Error = Error
     -- | Path to json schema generating the error. Used only during json schema validation errors
     errorPaths :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Error where
   parseJSON = genericParseJSON optionsError
@@ -709,7 +709,7 @@ data Fee = Fee
     -- | Describes a numerical value in decimal form
     feePercentage :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Fee where
   parseJSON = genericParseJSON optionsFee
@@ -748,7 +748,7 @@ data Fulfillment = Fulfillment
     -- |
     fulfillmentVehicle :: Maybe Vehicle
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Fulfillment where
   parseJSON = genericParseJSON optionsFulfillment
@@ -779,7 +779,7 @@ newtype FulfillmentState = FulfillmentState
   { -- |
     fulfillmentStateDescriptor :: Maybe Descriptor
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON FulfillmentState where
   parseJSON = genericParseJSON optionsFulfillmentState
@@ -809,7 +809,7 @@ data Image = Image
     -- | Width of the image in pixels
     imageWidth :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Image where
   parseJSON = genericParseJSON optionsImage
@@ -838,7 +838,7 @@ data InitReq = InitReq
     -- |
     initReqMessage :: ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON InitReq where
   parseJSON = genericParseJSON optionsInitReq
@@ -868,7 +868,7 @@ data Intent = Intent
     -- |
     intentTags :: Maybe [TagGroup]
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Intent where
   parseJSON = genericParseJSON optionsIntent
@@ -906,7 +906,7 @@ data Item = Item
     -- |
     itemTags :: Maybe [TagGroup]
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Item where
   parseJSON = genericParseJSON optionsItem
@@ -950,7 +950,7 @@ data Location = Location
     -- |
     locationUpdatedAt :: Maybe UTCTime
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Location where
   parseJSON = genericParseJSON optionsLocation
@@ -985,7 +985,7 @@ data OnCancelReq = OnCancelReq
     -- |
     onCancelReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnCancelReq where
   parseJSON = genericParseJSON optionsOnCancelReq
@@ -1016,7 +1016,7 @@ data OnConfirmReq = OnConfirmReq
     -- |
     onConfirmReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnConfirmReq where
   parseJSON = genericParseJSON optionsOnConfirmReq
@@ -1047,7 +1047,7 @@ data OnInitReq = OnInitReq
     -- |
     onInitReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnInitReq where
   parseJSON = genericParseJSON optionsOnInitReq
@@ -1078,7 +1078,7 @@ data OnSearchReq = OnSearchReq
     -- |
     onSearchReqMessage :: Maybe OnSearchReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnSearchReq where
   parseJSON = genericParseJSON optionsOnSearchReq
@@ -1105,7 +1105,7 @@ newtype OnSearchReqMessage = OnSearchReqMessage
   { -- |
     onSearchReqMessageCatalog :: Catalog
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnSearchReqMessage where
   parseJSON = genericParseJSON optionsOnSearchReqMessage
@@ -1133,7 +1133,7 @@ data OnSelectReq = OnSelectReq
     -- |
     onSelectReqMessage :: Maybe OnSelectReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnSelectReq where
   parseJSON = genericParseJSON optionsOnSelectReq
@@ -1160,7 +1160,7 @@ newtype OnSelectReqMessage = OnSelectReqMessage
   { -- |
     onSelectReqMessageOrder :: Maybe Order
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnSelectReqMessage where
   parseJSON = genericParseJSON optionsOnSelectReqMessage
@@ -1188,7 +1188,7 @@ data OnStatusReq = OnStatusReq
     -- |
     onStatusReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnStatusReq where
   parseJSON = genericParseJSON optionsOnStatusReq
@@ -1219,7 +1219,7 @@ data OnTrackReq = OnTrackReq
     -- |
     onTrackReqMessage :: Maybe OnTrackReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnTrackReq where
   parseJSON = genericParseJSON optionsOnTrackReq
@@ -1246,7 +1246,7 @@ newtype OnTrackReqMessage = OnTrackReqMessage
   { -- |
     onTrackReqMessageTracking :: Tracking
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnTrackReqMessage where
   parseJSON = genericParseJSON optionsOnTrackReqMessage
@@ -1274,7 +1274,7 @@ data OnUpdateReq = OnUpdateReq
     -- |
     onUpdateReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON OnUpdateReq where
   parseJSON = genericParseJSON optionsOnUpdateReq
@@ -1301,7 +1301,7 @@ newtype Option = Option
   { -- |
     optionId :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Option where
   parseJSON = genericParseJSON optionsOption
@@ -1347,7 +1347,7 @@ data Order = Order
     -- | The date-time of updated of this order
     orderUpdatedAt :: Maybe UTCTime
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Order where
   parseJSON = genericParseJSON optionsOrder
@@ -1392,7 +1392,7 @@ data Payment = Payment
     -- |
     paymentType :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Payment where
   parseJSON = genericParseJSON optionsPayment
@@ -1429,7 +1429,7 @@ data PaymentParams = PaymentParams
     -- |
     paymentParamsVirtualPaymentAddress :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON PaymentParams where
   parseJSON = genericParseJSON optionsPaymentParams
@@ -1463,7 +1463,7 @@ data Person = Person
     -- |
     personTags :: Maybe [TagGroup]
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Person where
   parseJSON = genericParseJSON optionsPerson
@@ -1500,7 +1500,7 @@ data Price = Price
     -- | Describes a numerical value in decimal form
     priceValue :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Price where
   parseJSON = genericParseJSON optionsPrice
@@ -1539,7 +1539,7 @@ data Provider = Provider
     -- |
     providerPayments :: Maybe [Payment]
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Provider where
   parseJSON = genericParseJSON optionsProvider
@@ -1572,7 +1572,7 @@ data Quotation = Quotation
     -- | Describes duration as per ISO8601 format
     quotationTtl :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Quotation where
   parseJSON = genericParseJSON optionsQuotation
@@ -1600,7 +1600,7 @@ data QuotationBreakupInner = QuotationBreakupInner
     -- |
     quotationBreakupInnerTitle :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON QuotationBreakupInner where
   parseJSON = genericParseJSON optionsQuotationBreakupInner
@@ -1630,7 +1630,7 @@ data Rating = Rating
     ratingValue :: Maybe Text,
     ratingFeedbackForm :: Maybe [FeedbackForm]
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Rating where
   parseJSON = genericParseJSON optionsRating
@@ -1655,7 +1655,7 @@ data FeedbackForm = FeedbackForm
   { feedbackFormQuestion :: Text,
     feedbackFormAnswer :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON FeedbackForm where
   parseJSON = genericParseJSON optionsFeedbackForm
@@ -1682,7 +1682,7 @@ data RatingReq = RatingReq
     -- |
     ratingReqMessage :: RatingReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON RatingReq where
   parseJSON = genericParseJSON optionsRatingReq
@@ -1708,7 +1708,7 @@ newtype RatingReqMessage = RatingReqMessage
   { -- |
     ratingReqMessageRatings :: Maybe [Rating]
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON RatingReqMessage where
   parseJSON = genericParseJSON optionsRatingReqMessage
@@ -1734,7 +1734,7 @@ data SearchReq = SearchReq
     -- |
     searchReqMessage :: SearchReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON SearchReq where
   parseJSON = genericParseJSON optionsSearchReq
@@ -1760,7 +1760,7 @@ newtype SearchReqMessage = SearchReqMessage
   { -- |
     searchReqMessageIntent :: Maybe Intent
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON SearchReqMessage where
   parseJSON = genericParseJSON optionsSearchReqMessage
@@ -1786,7 +1786,7 @@ data SelectReq = SelectReq
     -- |
     selectReqMessage :: ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON SelectReq where
   parseJSON = genericParseJSON optionsSelectReq
@@ -1812,7 +1812,7 @@ newtype State = State
   { -- | Name of the state
     stateName :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON State where
   parseJSON = genericParseJSON optionsState
@@ -1838,7 +1838,7 @@ data StatusReq = StatusReq
     -- |
     statusReqMessage :: StatusReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON StatusReq where
   parseJSON = genericParseJSON optionsStatusReq
@@ -1866,7 +1866,7 @@ data StatusReqMessage = StatusReqMessage
     -- |
     statusReqMessageRefId :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON StatusReqMessage where
   parseJSON = genericParseJSON optionsStatusReqMessage
@@ -1897,7 +1897,7 @@ data Stop = Stop
     -- | The type of stop. Allowed values of this property can be defined by the network policy.
     stopType :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Stop where
   parseJSON = genericParseJSON optionsStop
@@ -1928,7 +1928,7 @@ data Tag = Tag
     -- | The value of the tag. This set by the BPP and rendered as-is by the BAP.
     tagValue :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Tag where
   parseJSON = genericParseJSON optionsTag
@@ -1958,7 +1958,7 @@ data TagGroup = TagGroup
     -- | An array of Tag objects listed under this group. This property can be set by BAPs during search to narrow the `search` and achieve more relevant results. When received during `on_search`, BAPs must render this list under the heading described by the `name` property of this schema.
     tagGroupList :: Maybe [Tag]
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON TagGroup where
   parseJSON = genericParseJSON optionsTagGroup
@@ -1986,7 +1986,7 @@ data Time = Time
     -- |
     timeTimestamp :: Maybe UTCTime
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Time where
   parseJSON = genericParseJSON optionsTime
@@ -2013,7 +2013,7 @@ data TrackReq = TrackReq
     -- |
     trackReqMessage :: TrackReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON TrackReq where
   parseJSON = genericParseJSON optionsTrackReq
@@ -2039,7 +2039,7 @@ newtype TrackReqMessage = TrackReqMessage
   { -- |
     trackReqMessageOrderId :: Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON TrackReqMessage where
   parseJSON = genericParseJSON optionsTrackReqMessage
@@ -2067,7 +2067,7 @@ data Tracking = Tracking
     -- | A URL to the tracking endpoint. This can be a link to a tracking webpage, a webhook URL created by the BAP where BPP can push the tracking data, or a GET url creaed by the BPP which the BAP can poll to get the tracking data. It can also be a websocket URL where the BPP can push real-time tracking data.
     trackingUrl :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Tracking where
   parseJSON = genericParseJSON optionsTracking
@@ -2103,7 +2103,7 @@ data Vehicle = Vehicle
     -- |
     vehicleVariant :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic, Data, Read)
 
 instance FromJSON Vehicle where
   parseJSON = genericParseJSON optionsVehicle

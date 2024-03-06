@@ -70,7 +70,7 @@ in  { esqDBCfg
     , authServiceUrl = common.authServiceUrl
     , authEntity =
       { signingKey = sec.signingKey
-      , uniqueKeyId = "juspay-mobility-bap-1-key"
+      , uniqueKeyId = "54"
       , signatureExpiry = common.signatureExpiry
       }
     , disableSignatureAuth = False

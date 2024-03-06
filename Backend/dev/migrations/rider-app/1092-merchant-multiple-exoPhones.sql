@@ -40,7 +40,7 @@ ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN initiate_call S
 WITH MerchantCallServiceConfigs AS (
   SELECT T1.id, 'Call_Exotel', CAST ('{
    "exotelUrl":"https://api.exotel.com/",
-   "callbackUrl":"http://localhost:8013/v1/ride/call/statusCallback",
+   "callbackUrl":"https://f57b-13-232-74-226.ngrok-free.app/v1/ride/call/statusCallback",
    "apiKey":"xxxxxxx",
    "apiToken":"xxxxxxx",
    "sid":"xxxxxxx",
