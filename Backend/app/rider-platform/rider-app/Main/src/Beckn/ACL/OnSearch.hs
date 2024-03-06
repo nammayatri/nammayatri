@@ -40,7 +40,6 @@ buildOnSearchReqV2 req = do
   (_, validTill) <- Utils.getTimestampAndValidTill req.onSearchReqContext
   case req.onSearchReqError of
     Nothing -> do
-      -- generated function
       message <- req.onSearchReqMessage & fromMaybeM (InvalidRequest "Missing message")
       let catalog = message.onSearchReqMessageCatalog
       providers <- catalog.catalogProviders & fromMaybeM (InvalidRequest "Missing Providers")

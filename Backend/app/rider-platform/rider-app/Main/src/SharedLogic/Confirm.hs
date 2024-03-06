@@ -243,7 +243,8 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         isScheduled = isScheduled,
         createdAt = now,
         updatedAt = now,
-        serviceTierName = quote.serviceTierName
+        serviceTierName = quote.serviceTierName,
+        paymentStatus = Nothing
       }
   where
     buildBookingDetails = case quote.quoteDetails of

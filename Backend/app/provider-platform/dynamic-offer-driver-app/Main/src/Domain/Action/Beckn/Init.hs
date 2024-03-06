@@ -77,7 +77,8 @@ data InitRes = InitRes
     driverId :: Maybe Text,
     bppSubscriberId :: Maybe Text,
     riderPhoneNumber :: Text,
-    riderName :: Maybe Text
+    riderName :: Maybe Text,
+    paymentId :: Text
   }
 
 handler ::
@@ -92,6 +93,7 @@ handler ::
 handler merchantId req validatedReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
+  paymentId <- generateGUID
   let searchRequest = validatedReq.searchRequest
       riderName = req.mbRiderName
       riderPhoneNumber = req.riderPhoneNumber

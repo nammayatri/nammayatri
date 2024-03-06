@@ -65,7 +65,7 @@ data RideAssignedInfo = RideAssignedInfo
     isFreeRide :: Bool,
     rideOtp :: Text,
     vehicleNumber :: Text,
-    vehicleColor :: Text,
+    vehicleColor :: Maybe Text,
     vehicleModel :: Text
   }
 
@@ -119,11 +119,11 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
   void $ QRB.updateStatus booking.id DRB.CONFIRMED
 onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
 
-validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
-validateRequest (BookingConfirmed BookingConfirmedInfo {..}) = do
+validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
+validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
   return $ ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}
-validateRequest (RideAssigned RideAssignedInfo {..}) = do
+validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
   let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
+  booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {..}

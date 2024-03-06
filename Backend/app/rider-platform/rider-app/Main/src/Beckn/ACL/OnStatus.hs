@@ -32,8 +32,9 @@ buildOnStatusReqV2 ::
     CacheFlow m r
   ) =>
   Spec.OnStatusReq ->
+  Text ->
   m (Maybe DOnStatus.DOnStatusReq)
-buildOnStatusReqV2 req = do
+buildOnStatusReqV2 req txnId = do
   ContextV2.validateContext Context.ON_STATUS req.onStatusReqContext
   handleErrorV2 req \message -> do
     let order = message.confirmReqMessageOrder
@@ -57,8 +58,9 @@ buildOnStatusReqV2 req = do
         "ACTIVE" -> do
           case eventType of
             "RIDE_ASSIGNED" -> do
-              assignedReq <- Common.parseRideAssignedEvent order messageId
+              assignedReq <- Common.parseRideAssignedEvent order messageId txnId
               return $ DOnStatus.RideAssignedDetails assignedReq
+            "RIDE_ENROUTE_PICKUP" -> pure DOnStatus.RideEnroutePickupDetails
             "RIDE_ARRIVED_PICKUP" -> do
               arrivedReq <- Common.parseDriverArrivedEvent order messageId
               return $ DOnStatus.DriverArrivedDetails arrivedReq

@@ -51,9 +51,9 @@ mkRideCompletedQuote ride fareParams = do
   let currency = "INR"
       price =
         Spec.Price
-          { priceComputedValue = Just fare,
-            priceCurrency = Just currency,
+          { priceCurrency = Just currency,
             priceValue = Just fare,
+            priceComputedValue = Nothing,
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
             priceOfferedValue = Nothing

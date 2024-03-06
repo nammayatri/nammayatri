@@ -65,7 +65,7 @@ data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
     estimatedFare :: Money,
     discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    -- estimatedTotalFare :: Money,
     quoteDetails :: DriverOfferQuoteDetails,
     specialLocationTag :: Maybe Text,
     serviceTierName :: Maybe Text,
@@ -166,6 +166,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             requestId = estimate.requestId,
             itemId = estimate.itemId,
             validTill = quoteValidTill,
+            estimatedTotalFare = estimatedFare,
             ..
           }
   pure quote

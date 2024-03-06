@@ -41,7 +41,7 @@ onStatus _ reqV2 = withFlowHandlerBecknAPI do
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "onStatusAPIV2" $ "Received onStatus API call:-" <> show reqV2
     messageId <- Utils.getMessageIdText reqV2.onStatusReqContext
-    mbDOnStatusReq <- ACL.buildOnStatusReqV2 reqV2
+    mbDOnStatusReq <- ACL.buildOnStatusReqV2 reqV2 transactionId
     whenJust mbDOnStatusReq $ \onStatusReq ->
       Redis.whenWithLockRedis (onStatusLockKey messageId) 60 $ do
         validatedOnStatusReq <- DOnStatus.validateRequest onStatusReq

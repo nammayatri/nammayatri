@@ -72,7 +72,7 @@ parseEventV2 transactionId messageId order = do
   -- TODO::Beckn, fix this codes after correct v2-spec mapping
   case eventType of
     "RIDE_ASSIGNED" -> do
-      assignedReq <- Common.parseRideAssignedEvent order messageId
+      assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
       return $ DOnUpdate.OURideAssignedReq assignedReq
     "RIDE_ARRIVED_PICKUP" -> do
       arrivedReq <- Common.parseDriverArrivedEvent order messageId
