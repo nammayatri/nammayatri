@@ -751,14 +751,12 @@ getRouteMarkers variant city trackingType =
     mkSrcMarker = getCitySpecificMarker city
     
     getCitySpecificMarker :: City -> String
-    getCitySpecificMarker city = case city of
-        Hyderabad -> "ny_ic_black_yellow_auto"
-        _         -> getMarkerVariant variant
-
-    getMarkerVariant :: String -> String
-    getMarkerVariant variant =
+    getCitySpecificMarker city = 
         case variant of
-            "AUTO_RICKSHAW" -> "ic_auto_nav_on_map"
+            "AUTO_RICKSHAW" -> getAutoImage city
+            "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
+            "SUV"           -> "ny_ic_suv_nav_on_map"
+            "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
             _               -> "ny_ic_vehicle_nav_on_map"
     
     mkDestMarker :: String
@@ -772,7 +770,7 @@ getRouteMarkers variant city trackingType =
         Hyderabad -> "ny_ic_black_yellow_auto"
         Kochi -> "ny_ic_koc_auto_on_map"
         Chennai -> "ny_ic_black_yellow_auto"
-        _         -> "ny_ic_auto_nav_on_map"
+        _         -> "ic_auto_nav_on_map"
       
 
 

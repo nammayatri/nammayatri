@@ -243,7 +243,13 @@ getVehicleImage variant vehicleDetail city = do
           YATRISATHI -> case variant of
                           "SUV" -> "ny_ic_suv_concept"
                           _     -> "ny_ic_sedan_concept"
-          _          -> "ic_white_taxi"
+          _          -> case variant of
+                          "TAXI"      -> "ny_ic_sedan_concept"
+                          "TAXI_PLUS" -> "ny_ic_sedan_concept"
+                          "SUV"       -> "ny_ic_suv_concept"
+                          "SEDAN"     -> "ny_ic_sedan_concept"
+                          "HATCHBACK" -> "ny_ic_hatchback_concept"
+                          _           -> "ny_ic_sedan_concept"              
     where 
       mkAutoImage :: City -> String
       mkAutoImage city = 
