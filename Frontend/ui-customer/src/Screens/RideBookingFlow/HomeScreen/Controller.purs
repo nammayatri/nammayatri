@@ -1793,11 +1793,11 @@ eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do
     formatDigits time = (if time >= 10 then "" else "0") <> show time
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate)) state = do
-  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng "DRIVE"
+  void $ pure $ openNavigation state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng "DRIVE"
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigateToZone)) state = do
-  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng "WALK"
+  void $ pure $ openNavigation state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng "WALK"
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.RideSupport)) state = do
