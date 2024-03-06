@@ -8,8 +8,8 @@ ADD
 UPDATE
     atlas_app.merchant
 SET
-    registry_url = 'http://localhost:8020',
-    gateway_url = 'http://localhost:8015/v1';
+    registry_url = 'https://staging.registry.ondc.org',
+    gateway_url = 'https://staging.gateway.proteantech.in';
 
 ALTER TABLE
     atlas_app.merchant

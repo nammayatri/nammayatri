@@ -2,7 +2,7 @@ let common = ./common.dhall
 
 let main = ./public-transport-rider-platform.dhall
 
-let juspayGatewayUrl = "http://localhost:8015/v1"
+let juspayGatewayUrl = "https://staging.gateway.proteantech.in"
 
 let kafkaConsumerCfgs =
       { publicTransportSearch =

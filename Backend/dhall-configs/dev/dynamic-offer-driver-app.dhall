@@ -166,19 +166,22 @@ let kvConfigUpdateFrequency = +10
 
 let appBackendBapInternal =
       { name = "APP_BACKEND"
-      , url = "http://localhost:8013/"
+      , url = "https://f57b-13-232-74-226.ngrok-free.app/"
       , apiKey = sec.appBackendApikey
       , internalKey = sec.internalKey
       }
 
 let registryMap =
       [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
-        , mapValue = "http://localhost:8020/"
+        , mapValue = "https://staging.registry.ondc.org"
         }
-      , { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
-        , mapValue = "http://localhost:8020/"
+      , { mapKey =
+            "beta.beckn.uat.juspay.net/dev/bap/beckn/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
+        , mapValue = "https://staging.registry.ondc.org"
         }
-      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
+      , { mapKey = "JUSPAY.BG.1"
+        , mapValue = "https://staging.registry.ondc.org"
+        }
       ]
 
 let AllocatorJobType =

@@ -1,3 +1,3 @@
 ALTER TABLE atlas_driver_offer_bpp.white_list_org ALTER COLUMN subscriber_id TYPE character varying(255);
 UPDATE atlas_driver_offer_bpp.white_list_org SET subscriber_id = trim(subscriber_id);
-UPDATE atlas_driver_offer_bpp.white_list_org SET subscriber_id = 'localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51' where subscriber_id = 'localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52';
+UPDATE atlas_driver_offer_bpp.white_list_org SET subscriber_id = 'beta.beckn.uat.juspay.net/dev/bap/beckn/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51' where subscriber_id = 'beta.beckn.uat.juspay.net/dev/bap/beckn/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51';

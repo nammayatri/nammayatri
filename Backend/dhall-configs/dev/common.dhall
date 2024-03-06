@@ -2,7 +2,7 @@ let sec = ./secrets/common.dhall
 
 let globalCommon = ../generic/common.dhall
 
-let mockRegistryUrl = "http://localhost:8020/"
+let mockRegistryUrl = "https://staging.registry.ondc.org"
 
 let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 
@@ -21,8 +21,8 @@ let mockGoogleCfg =
       }
 
 let internalEndPointMap =
-      [ { mapKey = "http://localhost:8015/v1"
-        , mapValue = "http://localhost:8015/v1"
+      [ { mapKey = "https://staging.gateway.proteantech.in"
+        , mapValue = "https://staging.gateway.proteantech.in"
         }
       ]
 
@@ -53,7 +53,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
     , registryUrl = mockRegistryUrl
-    , authServiceUrl = "http://localhost:8013/"
+    , authServiceUrl = "https://f57b-13-232-74-226.ngrok-free.app/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
     , internalEndPointMap
