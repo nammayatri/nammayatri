@@ -66,6 +66,7 @@ library
       API.Internal.Auth
       API.Internal.BulkLocUpdate
       API.Internal.CustomerCancellationDues
+      API.Internal.DriverInactiveFCM
       API.Internal.DriverReferee
       API.Internal.FeedbackForm
       API.UI
@@ -156,6 +157,7 @@ library
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.CustomerCancellationDues
+      Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
