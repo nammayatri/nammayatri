@@ -44,7 +44,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Cac
 import Kernel.Types.Id
-import qualified Kernel.Types.SlidingWindowCounters as SWC
+-- import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
@@ -61,14 +61,10 @@ getDriverIntelligentPoolConfigFromDB id =
     Just a -> return . Just $ coerce @(DriverIntelligentPoolConfigD 'Unsafe) @DriverIntelligentPoolConfig a
     Nothing -> flip whenJust cacheDriverIntelligentPoolConfig /=<< Queries.findByMerchantOpCityId id
 
-stringValueToObject :: [(Key, Value)] -> [(Key, Value)]
-stringValueToObject [] = []
-stringValueToObject ((k, v) : xs) = case DAK.toText k of
-  "availabilityTimeWindowOption" -> ("availabilityTimeWindowOption", toJSON ((valueToType v) :: SWC.SlidingWindowOptions)) : stringValueToObject xs
-  "acceptanceRatioWindowOption" -> ("acceptanceRatioWindowOption", toJSON ((valueToType v) :: SWC.SlidingWindowOptions)) : stringValueToObject xs
-  "cancellationAndRideFrequencyRatioWindowOption" -> ("cancellationAndRideFrequencyRatioWindowOption", toJSON ((valueToType v) :: SWC.SlidingWindowOptions)) : stringValueToObject xs
-  "minQuotesToQualifyForIntelligentPoolWindowOption" -> ("minQuotesToQualifyForIntelligentPoolWindowOption", toJSON ((valueToType v) :: SWC.SlidingWindowOptions)) : stringValueToObject xs
-  _ -> (k, v) : stringValueToObject xs
+-- stringValueToObject :: [(Key, Value)] -> [(Key, Value)]
+-- stringValueToObject [] = []
+-- stringValueToObject ((k, v) : xs) = case DAK.toText k of
+--   _ -> (k, v) : stringValueToObject xs
 
 getConfigFromCACStrict :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig
 getConfigFromCACStrict merchantOpCityId = do
@@ -78,8 +74,8 @@ getConfigFromCACStrict merchantOpCityId = do
   let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dipcCond toss
   let res' = (contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverIntelligentPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverIntelligentPoolConfig:" (DAK.toText k))))
-      res'' = stringValueToObject res'
-      res = (DA.Object $ DAKM.fromList res'') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
+      -- res'' = stringValueToObject res'
+      res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
   pure . fromMaybe (error "error in fetching the context value driverIntelligentPoolConfig: ") $ res
 
 cacFallbackHelper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m DriverIntelligentPoolConfig

@@ -18,12 +18,20 @@ module Domain.Types.FarePolicy.FarePolicySlabsDetails
   )
 where
 
+import Control.Lens.Combinators
+import Control.Lens.Fold
+import qualified Data.Aeson.Key as DAK
+import qualified Data.Aeson.KeyMap as DAKM
+import Data.Aeson.Lens
 import Data.Aeson.Types
 import qualified Data.List.NonEmpty as NE
 import Data.Ord
+import qualified Data.Text as Text
+import Debug.Trace as T
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as Reexport
 import Kernel.Prelude
+import Kernel.Types.Cac
 import Kernel.Types.Common
 
 newtype FPSlabsDetailsD (s :: UsageSafety) = FPSlabsDetails
@@ -33,9 +41,13 @@ newtype FPSlabsDetailsD (s :: UsageSafety) = FPSlabsDetails
 
 type FPSlabsDetails = FPSlabsDetailsD 'Safe
 
+instance ToJSON (FPSlabsDetailsD 'Unsafe)
+
 instance FromJSON (FPSlabsDetailsD 'Unsafe)
 
-instance ToJSON (FPSlabsDetailsD 'Unsafe)
+instance FromJSON (FPSlabsDetailsD 'Safe)
+
+instance ToJSON (FPSlabsDetailsD 'Safe)
 
 findFPSlabsDetailsSlabByDistance :: Meters -> NonEmpty (FPSlabsDetailsSlabD s) -> FPSlabsDetailsSlabD s
 findFPSlabsDetailsSlabByDistance dist slabList = do
@@ -52,12 +64,20 @@ newtype FPSlabsDetailsAPIEntity = FPSlabsDetailsAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-makeFPSlabsDetails' :: Object -> String -> Parser (Maybe FPSlabsDetails)
-makeFPSlabsDetails' k key = do
-  fpsdsl <- jsonToFPSlabsDetailsSlab k key
-  case NE.nonEmpty fpsdsl of
-    Just fpsdsl' -> pure $ Just (FPSlabsDetails fpsdsl')
-    Nothing -> pure $ Nothing
+-- makeFPSlabsDetails' :: Object -> String -> Parser (Maybe FPSlabsDetails)
+-- makeFPSlabsDetails' k key' = do
+--   fpsdsl <- jsonToFPSlabsDetailsSlab k key'
+--   case NE.nonEmpty fpsdsl of
+--     Just fpsdsl' -> pure $ Just (FPSlabsDetails fpsdsl')
+--     Nothing -> pure $ Nothing
+
+getFPSlabDetailsSlab :: String -> String -> (Maybe FPSlabsDetails)
+getFPSlabDetailsSlab config key' = do
+  let k = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicySlabsDetailsSlab:") (itraversed . indices (\k' -> Text.isPrefixOf "farePolicySlabsDetailsSlab:" (DAK.toText k'))))
+      fpsdsl = T.trace ("the value of fpsSlab" <> show k) $ jsonToFPSlabsDetailsSlab (DAKM.fromList k) key'
+  case T.trace ("value of fpsSlab" <> show fpsdsl) (NE.nonEmpty fpsdsl) of
+    Just fpsdsl' -> Just (FPSlabsDetails fpsdsl')
+    Nothing -> Nothing
 
 makeFPSlabsDetailsAPIEntity :: FPSlabsDetails -> FPSlabsDetailsAPIEntity
 makeFPSlabsDetailsAPIEntity FPSlabsDetails {..} =

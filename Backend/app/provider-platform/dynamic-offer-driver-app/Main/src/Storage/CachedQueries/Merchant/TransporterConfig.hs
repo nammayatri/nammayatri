@@ -54,7 +54,7 @@ import Domain.Types.Person
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Notification.FCM.Types as FCM
-import Kernel.External.Types (Language)
+-- import Kernel.External.Types (Language)
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
@@ -93,33 +93,16 @@ parsingMiddleware km =
   let newObject'' =
         DAKM.mapWithKey
           ( \k v -> case DAK.toText k of
-              "languagesToBeTranslated" -> toJSON $ (readWithInfo v :: [Language])
-              "notificationRetryEligibleErrorCodes" -> toJSON (valueToTextList v)
-              "specialDrivers" -> toJSON (valueToTextList v)
-              "specialLocationTags" -> toJSON (valueToTextList v)
-              "dummyFromLocation" -> toJSON (fromMaybe dummyToLocationData (valueToMaybe v))
-              "dummyToLocation" -> toJSON (fromMaybe dummyToLocationData (valueToMaybe v))
-              "fakeOtpMobileNumbers" -> toJSON (valueToTextList v)
+              "dummyFromLocation" -> toJSON (fromMaybe dummyToLocationData (fromJSONHelper v))
+              "dummyToLocation" -> toJSON (fromMaybe dummyToLocationData (fromJSONHelper v))
               _ -> v
           )
           km
-      newObject' =
-        DAKM.mapKeyVal
-          (\key'' -> key'')
-          ( \val -> case val of
-              String s -> case ((Text.isInfixOf "{" s) && (Text.isInfixOf ":" s)) of
-                True -> case (CM.convertTextToObject (Text.replace "'" "\"" s)) of
-                  Left _ -> String s
-                  Right obj' -> Object obj'
-                False -> String s
-              x -> x
-          )
-          newObject''
-      fcmUrl = valueToType <$> (DAKM.lookup "fcmUrl" newObject')
-      fcmServiceAccount = valueToText <$> (DAKM.lookup "fcmServiceAccount" newObject')
-      fcmTokenKeyPrefix = valueToText <$> (DAKM.lookup "fcmTokenKeyPrefix" newObject')
+      fcmUrl = valueToType <$> (DAKM.lookup "fcmUrl" newObject'')
+      fcmServiceAccount = valueToText <$> (DAKM.lookup "fcmServiceAccount" newObject'')
+      fcmTokenKeyPrefix = valueToText <$> (DAKM.lookup "fcmTokenKeyPrefix" newObject'')
       fcmConfig = FCM.FCMConfig <$> fcmUrl <*> fcmServiceAccount <*> fcmTokenKeyPrefix
-      newObject = KP.foldr DAKM.delete newObject' ["fcmUrl", "fcmServiceAccount", "fcmTokenKeyPrefix"]
+      newObject = KP.foldr DAKM.delete newObject'' ["fcmUrl", "fcmServiceAccount", "fcmTokenKeyPrefix"]
    in DAKM.insert "fcmConfig" (toJSON fcmConfig) newObject
 
 getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m TransporterConfig
