@@ -250,7 +250,6 @@ library
       Domain.Types.Invoice
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
-      Domain.Types.LeaderBoardConfig
       Domain.Types.LmsEnumTypes
       Domain.Types.Location
       Domain.Types.LocationMapping
@@ -258,7 +257,6 @@ library
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
-      Domain.Types.Merchant.LeaderBoardConfig
       Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantOperatingCity
       Domain.Types.Merchant.MerchantPaymentMethod
@@ -397,7 +395,6 @@ library
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.DriverIntelligentPoolConfig
-      Storage.Beam.Merchant.LeaderBoardConfig
       Storage.Beam.Merchant.MerchantMessage
       Storage.Beam.Merchant.MerchantOperatingCity
       Storage.Beam.Merchant.MerchantPaymentMethod
@@ -523,7 +520,6 @@ library
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
-      Storage.Queries.Merchant.LeaderBoardConfig
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantOperatingCity
       Storage.Queries.Merchant.MerchantPaymentMethod
@@ -617,6 +613,7 @@ library
       Domain.Types.IdfyVerification
       Domain.Types.Image
       Domain.Types.InterCityTravelCities
+      Domain.Types.LeaderBoardConfigs
       Domain.Types.LmsModule
       Domain.Types.LmsModuleTranslation
       Domain.Types.LmsModuleVideoInformation
@@ -664,6 +661,7 @@ library
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
       Storage.Beam.InterCityTravelCities
+      Storage.Beam.LeaderBoardConfigs
       Storage.Beam.LmsModule
       Storage.Beam.LmsModuleTranslation
       Storage.Beam.LmsModuleVideoInformation
@@ -711,6 +709,7 @@ library
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
       Storage.Queries.InterCityTravelCities
+      Storage.Queries.LeaderBoardConfigs
       Storage.Queries.LmsModule
       Storage.Queries.LmsModuleTranslation
       Storage.Queries.LmsModuleVideoInformation
