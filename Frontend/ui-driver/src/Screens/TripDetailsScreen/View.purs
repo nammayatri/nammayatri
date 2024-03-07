@@ -479,15 +479,17 @@ issueReportedView state push =
   ]
 
 getVehicleImage :: ST.TripDetailsScreenState -> String
-getVehicleImage state = case getMerchant FunctionCall of
-                          YATRI       -> case state.data.vehicleType of
-                                          "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto1"
-                                          _               -> fetchImage FF_ASSET "ic_vehicle_front"
-                          YATRISATHI -> getVehicleVariantImage state.data.vehicleType
-                          _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-                        
-                        where
-                          mkAsset cityConfig =
-                            if cityConfig.cityCode == "std:040" 
-                              then fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-                              else fetchImage FF_ASSET "ic_vehicle_front" 
+getVehicleImage state = 
+  case getMerchant FunctionCall of
+    YATRI     -> case state.data.vehicleType of
+                    "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto1"
+                    _               -> fetchImage FF_ASSET "ic_vehicle_front"
+    YATRISATHI -> getVehicleVariantImage state.data.vehicleType
+    NAMMAYATRI -> getVehicleVariantImage state.data.vehicleType
+    _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  
+  where
+    mkAsset cityConfig =
+      if cityConfig.cityCode == "std:040" 
+        then fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+        else fetchImage FF_ASSET "ic_vehicle_front"

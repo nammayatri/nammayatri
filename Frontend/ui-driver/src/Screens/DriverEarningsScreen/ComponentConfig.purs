@@ -37,6 +37,8 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
 import Mobility.Prelude
+import LocalStorage.Cache (getValueFromCache)
+import JBridge as JB
 
 primaryButtonConfig :: Boolean -> PrimaryButtonConfig.Config
 primaryButtonConfig isActive =
@@ -259,14 +261,19 @@ coinsInfoCardConfig _ =
 
 errorModalConfig :: ST.DriverEarningsScreenState -> ErrorModal.Config
 errorModalConfig state =
-  ErrorModal.config
+  let isVehicleRickshaw = (getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys) == "AUTO_RICKSHAW"
+  in ErrorModal.config
     { imageConfig
       { imageUrl =
-        HU.fetchImage HU.FF_ASSET
-          if state.props.subView == ST.EARNINGS_VIEW then
-            "ny_ic_no_rides_history"
+        if isVehicleRickshaw 
+          then
+            HU.fetchImage HU.FF_ASSET
+              if state.props.subView == ST.EARNINGS_VIEW then
+                "ny_ic_no_rides_history"
+              else
+                "ny_ic_no_coins_history"
           else
-            "ny_ic_no_coins_history"
+            "ny_ic_no_rides_history_cab,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_no_rides_history_cab.png"
       , height = V if state.props.subView == ST.EARNINGS_VIEW then 110 else 115
       , width = V if state.props.subView == ST.EARNINGS_VIEW then 124 else 200
       , margin = MarginBottom 61
