@@ -1,0 +1,41 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  HighPrecMoney: Kernel.Types.Common
+  Bool: Kernel.Prelude
+  Text: Data.Text
+  Seconds: Kernel.Types.Common
+  Int: Kernel.Prelude
+
+LeaderBoardConfigs:
+  tableName: leader_board_configs
+
+  fields:
+    id : Id LeaderBoardConfigs
+    leaderBoardType : LeaderBoardType
+    numberOfSets : Int
+    leaderBoardExpiry : Seconds
+    zScoreBase : Int
+    leaderBoardLengthLimit : Integer
+    isEnabled : Bool
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    useOperatingCityBasedLeaderBoard : Maybe Bool
+
+  types:
+    LeaderBoardType:
+      enum: "WEEKLY,DAILY"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findLeaderBoardConfigbyType:
+      kvFunction: findOneWithKV
+      where:
+        and: [leaderBoardType, merchantOperatingCityId]
