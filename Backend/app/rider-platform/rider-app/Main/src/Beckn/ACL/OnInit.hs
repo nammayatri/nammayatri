@@ -14,7 +14,6 @@
 
 module Beckn.ACL.OnInit (buildOnInitReqV2) where
 
-import Beckn.ACL.Common
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
@@ -38,21 +37,17 @@ buildOnInitReqV2 req = do
       Left err -> do
         logTagError "on_init req" $ "on_init error: " <> show err
         pure Nothing
-      Right (bookingId, bppBookingId, estimatedFare, estimatedTotalFare) -> do
-        validatePrices estimatedFare estimatedTotalFare
-        -- if we get here, the discount >= 0
-        let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
+      Right (bookingId, bppBookingId, estimatedFare, paymentId) -> do
         return $
           Just $
             DOnInit.OnInitReq
               { estimatedFare = Money estimatedFare,
-                estimatedTotalFare = Money estimatedTotalFare,
-                discount = Money <$> discount,
+                discount = Nothing, -- TODO : replace when actual discount logic is implemented
                 paymentUrl = Nothing, -- TODO check with ONDC
                 ..
               }
   where
-    parsedData :: Either Text (Id Booking, Id BPPBooking, Int, Int)
+    parsedData :: Either Text (Id Booking, Id BPPBooking, Int, Maybe Text)
     parsedData = do
       order <- maybe (Left "Invalid Order") (Right . (.confirmReqMessageOrder)) req.onInitReqMessage
 
@@ -73,14 +68,13 @@ buildOnInitReqV2 req = do
           >>= parseInt
           & maybe (Left "Invalid Price") Right
 
-      estimatedTotalFare <-
-        order.orderQuote
-          >>= (.quotationPrice)
-          >>= (.priceOfferedValue)
-          >>= parseInt
-          & maybe (Left "Invalid Offered Price") Right
+      paymentId <-
+        order.orderPayments
+          >>= listToMaybe
+          >>= (.paymentId)
+          & Right
 
-      Right (bookingId, bppBookingId, estimatedFare, estimatedTotalFare)
+      Right (bookingId, bppBookingId, estimatedFare, paymentId)
 
     parseInt :: Text -> Maybe Int
     parseInt = readMaybe . T.unpack
