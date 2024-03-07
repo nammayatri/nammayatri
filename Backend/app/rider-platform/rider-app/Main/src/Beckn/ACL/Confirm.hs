@@ -59,7 +59,7 @@ mkConfirmMessageV2 res bapConfig = do
 tfOrder :: DOnInit.OnInitRes -> DBC.BecknConfig -> Spec.Order
 tfOrder res bapConfig = do
   Spec.Order
-    { orderBilling = Nothing,
+    { orderBilling = tfOrderBilling res,
       orderCancellation = Nothing,
       orderCancellationTerms = Nothing,
       orderFulfillments = tfFulfillments res,
@@ -113,7 +113,7 @@ tfPayments :: DOnInit.OnInitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig = do
   let amount = Just $ show res.estimatedTotalFare.getMoney
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
-  Just $ DL.singleton $ OUP.mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
+  Just $ DL.singleton $ OUP.mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID amount res.paymentId mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
 tfQuotation res =
@@ -227,4 +227,12 @@ tfProvider res =
         providerPayments = Nothing,
         providerDescriptor = Nothing,
         providerFulfillments = Nothing
+      }
+
+tfOrderBilling :: DOnInit.OnInitRes -> Maybe Spec.Billing
+tfOrderBilling res =
+  Just $
+    Spec.Billing
+      { billingPhone = Just $ Utils.maskBillingNumber res.riderPhoneNumber,
+        billingName = res.mbRiderName
       }

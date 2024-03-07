@@ -820,19 +820,24 @@ mkQuotationBreakup booking =
 
 type MerchantShortId = Text
 
-tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.Item]
-tfItems booking shortId estimatedDistance mbFarePolicy =
+tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]
+tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
   Just
     [ Spec.Item
         { itemDescriptor = tfItemDescriptor booking,
           itemFulfillmentIds = Just [booking.quoteId],
           itemId = Just $ Common.mkItemId shortId booking.vehicleVariant,
           itemLocationIds = Nothing,
-          itemPaymentIds = Nothing,
+          itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice booking,
           itemTags = mkRateCardTag estimatedDistance mbFarePolicy
         }
     ]
+
+tfPaymentId :: Maybe Text -> Maybe [Text]
+tfPaymentId mbPaymentId = do
+  paymentId <- mbPaymentId
+  Just [paymentId]
 
 tfItemPrice :: DBooking.Booking -> Maybe Spec.Price
 tfItemPrice booking =
@@ -842,7 +847,7 @@ tfItemPrice booking =
         priceCurrency = Just "INR",
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText booking.estimatedFare,
+        priceOfferedValue = Just $ encodeToText booking.estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
         priceValue = Just $ encodeToText booking.estimatedFare
       }
 

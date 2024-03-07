@@ -40,8 +40,8 @@ data OnInitReq = OnInitReq
     bppBookingId :: Id BPPBooking,
     estimatedFare :: Money,
     discount :: Maybe Money,
-    estimatedTotalFare :: Money,
-    paymentUrl :: Maybe Text
+    paymentUrl :: Maybe Text,
+    paymentId :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -67,14 +67,15 @@ data OnInitRes = OnInitRes
     city :: Context.City,
     nightSafetyCheck :: Bool,
     isValueAddNP :: Bool,
-    enableFrequentLocationUpdates :: Bool
+    enableFrequentLocationUpdates :: Bool,
+    paymentId :: Maybe Text
   }
   deriving (Generic, Show)
 
 onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
 onInit req = do
   void $ QRideB.updateBPPBookingId req.bookingId req.bppBookingId
-  void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare req.paymentUrl
+  void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedFare req.paymentUrl -- TODO : 4th parameter is discounted fare (not implemented)
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   decRider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId) >>= decrypt
@@ -120,6 +121,7 @@ onInit req = do
                 || ( decRider.shareTripWithEmergencyContactOption == Just SHARE_WITH_TIME_CONSTRAINTS
                        && checkTimeConstraintForFollowRide riderConfig now
                    ),
+            paymentId = req.paymentId,
             ..
           }
   pure (onInitRes, booking)

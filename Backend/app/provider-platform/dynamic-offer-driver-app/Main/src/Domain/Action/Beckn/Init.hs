@@ -77,7 +77,8 @@ data InitRes = InitRes
     driverId :: Maybe Text,
     bppSubscriberId :: Maybe Text,
     riderPhoneNumber :: Text,
-    riderName :: Maybe Text
+    riderName :: Maybe Text,
+    paymentId :: Text
   }
 
 handler ::
@@ -112,6 +113,7 @@ handler merchantId req validatedReq = do
 
   let paymentMethodInfo = req.paymentMethodInfo
   let bppSubscriberId = req.bppSubscriberId
+  paymentId <- generateGUID
   pure InitRes {..}
   where
     buildBooking ::
