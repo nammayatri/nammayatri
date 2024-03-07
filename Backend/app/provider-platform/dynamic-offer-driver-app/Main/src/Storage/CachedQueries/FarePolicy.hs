@@ -24,7 +24,7 @@ where
 
 import qualified Client.Main as CM
 import qualified Data.Aeson as DA
-import Data.Aeson.Types as DAT
+-- import Data.Aeson.Types as DAT
 import Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text as Text
@@ -37,7 +37,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
-import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+-- import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
@@ -50,30 +50,13 @@ findFarePolicyFromCAC id toss = do
   fp <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "farePolicyId", DA.String (getId id))]
   logDebug $ "the context value is " <> show fp
   tenant <- liftIO $ SE.lookupEnv "TENANT"
-  contextValue <- liftIO $ CM.evalExperiment (fromMaybe "test" tenant) fp toss
-  case contextValue of
-    Left err -> do
-      host <- liftIO $ SE.lookupEnv "CAC_HOST"
-      interval' <- liftIO $ SE.lookupEnv "CAC_INTERVAL"
-      let interval = case interval' of
-            Just a -> fromMaybe 10 (readMaybe a)
-            Nothing -> 10
-      logError $ Text.pack "error in fetching the context value " <> Text.pack err
-      c <- KSQS.findById' $ Text.pack (fromMaybe "driver_offer_bpp_v2" tenant)
-      status <- liftIO $ CM.createClientFromConfig (fromMaybe "driver_offer_bpp_v2" tenant) interval (Text.unpack c.configValue) (fromMaybe "http://localhost:8080" host)
-      case status of
-        0 -> do
-          logDebug $ "client created for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant
-          findFarePolicyFromCAC id toss
-        _ -> error $ "error in creating the client for tenant" <> maybe "driver_offer_bpp_v2" Text.pack tenant <> " retrying again"
-    Right contextValue' -> do
-      logDebug $ "the fetched context value is for farePolicy " <> show contextValue'
-      buildFPType contextValue' (getId id)
-  where
-    buildFPType contextValue id' = do
-      case DAT.parse (jsonToFarePolicy contextValue) (Text.unpack id') of
-        Success a -> return a
-        DAT.Error err -> error $ pack "error in parsing the context value for farepolicy " <> pack err
+  -- contextValue <- liftIO $ CM.evalExperiment (fromMaybe "test" tenant) fp toss
+  contextValue <- liftIO $ CM.evalExperimentAsString (fromMaybe "test" tenant) fp toss
+  -- logDebug $ "the context value is " <> show contextValue
+  -- let conf = jsonToDriverExtraFeeBounds' contextValue'' $ Text.unpack $ getId id
+  -- logDebug $ "the evaluted context value is driverextrafeebounds: " <> show conf
+  let config = jsonToFarePolicy contextValue $ Text.unpack $ getId id
+  pure $ config
 
 getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> m (Maybe FarePolicy)
 getConfigFromInMemory id toss = do

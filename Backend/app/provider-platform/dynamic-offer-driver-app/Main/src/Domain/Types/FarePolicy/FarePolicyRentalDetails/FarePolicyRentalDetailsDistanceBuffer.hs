@@ -9,16 +9,24 @@
 
 module Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer where
 
+-- import Data.Aeson.Types
+
+import Control.Lens.Combinators
+import Control.Lens.Fold
 import Data.Aeson as DA
 import Data.Aeson.Key as DAK
-import Data.Aeson.Types
+import qualified Data.Aeson.KeyMap as KM
+import Data.Aeson.Lens
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as DTE
+import qualified Data.Vector as DV
+import Debug.Trace as T
 import Domain.Types.Common
 import Kernel.Prelude
+import Kernel.Types.Cac
 import Kernel.Utils.Common (Seconds)
 
 data FPRentalDetailsDistanceBuffersD (s :: UsageSafety) = FPRentalDetailsDistanceBuffers
@@ -66,10 +74,17 @@ listToType value =
             Nothing -> error $ "Not able to parse value" <> show val
     _ -> error $ "Not able to parse value" <> show value
 
-jsonToFPRentalDetailsDistanceBuffers :: String -> Object -> Parser [FPRentalDetailsDistanceBuffers]
-jsonToFPRentalDetailsDistanceBuffers id k = do
-  apiData <- ((listToType <$> (k .: DAK.fromText (Text.pack ("farePolicyRentalDetailsDistanceBuffers:" <> id)))) :: Parser [FPRentalDetailsDistanceBuffersAPIEntity])
-  pure $ makeFPRentalDetailsDistanceBuffersList apiData
+jsonToFPRentalDetailsDistanceBuffers :: String -> String -> [FPRentalDetailsDistanceBuffers]
+jsonToFPRentalDetailsDistanceBuffers config key' = do
+  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyRentalDetailsDistanceBuffers:") (itraversed . indices (\k -> Text.isPrefixOf "farePolicyRentalDetailsDistanceBuffers:" (DAK.toText k))))
+      res'' = T.trace ("rentaldetailsDistanceBuffers" <> show res') $ fromMaybe (DA.Array (DV.fromList [])) (KM.lookup (DAK.fromText (Text.pack key')) (KM.fromList res'))
+      res = T.trace ("rentaldetailsDistanceBuffers'" <> show res'') $ res'' ^? _JSON :: (Maybe [FPRentalDetailsDistanceBuffers])
+  T.trace ("rentaldetailsDistanceBuffers''" <> show res'') $ fromMaybe [] res
+
+-- jsonToFPRentalDetailsDistanceBuffers :: String -> Object -> Parser [FPRentalDetailsDistanceBuffers]
+-- jsonToFPRentalDetailsDistanceBuffers id k = do
+--   apiData <- ((listToType <$> (k .: DAK.fromText (Text.pack ("farePolicyRentalDetailsDistanceBuffers:" <> id)))) :: Parser [FPRentalDetailsDistanceBuffersAPIEntity])
+--   pure $ makeFPRentalDetailsDistanceBuffersList apiData
 
 makeFPRentalDetailsDistanceBuffersList :: [FPRentalDetailsDistanceBuffersAPIEntity] -> [FPRentalDetailsDistanceBuffers]
 makeFPRentalDetailsDistanceBuffersList = fmap makeFPRentalDetailsDistanceBuffers
