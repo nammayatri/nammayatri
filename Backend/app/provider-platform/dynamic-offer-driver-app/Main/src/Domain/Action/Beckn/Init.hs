@@ -96,14 +96,14 @@ handler merchantId req validatedReq = do
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do
-        booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup)
+        booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory (Just driverQuote.estimateId.getId) now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup)
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
 
         QST.updateStatus searchTry.id DST.COMPLETED
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
-        booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing
+        booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory Nothing now (mbPaymentMethod <&> (.id)) paymentUrl Nothing
         QRB.createBooking booking
         -- moving route from search request id to booking id
         routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (SR.searchRequestKey $ getId searchRequest.id)
@@ -133,12 +133,13 @@ handler merchantId req validatedReq = do
       q ->
       Text ->
       DTC.TripCategory ->
+      Maybe Text ->
       UTCTime ->
       Maybe (Id DMPM.MerchantPaymentMethod) ->
       Maybe Text ->
       Maybe Meters ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup = do
+    buildBooking searchRequest driverQuote quoteId tripCategory estimateId now mbPaymentMethodId paymentUrl distanceToPickup = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation

@@ -50,6 +50,7 @@ data Booking = Booking
   { id :: Id Booking,
     transactionId :: Text,
     quoteId :: Text,
+    estimateId :: Maybe Text,
     status :: BookingStatus,
     tripCategory :: DTC.TripCategory,
     specialZoneOtpCode :: Maybe Text,

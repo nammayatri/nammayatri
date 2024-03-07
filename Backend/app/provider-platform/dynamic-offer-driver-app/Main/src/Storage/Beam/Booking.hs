@@ -30,6 +30,7 @@ data BookingT f = BookingT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     quoteId :: B.C f Text,
+    estimateId :: B.C f (Maybe Text),
     status :: B.C f Domain.BookingStatus,
     bookingType :: B.C f Domain.BookingType, -- Just for backward compatibilty
     tripCategory :: B.C f (Maybe DTC.TripCategory),
