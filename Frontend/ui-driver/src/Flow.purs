@@ -123,7 +123,7 @@ import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OU
 import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
-import Timers (clearTimerWithId)
+import Timers (clearTimerWithId, resetAllTimers)
 import RemoteConfig as RC
 import Locale.Utils
 import Data.Array as DA
@@ -136,6 +136,7 @@ baseAppFlow baseFlow event = do
     liftFlowBT $ setEventTimestamp "baseAppFlow"
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     liftFlowBT $ runEffectFn1 EHC.resetIdMap ""
+    liftFlowBT $ resetAllTimers
     -- checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
