@@ -14,7 +14,6 @@
 
 module Beckn.ACL.OnSelect where
 
-import Beckn.ACL.Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified BecknV2.OnDemand.Tags as Tag
@@ -100,22 +99,18 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
     Left err -> do
       logTagError "on_select req" $ "on_select error: " <> show err
       throwError $ InvalidRequest "Invalid or missing price data"
-    Right (estimatedFare, estimatedTotalFare) -> do
-      validatePrices estimatedFare estimatedTotalFare
-      -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
-      let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
+    Right estimatedFare -> do
       return $
         DOnSelect.QuoteInfo
           { vehicleVariant = vehicleVariant,
             estimatedFare = Money estimatedFare,
-            estimatedTotalFare = Money estimatedTotalFare,
-            discount = Money <$> discount,
+            discount = Nothing,
             serviceTierName = serviceTierName,
             quoteValidTill = validTill,
             ..
           }
   where
-    parsedData :: Spec.Order -> Either Text (Int, Int)
+    parsedData :: Spec.Order -> Either Text Int
     parsedData orderV2 = do
       estimatedFare <-
         orderV2.orderQuote
@@ -124,14 +119,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
           >>= parseInt
           & maybe (Left "Invalid Price") Right
 
-      estimatedTotalFare <-
-        orderV2.orderQuote
-          >>= (.quotationPrice)
-          >>= (.priceOfferedValue)
-          >>= parseInt
-          & maybe (Left "Invalid Offered Price") Right
-
-      Right (estimatedFare, estimatedTotalFare)
+      Right estimatedFare
 
     parseInt :: Text -> Maybe Int
     parseInt = readMaybe . T.unpack

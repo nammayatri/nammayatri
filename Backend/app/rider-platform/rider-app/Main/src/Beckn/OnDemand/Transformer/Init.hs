@@ -54,15 +54,15 @@ tfOrder uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig = d
   let orderPayments_ = Beckn.OnDemand.Utils.Init.mkPayment uiConfirm.paymentMethodInfo bapConfig uiConfirm.city & Just
   let orderStatus_ = Nothing
   let orderQuote_ = Nothing
-  let orderBilling_ = tfOrderBilling uiConfirm.riderPhone & Just
+  let orderBilling_ = tfOrderBilling uiConfirm.riderPhone uiConfirm.riderName & Just
   let orderFulfillments_ = Just $ Data.List.singleton $ tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP
   let orderItems_ = Just $ Data.List.singleton $ tfOrderItems uiConfirm mbBppFullfillmentId
   BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_, orderCreatedAt = Just uiConfirm.booking.createdAt, orderUpdatedAt = Just uiConfirm.booking.updatedAt}
 
-tfOrderBilling :: Maybe Data.Text.Text -> BecknV2.OnDemand.Types.Billing
-tfOrderBilling mbPhoneNumber = do
+tfOrderBilling :: Maybe Data.Text.Text -> Maybe Data.Text.Text -> BecknV2.OnDemand.Types.Billing
+tfOrderBilling mbPhoneNumber mbRiderName = do
   let billingPhone_ = mbPhoneNumber <&> Utils.maskBillingNumber
-  BecknV2.OnDemand.Types.Billing {billingPhone = billingPhone_, billingName = Nothing}
+  BecknV2.OnDemand.Types.Billing {billingPhone = billingPhone_, billingName = mbRiderName}
 
 tfOrderFulfillments :: SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> Bool -> BecknV2.OnDemand.Types.Fulfillment
 tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP = do

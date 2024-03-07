@@ -61,6 +61,7 @@ data FulfillmentState
   | RIDE_ASSIGNED
   | RIDE_ENROUTE_PICKUP
   | RIDE_ARRIVED_PICKUP
+  | RIDE_CONFIRMED -- not part of spec yet but used in on_init/on_confirm
   | NEW -- Custom type only used for on-us transaction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
