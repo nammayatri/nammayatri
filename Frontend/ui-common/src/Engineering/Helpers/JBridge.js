@@ -1471,6 +1471,34 @@ export const stopLocationPollingAPI = function () {
     stopLocationService();
   }
 }
+
+export const isServiceRunning = function(serviceName) {
+  try{
+    return window.JBridge.isServiceRunning(serviceName);
+  } catch (error){
+    console.log("Error in checking Service Running status : ", serviceName)
+    return true;
+  }
+}
+
+export const startService = function(serviceName) {
+  try{
+    window.JBridge.startServiceForClass(serviceName);
+  } catch (error){
+    console.log("Error in starting the service : ", serviceName)
+  }
+}
+
+
+export const stopService = function(serviceName) {
+  try{
+    window.JBridge.stopServiceForClass(serviceName);
+  } catch (error){
+    console.log("Error in stopping the service : ", serviceName)
+  }
+}
+
+
 export const removeAllPolylines = function (str) {
   window.JBridge.removeAllPolylines(str);
 }

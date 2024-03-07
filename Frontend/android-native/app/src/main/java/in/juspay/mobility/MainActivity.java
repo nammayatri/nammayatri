@@ -96,7 +96,6 @@ import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
-import in.juspay.mobility.app.GRPCNotificationService;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MobilityAppBridge;
@@ -168,15 +167,11 @@ public class MainActivity extends AppCompatActivity {
                         Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
                         context.stopService(locationUpdateIntent);
                         mWorkManager.cancelAllWorkByTag(context.getString(in.juspay.mobility.app.R.string.location_update));
-                        Intent grpcNotificationServiceIntent = new Intent(context, GRPCNotificationService.class);
-                        context.stopService(grpcNotificationServiceIntent);
                     } else {
                         Context context = getApplicationContext();
                         Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
                         context.stopService(locationUpdateIntent);
                         mWorkManager.cancelAllWorkByTag(context.getString(in.juspay.mobility.app.R.string.location_update));
-                        Intent grpcNotificationServiceIntent = new Intent(context, GRPCNotificationService.class);
-                        context.stopService(grpcNotificationServiceIntent);
                     }
                 }
             }
@@ -188,9 +183,6 @@ public class MainActivity extends AppCompatActivity {
                     locationUpdateIntent.putExtra("TRIP_STATUS", sharedPreferences.getString(key,"null"));
                 }
                 context.startService(locationUpdateIntent);
-
-                Intent grpcNotificationServiceIntent = new Intent(context, GRPCNotificationService.class);
-                context.startService(grpcNotificationServiceIntent);
             }
         }
     };

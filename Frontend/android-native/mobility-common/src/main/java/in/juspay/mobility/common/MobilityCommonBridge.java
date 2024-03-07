@@ -2913,11 +2913,46 @@ public class MobilityCommonBridge extends HyperBridge {
         final List<ActivityManager.RunningServiceInfo> services = activityManager.getRunningServices(Integer.MAX_VALUE);
 
         for (ActivityManager.RunningServiceInfo runningServiceInfo : services) {
+            Log.i("SERVICE", (runningServiceInfo.service.getClassName()));
             if (runningServiceInfo.service.getClassName().equals(serviceClassName)){
                 return true;
             }
         }
         return false;
+    }
+
+    public static boolean isServiceRunning(Context context, String serviceClassName){
+        final ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        final List<ActivityManager.RunningServiceInfo> services = activityManager.getRunningServices(Integer.MAX_VALUE);
+
+        for (ActivityManager.RunningServiceInfo runningServiceInfo : services) {
+            if (runningServiceInfo.service.getClassName().equals(serviceClassName)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @JavascriptInterface
+    public void startServiceForClass(String serviceClassName){
+       try{
+           Log.i("SERVICE", "starting the service for class - " + serviceClassName) ;
+           Intent serviceIntent = new Intent(bridgeComponents.getContext(), Class.forName(serviceClassName));
+           bridgeComponents.getContext().startService(serviceIntent);
+       }catch(Exception e){
+           Log.i("SERVICE", "Error in starting the service for class - " + serviceClassName + " " + e) ;
+       }
+    }
+
+    @JavascriptInterface
+    public void stopServiceForClass(String serviceClassName){
+       try{
+           Log.i("SERVICE", "stopping the service for class - " + serviceClassName);
+           Intent serviceIntent = new Intent(bridgeComponents.getContext(), Class.forName(serviceClassName));
+           bridgeComponents.getContext().stopService(serviceIntent);
+       }catch(Exception e){
+           Log.i("SERVICE", "Error in stopping the service for class - " + serviceClassName + " " + e) ;
+       }
     }
 
     @JavascriptInterface

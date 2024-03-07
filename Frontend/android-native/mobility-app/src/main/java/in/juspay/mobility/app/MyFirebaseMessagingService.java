@@ -24,6 +24,7 @@ import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
 
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.pushnotification.NotificationInfo;
@@ -47,6 +48,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
@@ -63,6 +65,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private static final ArrayList<BundleUpdateCallBack> bundleUpdate = new ArrayList<>();
     private static final ArrayList<ShowNotificationCallBack> showNotificationCallBacks = new ArrayList<>();
     public static final HashMap<String, Long> clearedRideRequest = new HashMap<>();
+
+    public static final Hashtable<String, String> notificationIdsReceived = new Hashtable<>();
     private static final String LOG_TAG = "FirebaseMessagingService";
 
     @Override
@@ -121,7 +125,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         Log.e("onMessageReceived", remoteMessage.getData().toString());
-        firebaseLogEventWithParams("notification_received", "type", remoteMessage.getData().get("notification_type"));
+        NotificationUtils.firebaseLogEventWithParams(this, "notification_received", "type", remoteMessage.getData().get("notification_type"));
 
         super.onMessageReceived(remoteMessage);
         JSONObject payload = new JSONObject();
@@ -218,18 +222,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         case NotificationTypes.NEW_RIDE_AVAILABLE:
                             RideRequestUtils.addRideReceivedEvent(entity_payload,null,null,"ride_request_fcm_received", this);
                             if(sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
-                                if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))  showRR(entity_payload, payload);
+                                if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))  NotificationUtils.showRR(this, entity_payload, payload, "FCM");
                                 else {
                                     RideRequestUtils.addRideReceivedEvent(entity_payload, null,null, "ride_request_ignored", this);
-                                    firebaseLogEventWithParams("ride_ignored", "payload", entity_payload.toString());
+                                    NotificationUtils.firebaseLogEventWithParams(this, "ride_ignored", "payload", entity_payload.toString());
                                 }
-                            }else showRR(entity_payload, payload);
+                            }else NotificationUtils.showRR(this, entity_payload, payload, "FCM");
                             break;
 
                         case NotificationTypes.CLEARED_FARE:
                             sharedPref.edit().putString(getString(R.string.CLEAR_FARE), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
                             NotificationUtils.showAllocationNotification(this, payload, entity_payload, "FCM");
-                            startWidgetService("CLEAR_FARE", payload, entity_payload);
+                            NotificationUtils.startWidgetService(this, "CLEAR_FARE", payload, entity_payload);
                             break;
 
                         case NotificationTypes.CANCELLED_PRODUCT:
@@ -240,7 +244,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
                                 startMainActivity();
                             } else {
-                                startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
+                               NotificationUtils.startWidgetService(this, getString(R.string.ride_cancelled), payload, entity_payload);
                             }
                             break;
 
@@ -278,18 +282,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                         bundleUpdate.get(i).callBundleUpdate();
                                     }
                                 } else {
-                                    firebaseLogEventWithParams("unable_to_update_bundle", "reason", "Main Activity instance is null");
+                                    NotificationUtils.firebaseLogEventWithParams(this, "unable_to_update_bundle", "reason", "Main Activity instance is null");
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
-                                firebaseLogEventWithParams("exception_in_bundle_update _fcm", "exception", e.toString());
+                                NotificationUtils.firebaseLogEventWithParams(this, "exception_in_bundle_update _fcm", "exception", e.toString());
                             }
                             break;
 
                         case NotificationTypes.CANCELLED_SEARCH_REQUEST:
                             sharedPref.edit().putString(getString(R.string.CANCELLED_SEARCH_REQUEST), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
                             NotificationUtils.showAllocationNotification(this, payload, entity_payload, "FCM");
-                            startWidgetService("CLEAR_FARE", payload, entity_payload);
+                            NotificationUtils.startWidgetService(this, "CLEAR_FARE", payload, entity_payload);
                             break;
 
                         case NotificationTypes.NEW_MESSAGE:
@@ -401,7 +405,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 }
             }
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception_in_notification", "remoteMessage", remoteMessage.getData().toString());
+            NotificationUtils.firebaseLogEventWithParams(this, "exception_in_notification", "remoteMessage", remoteMessage.getData().toString());
         }
     }
 
@@ -425,16 +429,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             }
         } catch (Exception e) {
             Log.e("FCMBundleUpdateService", "Failed to start BundleUpdateService : " + e);
-        }
-    }
-
-    private void showRR(JSONObject entity_payload, JSONObject payload){
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
-            startWidgetService(null, payload, entity_payload);
-        } else {
-            NotificationUtils.showAllocationNotification(this, payload, entity_payload, "FCM");
         }
     }
 
@@ -524,22 +518,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         });
     }
 
-    private void startWidgetService(String widgetMessage, JSONObject data, JSONObject payload) {
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
-        String key = getString(R.string.service);
-        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
-        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(getApplicationContext()) && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "true").equals("true") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
-            widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
-            widgetService.putExtra("payload", payload != null ? payload.toString() : null);
-            widgetService.putExtra("data", data != null ? data.toString() : null);
-            try {
-                startService(widgetService);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
+
 
     private void startMainActivity() {
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -551,16 +530,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             try {
                 getApplicationContext().startActivity(intent);
             } catch (Exception e) {
-                firebaseLogEventWithParams("exception_in_startMainActivity", "startMainActivity", String.valueOf(e));
+                NotificationUtils.firebaseLogEventWithParams(this, "exception_in_startMainActivity", "startMainActivity", String.valueOf(e));
             }
         }
-    }
-
-    public void firebaseLogEventWithParams(String event, String paramKey, String paramValue) {
-        Bundle params = new Bundle();
-        params.putString(paramKey, paramValue);
-        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-        mFirebaseAnalytics.logEvent(event, params);
     }
 
     private void stopChatService(String notificationType, SharedPreferences sharedPref) {

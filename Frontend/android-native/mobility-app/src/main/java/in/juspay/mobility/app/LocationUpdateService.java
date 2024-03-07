@@ -10,7 +10,8 @@
 package in.juspay.mobility.app;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
-import static android.graphics.Color.rgb;
+
+import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -20,13 +21,17 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -123,6 +128,8 @@ public class LocationUpdateService extends Service {
     static JSONObject triggerFunction;
     static JSONObject androidVersion;
 
+    private BroadcastReceiver internetBroadcastReceiver;
+
     private long lastCallTime = 0;
 
     enum LocationSource {
@@ -164,11 +171,46 @@ public class LocationUpdateService extends Service {
         executorLocUpdate.shutdown();
         timer = new Timer();
         resetTimer(delayForGNew, minDispDistanceNew, delayForTNew);
+
+        internetBroadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.i("LOCATION_UPDATE_SERVICE", "internet broadcast receiver received a callback");
+                if(isNetworkAvailable(context) && !isServiceRunning(context, GRPCNotificationService.class.getName()) && isServiceRunning(context, LocationUpdateService.class.getName())){
+                    Log.i("LOCATION_UPDATE_SERVICE", "internet broadcast receiver received a callback with network available state");
+                    Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+                    context.startService(grpcServiceIntent);
+                }
+            }
+        };
+
+        // removing the broadcast receiver in case if it is already registered but in try catch
+        try{
+            context.unregisterReceiver(internetBroadcastReceiver);
+
+        }catch(Exception e){
+            Log.i("LOCATION_UPDATE_SERVICE", "Error faced in removing the internet broadcast receiver : " + e);
+        }
+
+        // register the internet receiver - this will be done only once as onCreate will be called only once when the service is started
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU){
+            context.registerReceiver(internetBroadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION), Context.RECEIVER_EXPORTED);
+        }else{
+            context.registerReceiver(internetBroadcastReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        }
+    }
+
+    private boolean isNetworkAvailable(Context context) {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager != null ? connectivityManager.getActiveNetworkInfo() : null;
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         /* Start the service if the driver is active*/
+        Log.i("LOCATION_UPDATE_WORKER", "Location update service is started");
         startForeground(notificationServiceId, createNotification());
 		if (intent != null) {
             String startDistanceCalStr = intent.hasExtra("TRIP_STATUS") ? intent.getStringExtra("TRIP_STATUS") : null;
@@ -197,6 +239,18 @@ public class LocationUpdateService extends Service {
         } else if (!isLocationUpdating) {
             startLocationUpdates(delayForGNew, minDispDistanceNew, delayForTNew);
         }
+
+        try {
+            // starting GRPC service
+            if (!isServiceRunning(context, GRPCNotificationService.class.getName())) {
+                Log.i("SERVICE", " Starting GRPC service from onStartCommand location update service ");
+                Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+                context.startService(grpcServiceIntent);
+            }
+        } catch(Exception e){
+            Log.i("SERVICE", "Error in starting the GRPC service from onStartCommand of location update service " + e );
+        }
+
         return START_STICKY;
     }
 
@@ -340,6 +394,18 @@ public class LocationUpdateService extends Service {
         }
         if (executorLocUpdate != null) executorLocUpdate.shutdown();
         stopForeground(true);
+
+        try {
+            // stopping GRPC service
+            Log.i("SERVICE", " I am here to stop GRPC service ");
+            if (isServiceRunning(context, GRPCNotificationService.class.getName())) {
+                Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+                context.stopService(grpcServiceIntent);
+            }
+        } catch(Exception e){
+            Log.i("SERVICE", "Error in stopping the GRPC service from OnDestroy of location update service " + e );
+        }
+
         stopSelf();
     }
 

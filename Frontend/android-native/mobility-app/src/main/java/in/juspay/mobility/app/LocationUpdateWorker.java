@@ -16,6 +16,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.PowerManager;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.work.Worker;
@@ -33,6 +34,7 @@ public class LocationUpdateWorker extends Worker {
     @Override
     public Result doWork() {
         String driverStatus = sharedPrefs != null ? sharedPrefs.getString("DRIVER_STATUS", "__failed") : "";
+        Log.i("LOCATION_UPDATE_WORKER", "Location update worker is trying to do work");
         if (driverStatus.equals("true")) {
             Context context = getApplicationContext();
             // creates intent for main activity
