@@ -19,6 +19,7 @@ module API
 where
 
 import qualified API.Beckn as Beckn
+import qualified API.Cac as CacApi
 import qualified API.Dashboard as Dashboard
 import qualified API.FRFS as FRFS
 import qualified API.Internal as Internal
@@ -59,6 +60,9 @@ type MainAPI =
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> Internal.API
+    :<|> CacAPI
+
+type CacAPI = "cac" :> CacApi.API
 
 handler :: FlowServer API
 handler =
@@ -80,6 +84,7 @@ mainServer =
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
+    :<|> CacApi.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 

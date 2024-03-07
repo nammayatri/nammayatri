@@ -41,6 +41,7 @@ library
       API.Beckn.OnStatus
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
+      API.Cac
       API.Dashboard
       API.Dashboard.Booking
       API.Dashboard.Customer
@@ -152,6 +153,7 @@ library
       Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
+      Domain.Action.Cac
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
