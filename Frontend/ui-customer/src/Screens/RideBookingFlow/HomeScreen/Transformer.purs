@@ -272,36 +272,8 @@ getUpdatedLocationList locationList placeId = (map
                             (\item ->
                                 ( item  {postfixImageUrl = if (item.placeId == placeId || item.postfixImageUrl == "ic_fav_red") then "ny_ic_fav_red" else "ic_fav" } )
                             ) (locationList))
-
-transformSavedLocations :: Array LocationListItemState -> FlowBT String Unit
-transformSavedLocations array = case DA.head array of
-            Just item -> do
-              case item.lat , item.lon , item.fullAddress.ward of
-                Just 0.0 , Just 0.0 , Nothing ->
-                  updateSavedLocation item 0.0 0.0
-                Just 0.0 , Just 0.0 , Just _ ->
-                  updateSavedLocation item 0.0 0.0
-                Just lat , Just lon , Nothing ->
-                  updateSavedLocation item lat lon
-                Nothing, Nothing, Nothing ->
-                  updateSavedLocation item 0.0 0.0
-                _ , _ , _-> pure unit
-              transformSavedLocations (DA.drop 1 array)
-            Nothing -> pure unit
-
-updateSavedLocation :: LocationListItemState -> Number -> Number -> FlowBT String Unit
-updateSavedLocation item lat lon = do
-  let placeId = item.placeId
-      address = item.description
-      tag = item.tag
-  resp <- Remote.deleteSavedLocationBT (DeleteSavedLocationReq (trim item.tag))
-  (GetPlaceNameResp placeNameResp) <- getPlaceNameResp item.address item.placeId lat lon item
-  let (PlaceName placeName) = (fromMaybe dummyLocationName (placeNameResp DA.!! 0))
-  let (LatLong placeLatLong) = (placeName.location)
-  _ <- Remote.addSavedLocationBT (encodeAddressDescription address tag (item.placeId) (Just placeLatLong.lat) (Just placeLatLong.lon) placeName.addressComponents)
-  _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
-  pure unit
-
+       
+                            
 transformContactList :: Array NewContacts -> Array Contact
 transformContactList contacts = map (\x -> getContact x) contacts
 

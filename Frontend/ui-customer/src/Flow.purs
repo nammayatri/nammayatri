@@ -1435,7 +1435,6 @@ homeScreenFlow = do
                   "work" -> "Work"
                   "home" -> "Home"
                   _      -> state.data.saveFavouriteCard.tag
-      void $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
       case state.data.saveFavouriteCard.selectedItem.lat , state.data.saveFavouriteCard.selectedItem.lon of
         Nothing , Nothing -> fetchLatAndLong state tag
         _ , _ -> do
@@ -2103,8 +2102,7 @@ savedLocationFlow = do
     DELETE_LOCATION tagName -> do
       resp <- Remote.deleteSavedLocationBT (DeleteSavedLocationReq (trim tagName))
       void $ FlowCache.updateAndFetchSavedLocations true
-      pure $ toast (getString STR.FAVOURITE_REMOVED_SUCCESSFULLY)
-      setValueToLocalStore RELOAD_SAVED_LOCATION "true"
+      pure $ toast $ getString STR.FAVOURITE_REMOVED_SUCCESSFULLY
       savedLocationFlow
     EDIT_LOCATION cardState -> do
       (ServiceabilityRes serviceabilityRes) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 cardState.lat) (fromMaybe 0.0 cardState.lon))
@@ -2203,10 +2201,10 @@ addNewAddressScreenFlow input = do
 
       resp <- Remote.addSavedLocationBT (AddNewAddress.encodeAddressDescription newstate)
       void $ FlowCache.updateAndFetchSavedLocations true
+
       if state.props.editSavedLocation then pure $ toast (getString STR.FAVOURITE_UPDATED_SUCCESSFULLY)
         else pure $ toast (getString STR.FAVOURITE_ADDED_SUCCESSFULLY)
 
-      setValueToLocalStore RELOAD_SAVED_LOCATION "true"
       void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
       if state.props.fromHome || state.props.fromScreen == (Screen.getScreen Screen.HOME_SCREEN) then do
         (GlobalState globalState) <- getState
@@ -2383,10 +2381,8 @@ isForLostAndFound = true
 
 checkAndUpdateSavedLocations :: HomeScreenState -> FlowBT String Unit
 checkAndUpdateSavedLocations state = do
-  when ((getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || state.props.currentStage == HomeScreen) $ do
-    (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocations false
-    fetchAndModifyLocationLists $ AddNewAddress.getSavedLocations savedLocationResp.list
-    pure unit
+  (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocations false
+  fetchAndModifyLocationLists $ AddNewAddress.getSavedLocations savedLocationResp.list
   pure unit
 
 addLocationToRecents :: LocationListItemState -> HomeScreenState -> Boolean -> Boolean -> FlowBT String Unit
@@ -3484,17 +3480,18 @@ searchLocationFlow = do
           _       , _ -> pure $ {lat : selectedItem.lat, long : selectedItem.lon, addressComponents : []}
 
       when (isJust lat && isJust long) $ do
-        resp <- Remote.addSavedLocationBT (encodeAddressDescription saveFavouriteCard.address tag selectedItem.placeId lat long addressComponents )
+        void $ Remote.addSavedLocationBT $ encodeAddressDescription saveFavouriteCard.address tag selectedItem.placeId lat long addressComponents 
+        void $ FlowCache.updateAndFetchSavedLocations true
         void $ pure $ toast $ getString STR.FAVOURITE_ADDED_SUCCESSFULLY 
-      savedLocResp <- lift $ lift $ Remote.getSavedLocationList ""
-      case savedLocResp of 
-        Right (SavedLocationsListRes savedLocs) -> do 
-          let updatedLocList = getUpdatedLocationList state.data.locationList selectedItem.placeId
-              savedLocList = AddNewAddress.savedLocTransformer savedLocs.list
-          modifyScreenState $ SearchLocationScreenStateType (\searchLocScreenState -> searchLocScreenState{data{locationList = updatedLocList}})
-          updateSavedLocations savedLocList
-          searchLocationFlow
-        Left (err) -> searchLocationFlow
+
+      (SavedLocationsListRes savedLocs) <- FlowCache.updateAndFetchSavedLocations false
+      let 
+        updatedLocList = getUpdatedLocationList state.data.locationList selectedItem.placeId
+        savedLocList = AddNewAddress.savedLocTransformer savedLocs.list
+      modifyScreenState $ SearchLocationScreenStateType (\searchLocScreenState -> searchLocScreenState{data{locationList = updatedLocList}})
+      updateSavedLocations savedLocList
+      searchLocationFlow
+
 
     addFavLocFlow :: SearchLocationScreenState -> String -> FlowBT String Unit
     addFavLocFlow state tag = do 

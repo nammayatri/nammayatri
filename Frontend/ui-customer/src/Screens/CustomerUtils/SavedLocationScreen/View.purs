@@ -56,19 +56,24 @@ import Types.App (GlobalState(..), defaultGlobalState, FlowBT)
 import Services.FlowCache as FlowCache
 import Engineering.Helpers.BackTrack
 
-screen :: ST.SavedLocationScreenState -> GlobalState -> Screen Action ST.SavedLocationScreenState ScreenOutput
-screen initialState st =
+screen :: ST.SavedLocationScreenState -> SavedLocationsListRes -> Screen Action ST.SavedLocationScreenState ScreenOutput
+screen initialState savedLocationsListRes =
   { initialState
   , view
   , name : "SavedLocationScreen"
-  , globalEvents : [
-      (\push -> do
-        _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
+  , globalEvents : [( 
+      \push -> do 
+        push $ SavedLocationListAPIResponseAction savedLocationsListRes
         pure $ pure unit
-          )
+    )
   ]
-  , eval
-  }
+  , eval : (
+    \action state -> do
+      let _ = spy "SavedLocationScreen state" state
+      let _ = spy "SavedLocationScreen action" action
+      eval action state
+  )
+}
 
 view :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -191,11 +196,3 @@ savedLocationsView push state =
           ][]
         ]]
     ]
-
-getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> FlowBT String Unit
-getSavedLocationsList action push state = do
-  void $ lift $ lift $ EHU.toggleLoader true
-  (SavedLocationsListRes savedLocationResp ) <- FlowCache.updateAndFetchSavedLocations false
-  void $ lift $ lift $ EHU.toggleLoader false
-  liftFlowBT $ push $ action ( SavedLocationsListRes savedLocationResp)
-  pure unit

@@ -34,7 +34,7 @@ updateAndFetchSavedLocations needApiCall = do
   (GlobalState state) <- getState
   let
     savedLocations = state.globalFlowCache.savedLocations
-  if (not $ isJust savedLocations) || needApiCall then do
+  if (isNothing savedLocations) || needApiCall then do
     (savedLocationResp) <- lift $ lift $ Remote.getSavedLocationList ""
     case savedLocationResp of
       Right resp -> do

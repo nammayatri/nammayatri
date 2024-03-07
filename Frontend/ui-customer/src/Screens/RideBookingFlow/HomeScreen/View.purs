@@ -92,7 +92,7 @@ import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts)
+import Screens.HomeScreen.Transformer ( getActiveBooking, getDriverInfo, getFormattedContacts)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
@@ -145,7 +145,6 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
-            _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             when (initialState.props.followsRide && isNothing initialState.data.followers) $ void $ launchAff $ flowRunner defaultGlobalState $ getFollowRide push UpdateFollowers
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
@@ -2765,16 +2764,6 @@ cancelRidePopUpView push state =
     , width MATCH_PARENT
     , accessibility DISABLE
     ][ CancelRidePopUp.view (push <<< CancelRidePopUpAction) (cancelRidePopUpConfig state)]
-
-checkForLatLongInSavedLocations :: forall action. (action -> Effect Unit) -> (Array LocationListItemState -> action) -> HomeScreenState -> FlowBT String Unit
-checkForLatLongInSavedLocations push action state = do
-  void $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
-  void $ transformSavedLocations state.data.savedLocations
-  if getValueToLocalStore RELOAD_SAVED_LOCATION == "true" then do 
-    (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocations false
-    liftFlowBT $ push $ action $ AddNewAddress.getSavedLocations savedLocationResp.list
-  else pure unit
-  void $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
 
 notinPickUpZoneView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 notinPickUpZoneView push state =
