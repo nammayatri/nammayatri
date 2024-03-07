@@ -913,11 +913,13 @@ newtype RideBookingRes = RideBookingRes {
   updatedAt :: String,
   bookingDetails :: RideBookingAPIDetails ,
   fromLocation ::  BookingLocationAPIEntity,
+  initialPickupLocation :: BookingLocationAPIEntity,
   merchantExoPhone :: String,
   specialLocationTag :: Maybe String,
   hasDisability :: Maybe Boolean,
   hasNightIssue :: Maybe Boolean,
-  sosStatus :: Maybe CTA.SosStatus
+  sosStatus :: Maybe CTA.SosStatus,
+  editPickupAttemptsLeft :: Int
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -2514,6 +2516,41 @@ instance standardEncodeBusinessHoursResp :: StandardEncode BusinessHoursResp whe
 instance showBusinessHoursResp :: Show BusinessHoursResp where show = genericShow
 instance decodeBusinessHoursResp :: Decode BusinessHoursResp where decode = defaultDecode
 instance encodeBusinessHoursResp :: Encode BusinessHoursResp where encode = defaultEncode
+
+--------------------------------------------------------------------- Edit PickUp Location ---------------------------------------------------------- 
+data EditLocationRequest = EditLocationRequest EditLocationReq String
+
+newtype EditLocationReq = EditLocationReq {
+  destination :: SearchReqLocation ,
+  origin :: SearchReqLocation
+}
+
+data EditLocationRes = EditLocationRes
+
+instance makeEditLocationReq :: RestEndpoint EditLocationRequest EditLocationRes where
+  makeRequest reqBody@(EditLocationRequest rqBody rideId) headers = defaultMakeRequest POST (EP.editLocation rideId) headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+
+derive instance genericEditLocationReq :: Generic EditLocationReq _
+derive instance newtypeEditLocationReq :: Newtype EditLocationReq _
+instance standardEncodeEditLocationReq :: StandardEncode EditLocationReq where standardEncode (EditLocationReq id) = standardEncode id
+instance showEditLocationReq :: Show EditLocationReq where show = genericShow
+instance decodeEditLocationReq :: Decode EditLocationReq where decode = defaultDecode
+instance encodeEditLocationReq :: Encode EditLocationReq where encode = defaultEncode
+
+derive instance genericEditLocationRes :: Generic EditLocationRes _
+instance standardEncodeEditLocationRes :: StandardEncode EditLocationRes where standardEncode (EditLocationRes) = standardEncode {}
+instance showEditLocationRes :: Show EditLocationRes where show = genericShow
+instance decodeEditLocationRes :: Decode EditLocationRes where decode = defaultDecode
+instance encodeEditLocationRes  :: Encode EditLocationRes where encode = defaultEncode
+
+derive instance genericEditLocationRequest :: Generic EditLocationRequest _
+instance standardEncodeEditLocationRequest :: StandardEncode EditLocationRequest where standardEncode (EditLocationRequest body rideId) = standardEncode body
+instance showEditLocationRequest :: Show EditLocationRequest where show = genericShow
+instance decodeEditLocationRequest :: Decode EditLocationRequest where decode = defaultDecode
+instance encodeEditLocationRequest  :: Encode EditLocationRequest where encode = defaultEncode
 -------------------------------------------- FetchIssueList -------------------------------------------
 
 

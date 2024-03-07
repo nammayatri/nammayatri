@@ -17,7 +17,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType)
 
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
@@ -142,6 +142,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , price : resp.estimatedTotalFare
       , sourceLat : resp.fromLocation ^._lat
       , sourceLng : resp.fromLocation ^._lon
+      , initialPickupLat : resp.initialPickupLocation ^._lat
+      , initialPickupLon : resp.initialPickupLocation ^._lon
       , destinationLat : (resp.bookingDetails ^._contents^._toLocation ^._lat)
       , destinationLng : (resp.bookingDetails ^._contents^._toLocation ^._lon)
       , sourceAddress : getAddressFromBooking resp.fromLocation
@@ -163,7 +165,9 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
                             then rideList.vehicleVariant 
                          else
                             fromMaybe "" vehicleVariant
+      , editPickupAttemptsLeft : resp.editPickupAttemptsLeft
       , status : rideList.status
+      , fareProductType : resp.bookingDetails ^._fareProductType
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

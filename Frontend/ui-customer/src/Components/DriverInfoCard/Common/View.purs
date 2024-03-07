@@ -29,7 +29,7 @@ import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), 
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, alignParentRight)
 import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Properties (rippleColor, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
@@ -288,36 +288,54 @@ sourceDestinationView push config =
   , cornerRadius 8.0
   , padding $ Padding 16 12 16 12
   ][linearLayout
-    [ orientation VERTICAL
+    [ orientation HORIZONTAL
     , height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity LEFT
-    , accessibility ENABLE
-    , accessibilityHint $ "Pickup : " <> config.source
+    , width MATCH_PARENT
+    , gravity CENTER
     ][linearLayout
-      [ orientation HORIZONTAL
-      , gravity CENTER
-      ][imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
-        , height $ V 8
-        , width $ V 8
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity LEFT
+      , accessibility ENABLE
+      , weight 1.0
+      , accessibilityHint $ "Pickup : " <> config.source
+      ][linearLayout
+        [ orientation HORIZONTAL
+        , gravity CENTER
+        ][imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
+          , height $ V 8
+          , width $ V 8
+          ]
+          ,textView $
+          [ text $ getString PICKUP
+          , margin $ MarginLeft 6
+          , color Color.black700
+          ] <> FontStyle.body3 TypoGraphy
+          ]
+        , textView $
+          [ text config.source
+          , maxLines 2
+          , ellipsize true
+          , width $ if (config.isEditPickupEnabled && config.rideAccepted) then V ((screenWidth unit) / 100 * 65) else V ((screenWidth unit) / 10 * 8) 
+          , height MATCH_PARENT
+          , gravity LEFT
+          , color Color.black900
+          , margin $ MarginTop 3
+          ] <> FontStyle.body1 TypoGraphy
         ]
-        ,textView $
-         [ text $ getString PICKUP
-         , margin $ MarginLeft 6
-         , color Color.black700
-         ] <> FontStyle.body3 TypoGraphy
-        ]
-       , textView $
-         [ text config.source
-         , maxLines 1
-         , ellipsize true
-         , width $ V ((screenWidth unit) / 10 * 8)
-         , height MATCH_PARENT
-         , gravity LEFT
-         , color Color.black900
-         , margin $ MarginTop 3
-         ] <> FontStyle.body1 TypoGraphy
+      , textView $ 
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ getString EDIT
+        , cornerRadius 32.0
+        , stroke $ "1," <> Color.grey900
+        , padding $ Padding 12 8 12 8
+        , visibility $ boolToVisibility $ (config.isEditPickupEnabled && os /= "IOS" && config.rideAccepted)
+        , onClick push $ const config.editingPickupLocation
+        , rippleColor Color.rippleShade
+        ] <> FontStyle.body1 TypoGraphy
       ]
     , separator (MarginVertical 12 12) (V 1) Color.ghostWhite true
     ,linearLayout
@@ -343,7 +361,7 @@ sourceDestinationView push config =
       ]
       , textView $
         [ text config.destination
-        , maxLines 1
+        , maxLines 2
         , ellipsize true
         , width $ V ((screenWidth unit) / 10 * 8)
         , height MATCH_PARENT

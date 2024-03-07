@@ -81,6 +81,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -132,7 +133,7 @@ public class OverlayMessagingService extends Service {
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         messageView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.message_overlay, null);
 
-        setViewListeners(messageView);
+        setViewListeners(messageView, intentMessage);
         windowManager.addView(messageView, params);
         setDataToViews(intentMessage);
         return START_STICKY;
@@ -246,13 +247,13 @@ public class OverlayMessagingService extends Service {
         }
     }
 
-    private void setViewListeners(View messageView) {
+    private void setViewListeners(View messageView, String intentMessage) {
         messageView.findViewById(R.id.dismiss_message).setOnClickListener(view -> stopSelf());
         messageView.findViewById(R.id.button_ok).setOnClickListener(view -> {
             try {
                 for (int i = 0; i < actions.length(); i++) {
                     String action = String.valueOf(actions.get(i));
-                    performAction(action);
+                    performAction(action, intentMessage);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -264,7 +265,7 @@ public class OverlayMessagingService extends Service {
             try {
                 for (int i = 0; i < secondaryActions.length(); i++) {
                     String action = String.valueOf(secondaryActions.get(i));
-                    performAction(action);
+                    performAction(action, intentMessage);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -273,7 +274,7 @@ public class OverlayMessagingService extends Service {
         });
     }
 
-    void performAction(String action){
+    void performAction(String action, String intentMessage){
         switch (action) {
             case "SET_DRIVER_ONLINE":
                 RideRequestUtils.updateDriverStatus(true, "ONLINE", this, false);
@@ -330,7 +331,25 @@ public class OverlayMessagingService extends Service {
                 } catch (Exception e){
                     System.out.println(e.toString());
                 }
-
+                break;
+            case "EDIT_LOCATION" :
+                try {
+                    JSONObject data = new JSONObject(intentMessage);
+                    String gpsValue = data.optString("gps", "0.0, 0.0");
+                    String[] latLong = gpsValue.split(",\\s*");
+                    if (latLong.length == 2) {
+                        double latitude = Double.parseDouble(latLong[0]);
+                        double longitude = Double.parseDouble(latLong[1]);
+                        String mapsQuery = String.format(Locale.ENGLISH, "google.navigation:q=%f,%f", latitude, longitude);
+                        Uri mapsURI = Uri.parse(mapsQuery);
+                        Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
+                        mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        mapIntent.setPackage("com.google.android.apps.maps");
+                        startActivity(mapIntent);
+                    }
+                } catch (Exception e) {
+                    System.out.println(e.toString());
+                }
                 break;
         }
         stopSelf();

@@ -36,6 +36,7 @@ data Action = NoAction
             | CallDriver
             | ToggleBottomSheet
             | CollapseBottomSheet
+            | EditingPickupLocation
             | ShareRide
             | RideSupport
             | StartLocationTracking String

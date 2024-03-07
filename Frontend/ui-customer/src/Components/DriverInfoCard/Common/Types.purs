@@ -25,4 +25,7 @@ type TripDetails a
   , onAnimationEnd :: a
   , backgroundColor :: String
   , enablePaddingBottom :: Boolean
+  , rideAccepted :: Boolean
+  , editingPickupLocation :: a
+  , isEditPickupEnabled :: Boolean
     }

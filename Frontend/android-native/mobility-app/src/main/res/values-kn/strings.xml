@@ -62,5 +62,8 @@
     <string name="zone_pickup_extra">ವಲಯ ಪಿಕಪ್ ಹೆಚ್ಚುವರಿ</string>
     <string name="you_are_near_a_special_pickup_zone">ನೀವು ವಿಶೇಷ \n ಪಿಕಪ್ ವಲಯದ ಹತ್ತಿರದಲ್ಲಿದ್ದೀರಿ</string>
     <string name="zone_pickup">ಪಿಕಪ್ ಜೋನ್</string>
+    <string name="location_is_too_far">ಸ್ಥಳ ತುಂಬಾ ದೂರದಲ್ಲಿದೆ!</string>
+    <string name="update_navigation">ನ್ಯಾವಿಗೇಶನ್ ಅನ್ನು ನವೀಕರಿಸಿ</string>
+    <string name="updated_pickup_location">ಪಿಕಪ್ ಸ್ಥಳವನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ!</string>
 
 </resources>
