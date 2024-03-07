@@ -1,8 +1,12 @@
-import { callbackMapper } from "presto-ui";
+import {
+  callbackMapper
+} from "presto-ui";
 
 const JBridge = window.JBridge;
 
 const activeTimers = {};
+
+let activeTimerIds = [];
 
 function instantGetTimer(fn, id, delay) {
   const timerId = setInterval(fn, delay, id);
@@ -10,6 +14,7 @@ function instantGetTimer(fn, id, delay) {
 }
 
 export const countDownImpl = function (countDownTime, id, interval, cb, action) {
+  activeTimerIds.push(id);
   if (countDownTime < interval) interval = countDownTime;
   if (activeTimers[id] != undefined) {
     clearInterval(activeTimers[id].id);
@@ -42,8 +47,7 @@ export const clearTimerWithId = function (id) {
   if (window.__OS == "IOS") {
     if (JBridge.clearTimerWithId) {
       JBridge.clearTimerWithId(id);
-    }
-    else {
+    } else {
       if (JBridge.clearCountDownTimer) {
         JBridge.clearCountDownTimer();
       }
@@ -58,6 +62,9 @@ export const clearTimerWithId = function (id) {
       delete activeTimers[id];
     }
   }
+  activeTimerIds = activeTimerIds.filter((value) => {
+    return value != id
+  });
 }
 
 function getTwoDigitsNumber(number) {
@@ -65,6 +72,7 @@ function getTwoDigitsNumber(number) {
 }
 
 export const waitingCountdownTimerV2Impl = function (startingTime, interval, timerId, cb, action) {
+  activeTimerIds.push(timerId);
   if (window.__OS == "IOS") {
     if (JBridge.startCountUpTimerV2) {
       const callbackIOS = callbackMapper.map(function (timerID, sec) {
@@ -74,8 +82,7 @@ export const waitingCountdownTimerV2Impl = function (startingTime, interval, tim
         cb(action(timerID)(timeInMinutesFormat)(sec))();
       });
       JBridge.startCountUpTimerV2(startingTime.toString(), interval, timerId, callbackIOS);
-    }
-    else if (JBridge.startCountUpTimer) {
+    } else if (JBridge.startCountUpTimer) {
       const callbackIOS = callbackMapper.map(function (timerID, sec) {
         const minutes = getTwoDigitsNumber(Math.floor(sec / 60));
         const seconds = getTwoDigitsNumber(sec - minutes * 60);
@@ -110,6 +117,7 @@ export const waitingCountdownTimerV2Impl = function (startingTime, interval, tim
 }
 
 export const startTimerWithTimeV2Impl = function (time, cdTimerId, interval, cb, action) {
+  activeTimerIds.push(cdTimerId);
   if (JBridge.startCountDownTimerWithTimeV2) {
     const callback = callbackMapper.map(function (seconds, timerStatus, timerID) {
       cb(action(seconds)(timerStatus)(timerID))();
@@ -122,4 +130,10 @@ export const startTimerWithTimeV2Impl = function (time, cdTimerId, interval, cb,
     });
     return JBridge.startCountDownTimerWithTime(time, interval, cdTimerId, callback);
   }
+}
+
+export const resetAllTimers = function () {
+  activeTimerIds.forEach((value) => {
+    clearTimerWithId(value);
+  })
 }
