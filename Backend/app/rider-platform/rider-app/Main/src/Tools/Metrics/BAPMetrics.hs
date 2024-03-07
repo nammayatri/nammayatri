@@ -50,16 +50,16 @@ incrementRideCreatedRequestCount' bmContainer merchantId merchantOperatingCityId
   let rideCreatedCounter = bmContainer.rideCreatedCounter
   liftIO $ P.withLabel rideCreatedCounter (merchantId, version.getDeploymentVersion, category, merchantOperatingCityId) P.incCounter
 
-incrementSearchRequestCount :: HasBAPMetrics m r => Text -> m ()
-incrementSearchRequestCount merchantName = do
+incrementSearchRequestCount :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementSearchRequestCount merchantName merchantOperatingCityId = do
   bmContainer <- asks (.bapMetrics)
   version <- asks (.version)
-  incrementSearchRequestCount' bmContainer merchantName version
+  incrementSearchRequestCount' bmContainer merchantName merchantOperatingCityId version
 
-incrementSearchRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> DeploymentVersion -> m ()
-incrementSearchRequestCount' bmContainer merchantName version = do
+incrementSearchRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> Text -> DeploymentVersion -> m ()
+incrementSearchRequestCount' bmContainer merchantName merchantOperatingCityId version = do
   let searchRequestCounter = bmContainer.searchRequestCounter
-  liftIO $ P.withLabel searchRequestCounter (merchantName, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel searchRequestCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
 
 putSearchDuration :: MonadIO m => P.Vector P.Label2 P.Histogram -> Text -> DeploymentVersion -> Double -> m ()
 putSearchDuration searchDurationHistogram merchantName version duration = liftIO $ P.withLabel searchDurationHistogram (merchantName, version.getDeploymentVersion) (`P.observe` duration)

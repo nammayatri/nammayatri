@@ -341,7 +341,7 @@ search personId req bundleVersion clientVersion device = do
       tag
       shortestRouteDuration
       riderPreferredOption
-  Metrics.incrementSearchRequestCount merchant.name
+  Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId

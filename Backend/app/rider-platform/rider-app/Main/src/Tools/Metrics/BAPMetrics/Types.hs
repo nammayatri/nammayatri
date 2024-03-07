@@ -33,7 +33,7 @@ data BAPMetricsContainer = BAPMetricsContainer
     searchDuration :: SearchDurationMetric
   }
 
-type SearchRequestCounterMetric = P.Vector P.Label2 P.Counter
+type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
 
 type RideCreatedCounterMetric = P.Vector P.Label4 P.Counter
 
@@ -47,7 +47,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   return $ BAPMetricsContainer {..}
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
-registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version") $ P.counter $ P.Info "search_request_count" ""
+registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "search_request_count" ""
 
 registerRideCreatedCounterMetric :: IO RideCreatedCounterMetric
 registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchantOperatingCityId") $ P.counter $ P.Info "ride_created_count" ""
