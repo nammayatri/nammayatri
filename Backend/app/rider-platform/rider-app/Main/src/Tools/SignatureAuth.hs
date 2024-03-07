@@ -33,9 +33,9 @@ import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (fromList, (.~))
 import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import Kernel.Beam.ART.ARTUtils (HasARTFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Tools.ARTUtils (HasARTFlow)
 import Kernel.Tools.Metrics.CoreMetrics (HasCoreMetrics)
 import Kernel.Types.Base64
 import qualified Kernel.Types.CacheFlow as CF
