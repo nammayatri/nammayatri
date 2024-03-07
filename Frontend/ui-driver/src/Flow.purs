@@ -124,7 +124,7 @@ import Types.App (LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPOR
 import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
-import Timers (clearTimerWithId)
+import Timers (clearTimerWithId, resetAllTimers)
 import RemoteConfig as RC
 import Locale.Utils
 import Data.Array as DA
@@ -141,6 +141,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
     liftFlowBT $ setEventTimestamp "baseAppFlow"    
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     liftFlowBT $ runEffectFn1 EHC.resetIdMap ""
+    liftFlowBT $ resetAllTimers
     -- checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
     checkTimeSettings
     cacheAppParameters versionCode baseFlow

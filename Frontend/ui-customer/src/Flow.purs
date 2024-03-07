@@ -201,6 +201,7 @@ baseAppFlow gPayload callInitUI = do
   baseAppStorage -- TODO:: Restructure the files and names
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
+  liftFlowBT $ resetAllTimers
   let showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
   when callInitUI $ lift $ lift $ initUI -- TODO:: Can we move this to Main
   when showSplashScreen $ toggleSplash true
