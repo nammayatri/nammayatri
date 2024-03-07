@@ -521,7 +521,29 @@ checkStatusAndStartLocationUpdates = do
       currentMode = if isNoDriverMode then show $ updateDriverStatus (getDriverInfoResp.active) else driverMode
   if isNoDriverMode then pure unit else void $ pure $ setCleverTapUserProp [{key : "Mode", value : unsafeToForeign driverMode}]
   setDriverStatusInLocal (show (not isOffline)) $ show $ getDriverStatusFromMode currentMode
-  liftFlowBT $ if isOffline then stopLocationPollingAPI else startLocationPollingAPI
+  liftFlowBT $ if isOffline then do 
+                    stopLocationPollingAPI 
+                    void $ pure $ stopGrpcService
+               else do
+                    startLocationPollingAPI
+                    void $ pure $ startGrpcService
+
+
+startGrpcService :: FlowBT String Unit
+startGrpcService =
+  let grpcServiceRunning = runFn1 JB.isServiceRunning "in.juspay.mobility.app.GRPCNotificationService"
+      locationUpdateServiceRunning = runFn1 JB.isServiceRunning "in.juspay.mobility.app.LocationUpdateService"
+  in
+  if locationUpdateServiceRunning && (not grpcServiceRunning) then void $ pure $ JB.startService "in.juspay.mobility.app.GRPCNotificationService"
+  else pure unit
+
+stopGrpcService :: FlowBT String Unit
+stopGrpcService =
+  let grpcServiceRunning = runFn1 JB.isServiceRunning "in.juspay.mobility.app.GRPCNotificationService"
+  in
+  if grpcServiceRunning then void $ pure $ JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
+  else pure unit
+
 
 onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
@@ -3063,6 +3085,7 @@ logoutFlow = do
   pure $ factoryResetApp ""
   void $ lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+  void $ pure $ JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
   if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
     chooseCityFlow
   else authenticationFlow ""

@@ -64,12 +64,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.app.callbacks.CallBack;
-import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.common.services.TLSSocketFactory;
 
 
@@ -77,7 +75,6 @@ public class NotificationUtils {
 
     private static final String LOG_TAG = "LocationServices";
     private static final String TAG = "NotificationUtils";
-    private static final String PROCESSED_NOTIFICATIONS_KEY = "PROCESSED_NOTIFICATIONS";
     public static final String GENERAL_NOTIFICATION = "GENERAL_NOTIFICATION";
     public static final String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
     public static final String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";
@@ -99,7 +96,6 @@ public class NotificationUtils {
     public static MediaPlayer mediaPlayer;
     public static Bundle lastRideReq = new Bundle();
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
-    private static final Object lock = new Object();
 
     public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);
@@ -114,48 +110,36 @@ public class NotificationUtils {
             SharedPreferences sharedPref = context.getSharedPreferences(
                     context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
-            synchronized (lock) {
-                String notificationId = data.getString("notification_id");
-
-                // Retrieve the stored JSONObject from SharedPreferences
-                String processedNotificationsJson = sharedPref.getString(PROCESSED_NOTIFICATIONS_KEY, "{}");
-                JSONObject processedNotifications = new JSONObject(processedNotificationsJson);
-
-                // Check if the notification_id exists in processedNotifications
-                if (!processedNotifications.has(notificationId)) {
-                    Log.i("ShowAllocationNotification Reached - [" + source + "]", notificationId);
-
-                    // If it doesn't exist, add it with the current timestamp
-                    processedNotifications.put(notificationId, System.currentTimeMillis());
-                }
-
-                // Get the current time in milliseconds
-                long currentTimeMillis = System.currentTimeMillis();
-
-                // Iterate over the keys of processedNotifications
-                Iterator<String> keysIterator = processedNotifications.keys();
-                while (keysIterator.hasNext()) {
-                    String key = keysIterator.next();
-                    long notificationProcessTime = processedNotifications.optLong(key);
-
-                    // Check if the timestamp is more than 1 hour older than the current time
-                    if (currentTimeMillis - notificationProcessTime > TimeUnit.HOURS.toMillis(1)) {
-                        // Remove the key-value pair from processedNotifications
-                        keysIterator.remove();
-                    }
-                }
-
-                // Save the updated JSONObject back to SharedPreferences
-                sharedPref.edit().putString(PROCESSED_NOTIFICATIONS_KEY, processedNotifications.toString()).apply();
-            }
+            String notificationType = data.getString("notification_type");
+            String notificationIdString = "null", expTime = "null";
 
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
             f.setTimeZone(TimeZone.getTimeZone("IST"));
             String currTime = f.format(new Date());
 
-            String notificationType = data.getString("notification_type");
+            try{
+                notificationIdString = data.getString("notification_id");
+                expTime = entity_payload.getString("searchRequestValidTill");
+            }catch(Exception e){
+                Log.i("SHOW_ALLOCATION", "notification_id field not present in " + notificationType);
+            }
+
+            if(!notificationIdString.equals("null")){
+                synchronized (MyFirebaseMessagingService.notificationIdsReceived){
+                    if(MyFirebaseMessagingService.notificationIdsReceived.containsKey(notificationIdString)){
+                        Log.i("SHOW_ALLOCATION", "Already There - [" + source + "] - " + notificationIdString);
+                        return;
+                    }
+                }
+                Log.i("SHOW_ALLOCATION", "adding notification id for - [" + source + "] - " + notificationIdString);
+                MyFirebaseMessagingService.notificationIdsReceived.put(notificationIdString, expTime.equals("null") ? currTime : expTime);
+                // add logs to monitor success rate - which sources' notification was used for NEW_RIDE_AVAILABLE
+            }
+
+            Log.i("SHOW_ALLOCATION", "processing for notification type " + notificationType);
+
             if (ALLOCATION_TYPE.equals(notificationType) && MyFirebaseMessagingService.clearedRideRequest.containsKey(data.getString("entity_ids"))) {
-                System.out.println("The remove notification cleare "+data.getString("entity_ids"));
+                System.out.println("The remove notification cleared " + data.getString("entity_ids"));
                 MyFirebaseMessagingService.clearedRideRequest.remove(data.getString("entity_ids"));
                 return;
             }
@@ -311,13 +295,28 @@ public class NotificationUtils {
                   }
             }
             handleClearedReq(context, notificationType, data);
+            removeExpiredNotificationIds();
         } catch (Exception e) {
+            Log.i("SHOW_ALLOCATION", "error occurred" + e);
             e.printStackTrace();
             if (mFirebaseAnalytics!=null) mFirebaseAnalytics.logEvent("exception_in_showAllocationNotification", new Bundle());
         }
     }
 
+    private static void removeExpiredNotificationIds(){
+        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
+        f.setTimeZone(TimeZone.getTimeZone("IST"));
+        String currTime = f.format(new Date());
 
+        Iterator<Map.Entry<String, String>> iterator = MyFirebaseMessagingService.notificationIdsReceived.entrySet().iterator();
+        while(iterator.hasNext()){
+            Map.Entry<String, String> entry = iterator.next();
+            if(RideRequestUtils.calculateExpireTimer(entry.getValue(), currTime) < 1){
+                Log.i("SHOW_ALLOCATION", "Removing the entry for notification Id : " + entry.getKey() + " - expiry time : " + entry.getValue() + " - curr time : " + currTime);
+                iterator.remove();
+            }
+        }
+    }
 
     private static void handleClearedReq (Context context, String notificationType, JSONObject data) throws JSONException {
         if (notificationType.equals(context.getString(R.string.CLEARED_FARE)) || notificationType.equals(context.getString(R.string.CANCELLED_SEARCH_REQUEST))) {
@@ -634,9 +633,43 @@ public class NotificationUtils {
         }
         AudioManager audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         if (increaseVolume)
-            audio.setStreamVolume(AudioManager.STREAM_MUSIC, audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC), AudioManager.ADJUST_SAME);
+            audio.setStreamVolume(AudioManager.STREAM_MUSIC, audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC), 0); // need to verify this cc: @Vicky
         mediaPlayer = MediaPlayer.create(context, mediaFile);
         mediaPlayer.start();
+    }
+
+    public static void showRR(Context context, JSONObject entity_payload, JSONObject payload, String source){
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.NEW_RIDE_AVAILABLE)).apply();
+        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
+            NotificationUtils.startWidgetService(context, null, payload, entity_payload);
+        } else {
+            NotificationUtils.showAllocationNotification(context, payload, entity_payload, source);
+        }
+    }
+
+    public static void startWidgetService(Context context, String widgetMessage, JSONObject data, JSONObject payload) {
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        Intent widgetService = new Intent(context, WidgetService.class);
+        String key = context.getString(R.string.service);
+        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
+        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(context) && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "true").equals("true") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+            widgetService.putExtra(context.getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
+            widgetService.putExtra("payload", payload != null ? payload.toString() : null);
+            widgetService.putExtra("data", data != null ? data.toString() : null);
+            try {
+                context.startService(widgetService);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void firebaseLogEventWithParams(Context context, String event, String paramKey, String paramValue) {
+        Bundle params = new Bundle();
+        params.putString(paramKey, paramValue);
+        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        mFirebaseAnalytics.logEvent(event, params);
     }
 
     public static boolean overlayFeatureNotAvailable(Context context) {

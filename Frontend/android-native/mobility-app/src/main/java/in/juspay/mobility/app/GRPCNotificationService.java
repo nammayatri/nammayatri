@@ -1,43 +1,34 @@
 package in.juspay.mobility.app;
 import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.IBinder;
-import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
 
-import com.google.android.gms.location.LocationServices;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Map;
 import java.util.Objects;
-import java.util.Timer;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
-import io.grpc.ConnectivityState;
 import io.grpc.ForwardingClientCall;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
 interface NotificationListener {
@@ -48,8 +39,9 @@ interface NotificationListener {
 public class GRPCNotificationService extends Service implements NotificationListener {
     private static NotificationGrpc.NotificationStub asyncStub;
     private ManagedChannel channel;
-    private String token;
     private Context context;
+
+    private MobilityRemoteConfigs remoteConfig ;
 
     @Nullable
     @Override
@@ -61,23 +53,51 @@ public class GRPCNotificationService extends Service implements NotificationList
     public void onCreate() {
         super.onCreate();
         this.context = getApplicationContext();
-        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+        remoteConfig = new MobilityRemoteConfigs(true, false);
         initialize();
-//        this.startForeground(50051, createNotification());
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        stopForeground(true);
+        Log.i("GRPC", "Destroying GRPC service");
         closeChannel();
         stopSelf();
     }
 
     /* Initialize channel and connection for bi-directional notification streaming */
     private void initialize() {
-        channel = ManagedChannelBuilder.forAddress("beta.beckn.uat.juspay.net", 50051)
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+        Log.i("GRPC", "Registration token - " + token);
+        if(token.equals("null")){
+            onDestroy();
+            return;
+        }
+
+        boolean isGRPCEnabled = false;
+        String grpcAddress = "beta.beckn.uat.juspay.net";
+        int grpcPort = 50051;
+        try{
+            JSONObject grpcConfig = new JSONObject(remoteConfig.getString("grpc_config"));
+            isGRPCEnabled = grpcConfig.optBoolean("enabled", false);
+            grpcAddress = grpcConfig.has("address") ? grpcConfig.getString("address") : grpcAddress;
+            grpcPort = grpcConfig.optInt("port", 50051);
+
+            Log.i("GRPC", "Fetched from remote config - grpc enabled : " + isGRPCEnabled);
+            Log.i("GRPC", "Fetched from remote config - grpc address : " + grpcAddress);
+            Log.i("GRPC", "Fetched from remote config - grpc port : " + grpcPort);
+
+        }catch(Exception e){
+            Log.i("GRPC", "unable to fetch GRPC remote config");
+        }
+
+        if(!isGRPCEnabled){
+            onDestroy();
+            return;
+        }
+
+        channel = ManagedChannelBuilder.forAddress(grpcAddress, grpcPort)
                 .intercept(new GRPCNotificationHeaderInterceptor(token))
                 .keepAliveTime(20, TimeUnit.SECONDS)
                 .keepAliveTimeout(5, TimeUnit.SECONDS)
@@ -89,31 +109,6 @@ public class GRPCNotificationService extends Service implements NotificationList
         startGRPCNotificationService();
     }
 
-    /* Creating channel for sticky notification */
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel("SEARCH_REQUEST_NOTIFICATION", LOCATION_SERVICE, NotificationManager.IMPORTANCE_MIN);
-            channel.setDescription("LISTENING_FOR_NOTIFICATIONS");
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
-        }
-    }
-
-    /* returns notification for foreground services */
-    private Notification createNotification() {
-        createNotificationChannel();
-        Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 10, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
-        NotificationCompat.Builder notification =
-                new NotificationCompat.Builder(this, "SEARCH_REQUEST_NOTIFICATION")
-                        .setContentTitle("Listening")
-                        .setContentText(getString(R.string.your_location_is_being_updated))
-                        .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
-                        .setPriority(NotificationCompat.PRIORITY_MIN)
-                        .setOngoing(true)
-                        .setContentIntent(pendingIntent);
-        return notification.build();
-    }
 
     // This method starts the GRPC Notification Service
     private void startGRPCNotificationService() {
@@ -142,8 +137,17 @@ public class GRPCNotificationService extends Service implements NotificationList
     @Override
     public void onError(Throwable t) {
         Log.e("GRPC", "[Retrying]");
-        closeChannel();
-        initialize();
+        if(t instanceof StatusRuntimeException){
+            StatusRuntimeException statusRuntimeException = (StatusRuntimeException) t;
+            if((statusRuntimeException.getStatus().getCode() == Status.Code.INTERNAL) &&
+                    (statusRuntimeException.getStatus().getDescription() != null ? statusRuntimeException.getStatus().getDescription().contains("Rst Stream") : false)){
+                Log.i("GRPC", "Reached here in onError");
+                closeChannel();
+                initialize();
+                return;
+            }
+        }
+        stopSelf();
     }
 
     @Override
@@ -155,16 +159,34 @@ public class GRPCNotificationService extends Service implements NotificationList
             JSONObject payload = new JSONObject();
             String notificationType = notification.getCategory();
 
+            String title = notification.getTitle();
+            String body = notification.getBody();
+
             payload.put("notification_id", notification.getId());
             payload.put("notification_type", notification.getCategory());
             payload.put("entity_ids", notification.getEntity().getId());
+            payload.put("entity_type", notification.getEntity().getType());
             payload.put("show_notification", Objects.equals(notification.getShow(), "SHOW") ? "true" : "false");
 
-            switch (notificationType) {
-                case "NEW_RIDE_AVAILABLE":
-                    NotificationUtils.showAllocationNotification(this, payload, entity_payload, "GRPC");
-                    break;
+
+            if(notificationType.equals("NEW_RIDE_AVAILABLE")) {
+                JSONObject notificationData = new JSONObject();
+                notificationData.put("title", title)
+                        .put("msg", body);
+                NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());
+
+                SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_fcm_received", this);
+                if (sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
+                    if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))
+                        NotificationUtils.showRR(this, entity_payload, payload, "GRPC");
+                    else {
+                        RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_ignored", this);
+                        NotificationUtils.firebaseLogEventWithParams(this, "ride_ignored", "payload", entity_payload.toString());
+                    }
+                } else NotificationUtils.showRR(this, entity_payload, payload, "GRPC");
             }
+
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -209,6 +231,7 @@ class GRPCNotificationResponseObserver implements StreamObserver<NotificationPay
     @Override
     public void onCompleted() {
         Log.e("GRPC", "[Completed]");
+        notificationListener.onError(null);
     }
 }
 

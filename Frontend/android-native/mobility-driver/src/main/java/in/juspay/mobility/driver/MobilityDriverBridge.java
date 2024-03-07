@@ -216,10 +216,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 }
                 mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
                 Constraints constraints = new Constraints.Builder()
-                        .setRequiresDeviceIdle(true)
+                        .setRequiresDeviceIdle(false)
                         .build();
-                PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 15, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update)).setConstraints(constraints).build();
-                mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
+                PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 15, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update)).build();
+                mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update), ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, mWorkRequest);
                 Log.i(LOCATION, "Start Location Polling");
             }
         });
