@@ -134,11 +134,11 @@ getBoundedFareProduct merchantOpCityId tripCategory vehVariant area = do
 
     getPeaksForCurrentDay currentDayOfWeek peaks =
       case currentDayOfWeek of
-        1 -> peaks.sunday
-        2 -> peaks.monday
-        3 -> peaks.tuesday
-        4 -> peaks.wednesday
-        5 -> peaks.thursday
-        6 -> peaks.friday
-        7 -> peaks.saturday
+        1 -> peaks.monday
+        2 -> peaks.tuesday
+        3 -> peaks.wednesday
+        4 -> peaks.thursday
+        5 -> peaks.friday
+        6 -> peaks.saturday
+        7 -> peaks.sunday
         _ -> peaks.monday -- This case should never come.

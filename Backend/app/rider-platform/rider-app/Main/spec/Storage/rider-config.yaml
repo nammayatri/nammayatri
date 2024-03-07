@@ -21,6 +21,7 @@ RiderConfig:
     collectAutoCompleteData: Maybe Bool
     distanceWeightage: Int
     collectMMIRouteData: Maybe Bool
+    isAvoidToll: Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -37,6 +38,7 @@ RiderConfig:
     trackingShortUrlPattern: "'nammayatri.in/t/'"
     specialZoneRadius: "150"
     distanceWeightage: "70"
+    isAvoidToll: "true"
 
   queries:
     findByMerchantOperatingCityId:

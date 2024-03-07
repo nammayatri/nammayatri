@@ -252,6 +252,8 @@ search personId req bundleVersion clientVersion device = do
   (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, multipleRoutes) <-
     case req of
       OneWaySearch oneWayReq -> do
+        riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
+
         let destinationLatLong = oneWayReq.destination.gps
         let request =
               Maps.GetRoutesReq
@@ -259,22 +261,19 @@ search personId req bundleVersion clientVersion device = do
                   calcPoints = True,
                   mode = Just Maps.CAR
                 }
-        routeResponse <- Maps.getRoutes person.id person.merchantId (Just merchantOperatingCity.id) request
-
-        riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id
+        routeResponse <- Maps.getRoutes (Just riderConfig.isAvoidToll) person.id person.merchantId (Just merchantOperatingCity.id) request
 
         fork "calling mmi directions api" $ do
-          whenJust riderConfig $ \config -> do
-            let collectMMIData = fromMaybe False config.collectMMIRouteData
-            when collectMMIData $ do
-              mmiConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
-              case mmiConfigs.serviceConfig of
-                DMSC.MapsServiceConfig mapsCfg -> do
-                  routeResp <- MapsRoutes.getRoutes True mapsCfg request
-                  logInfo $ "MMI route response: " <> show routeResp
-                  let routeData = RouteDataEvent (Just $ show MapsK.MMI) (map show routeResp) (Just searchRequestId) merchant.id merchantOperatingCity.id now now
-                  triggerRouteDataEvent routeData
-                _ -> logInfo "MapsServiceConfig config not found for MMI"
+          let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
+          when collectMMIData $ do
+            mmiConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
+            case mmiConfigs.serviceConfig of
+              DMSC.MapsServiceConfig mapsCfg -> do
+                routeResp <- MapsRoutes.getRoutes True mapsCfg request
+                logInfo $ "MMI route response: " <> show routeResp
+                let routeData = RouteDataEvent (Just $ show MapsK.MMI) (map show routeResp) (Just searchRequestId) merchant.id merchantOperatingCity.id now now
+                triggerRouteDataEvent routeData
+              _ -> logInfo "MapsServiceConfig config not found for MMI"
 
         fork "calling next billion directions api" $ do
           shouldCollectRouteData <- asks (.collectRouteData)
@@ -298,23 +297,22 @@ search personId req bundleVersion clientVersion device = do
 
         fork "Updating autocomplete data in search" $ do
           whenJust oneWayReq.sessionToken $ \token -> do
-            whenJust riderConfig $ \config -> do
-              let toCollectData = fromMaybe False config.collectAutoCompleteData
-              when toCollectData $ do
-                let pickUpKey = makeAutoCompleteKey token (show DMaps.PICKUP)
-                let dropKey = makeAutoCompleteKey token (show DMaps.DROP)
-                pickupRecord :: Maybe AutoCompleteEventData <- Redis.safeGet pickUpKey
-                dropRecord :: Maybe AutoCompleteEventData <- Redis.safeGet dropKey
-                whenJust pickupRecord $ \record -> do
-                  let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isSourceManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
-                  -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isSourceManuallyMoved, DTA.updatedAt = now}
-                  triggerAutoCompleteEvent updatedRecord
-                whenJust dropRecord $ \record -> do
-                  let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isDestinationManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
-                  -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isDestinationManuallyMoved, DTA.updatedAt = now}
-                  triggerAutoCompleteEvent updatedRecord
+            let toCollectData = fromMaybe False riderConfig.collectAutoCompleteData
+            when toCollectData $ do
+              let pickUpKey = makeAutoCompleteKey token (show DMaps.PICKUP)
+              let dropKey = makeAutoCompleteKey token (show DMaps.DROP)
+              pickupRecord :: Maybe AutoCompleteEventData <- Redis.safeGet pickUpKey
+              dropRecord :: Maybe AutoCompleteEventData <- Redis.safeGet dropKey
+              whenJust pickupRecord $ \record -> do
+                let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isSourceManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
+                -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isSourceManuallyMoved, DTA.updatedAt = now}
+                triggerAutoCompleteEvent updatedRecord
+              whenJust dropRecord $ \record -> do
+                let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isDestinationManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
+                -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isDestinationManuallyMoved, DTA.updatedAt = now}
+                triggerAutoCompleteEvent updatedRecord
 
-        let distanceWeightage = maybe 70 (.distanceWeightage) riderConfig
+        let distanceWeightage = riderConfig.distanceWeightage
             durationWeightage = 100 - distanceWeightage
             (shortestRouteInfo, shortestRouteIndex) = getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
             longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse

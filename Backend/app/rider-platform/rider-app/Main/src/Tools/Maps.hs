@@ -85,11 +85,11 @@ getDistances ::
   m (GetDistancesResp a b)
 getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
 
-getRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
-getRoutes personId merchantId mbMOCId req = do
+getRoutes :: ServiceFlow m r => Maybe Bool -> Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
+getRoutes isAvoidToll personId merchantId mbMOCId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getRoutes) merchantId mOCId req
+  runWithServiceConfig (Maps.getRoutes $ fromMaybe merchant.isAvoidToll isAvoidToll) (.getRoutes) merchantId mOCId req
 
 getPickupRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes personId merchantId mbMOCId req = do
