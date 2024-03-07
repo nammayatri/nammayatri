@@ -50,6 +50,10 @@ mkProviderLocation NearestDriverInfo {..} = do
           locationState = Nothing
         }
 
+mkItemLocationIds :: [Maybe NearestDriverInfo] -> Maybe [Text]
+mkItemLocationIds driverLocationsInfo = do
+  Just $ map (.locationId) (catMaybes driverLocationsInfo)
+
 buildFareParamsBreakupsTags :: FareParamsBreakupItem -> Spec.Tag
 buildFareParamsBreakupsTags FareParamsBreakupItem {..} = do
   Spec.Tag
