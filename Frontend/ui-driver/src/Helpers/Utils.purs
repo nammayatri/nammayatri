@@ -72,7 +72,7 @@ import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig)
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer)
+import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -90,6 +90,7 @@ import Screens.Types as ST
 import MerchantConfig.Types as MCT
 import Locale.Utils
 import Language.Types (STR(..))
+import LocalStorage.Cache (getValueFromCache)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -537,6 +538,16 @@ getVehicleVariantImage variant =
                         "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
                         "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
+        NAMMAYATRI -> case variant of
+                        "SEDAN"     -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
+                        "SUV"       -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
+                        "HATCHBACK" -> "ny_ic_sedan," <> "https://assets.juspay.in/beckn/nammayatri/user/images/" <> "ny_ic_sedan.png"
+                        "AUTO_RICKSHAW" -> 
+                          case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
+                            "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+                            "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+                            _           -> fetchImage FF_ASSET "ic_vehicle_front"
+                        _ -> fetchImage FF_ASSET "ic_vehicle_front"
         _          -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
                         "SUV"       -> "ny_ic_suv_car_side," <> url <> "ny_ic_suv_car_side.png"

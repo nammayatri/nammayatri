@@ -70,6 +70,7 @@ import Locale.Utils
 import RemoteConfig (RCCarousel(..))
 import Mobility.Prelude (boolToVisibility)
 import Constants 
+import LocalStorage.Cache (getValueFromCache)
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -1400,33 +1401,38 @@ newtype PopupReturn = PopupReturn {
 } 
 
 gotoCounterStrings :: GoToPopUpType -> PopupReturn
-gotoCounterStrings popupType = case popupType of 
-  MORE_GOTO_RIDES -> PopupReturn { primaryText : getString MORE_GOTO_RIDE_COMING
-                            , secondaryText : getString MORE_GOTO_RIDE_COMING_DESC
-                            , imageURL : fetchImage FF_ASSET "ny_ic_goto_more_rides"
-                            , buttonText : getString OKAY
-                            }
-  REDUCED 0 -> PopupReturn { primaryText : getString GOTO_REDUCED_TO_ZERO
-                            , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " 0."
-                            , imageURL : fetchImage FF_ASSET "ny_ic_gotodriver_zero"
-                            , buttonText : getString OK_GOT_IT
-                            }
-  REDUCED n -> PopupReturn { primaryText : getString GOTO_REDUCED_TO <> " " <> show n
-                            , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " " <> show  n <> "."
-                            , imageURL : fetchImage FF_ASSET "ny_ic_gotodriver_one"
-                            , buttonText : getString OK_GOT_IT
-                            }
-  VALIDITY_EXPIRED -> PopupReturn { primaryText : getString VALIDITY_EXPIRED_STR
-                            , secondaryText : getString VALIDITY_EXPIRED_DESC
-                            , imageURL : fetchImage FF_ASSET "ny_ic_validity_expired"
-                            , buttonText : getString OK_GOT_IT
-                            }
-  REACHED_HOME -> PopupReturn { primaryText : getString GOTO_LOC_REACHED
-                            , secondaryText : getString YOU_ARE_ALMOST_AT_LOCATION
-                            , imageURL : fetchImage FF_ASSET "ny_ic_goto_arrived"
-                            , buttonText : getString OK_GOT_IT
-                            }
-  NO_POPUP_VIEW -> PopupReturn { primaryText : "" , secondaryText : "" , imageURL : "" , buttonText : "" }
+gotoCounterStrings popupType = 
+  case popupType of 
+    MORE_GOTO_RIDES -> PopupReturn { primaryText : getString MORE_GOTO_RIDE_COMING
+                              , secondaryText : getString MORE_GOTO_RIDE_COMING_DESC
+                              , imageURL : getImage "ny_ic_goto_more_rides" "ny_ic_goto_more_rides,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_goto_more_rides.png"
+                              , buttonText : getString OKAY
+                              }
+    REDUCED 0 -> PopupReturn { primaryText : getString GOTO_REDUCED_TO_ZERO
+                              , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " 0."
+                              , imageURL : getImage "ny_ic_gotodriver_zero" "ny_ic_gotodriver_zero,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_gotodriver_zero.png"
+                              , buttonText : getString OK_GOT_IT
+                              }
+    REDUCED n -> PopupReturn { primaryText : getString GOTO_REDUCED_TO <> " " <> show n
+                              , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " " <> show  n <> "."
+                              , imageURL : getImage "ny_ic_gotodriver_one" "ny_ic_gotodriver_one,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_gotodriver_one.png"
+                              , buttonText : getString OK_GOT_IT
+                              }
+    VALIDITY_EXPIRED -> PopupReturn { primaryText : getString VALIDITY_EXPIRED_STR
+                              , secondaryText : getString VALIDITY_EXPIRED_DESC
+                              , imageURL : fetchImage FF_ASSET "ny_ic_validity_expired"
+                              , buttonText : getString OK_GOT_IT
+                              }
+    REACHED_HOME -> PopupReturn { primaryText : getString GOTO_LOC_REACHED
+                              , secondaryText : getString YOU_ARE_ALMOST_AT_LOCATION
+                              , imageURL : getImage "ny_ic_goto_arrived" "ny_ic_goto_arrived,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_goto_arrived.png"
+                              , buttonText : getString OK_GOT_IT
+                              }
+    NO_POPUP_VIEW -> PopupReturn { primaryText : "" , secondaryText : "" , imageURL : "" , buttonText : "" }
+  where 
+    getImage current new = 
+      let isVehicleRickshaw = (getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys) == "AUTO_RICKSHAW"
+      in if isVehicleRickshaw then fetchImage FF_ASSET current else new
 
 ------------------------------------------------------------------------------gotoLocInRange------------------------------------------------------------------------------------
 gotoLocInRangeConfig :: ST.HomeScreenState-> PopUpModal.Config
