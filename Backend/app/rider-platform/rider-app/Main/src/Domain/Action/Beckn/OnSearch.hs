@@ -32,6 +32,7 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
+import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -47,6 +48,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -184,11 +186,13 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
   forM_ estimates $ \est -> do
     triggerEstimateEvent EstimateEventData {estimate = est, personId = _searchRequest.riderId, merchantId = _searchRequest.merchantId}
-  _ <- QEstimate.createMany estimates
-  _ <- QQuote.createMany quotes
-  _ <- QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
-  _ <- QSearchReq.updatePaymentMethods _searchRequest.id (paymentMethods <&> (.id))
-  QPFS.clearCache _searchRequest.riderId
+  let lockKey = DQ.estimateBuildLockKey $ show searchRequest.id
+  Redis.withLockRedis lockKey 5 $ do
+    _ <- QEstimate.createMany estimates
+    _ <- QQuote.createMany quotes
+    _ <- QPFS.updateStatus searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = searchRequest.id, validTill = searchRequest.validTill}
+    _ <- QSearchReq.updatePaymentMethods searchRequest.id (paymentMethods <&> (.id))
+    QPFS.clearCache searchRequest.riderId
   where
     {- Author: Hemant Mangla
       Rider quotes and estimates are filtered based on their preferences.

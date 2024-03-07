@@ -17,6 +17,7 @@ module Domain.Action.UI.Quote
   ( GetQuotesRes (..),
     OfferRes (..),
     getQuotes,
+    estimateBuildLockKey,
   )
 where
 
@@ -33,6 +34,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -74,23 +76,28 @@ instance FromJSON OfferRes where
 instance ToSchema OfferRes where
   declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
 
+estimateBuildLockKey :: Text -> Text
+estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
+
 getQuotes :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   activeBooking <- runInReplica $ QBooking.findLatestByRiderId searchRequest.riderId
   whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
   logDebug $ "search Request is : " <> show searchRequest
-  offers <- getOffers searchRequest
-  estimates <- getEstimates searchRequestId
-  paymentMethods <- getPaymentMethods searchRequest
-  return $
-    GetQuotesRes
-      { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
-        toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
-        quotes = offers,
-        estimates,
-        paymentMethods
-      }
+  let lockKey = estimateBuildLockKey (show searchRequestId)
+  Redis.withLockRedisAndReturnValue lockKey 5 $ do
+    offers <- getOffers searchRequest
+    estimates <- getEstimates searchRequestId
+    paymentMethods <- getPaymentMethods searchRequest
+    return $
+      GetQuotesRes
+        { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
+          toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
+          quotes = offers,
+          estimates,
+          paymentMethods
+        }
 
 getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do
