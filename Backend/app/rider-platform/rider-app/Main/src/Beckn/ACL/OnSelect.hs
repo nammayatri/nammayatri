@@ -87,7 +87,7 @@ buildQuoteInfoV2 ::
 buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   fulfillmentType <- fulfillment.fulfillmentType & fromMaybeM (InvalidRequest "Missing fulfillmentType")
   quoteDetails <- case fulfillmentType of
-    "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime
+    "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill
     "RIDE_OTP" -> throwError $ InvalidRequest "select not supported for ride otp trip"
     _ -> throwError $ InvalidRequest "Invalid fulfillmentType"
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
@@ -130,15 +130,16 @@ buildDriverOfferQuoteDetailsV2 ::
   Spec.Fulfillment ->
   Spec.Quotation ->
   UTCTime ->
+  UTCTime ->
   m DOnSelect.DriverOfferQuoteDetails
-buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp = do
+buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
   let agentTags = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personTags)
       itemTags = item.itemTags
       driverName = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personName) & fromMaybe "Driver"
       durationToPickup = getPickupDurationV2 agentTags
       distanceToPickup' = getDistanceToNearestDriverV2 itemTags
       rating = getDriverRatingV2 agentTags
-  validTill <- (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
+  let validTill = (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybe onSelectTtl
   logDebug $ "on_select ttl request rider: " <> show validTill
   bppQuoteId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
   pure $

@@ -18,8 +18,9 @@ import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
-import qualified Data.Aeson as A
+-- import qualified Data.Aeson as A
 import Data.List (singleton)
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
@@ -45,7 +46,7 @@ mkStops origin mDestination mStartOtp =
                           locationAreaCode = origin.address.areaCode,
                           locationCity = Just $ Spec.City Nothing origin.address.city,
                           locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                          locationGps = A.decode $ A.encode originGps,
+                          locationGps = Utils.gpsToText originGps,
                           locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing,
                           locationUpdatedAt = Nothing
@@ -71,7 +72,7 @@ mkStops origin mDestination mStartOtp =
                             locationAreaCode = destination.address.areaCode,
                             locationCity = Just $ Spec.City Nothing destination.address.city,
                             locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                            locationGps = A.decode $ A.encode (destinationGps destination),
+                            locationGps = Utils.gpsToText (destinationGps destination),
                             locationState = Just $ Spec.State destination.address.state,
                             locationId = Nothing,
                             locationUpdatedAt = Nothing

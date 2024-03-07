@@ -65,7 +65,7 @@ getVehicleVariant provider item = do
     (Just "CAB", Just "SEDAN") -> return VehicleVariant.SEDAN
     (Just "CAB", Just "SUV") -> return VehicleVariant.SUV
     (Just "CAB", Just "HATCHBACK") -> return VehicleVariant.HATCHBACK
-    (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> return VehicleVariant.AUTO_RICKSHAW
+    (Just "AUTO_RICKSHAW", _) -> return VehicleVariant.AUTO_RICKSHAW
     (Just "CAB", Just "TAXI") -> return VehicleVariant.TAXI
     (Just "CAB", Just "TAXI_PLUS") -> return VehicleVariant.TAXI_PLUS
     _ -> throwError (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
@@ -108,10 +108,10 @@ buildEstimateBreakupList item = do
     item.itemPrice
       >>= (.priceCurrency)
       & fromMaybeM (InvalidRequest "Missing Currency")
-  tagGroups <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tag Groups")
-  tagGroupRateCard <- find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just (show Tag.FARE_POLICY)) tagGroups & fromMaybeM (InvalidRequest "Missing fare policy") -- consume this from now on
-  tagListRateCard <- tagGroupRateCard.tagGroupList & fromMaybeM (InvalidRequest "Missing Tag List")
-  let breakups = map (buildEstimateBreakUpItem currency) tagListRateCard
+  let tagGroups = item.itemTags
+      tagGroupRateCard = find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just (show Tag.FARE_POLICY)) =<< tagGroups -- consume this from now on
+      tagListRateCard = (.tagGroupList) =<< tagGroupRateCard
+  let breakups = map (buildEstimateBreakUpItem currency) (fromMaybe [] tagListRateCard)
   return (catMaybes breakups)
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
