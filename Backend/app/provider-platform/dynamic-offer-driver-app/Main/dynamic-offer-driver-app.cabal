@@ -37,6 +37,7 @@ library
       API.Beckn.Status
       API.Beckn.Track
       API.Beckn.Update
+      API.Cac
       API.Dashboard
       API.Dashboard.Exotel
       API.Dashboard.Fleet
@@ -140,6 +141,7 @@ library
       Domain.Action.Beckn.Status
       Domain.Action.Beckn.Track
       Domain.Action.Beckn.Update
+      Domain.Action.Cac
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Driver
       Domain.Action.Dashboard.Driver.Coin
