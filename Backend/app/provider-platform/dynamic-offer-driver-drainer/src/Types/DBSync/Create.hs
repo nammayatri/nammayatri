@@ -54,13 +54,13 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeC
 import qualified "dynamic-offer-driver-app" Storage.Beam.IdfyVerification as IdfyVerification
 import qualified "dynamic-offer-driver-app" Storage.Beam.Image as Image
 import "dynamic-offer-driver-app" Storage.Beam.IssueManagement ()
+import qualified "dynamic-offer-driver-app" Storage.Beam.LeaderBoardConfigs as MerchantLeaderBoardConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
 import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.Mandate as Mandate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.LeaderBoardConfig as MerchantLeaderBoardConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
