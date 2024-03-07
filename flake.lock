@@ -3770,15 +3770,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1709707046,
-        "narHash": "sha256-Hfa7n1BgLBtcDcga/eSxMyMVWcaA92OfiZs8vr8Zi9Y=",
+        "lastModified": 1709821169,
+        "narHash": "sha256-tPy4otpDFgbMMui3v0V9u/dMMSTLknZkxGhhtx1ulLM=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "a4788cc044abaccb4df297f77d9094766f4ff663",
+        "rev": "991f68ef3b86ad4a17a06eb0fb3f20180f9b21fe",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/ART-function-switch-implementation",
         "repo": "shared-kernel",
         "type": "github"
       }

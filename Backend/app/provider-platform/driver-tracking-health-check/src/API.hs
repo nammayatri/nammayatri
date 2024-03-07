@@ -15,9 +15,9 @@
 module API (healthCheckAPI, healthCheck, iAmAlive) where
 
 import EulerHS.Prelude
+import Kernel.Beam.ART.ARTUtils (HasARTFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Tools.ARTUtils (HasARTFlow)
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
