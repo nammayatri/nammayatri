@@ -1,6 +1,8 @@
 module Domain.Action.Cac where
 
 import Data.Aeson
+import Data.Text (unpack)
+import Domain.Types.CacType
 import Environment (Flow)
 import Kernel.Prelude
 
@@ -16,6 +18,4 @@ data CacTypeValidationResp = CacTypeValidationResp
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 typeCheckHandler :: CacTypeValidationReq -> Flow CacTypeValidationResp
-typeCheckHandler _ = do
-  result <- return False -- Here Goes Akhilesh's logic
-  return $ CacTypeValidationResp result
+typeCheckHandler req = return $ CacTypeValidationResp $ checkParseCommon (unpack (req.key), req.value) -- Here Goes Akhilesh's logic

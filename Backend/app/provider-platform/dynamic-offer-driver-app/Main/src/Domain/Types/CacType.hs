@@ -16,14 +16,14 @@ import Kernel.Types.Id
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 import qualified Storage.Beam.DriverPoolConfig as DPC
 
-checkParseCommon :: (String, A.Value) -> String
+checkParseCommon :: (String, A.Value) -> Bool
 checkParseCommon (key, value) = do
   case Text.splitOn ":" (pack key) of
     [tableName, tableColumn] -> do
       case tableName of
-        "driverPoolConfig" -> show $ checkParse (Proxy @DPC.DriverPoolConfig) tableColumn value
-        _ -> "This is to already not there no parsing req"
-    _ -> "Bro what the f**k you should follow a format."
+        "driverPoolConfig" -> checkParse (Proxy @DPC.DriverPoolConfig) tableColumn value
+        _ -> False
+    _ -> False
 
 class CheckParse table where
   checkParse :: Proxy table -> Text -> A.Value -> Bool
