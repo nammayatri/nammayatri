@@ -14,14 +14,14 @@
 
 module Storage.CachedQueries.Merchant.LeaderBoardConfig where
 
-import Domain.Types.Merchant.LeaderBoardConfig
+import Domain.Types.LeaderBoardConfigs
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, MonadFlow)
-import qualified Storage.Queries.Merchant.LeaderBoardConfig as Queries
+import Storage.Queries.LeaderBoardConfigs as Queries
 
 create :: (MonadFlow m, CacheFlow m r, Esq.EsqDBFlow m r) => LeaderBoardConfigs -> m ()
 create = Queries.create
