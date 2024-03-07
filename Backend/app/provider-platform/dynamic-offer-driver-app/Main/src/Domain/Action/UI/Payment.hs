@@ -189,6 +189,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc' -> pure psc'
+    DMSC.RentalPaymentServiceConfig psc' -> pure psc'
     _ -> throwError $ InternalError "Unknown Service Config"
   orderStatusResp <- Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
   osr <- case orderStatusResp of
