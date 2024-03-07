@@ -186,13 +186,13 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
   forM_ estimates $ \est -> do
     triggerEstimateEvent EstimateEventData {estimate = est, personId = _searchRequest.riderId, merchantId = _searchRequest.merchantId}
-  let lockKey = DQ.estimateBuildLockKey $ show searchRequest.id
+  let lockKey = DQ.estimateBuildLockKey _searchRequest.id.getId
   Redis.withLockRedis lockKey 5 $ do
     _ <- QEstimate.createMany estimates
     _ <- QQuote.createMany quotes
-    _ <- QPFS.updateStatus searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = searchRequest.id, validTill = searchRequest.validTill}
-    _ <- QSearchReq.updatePaymentMethods searchRequest.id (paymentMethods <&> (.id))
-    QPFS.clearCache searchRequest.riderId
+    _ <- QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
+    _ <- QSearchReq.updatePaymentMethods _searchRequest.id (paymentMethods <&> (.id))
+    QPFS.clearCache _searchRequest.riderId
   where
     {- Author: Hemant Mangla
       Rider quotes and estimates are filtered based on their preferences.
