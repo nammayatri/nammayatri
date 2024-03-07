@@ -19,6 +19,7 @@ data RiderConfig = RiderConfig
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
+    isAvoidToll :: Kernel.Prelude.Bool,
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,

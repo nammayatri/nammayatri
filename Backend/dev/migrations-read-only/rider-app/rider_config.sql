@@ -31,3 +31,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN distance_weightage integer NOT NUL
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN collect_mmi_route_data boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN is_avoid_toll boolean NOT NULL default true;

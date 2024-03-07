@@ -23,6 +23,7 @@ data RiderConfigT f = RiderConfigT
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
+    isAvoidToll :: B.C f Kernel.Prelude.Bool,
     localPoliceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
