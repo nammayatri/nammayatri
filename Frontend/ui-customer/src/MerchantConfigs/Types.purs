@@ -70,6 +70,7 @@ type AppConfigCustomer a =
   , cityConfig :: Array CityConfig
   , enableSingleEstimate :: Boolean
   , driverLocationPolling :: DriverLocationPollingConfig
+  , banners :: Banners
   | a
   }
 
@@ -376,4 +377,8 @@ type GeoCodeConfig = {
 
 type DriverLocationPollingConfig = {
   retryExpFactor :: Int
+}
+
+type Banners = {
+  homeScreenSafety :: Boolean
 }
