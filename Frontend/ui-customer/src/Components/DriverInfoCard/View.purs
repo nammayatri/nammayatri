@@ -33,7 +33,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize)
 import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
@@ -251,7 +251,7 @@ otpAndWaitView push state =
           , text $ getString OTP
           , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
           , color Color.black700
-          ] <> FontStyle.body22 TypoGraphy
+          ] <> FontStyle.body23 TypoGraphy
         , otpView push state
         ]
       , trackRideView push state
@@ -279,7 +279,7 @@ otpAndWaitView push state =
              , text $ if isQuotes then getString EXPIRES_IN else getString WAIT_TIME
              , color Color.black700
              , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
-             ] <> FontStyle.body22 TypoGraphy
+             ] <> FontStyle.body23 TypoGraphy
            , imageView
                [ height $ V 12
                , width  $ V 12
@@ -348,7 +348,7 @@ waitTimeView push state =
      , color Color.black900
      , gravity CENTER
      , singleLine true
-     ] <> FontStyle.body22 TypoGraphy
+     ] <> FontStyle.body23 TypoGraphy
   ]
 
 waitTimeHint :: DriverInfoCardState -> String
@@ -375,8 +375,8 @@ colorForWaitTime state =
 otpView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 otpView push state =
   let otpDimensions = runFn1 getLayoutBounds $ getNewIDWithTag "OTPView"
-      shimmerHeight = (otpDimensions.height) + 3
-      shimmerWidth = (otpDimensions.width) - (if os == "IOS" then 3 else 10)
+      shimmerHeight = (getDefaultPixelSize (otpDimensions.height)) + 3
+      shimmerWidth = (getDefaultPixelSize (otpDimensions.width)) - (if os == "IOS" then 3 else 10)
   in
   relativeLayout
   [ height $ MATCH_PARENT
@@ -397,9 +397,9 @@ otpView push state =
         , width MATCH_PARENT
         , height MATCH_PARENT
         , padding $ Padding 8 4 8 6
-        ] <> FontStyle.body22 TypoGraphy
+        ] <> FontStyle.body23 TypoGraphy
       ]
-  , if state.props.currentSearchResultType == QUOTES then shineAnimation shimmerHeight shimmerWidth else dummyView push
+  , shineAnimation shimmerHeight shimmerWidth
   ]
 
 trackRideView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w

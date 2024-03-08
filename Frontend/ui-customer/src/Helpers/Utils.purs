@@ -617,9 +617,9 @@ getVehicleVariantImage variant =
       "SUV"           -> variantConfig.suv.image
       "HATCHBACK"     -> variantConfig.hatchback.image
       "AUTO_RICKSHAW" -> case city of 
-                          Kochi -> fetchImage FF_ASSET "ny_ic_black_auto_quote_list" 
-                          Chennai -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list" 
-                          Hyderabad -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list"
+                          Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
+                          Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+                          Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                           _ -> variantConfig.autoRickshaw.image
       _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
