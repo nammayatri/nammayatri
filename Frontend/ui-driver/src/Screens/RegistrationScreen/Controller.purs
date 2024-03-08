@@ -128,6 +128,7 @@ instance eqAction :: Eq Action where
 
 eval :: Action -> RegistrationScreenState -> Eval Action ScreenOutput RegistrationScreenState
 eval AfterRender state = continue state
+
 eval BackPressed state = do
   if state.props.enterReferralCodeModal then continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
   else if state.props.menuOptions then continue state { props { menuOptions = false}}
@@ -135,9 +136,11 @@ eval BackPressed state = do
   else if state.data.vehicleTypeMismatch then continue state { data { vehicleTypeMismatch = false}}
   else if state.props.confirmChangeVehicle then continue state { props { confirmChangeVehicle = false}}
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
+  else if DA.notElem state.data.vehicleDetailsStatus [COMPLETED, IN_PROGRESS] && Mb.isJust state.data.vehicleCategory then continue state { data {vehicleCategory = Mb.Nothing}}
   else do
       void $ pure $ JB.minimizeApp ""
       continue state
+
 eval (RegistrationAction item ) state = 
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
@@ -253,10 +256,10 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
       case (state.data.variantList) DA.!! index of
         Mb.Just vehicleType -> do
           void $ pure $ setValueToLocalStore VEHICLE_CATEGORY $ show vehicleType
-          -- void $ pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS 
-          --   $ if DA.elem (show vehicleType) state.data.cityConfig.variantSubscriptionConfig.variantList 
-          --       then "true"
-          --     else "false"
+          void $ pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS 
+            $ if DA.elem (show vehicleType) state.data.cityConfig.variantSubscriptionConfig.variantList 
+                then "true"
+              else "false"
           continue state { data { vehicleCategory = Mb.Just vehicleType } }
         Mb.Nothing -> continue state
 
@@ -297,3 +300,10 @@ getStatus step state =
             Mb.Nothing -> ST.NOT_STARTED
             Mb.Just docStatus -> docStatus.status
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) || (Mb.isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
+
+decodeVehicleType :: String -> Mb.Maybe ST.VehicleCategory
+decodeVehicleType value = case value of
+  "AutoCategory" -> Mb.Just ST.AutoCategory
+  "CarCategory" -> Mb.Just ST.CarCategory
+  "BikeCategory" -> Mb.Just ST.BikeCategory
+  _ -> Mb.Nothing

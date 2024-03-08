@@ -199,6 +199,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "918618963188",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : ["AutoCategory"]
         }
       },
       {
@@ -218,6 +222,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "919392636637",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -237,6 +245,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "918618963188",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -256,6 +268,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "919625724848",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -275,6 +291,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "917483117936",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -294,6 +314,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "",
             "callSupport" : true,
             "whatsappSupport" : false
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -313,7 +337,11 @@ window.getMerchantConfig = function () {
           "supportWAN" : "917483117936",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
       },
       {
         "cityName" : "Tumakuru",
@@ -332,7 +360,11 @@ window.getMerchantConfig = function () {
           "supportWAN" : "918618963188",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
       },
       {
         "cityName" : "Gurugram",
@@ -351,7 +383,11 @@ window.getMerchantConfig = function () {
           "supportWAN" : "919625724848",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
       },
       {
         "cityName" : "Noida",
@@ -370,7 +406,35 @@ window.getMerchantConfig = function () {
           "supportWAN" : "919625724848",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
+      },
+      {
+        "cityName" : "TamilNaduCities",
+        "mapImage" : "ny_ic_tamilnadu_map",
+        "cityCode" :  "std:0422",
+        "showSubscriptions" : false,
+        "cityLat" : 11.1271,
+        "cityLong" : 78.6569,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+          "supportWAN" : "917483117936",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
       }
   ]
   , "dashboard" : {

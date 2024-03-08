@@ -349,6 +349,12 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory
+
+derive instance genericVehicleCategory :: Generic VehicleCategory _
+instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
+instance showVehicleCategory :: Show VehicleCategory where show = genericShow
+
  -- ############################################################# UploadAdhaarScreen ################################################################################
 
 type UploadAdhaarScreenState = {
@@ -2487,9 +2493,3 @@ type DocumentCaptureScreenProps = {
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean
 } 
-
-data VehicleCategory = AutoCategory | CarCategory | BikeCategory
-
-derive instance genericVehicleCategory :: Generic VehicleCategory _
-instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
-instance showVehicleCategory :: Show VehicleCategory where show = genericShow

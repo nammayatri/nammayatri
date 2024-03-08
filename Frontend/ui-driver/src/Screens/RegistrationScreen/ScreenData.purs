@@ -96,5 +96,22 @@ dummyCityConfig = {
                       callSupport : false,
                       supportWAN : "", 
                       whatsappSupport : false
-                    }
+                    },
+                    variantSubscriptionConfig : {
+                      enableVariantBasedSubscription : true,
+                      variantList : ["AutoCategory"]
+                    },
+                    vehicleNSImg : ""
                   }
+          
+type VehicleInfo = {
+  vehicleType :: ST.VehicleCategory,
+  vehicleImage :: String,
+  vehicleName :: String
+}
+
+variantsData :: Array VehicleInfo
+variantsData = [
+  { vehicleType : ST.AutoCategory, vehicleImage : "ny_ic_auto_side", vehicleName : getString AUTO_RICKSHAW },
+  { vehicleType : ST.CarCategory, vehicleImage : "ny_ic_sedan_side", vehicleName : getString CAR }
+]

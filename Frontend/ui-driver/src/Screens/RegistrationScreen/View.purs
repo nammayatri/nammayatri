@@ -52,6 +52,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.RegistrationScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (RegisterationStep(..), StageStatus(..), ValidationStatus(..))
 import Screens.Types as ST
+import Services.API as API
 import Storage (KeyStore(..), getValueToLocalNativeStore)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
@@ -100,11 +101,13 @@ view push state =
               )
               $ const (AfterRender)
           ]
-      $ [ linearLayout
+      $ [ chooseVehicleView push state
+        , linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , gravity CENTER
             , orientation VERTICAL
+            , visibility $ boolToVisibility $ isJust state.data.vehicleCategory || not state.data.cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription
             ]
             [ headerView state push                    
             , linearLayout
@@ -654,7 +657,7 @@ chooseVehicleView push state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility $ isNothing state.data.vehicleCategory -- && state.data.cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription
+    , visibility $ boolToVisibility $ isNothing state.data.vehicleCategory && state.data.cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription
     ]
     [ headerView state push
     , textView $ 
@@ -680,6 +683,29 @@ chooseVehicleView push state =
       , PrimaryButton.view (push <<< ContinueButtonAction) (continueButtonConfig state)
       ]
     ]
+  where 
+    headerView :: ST.RegistrationScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+    headerView state push = 
+      linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , background state.data.config.primaryBackground
+      , padding $ Padding 16 16 16 16
+      ][  imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
+          , height $ V 25 
+          , width $ V 25
+          , onClick push $ const BackPressed
+          ]
+        , textView $ 
+          [ text $ getString ADD_VEHICLE
+          , color Color.white900
+          , margin $ MarginVertical 5 22
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          ] <> FontStyle.h1 TypoGraphy
+      ]
 
 variantListView :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 variantListView push state = 
@@ -713,6 +739,7 @@ variantListView push state =
                     ST.AutoCategory -> "ny_ic_auto_side_view"
                     ST.CarCategory -> "ny_ic_sedan_side"
                     ST.BikeCategory -> "ny_ic_bike_side"
+              -- , imageWithFallback $ fetchImage FF_ASSET item.vehicleImage
               ]
             , textView $
               [ width WRAP_CONTENT
@@ -721,6 +748,7 @@ variantListView push state =
                         ST.AutoCategory -> getString AUTO_RICKSHAW
                         ST.CarCategory -> getString CAR
                         ST.BikeCategory -> "BIKE"
+              -- , text item.vehicleName
               , color Color.black800
               , margin $ MarginLeft 20
               ] <> FontStyle.subHeading1 TypoGraphy
