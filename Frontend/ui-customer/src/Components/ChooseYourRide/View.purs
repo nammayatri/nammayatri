@@ -408,7 +408,7 @@ quoteListView push config isSingleEstimate =
           , orientation VERTICAL
           ]( mapWithIndex
               ( \index item -> do 
-                  let vehicleImage = if isSingleEstimate then (HU.fetchImage HU.FF_ASSET "ny_ic_single_estimate_auto") else item.vehicleImage 
+                  let vehicleImage = if isSingleEstimate then HU.getSingelEstimateAuto FunctionCall else item.vehicleImage 
                   ChooseVehicle.view (push <<< ChooseVehicleAC) (item{isSingleEstimate = isSingleEstimate, vehicleImage = vehicleImage})
               ) config.quoteList
           )]]
