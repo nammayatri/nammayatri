@@ -642,7 +642,7 @@ homeScreenFlow = do
       void $ lift $ lift $ toggleLoader showLoader
       (GlobalState newState) <- getState
       let state = newState.homeScreen
-      liftFlowBT $ logEventWithParams logField_ "ny_user_tip_search" "Tip amount (₹)" (show $ state.props.customerTip.tipForDriver)
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_tip_search" $ [{key : "Tip amount (₹)", value : unsafeToForeign state.props.customerTip.tipForDriver}]
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_retry_request_quote" $ [ {key : "Request Type", value : unsafeToForeign if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign"},
                                                                                                       {key : "Estimate Fare (₹)", value : unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare)},
                                                                                                       {key : "Customer tip (₹)", value : unsafeToForeign state.props.customerTip.tipForDriver},
@@ -1046,7 +1046,7 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       enterMobileNumberScreenFlow -- Removed choose langauge screen
     SUBMIT_RATING state -> do
-      liftFlowBT $ logEventWithParams logField_ "ny_user_ride_give_feedback" "Rating" (show $ state.data.rating)
+      liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_give_feedback" $ [{key : "Rating", value : unsafeToForeign state.data.ratingViewState.selectedRating}]
       void $ Remote.bookingFeedbackBT (Remote.makeRideFeedBackReq (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedbackList))
       void $ Remote.rideFeedbackBT (getfeedbackReq state)
       void $ updateLocalStage HomeScreen
