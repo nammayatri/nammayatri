@@ -70,6 +70,7 @@ import Screens.Benefits.BenefitsScreen.ScreenData as BenefitsScreenData
 import Screens.Benefits.LmsVideoScreen.ScreenData as LmsVideoScreenData
 import Screens.Benefits.LmsQuizScreen.ScreenData as LmsQuizScreenData
 import Common.Types.App (CategoryListType)
+import Services.API
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -368,6 +369,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GOTO_LOCATION_FLOW HomeScreenState Boolean
                           | REFRESH_GOTO HomeScreenState
                           | GO_TO_EARNINGS_SCREEN
+                          | GOT_DRIVER_STATS HomeScreenState DriverProfileStatsResp
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

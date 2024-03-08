@@ -102,6 +102,7 @@ import RemoteConfig as RC
 import Locale.Utils
 import Foreign (unsafeToForeign)
 import SessionCache (getValueFromWindow)
+import Services.API
 
 
 instance showAction :: Show Action where
@@ -230,6 +231,7 @@ instance loggableAction :: Loggable Action where
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
     FreeTrialEndingAC _ -> pure unit
+    DriverStats _ -> pure unit
     _ -> pure unit
 
 
@@ -265,6 +267,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
                     | EarningsScreen ST.HomeScreenState Boolean
+                    | DriverStatsUpdate ST.HomeScreenState DriverProfileStatsResp
 
 data Action = NoAction
             | BackPressed
@@ -367,6 +370,7 @@ data Action = NoAction
             | CustomerSafetyPopupAC PopUpModal.Action
             | UpdateLastLoc Number Number Boolean
             | VehicleNotSupportedAC PopUpModal.Action
+            | DriverStats DriverProfileStatsResp
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -1087,6 +1091,9 @@ eval ToggleStatsModel state = continue state { props { isStatsModelExpanded = no
 eval (GoToEarningsScreen showCoinsView) state = do
   let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_coins_click_on_homescreen" $ [{key : "CoinBalance", value : unsafeToForeign state.data.coinBalance}]
   exit $ EarningsScreen state showCoinsView
+
+eval (DriverStats driverStats) state = do
+  updateAndExit state $ DriverStatsUpdate state driverStats
 
 eval _ state = continue state
 

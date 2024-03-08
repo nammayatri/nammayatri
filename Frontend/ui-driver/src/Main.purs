@@ -19,15 +19,17 @@ import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void, dis
 import Data.Either (Either(..))
 import Effect (Effect)
 import Effect.Aff (killFiber, launchAff, launchAff_)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable, setEventTimestamp)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable, markPerformance, setEventTimestamp)
 import AssetsProvider (fetchAssets)
 import Flow as Flow
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Log
+import Presto.Core.Types.API (ErrorResponse(..))
 import Presto.Core.Types.Language.Flow (throwErr)
-import Foreign (MultipleErrors, unsafeToForeign)
+import Foreign (Foreign, MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import Common.Types.App (GlobalPayload, Event, FCMBundleUpdate)
 import Types.App (defaultGlobalState)
@@ -48,19 +50,30 @@ import Effect.Uncurried (runEffectFn1)
 import Screens.Types as ST
 import Common.Types.App as Common
 import Storage (KeyStore(..), setValueToLocalStore)
+import Services.API (GetDriverInfoResp(..))
 
-main :: Event -> Effect Unit
-main event = do
+main :: Event -> Foreign -> Effect Unit
+main event driverInfoRespFiber = do
+  void $ markPerformance "MAIN_START"
   void $ Events.initMeasuringDuration "Flow.mainFlow"
-  void $ Events.initMeasuringDuration "mainToHomeScreenDuration"
-  _ <- launchAff $ flowRunner defaultGlobalState $ do
-    liftFlow $ setEventTimestamp "main_purs"
+  void $ Events.initMeasuringDuration "mainToHomeScreenDuration"  
+  (driverInfoResp :: Maybe (Either ErrorResponse GetDriverInfoResp)) <- case runExcept (decode driverInfoRespFiber) of
+    Right (driverInfoRes :: GetDriverInfoResp) -> pure $ Just (Right driverInfoRes)
+    Left _ -> case runExcept (decode driverInfoRespFiber) of
+      Right (errorRes :: ErrorResponse) ->
+        if (DA.any (\error -> Utils.decodeErrorCode errorRes.response.errorMessage == error) ["VEHICLE_NOT_FOUND", "DRIVER_INFORMATON_NOT_FOUND"]) 
+          then pure $ Just (Left errorRes)
+          else pure Nothing
+      Left err -> pure Nothing
+  mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
+    liftFlow $ setEventTimestamp "main_purs" 
     _ <- runExceptT $ runBackT $ updateEventData event
-    resp ← runExceptT $ runBackT $ Flow.baseAppFlow true Nothing
+    resp ← runExceptT $ runBackT $ Flow.baseAppFlow true Nothing driverInfoResp
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
-      Left error -> liftFlow $ main event
+      Left error -> liftFlow $ main event driverInfoRespFiber
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
+  void $ markPerformance "MAIN_END"
   pure unit
 
 mainAllocationPop :: String -> AllocationData -> Effect Unit
@@ -103,9 +116,9 @@ onConnectivityEvent triggertype = do
       "INTERNET_ACTION" -> Flow.noInternetScreenFlow triggertype
       "REFRESH" -> do
         void $ restorePreviousState
-        Flow.baseAppFlow false Nothing
+        Flow.baseAppFlow false Nothing Nothing
       "CHECK_NETWORK_TIME" ->  Flow.checkTimeSettings
-      _ -> Flow.baseAppFlow false Nothing
+      _ -> Flow.baseAppFlow false Nothing Nothing
     pure unit
   pure unit
 
@@ -121,13 +134,13 @@ onNewIntent :: Event -> Effect Unit
 onNewIntent event = do
   _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $
     case event.type of
-      "DEEP_VIEW_NEW_INTENT" -> Flow.baseAppFlow false (Just event)
-      "DEEP_VIEW" -> Flow.baseAppFlow true (Just event)
+      "DEEP_VIEW_NEW_INTENT" -> Flow.baseAppFlow false (Just event) Nothing
+      "DEEP_VIEW" -> Flow.baseAppFlow true (Just event) Nothing
       "REFERRAL" -> setValueToLocalStore REFERRER_URL event.data
       "REFERRAL_NEW_INTENT" -> do
         setValueToLocalStore REFERRER_URL event.data
-        Flow.baseAppFlow true Nothing
-      _ -> Flow.baseAppFlow false Nothing
+        Flow.baseAppFlow true Nothing Nothing
+      _ -> Flow.baseAppFlow false Nothing Nothing
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
   pure unit
 

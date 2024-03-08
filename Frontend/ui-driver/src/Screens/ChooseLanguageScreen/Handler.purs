@@ -15,7 +15,8 @@
 
 module Screens.ChooseLanguageScreen.Handler where
 
-import Engineering.Helpers.BackTrack (getState)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Engineering.Helpers.Commons (markPerformance)
 import Prelude (bind, pure, ($), (<$>), discard)
 import Screens.ChooseLanguageScreen.Controller (ScreenOutput(..))
 import Types.App (ScreenType(..))
@@ -33,6 +34,7 @@ chooseLanguage :: FlowBT String TA.CHOOSE_LANG_SCREEN_OUTPUT
 chooseLanguage = do
   (GlobalState state) <- getState
   config <- getAppConfigFlowBT appConfig
+  liftFlowBT $ markPerformance "CHOOSE_LANGUAGE_SCREEN"
   action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{props{selectedLanguage = config.defaultLanguage}}
   case action of
     GoToEnterMobileScreen updateState -> do
