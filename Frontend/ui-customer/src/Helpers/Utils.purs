@@ -758,3 +758,13 @@ getDefaultPixelSize size =
   else let pixels = runFn1 getPixels FunctionCall
            androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall) / defaultDensity
        in ceil $ (toNumber size / pixels) * androidDensity
+
+getSingelEstimateAuto :: LazyCheck -> String
+getSingelEstimateAuto dummy =
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in 
+  case city of 
+    Kochi -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
+    Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+    Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
+    _ -> fetchImage FF_ASSET "ny_ic_single_estimate_auto"

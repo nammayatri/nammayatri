@@ -1609,9 +1609,9 @@ chooseVehicleConfig :: ST.HomeScreenState -> ChooseVehicle.Config
 chooseVehicleConfig state = let
   config = ChooseVehicle.config
   selectedEstimates = state.data.selectedEstimatesObject
-  isSingleEstimate = selectedEstimates.vehicleVariant == "AUTO_RICKSHAW" && ((DA.length state.data.specialZoneQuoteList) == 1)
+  isSingleEstimate = selectedEstimates.vehicleVariant == "AUTO_RICKSHAW" && ((DA.length state.data.specialZoneQuoteList) == 1) && state.data.config.enableSingleEstimate
   chooseVehicleConfig' = config
-    { vehicleImage = if isSingleEstimate then (fetchImage FF_ASSET "ny_ic_single_estimate_auto") else "ny_ic_auto_quote_list"
+    { vehicleImage = if isSingleEstimate then HU.getSingelEstimateAuto FunctionCall else "ny_ic_auto_quote_list"
     , isSelected = true
     , vehicleVariant = selectedEstimates.vehicleVariant
     , vehicleType = selectedEstimates.vehicleType
