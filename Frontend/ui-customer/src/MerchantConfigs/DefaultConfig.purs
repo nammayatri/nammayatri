@@ -338,6 +338,9 @@ config =
   , enableSingleEstimate : false
   , driverLocationPolling : {
     retryExpFactor : 3
+  },
+  banners : {
+    homeScreenSafety : false
   }
 }
 
