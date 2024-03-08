@@ -396,7 +396,7 @@ driverIntelligentPoolConfig :: ShortId DM.Merchant -> Context.City -> Flow Commo
 driverIntelligentPoolConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   pure $ mkDriverIntelligentPoolConfigRes config
 
 mkDriverIntelligentPoolConfigRes :: DDIPC.DriverIntelligentPoolConfig -> Common.DriverIntelligentPoolConfigRes
@@ -412,7 +412,7 @@ driverIntelligentPoolConfigUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateDriverIntelligentPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{availabilityTimeWeightage = maybe config.availabilityTimeWeightage (.value) req.availabilityTimeWeightage,
                availabilityTimeWindowOption = fromMaybe config.availabilityTimeWindowOption req.availabilityTimeWindowOption,
@@ -806,7 +806,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newOperatingCity <- buildMerchantOperatingCity merchant.id baseOperatingCity
 
   -- intelligent pool config
-  intelligentPoolConfig <- CQDIPC.findByMerchantOpCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
+  intelligentPoolConfig <- CQDIPC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
   newIntelligentPoolConfig <- buildIntelligentPoolConfig newOperatingCity.id intelligentPoolConfig
 
   -- driver pool config

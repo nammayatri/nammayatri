@@ -79,42 +79,12 @@ data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
--- readWithInfo' :: (Read a, Show a) => String -> Value -> Maybe a
--- readWithInfo' msg s = case s of
---   String str -> case KP.readMaybe (Text.unpack str) of
---     Just val -> Just val
---     Nothing -> Nothing
---   Number scientific -> case KP.readMaybe (show scientific) of
---     Just val -> Just val
---     Nothing -> Nothing
---   Null -> Nothing
---   _ -> error . Text.pack $ "Failed to parse: for key: mes " <> msg <> " and value: " ++ show s
-
--- valueToType :: FromJSON a => Value -> Maybe a
--- valueToType value = case value of
---   String str -> DA.decode (BL.fromStrict (DTE.encodeUtf8 (replaceSingleQuotes str)))
---   _ -> error $ "Not able to parse value" <> show value
-
--- jsonToWaitingChargeInfo :: Object -> Parser (Maybe WaitingChargeInfo)
--- jsonToWaitingChargeInfo k = do
---   waitingCharge <- readWithInfo' "farePolicyProgressiveDetails:waitingCharge" <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:waitingCharge")
---   freeWaitingTime <- readWithInfo' "farePolicyProgressiveDetails:freeWatingTime" <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:freeWatingTime")
---   return $ WaitingChargeInfo <$> waitingCharge <*> freeWaitingTime
-
 jsonToFPProgressiveDetailsPerExtraKmRateSection :: String -> String -> [FPProgressiveDetailsPerExtraKmRateSection]
 jsonToFPProgressiveDetailsPerExtraKmRateSection config key' = do
   let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyProgressiveDetailsPerExtraKmRateSection:") (itraversed . indices (\k -> Text.isPrefixOf "farePolicyProgressiveDetailsPerExtraKmRateSection:" (DAK.toText k))))
       res'' = T.trace ("perKmRateSectionvalue" <> show res' <> "and key" <> show key') $ fromMaybe (DA.Array (DV.fromList [])) (KM.lookup (DAK.fromText (Text.pack key')) (KM.fromList res'))
       res = T.trace ("perKmRateSectionValue'" <> show res'') $ res'' ^? _JSON :: (Maybe [FPProgressiveDetailsPerExtraKmRateSection])
   fromMaybe [] res
-
--- jsonToFPProgressiveDetailsPerExtraKmRateSection' :: Object -> String -> Parser (NonEmpty FPProgressiveDetailsPerExtraKmRateSection)
--- jsonToFPProgressiveDetailsPerExtraKmRateSection' k id = do
---   val <- jsonToFPProgressiveDetailsPerExtraKmRateSection k id
---   let res = nonEmpty val
---   case res of
---     Nothing -> error "FromLocation not found"
---     Just val' -> pure val'
 
 parsingMiddleware :: KM.KeyMap Value -> String -> String -> KM.KeyMap Value
 parsingMiddleware config configS key' =
@@ -130,21 +100,6 @@ jsonToFPProgressiveDetails config key' =
       res'' = T.trace ("the farePolicyProgressiveDetails " <> show res' <> "and the config" <> show config) $ parsingMiddleware (KM.fromList res') config key'
       res = T.trace ("farePolicyProgressiveDetails" <> show res'') $ (DA.Object res'') ^? _JSON :: (Maybe FPProgressiveDetails)
    in T.trace ("farePolicyProgressiveDetails parsed " <> show res) $ res
-
--- jsonToFPProgressiveDetails :: String -> Object -> Parser FPProgressiveDetails
--- jsonToFPProgressiveDetails id k = do
---   -- let fullFPPDP =  parse (())  id
---   -- case fullFPPDP of
---   --   Success fPPDP ->
---   FPProgressiveDetails
---     <$> ((readWithInfo "farePolicyProgressiveDetails:baseFare" <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:baseFare")) :: (Parser Money))
---     <*> ((readWithInfo "farePolicyProgressiveDetails:baseDistance" <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:baseDistance")) :: (Parser Meters))
---     <*> (jsonToFPProgressiveDetailsPerExtraKmRateSection' k id)
---     <*> ((readWithInfo "farePolicyProgressiveDetails:deadKmFare" <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:deadKmFare")) :: (Parser Money))
---     <*> (jsonToWaitingChargeInfo k)
---     <*> ((valueToType <$> k .: DAK.fromText (Text.pack "farePolicyProgressiveDetails:nightShiftCharge")) :: (Parser (Maybe NightShiftCharge)))
-
--- Error e -> error "FromLocation not found with error " <> show e
 
 makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetailsAPIEntity
 makeFPProgressiveDetailsAPIEntity FPProgressiveDetails {..} =

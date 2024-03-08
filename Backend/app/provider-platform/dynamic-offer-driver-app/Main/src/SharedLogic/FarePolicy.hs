@@ -42,9 +42,16 @@ data FarePoliciesProduct = FarePoliciesProduct
 makeFarePolicyByEstOrQuoteIdKey :: Text -> Text
 makeFarePolicyByEstOrQuoteIdKey estOrQuoteId = "CachedQueries:FarePolicy:EstOrQuoteId-" <> estOrQuoteId
 
+getFarePolicyByEstOrQuoteIdWithoutFallback :: (CacheFlow m r) => Text -> m (Maybe FarePolicyD.FullFarePolicy)
+getFarePolicyByEstOrQuoteIdWithoutFallback estOrQuoteId = do
+  Redis.get (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
+    Nothing -> do
+      logWarning $ "Fare Policy Not Found for quote id: " <> estOrQuoteId
+      return Nothing
+    Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
 
-getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> Variant -> Maybe FareProductD.Area -> Text -> m FarePolicyD.FullFarePolicy
-getFarePolicyByEstOrQuoteId merchantOpCityId tripCategory vehVariant area estOrQuoteId = do
+getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> Variant -> Maybe FareProductD.Area -> Text -> Maybe Text -> m FarePolicyD.FullFarePolicy
+getFarePolicyByEstOrQuoteId merchantOpCityId tripCategory vehVariant area estOrQuoteId txnId = do
   Redis.get (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
     Nothing -> do
       logWarning "Old Fare Policy Not Found, Hence using new fare policy."

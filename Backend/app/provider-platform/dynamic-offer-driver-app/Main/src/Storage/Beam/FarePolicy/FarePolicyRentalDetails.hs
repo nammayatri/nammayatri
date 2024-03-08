@@ -13,6 +13,7 @@ module Storage.Beam.FarePolicy.FarePolicyRentalDetails where
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
@@ -45,3 +46,5 @@ type FullFarePolicyRentalDetails = (KTI.Id Domain.FarePolicy, Domain.FPRentalDet
 $(enableKVPG ''FarePolicyRentalDetailsT ['farePolicyId] [])
 
 $(mkTableInstances ''FarePolicyRentalDetailsT "fare_policy_rental_details")
+
+$(mkCacParseInstance ''FarePolicyRentalDetailsT)

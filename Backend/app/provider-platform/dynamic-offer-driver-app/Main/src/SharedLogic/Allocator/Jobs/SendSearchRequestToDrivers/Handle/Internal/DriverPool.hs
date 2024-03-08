@@ -85,7 +85,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
   previousBatchesDrivers <- getPreviousBatchesDrivers
   let merchantOpCityId = searchReq.merchantOperatingCityId
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
-  (finalPool, poolType, nextScheduleTime) <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId
+  (finalPool, poolType, nextScheduleTime) <- prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum True merchantOpCityId (Just searchReq.transactionId)
   incrementDriverRequestCount finalPool searchTry.id
   pure $ buildDriverPoolWithActualDistResultWithFlags finalPool poolType nextScheduleTime previousBatchesDrivers
   where
@@ -107,10 +107,10 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
         then return (res, poolType, nextScheduleIn)
         else calculateWithFallback fallbackPoolTypes fn
 
-    prepareDriverPoolBatch' previousBatchesDrivers batchNum doGoHomePooling merchantOpCityId_ = withLogTag ("BatchNum - " <> show batchNum) $ do
+    prepareDriverPoolBatch' previousBatchesDrivers batchNum doGoHomePooling merchantOpCityId_ txnId = withLogTag ("BatchNum - " <> show batchNum) $ do
       radiusStep <- getPoolRadiusStep searchTry.id
       transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId_ Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
-      intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId_ >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
+      intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId_ txnId >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (\riderId -> Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversForRiderKey riderId)) searchReq.riderId
       let blockListedDrivers = blockListedDriversForSearch <> blockListedDriversForRider
@@ -130,7 +130,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
           case poolType of
             SkipPool -> do
               incrementBatchNum searchTry.id
-              prepareDriverPoolBatch' previousBatchesDrivers (batchNum + 1) True merchantOpCityId_
+              prepareDriverPoolBatch' previousBatchesDrivers (batchNum + 1) True merchantOpCityId_ txnId
             SpecialZoneQueuePool -> do
               (driversInQueue, _) <- splitDriverFromGateAndRest allDriversNotOnRide
               goHomeDriversInQueue <-
@@ -173,7 +173,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
             NormalPool -> do
               let allNearbyDriversCurrentlyNotOnRide = filterSpecialDrivers transporterConfig.specialDrivers allDriversNotOnRide
               allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId_
-              (,poolType,Nothing) <$> calculateNormalBatch merchantOpCityId_ transporterConfig intelligentPoolConfig (allNearbyDriversCurrentlyOnRide <> allNearbyDriversCurrentlyNotOnRide) radiusStep blockListedDrivers
+              (,poolType,Nothing) <$> calculateNormalBatch merchantOpCityId_ transporterConfig intelligentPoolConfig (allNearbyDriversCurrentlyOnRide <> allNearbyDriversCurrentlyNotOnRide) radiusStep blockListedDrivers txnId
       logDebug $ "finalPool: " <> show currentDriverPoolBatch
       cacheBatch currentDriverPoolBatch
       let poolWithMicroBatching =
@@ -213,7 +213,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
           logDebug $ "GoHomeDriverPoolBatch-" <> show goHomeDriverPoolBatch
           pure goHomeDriverPoolBatch
 
-        calculateNormalBatch mOCityId transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers = do
+        calculateNormalBatch mOCityId transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers txnId' = do
           logDebug $ "NormalDriverPool-" <> show normalDriverPool
           allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId mOCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) normalDriverPool
           let allNearbyDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) allNearbyNonGoHomeDrivers
@@ -221,7 +221,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
           if length onlyNewNormalDrivers < batchSize && not (isAtMaxRadiusStep radiusStep)
             then do
               incrementPoolRadiusStep searchTry.id
-              (batch, _, _) <- prepareDriverPoolBatch' previousBatchesDrivers batchNum False mOCityId
+              (batch, _, _) <- prepareDriverPoolBatch' previousBatchesDrivers batchNum False mOCityId txnId'
               pure batch
             else do
               normalDriverPoolBatch <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers intelligentPoolConfig transporterConfig

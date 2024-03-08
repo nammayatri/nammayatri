@@ -33,11 +33,13 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy
 import EulerHS.Language as L (getOption)
 import qualified EulerHS.Language as L
+-- import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
+
+import qualified GHC.List as GL
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
--- import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
@@ -74,8 +76,8 @@ getConfigFromInMemory id toss = do
 findById :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Id FarePolicy -> m (Maybe FarePolicy)
 findById txnId id = do
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (.useCAC) systemConfigs
-  ( if useCACConfig
+  let useCACConfig = maybe [] (.useCAC) systemConfigs
+  ( if "fare_policy" `GL.elem` useCACConfig
       then
         ( do
             tenant <- liftIO $ SE.lookupEnv "TENANT"

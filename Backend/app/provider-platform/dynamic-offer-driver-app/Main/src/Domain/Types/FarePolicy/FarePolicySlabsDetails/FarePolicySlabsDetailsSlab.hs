@@ -16,13 +16,6 @@
 
 module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
--- import Data.Aeson.Types
--- import Data.ByteString.Lazy as BL
-
--- import Data.Text.Encoding as DTE
-
--- import Kernel.Prelude as KP
-
 import Control.Lens.Fold
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
 import Data.Aeson as DA
@@ -32,9 +25,12 @@ import Data.Aeson.Lens
 import Data.Text as Text
 import qualified Data.Vector as DV
 import Domain.Types.Common
-import Kernel.Prelude
+import Kernel.Prelude as KP
+import Kernel.Types.Cac
 import Kernel.Types.Common
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
+
+-- import Data.Maybe
 
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
@@ -70,48 +66,29 @@ data PlatformFeeInfo = PlatformFeeInfo
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
 
--- replaceSingleQuotes :: Text -> Text
--- replaceSingleQuotes = Text.replace "'" "\""
-
--- readWithInfo :: (Read a, Show a) => String -> Value -> a
--- readWithInfo mes s = case s of
---   String str -> case KP.readMaybe (Text.unpack str) of
---     Just val -> val
---     Nothing -> error . Text.pack $ "Failed to parse: for key: mes " <> mes <> " and value: " ++ Text.unpack str
---   Number scientific -> case KP.readMaybe (show scientific) of
---     Just val -> val
---     Nothing -> error . Text.pack $ "Failed to parse: for key: mes " <> mes <> " and value: " ++ show scientific
---   _ -> error $ "Not able to parse value" <> show s
-
--- listToType :: FromJSON a => Value -> [a]
--- listToType value =
---   case value of
---     String str ->
---       let val = replaceSingleQuotes $ str
---        in case DA.decode (BL.fromStrict (DTE.encodeUtf8 val)) of
---             Just a -> a
---             Nothing -> error $ "Not able to parse value" <> show val
---     _ -> error $ "Not able to parse value" <> show value
-
--- jsonToFPSlabsDetailsSlab :: Object -> String -> Parser [FPSlabsDetailsSlab]
--- jsonToFPSlabsDetailsSlab k key' = do
---   val <- ((listToType <$> (k .: DAK.fromText (Text.pack ("farePolicySlabsDetailsSlab:" <> key')))) :: Parser [FPSlabsDetailsSlabAPIEntity])
---   pure $ makeFPSlabsDetailsSlabList val
+parseFromCACMiddleware :: Value -> Maybe FPSlabsDetailsSlab
+parseFromCACMiddleware k1 = do
+  case k1 of
+    Object config -> do
+      let waitingCharge = DAKM.lookup ("waitingCharge") config >>= fromJSONHelper
+          freeWaitingTime = DAKM.lookup ("freeWatingTime") config >>= fromJSONHelper
+          waitingChargeInfo = WaitingChargeInfo <$> waitingCharge <*> freeWaitingTime
+          platformFeeCharge = DAKM.lookup ("platformFeeCharge") config >>= fromJSONHelper
+          platformFeeCgst = DAKM.lookup ("platformFeeCgst") config >>= fromJSONHelper
+          platformFeeSgst = DAKM.lookup ("platformFeeSgst") config >>= fromJSONHelper
+          platformFeeInfo = PlatformFeeInfo <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst
+          newKeyMap = KP.foldr (\(k, v) acc -> DAKM.insert k v acc) config [("waitingChargeInfo", DA.toJSON waitingChargeInfo), ("platformFeeInfo", DA.toJSON platformFeeInfo)]
+      (Object newKeyMap) ^? _JSON :: Maybe (FPSlabsDetailsSlab)
+    _ -> Nothing
 
 jsonToFPSlabsDetailsSlab :: DAKM.KeyMap Value -> String -> [FPSlabsDetailsSlab]
 jsonToFPSlabsDetailsSlab config key' = do
-  let res'' = fromMaybe (DA.Array (DV.fromList [])) (DAKM.lookup (DAK.fromText (Text.pack key')) config)
-      res = res'' ^? _JSON :: (Maybe [FPSlabsDetailsSlab])
-  fromMaybe [] res
+  let res' = fromMaybe (DA.Array (DV.fromList [])) (DAKM.lookup (DAK.fromText (Text.pack key')) config)
+      res = case res' of
+        DA.Array k -> KP.map parseFromCACMiddleware (DV.toList k)
+        _ -> []
 
--- makeFPSlabsDetailsSlabList :: [FPSlabsDetailsSlabAPIEntity] -> [FPSlabsDetailsSlab]
--- makeFPSlabsDetailsSlabList = fmap makeFPSlabsDetailsSlab
-
--- makeFPSlabsDetailsSlab :: FPSlabsDetailsSlabAPIEntity -> FPSlabsDetailsSlab
--- makeFPSlabsDetailsSlab FPSlabsDetailsSlabAPIEntity {..} =
---   FPSlabsDetailsSlab
---     { ..
---     }
+  catMaybes res
 
 data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,

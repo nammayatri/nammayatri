@@ -115,7 +115,7 @@ mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
 windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
-windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> DIP.findByMerchantOpCityId merchantOpCityId
+windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> DIP.findByMerchantOpCityId merchantOpCityId Nothing
   where
     defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
 
@@ -400,7 +400,7 @@ updateDriverSpeedInRedis ::
   UTCTime ->
   m ()
 updateDriverSpeedInRedis merchantOpCityId driverId points timeStamp = Redis.withCrossAppRedis $ do
-  locationUpdateSampleTime <- maybe 3 (.locationUpdateSampleTime) <$> DIP.findByMerchantOpCityId merchantOpCityId
+  locationUpdateSampleTime <- maybe 3 (.locationUpdateSampleTime) <$> DIP.findByMerchantOpCityId merchantOpCityId (Just driverId.getId)
   now <- getCurrentTime
   let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantOpCityId driverId
   locationUpdatesList :: [(LatLong, UTCTime)] <-
@@ -422,7 +422,7 @@ getDriverAverageSpeed ::
   Id DP.Person ->
   m Double
 getDriverAverageSpeed merchantOpCityId driverId = Redis.withCrossAppRedis $ do
-  intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId
+  intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId (Just driverId.getId)
   let minLocationUpdates = maybe 3 (.minLocationUpdates) intelligentPoolConfig
       defaultDriverSpeed = maybe 27.0 (.defaultDriverSpeed) intelligentPoolConfig
   let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantOpCityId driverId

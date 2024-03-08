@@ -52,9 +52,11 @@ import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person
 import qualified EulerHS.Language as L
+-- import Kernel.External.Types (Language)
+
+import qualified GHC.List as GL
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Notification.FCM.Types as FCM
--- import Kernel.External.Types (Language)
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
@@ -137,8 +139,8 @@ getTransporterConfigFromDB id = do
 findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person) -> m (Maybe TransporterConfig)
 findByMerchantOpCityId id mPersonId = do
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (.useCAC) systemConfigs
-  if useCACConfig
+  let useCACConfig = maybe [] (.useCAC) systemConfigs
+  if ("transporter_config" `GL.elem` useCACConfig)
     then Just <$> findByMerchantOpCityIdCAC id mPersonId
     else getTransporterConfigFromDB id
 
@@ -155,7 +157,6 @@ findByMerchantOpCityIdCAC id (Just personId) = do
               Nothing -> do
                 gen <- newStdGen
                 let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-                logDebug $ "the toss value is for transporter config " <> show toss
                 _ <- cacheToss personId toss
                 getConfig id toss
         )

@@ -903,8 +903,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
-    getQuoteLimit dist vehicleVariant tripCategory = do
-      driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleVariant tripCategory dist
+    getQuoteLimit dist vehicleVariant tripCategory txnId = do
+      driverPoolCfg <- DP.getDriverPoolConfig merchantOpCityId vehicleVariant tripCategory dist (Just txnId)
       pure driverPoolCfg.driverQuoteLimit
 
     acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD = do
@@ -913,7 +913,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
           throwError (InternalError "SEARCH_TRY_CANCELLED")
         CS.markSearchTryAsAssigned searchTry.id
       logDebug $ "offered fare: " <> show req.offeredFare
-      quoteLimit <- getQuoteLimit searchReq.estimatedDistance searchTry.vehicleVariant searchTry.tripCategory
+      quoteLimit <- getQuoteLimit searchReq.estimatedDistance searchTry.vehicleVariant searchTry.tripCategory searchReq.transactionId
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
 

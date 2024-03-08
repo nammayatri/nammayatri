@@ -29,6 +29,7 @@ import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person as DP
 import EulerHS.Language as L (getOption)
+import qualified GHC.List as GL
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -139,8 +140,8 @@ getGoHomeConfigFromDB id = do
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id DP.Person) -> m GoHomeConfig
 findByMerchantOpCityId id (Just personId) = do
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
-  case useCACConfig of
+  let useCACConfig = maybe [] (.useCAC) systemConfigs
+  case "go_home_config" `GL.elem` useCACConfig of
     False -> getGoHomeConfigFromDB id
     True -> do
       tenant <- liftIO $ Se.lookupEnv "TENANT"
@@ -159,8 +160,8 @@ findByMerchantOpCityId id (Just personId) = do
         False -> getGoHomeConfigFromCAC id 1
 findByMerchantOpCityId id Nothing = do
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
-  case useCACConfig of
+  let useCACConfig = maybe [] (.useCAC) systemConfigs
+  case "go_home_config" `GL.elem` useCACConfig of
     True -> do
       gen <- newStdGen
       let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)

@@ -35,6 +35,7 @@ import Domain.Types.Common
 import Domain.Types.Merchant.MerchantServiceUsageConfig
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified EulerHS.Language as L
+import qualified GHC.List as GL
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -53,8 +54,8 @@ create = Queries.create
 findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantOperatingCityId id = do
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (\sc -> sc.useCAC) systemConfigs
-  case useCACConfig of
+  let useCACConfig = maybe [] (.useCAC) systemConfigs
+  case "merchant_service_usage_config" `GL.elem` useCACConfig of
     True -> do
       gen <- newStdGen
       let toss = fst (randomR (1, 100) gen :: (Int, StdGen))
