@@ -1363,8 +1363,10 @@ export const _onEventWithCB = function (payload) {
 const aggregate = function (key) {
   try {
     window.Aggregate = window.Aggregate || {};
-    window.Aggregate[key] = window.Aggregate[key] || 0;
-    window.Aggregate[key] += 1;
+    if (window.Aggregate && !window.Aggregate.pushOnce) {      
+      window.Aggregate[key] = window.Aggregate[key] || 0;
+      window.Aggregate[key] += 1;
+    }
   } catch (err) {
     console.log("Catch aggregate : ", err);
   }
@@ -1374,24 +1376,28 @@ const aggregate = function (key) {
 
 export const getKeyInNativeSharedPrefKeys = function (key) {
   aggregate("getKeyInNativeSharedPrefKeys");
+  aggregate("JBridgeCalls");
   return JBridge.getFromSharedPrefs(key);
 };
 
 export const setKeyInSharedPrefKeysImpl = function (key) {
   return function (value) {
     aggregate("setKeyInSharedPrefKeysImpl");
+    aggregate("JBridgeCalls");
     return JBridge.setInSharedPrefs(key, value);
   };
 };
 
 export const setKeyInSharedPref = function (key, value) {
   aggregate("setKeyInSharedPref");
+  aggregate("JBridgeCalls");
   return JBridge.setInSharedPrefs(key, value);
 };
 
 export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
     aggregate("setEnvInNativeSharedPrefKeysImpl");
+    aggregate("JBridgeCalls");
     return JBridge.setInSharedPrefs(key, value);
   };
 };
@@ -1404,11 +1410,13 @@ export const setEnvInNativeSharedPrefKeysImpl = function (key) {
 
 export const removeKeysInSharedPrefs = function (key) {
   aggregate("removeKeysInSharedPrefs");
+  aggregate("JBridgeCalls");
   return JBridge.removeDataFromSharedPrefs(key);
 };
 
 export const removeKeysInNativeSharedPrefs = function (key) {
   aggregate("removeKeysInNativeSharedPrefs");
+  aggregate("JBridgeCalls");
   return JBridge.removeDataFromSharedPrefs(key);
 };
 
