@@ -2001,11 +2001,11 @@ permissionScreenFlow = do
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
   case flow of
     REFRESH_INTERNET -> do
-        if (os == "IOS") then pure unit
-          else if not internetCondition then do 
-            modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-            permissionScreenFlow 
-          else currentFlowStatus
+      if internetCondition then
+          currentFlowStatus
+        else do
+          modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
+          permissionScreenFlow 
     TURN_ON_GPS -> if not internetCondition then do  
                       modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
                       permissionScreenFlow
@@ -2014,12 +2014,13 @@ permissionScreenFlow = do
                       currentFlowStatus
     TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
                             true -> pure unit
-                            _ -> if os == "IOS" && not permissionConditionB then modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DENIED})
+                            _ -> if os == "IOS" && not permissionConditionB then do 
+                                  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DENIED})
+                                  permissionScreenFlow
                                  else if not (permissionConditionA && permissionConditionB) then do 
                                   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                                   permissionScreenFlow 
                                  else currentFlowStatus
-  pure unit
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do

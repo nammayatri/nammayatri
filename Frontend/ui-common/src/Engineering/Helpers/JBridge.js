@@ -1,11 +1,9 @@
 import { callbackMapper } from "presto-ui";
 
-let timerIdForTimeout;
 const btnLoaderState = new Map();
 const {
   JBridge
 } = window;
-let mainFiber = null;
 let timer;
 let locationPollingTimer;
 const locationUpdateServiceName = "in.juspay.mobility.app.LocationUpdateService";
@@ -1933,20 +1931,6 @@ export const toggleBtnLoader = function (id) {
 export const getBtnLoader = function (val) {
   return (btnLoaderState.get(val) == true) ? true : false;
 };
-
-export const storeMainFiberOb = function (fiber) {
-  mainFiber = fiber;
-};
-
-export const getMainFiber = function (just, nothing) {
-  if (mainFiber === null) {
-    return nothing;
-  } else {
-    const localFiber = mainFiber;
-    mainFiber = null;
-    return just(localFiber);
-  }
-}
 
 export const launchInAppRatingPopup = function (unit) {
   if (JBridge.launchInAppRatingPopup) {
