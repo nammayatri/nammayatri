@@ -19,10 +19,7 @@ import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import Data.Coerce (coerce)
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import Domain.Types.Common
-import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
@@ -42,7 +39,6 @@ import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import qualified Storage.Queries.DriverQuote as QDQ
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -102,19 +98,9 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapVariantToVehicle dConfirmRes.vehicleVariant
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-      mbDriverQuote <- QDQ.findById $ Id dConfirmRes.booking.quoteId
-      farePolicy <- case mbDriverQuote of
-        Nothing -> do
-          logWarning $ "Driver Quote Not Found for quoteId " <> show dConfirmRes.booking.quoteId
-          return Nothing
-        Just driverQuote ->
-          Redis.get (SFP.makeFarePolicyByEstOrQuoteIdKey driverQuote.estimateId.getId) >>= \case
-            Nothing -> do
-              logWarning $ "Fare Policy Not Found for estimateId " <> show driverQuote.estimateId
-              return Nothing
-            Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+      mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dConfirmRes.booking.quoteId
       let pricing = Utils.convertBookingToPricing dConfirmRes.booking
-          onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig farePolicy
+          onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
 
 confirmLockKey :: Text -> Text

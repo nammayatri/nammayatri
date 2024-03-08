@@ -35,15 +35,12 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as Ride
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
-import Data.Coerce (coerce)
 import Domain.Types.Beckn.Status as DStatus
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
-import Domain.Types.Common
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -52,7 +49,6 @@ import Kernel.Utils.Common
 import qualified SharedLogic.Beckn.Common as Common
 import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import Storage.Queries.DriverQuote as QDQ
 
 buildOnStatusMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
@@ -169,17 +165,7 @@ buildOnStatusReqV2 merchant booking req = do
       city = fromMaybe merchant.city booking.bapCity
       country = fromMaybe merchant.country booking.bapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  mbDriverQuote <- QDQ.findById $ Id booking.quoteId
-  farePolicy <- case mbDriverQuote of
-    Nothing -> do
-      logWarning $ "Driver Quote Not Found for quoteId " <> show booking.quoteId
-      return Nothing
-    Just driverQuote ->
-      Redis.get (SFP.makeFarePolicyByEstOrQuoteIdKey driverQuote.estimateId.getId) >>= \case
-        Nothing -> do
-          logWarning $ "Fare Policy Not Found for estimateId " <> show driverQuote.estimateId
-          return Nothing
-        Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+  farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   buildOnStatusReqV2' Context.ON_STATUS Context.MOBILITY msgId bppId bppUri city country booking req farePolicy bppConfig
 

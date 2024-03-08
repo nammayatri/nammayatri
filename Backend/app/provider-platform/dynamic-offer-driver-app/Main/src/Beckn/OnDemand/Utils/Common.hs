@@ -694,13 +694,14 @@ mapVariantToVehicle variant =
     Variant.TAXI_PLUS -> CAB
     Variant.AUTO_RICKSHAW -> AUTO_RICKSHAW
 
-mapRideStatus :: DRide.RideStatus -> Enums.FulfillmentState
+mapRideStatus :: Maybe DRide.RideStatus -> Enums.FulfillmentState
 mapRideStatus rideStatus =
   case rideStatus of
-    DRide.NEW -> Enums.RIDE_ASSIGNED
-    DRide.INPROGRESS -> Enums.RIDE_STARTED
-    DRide.COMPLETED -> Enums.RIDE_ENDED
-    DRide.CANCELLED -> Enums.RIDE_CANCELLED
+    Just DRide.NEW -> Enums.RIDE_ASSIGNED
+    Just DRide.INPROGRESS -> Enums.RIDE_STARTED
+    Just DRide.COMPLETED -> Enums.RIDE_ENDED
+    Just DRide.CANCELLED -> Enums.RIDE_CANCELLED
+    Nothing -> Enums.RIDE_ASSIGNED
 
 tfCancellationFee :: Maybe Int -> Maybe Spec.Fee
 tfCancellationFee Nothing = Nothing
