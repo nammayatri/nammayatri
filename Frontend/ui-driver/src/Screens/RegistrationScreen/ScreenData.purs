@@ -25,6 +25,12 @@ import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatu
 import ConfigProvider
 import Foreign.Object (empty)
 import Screens.Types as ST
+import Prelude (class Eq, class Show)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 initData :: RegistrationScreenState
 initData = {
@@ -62,7 +68,8 @@ initData = {
         enteredDL : "",
         enteredRC : "",
         dlVerficationMessage : "",
-        rcVerficationMessage : ""
+        rcVerficationMessage : "",
+        vehicleCategory : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -95,5 +102,21 @@ dummyCityConfig = {
                       callSupport : false,
                       supportWAN : "", 
                       whatsappSupport : false
+                    },
+                    variantSubscriptionConfig : {
+                      enableVariantBasedSubscription : true,
+                      variantList : ["AutoCategory"]
                     }
                   }
+          
+type VehicleInfo = {
+  vehicleType :: ST.VehicleCategory,
+  vehicleImage :: String,
+  vehicleName :: String
+}
+
+variantsData :: Array VehicleInfo
+variantsData = [
+  { vehicleType : ST.AutoCategory, vehicleImage : "ny_ic_auto_side", vehicleName : getString AUTO_RICKSHAW },
+  { vehicleType : ST.CarCategory, vehicleImage : "ny_ic_sedan_side", vehicleName : getString CAR }
+]

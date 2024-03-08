@@ -1237,3 +1237,6 @@ getHI stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "शून्य कमीशन और असीमित सवारी"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "हम वर्तमान में आपके शहर में केवल ऑटोरिक्शा के साथ रह रहे हैं"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "अधिक अपडेट के लिए बने रहें"
+        ADD_VEHICLE -> "वाहन जोड़ें"
+        SELECT_YOUR_VEHICLE_TYPE -> "अपने वाहन का प्रकार चुनें"
+        CAR -> "कार"

@@ -41,6 +41,9 @@ import Foreign (Foreign, unsafeToForeign)
 import Data.Eq.Generic (genericEq)
 import Screens.Types as ST
 import Data.Generic.Rep (class Generic)
+import Data.Maybe as Mb
+import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore)
+import Data.Array as DA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -108,6 +111,7 @@ data Action = BackPressed
             | SupportClick Boolean
             | WhatsAppClick
             | CallButtonClick
+            | ChooseVehicleCategory ST.VehicleCategory
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -115,12 +119,15 @@ instance eqAction :: Eq Action where
 
 eval :: Action -> RegistrationScreenState -> Eval Action ScreenOutput RegistrationScreenState
 eval AfterRender state = continue state
+
 eval BackPressed state = do
   if state.props.enterReferralCodeModal then continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
+  else if DA.notElem state.data.vehicleDetailsStatus [COMPLETED, IN_PROGRESS] && Mb.isJust state.data.vehicleCategory then continue state { data {vehicleCategory = Mb.Nothing}}
   else do
       void $ pure $ JB.minimizeApp ""
       continue state
+
 eval (RegistrationAction item ) state = 
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
@@ -197,6 +204,15 @@ eval ContactSupport state = continueWithCmd state [do
   pure NoAction
   ]
 
+eval (ChooseVehicleCategory category) state = do
+  void $ pure $ setValueToLocalStore VEHICLE_CATEGORY $ show category
+  void $ pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS 
+    $ if DA.elem (show category) state.data.cityConfig.variantSubscriptionConfig.variantList then
+        "true"
+      else
+        "false"
+  continue state { data { vehicleCategory = Mb.Just category } }
+
 eval _ state = continue state
 
 getStatusValue :: String -> StageStatus
@@ -208,3 +224,14 @@ getStatusValue value = case value of
   "INVALID" -> FAILED
   "LIMIT_EXCEED" -> FAILED
   _ -> NOT_STARTED
+
+decodeVehicleType :: String -> Mb.Maybe ST.VehicleCategory
+decodeVehicleType value = case value of
+  "AutoCategory" -> Mb.Just ST.AutoCategory
+  "CarCategory" -> Mb.Just ST.CarCategory
+  _ -> Mb.Nothing
+
+getCategoryFromVariant :: String -> Mb.Maybe ST.VehicleCategory
+getCategoryFromVariant variant = case variant of
+  "AUTO_RICKSHAW" -> Mb.Just ST.AutoCategory
+  _ -> Mb.Just ST.CarCategory

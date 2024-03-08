@@ -269,5 +269,31 @@ window.getMerchantConfig = function () {
   , "waitTimeConfig" : {
     "enableWaitTime" : false
   }
+  , "cityConfig" : [
+    {
+      "cityName" : "Kolkata",
+      "mapImage" : "",
+      "cityCode" : "std:033",
+      "showSubscriptions" : true,
+      "cityLat" : 22.5354064,
+      "cityLong" : 88.2649516,
+      "supportNumber" : "",
+      "languageKey" : "BN_IN",
+      "showDriverReferral" : true,
+      "showCustomerReferral" : true,
+      "uploadRCandDL" : true, 
+      "enableYatriCoins" : false,
+      "vehicleNSImg" : "",
+      "registration" : {
+          "supportWAN" : "",
+          "callSupport" : false,
+          "whatsappSupport" : false
+      },
+      "variantSubscriptionConfig" : {
+        "enableVariantBasedSubscription" : false,
+        "variantList" : []
+      }
+    }
+  ]
   })
 }
