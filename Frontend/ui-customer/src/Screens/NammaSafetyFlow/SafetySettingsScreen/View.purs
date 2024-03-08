@@ -233,7 +233,7 @@ imageWithTextView text' isActive =
           , height WRAP_CONTENT
           , singleLine false
           ]
-        <> FontStyle.tags TypoGraphy
+        <> FontStyle.paragraphText TypoGraphy
     ]
 
 userSettingsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
