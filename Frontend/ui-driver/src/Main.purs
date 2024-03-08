@@ -53,14 +53,13 @@ main :: Event -> Effect Unit
 main event = do
   void $ Events.initMeasuringDuration "Flow.mainFlow"
   void $ Events.initMeasuringDuration "mainToHomeScreenDuration"
-  mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
+  _ <- launchAff $ flowRunner defaultGlobalState $ do
     liftFlow $ setEventTimestamp "main_purs"
     _ <- runExceptT $ runBackT $ updateEventData event
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow true Nothing
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event
-  JBridge.storeMainFiberOb mainFiber
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
   pure unit
 
@@ -99,9 +98,6 @@ onEvent event = do
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do
   mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-    _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
-      Nothing -> pure unit
-      Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
     _ ← runExceptT $ runBackT $ case triggertype of
       "LOCATION_DISABLED" -> Flow.noInternetScreenFlow triggertype
       "INTERNET_ACTION" -> Flow.noInternetScreenFlow triggertype
@@ -111,7 +107,6 @@ onConnectivityEvent triggertype = do
       "CHECK_NETWORK_TIME" ->  Flow.checkTimeSettings
       _ -> Flow.baseAppFlow false Nothing
     pure unit
-  JBridge.storeMainFiberOb mainFiber
   pure unit
 
 onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
@@ -124,8 +119,8 @@ onBundleUpdatedEvent description= do
 
 onNewIntent :: Event -> Effect Unit
 onNewIntent event = do
-  mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-    _ ← runExceptT $ runBackT $ case event.type of
+  _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $
+    case event.type of
       "DEEP_VIEW_NEW_INTENT" -> Flow.baseAppFlow false (Just event)
       "DEEP_VIEW" -> Flow.baseAppFlow true (Just event)
       "REFERRAL" -> setValueToLocalStore REFERRER_URL event.data
@@ -133,9 +128,7 @@ onNewIntent event = do
         setValueToLocalStore REFERRER_URL event.data
         Flow.baseAppFlow true Nothing
       _ -> Flow.baseAppFlow false Nothing
-    pure unit
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
-  JBridge.storeMainFiberOb mainFiber
   pure unit
 
 updateEventData :: Event -> FlowBT String Unit

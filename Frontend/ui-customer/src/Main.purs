@@ -50,7 +50,7 @@ main event callInitUI = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-      mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
+      _ <- launchAff $ flowRunner defaultGlobalState $ do
           _ <- runExceptT $ runBackT $ updateEventData event
           resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' callInitUI
           case resp of
@@ -60,7 +60,6 @@ main event callInitUI = do
                   _ <- liftFlow $ main event callInitUI
                   pure unit
       _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
-      JBridge.storeMainFiberOb mainFiber
       pure unit
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
@@ -80,22 +79,18 @@ onConnectivityEvent triggertype = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-        mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-          _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
-            Nothing -> pure unit
-            Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
-          _ ← runExceptT $ runBackT do
-              case triggertype of 
-                "LOCATION_DISABLED" -> do
-                  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
-                  Flow.permissionScreenFlow
-                "INTERNET_ACTION" -> do
-                  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-                  Flow.permissionScreenFlow
-                "REFRESH" -> Flow.baseAppFlow payload' false
-                _ -> Flow.baseAppFlow payload' false
-          pure unit
-        JBridge.storeMainFiberOb mainFiber
+        _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $
+                do
+                case triggertype of 
+                  "LOCATION_DISABLED" -> do
+                    modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
+                    Flow.permissionScreenFlow
+                  "INTERNET_ACTION" -> do
+                    modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
+                    Flow.permissionScreenFlow
+                  "REFRESH" -> Flow.baseAppFlow payload' false
+                  _ -> Flow.baseAppFlow payload' false
+                pure unit
         pure unit
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
@@ -117,21 +112,15 @@ onNewIntent event = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-        mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-          _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
-            Nothing -> pure unit
-            Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
-          _ <- runExceptT $ runBackT do
-                  case event.type of 
-                    "REFERRAL" -> do
-                      setValueToLocalStore REFERRER_URL event.data
-                      Flow.baseAppFlow payload' false
-                    "REFERRAL_NEW_INTENT" -> do
-                      setValueToLocalStore REFERRER_URL event.data
-                      Flow.baseAppFlow payload' true
-                    _ -> Flow.baseAppFlow payload' false
-          pure unit
-        JBridge.storeMainFiberOb mainFiber
+        _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $
+                case event.type of 
+                  "REFERRAL" -> do
+                    setValueToLocalStore REFERRER_URL event.data
+                    Flow.baseAppFlow payload' false
+                  "REFERRAL_NEW_INTENT" -> do
+                    setValueToLocalStore REFERRER_URL event.data
+                    Flow.baseAppFlow payload' true
+                  _ -> Flow.baseAppFlow payload' false
         pure unit
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
