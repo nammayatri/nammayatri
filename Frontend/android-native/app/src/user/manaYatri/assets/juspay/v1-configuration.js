@@ -40,7 +40,6 @@ window.getMerchantConfig = function () {
     "isChatEnabled": "true",
     "isGradient" : "false",
     "gradient": [],
-    "enableSingleEstimate": true,
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "estimateConfirmText": "Request a NammaYatri Ride",
