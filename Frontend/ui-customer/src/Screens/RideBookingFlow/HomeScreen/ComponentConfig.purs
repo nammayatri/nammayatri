@@ -1444,7 +1444,8 @@ chooseYourRideConfig state = ChooseYourRide.config
     showPreferences = state.data.showPreferences,
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore,
     flowWithoutOffers = state.props.flowWithoutOffers,
-    enableSingleEstimate = state.data.config.enableSingleEstimate
+    enableSingleEstimate = state.data.config.enableSingleEstimate,
+    selectedEstimateHeight = state.props.selectedEstimateHeight
   }
 
 

@@ -308,6 +308,7 @@ initData = {
           , destManuallyMoved : false
           , autoCompleteType : Nothing
         }
+    , selectedEstimateHeight : 0
     , isSafetyCenterDisabled : false
     }
 }

@@ -26,6 +26,7 @@ type Config
     , bookingPreferenceEnabled :: Boolean
     , flowWithoutOffers :: Boolean
     , enableSingleEstimate :: Boolean
+    , selectedEstimateHeight :: Int
     }
 
 config :: Config
@@ -40,4 +41,5 @@ config =
   , bookingPreferenceEnabled : false
   , flowWithoutOffers : false
   , enableSingleEstimate : false
+  , selectedEstimateHeight : 0
   }
