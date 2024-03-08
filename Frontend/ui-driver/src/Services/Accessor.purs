@@ -79,15 +79,3 @@ _distance = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec
 
 _orderId :: forall a b c. Newtype a { orderId :: b | c } => Lens' a b
 _orderId = lens (unwrap >>> _.orderId) (\oldRec newVal -> wrap ((unwrap oldRec) { orderId = newVal }))
-
-_moduleId :: forall a b c. Newtype a { moduleId :: b | c } => Lens' a b
-_moduleId = lens (unwrap >>> _.moduleId) (\oldRec newVal -> wrap ((unwrap oldRec) { moduleId = newVal }))
-
-_name :: forall a b c. Newtype a { name :: b | c } => Lens' a b
-_name = lens (unwrap >>> _.name) (\oldRec newVal -> wrap ((unwrap oldRec) { name = newVal }))
-
-_languagesAvailableForQuiz :: forall a b c. Newtype a { languagesAvailableForQuiz :: b | c } => Lens' a b
-_languagesAvailableForQuiz = lens (unwrap >>> _.languagesAvailableForQuiz) (\oldRec newVal -> wrap ((unwrap oldRec) { languagesAvailableForQuiz = newVal }))
-
-_languagesAvailableForVideos :: forall a b c. Newtype a { languagesAvailableForVideos :: b | c } => Lens' a b
-_languagesAvailableForVideos = lens (unwrap >>> _.languagesAvailableForVideos) (\oldRec newVal -> wrap ((unwrap oldRec) { languagesAvailableForVideos = newVal }))

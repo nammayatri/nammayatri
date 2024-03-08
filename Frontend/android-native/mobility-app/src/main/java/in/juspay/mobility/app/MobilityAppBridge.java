@@ -37,10 +37,12 @@ import android.webkit.JavascriptInterface;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.content.ContextCompat;
+import androidx.media3.exoplayer.ExoPlayer;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.android.installreferrer.api.InstallReferrerClient;
@@ -74,10 +76,22 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Serializable;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
@@ -87,7 +101,10 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
+
+import in.juspay.mobility.app.reels.ExoplayerItem;
 import in.juspay.mobility.app.reels.ReelController;
+import in.juspay.mobility.app.reels.ReelViewPagerItem;
 
 public class MobilityAppBridge extends HyperBridge {
 
@@ -128,6 +145,7 @@ public class MobilityAppBridge extends HyperBridge {
     CameraUtils cameraUtils;
 
     protected HashMap<String, Trace> traceElements;
+    public static View reelControllerLayout = null;
 
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     private CallBack callBack;
@@ -522,12 +540,7 @@ public class MobilityAppBridge extends HyperBridge {
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
 
-        ReelController.registerCallback(new ReelController.ReelControllerCallback() {
-            @Override
-            public void sendJsCallBack(String javascript) {
-                bridgeComponents.getJsCallback().addJsToWebView(javascript);
-            }
-        });
+        ReelController.initializeBridgeComponents(bridgeComponents);
 
         Intent newIntent = new Intent (context, ReelsPlayerView.class);
         newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

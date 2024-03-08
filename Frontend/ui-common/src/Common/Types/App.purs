@@ -390,67 +390,43 @@ type MarginConfig = {
 type ReelModal = {
   reelData :: Array ReelItem,
   titleConfig :: ReelTextConfig,
-  descriptionConfig :: ReelTextConfig,
-  reelExtraConfig :: Maybe ReelExtraConfig
-}
-
-type ReelVideoThresholdConfig = {
-  isThresholdEnabled :: Maybe Boolean,
-  isStartThresholdEnabled :: Maybe Boolean,
-  isEndThresholdEnabled :: Maybe Boolean,
-  startThreshold :: Maybe Int,
-  endThreshold :: Maybe Int,
-  sendCallbackAfterEverySecondEnabled :: Maybe Boolean -- by default it is taken as false
-}
-
-type ReelExtraConfig = {
-  bounceAnimationEnabled :: Maybe Boolean, -- bounce animation will not work if autoSwipeToNext is enabled
-  bounceAnimationCount :: Maybe Int,
-  bounceAnimationDuration :: Maybe Int,
-  progressBarColor :: Maybe String,
-  progressBarVisible :: Maybe Boolean,
-  autoSwipeToNext :: Maybe Boolean,
-  seekEnabled :: Maybe Boolean
+  descriptionConfig :: ReelTextConfig
 }
 
 type ReelButtonConfig = {
-    prefixImage :: Maybe String,
-    suffixImage :: Maybe String,
-    actions :: Maybe (Array String),
-    shareLink :: Maybe String,
-    shareText :: Maybe String,
-    shareMessageTitle :: Maybe String,
-    buttonColor :: Maybe String,
-    cornerRadius :: Maybe Int,
-    text :: Maybe String,
-    textSize :: Maybe Int,
-    textColor :: Maybe String,
-    prefixImageHeight :: Maybe Int,
-    prefixImageWidth :: Maybe Int,
-    suffixImageHeight :: Maybe Int,
-    suffixImageWidth :: Maybe Int,
-    activeIndex :: Maybe String,
-    inActiveIndex :: Maybe String,
-    activeIndexWidth :: Maybe Int,
-    activeIndexHeight :: Maybe Int,
-    inActiveIndexWidth :: Maybe Int,
-    inActiveIndexHeight :: Maybe Int
+    prefixImage :: String,
+    suffixImage :: String,
+    actions :: Array String,
+    buttonColor :: String,
+    cornerRadius :: Int,
+    text :: String,
+    textSize :: Int,
+    textColor :: String,
+    prefixImageHeight :: Int,
+    prefixImageWidth :: Int,
+    suffixImageHeight :: Int,
+    suffixImageWidth :: Int,
+    activeIndex :: String,
+    inActiveIndex :: String,
+    activeIndexWidth :: Int,
+    activeIndexHeight :: Int,
+    inActiveIndexWidth :: Int,
+    inActiveIndexHeight :: Int
 }
 
 type ReelItem = {
   title :: String,
-  description :: Maybe String,
+  description :: String,
   id :: String,
-  shareLink :: Maybe String,
-  thumbnailImageUrl :: Maybe String,
+  shareLink :: String,
+  thumbnailImageUrl :: String,
   videoUrl :: String,
-  carouselBigImageUrl :: Maybe String,
-  carouselSmallImageUrl :: Maybe String,
-  carouselTextString :: Maybe String,
-  carouselTextColor :: Maybe String,
-  bottomButtonConfig :: Maybe (Array (Array ReelButtonConfig)),
-  sideButtonConfig :: Maybe (Array (Array ReelButtonConfig)),
-  thresholdConfig :: Maybe ReelVideoThresholdConfig
+  carouselBigImageUrl :: String,
+  carouselSmallImageUrl :: String,
+  carouselTextString :: String,
+  carouselTextColor :: String,
+  bottomButtonConfig :: Array (Array ReelButtonConfig),
+  sideButtonConfig :: Array (Array ReelButtonConfig)
 }
 
 type ReelTextConfig = {

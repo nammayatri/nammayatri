@@ -25,12 +25,9 @@ initData = {
     isSelected : true
   , config : getAppConfig appConfig
   , logField : empty
-  , languageList: []
     },
     props: {
       btnActive :false,
-      selectedLanguage: "",
-      onlyGetTheSelectedLanguage : false,
-      selectLanguageForScreen : ""
+      selectedLanguage: ""
     }
 }

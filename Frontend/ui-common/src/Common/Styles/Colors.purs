@@ -61,9 +61,6 @@ red100 = "#FEF8F8"
 white900 :: Color
 white900 = "#FFFFFF"
 
-white40Alpha :: Color
-white40Alpha = "#66FFFFFF"
-
 white27 ::Color
 white27 = "#45FCFCFC"
 
@@ -94,9 +91,6 @@ warningRed  = "#f04c31"
 
 green900 :: Color 
 green900 = "#53BB6F"
-
-greenAlpha :: Color 
-greenAlpha = "#1A53BB6F"
 
 yellow100 :: Color
 yellow100 = "#FFFDF7"
@@ -223,9 +217,6 @@ fadedPurple = "#339747FF"
 red900 :: Color
 red900 = "#E55454"
 
-red900Alpha16 :: Color
-red900Alpha16 = "#29E55454"
-
 yellow200 :: Color
 yellow200 = "#33FCC32C"
 
@@ -313,8 +304,6 @@ tealishGreen = "#E5F5E9"
 darkGradientBlue :: Color
 darkGradientBlue = "#E2EAFF"
 
-lightBlueTeal :: Color
-lightBlueTeal = "#B2E4EF"
 black7000 :: Color
 black7000 = "#B32C2F3A"
 

@@ -68,11 +68,9 @@ modifyScreenState st =
     DriverSavedLocationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverSavedLocationScreen = a state.driverSavedLocationScreen})
     ChooseCityScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {chooseCityScreen = a state.chooseCityScreen})
     WelcomeScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {welcomeScreen = a state.welcomeScreen})
-    BenefitsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {benefitsScreen = a state.benefitsScreen})
+    DriverReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverReferralScreen = a state.driverReferralScreen})
     RegistrationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {registrationScreen = a state.registrationScreen})
     DriverEarningsScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { driverEarningsScreen = a state.driverEarningsScreen })
-    LmsVideoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsVideoScreen = a state.lmsVideoScreen})
-    LmsQuizScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsQuizScreen = a state.lmsQuizScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

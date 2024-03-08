@@ -126,7 +126,6 @@ data KeyStore = USER_NAME
                 | T_AND_C_VERSION
                 | NIGHT_SAFETY_POP_UP
                 | REFERRER_URL
-                | LMS_SELECTED_LANGUAGE_CACHE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

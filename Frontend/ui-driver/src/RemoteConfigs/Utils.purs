@@ -49,6 +49,3 @@ reelsData key =
 
 defaultReelsData :: Array ReelItem
 defaultReelsData = []
-
-defaultReelButtonConfig :: Maybe ReelButtonConfig
-defaultReelButtonConfig = Nothing

@@ -11,13 +11,21 @@
         android:background="@drawable/black_background">
 
 
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/reelVideoView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:use_controller="false"
+            android:layout_centerInParent="true"
+            app:resize_mode="fixed_height"
+            android:background="@drawable/black_background"
+            app:show_buffering="when_playing"/>
+
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/black_background"
             android:id = "@+id/reelThumbnailImageView"/>
-
-
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -35,41 +43,12 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
         </LinearLayout>
-
-
-        <androidx.media3.ui.PlayerView
-            android:id="@+id/reelVideoView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_centerHorizontal="true"
-            android:layout_centerVertical="true"
-            android:background="@drawable/black_background"
-            app:resize_mode="fit"
-            app:show_buffering="when_playing"
-            app:use_controller="false" />
-
-        <ImageView
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:layout_centerInParent="true"
-            android:background="@drawable/ny_ic_white_play_button_with_grey"
-            android:id = "@+id/reelPauseButton"/>
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="200dp"
             android:layout_alignParentBottom="true"
             android:background="@drawable/black_gradient"
             android:id="@+id/reel_gradient_background"
-            android:orientation="horizontal">
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginBottom="200px"
-            android:id="@+id/reelPauseButtonClickView"
             android:orientation="horizontal">
 
         </LinearLayout>
@@ -144,20 +123,21 @@
 
         </LinearLayout>
 
-       <SeekBar
-           android:id="@+id/reels_player_view_seekbar"
+
+
+
+
+
+       <com.google.android.material.progressindicator.LinearProgressIndicator
            android:layout_width="match_parent"
-           android:layout_alignParentBottom="true"
-           android:layout_height="wrap_content"
-           android:backgroundTint="#33FFFFFF"
-           android:progress="0"
-           android:paddingStart="0dp"
+           android:layout_height="8px"
+           app:trackThickness="8px"
            app:trackCornerRadius="50dp"
-           android:thumb="@drawable/reel_thumb"
-           android:paddingEnd="0dp"
-           android:splitTrack="false"
-           android:max="100"
-           android:focusable="true" />
+           android:layout_alignParentBottom="true"
+           android:progressTint="@color/white"
+           android:id="@+id/reels_player_view_progress"
+           android:progress="0"/>
+
 
     </RelativeLayout>
 

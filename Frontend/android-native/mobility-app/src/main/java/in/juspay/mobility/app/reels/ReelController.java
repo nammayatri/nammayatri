@@ -4,13 +4,16 @@ import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
-import androidx.annotation.Nullable;
+import androidx.media3.exoplayer.ExoPlayer;
 import androidx.viewpager2.widget.ViewPager2;
+
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -19,110 +22,43 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Locale;
-import java.util.Objects;
 
+import in.juspay.hyper.core.BridgeComponents;
+import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.R;
 
 public class ReelController {
 
-    private final Context context;
-    private final Activity activity;
+    private Context context;
+    private Activity activity;
     private final ArrayList<ReelViewPagerItem> reelViewPagerItemArrayList = new ArrayList<>();
 
-    private final ViewPager2 reelViewPager;
+    public static ViewPager2 reelViewPager;
 
-    public String callback;
+    public static String callback;
 
-    private ExoplayerItem currentExoplayerPlaying = null;
+    public static ExoPlayer currentExoplayerPlaying = null;
 
-    private final ReelViewAdapter reelViewAdapter;
-    private final ArrayList<ExoplayerItem> exoplayerItems = new ArrayList<>();
+    public static LinearProgressIndicator currentHorizontalProgressBar = null;
 
-    private final OnPauseExoplayerListener onPauseExoplayerListener;
+    public static BridgeComponents bridgeComponentsInternal = null;
 
-    public static ArrayList<ReelControllerCallback> callbackList = new ArrayList<>();
+    private ReelViewAdapter reelViewAdapter;
 
-    public interface ReelControllerCallback {
-        void sendJsCallBack(String javascript);
-    }
+    private static ArrayList<ExoplayerItem> exoplayerItems = new ArrayList<>();
 
-    public static void registerCallback(ReelControllerCallback callback){
-        callbackList.add(callback);
-    }
-
-    public static void deRegisterCallbacks(){
-        callbackList.clear();
-    }
-
-    public ReelController(Context context, Activity activity, OnResumeExoplayerListener onResumeExoplayerListener, OnPauseExoplayerListener onPauseExoplayerListener){
+    public ReelController(Context context){
         this.context = context;
-        this.activity = activity;
+        this.activity = (Activity) context;
         reelViewPager = new ViewPager2(context);
         reelViewPager.setOrientation(ViewPager2.ORIENTATION_VERTICAL);
-        this.onPauseExoplayerListener = onPauseExoplayerListener;
-        reelViewAdapter = new ReelViewAdapter(reelViewPagerItemArrayList, context, exoplayerItems::add, new ReelViewAdapter.ReelViewAdapterInterface() {
-            @Nullable
-            @Override
-            public ExoplayerItem getCurrentExoplayerPlaying() {
-                return currentExoplayerPlaying;
-            }
 
+        reelViewAdapter = new ReelViewAdapter(reelViewPagerItemArrayList, context, bridgeComponentsInternal, new ReelViewAdapter.OnVideoPreparedListener() {
             @Override
-            public ViewPager2 getReelViewPager() {
-                return reelViewPager;
+            public void onVideoPrepared(ExoplayerItem exoplayerItem) {
+                exoplayerItems.add(exoplayerItem);
             }
-
-            @Override
-            public void sendJsCallbackFromAdapter(String javascript) {
-                sendJsCallback(javascript);
-            }
-
-            @Nullable
-            @Override
-            public String getCallback() {
-                return callback;
-            }
-
-            @Override
-            public void abandonAudioFocus() {
-                onPauseExoplayerListener.abandonAudioFocusWhilePausingExoplayer();
-            }
-
-            @Override
-            public void getAudioFocus() {
-                onResumeExoplayerListener.getAudioFocusToResumeExoplayer();
-            }
-
-            @Override
-            public ReelViewPagerItem getCurrentReelViewPagerItem() {
-                return reelViewPagerItemArrayList.get(reelViewPager.getCurrentItem());
-            }
-
-            @Override
-            public void setCurrentReelViewPagerItem(int position) {
-                reelViewPager.setCurrentItem(position);
-            }
-
         });
-    }
-
-
-
-    public JSONObject getCurrentReelVideoConfig() {
-        try{
-            return reelViewPagerItemArrayList.get(currentExoplayerPlaying.position).reelVideoConfig;
-        } catch(Exception e){
-            return null;
-        }
-    }
-
-
-    public interface OnResumeExoplayerListener{
-        void getAudioFocusToResumeExoplayer();
-    }
-
-    public interface OnPauseExoplayerListener{
-        void abandonAudioFocusWhilePausingExoplayer();
     }
 
     public void initializeReelsView(String stringifyJsonData, int index, String callback){
@@ -130,6 +66,8 @@ public class ReelController {
         try{
             JSONObject jsonData = new JSONObject(stringifyJsonData);
             this.callback = callback;
+            JSONObject reelTitleConfig = jsonData.getJSONObject("titleConfig");
+            JSONObject reelDescriptionConfig = jsonData.getJSONObject("descriptionConfig");
             JSONArray jsonArray = jsonData.getJSONArray("reelData");
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject jsonObject = jsonArray.getJSONObject(i);
@@ -140,10 +78,8 @@ public class ReelController {
             Collections.rotate(reelViewPagerItemArrayList, index * -1);
             reelViewPager.setAdapter(reelViewAdapter);
             reelViewAdapter.notifyItemRangeInserted(0, jsonArray.length());
-            reelViewAdapter.setReelTitleConfig(jsonData.optJSONObject("descriptionConfig") == null ? new JSONObject() : jsonData.optJSONObject("titleConfig"));
-            reelViewAdapter.setReelDescriptionConfig(jsonData.optJSONObject("descriptionConfig") == null ? new JSONObject() : jsonData.optJSONObject("descriptionConfig"));
-            reelViewAdapter.setReelExtraConfig(jsonData.optJSONObject("reelExtraConfig") == null ? new JSONObject() : Objects.requireNonNull(jsonData.optJSONObject("reelExtraConfig")));
-
+            reelViewAdapter.setReelTitleConfig(reelTitleConfig);
+            reelViewAdapter.setReelDescriptionConfig(reelDescriptionConfig);
         } catch(JSONException e){
             Log.e("REELS_VIEW_ACTIVITY", "error in json while initializing the reelsView" + e);
         }
@@ -151,7 +87,12 @@ public class ReelController {
         RelativeLayout finalReelParentLayout = activity.findViewById(R.id.reels_player_view_ll);
         LinearLayout backPressImageButton = activity.findViewById(R.id.reel_backpress_button);
 
-        backPressImageButton.setOnClickListener(v -> activity.finish());
+        backPressImageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                activity.finish();
+            }
+        });
 
 
         reelViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -171,75 +112,26 @@ public class ReelController {
             public void onPageSelected(int position) {
                 // add a callback here to trigger action on page callback change
                 if (callback != null) {
-                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s', '%s', %s, %s);",
-                            callback, "CURRENT_POSITION", reelViewPagerItemArrayList.get(position).getReelViewPagerItemId(), reelViewPagerItemArrayList.get(position).reelVideoConfig, null);
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s', '%s');",
+                            callback, "CURRENT_POSITION", reelViewPagerItemArrayList.get(position).reelVideoConfig.toString());
 
-                    sendJsCallback(javascript);
+                    bridgeComponentsInternal.getJsCallback().addJsToWebView(javascript);
                 }
 
                 Log.e("PAGE_SELECTED_CHANGED", "" + reelViewPagerItemArrayList.get(position).getReelViewPagerItemId());
 
-                pauseExoplayers(true, false);
+                pauseExoplayers(true);
+
                 try {
-                    currentExoplayerPlaying = exoplayerItems.get(position);
+                    currentExoplayerPlaying = exoplayerItems.get(position).exoPlayer;
+                    currentHorizontalProgressBar = exoplayerItems.get(position).horizontalProgressBar;
                     exoplayerItems.get(position).exoPlayer.setPlayWhenReady(false);
                     exoplayerItems.get(position).exoPlayer.seekTo(0);
-                    currentExoplayerPlaying.reelSeekBar.setProgress(0);
-                    currentExoplayerPlaying.reelPauseButton.setVisibility(View.GONE);
-                    if(currentExoplayerPlaying.scrollViewExpanded){
-                        currentExoplayerPlaying.reelInfoView.performClick();
-                        currentExoplayerPlaying.scrollViewExpanded = false;
-                    }
+                    currentHorizontalProgressBar.setProgress(0);
                     exoplayerItems.get(position).exoPlayer.play();
-                } catch(IndexOutOfBoundsException e){
-                    Thread repeatThread = new Thread() {
-                        public void run() {
-                            int restartAttemptCount = 0;
-                            boolean contentLoaded = false;
-                            while (restartAttemptCount < 5 && !contentLoaded) {
-                                restartAttemptCount++;
-                                try{
-                                    currentExoplayerPlaying = exoplayerItems.get(position);
-                                    ((Activity) context).runOnUiThread(() -> {
-                                        exoplayerItems.get(position).exoPlayer.setPlayWhenReady(false);
-                                        exoplayerItems.get(position).exoPlayer.seekTo(0);
-                                        currentExoplayerPlaying.reelSeekBar.setProgress(0);
-                                        exoplayerItems.get(position).exoPlayer.play();
-                                    });
-
-                                    currentExoplayerPlaying.reelPauseButton.setVisibility(View.GONE);
-                                    if(currentExoplayerPlaying.scrollViewExpanded){
-                                        currentExoplayerPlaying.reelInfoView.performClick();
-                                        currentExoplayerPlaying.scrollViewExpanded = false;
-                                    }
-                                    contentLoaded = true;
-
-                                }
-                                catch(Exception e)
-                                {
-                                    Log.e("REEL_RESTARTING_THREAD", "Restarting attempt" + " " + restartAttemptCount + " " + e);
-                                }
-
-                                try {
-                                    Thread.sleep(1000);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-
-                                if(restartAttemptCount == 4){
-                                    Toast.makeText(context, "Something went wrong. Please try again later!", Toast.LENGTH_SHORT).show();
-                                    ((Activity) context).finish();
-                                }
-
-                            }
-                        }
-                    };
-
-                    repeatThread.start();
-                }  catch (Exception e) {
+                    Log.i("REELS", position + "");
+                } catch (Exception e) {
                     Log.e("REEL_PLAYBACK_ERROR", e.toString());
-                    Toast.makeText(context, "Something went wrong. Please try again later!", Toast.LENGTH_SHORT).show();
-                    ((Activity) context).finish();
                 }
 
                 super.onPageSelected(position);
@@ -252,7 +144,6 @@ public class ReelController {
     public void stopAndReleaseExoplayers(){
         try {
 
-            reelViewAdapter.removeCallbacks();
             for (ExoplayerItem exoplayerItem : exoplayerItems) {
                 if (exoplayerItem.exoPlayer != null) {
                     exoplayerItem.exoPlayer.pause();
@@ -261,7 +152,6 @@ public class ReelController {
             }
             currentExoplayerPlaying = null;
             exoplayerItems.clear();
-            reelViewPagerItemArrayList.clear();
             reelViewAdapter.handler.removeCallbacks(reelViewAdapter.updatePercentageVideoCompletedRunnable);
         } catch (Exception e) {
             Log.e("REEL", "error in releasing the exoplayers" + e);
@@ -271,31 +161,22 @@ public class ReelController {
     public void resumeExoplayer() {
         if (currentExoplayerPlaying != null) {
             try {
-                if(!currentExoplayerPlaying.exoPlayer.isPlaying()) {
-                    currentExoplayerPlaying.exoPlayer.play();
-                }
-                currentExoplayerPlaying.reelPauseButton.setVisibility(View.GONE);
+                currentExoplayerPlaying.play();
             } catch (Exception e) {
                 Log.e("REEL", "error in resuming the current exoplayerPlaying" + e);
             }
         }
     }
 
-    public void pauseExoplayers(Boolean playFromStart, boolean abandonAudioManager) {
-
+    public void pauseExoplayers(Boolean playFromStart) {
         try {
             for (ExoplayerItem exoplayerItem : exoplayerItems) {
                 if (exoplayerItem.exoPlayer != null) {
                     exoplayerItem.exoPlayer.pause();
-                    exoplayerItem.reelPauseButton.setVisibility(View.VISIBLE);
                     if (playFromStart) {
                         exoplayerItem.exoPlayer.seekTo(0);
                     }
                 }
-            }
-
-            if (abandonAudioManager) {
-                onPauseExoplayerListener.abandonAudioFocusWhilePausingExoplayer();
             }
         } catch (Exception e) {
             Log.e("REEL", "error in pausing the exoplayers" + e);
@@ -303,10 +184,8 @@ public class ReelController {
 
     }
 
-    public void sendJsCallback(String javaScript){
-        for(ReelControllerCallback callback : callbackList){
-            callback.sendJsCallBack(javaScript);
-        }
+    public static void initializeBridgeComponents (BridgeComponents bridgeComponents){
+        bridgeComponentsInternal = bridgeComponents;
     }
 
 }

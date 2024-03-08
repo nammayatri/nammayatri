@@ -33,7 +33,7 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig, Language(..))
+import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig)
 import Prelude (class Eq, class Show)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
@@ -46,13 +46,13 @@ import MerchantConfig.Types (AppConfig)
 import Foreign.Object (Object)
 import Foreign (Foreign)
 import PrestoDOM.List (ListItem)
-import Services.API (QuestionConfirmRes(..), GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp)
+import Services.API (GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp)
 import Styles.Types (FontSize)
 import Components.ChatView.Controller as ChatView
 import Foreign.Object (Object)
 import Foreign (Foreign)
 import Screens (ScreenName)
-import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..))
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
 import RemoteConfig as RC
@@ -848,14 +848,11 @@ type SelectLanguageScreenData = {
   isSelected :: Boolean
 , config :: AppConfig
 , logField :: Object Foreign
-, languageList:: Array Language
 }
 
 type SelectLanguageScreenProps = {
   selectedLanguage :: String,
-  btnActive :: Boolean,
-  onlyGetTheSelectedLanguage :: Boolean,
-  selectLanguageForScreen :: String
+  btnActive :: Boolean
 }
 
 ----------------------------------------------- HomeScreenState ---------------------------------------------
@@ -2330,14 +2327,14 @@ instance showDriverEarningsPopupType :: Show DriverEarningsPopupType where show 
 instance eqDriverEarningsPopupType :: Eq DriverEarningsPopupType where eq = genericEq
 
 
---------------------------------------------- Benefits.BenefitsScreen -------------------------------------
+---------------------------------------------DriverReferralScreen -------------------------------------
 
-type BenefitsScreenState = {
-  data :: BenefitsScreenData,
-  props :: BenefitsScreenProps
+type DriverReferralScreenState = {
+  data :: DriverReferralScreenData,
+  props :: DriverReferralScreenProps
 }
 
-type BenefitsScreenData = {
+type DriverReferralScreenData = {
     logField :: Object Foreign
   , config :: AppConfig
   , totalReferredDrivers :: Int
@@ -2346,22 +2343,14 @@ type BenefitsScreenData = {
   , referralCode :: String
   , rank :: Maybe Int
   , totalEligibleDrivers :: Maybe Int
-  , moduleList :: LmsModuleList
 }
 
-type BenefitsScreenProps = {
+type DriverReferralScreenProps = {
   showDriverReferralQRCode :: Boolean
 , showNewDriverReferralText :: Boolean
 , driverReferralType :: DriverReferralType
 , referralInfoPopType :: ReferralInfoPopType
-, selectedModule :: Maybe LmsModuleRes
-, showShimmer :: Boolean
 }
-
-type LmsModuleList =
-  { completed :: Array LmsModuleRes,
-    remaining :: Array LmsModuleRes
-  }
 
 data DriverReferralType = DRIVER | CUSTOMER
 
@@ -2382,89 +2371,3 @@ instance showGoBackToScreen :: Show GoBackToScreen where show = genericShow
 instance eqGoBackToScreen :: Eq GoBackToScreen where eq = genericEq
 instance encodeGoBackToScreen :: Encode GoBackToScreen where encode = defaultEnumEncode
 instance decodeGoBackToScreen :: Decode GoBackToScreen where decode = defaultEnumDecode
-
-
---------------------------------------------- Benefits.LmsVideoScreen -------------------------------------
-
-type LmsVideoScreenState = {
-  data :: LmsVideoScreenData,
-  props :: LmsVideoScreenProps
-}
-
-type LmsVideoScreenData = {
-  config :: AppConfig,
-  logField :: Object Foreign,
-  videosScreenData :: LmsGetVideo
-}
-
-type LmsGetVideo = {
-  quizEnabled :: Boolean,
-  completed :: Array LmsVideoRes,
-  pending :: Array LmsVideoRes,
-  quizStatus :: LmsEntityCompletionStatus,
-  selectedTranslatedModule :: Maybe LmsTranslatedModuleInfoRes
-}
-
-type LmsVideoScreenProps = {
-  selectedModule :: Maybe LmsModuleRes,
-  showShimmer :: Boolean,
-  showError :: Boolean,
-  selectedLanguage :: String,
-  isFetchingQuiz :: Boolean
-}
-
---------------------------------------------- Benefits.LmsQuizScreen -------------------------------------
-
-type LmsQuizScreenState = {
-  data :: LmsQuizScreenData,
-  props :: LmsQuizScreenProps
-}
-
-type LmsQuizScreenData = {
-  config :: AppConfig,
-  logField :: Object Foreign,
-  questions :: Array LmsQuestion
-}
-
-type LmsQuizScreenProps = {
-  selectedTranslatedModule :: Maybe LmsTranslatedModuleInfoRes,
-  currentQuestionSelectedOptionsData :: CurrentQuestionSelectedOptionData,
-  currentQuestionIndex :: Int,
-  isRetryEnabled :: Boolean,
-  showShimmer :: Boolean,
-  selectedLanguage :: String,
-  languageUpdated :: Boolean,
-  animationVisibilty :: Boolean,
-  exitPopupVisible :: Boolean,
-  isConfirming :: Boolean,
-  isConfirmed :: Boolean,
-  bottomButtonVisibility :: Boolean
-}
-
-type LmsQuestion = {
-    questionId :: String
-  , moduleId :: String
-  , language :: String
-  , question :: QuizQuestion
-  , options :: QuizOptions
-  , previousHistory :: Maybe LmsQuizHistory
-  , questionStatusDuringQuiz :: QuestionStatus
-  , validationRes :: Maybe QuestionConfirmRes
-}
-
-data QuestionStatus = QUESTION_NOT_ATTEMPTED | QUESTION_CORRECT | QUESTION_INCORRECT | QUESTION_ATTEMPTING
-
-instance eqQuestionStatus :: Eq QuestionStatus where eq = genericEq
-derive instance genericQuestionStatus :: Generic QuestionStatus _
-instance showQuestionStatus :: Show QuestionStatus where show = genericShow
-
-type CurrentQuestionSelectedOptionData = {
-  selectedSingleOption :: Maybe SelectedOption,
-  selectedMultipleOptions :: Array SelectedOption
-}
-
-type SelectedOption = {
-  optionId :: String,
-  isCorrect :: Boolean,
-  validated :: Boolean
-}

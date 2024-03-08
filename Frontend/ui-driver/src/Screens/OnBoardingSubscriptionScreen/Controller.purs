@@ -16,7 +16,7 @@ import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, getAutoPayDetailsList, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
 import Screens.Types (OnBoardingSubscriptionScreenState)
 import Screens.Types (PlanCardConfig)
-import Services.API (ReelsResp(..), UiPlansResp(..))
+import Services.API (UiPlansResp(..))
 import Storage (KeyStore(..), setValueToLocalStore)
 import Components.PopUpModal as PopUpModal
 import PrestoDOM.Core (getPushFn)
@@ -24,11 +24,6 @@ import Effect.Uncurried (runEffectFn5, runEffectFn1)
 import Screens.OnBoardingSubscriptionScreen.Transformer (transformReelsPurescriptDataToNativeData)
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import RemoteConfig (ReelItem(..))
-import Foreign (Foreign)
-import Foreign.Generic (encodeJSON)
-import Presto.Core.Types.Language.Flow (delay)
-import Data.Time.Duration (Milliseconds(..))
-import Control.Monad.Trans.Class(lift)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -57,8 +52,7 @@ data Action = BackPressed
             | CallSupport
             | PopUpModalAC PopUpModal.Action
             | OpenReelsView Int
-            | GetCurrentPosition String String Foreign Foreign
-
+            | GetCurrentPosition String String
 
 eval :: Action -> OnBoardingSubscriptionScreenState -> Eval Action ScreenOutput OnBoardingSubscriptionScreenState
 eval BackPressed state = 
@@ -84,27 +78,20 @@ eval (PopUpModalAC PopUpModal.OnButton1Click) state = do
 eval (PopUpModalAC (PopUpModal.OnButton2Click)) _ = exit GoBack
 
 eval (OpenReelsView index) state = do
-  void $ pure $ setValueToLocalStore DISABLE_WIDGET "true"
   continueWithCmd state [ do
     push <-  getPushFn Nothing "OnBoardingSubscriptionScreen"
-    _ <- runEffectFn5 JB.addReels (encodeJSON (transformReelsPurescriptDataToNativeData state.data.reelsData)) index (getNewIDWithTag "ReelsViewOnBoarding") push $ GetCurrentPosition
+    _ <- runEffectFn5 JB.addReels (transformReelsPurescriptDataToNativeData state.data.reelsData) index (getNewIDWithTag "ReelsViewOnBoarding") push $ GetCurrentPosition
     pure NoAction
   ]
 
-eval (GetCurrentPosition label stringData reelData buttonData) state = do
+eval (GetCurrentPosition label stringData) state = do
   case label of
     "ACTION" -> 
       case stringData of
-        "CHOOSE_A_PLAN" -> do
-                          void $ pure $ setValueToLocalStore DISABLE_WIDGET "false"
-                          continueWithCmd state [ do
-                            _ <- pure $ delay $ Milliseconds 2000.0
+        "CHOOSE_A_PLAN" -> continueWithCmd state [ do
                             _ <- JB.scrollToEnd (getNewIDWithTag "OnBoardingSubscriptionScreenScrollView") true
                             pure NoAction
                           ]
-        "DESTROY_REEL" -> do
-                          void $ pure $ setValueToLocalStore DISABLE_WIDGET "false"
-                          continue state
         _ -> continue state
     "CURRENT_POSITION" -> let hello = spy "Current position" stringData
                           in continue state

@@ -288,24 +288,3 @@ convertCoinToCash _ =  (getBaseUrl "") <> "/coins/convertCoinToCash"
 
 pushSDKEvents :: String -> String
 pushSDKEvents _ =  (getBaseUrl "") <> "/sdk/events"
-
-getAllLmsModules :: String -> String
-getAllLmsModules language = (getBaseUrl "") <> "/lms/listAllModules?language="<>language
-
-getAllLmsVideos :: String -> String -> String
-getAllLmsVideos moduleId language = (getBaseUrl "") <> "/lms/"<> moduleId <>"/listAllVideos?language="<>language
-
-getAllLmsQuestions :: String -> String -> String
-getAllLmsQuestions moduleId language = (getBaseUrl "") <> "/lms/" <> moduleId <> "/listAllQuiz?language="<>language
-
-markVideoAsStarted :: String -> String
-markVideoAsStarted _ = (getBaseUrl "") <> "/lms/markVideoAsStarted"
-
-markVideoAsCompleted :: String -> String
-markVideoAsCompleted _ = (getBaseUrl "") <> "/lms/markVideoAsCompleted"
-
-confirmQuestion :: String -> String
-confirmQuestion _ = (getBaseUrl "") <> "/lms/question/confirm"
-
-getReelsData :: String -> String -> String
-getReelsData reelsKey language = (getBaseUrl "") <> "/reels/getAllReelVideos?language=" <> language <> "&reelsKey=" <> reelsKey
