@@ -72,6 +72,12 @@ translateYAnimHomeConfig direction = animConfig {
             _          -> 0
 }
 
+chooseRideAnimConfig :: Common.AnimConfig
+chooseRideAnimConfig = animConfig {
+  duration = 1000
+, fromY = if os == "IOS" then (screenHeight unit) else (80)
+}
+
 translateYAnimMapConfig :: Int -> Common.AnimConfig
 translateYAnimMapConfig index = animConfig {
   duration = (300 + (index*50))

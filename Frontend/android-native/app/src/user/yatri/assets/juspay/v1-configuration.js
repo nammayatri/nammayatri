@@ -240,7 +240,7 @@ window.getMerchantConfig = function () {
         },
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
-          "image" : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_auto_quote_list.png"
+          "image" : "ny_ic_single_estimate_auto_black,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_single_estimate_auto_black.png"
         }
 
       }
