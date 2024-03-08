@@ -1357,15 +1357,13 @@ type OnBoardingSubscriptionScreenState = {
 type OnBoardingSubscriptionScreenData = {
   plansList :: Array PlanCardConfig,
   selectedPlanItem :: Maybe PlanCardConfig,
-  subscriptionConfig :: SubscriptionConfig,
-  reelsData :: Array RC.ReelItem
+  subscriptionConfig :: SubscriptionConfig
 }
 
 type OnBoardingSubscriptionScreenProps = {
   isSelectedLangTamil :: Boolean,
   screenCount :: Int,
-  supportPopup :: Boolean,
-  choosePlanSelected :: Boolean
+  supportPopup :: Boolean
 }
 
 
@@ -1786,7 +1784,6 @@ type SubscriptionScreenState = {
 
 type SubscriptionScreenData = {
   myPlanData :: MyPlanData,
-  reelsData :: Array RC.ReelItem,
   managePlanData :: ManagePlanData,
   joinPlanData :: JoinPlanData,
   autoPayDetails :: AutoPayDetails,

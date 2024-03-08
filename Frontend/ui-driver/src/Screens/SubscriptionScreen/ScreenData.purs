@@ -21,7 +21,6 @@ import Data.Maybe as Mb
 import ConfigProvider
 import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
 import Services.API (AutopayPaymentStage(..), DriverDuesEntity(..), FeeType(..), InvoiceStatus(..), OfferEntity(..), PaymentBreakUp(..))
-import RemoteConfig as RC
 
 initData :: SubscriptionScreenState
 initData = 
@@ -56,7 +55,6 @@ initData =
             currentPlan : dummyPlanConfig,
             alternatePlans : []
         },
-        reelsData : RC.defaultReelsData,
         autoPayDetails : {
             isActive : false,
             detailsList : [],

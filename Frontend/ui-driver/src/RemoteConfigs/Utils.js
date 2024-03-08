@@ -11,12 +11,3 @@ export const getSubsRemoteConfig = function (config) {
   }
   return "";
 }
-
-export const getReelsData = function (reelsData) {
-  try {
-    return JSON.parse(reelsData);
-  }catch (e){
-    console.error("Error in parsing remote config", e);
-  }
-  return "[]";
-}

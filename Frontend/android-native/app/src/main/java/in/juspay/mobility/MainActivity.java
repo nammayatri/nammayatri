@@ -73,7 +73,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -97,7 +96,6 @@ import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
-import in.juspay.mobility.app.reels.ExoplayerItem;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
 import in.juspay.mobility.common.Utils;
 import in.juspay.services.HyperServices;
@@ -112,7 +110,6 @@ public class MainActivity extends AppCompatActivity {
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
     private HyperServices hyperServices;
     private FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-
     private Context context;
     private Activity activity;
     @Nullable

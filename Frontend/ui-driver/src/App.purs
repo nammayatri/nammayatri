@@ -417,7 +417,6 @@ data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | REFRESH_HELP_CENTRE SubscriptionScreenState
                                   | CLEAR_DUES_ACT
                                   | SUBSCRIBE_API SubscriptionScreenState
-                                  | REMOVE_REELS_VIEW_MY_PLANS SubscriptionScreenState
 
 data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToRideHistory

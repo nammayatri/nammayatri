@@ -23,12 +23,11 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig)
-import Data.Maybe (Maybe(..))
+import RemoteConfig.Types (RCSubscription)
 
 foreign import getSubsRemoteConfig :: String -> Foreign
 
-foreign import getReelsData :: String -> Foreign
+
 
 subscriptionRemoteConfig :: RCSubscription
 subscriptionRemoteConfig = {
@@ -41,11 +40,3 @@ subscriptionConfig :: String -> RCSubscription
 subscriptionConfig key = do
     let conf = getSubsRemoteConfig $ fetchRemoteConfigString key
     decodeForeignObject conf subscriptionRemoteConfig
-
-reelsData :: String -> Array ReelItem
-reelsData key = 
-  let reelDataString = getReelsData $ fetchRemoteConfigString key
-  in decodeForeignObject reelDataString defaultReelsData
-
-defaultReelsData :: Array ReelItem
-defaultReelsData = []
