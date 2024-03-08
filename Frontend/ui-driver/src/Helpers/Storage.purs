@@ -129,6 +129,7 @@ data KeyStore = USER_NAME
                 | LMS_SELECTED_LANGUAGE_CACHE
                 | ANOTHER_ACTIVITY_LAUNCHED
                 | DRIVER_PROFILE_STATS_RESPONSE
+                | VEHICLE_CATEGORY
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

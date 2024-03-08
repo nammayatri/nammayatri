@@ -375,6 +375,13 @@ getAllRcDataBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+getAllRcData :: GetAllRcDataReq -> Flow GlobalState (Either ErrorResponse GetAllRcDataResp)
+getAllRcData payload = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.getAllRcData "") unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse (x) = x
+
 dummyVehicleObject :: Vehicle
 dummyVehicleObject = Vehicle
    {

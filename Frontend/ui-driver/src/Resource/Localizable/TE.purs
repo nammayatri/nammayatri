@@ -1290,3 +1290,6 @@ getTE stringKey =
         SHARE_NAMMA_YATRI_MESSAGE -> "హలో! \n\nభారతదేశం యొక్క మొదటి జీరో కమీషన్ రైడ్ యాప్‌ని తనిఖీ చేయండి. \n100% ఓపెన్ సోర్స్ | 100% ఓపెన్ డేటా \n\n"
         BE_OPEN_CHOOSE_OPEN -> "\n\n #తెరవడం #ఎంపికచేయండి"
         NOW -> "ఇప్పుడు"
+        ADD_VEHICLE -> "వాహనాన్ని జోడించండి"
+        SELECT_YOUR_VEHICLE_TYPE -> "మీ వాహన రకం ఎంచుకోండి"
+        CAR -> "కారు"
