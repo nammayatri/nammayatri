@@ -628,6 +628,10 @@ getCityConfig cityConfig cityName = do
                             callSupport : false,
                             supportWAN : "", 
                             whatsappSupport : false
+                          },
+                          variantSubscriptionConfig : {
+                            enableVariantBasedSubscription : true,
+                            variantList : ["AutoCategory"]
                           }
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig

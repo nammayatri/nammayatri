@@ -271,7 +271,8 @@ type RegistrationScreenData = {
   enteredDL :: String,
   enteredRC :: String,
   dlVerficationMessage :: String,
-  rcVerficationMessage :: String
+  rcVerficationMessage :: String,
+  vehicleCategory :: Maybe VehicleCategory
 }
 
 type StepProgress = {
@@ -287,7 +288,8 @@ type RegistrationScreenProps = {
   enterReferralCodeModal :: Boolean,
   referralCodeSubmitted :: Boolean,
   contactSupportView :: Boolean,
-  contactSupportModal :: AnimType
+  contactSupportModal :: AnimType,
+  selectedVehicleIndex :: Maybe Int
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
@@ -301,6 +303,12 @@ instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
 data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
+
+data VehicleCategory = AutoCategory | CarCategory
+
+derive instance genericVehicleCategory :: Generic VehicleCategory _
+instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
+instance showVehicleCategory :: Show VehicleCategory where show = genericShow
 
  -- ############################################################# UploadAdhaarScreen ################################################################################
 

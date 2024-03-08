@@ -1237,3 +1237,6 @@ getBN stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "শূন্য কমিশন, অসীম চালনা"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "আমরা বর্তমানে আপনার শহরে শুধুমাত্র অটোরিকশার সাথে লাইভ করছি"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "আরো আপডেটের জন্য সাথে থাকুন"
+        ADD_VEHICLE -> "যোগ যান"
+        SELECT_YOUR_VEHICLE_TYPE -> "আপনার গাড়ির প্রকার নির্বাচন করুন"
+        CAR -> "গাড়ী"

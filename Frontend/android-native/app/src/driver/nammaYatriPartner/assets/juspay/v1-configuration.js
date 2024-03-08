@@ -190,6 +190,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "918618963188",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : ["AutoCategory"]
         }
       },
       {
@@ -210,6 +214,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "919392636637",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -230,6 +238,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "918618963188",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -250,6 +262,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "919625724848",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -270,6 +286,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "917483117936",
             "callSupport" : true,
             "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -290,6 +310,10 @@ window.getMerchantConfig = function () {
             "supportWAN" : "",
             "callSupport" : true,
             "whatsappSupport" : false
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
         }
       },
       {
@@ -310,7 +334,11 @@ window.getMerchantConfig = function () {
           "supportWAN" : "917483117936",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
       },
       {
         "cityName" : "Tumakuru",
@@ -329,7 +357,11 @@ window.getMerchantConfig = function () {
           "supportWAN" : "918618963188",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
       },
       {
         "cityName" : "Gurugram",
@@ -349,7 +381,11 @@ window.getMerchantConfig = function () {
           "supportWAN" : "919625724848",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
       },
       {
         "cityName" : "Noida",
@@ -368,7 +404,11 @@ window.getMerchantConfig = function () {
           "supportWAN" : "919625724848",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
       },
       {
         "cityName" : "TamilNaduCities",
@@ -388,7 +428,11 @@ window.getMerchantConfig = function () {
           "supportWAN" : "917483117936",
           "callSupport" : true,
           "whatsappSupport" : true
-      }
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        }
       }
   ]
   , "dashboard" : {
