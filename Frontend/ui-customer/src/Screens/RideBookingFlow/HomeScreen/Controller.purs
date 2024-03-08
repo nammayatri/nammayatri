@@ -2534,8 +2534,9 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
       _ <- animateCamera config.lat config.lng 25.0 "NO_ZOOM"
       pure NoAction
     ]
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehicleController.NoAction)) state =
-  continue state{ props{ defaultPickUpPoint = "" } }
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehicleController.NoAction)) state = do
+  let height = (runFn1 getLayoutBounds $ getNewIDWithTag state.props.estimateId).height
+  continue state{ props{ defaultPickUpPoint = "", selectedEstimateHeight = height } }
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
