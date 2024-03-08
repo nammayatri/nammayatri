@@ -24,14 +24,11 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import BecknV2.OnDemand.Utils.Payment
-import Data.Coerce (coerce)
 import qualified Data.List as L
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import Domain.Types.Common
-import qualified Domain.Types.DriverQuote as DQ
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.OnCancel as Reexport
@@ -41,7 +38,6 @@ import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -49,7 +45,7 @@ import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
@@ -76,20 +72,15 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
       country = fromMaybe merchant.country mbBapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
-  ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
+  mbRide <- QRide.findOneByBookingId booking.id
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-  driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   let vehicleCategory = BUtils.mapVariantToVehicle booking.vehicleVariant
-  mbVehicle <- QVeh.findById ride.driverId
-  mbFarePolicy <-
-    Redis.get (SFP.makeFarePolicyByEstOrQuoteIdKey driverQuote.estimateId.getId) >>= \case
-      Nothing -> do
-        logWarning $ "Fare Policy Not Found for estimateId " <> show driverQuote.estimateId
-        return Nothing
-      Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+  mbVehicle <- maybe (pure Nothing) (runInReplica . QVeh.findById . (.driverId)) mbRide
+  mbPerson <- maybe (pure Nothing) (runInReplica . QPerson.findById . (.driverId)) mbRide
+  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) ride.status becknConfig mbVehicle mbFarePolicy
+  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant (mbPerson <&> (.firstName)) customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide <&> (.status)) becknConfig mbVehicle mbFarePolicy
 
 buildOnCancelReq ::
   (MonadFlow m, EncFlow m r) =>
@@ -102,49 +93,49 @@ buildOnCancelReq ::
   Context.Country ->
   Text ->
   DM.Merchant ->
-  DQ.DriverQuote ->
+  Maybe Text ->
   Text ->
   OC.OnCancelBuildReq ->
-  RideStatus ->
+  Maybe RideStatus ->
   DBC.BecknConfig ->
   Maybe DVeh.Vehicle ->
   Maybe FarePolicyD.FullFarePolicy ->
   m Spec.OnCancelReq
-buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverQuote customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy = do
+buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy = do
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
   pure $
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
         onCancelReqContext = context,
-        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy
       }
 
-buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> DBC.BecknConfig -> RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Spec.ConfirmReqMessage
-buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy = do
+buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Spec.ConfirmReqMessage
+buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy = do
   Just $
     Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy
+      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy
       }
 
-tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> DQ.DriverQuote -> Text -> DBC.BecknConfig -> RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
-tfOrder booking cancelStatus cancellationSource merchant driverQuote customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy = do
+tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
+tfOrder booking cancelStatus cancellationSource merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy = do
   Spec.Order
     { orderId = Just booking.id.getId,
       orderStatus = Just cancelStatus,
-      orderFulfillments = tfFulfillments booking driverQuote customerPhoneNo rideStatus mbVehicle,
+      orderFulfillments = tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle,
       orderCancellation = tfCancellation cancellationSource,
       orderBilling = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
       orderItems = tfItems booking merchant mbFarePolicy,
-      orderPayments = tfPayments driverQuote merchant becknConfig,
+      orderPayments = tfPayments booking.estimatedFare merchant becknConfig,
       orderProvider = BUtils.tfProvider becknConfig,
       orderQuote = tfQuotation booking,
       orderCreatedAt = Just booking.createdAt,
       orderUpdatedAt = Just booking.updatedAt
     }
 
-tfFulfillments :: DRB.Booking -> DQ.DriverQuote -> Text -> RideStatus -> Maybe DVeh.Vehicle -> Maybe [Spec.Fulfillment]
-tfFulfillments booking driverQuote customerPhoneNo rideStatus mbVehicle = do
+tfFulfillments :: DRB.Booking -> Maybe Text -> Text -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe [Spec.Fulfillment]
+tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle = do
   let stops = BUtils.mkStops' booking.fromLocation booking.toLocation booking.specialZoneOtpCode
   Just
     [ Spec.Fulfillment
@@ -152,7 +143,7 @@ tfFulfillments booking driverQuote customerPhoneNo rideStatus mbVehicle = do
           fulfillmentState = mkFulfillmentState rideStatus,
           fulfillmentStops = stops,
           fulfillmentType = Just $ BUtils.mkFulfillmentType booking.tripCategory,
-          fulfillmentAgent = tfAgent booking driverQuote,
+          fulfillmentAgent = tfAgent booking driverName,
           fulfillmentCustomer = tfCustomer booking customerPhoneNo,
           fulfillmentTags = Nothing,
           fulfillmentVehicle = tfVehicle mbVehicle
@@ -165,7 +156,7 @@ tfFulfillments booking driverQuote customerPhoneNo rideStatus mbVehicle = do
           { fulfillmentStateDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just . show $ BUtils.mapRideStatus rideStatus',
+                  { descriptorCode = (Just . show . BUtils.mapRideStatus) rideStatus',
                     descriptorName = Nothing,
                     descriptorShortDesc = Nothing
                   }
@@ -215,9 +206,9 @@ mkQuotationBreakup booking =
           quotationBreakupInnerTitle = Just title
         }
 
-tfPayments :: DQ.DriverQuote -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
-tfPayments res merchant bppConfig = do
-  let amount = Just $ show res.estimatedFare.getMoney
+tfPayments :: Money -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
+tfPayments estimatedFare merchant bppConfig = do
+  let amount = Just $ show estimatedFare.getMoney
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
   Just . L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID amount Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
@@ -261,8 +252,8 @@ tfVehicle mbVehicle =
           vehicleMake = Nothing
         }
 
-tfAgent :: DRB.Booking -> DQ.DriverQuote -> Maybe Spec.Agent
-tfAgent _booking driverQuote = do
+tfAgent :: DRB.Booking -> Maybe Text -> Maybe Spec.Agent
+tfAgent _booking driverName = do
   Just $
     Spec.Agent
       { agentContact = Nothing,
@@ -271,7 +262,7 @@ tfAgent _booking driverQuote = do
             Spec.Person
               { personId = Nothing,
                 personImage = Nothing,
-                personName = Just driverQuote.driverName,
+                personName = driverName,
                 personTags = Nothing
               }
       }

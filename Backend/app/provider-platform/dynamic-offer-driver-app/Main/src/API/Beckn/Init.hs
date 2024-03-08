@@ -23,10 +23,7 @@ import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.Utils
-import Data.Coerce (coerce)
 import qualified Domain.Action.Beckn.Init as DInit
-import Domain.Types.Common
-import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude hiding (init)
@@ -44,7 +41,6 @@ import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import Storage.Queries.DriverQuote as QDQ
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -94,18 +90,8 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
           context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttlToISO8601Duration)
           void . handle (errHandler dInitRes.booking dInitRes.transporter) $
             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
-              mbDriverQuote <- QDQ.findById $ Id dInitRes.booking.quoteId
-              farePolicy <- case mbDriverQuote of
-                Nothing -> do
-                  logWarning $ "Driver Quote Not Found for quoteId " <> show dInitRes.booking.quoteId
-                  return Nothing
-                Just driverQuote ->
-                  Redis.get (SFP.makeFarePolicyByEstOrQuoteIdKey driverQuote.estimateId.getId) >>= \case
-                    Nothing -> do
-                      logWarning $ "Fare Policy Not Found for estimateId " <> show driverQuote.estimateId
-                      return Nothing
-                    Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
-              let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig farePolicy
+              mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
+              let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
               pure $
                 Spec.OnInitReq
                   { onInitReqContext = context,

@@ -23,23 +23,18 @@ import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as CU
-import Data.Coerce (coerce)
 import qualified Data.List as List
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
-import Domain.Types.Common
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.OnUpdate as OU
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Beckn.Common
 import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import Storage.Queries.DriverQuote as QDQ
 
 buildOnUpdateReqV2 ::
   (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
@@ -55,17 +50,7 @@ buildOnUpdateReqV2 ::
   m Spec.OnUpdateReq
 buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req = do
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just "PT2M")
-  mbDriverQuote <- QDQ.findById $ Id booking.quoteId
-  farePolicy <- case mbDriverQuote of
-    Nothing -> do
-      logWarning $ "Driver Quote Not Found for quoteId " <> show booking.quoteId
-      return Nothing
-    Just driverQuote ->
-      Redis.get (SFP.makeFarePolicyByEstOrQuoteIdKey driverQuote.estimateId.getId) >>= \case
-        Nothing -> do
-          logWarning $ "Fare Policy Not Found for estimateId " <> show driverQuote.estimateId
-          return Nothing
-        Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+  farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   message <- mkOnUpdateMessageV2 req farePolicy becknConfig
   pure $
