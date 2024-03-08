@@ -1237,3 +1237,6 @@ getEN stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "We are currently live with only Autorickshaws in your city"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "Stay tuned for more updates"
+        ADD_VEHICLE -> "Add Vehicle"
+        SELECT_YOUR_VEHICLE_TYPE -> "Select your vehicle type"
+        CAR -> "Car"

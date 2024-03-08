@@ -99,7 +99,8 @@ type CityConfig = {
   uploadRCandDL :: Boolean,
   enableYatriCoins :: Boolean,
   registration :: RegistrationConfig,
-  vehicleNSImg :: String
+  vehicleNSImg :: String,
+  variantSubscriptionConfig :: VariantSubscriptionConfig
 }
 
 type DashboardConfig = {
@@ -116,4 +117,9 @@ type RegistrationConfig = {
 type BannerCarousalConfig = {
   autoScrollDelay :: Number
 , enableAutoScroll :: Boolean
+}
+
+type VariantSubscriptionConfig = {
+  enableVariantBasedSubscription :: Boolean,
+  variantList :: Array String
 }

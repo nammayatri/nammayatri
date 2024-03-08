@@ -1237,3 +1237,6 @@ getKN stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "ಶೂನ್ಯ ಕಮಿಷನ್,ಅನಿಯಮಿತ ಸವಾರಿಗಳು"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "ನಾವು ಪ್ರಸ್ತುತ ನಿಮ್ಮ ನಗರದಲ್ಲಿ ಆಟೋರಿಕ್ಷಾಗಳೊಂದಿಗೆ ಮಾತ್ರ ಲೈವ್ ಮಾಡುತ್ತಿದ್ದೇವೆ"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "ಹೆಚ್ಚಿನ ನವೀಕರಣಗಳಿಗಾಗಿ ಟ್ಯೂನ್ ಮಾಡಿ"
+        ADD_VEHICLE -> "ವಾಹನ ಸೇರಿಸಿ"
+        SELECT_YOUR_VEHICLE_TYPE -> "ನಿಮ್ಮ ವಾಹನದ ರೀತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+        CAR -> "ಕಾರು"

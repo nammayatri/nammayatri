@@ -1237,3 +1237,6 @@ getML stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "ഞങ്ങൾ നിലവിൽ നിങ്ങളുടെ നഗരത്തിൽ ഓട്ടോറിക്ഷകളിൽ മാത്രമാണ് താമസിക്കുന്നത്"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "കൂടുതൽ അപ്‌ഡേറ്റുകൾക്കായി കാത്തിരിക്കുക"
+        ADD_VEHICLE -> "വാഹനം ചേർക്കുക"
+        SELECT_YOUR_VEHICLE_TYPE -> "നിങ്ങളുടെ വാഹന തരം തിരഞ്ഞെടുക്കുക"
+        CAR -> "കാർ"
