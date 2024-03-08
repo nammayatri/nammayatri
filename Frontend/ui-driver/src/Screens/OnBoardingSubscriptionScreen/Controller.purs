@@ -84,10 +84,10 @@ eval (PopUpModalAC PopUpModal.OnButton1Click) state = do
 eval (PopUpModalAC (PopUpModal.OnButton2Click)) _ = exit GoBack
 
 eval (OpenReelsView index) state = do
-  void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
+  void $ pure $ setValueToLocalStore DISABLE_WIDGET "true"
   continueWithCmd state [ do
     push <-  getPushFn Nothing "OnBoardingSubscriptionScreen"
-    void $ runEffectFn5 JB.addReels (encodeJSON (transformReelsPurescriptDataToNativeData state.data.reelsData)) index (getNewIDWithTag "ReelsViewOnBoarding") push $ GetCurrentPosition
+    _ <- runEffectFn5 JB.addReels (encodeJSON (transformReelsPurescriptDataToNativeData state.data.reelsData)) index (getNewIDWithTag "ReelsViewOnBoarding") push $ GetCurrentPosition
     pure NoAction
   ]
 
@@ -96,14 +96,14 @@ eval (GetCurrentPosition label stringData reelData buttonData) state = do
     "ACTION" -> 
       case stringData of
         "CHOOSE_A_PLAN" -> do
-                          void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
+                          void $ pure $ setValueToLocalStore DISABLE_WIDGET "false"
                           continueWithCmd state [ do
                             _ <- pure $ delay $ Milliseconds 2000.0
                             _ <- JB.scrollToEnd (getNewIDWithTag "OnBoardingSubscriptionScreenScrollView") true
                             pure NoAction
                           ]
         "DESTROY_REEL" -> do
-                          void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
+                          void $ pure $ setValueToLocalStore DISABLE_WIDGET "false"
                           continue state
         _ -> continue state
     "CURRENT_POSITION" -> let hello = spy "Current position" stringData

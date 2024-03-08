@@ -817,8 +817,7 @@ public class MainActivity extends AppCompatActivity {
         if (BuildConfig.MERCHANT_TYPE.equals("DRIVER") &&
                 widgetService != null && Settings.canDrawOverlays(this) &&
                 !sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.REGISTERATION_TOKEN), "null").equals("null") &&
-                !sharedPref.getString("DISABLE_WIDGET", "true").equals("true") &&
-                !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "true").equals("true")) {
+                !sharedPref.getString("DISABLE_WIDGET", "true").equals("true")) {
             widgetService.putExtra("payload", "{}");
             widgetService.putExtra("data", "{}");
             startService(widgetService);

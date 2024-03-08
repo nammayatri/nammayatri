@@ -73,7 +73,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Types (AppConfig(..), Language)
+import MerchantConfig.Types (AppConfig(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
@@ -3196,16 +3196,14 @@ lmsVideoScreenFlow = do
           case res of
             Right resp -> do
                 let (API.LmsGetQuizRes extractedData ) = resp
-                modifyScreenState 
-                 $ LmsQuizScreenStateType 
-                    (\lmsQuizScreen -> lmsQuizScreen { data  {  questions = transformQuizRespToQuestions resp}, 
-                                                       props {  selectedLanguage = state.props.selectedLanguage,
-                                                                selectedTranslatedModule = Just $ extractedData.selectedModuleInfo,
-                                                                currentQuestionIndex = 0,
-                                                                currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing, selectedMultipleOptions : []}
-                                                            }
-                                                      }
-                    )
+                modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { data  {questions = transformQuizRespToQuestions resp}, 
+                                                                                              props { selectedLanguage = state.props.selectedLanguage,
+                                                                                                      selectedTranslatedModule = Just $ extractedData.selectedModuleInfo,
+                                                                                                      currentQuestionIndex = 0,
+                                                                                                      currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing, selectedMultipleOptions : []}
+                                                                                                    }
+                                                                                            }
+                                                            )
             Left err -> do
                 pure $ toast $ getString UNABLE_TO_LOAD_QUIZ_PLEASE_TRY_AGAIN
                 lmsVideoScreenFlow
@@ -3219,23 +3217,16 @@ lmsVideoScreenFlow = do
       let genLanguageList = case state.props.selectedModule of
                               Nothing -> state.data.config.languageList
                               Just selModule ->  HU.generateLanguageList $ selModule ^. _languagesAvailableForVideos
-      selectLanguageForScreenFlow "LMS_VIDEO_SCREEN" state.props.selectedLanguage genLanguageList
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ data { languageList = genLanguageList},
+                                                                                              props{ selectedLanguage = state.props.selectedLanguage,
+                                                                                                     onlyGetTheSelectedLanguage = true,
+                                                                                                     selectLanguageForScreen = "LMS_VIDEO_SCREEN" 
+                                                                                                    }
+                                                                                            }
+                                                        )
+      selectLanguageFlow
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
       lmsVideoScreenFlow
-
-
-selectLanguageForScreenFlow :: String -> String -> Array Language -> FlowBT String Unit
-selectLanguageForScreenFlow screenName selLanguage genLanguageList = do
-  modifyScreenState 
-    $ SelectLanguageScreenStateType 
-      (\selectLangState -> selectLangState{ data  { languageList = genLanguageList},
-                                            props { selectedLanguage = selLanguage,
-                                                    onlyGetTheSelectedLanguage = true,
-                                                    selectLanguageForScreen = screenName 
-                                                  }
-                                          }
-      )
-  selectLanguageFlow
-  modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
 
 lmsQuizFlow :: FlowBT String Unit
 lmsQuizFlow = do
@@ -3250,7 +3241,15 @@ lmsQuizFlow = do
       let genLanguageList = case state.props.selectedTranslatedModule of
                               Nothing -> state.data.config.languageList
                               Just selModule ->  HU.generateLanguageList $ selModule ^. _languagesAvailableForVideos
-      selectLanguageForScreenFlow "LMS_QUIZ_SCREEN" state.props.selectedLanguage genLanguageList
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ data {languageList = genLanguageList},
+                                                                                              props{  selectedLanguage = state.props.selectedLanguage,
+                                                                                                      onlyGetTheSelectedLanguage = true,
+                                                                                                      selectLanguageForScreen = "LMS_QUIZ_SCREEN"
+                                                                                                    }
+                                                                                             }
+                                                        )
+      selectLanguageFlow
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
       modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { props {languageUpdated = true}})
       lmsQuizFlow
     GO_TO_LMS_VIDEOS_SCREEN_FROM_QUIZ state -> do
@@ -3271,13 +3270,8 @@ goToQuizNextQuestionFlow state = do
                                   Just (API.LmsQuizHistory history) -> if history.status == API.CORRECT then ST.QUESTION_CORRECT else ST.QUESTION_INCORRECT
             in question {questionStatusDuringQuiz = updatedStatus}
       else question ) state.data.questions
-  let retryEnabled = case state.data.questions !! (state.props.currentQuestionIndex + 1) of
-                        Nothing -> false
-                        Just question -> case question.previousHistory of
-                                          Nothing -> false
-                                          Just (API.LmsQuizHistory history) -> history.status == API.INCORRECT
   modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { data {questions = updatedQuestions}, 
-      props {isRetryEnabled = retryEnabled, currentQuestionIndex = state.props.currentQuestionIndex + 1, currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing, selectedMultipleOptions : []}}})
+      props {currentQuestionIndex = state.props.currentQuestionIndex + 1, currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing, selectedMultipleOptions : []}}})
   pure $ toggleBtnLoader "QuizPrimaryButton_NEXT_QUESTION" false
   lmsQuizFlow
 
@@ -3290,24 +3284,23 @@ retakeQuizFlow state =
       case res of
         Right resp -> do
             let (API.LmsGetQuizRes extractedResp) = resp
-            modifyScreenState 
-             $ LmsQuizScreenStateType 
-               (\lmsQuizScreen -> lmsQuizScreen { data {questions = transformQuizRespToQuestions resp}, 
-                                                  props { isRetryEnabled = false,
-                                                          showShimmer = false,
-                                                          selectedTranslatedModule = Just $ extractedResp.selectedModuleInfo,
-                                                          currentQuestionIndex = 0,
-                                                          currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing,
-                                                          selectedMultipleOptions : []}}
-                                                }
-                )
+            modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { data {questions = transformQuizRespToQuestions resp}, 
+                                                                                          props { isRetryEnabled = false,
+                                                                                                  showShimmer = false,
+                                                                                                  selectedTranslatedModule = Just $ extractedResp.selectedModuleInfo,
+                                                                                                  currentQuestionIndex = 0,
+                                                                                                  currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing,
+                                                                                                  selectedMultipleOptions : []}}
+                                                        })
             lmsQuizFlow
         Left err -> do
           pure $ toast $ getString SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
           lmsVideoScreenFlow
 
 confirmQuestionFlow :: ST.LmsQuizScreenState -> FlowBT String Unit
-confirmQuestionFlow state = let moduleId = maybe "" (\selModule -> selModule ^. _moduleId) state.props.selectedTranslatedModule in
+confirmQuestionFlow state = 
+  let moduleId = maybe "" (\selModule -> selModule ^. _moduleId) state.props.selectedTranslatedModule
+  in 
   case (state.data.questions !! state.props.currentQuestionIndex) of
     Nothing -> do
       modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen {props {isConfirming = false, isConfirmed = true}})

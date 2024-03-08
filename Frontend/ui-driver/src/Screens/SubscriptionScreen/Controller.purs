@@ -396,7 +396,7 @@ eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state =
 eval EnableIntroductoryView state = continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = [introductoryPlanConfig state.data.config.subscriptionConfig]}}}
 
 eval (OpenReelsView index) state = do
-  void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
+  void $ pure $ setValueToLocalStore DISABLE_WIDGET "true"
   continueWithCmd state [ do
     push <-  getPushFn Mb.Nothing "SubscriptionScreen"
     _ <- runEffectFn5 addReels (encodeJSON (transformReelsPurescriptDataToNativeData state.data.reelsData)) index (getNewIDWithTag "ReelsView") push $ GetCurrentPosition
@@ -412,7 +412,7 @@ eval (GetCurrentPosition label stringData reelItemData buttonData) state = case 
            shareLink = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareLink) currentButtonConfig
       in   case stringData of
                 "CHOOSE_A_PLAN" -> do
-                    void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
+                    void $ pure $ setValueToLocalStore DISABLE_WIDGET "false"
                     continue state
                 "SHARE" -> do 
                   _ <- pure $ shareTextMessage (Mb.fromMaybe "" shareMessageTitle) (Mb.fromMaybe "" shareText)
@@ -421,7 +421,7 @@ eval (GetCurrentPosition label stringData reelItemData buttonData) state = case 
                   _ <- pure $ openUrlInApp (Mb.fromMaybe "www.nammayatri.in" shareLink)
                   continue state
                 "DESTROY_REEL" -> do
-                  void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
+                  void $ pure $ setValueToLocalStore DISABLE_WIDGET "false"
                   continue state
                 _ -> continue state
   _ -> continue state

@@ -77,10 +77,10 @@ eval BackPressed state = exit $ GoToBenefitsScreen state
 eval TakeQuiz state = exit $ GoToTakeQuiz state {props {isFetchingQuiz = true}}
 
 eval (OpenReelsView index videoStatus) state = do
-  void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
+  void $ pure $ setValueToLocalStore DISABLE_WIDGET "true"
   continueWithCmd state{props{showShimmer = true}} [ do
     push <-  getPushFn Nothing "LmsVideoScreen"
-    void $ runEffectFn5 JB.addReels (encodeJSON (transformReelsPurescriptDataToNativeData $ if videoStatus == "PENDING" then state.data.videosScreenData.pending else state.data.videosScreenData.completed)) index (getNewIDWithTag "") push $ GetCurrentPosition
+    _ <- runEffectFn5 JB.addReels (encodeJSON (transformReelsPurescriptDataToNativeData $ if videoStatus == "PENDING" then state.data.videosScreenData.pending else state.data.videosScreenData.completed)) index (getNewIDWithTag "") push $ GetCurrentPosition
     pure NoAction
   ]
 
@@ -98,7 +98,7 @@ eval (GetCurrentPosition label stringData reelData buttonData) state =
     "ACTION" -> 
       case stringData of
         "DESTROY_REEL" -> do
-           void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
+           void $ pure $ setValueToLocalStore DISABLE_WIDGET "false"
            updateAndExit state {props {showShimmer = true}} $ RefreshLmsVideoScreen state {props {showShimmer = true}}
         "SHARE" -> do 
             _ <- pure $ JB.shareTextMessage (fromMaybe "" shareMessageTitle) (fromMaybe "" shareText)

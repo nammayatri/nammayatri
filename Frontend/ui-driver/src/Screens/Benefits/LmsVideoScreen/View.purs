@@ -167,7 +167,7 @@ videosShimmerView push state =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , margin $ Margin 16 16 16 16
-  , visibility $ boolToVisibility state.props.showShimmer
+  , visibility $ if state.props.showShimmer then VISIBLE else GONE
   ][ linearLayout
      [ width $ MATCH_PARENT
      , height $ V 50
@@ -238,7 +238,7 @@ videosView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility $ boolToVisibility (not state.props.showShimmer)
+  , visibility $ if state.props.showShimmer then GONE else VISIBLE
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -389,7 +389,7 @@ quizCardView push state isLocked =
       , background $ Color.white40Alpha
       , cornerRadius 8.0
       , clickable false
-      , visibility $ boolToVisibility isLocked
+      , visibility $ if isLocked then VISIBLE else GONE
       ][]
     , shimmerFrameLayout
       [ width MATCH_PARENT
@@ -426,7 +426,7 @@ statusPillView push state status pillMargin =
   ][ imageView
      [ width $ V 10
      , height $ V 10
-     , visibility $ boolToVisibility pillProperty.shouldImageBeVisible
+     , visibility $ if pillProperty.shouldImageBeVisible then VISIBLE else GONE
      , imageWithFallback $ fetchImage FF_ASSET pillProperty.pillImage
      , margin $ MarginRight 3]
   ,  textView $
