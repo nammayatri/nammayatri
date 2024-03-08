@@ -1290,3 +1290,6 @@ getBN stringKey =
         SHARE_NAMMA_YATRI_MESSAGE -> "এখানে দেখুন! \n\nভারতের প্রথম শূন্য কমিশন রাইড হেইলিং অ্যাপ। \n১০০% ওপেন সোর্স | ১০০% ওপেন ডেটা \n\n"
         BE_OPEN_CHOOSE_OPEN -> "\n\n #খুলে_রাখুন #খোঁজ_করুন_খোঁজ_করুন"
         NOW -> "এখন"
+        ADD_VEHICLE -> "যোগ যান"
+        SELECT_YOUR_VEHICLE_TYPE -> "আপনার গাড়ির প্রকার নির্বাচন করুন"
+        CAR -> "গাড়ী"

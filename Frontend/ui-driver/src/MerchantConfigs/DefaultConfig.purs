@@ -139,7 +139,11 @@ config =
               uploadRCandDL : true,
               enableYatriCoins : true,
               vehicleNSImg : "ny_ic_auto_image",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : true,
+                variantList : ["AutoCategory"]
+              }
             },
             {
               cityName : "Hyderabad",
@@ -155,7 +159,11 @@ config =
               uploadRCandDL : true,
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image_old",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
             },
             {
               cityName : "Mysore",
@@ -171,7 +179,11 @@ config =
               uploadRCandDL : true,
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
             },
             {
               cityName : "Delhi",
@@ -187,7 +199,11 @@ config =
               uploadRCandDL : true,
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
             },
             {
               cityName : "Chennai",
@@ -203,7 +219,11 @@ config =
               uploadRCandDL : false,
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image_old",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
             },
             {
               cityName : "Coimbatore",
@@ -219,7 +239,11 @@ config =
               uploadRCandDL : true,
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
             },
             {
               cityName : "Puducherry",
@@ -235,7 +259,11 @@ config =
               uploadRCandDL : true,
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
             },
             {
               cityName : "Gurugram",
@@ -251,7 +279,11 @@ config =
               uploadRCandDL : true,
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
             },
             {             
               cityName : "Noida",
@@ -267,7 +299,11 @@ config =
               uploadRCandDL : true,
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
             },
             {
               cityName : "TamilNaduCities",
@@ -283,9 +319,36 @@ config =
               uploadRCandDL : false,
               enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image_old",
-              registration : registrationConfig
+              registration : registrationConfig,
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
+            },
+            {
+              cityName : "Kolkata",
+              mapImage : "",
+              cityCode : "std:033",
+              showSubscriptions : true,
+              cityLat : 22.5354064,
+              cityLong : 88.2649516,
+              supportNumber : "",
+              languageKey : "BN_IN",
+              showDriverReferral : true,
+              showCustomerReferral : true,
+              uploadRCandDL : true, 
+              enableYatriCoins : false,
+              vehicleNSImg : "",
+              registration : {
+                  supportWAN : "",
+                  callSupport : false,
+                  whatsappSupport : false
+              },
+              variantSubscriptionConfig : {
+                enableVariantBasedSubscription : false,
+                variantList : []
+              }
             }
-            
             --, For future use
             -- {
             --   cityName : "Madurai",

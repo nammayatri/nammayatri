@@ -1290,3 +1290,6 @@ getHI stringKey =
         SHARE_NAMMA_YATRI_MESSAGE -> "नमस्ते! \n\nभारत का पहला जीरो कमीशन राइड हेलिंग ऐप देखें। \n100% ओपन सोर्स | 100% ओपन डेटा \n\n"
         BE_OPEN_CHOOSE_OPEN -> "\n\n #बी_ओपन #चुनें_ओपन"
         NOW -> "अभी"
+        ADD_VEHICLE -> "वाहन जोड़ें"
+        SELECT_YOUR_VEHICLE_TYPE -> "अपने वाहन का प्रकार चुनें"
+        CAR -> "कार"

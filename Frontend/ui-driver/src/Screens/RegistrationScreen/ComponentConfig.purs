@@ -149,3 +149,13 @@ enterReferralStateConfig state = InAppKeyboardModal.config{
       },
       modalType = ST.OTP
     }
+
+continueButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
+continueButtonConfig state = 
+  PrimaryButton.config
+  { textConfig{ text = getString CONTINUE}
+  , width = MATCH_PARENT
+  , margin = Margin 16 16 16 16
+  , height = V 48
+  , id = "RegistrationScreenButton"
+  }

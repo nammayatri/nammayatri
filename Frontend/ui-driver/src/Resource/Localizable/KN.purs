@@ -1290,3 +1290,6 @@ getKN stringKey =
         SHARE_NAMMA_YATRI_MESSAGE -> "ಹಾಯ್! \n\nಭಾರತದ ಮೊದಲನೇ ಜಿರೋ ಕಮಿಷನ್ ರೈಡ್ ಅಪ್ಲಿಕೇಶನ್ ಪರಿಶೀಲಿಸಿ. \n100% ಓಪನ್ ಸೋರ್ಸ್ | 100% ಓಪನ್ ಡೇಟಾ \n\n"
         BE_OPEN_CHOOSE_OPEN -> "\n\n #ತೆರೆದುಕೊಳ್ಳಿ #ಆಯ್ಕೆಮಾಡಿಕೊಳ್ಳಿ"
         NOW -> "ಈಗ"
+        ADD_VEHICLE -> "ವಾಹನ ಸೇರಿಸಿ"
+        SELECT_YOUR_VEHICLE_TYPE -> "ನಿಮ್ಮ ವಾಹನದ ರೀತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+        CAR -> "ಕಾರು"

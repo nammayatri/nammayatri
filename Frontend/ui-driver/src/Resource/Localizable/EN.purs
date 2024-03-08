@@ -1290,3 +1290,6 @@ getEN stringKey =
         SHARE_NAMMA_YATRI_MESSAGE -> "Hey there! \n\nCheck India's first Zero commission ride hailing app. \n100% Open source | 100% Open data \n\n"
         BE_OPEN_CHOOSE_OPEN -> "\n\n #beOpen #chooseOpen"
         NOW -> "Now"
+        ADD_VEHICLE -> "Add Vehicle"
+        SELECT_YOUR_VEHICLE_TYPE -> "Select your vehicle type"
+        CAR -> "Car"

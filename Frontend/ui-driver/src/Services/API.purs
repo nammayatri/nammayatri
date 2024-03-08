@@ -2022,6 +2022,7 @@ newtype VehicleDetails = VehicleDetails
     { certificateNumber :: String
     , vehicleModel :: Maybe String
     , vehicleColor :: Maybe String
+    , vehicleVariant :: Maybe String
     }
 
 instance makeGetAllRcDataReq :: RestEndpoint GetAllRcDataReq GetAllRcDataResp where

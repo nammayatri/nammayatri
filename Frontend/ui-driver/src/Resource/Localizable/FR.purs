@@ -958,5 +958,8 @@ getFR stringKey =
         SHARE_NAMMA_YATRI_MESSAGE -> "Salut! \n\nDécouvrez la première application de covoiturage sans commission en Inde. \n100% open source | 100% données ouvertes \n\n"
         BE_OPEN_CHOOSE_OPEN -> "\n\n #খুলে_রাখুন #খোঁজ_করুন_খোঁজ_করুন"
         NOW -> "Maintenant"
+        ADD_VEHICLE -> "Ajouter un véhicule"
+        SELECT_YOUR_VEHICLE_TYPE -> "Sélectionnez votre type de véhicule"
+        CAR -> "Voiture"
         _ -> ""
 

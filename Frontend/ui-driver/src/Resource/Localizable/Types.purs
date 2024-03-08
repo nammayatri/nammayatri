@@ -1300,3 +1300,6 @@ data STR = LETS_GET_STARTED
         | SHARE_NAMMA_YATRI_MESSAGE
         | BE_OPEN_CHOOSE_OPEN
         | NOW
+        | ADD_VEHICLE
+        | SELECT_YOUR_VEHICLE_TYPE
+        | CAR 
