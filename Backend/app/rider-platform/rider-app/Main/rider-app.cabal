@@ -203,6 +203,7 @@ library
       Domain.Types.Booking.BookingLocation
       Domain.Types.Booking.Type
       Domain.Types.BookingCancellationReason
+      Domain.Types.CacType
       Domain.Types.CallbackRequest
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
@@ -244,6 +245,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
+      Domain.Types.UtilsTH
       Domain.Types.VehicleVariant
       Domain.Types.WhiteListOrg
       Environment
