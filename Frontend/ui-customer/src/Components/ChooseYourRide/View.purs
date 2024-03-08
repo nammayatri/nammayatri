@@ -97,7 +97,7 @@ view push config =
         headerLayout = runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout"
         bottomButtonLayout = runFn1 getLayoutBounds $ EHC.getNewIDWithTag "bottomButtonLayout"
         len = length config.quoteList
-        estimateItemHeight = getHeightOfEstimateItem config
+        estimateItemHeight = config.selectedEstimateHeight
         quoteViewVisibleHeight = if len > 2 then (3 * estimateItemHeight) else (len * estimateItemHeight) + (estimateItemHeight / 2)
         
         pixels = runFn1 HU.getPixels FunctionCall
@@ -414,12 +414,9 @@ quoteListView push config isSingleEstimate =
 getQuoteListViewHeight :: Config -> Length
 getQuoteListViewHeight config =
     let len = length config.quoteList
-        quoteHeight = HU.getDefaultPixelSize $ getHeightOfEstimateItem config
-        height = if quoteHeight == 0 then 87 else quoteHeight
+        quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
+        height = if quoteHeight == 0 then 84 else quoteHeight
     in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then (if EHC.os == "IOS" then 18 else 16) else 5
-
-getHeightOfEstimateItem :: Config -> Int
-getHeightOfEstimateItem config = (runFn1 getLayoutBounds $ EHC.getNewIDWithTag (fromMaybe ChooseVehicle.config (config.quoteList !! 0)).id).height
 
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config
