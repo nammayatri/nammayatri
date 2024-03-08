@@ -3184,10 +3184,7 @@ whereToButtonView push state  =
       , cornerRadii $ Corners 8.0 true true true true
       , shadow $ getShadowFromConfig whereToButtonConfig.shadow
       ][
-        PrestoAnim.animationSet
-        [ Anim.fadeIn  ( state.props.isHomescreenExpanded) 
-        , Anim.fadeOut (not state.props.isHomescreenExpanded) 
-        ] $ 
+
         linearLayout
           [ width WRAP_CONTENT
           , height MATCH_PARENT
