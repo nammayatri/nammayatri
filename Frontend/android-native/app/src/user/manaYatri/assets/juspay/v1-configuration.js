@@ -40,6 +40,7 @@ window.getMerchantConfig = function () {
     "isChatEnabled": "true",
     "isGradient" : "false",
     "gradient": [],
+    "enableSingleEstimate": true,
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "estimateConfirmText": "Request a NammaYatri Ride",
@@ -244,7 +245,7 @@ window.getMerchantConfig = function () {
         },
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
-          "image" : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+          "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_single_estimate_auto.png"
         }
 
       }
