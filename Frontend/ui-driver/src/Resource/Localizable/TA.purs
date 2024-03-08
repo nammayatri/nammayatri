@@ -1237,3 +1237,6 @@ getTA stringKey =
         ZERO_COMMISION_UNLIMITED_RIDES -> "வரம்பற்ற சவாரிகள், கமிஷன் இல்லை"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "நாங்கள் தற்போது உங்கள் நகரத்தில் ஆட்டோரிக்ஷாக்களுடன் மட்டுமே வசிக்கிறோம்"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "மேலும் புதுப்பிப்புகளுக்கு காத்திருங்கள்"
+        ADD_VEHICLE -> "வாகனத்தைச் சேர்க்கவும்"
+        SELECT_YOUR_VEHICLE_TYPE -> "உங்கள் வாகன வகையை தேர்ந்தெடுக்கவும்"
+        CAR -> "கார்"
