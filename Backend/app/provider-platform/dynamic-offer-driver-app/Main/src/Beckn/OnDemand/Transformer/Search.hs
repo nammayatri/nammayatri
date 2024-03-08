@@ -1,3 +1,16 @@
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
+
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -26,25 +39,25 @@ import Tools.Error
 
 buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m Domain.Action.Beckn.Search.DSearchReq
 buildSearchReq messageId subscriber req context = do
-  let bapId_ = subscriber.subscriber_id
-  let bapUri_ = subscriber.subscriber_url
-  customerLanguage_ <- Beckn.OnDemand.Utils.Search.buildCustomerLanguage req
-  customerPhoneNum_ <- Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
-  let device_ = Nothing
-  disabilityTag_ <- Beckn.OnDemand.Utils.Search.buildDisabilityTag req
-  isReallocationEnabled_ <- Beckn.OnDemand.Utils.Search.getIsReallocationEnabled req
-  multipleRoutes <- Beckn.OnDemand.Utils.Search.buildMultipleRoutesTag req
-  let messageId_ = messageId
   now <- Kernel.Types.Common.getCurrentTime
-  routeDistance_ <- Beckn.OnDemand.Utils.Search.getDistance req
-  routeDuration_ <- Beckn.OnDemand.Utils.Search.getDuration req
-  routePoints_ <- Beckn.OnDemand.Utils.Search.buildRoutePoints req
+  let bapId_ = subscriber.subscriber_id
+      bapUri_ = subscriber.subscriber_url
+      customerLanguage_ = Beckn.OnDemand.Utils.Search.buildCustomerLanguage req
+      customerPhoneNum_ = Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
+      device_ = Nothing
+      disabilityTag_ = Beckn.OnDemand.Utils.Search.buildDisabilityTag req
+      isReallocationEnabled_ = Beckn.OnDemand.Utils.Search.getIsReallocationEnabled req
+      messageId_ = messageId
+      routeDistance_ = Beckn.OnDemand.Utils.Search.getDistance req
+      routeDuration_ = Beckn.OnDemand.Utils.Search.getDuration req
+      routePoints_ = Beckn.OnDemand.Utils.Search.buildRoutePoints req
+      multipleRoutes = Beckn.OnDemand.Utils.Search.buildMultipleRoutesTag req
+      pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
   pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddress . Just)
   pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req >>= tfLatLong
-  let pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
   transactionId_ <- Beckn.OnDemand.Utils.Common.getTransactionId context
   pure $
     Domain.Action.Beckn.Search.DSearchReq

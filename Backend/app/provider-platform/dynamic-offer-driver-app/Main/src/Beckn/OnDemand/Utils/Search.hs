@@ -73,52 +73,50 @@ getDropOffLocationGps req = do
     >>= (.stopLocation)
     >>= (.locationGps)
 
-getDistance :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Meters)
+getDistance :: Spec.SearchReqMessage -> Maybe Meters
 getDistance req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
   let tagValue = Utils.getTagV2 Tag.ROUTE_INFO Tag.DISTANCE_INFO_IN_M tagGroups
-  return $ tagValue >>= readMaybe . T.unpack >>= Just . Meters
+  Just . Meters =<< readMaybe . T.unpack =<< tagValue
 
-getDuration :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Seconds)
+getDuration :: Spec.SearchReqMessage -> Maybe Seconds
 getDuration req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
   let tagValue = Utils.getTagV2 Tag.ROUTE_INFO Tag.DURATION_INFO_IN_S tagGroups
-  return $ tagValue >>= readMaybe . T.unpack >>= Just . Seconds
+  Just . Seconds =<< readMaybe . T.unpack =<< tagValue
 
-buildCustomerLanguage :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Language)
+buildCustomerLanguage :: Spec.SearchReqMessage -> Maybe Language
 buildCustomerLanguage req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_LANGUAGE tagGroups
-  return $ tagValue >>= readMaybe . T.unpack >>= Just
+  readMaybe . T.unpack =<< tagValue
 
-buildDisabilityTag :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Text)
+buildDisabilityTag :: Spec.SearchReqMessage -> Maybe Text
 buildDisabilityTag req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
-  let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_DISABILITY tagGroups
-  return tagValue
+  Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_DISABILITY tagGroups
 
-buildCustomerPhoneNumber :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Text)
+buildCustomerPhoneNumber :: Spec.SearchReqMessage -> Maybe Text
 buildCustomerPhoneNumber req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
-  let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_PHONE_NUMBER tagGroups
-  return tagValue
+  Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_PHONE_NUMBER tagGroups
 
 -- customerPerson <- req ^? (ix "searchReqMessageIntent" . key "intentFulfillment" . key "fulfillmentCustomer" . key "customerPerson" . key "tags") & fromMaybeM (InvalidRequest "Missing Fields")
 
-getIsReallocationEnabled :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Bool)
+getIsReallocationEnabled :: Spec.SearchReqMessage -> Maybe Bool
 getIsReallocationEnabled req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
-  let tagValue = Utils.getTagV2 Tag.REALLOCATION_INFO Tag.IS_REALLOCATION_ENABLED tagGroups
-  return $ tagValue >>= readMaybe . T.unpack >>= Just
+      tagValue = Utils.getTagV2 Tag.REALLOCATION_INFO Tag.IS_REALLOCATION_ENABLED tagGroups
+  readMaybe . T.unpack =<< tagValue
 
-buildRoutePoints :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe [Maps.LatLong])
+buildRoutePoints :: Spec.SearchReqMessage -> Maybe [Maps.LatLong]
 buildRoutePoints req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
-  return $ Utils.getTagV2 Tag.ROUTE_INFO Tag.WAYPOINTS tagGroups >>= decode . encodeUtf8 >>= Just
+  decode . encodeUtf8 =<< Utils.getTagV2 Tag.ROUTE_INFO Tag.WAYPOINTS tagGroups
 
-buildMultipleRoutesTag :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe [Maps.RouteInfo])
+buildMultipleRoutesTag :: Spec.SearchReqMessage -> Maybe [Maps.RouteInfo]
 buildMultipleRoutesTag req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
-  return $ Utils.getTagV2 Tag.ROUTE_INFO Tag.MULTIPLE_ROUTES tagGroups >>= decode . encodeUtf8 >>= Just
+  decode . encodeUtf8 =<< Utils.getTagV2 Tag.ROUTE_INFO Tag.MULTIPLE_ROUTES tagGroups
 
 ----------------------fix it---------Add new tag-------RITIKA

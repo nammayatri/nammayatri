@@ -160,7 +160,7 @@ mkCustomerInfoTags customerLanguage disabilityTag _ =
 
 mkReallocationInfoTags :: Maybe Bool -> Maybe [Spec.TagGroup]
 mkReallocationInfoTags Nothing = Nothing
-mkReallocationInfoTags isReallocationEnabled =
+mkReallocationInfoTags (Just isReallocationEnabled) =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
