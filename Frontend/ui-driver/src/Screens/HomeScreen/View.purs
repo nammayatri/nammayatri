@@ -54,6 +54,8 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn3)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Utils (toggleLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign (unsafeToForeign)
@@ -235,6 +237,9 @@ view push state =
         (\action -> do
           void $ Events.endMeasuringDuration "onCreateToHomeScreenRenderDuration"
           void $ Events.endMeasuringDuration "initAppToHomeScreenRenderDuration"
+          void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+            liftFlowBT HU.hideSplash
+            void $ lift $ lift $ toggleLoader false  
           _ <- push action          
           _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
           _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation

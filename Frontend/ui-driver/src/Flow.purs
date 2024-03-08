@@ -1879,8 +1879,6 @@ homeScreenFlow = do
     when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
     when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
     updateBannerAndPopupFlags
-    liftFlowBT hideSplash
-    void $ lift $ lift $ toggleLoader false
     liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED  
   liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration"
   action <- UI.homeScreen
@@ -2258,9 +2256,9 @@ homeScreenFlow = do
       updateDriverDataToStates
       homeScreenFlow
     GOT_DRIVER_STATS state driverStats -> do
-      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{ driverRideStats = Just $ driverStats }      
-      updateDriverDataToStates
       modifyScreenState $ HomeScreenStateType (\_ -> state { data { driverStats = true } })
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{ driverRideStats = Just $ driverStats }      
+      updateDriverDataToStates      
       homeScreenFlow
   homeScreenFlow
 

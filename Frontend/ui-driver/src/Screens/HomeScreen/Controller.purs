@@ -1093,7 +1093,7 @@ eval (GoToEarningsScreen showCoinsView) state = do
   exit $ EarningsScreen state showCoinsView
 
 eval (DriverStats driverStats) state = do
-  updateAndExit state $ DriverStatsUpdate state driverStats
+  exit $ DriverStatsUpdate state driverStats
 
 eval _ state = continue state
 
