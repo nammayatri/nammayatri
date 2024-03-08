@@ -26,10 +26,6 @@ getBannerConfigs state action =
   then [metroBannerConfig state action]
   else [])
   <>
-  (if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
-    then [sosSetupBannerConfig state action] 
-    else [])
-  <>
   (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
     then [disabilityBannerConfig state action] 
     else [])
