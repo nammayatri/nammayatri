@@ -46,8 +46,8 @@ export const getEvents = function () {
   try {
     if (typeof window === "object") {
       if (window.Aggregate && !window.Aggregate.pushOnce) {
-        window.Aggregate.pushOnce = true;
         window.events.Aggregate = window.Aggregate;
+        window.Aggregate.pushOnce = true;        
       }
       const events = Object.assign({}, window.events, {
         appVersion: window.version["app"],
