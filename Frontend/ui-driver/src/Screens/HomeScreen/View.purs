@@ -76,7 +76,7 @@ import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, Screen
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..))
+import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), GetDriverInfoReq(..))
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
@@ -102,8 +102,12 @@ screen initialState =
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
-          when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
+          when (initialState.data.driverStats == false) do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+              driverStats <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (HU.getcurrentdate ""))            
+              lift $ lift $ doAff do liftEffect $ push $ DriverStats driverStats
+          when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do              
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
               case (activeRideResponse.list DA.!! 0) of
                 Just ride -> lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride
@@ -892,6 +896,7 @@ statsModel push state =
                               true -> getString COINS
                               false -> show state.data.coinBalance
                   , color Color.black700
+                  , visibility $ if state.data.driverStats then VISIBLE else GONE
                   ] <> FontStyle.tags TypoGraphy
               ]
             , imageView 
@@ -925,8 +930,8 @@ expandedStatsModel push state =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity CENTER_VERTICAL
-      ][ commonTV push (getString TODAYS_EARNINGS_STR) Color.black700 FontStyle.tags LEFT 0 ToggleStatsModel true
-      , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.totalEarningsOfDay)) Color.black800 FontStyle.h2 RIGHT 0 ToggleStatsModel false
+      ][ commonTV push (getString TODAYS_EARNINGS_STR) Color.black700 FontStyle.tags LEFT 0 ToggleStatsModel true true
+      , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.totalEarningsOfDay)) Color.black800 FontStyle.h2 RIGHT 0 ToggleStatsModel false state.data.driverStats
       , imageView 
         [ width $ V 12
         , height $ V 12
@@ -941,15 +946,15 @@ expandedStatsModel push state =
       , height WRAP_CONTENT
       , margin $ MarginTop 10
       , gravity CENTER_VERTICAL
-      ][ commonTV push (getString TRIP_EARNINGS) Color.black700 FontStyle.body3 LEFT 0 NoAction true
-        , commonTV push ("₹" <> formatCurrencyWithCommas (show (state.data.totalEarningsOfDay - state.data.bonusEarned))) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction false 
+      ][ commonTV push (getString TRIP_EARNINGS) Color.black700 FontStyle.body3 LEFT 0 NoAction true true
+        , commonTV push ("₹" <> formatCurrencyWithCommas (show (state.data.totalEarningsOfDay - state.data.bonusEarned))) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction false state.data.driverStats
       ]
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity CENTER_VERTICAL
       , margin $ MarginTop 10
-      ][ commonTV push (getString BONUS_EARNED) Color.black700 FontStyle.body3 LEFT 0 NoAction false
+      ][ commonTV push (getString BONUS_EARNED) Color.black700 FontStyle.body3 LEFT 0 NoAction false true
         , imageView 
           [ width $ V 12
           , height $ V 12
@@ -957,7 +962,7 @@ expandedStatsModel push state =
           , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_info_grey"
           , onClick push $ const $ ToggleBonusPopup
           ]
-        , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.bonusEarned)) Color.green900 FontStyle.subHeading1 RIGHT 0 NoAction true 
+        , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.bonusEarned)) Color.green900 FontStyle.subHeading1 RIGHT 0 NoAction true state.data.driverStats
       ]
     , separatorView 10
     , linearLayout
@@ -965,13 +970,13 @@ expandedStatsModel push state =
       , height WRAP_CONTENT
       , margin $ MarginTop 10
       , gravity CENTER_VERTICAL
-      ][ commonTV push (show state.data.totalRidesOfDay <> " " <> getString TRIPS) Color.black700 FontStyle.tags LEFT 0 NoAction true
-        , commonTV push (getString VIEW_MORE) Color.blue900 FontStyle.body3 RIGHT 0 (GoToEarningsScreen false) false
+      ][ commonTV push (show state.data.totalRidesOfDay <> " " <> getString TRIPS) Color.black700 FontStyle.tags LEFT 0 NoAction true state.data.driverStats
+        , commonTV push (getString VIEW_MORE) Color.blue900 FontStyle.body3 RIGHT 0 (GoToEarningsScreen false) false true
       ]
   ]
 
-commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean -> PrestoDOM (Effect Unit) w
-commonTV push text' color' theme gravity' marginTop action useWeight = 
+commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+commonTV push text' color' theme gravity' marginTop action useWeight visible = 
   textView $
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -980,6 +985,7 @@ commonTV push text' color' theme gravity' marginTop action useWeight =
   , gravity gravity'
   , margin $ MarginTop marginTop
   , onClick push $ const action
+  , visibility $ boolToVisibility visible
   ] <> theme TypoGraphy
     <> if useWeight then [weight 1.0] else []
 

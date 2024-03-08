@@ -871,6 +871,7 @@ type HomeScreenData =  {
   driverName :: String,
   vehicleType :: String,
   activeRide :: ActiveRide,
+  driverStats :: Boolean,
   cancelRideModal :: CancelRideModalData,
   currentDriverLat :: Number,
   currentDriverLon :: Number,

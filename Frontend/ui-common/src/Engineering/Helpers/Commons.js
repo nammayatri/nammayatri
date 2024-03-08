@@ -538,3 +538,13 @@ export const isTrue = function (a) {
   const bool = true;
   return a.toString() === bool.toString();
 }
+
+export const markPerformance = function (str) {
+  return function () {
+    try {
+      console.log("APP_PERF " + str + " : ", new Date().getTime());
+    } catch (err) {
+      console.log("Catch in APP_PERF markPerformance : ", err);
+    }
+  };
+};

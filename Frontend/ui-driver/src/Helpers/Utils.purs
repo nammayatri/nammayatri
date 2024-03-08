@@ -19,7 +19,7 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..))
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find) as DA
@@ -697,3 +697,25 @@ generateLanguageList languages = map getLanguage languages
       "BENGALI" -> {name:"বাংলা", value:"BN_IN", subtitle: "Bengali"}
       "ENGLISH" -> {name : "English", value: "EN_US", subtitle: "English"}
       _ -> {name : "English", value: "EN_US", subtitle: "English"}
+
+getDriverStatus :: String -> DriverStatus
+getDriverStatus dummy = do
+  case getValueToLocalNativeStore DRIVER_STATUS_N of
+    "Online" -> Online
+    "Offline" -> Offline
+    "Silent" -> Silent
+    _ -> Online
+
+getDriverStatusFromMode :: String -> DriverStatus
+getDriverStatusFromMode mode = do
+  case mode of
+    "ONLINE" -> Online
+    "OFFLINE" -> Offline
+    "SILENT" -> Silent
+    _ -> Online
+
+updateDriverStatus :: Boolean -> DriverStatus
+updateDriverStatus status = do
+  if status && getValueToLocalNativeStore DRIVER_STATUS_N == "Silent" then Silent
+    else if status then Online
+      else Offline

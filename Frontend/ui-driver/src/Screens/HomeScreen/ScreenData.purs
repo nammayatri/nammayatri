@@ -35,6 +35,7 @@ initData = {
         driverAlternateMobile : Nothing,
         gender : "UNKNOWN",
         subsRemoteConfig : RC.subscriptionConfig "subscription_configs",
+        driverStats: false,
         activeRide : {
           id : "",
           source : "",
