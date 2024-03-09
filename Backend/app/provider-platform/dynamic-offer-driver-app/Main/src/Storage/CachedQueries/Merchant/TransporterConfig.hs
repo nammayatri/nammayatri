@@ -50,7 +50,6 @@ import Domain.Types.Common
 import Domain.Types.Location (dummyToLocationData)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
-import Domain.Types.Person
 import qualified EulerHS.Language as L
 -- import Kernel.External.Types (Language)
 
@@ -136,28 +135,29 @@ getTransporterConfigFromDB id = do
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
     Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
 
-findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person) -> m (Maybe TransporterConfig)
-findByMerchantOpCityId id mPersonId = do
+findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> m (Maybe TransporterConfig)
+findByMerchantOpCityId id mbstickId = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
   if ("transporter_config" `GL.elem` useCACConfig)
-    then Just <$> findByMerchantOpCityIdCAC id mPersonId
+    then Just <$> findByMerchantOpCityIdCAC id mbstickId
     else getTransporterConfigFromDB id
 
-findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id Person) -> m TransporterConfig
-findByMerchantOpCityIdCAC id (Just personId) = do
+findByMerchantOpCityIdCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> m TransporterConfig
+findByMerchantOpCityIdCAC id (Just stickid) = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
   ( if isExp
       then
         ( do
-            Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACTransporterConfigKey personId) >>= \case
+            Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACTransporterConfigKey stickid) >>= \case
               Just (a :: Int) -> do
                 getConfig id a
               Nothing -> do
                 gen <- newStdGen
                 let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-                _ <- cacheToss personId toss
+                logDebug $ "the toss value is for transporter config " <> show toss
+                _ <- cacheToss stickid toss
                 getConfig id toss
         )
       else
@@ -177,13 +177,13 @@ cacheTransporterConfig cfg = do
   let merchantIdKey = makeMerchantOpCityIdKey cfg.merchantOperatingCityId
   Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @TransporterConfig @(TransporterConfigD 'Unsafe) cfg) expTime
 
-cacheToss :: (CacheFlow m r) => Id Person -> Int -> m ()
-cacheToss personId toss = do
+cacheToss :: (CacheFlow m r) => Text -> Int -> m ()
+cacheToss stickId toss = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeCACTransporterConfigKey personId) toss expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeCACTransporterConfigKey stickId) toss expTime
 
-makeCACTransporterConfigKey :: Id Person -> Text
-makeCACTransporterConfigKey id = "driver-offer:CAC:CachedQueries:TransporterConfig:PersonId-" <> id.getId
+makeCACTransporterConfigKey :: Text -> Text
+makeCACTransporterConfigKey id = "driver-offer:CAC:CachedQueries-" <> id
 
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:TransporterConfig:MerchantOperatingCityId-" <> id.getId

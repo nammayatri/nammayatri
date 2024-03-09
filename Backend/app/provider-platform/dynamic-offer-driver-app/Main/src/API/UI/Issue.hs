@@ -141,7 +141,7 @@ castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merc
 
 buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id SP.Person -> m Common.MerchantConfig
 buildMerchantConfig merchantOpCityId personId = do
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just personId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just personId.getId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   return
     Common.MerchantConfig
       { mediaFileSizeUpperLimit = transporterConfig.mediaFileSizeUpperLimit,

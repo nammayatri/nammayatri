@@ -122,7 +122,7 @@ data ServiceHandle m = ServiceHandle
     finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
-    findConfig :: m (Maybe DTConf.TransporterConfig),
+    findConfig :: (Maybe Text) -> m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
     getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m Meters,
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
@@ -131,7 +131,7 @@ data ServiceHandle m = ServiceHandle
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DP.Person) -> Flow (ServiceHandle Flow)
-buildEndRideHandle merchantId merchantOpCityId driverId = do
+buildEndRideHandle merchantId merchantOpCityId _ = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId True
   return $
     ServiceHandle
@@ -147,7 +147,7 @@ buildEndRideHandle merchantId merchantOpCityId driverId = do
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
         getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
         clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
-        findConfig = QTConf.findByMerchantOpCityId merchantOpCityId driverId,
+        findConfig = QTConf.findByMerchantOpCityId merchantOpCityId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId merchantOpCityId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
@@ -303,7 +303,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
   whenWithLocationUpdatesLock driverId $ do
     now <- getCurrentTime
-    thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
+    thresholdConfig <- findConfig (Just booking.transactionId) >>= fromMaybeM (InternalError "TransportConfigNotFound")
     let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
     tripEndPoints <- do
       res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId

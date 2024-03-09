@@ -97,7 +97,7 @@ verifyDL isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverDLReq 
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId.getId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   onboardingDocumentConfig <- QODC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound merchantOpCityId.getId (show DTO.DL))
   nameOnCard <-
     if (isNothing dateOfIssue && onboardingDocumentConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard))

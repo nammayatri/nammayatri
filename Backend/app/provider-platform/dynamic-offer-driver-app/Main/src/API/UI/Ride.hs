@@ -166,7 +166,7 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) DRide.OTPRideR
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   let rideOtp = specialZoneOtpCode
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId.getId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   -- confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId))]
   -- logDebug $ "transporterConfig Cond: " <> show confCond
   -- transporterConfig' <- liftIO $ CM.evalCtx "test" confCond

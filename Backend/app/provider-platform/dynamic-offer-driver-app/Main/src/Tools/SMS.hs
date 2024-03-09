@@ -80,7 +80,7 @@ sendDashboardSms ::
   HighPrecMoney ->
   m ()
 sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooking amount = do
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just driverId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (mbBooking <&> (.transactionId)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if transporterConfig.enableDashboardSms
     then do
       driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)

@@ -489,7 +489,7 @@ validateRequest merchantId sReq = do
       Nothing -> pure False
   let bapCity = nearestOperatingCity.city
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just bapCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just sReq.transactionId) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity
   return ValidatedDSearchReq {..}
