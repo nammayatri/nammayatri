@@ -2184,6 +2184,8 @@ type RideSearchProps = {
   , sourceManuallyMoved :: Boolean
   , destManuallyMoved :: Boolean
   , autoCompleteType :: Maybe AutoCompleteReqType
+  , prevSearchedSource :: String
+  , prevSearchedDestination :: String
 }
 
 data AutoCompleteReqType = PICKUP | DROP

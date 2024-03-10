@@ -304,6 +304,8 @@ initData = {
           , sourceManuallyMoved : false
           , destManuallyMoved : false
           , autoCompleteType : Nothing
+          , prevSearchedSource : ""
+          , prevSearchedDestination : ""
         }
     , selectedEstimateHeight : 0
     , isSafetyCenterDisabled : false

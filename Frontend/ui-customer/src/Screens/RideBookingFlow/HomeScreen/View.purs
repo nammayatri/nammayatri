@@ -2964,29 +2964,11 @@ zoneTimerExpiredView state push =
   , gravity CENTER
   ][ PopUpModal.view (push <<< ZoneTimerExpired) (zoneTimerExpiredConfig state)]
 
-editButtontView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-editButtontView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , gravity CENTER_VERTICAL
-  , stroke $ "1," <> state.data.config.confirmPickUpLocationBorder
-  , cornerRadius if (os == "IOS") then 15.0 else 20.0
-  , padding (Padding 10 6 10 6)
-  , margin $ MarginLeft 10 
-  ][ textView 
-      $
-      [ text (getString EDIT)
-      , color Color.black800
-      , gravity CENTER_VERTICAL
-      ]  
-      <> FontStyle.body1 TypoGraphy
-  ]
-
-currentLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w 
+currentLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 currentLocationView push state =
-  let showCurrentLocationView = DS.null state.props.defaultPickUpPoint
-  in linearLayout
+  let address = if DS.null state.data.source then getString CURRENT_LOCATION else state.data.source
+      showCurrentLocationView = DS.null state.props.defaultPickUpPoint
+  in  linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
@@ -3008,7 +2990,7 @@ currentLocationView push state =
                 ]
             , textView
                 $
-                  [ text state.data.source
+                  [ text address
                   , ellipsize true
                   , maxLines 2
                   , accessibility ENABLE

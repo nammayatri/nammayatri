@@ -1189,6 +1189,7 @@ homeScreenFlow = do
             { locateOnMapLocation
               { sourceLat = sourceLat
               , sourceLng = sourceLong
+              , source = ""
               }
             , sourceLat = sourceLat
             , sourceLong = sourceLong
@@ -1711,7 +1712,7 @@ rideSearchFlow flowType = do
   logField_ <- lift $ lift $ getLogFields
   (GlobalState homeScreenModifiedState) <- getState
   let finalState = homeScreenModifiedState.homeScreen -- bothLocationChangedState{props{isSrcServiceable =homeScreenModifiedState.homeScreen.props.isSrcServiceable, isDestServiceable = homeScreenModifiedState.homeScreen.props.isDestServiceable, isRideServiceable = homeScreenModifiedState.homeScreen.props.isRideServiceable }}
-  if (finalState.props.sourceLat /= 0.0 && finalState.props.sourceLong /= 0.0) && (finalState.props.destinationLat /= 0.0 && finalState.props.destinationLong /= 0.0) && (finalState.data.source /= "") && (finalState.data.destination /= "")
+  if (finalState.props.sourceLat /= 0.0 && finalState.props.sourceLong /= 0.0) && (finalState.props.destinationLat /= 0.0 && finalState.props.destinationLong /= 0.0) && (finalState.data.destination /= "")
     then do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{flowWithoutOffers = flowWithoutOffers WithoutOffers}})
       case finalState.props.sourceSelectedOnMap of
