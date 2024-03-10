@@ -2,13 +2,12 @@ import { callbackMapper } from "presto-ui";
 
 let timerIdForTimeout;
 const btnLoaderState = new Map();
-const {
-  JBridge
-} = window;
+const { JBridge } = window;
 let mainFiber = null;
 let timer;
 let locationPollingTimer;
-const locationUpdateServiceName = "in.juspay.mobility.app.LocationUpdateService";
+const locationUpdateServiceName =
+  "in.juspay.mobility.app.LocationUpdateService";
 let timerIdDebounce = null;
 let inputForDebounce;
 const JOS = window.JOS;
@@ -183,7 +182,6 @@ const JOS = window.JOS;
 //   }
 // }
 
-
 // exports._jwsSign = function(data) {
 //   return function(headers) {
 //     return function(alias) {
@@ -233,7 +231,9 @@ const JOS = window.JOS;
 export const requestLocationPermissionDriver = function (cb) {
   return function (action) {
     return function () {
-      const callback = callbackMapper.map(function (isLocationPermissionEnabled) {
+      const callback = callbackMapper.map(function (
+        isLocationPermissionEnabled
+      ) {
         cb(action(isLocationPermissionEnabled))();
       });
       return window.JBridge.requestLocationPermissionDriver(callback);
@@ -244,12 +244,12 @@ export const requestLocationPermissionDriver = function (cb) {
 export const _addCertificates = function (str) {
   return function () {
     window.JBridge.addCertificates(str);
-  }
-}
+  };
+};
 
 export const _isPlayStoreInstalled = function () {
   return window.JBridge.isPlayStoreInstalled();
-}
+};
 
 // exports._safefyNetShutdownSafeBrowsing = function(cb) {
 //   return function() {
@@ -268,16 +268,15 @@ export const _isPlayStoreInstalled = function () {
 export const _isNetworkAvailable = function () {
   return function () {
     return window.JBridge.isNetworkAvailable();
-  }
-}
-
+  };
+};
 
 export const _renewFile = function (file) {
   return function () {
-    console.log("renew files")
-    return window.JBridge.renewFile(file)
-  }
-}
+    console.log("renew files");
+    return window.JBridge.renewFile(file);
+  };
+};
 
 export const closeApp = function (str) {
   window.JBridge.closeApp();
@@ -296,12 +295,12 @@ export const showLoaderImpl = function (str) {
 export const fetchPackageName = function (unit) {
   return function () {
     try {
-      if(window.JBridge.fetchPackageName){
+      if (window.JBridge.fetchPackageName) {
         return window.JBridge.fetchPackageName();
-      }else{
+      } else {
         return "";
       }
-    }catch(e){
+    } catch (e) {
       console.log("Error in fetchPackageName : " + e);
       return "";
     }
@@ -312,13 +311,12 @@ export const isLocationPermissionEnabled = function (unit) {
   return function () {
     if (window.__OS == "IOS") {
       if (window.JBridge.isLocationAuthenticationStatusDetermined() == "1") {
-        return true
+        return true;
       } else {
-        return false
+        return false;
       }
     }
     return window.JBridge.isLocationPermissionEnabled();
-
   };
 };
 
@@ -336,18 +334,31 @@ export const checkAndAskNotificationPermission = function (shouldAlwaysAsk) {
         check = true;
       } else {
         check = false;
-        JBridge.setKeysInSharedPrefs("LAST_APP_OPENED", new Date().toLocaleDateString());
-        JBridge.setKeysInSharedPrefs("APP_OPEN_COUNT", String(parseInt(appOpenCount) + 1));
+        JBridge.setKeysInSharedPrefs(
+          "LAST_APP_OPENED",
+          new Date().toLocaleDateString()
+        );
+        JBridge.setKeysInSharedPrefs(
+          "APP_OPEN_COUNT",
+          String(parseInt(appOpenCount) + 1)
+        );
       }
     } else {
       check = false;
     }
   } else {
-    JBridge.setKeysInSharedPrefs("LAST_APP_OPENED", new Date().toLocaleDateString());
+    JBridge.setKeysInSharedPrefs(
+      "LAST_APP_OPENED",
+      new Date().toLocaleDateString()
+    );
     JBridge.setKeysInSharedPrefs("APP_OPEN_COUNT", "0");
   }
-  
-  if ((check || shouldAlwaysAsk) && window.__OS == "ANDROID" && window.JBridge.checkAndAskNotificationPermission) {
+
+  if (
+    (check || shouldAlwaysAsk) &&
+    window.__OS == "ANDROID" &&
+    window.JBridge.checkAndAskNotificationPermission
+  ) {
     return window.JBridge.checkAndAskNotificationPermission();
   }
 };
@@ -356,16 +367,16 @@ export const getLocationPermissionStatus = function (unit) {
   try {
     if (window.__OS == "IOS") {
       const resp = window.JBridge.getLocationPermissionStatus();
-      if (resp == "3" || resp == "4" || resp == "5") return "ENABLED"
-      else if (resp == "0") return "DISABLED"
-      else return "DENIED"
+      if (resp == "3" || resp == "4" || resp == "5") return "ENABLED";
+      else if (resp == "0") return "DISABLED";
+      else return "DENIED";
     } else {
       return window.JBridge.getLocationPermissionStatus();
     }
   } catch (e) {
     return "ENABLED";
   }
-}
+};
 
 export const isMicrophonePermissionEnabled = function (unit) {
   return window.JBridge.isMicrophonePermissionEnabled();
@@ -373,7 +384,7 @@ export const isMicrophonePermissionEnabled = function (unit) {
 
 export const getPackageName = function () {
   if (window.__OS == "IOS") {
-    const sessionDetails = JSON.parse(window.JBridge.getSessionDetails())
+    const sessionDetails = JSON.parse(window.JBridge.getSessionDetails());
     if (sessionDetails && sessionDetails.packageName) {
       return sessionDetails.packageName;
     }
@@ -385,7 +396,7 @@ export const getPackageName = function () {
 
 export const getVersionCode = function () {
   if (window.__OS == "IOS") {
-    const sessionDetails = JSON.parse(window.JBridge.getSessionDetails())
+    const sessionDetails = JSON.parse(window.JBridge.getSessionDetails());
     if (sessionDetails && sessionDetails.appVersion) {
       return parseInt(sessionDetails.appVersion);
     }
@@ -397,7 +408,7 @@ export const getVersionCode = function () {
 
 export const getVersionName = function () {
   if (window.__OS == "IOS") {
-    const sessionDetails = JSON.parse(window.JBridge.getSessionDetails())
+    const sessionDetails = JSON.parse(window.JBridge.getSessionDetails());
     if (sessionDetails && sessionDetails.app_version) {
       return sessionDetails.app_version;
     }
@@ -502,7 +513,7 @@ export const setFCMTokenWithTimeOut = function (timeOut, cb) {
     });
     return window.JBridge.setFCMToken(callback);
   }
-}
+};
 
 export const dateTimePicker = function (cb) {
   return function (action) {
@@ -554,7 +565,6 @@ export const getNearbyPlaces2 = function (cb) {
   };
 };
 
-
 export const isNetworkAvailable = function (unit) {
   return window.JBridge.isNetworkAvailable();
 };
@@ -570,7 +580,6 @@ export const openUrlInMailApp = function (str) {
     if (window.JBridge.openUrlInMailApp) {
       return window.JBridge.openUrlInMailApp(str);
     }
-
   };
 };
 
@@ -582,16 +591,22 @@ export const addMarkerImpl = function (title) {
           return function (anchorV1) {
             return function () {
               console.log("I AM HERE ------------------");
-              window.JBridge.upsertMarker(title, lat, lng, markerSize, anchorV, anchorV1);
+              window.JBridge.upsertMarker(
+                title,
+                lat,
+                lng,
+                markerSize,
+                anchorV,
+                anchorV1
+              );
               return true;
             };
-          }
-        }
-      }
+          };
+        };
+      };
     };
   };
 };
-
 
 export const removeMarker = function (title) {
   try {
@@ -619,18 +634,43 @@ export const drawRoute = function (data) {
                   return function (destinationName) {
                     return function (mapRouteConfig) {
                       return function () {
-                        console.log("I AM HERE ------------------ IN DRAW ROUTE");
+                        console.log(
+                          "I AM HERE ------------------ IN DRAW ROUTE"
+                        );
 
                         try {
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));
+                          return window.JBridge.drawRoute(
+                            JSON.stringify(data),
+                            style,
+                            trackColor,
+                            isActual,
+                            sourceMarker,
+                            destMarker,
+                            polylineWidth,
+                            type,
+                            sourceName,
+                            destinationName,
+                            JSON.stringify(mapRouteConfig)
+                          );
                         } catch (err) {
                           /*
                            * This Function is deprecated on 10 Jul- 2023
                            * Remove this function once it is not begin used.
                            */
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);
+                          return window.JBridge.drawRoute(
+                            JSON.stringify(data),
+                            style,
+                            trackColor,
+                            isActual,
+                            sourceMarker,
+                            destMarker,
+                            polylineWidth,
+                            type,
+                            sourceName,
+                            destinationName
+                          );
                         }
-                      }
+                      };
                     };
                   };
                 };
@@ -648,28 +688,43 @@ export const updateRouteMarker = function (data) {
     if (window.JBridge.updateRouteMarker) {
       return window.JBridge.updateRouteMarker(JSON.stringify(data));
     }
-  }
-}
+  };
+};
 
 export const methodArgumentCount = function (functionName) {
   try {
     return window.JBridge.methodArgumentCount(functionName);
   } catch (error) {
-    console.log("error inside argumentCount : " + error)
+    console.log("error inside argumentCount : " + error);
     return 0;
   }
-}
-
+};
 
 export const updateRoute = (configObj) => {
   if (window.JBridge.updateRoute) {
     try {
-      if (window.__OS == "IOS" || (window.__OS == "ANDROID" && (methodArgumentCount("updateRoute") == 1)))
+      if (
+        window.__OS == "IOS" ||
+        (window.__OS == "ANDROID" && methodArgumentCount("updateRoute") == 1)
+      )
         return window.JBridge.updateRoute(JSON.stringify(configObj));
       else
-        return window.JBridge.updateRoute(JSON.stringify(configObj.json), configObj.destMarker, configObj.eta, configObj.srcMarker, JSON.stringify(configObj.specialLocation), configObj.zoomLevel);
+        return window.JBridge.updateRoute(
+          JSON.stringify(configObj.json),
+          configObj.destMarker,
+          configObj.eta,
+          configObj.srcMarker,
+          JSON.stringify(configObj.specialLocation),
+          configObj.zoomLevel
+        );
     } catch (e) {
-      return window.JBridge.updateRoute(JSON.stringify(configObj.json), configObj.destMarker, configObj.eta, configObj.srcMarker, JSON.stringify(configObj.specialLocation));
+      return window.JBridge.updateRoute(
+        JSON.stringify(configObj.json),
+        configObj.destMarker,
+        configObj.eta,
+        configObj.srcMarker,
+        JSON.stringify(configObj.specialLocation)
+      );
     }
   }
 };
@@ -679,27 +734,39 @@ export const storeCallBackMessageUpdated = function (cb) {
     return function (chatUserId) {
       return function (action) {
         return function () {
-          const callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize) {
+          const callback = callbackMapper.map(function (
+            message,
+            sentBy,
+            timeStamp,
+            messagesSize
+          ) {
             if (messagesSize == undefined) {
-              messagesSize = "-1"
+              messagesSize = "-1";
             }
             const messageObj = {
-              "message": message,
-              "sentBy": sentBy,
-              "timeStamp": timeStamp,
+              message: message,
+              sentBy: sentBy,
+              timeStamp: timeStamp,
               type: "Text",
-              delay: 0
-            }
+              delay: 0,
+            };
             window.chatMessages = window.chatMessages || [];
-            if(sentBy == "Driver") window.didDriverMessage = true;
+            if (sentBy == "Driver") window.didDriverMessage = true;
             window.chatMessages.push(messageObj);
-            if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
+            if (
+              window.chatMessages.length - 1 == messagesSize ||
+              messagesSize === "-1"
+            ) {
               cb(action(message)(sentBy)(timeStamp)(messagesSize))();
             }
           });
           window.storeCallBackMessageUpdated = callback;
           if (JBridge.storeCallBackMessageUpdated) {
-            JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
+            JBridge.storeCallBackMessageUpdated(
+              chatChannelID,
+              chatUserId,
+              callback
+            );
           }
         };
       };
@@ -710,23 +777,25 @@ export const storeCallBackMessageUpdated = function (cb) {
 export const storeKeyBoardCallback = function (cb, action) {
   const keyBoardCallback = function (state) {
     cb(action(state))();
-  }
+  };
   window.keyBoardCallback = keyBoardCallback;
 };
 
 export const getChatMessages = function (string) {
-  return [].concat(window.chatMessages !== undefined ? window.chatMessages : []);
-}
+  return [].concat(
+    window.chatMessages !== undefined ? window.chatMessages : []
+  );
+};
 
 export const clearChatMessages = function () {
   window.chatMessages = undefined;
   window.didDriverMessage = undefined;
-}
+};
 
 export const dateCallback = function (cb, action) {
   const callback = function () {
     cb(action)();
-  }
+  };
   window.dateCallback = callback;
 };
 
@@ -756,24 +825,27 @@ export const scrollOnResume = function (cb) {
     try {
       const callback = function () {
         cb(action)();
-      }
+      };
       const scrollTime = function () {
-        if (getKeyInSharedPrefKeys("LOCAL_STAGE") === "ChatWithCustomer" || getKeyInSharedPrefKeys("LOCAL_STAGE") === "ChatWithDriver") {
+        if (
+          getKeyInSharedPrefKeys("LOCAL_STAGE") === "ChatWithCustomer" ||
+          getKeyInSharedPrefKeys("LOCAL_STAGE") === "ChatWithDriver"
+        ) {
           setTimeout(callback, 500);
         }
-      }
+      };
       window.scrollAction = scrollTime;
     } catch (e) {
       console.error("Error in scrollOnResume : " + e);
     }
-  }
-}
+  };
+};
 
 export const startChatListenerService = function () {
   if (JBridge.startChatListenerService) {
     JBridge.startChatListenerService();
   }
-}
+};
 
 export const stopChatListenerService = function () {
   if (JBridge.stopChatListenerService) {
@@ -781,14 +853,14 @@ export const stopChatListenerService = function () {
     window.didDriverMessage = undefined;
     JBridge.stopChatListenerService();
   }
-}
+};
 
 export const sendMessage = function (message) {
   if (JBridge.sendMessage) {
     if (timer) clearTimeout(timer);
     const fn = function () {
       return JBridge.sendMessage(message);
-    }
+    };
     timer = setTimeout(fn, 200);
   }
 };
@@ -800,14 +872,14 @@ export const scrollToEnd = function (id) {
     } else if (JBridge.scrollToBottom && bottom) {
       JBridge.scrollToBottom(id);
     }
-  }
-}
+  };
+};
 
 export const saveSuggestions = function (key) {
   return function (suggestions) {
     try {
       let configSuggestions = "";
-      if(JBridge.fetchRemoteConfigString) {
+      if (JBridge.fetchRemoteConfigString) {
         configSuggestions = JBridge.fetchRemoteConfigString("chat_suggestions");
       }
       if (configSuggestions == "") {
@@ -815,8 +887,8 @@ export const saveSuggestions = function (key) {
         if (!Array.isArray(suggestions)) {
           return;
         } else {
-          suggestions.forEach(item => {
-            convertedJSON[item.key] = item.value
+          suggestions.forEach((item) => {
+            convertedJSON[item.key] = item.value;
           });
         }
         configSuggestions = JSON.stringify(convertedJSON);
@@ -825,23 +897,25 @@ export const saveSuggestions = function (key) {
     } catch (error) {
       console.error("Error in saveSuggestions " + error);
     }
-  }
-}
+  };
+};
 
 export const saveSuggestionDefs = function (key) {
   return function (suggestionDefs) {
     try {
       let configSuggestionDefs = "";
-      if(JBridge.fetchRemoteConfigString) {
-        configSuggestionDefs = JBridge.fetchRemoteConfigString("chat_suggestions_defs");
+      if (JBridge.fetchRemoteConfigString) {
+        configSuggestionDefs = JBridge.fetchRemoteConfigString(
+          "chat_suggestions_defs"
+        );
       }
-      if(configSuggestionDefs == "") {
+      if (configSuggestionDefs == "") {
         const convertedJSON = {};
         if (!Array.isArray(suggestionDefs)) {
           return;
         } else {
-          suggestionDefs.forEach(item => {
-            convertedJSON[item.key] = item.value
+          suggestionDefs.forEach((item) => {
+            convertedJSON[item.key] = item.value;
           });
         }
         configSuggestionDefs = JSON.stringify(convertedJSON);
@@ -850,13 +924,15 @@ export const saveSuggestionDefs = function (key) {
     } catch (error) {
       console.error("Error in saveSuggestionDefs " + error);
     }
-  }
-}
+  };
+};
 
 export const getSuggestionsfromLocal = function (configKey) {
   return function (key) {
     try {
-      const suggestions = JSON.parse(JBridge.fetchRemoteConfigString(configKey));
+      const suggestions = JSON.parse(
+        JBridge.fetchRemoteConfigString(configKey)
+      );
       const keys = suggestions[key];
       if (keys) {
         return keys;
@@ -866,14 +942,16 @@ export const getSuggestionsfromLocal = function (configKey) {
       console.error("Error in getSuggestionsfromKey " + error);
       return ["error"];
     }
-  }
-}
+  };
+};
 
 export const getSuggestionfromKey = function (configKey) {
   return function (key) {
     return function (language) {
       try {
-        const suggestionDefs = JSON.parse(JBridge.fetchRemoteConfigString(configKey + "_defs"));
+        const suggestionDefs = JSON.parse(
+          JBridge.fetchRemoteConfigString(configKey + "_defs")
+        );
         const val = suggestionDefs[key];
         let suggestion = "";
         if (val) {
@@ -904,56 +982,86 @@ export const getSuggestionfromKey = function (configKey) {
               break;
           }
           return suggestion;
-        } else
-          return key;
+        } else return key;
       } catch (error) {
         console.error("Error in getSuggestionfromKey : " + error);
         return "";
       }
-    }
+    };
+  };
+};
+
+export const addMediaFile = (
+  viewID,
+  source,
+  actionButtonID,
+  playIcon,
+  pauseIcon,
+  timerID,
+  autoPlay
+) => {
+  try {
+    JBridge.addMediaFile(
+      viewID,
+      source,
+      actionButtonID,
+      playIcon,
+      pauseIcon,
+      timerID,
+      autoPlay
+    );
+  } catch (e) {
+    JBridge.addMediaFile(
+      viewID,
+      source,
+      actionButtonID,
+      playIcon,
+      pauseIcon,
+      timerID
+    );
   }
 };
 
-export const addMediaFile =  (viewID, source,actionButtonID, playIcon,pauseIcon, timerID, autoPlay) => {
-  try {
-    JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID, autoPlay);
-  }catch(e){
-    JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
+export const clearFocus = function (id) {
+  if (window.JBridge.clearFocus) {
+    return JBridge.clearFocus(id);
   }
-}
-
-
-export const clearFocus = function (id){
-  if(window.JBridge.clearFocus){
-    return JBridge.clearFocus(id)
-  }
-}
-
+};
 
 export const removeMediaPlayer = function (id) {
-  if (window.JBridge.removeMediaPlayer){
+  if (window.JBridge.removeMediaPlayer) {
     JBridge.removeMediaPlayer();
   }
 };
 
 // Deprecated 5-Jan-2024 - Remove this function once it is not begin used.
 // use displayBase64Image instead
-export const renderBase64ImageFile = function (base64Image, id, fitCenter, imgScaleType){
-  try{
-    return JBridge.renderBase64ImageFile(base64Image, id, fitCenter, imgScaleType);
-  }catch (err){
+export const renderBase64ImageFile = function (
+  base64Image,
+  id,
+  fitCenter,
+  imgScaleType
+) {
+  try {
+    return JBridge.renderBase64ImageFile(
+      base64Image,
+      id,
+      fitCenter,
+      imgScaleType
+    );
+  } catch (err) {
     return JBridge.renderBase64ImageFile(base64Image, id, fitCenter);
   }
-}
+};
 
 export const uploadMultiPartData = function (path, url, fileType) {
-  if (window.JBridge.uploadMultiPartData){
+  if (window.JBridge.uploadMultiPartData) {
     JBridge.uploadMultiPartData(path, url, fileType);
   }
-}
+};
 
 export const startAudioRecording = function (id) {
-  if (window.JBridge.startAudioRecording){
+  if (window.JBridge.startAudioRecording) {
     if (window.__OS == "IOS") {
       return JBridge.startAudioRecording() == "0" ? false : true;
     } else {
@@ -963,30 +1071,29 @@ export const startAudioRecording = function (id) {
 };
 
 export const stopAudioRecording = function (id) {
-  if (window.JBridge.stopAudioRecording){
+  if (window.JBridge.stopAudioRecording) {
     return JBridge.stopAudioRecording();
   }
-}
+};
 
 export const saveAudioFile = function (source) {
-  if (window.JBridge.saveAudioFile){
+  if (window.JBridge.saveAudioFile) {
     return JBridge.saveAudioFile(source);
   }
-}
-
+};
 
 export const differenceBetweenTwoUTC = function (date1, date2) {
   const diffInSeconds = Math.round((new Date(date1) - new Date(date2)) / 1000);
-  if (isNaN(diffInSeconds)){
+  if (isNaN(diffInSeconds)) {
     return 0;
   }
   return diffInSeconds;
-}
+};
 
 export const differenceBetweenTwoUTCInMinutes = function (date1, date2) {
   const diffInMinutes = Math.round((new Date(date1) - new Date(date2)) / 60000);
   return diffInMinutes;
-}
+};
 
 export const isCoordOnPath = function (data) {
   return function (lat) {
@@ -1014,7 +1121,6 @@ export const isCoordOnPath = function (data) {
   };
 };
 
-
 export const addMarkers = function (data) {
   window.JBridge.addMarkers(JSON.stringify(data));
 };
@@ -1033,7 +1139,7 @@ export const initiateLocationServiceClient = function () {
   } else {
     window.JBridge.initiateLocationServiceClient();
   }
-}
+};
 
 export const checkOverlayPermission = function (str) {
   return function () {
@@ -1066,16 +1172,32 @@ export const showMapImpl = function (id) {
                 window.y = action;
                 cb(action(key)(lat)(lon))();
               });
-              const mapConfig = window && window.appConfig && window.appConfig.mapConfig ? JSON.stringify(window.appConfig.mapConfig) : "{}";
+              const mapConfig =
+                window && window.appConfig && window.appConfig.mapConfig
+                  ? JSON.stringify(window.appConfig.mapConfig)
+                  : "{}";
               try {
-                window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback, mapConfig);
+                window.JBridge.showMap(
+                  id,
+                  isEnableCurrentLocation,
+                  type,
+                  zoom,
+                  callback,
+                  mapConfig
+                );
               } catch (err) {
-                window.JBridge.showMap(id, isEnableCurrentLocation, type, zoom, callback);
+                window.JBridge.showMap(
+                  id,
+                  isEnableCurrentLocation,
+                  type,
+                  zoom,
+                  callback
+                );
               }
               return true;
             };
           };
-        }
+        };
       };
     };
   };
@@ -1086,21 +1208,20 @@ export const getCurrentLatLong = function () {
     const parsedData = JSON.parse(window.JBridge.getCurrentLatLong());
     if (parsedData.lat && parsedData.lng) {
       return parsedData;
-    } else { // fallBack for previous release
+    } else {
+      // fallBack for previous release
       return {
-        "lat": parsedData.lat,
-        "lng": parsedData.lng
-      }
+        lat: parsedData.lat,
+        lng: parsedData.lng,
+      };
     }
   }
 };
 
-
 export const isLocationEnabled = function (unit) {
   return function () {
     if (window.__OS == "IOS") {
-      if (window.JBridge.isLocationEnabled() == "1")
-        return true;
+      if (window.JBridge.isLocationEnabled() == "1") return true;
       else return false;
     }
     return window.JBridge.isLocationEnabled();
@@ -1132,7 +1253,12 @@ export const getCurrentPosition = function (cb) {
   };
 };
 
-export const getCurrentPositionWithTimeoutImpl = function (cb, action, delay, shouldFallBack) {
+export const getCurrentPositionWithTimeoutImpl = function (
+  cb,
+  action,
+  delay,
+  shouldFallBack
+) {
   const callbackFallback = function () {
     cb(action("0.0")("0.0")(new Date().toISOString()))();
   };
@@ -1146,23 +1272,21 @@ export const getCurrentPositionWithTimeoutImpl = function (cb, action, delay, sh
   } catch (err) {
     window.JBridge.getCurrentPosition(callback);
   }
-}
+};
 
-export const datePickerImpl = function (cb , action, delay){
+export const datePickerImpl = function (cb, action, delay) {
   const callback = callbackMapper.map(function (str, year, month, date) {
     cb(action(str)(year)(month)(date))();
-  })
+  });
   window.JBridge.datePicker(callback, "");
-}
+};
 
-export const timePickerImpl = function (cb , action, delay){
+export const timePickerImpl = function (cb, action, delay) {
   const callback = callbackMapper.map(function (str, hour, min) {
     cb(action(str)(hour)(min))();
-  })
+  });
   window.JBridge.timePicker(callback);
-}
-
-
+};
 
 export const translateStringWithTimeout = function (cb) {
   return function (action) {
@@ -1183,30 +1307,40 @@ export const translateStringWithTimeout = function (cb) {
           //   cb(action(value))();
           // }
           cb(action(value))();
-        }
-      }
-    }
-  }
-}
+        };
+      };
+    };
+  };
+};
 
 export const openNavigation = function (slat) {
   return function (slong) {
     return function (dlat) {
       return function (dlong) {
         return function (mode) {
-          if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery) {
+          if (
+            window.appConfig &&
+            window.appConfig.navigationAppConfig &&
+            window.JBridge.openNavigationWithQuery
+          ) {
             const config = window.appConfig.navigationAppConfig;
             const isIOS = window.__OS === "IOS";
             const platformConfig = isIOS ? config.ios : config.android;
-            const query = mode == "WALK" ? platformConfig.walkQuery : platformConfig.query;
+            const query =
+              mode == "WALK" ? platformConfig.walkQuery : platformConfig.query;
             if (isIOS) {
               return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
             } else {
               const packageName = platformConfig.packageName;
-              return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
+              return window.JBridge.openNavigationWithQuery(
+                dlat,
+                dlong,
+                query,
+                packageName
+              );
             }
           } else {
-            // deprecated 
+            // deprecated
             return window.JBridge.openNavigation(slat, slong, dlat, dlong);
           }
         };
@@ -1231,7 +1365,6 @@ export const animateCamera = function (lat) {
   };
 };
 
-
 export const moveCamera = function (lat1) {
   return function (lng1) {
     return function (lat2) {
@@ -1254,10 +1387,8 @@ export const minimizeApp = function (str) {
 export const toast = function (str) {
   if (window.__OS == "IOS")
     window.JBridge.toast(str); //remove once toast is fixed in iOS.
-  else if (window.JBridge.toaster)
-    window.JBridge.toaster(str);
-  else
-    window.JBridge.toast(str);
+  else if (window.JBridge.toaster) window.JBridge.toaster(str);
+  else window.JBridge.toast(str);
 };
 
 export const firebaseLogEventWithParams = function (_event) {
@@ -1265,7 +1396,11 @@ export const firebaseLogEventWithParams = function (_event) {
     return function (paramValue) {
       return function () {
         if (window.JBridge.firebaseLogEventWithParams) {
-          window.JBridge.firebaseLogEventWithParams(_event, paramKey, paramValue);
+          window.JBridge.firebaseLogEventWithParams(
+            _event,
+            paramKey,
+            paramValue
+          );
         }
       };
     };
@@ -1279,7 +1414,13 @@ export const firebaseLogEventWithTwoParams = function (_event) {
         return function (paramValue2) {
           return function () {
             if (window.JBridge.firebaseLogEventWithTwoParams) {
-              window.JBridge.firebaseLogEventWithTwoParams(_event, paramKey1, paramValue1, paramKey2, paramValue2);
+              window.JBridge.firebaseLogEventWithTwoParams(
+                _event,
+                paramKey1,
+                paramValue1,
+                paramKey2,
+                paramValue2
+              );
             }
           };
         };
@@ -1293,14 +1434,14 @@ export const firebaseLogEvent = function (str) {
     if (window.JBridge.firebaseLogEvent) {
       window.JBridge.firebaseLogEvent(str);
     }
-  }
+  };
 };
 
 export const metaLogEvent = function (_event) {
   if (window.JBridge.metaLogEvent) {
     window.JBridge.metaLogEvent(_event);
   }
-}
+};
 
 export const metaLogEventWithParams = function (_event) {
   return function (paramKey) {
@@ -1321,7 +1462,13 @@ export const metaLogEventWithTwoParams = function (_event) {
         return function (paramValue2) {
           return function () {
             if (window.JBridge.metaLogEventWithTwoParams) {
-              window.JBridge.metaLogEventWithTwoParams(_event, paramKey1, paramValue1, paramKey2, paramValue2);
+              window.JBridge.metaLogEventWithTwoParams(
+                _event,
+                paramKey1,
+                paramValue1,
+                paramKey2,
+                paramValue2
+              );
             }
           };
         };
@@ -1331,8 +1478,7 @@ export const metaLogEventWithTwoParams = function (_event) {
 };
 
 export const hideKeyboardOnNavigation = function (permission) {
-  if (permission)
-    window.JBridge.hideKeyboardOnNavigation(permission);
+  if (permission) window.JBridge.hideKeyboardOnNavigation(permission);
 };
 
 export const onEvent = function (payload) {
@@ -1359,7 +1505,11 @@ export const _onEventWithCB = function (payload) {
             succ(res)();
           }
         });
-        window.JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), cb);
+        window.JBridge.runInJuspayBrowser(
+          "onEvent",
+          JSON.stringify(payload),
+          cb
+        );
       };
     };
   };
@@ -1415,7 +1565,6 @@ export const loaderTextImpl = function (mainTxt) {
   };
 };
 
-
 export const showDialer = function (str) {
   return function (call) {
     try {
@@ -1423,7 +1572,7 @@ export const showDialer = function (str) {
     } catch (error) {
       window.JBridge.showDialer(str);
     }
-  }
+  };
 };
 
 export const startLocationPollingAPI = function () {
@@ -1432,11 +1581,11 @@ export const startLocationPollingAPI = function () {
     locationPollingTimer = undefined;
   }
   return window.JBridge.startLocationPollingAPI();
-}
+};
 
 export const generatePDF = function (state) {
   return function (type) {
-    const data = JSON.stringify(state)
+    const data = JSON.stringify(state);
     window.JBridge.generatePDF(data, type);
     return true;
   };
@@ -1445,10 +1594,9 @@ export const generatePDF = function (state) {
 function stopLocationService() {
   const cb = function () {
     window.JBridge.stopLocationPollingAPI();
-  }
+  };
   locationPollingTimer = setTimeout(cb, 5000);
 }
-
 
 export const stopLocationPollingAPI = function () {
   if (locationPollingTimer) return;
@@ -1459,20 +1607,20 @@ export const stopLocationPollingAPI = function () {
   } else {
     stopLocationService();
   }
-}
+};
 export const removeAllPolylines = function (str) {
   window.JBridge.removeAllPolylines(str);
-}
+};
 
 export const removeAllPolylinesAndMarkers = function (array, unit) {
-  const stringifiedArray = JSON.stringify(array)
+  const stringifiedArray = JSON.stringify(array);
   window.JBridge.removeAllPolylines(stringifiedArray);
   return unit;
-}
+};
 
 export const currentPosition = function (str) {
   window.JBridge.currentPosition(str);
-}
+};
 
 export const firebaseScreenNameLog = function (str) {
   if (window.JBridge.firebaseScreenNameLog) {
@@ -1491,38 +1639,46 @@ export const storeCallBackDriverLocationPermission = function (cb) {
       try {
         if (window.onResumeListeners) {
           const locationCallBack = function () {
-            const isPermissionEnabled = isLocationPermissionEnabled()() && isLocationEnabled()()
+            const isPermissionEnabled =
+              isLocationPermissionEnabled()() && isLocationEnabled()();
             cb(action(isPermissionEnabled))();
           };
           window.onResumeListeners.push(locationCallBack);
         }
         if (window.__OS == "ANDROID") {
-          const callback = callbackMapper.map(function (isLocationPermissionGranted) {
+          const callback = callbackMapper.map(function (
+            isLocationPermissionGranted
+          ) {
             cb(action(isLocationPermissionGranted))();
           });
           window.JBridge.storeCallBackDriverLocationPermission(callback);
         }
-        console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
+        console.log(
+          "In storeCallBackDriverLocationPermission ---------- + " + action
+        );
       } catch (error) {
-        console.log("Error occurred in storeCallBackDriverLocationPermission ------", error);
+        console.log(
+          "Error occurred in storeCallBackDriverLocationPermission ------",
+          error
+        );
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const storeOnResumeCallback = function (cb, action) {
   try {
     const callback = function () {
       cb(action)();
-    }
-    console.log ("onResumeListeners",callback);
+    };
+    console.log("onResumeListeners", callback);
     if (window.onResumeListeners) {
       window.onResumeListeners.push(callback);
     }
   } catch (error) {
     console.log("Error occurred in storeOnResumeCallback ------", error);
   }
-}
+};
 
 export const storeCallBackInternetAction = function (cb) {
   return function (action) {
@@ -1534,37 +1690,47 @@ export const storeCallBackInternetAction = function (cb) {
         console.log("In storeCallBackInternetAction ---------- + " + action);
         window.JBridge.storeCallBackInternetAction(callback);
       } catch (error) {
-        console.log("Error occurred in storeCallBackInternetAction ------", error);
+        console.log(
+          "Error occurred in storeCallBackInternetAction ------",
+          error
+        );
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const storeCallBackImageUpload = function (cb) {
   return function (action) {
     return function () {
       try {
-        const callback = callbackMapper.map(function (imgStr, imageName, imagePath) {
+        const callback = callbackMapper.map(function (
+          imgStr,
+          imageName,
+          imagePath
+        ) {
           cb(action(imgStr)(imageName)(imagePath))();
         });
         window.JBridge.storeCallBackImageUpload(callback);
       } catch (error) {
         console.log("Error occurred in storeCallBackImageUpload ------", error);
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const storeCallBackUploadMultiPartData = function (cb, action) {
   try {
     const callback = callbackMapper.map(function (fileType, fileId) {
-      cb(action (fileType)(fileId))();
+      cb(action(fileType)(fileId))();
     });
     window.JBridge.storeCallBackUploadMultiPartData(callback);
-  }catch (error){
-    console.log("Error occurred in storeCallBackUploadMultiPartData ------", error);
+  } catch (error) {
+    console.log(
+      "Error occurred in storeCallBackUploadMultiPartData ------",
+      error
+    );
   }
-}
+};
 
 export const storeCallBackOverlayPermission = function (cb) {
   return function (action) {
@@ -1574,19 +1740,22 @@ export const storeCallBackOverlayPermission = function (cb) {
           cb(action(isOverlayPermission))();
         });
         const overlayCallBack = function () {
-          const isPermissionEnabled = JBridge.isOverlayPermissionEnabled()
+          const isPermissionEnabled = JBridge.isOverlayPermissionEnabled();
           cb(action(isPermissionEnabled))();
-        }
+        };
         if (window.onResumeListeners) {
           window.onResumeListeners.push(overlayCallBack);
         }
         console.log("In storeCallBackOverlayPermission ---------- + " + action);
       } catch (error) {
-        console.log("Error occurred in storeCallBackOverlayPermission ------", error);
+        console.log(
+          "Error occurred in storeCallBackOverlayPermission ------",
+          error
+        );
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const storeCallBackNotificationPermission = function (cb) {
   return function (action) {
@@ -1596,19 +1765,24 @@ export const storeCallBackNotificationPermission = function (cb) {
           cb(action(isPermissionEnabled))();
         });
         const notificationCallback = function () {
-          const isPermissionEnabled = JBridge.isNotificationPermissionEnabled()
+          const isPermissionEnabled = JBridge.isNotificationPermissionEnabled();
           cb(action(isPermissionEnabled))();
-        }
+        };
         if (window.onResumeListeners) {
           window.onResumeListeners.push(notificationCallback);
         }
-        console.log("In storeCallBackNotificationPermission ---------- + " + action);
+        console.log(
+          "In storeCallBackNotificationPermission ---------- + " + action
+        );
       } catch (error) {
-        console.log("Error occurred in storeCallBackNotificationPermission ------", error);
+        console.log(
+          "Error occurred in storeCallBackNotificationPermission ------",
+          error
+        );
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const storeCallBackBatteryUsagePermission = function (cb) {
   return function (action) {
@@ -1618,19 +1792,24 @@ export const storeCallBackBatteryUsagePermission = function (cb) {
           cb(action(isPermissionEnabled))();
         });
         const batteryCallBack = function () {
-          const isPermissionEnabled = JBridge.isBatteryPermissionEnabled()
+          const isPermissionEnabled = JBridge.isBatteryPermissionEnabled();
           cb(action(isPermissionEnabled))();
-        }
+        };
         if (window.onResumeListeners) {
           window.onResumeListeners.push(batteryCallBack);
         }
-        console.log("In storeCallBackBatteryUsagePermission ---------- + " + action);
+        console.log(
+          "In storeCallBackBatteryUsagePermission ---------- + " + action
+        );
       } catch (error) {
-        console.log("Error occurred in storeCallBackBatteryUsagePermission ------", error);
+        console.log(
+          "Error occurred in storeCallBackBatteryUsagePermission ------",
+          error
+        );
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const isBatteryPermissionEnabled = function (unit) {
   return function () {
@@ -1639,9 +1818,9 @@ export const isBatteryPermissionEnabled = function (unit) {
 };
 
 export const getAAID = function (str) {
-  console.log("HERE IN getAAID ===--->>")
+  console.log("HERE IN getAAID ===--->>");
   return window.JBridge.getAAID();
-}
+};
 
 export const isInternetAvailable = function (unit) {
   return function () {
@@ -1653,21 +1832,21 @@ export const isInternetAvailable = function (unit) {
 };
 
 export const restartApp = function () {
-  return function() {
-    console.log("HERE IN RESET ===--->>")
-    if (JBridge.restartApp){
+  return function () {
+    console.log("HERE IN RESET ===--->>");
+    if (JBridge.restartApp) {
       JBridge.restartApp();
     } else {
       JBridge.factoryResetApp();
     }
-  }
-}
+  };
+};
 
 // Deprecated
 export const factoryResetApp = function (str) {
-  console.log("HERE IN RESET ===--->>")
-  JBridge.factoryResetApp()
-}
+  console.log("HERE IN RESET ===--->>");
+  JBridge.factoryResetApp();
+};
 
 export const uploadFile = function (unit) {
   return function () {
@@ -1678,8 +1857,8 @@ export const uploadFile = function (unit) {
 export const previewImage = function (base64Image) {
   return function () {
     return JBridge.previewImage(base64Image);
-  }
-}
+  };
+};
 
 // Deprecated 5-Jan-2024 - Remove this function once it is not begin used.
 // use displayBase64Image instead
@@ -1689,7 +1868,12 @@ export const renderBase64Image = function (image) {
       return function (imgScaleType) {
         try {
           if (JBridge.renderBase64Image) {
-            return JBridge.renderBase64Image(image, id, fitCenter, imgScaleType);
+            return JBridge.renderBase64Image(
+              image,
+              id,
+              fitCenter,
+              imgScaleType
+            );
           }
         } catch (err1) {
           try {
@@ -1705,7 +1889,7 @@ export const renderBase64Image = function (image) {
             return JBridge.renderBase64Image(image, id);
           }
         }
-      }
+      };
     };
   };
 };
@@ -1722,7 +1906,7 @@ export const setScaleType = function (id) {
       if (JBridge.setScaleType) {
         return JBridge.setScaleType(id, url, scaleType);
       }
-    }
+    };
   };
 };
 
@@ -1733,51 +1917,70 @@ export const requestBatteryPermission = function (str) {
 };
 export const copyToClipboard = function (str) {
   JBridge.copyToClipboard(str);
-}
+};
 
 export const requestKeyboardShow = function (id) {
   JBridge.requestKeyboardShow(id);
-}
+};
 
 export const showKeyboard = function (id) {
-  if ( window.__OS == "IOS")
-    return JBridge.requestKeyboardShow(id);
-  else 
-    return JBridge.showKeyboard(id);
+  if (window.__OS == "IOS") return JBridge.requestKeyboardShow(id);
+  else return JBridge.showKeyboard(id);
   // JBridge.showKeyboard(id); // imeOptions is set to IME_ACTION_SEARCH and IME_ACTION_DONE
-}
+};
 
 export const locateOnMap = (configObj) => {
   try {
-    if ( window.__OS == "IOS" || (window.__OS == "ANDROID" && methodArgumentCount("locateOnMap") == 1))
+    if (
+      window.__OS == "IOS" ||
+      (window.__OS == "ANDROID" && methodArgumentCount("locateOnMap") == 1)
+    )
       return JBridge.locateOnMap(JSON.stringify(configObj));
     else
-      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, JSON.stringify(configObj.geoJson), JSON.stringify(configObj.points));
+      return JBridge.locateOnMap(
+        configObj.goToCurrentLocation,
+        configObj.lat,
+        configObj.lon,
+        JSON.stringify(configObj.geoJson),
+        JSON.stringify(configObj.points)
+      );
   } catch (err) {
-    try{
-      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon);
+    try {
+      return JBridge.locateOnMap(
+        configObj.goToCurrentLocation,
+        configObj.lat,
+        configObj.lon
+      );
     } catch (e) {
-      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, configObj.zoomLevel);
+      return JBridge.locateOnMap(
+        configObj.goToCurrentLocation,
+        configObj.lat,
+        configObj.lon,
+        configObj.zoomLevel
+      );
     }
   }
 };
 
 export const exitLocateOnMap = function (str) {
   JBridge.exitLocateOnMap(str);
-}
+};
 
 export const shareTextMessage = function (str) {
   return function (message) {
     if (JBridge.shareTextMessage) {
       JBridge.shareTextMessage(str, message);
     }
-  }
-}
+  };
+};
 
 export const shareImageMessage = function (message) {
   return function (data) {
     try {
-      if (JBridge.shareImageMessage && methodArgumentCount("shareImageMessage") == 3) {
+      if (
+        JBridge.shareImageMessage &&
+        methodArgumentCount("shareImageMessage") == 3
+      ) {
         JBridge.shareImageMessage(message, "", JSON.stringify(data));
       } else {
         if (JBridge.shareTextMessage) {
@@ -1789,8 +1992,8 @@ export const shareImageMessage = function (message) {
         JBridge.shareTextMessage("", message);
       }
     }
-  }
-}
+  };
+};
 
 export const showInAppNotification = function (title) {
   return function (message) {
@@ -1801,34 +2004,36 @@ export const showInAppNotification = function (title) {
             return function (action2Image) {
               return function (channelId) {
                 return function (duration) {
-                  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({
-                    event: "in_app_notification",
-                    title: title,
-                    message: message,
-                    onTapAction: onTapAction,
-                    action1Text: action1Text,
-                    action2Text: action2Text,
-                    action1Image: action1Image,
-                    action2Image: action2Image,
-                    channelId: channelId,
-                    durationInMilliSeconds: duration
-                  }))()
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
+                  return window.JOS.emitEvent("java")("onEvent")(
+                    JSON.stringify({
+                      event: "in_app_notification",
+                      title: title,
+                      message: message,
+                      onTapAction: onTapAction,
+                      action1Text: action1Text,
+                      action2Text: action2Text,
+                      action1Image: action1Image,
+                      action2Image: action2Image,
+                      channelId: channelId,
+                      durationInMilliSeconds: duration,
+                    })
+                  )();
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+};
 
 export const openWhatsAppSupport = function (contactNumber) {
   return function () {
-    console.log("contactNumber" + contactNumber)
-    return JBridge.openWhatsAppSupport(contactNumber)
-  }
-}
+    console.log("contactNumber" + contactNumber);
+    return JBridge.openWhatsAppSupport(contactNumber);
+  };
+};
 
 export const mapSnapShot = function (id) {
   return function (coordinates) {
@@ -1843,7 +2048,13 @@ export const mapSnapShot = function (id) {
                 window.y = action;
                 cb(action(encImage))();
               });
-              JBridge.mapSnapShot(id, JSON.stringify(coordinates), routeType, actualRoute, callback);
+              JBridge.mapSnapShot(
+                id,
+                JSON.stringify(coordinates),
+                routeType,
+                actualRoute,
+                callback
+              );
               return true;
             };
           };
@@ -1852,7 +2063,6 @@ export const mapSnapShot = function (id) {
     };
   };
 };
-
 
 export const setStoreCallBackPopUp = function (cb) {
   return function (action) {
@@ -1865,15 +2075,15 @@ export const setStoreCallBackPopUp = function (cb) {
       } catch (error) {
         console.log("Error occurred in setStoreCallBackPopUp", error);
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const deletePopUpCallBack = function (dummy) {
   console.log("jbridge deletepopupcallback before");
   JBridge.deletePopUpCallBack(dummy);
   return true;
-}
+};
 
 function isFilePresent(fileName) {
   if (window.__OS == "IOS") {
@@ -1889,38 +2099,55 @@ export const startLottieProcess = function (configObj) {
   const fileName = rawJson.substr(rawJson.lastIndexOf("/") + 1);
   if (!configObj.forceToUseRemote) {
     if (JBridge.isFilePresentDeep) {
-      lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+      lottieName = JBridge.isFilePresentDeep(fileName)
+        ? fileName.slice(0, fileName.lastIndexOf("."))
+        : rawJson;
     } else {
-      lottieName = isFilePresent(fileName) ? (fileName.slice(0, fileName.lastIndexOf("."))) : rawJson;
+      lottieName = isFilePresent(fileName)
+        ? fileName.slice(0, fileName.lastIndexOf("."))
+        : rawJson;
     }
   } else {
     lottieName = rawJson;
   }
   try {
     if (window.__OS == "IOS") {
-      return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType, JSON.stringify(configObj));
+      return JBridge.startLottieProcess(
+        lottieName,
+        configObj.lottieId,
+        configObj.repeat,
+        configObj.speed,
+        configObj.scaleType,
+        JSON.stringify(configObj)
+      );
     }
     configObj.rawJson = lottieName;
     return JBridge.startLottieProcess(JSON.stringify(configObj));
   } catch (err) {
-    if(configObj.forceToUseRemote){
+    if (configObj.forceToUseRemote) {
       const cmd = `set_view=ctx->findViewById:i_${configObj.lottieId};get_view->setCacheComposition:b_false`; // Hotfix to remove caching
       window.Android.runInUI(cmd, "");
     }
-    return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType);
+    return JBridge.startLottieProcess(
+      lottieName,
+      configObj.lottieId,
+      configObj.repeat,
+      configObj.speed,
+      configObj.scaleType
+    );
   }
-}
+};
 
 export const generateSessionToken = function (type) {
   if (window.__OS == "IOS") {
     return "d4faebc6-2f98-44a0-957e-20cb4646c013";
   }
   return JBridge.generateSessionToken(type);
-}
+};
 
 export const enableMyLocation = function (isEnableCurrentLocation) {
   JBridge.enableMyLocation(isEnableCurrentLocation);
-}
+};
 
 export const toggleBtnLoader = function (id) {
   return function (val) {
@@ -1928,13 +2155,13 @@ export const toggleBtnLoader = function (id) {
       btnLoaderState.set(id, true);
     } else {
       if (id == "") btnLoaderState.clear();
-      else btnLoaderState.set(id, false)
+      else btnLoaderState.set(id, false);
     }
   };
 };
 
 export const getBtnLoader = function (val) {
-  return (btnLoaderState.get(val) == true) ? true : false;
+  return btnLoaderState.get(val) == true ? true : false;
 };
 
 export const storeMainFiberOb = function (fiber) {
@@ -1949,7 +2176,7 @@ export const getMainFiber = function (just, nothing) {
     mainFiber = null;
     return just(localFiber);
   }
-}
+};
 
 export const launchInAppRatingPopup = function (unit) {
   if (JBridge.launchInAppRatingPopup) {
@@ -1965,26 +2192,28 @@ export const getExtendedPath = function (path) {
   }
 };
 
-
 export const setMapPaddingImpl = function (left, topPadding, right, bottom) {
   if (JBridge.setMapPadding) {
     JBridge.setMapPadding(left, topPadding, right, bottom);
   }
-}
+};
 
 export const generateSessionId = function () {
   try {
     let dt = new Date().getTime();
-    const uuid = "xxxxxxxx-xxxx-xxxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-      const r = (dt + Math.random() * 16) % 16 | 0;
-      dt = Math.floor(dt / 16);
-      return (c == "x" ? r : (r & 0x3 | 0x8)).toString(16);
-    });
+    const uuid = "xxxxxxxx-xxxx-xxxx-yxxx-xxxxxxxxxxxx".replace(
+      /[xy]/g,
+      function (c) {
+        const r = (dt + Math.random() * 16) % 16 | 0;
+        dt = Math.floor(dt / 16);
+        return (c == "x" ? r : (r & 0x3) | 0x8).toString(16);
+      }
+    );
     return uuid;
   } catch (err) {
     return Math.random().toString(16);
   }
-}
+};
 export const initialWebViewSetUp = function (cb) {
   return function (id) {
     return function (action) {
@@ -2011,7 +2240,7 @@ export const goBackPrevWebPage = function (id) {
   } catch (err) {
     console.log("goBackPrevWebPage error " + err);
   }
-}
+};
 
 export const detectPhoneNumbers = function (cb) {
   return function (action) {
@@ -2032,7 +2261,7 @@ export const setCleverTapUserData = function (key) {
       if (window.JBridge.setCleverTapUserData) {
         window.JBridge.setCleverTapUserData(key, value);
       }
-    }
+    };
   };
 };
 
@@ -2053,20 +2282,23 @@ export const setCleverTapUserProp = function (arr) {
   } catch (err) {
     console.log("setCleverTapUserProp error " + err);
   }
-}
+};
 
 export const cleverTapCustomEvent = function (_event) {
   if (window.JBridge.cleverTapCustomEvent) {
     return JBridge.cleverTapCustomEvent(_event);
   }
-}
-
+};
 
 export const cleverTapCustomEventWithParams = function (_event) {
   return function (paramKey) {
     return function (paramValue) {
       if (window.JBridge.cleverTapCustomEventWithParams) {
-        window.JBridge.cleverTapCustomEventWithParams(_event, paramKey, paramValue);
+        window.JBridge.cleverTapCustomEventWithParams(
+          _event,
+          paramKey,
+          paramValue
+        );
       }
     };
   };
@@ -2076,13 +2308,13 @@ export const cleverTapSetLocation = function () {
   if (window.JBridge.cleverTapSetLocation) {
     return window.JBridge.cleverTapSetLocation();
   }
-}
+};
 
 export const extractReferrerUrl = function () {
-  if(JBridge.extractReferrerUrl){
+  if (JBridge.extractReferrerUrl) {
     return window.JBridge.extractReferrerUrl();
   }
-}
+};
 
 export const launchDateSettings = function (res) {
   if (JBridge.launchDateSettings) {
@@ -2095,25 +2327,25 @@ export const cleverTapEvent = function (_event) {
     if (window.JBridge.cleverTapEvent) {
       return JBridge.cleverTapEvent(_event, JSON.stringify(param));
     }
-  }
-}
-
-export const emitJOSEvent = function (mapp, eventType, payload) {
-  console.log("payload", payload);
-  JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
+  };
 };
 
-export const getLocationNameV2 = function (lat, lon) { 
+export const emitJOSEvent = function (mapp, eventType, payload) {
+  // console.log("payload", payload);
+  // JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
+};
+
+export const getLocationNameV2 = function (lat, lon) {
   try {
     if (JBridge.getLocationNameSDK) {
       return JBridge.getLocationNameSDK(lat, lon);
-    }else{
+    } else {
       return "NO_LOCATION_FOUND";
     }
   } catch (error) {
     return "NO_LOCATION_FOUND";
   }
-}
+};
 
 function isJSONString(str) {
   try {
@@ -2126,14 +2358,16 @@ function isJSONString(str) {
 
 export const getLatLonFromAddress = function (address) {
   const defaultCoordinate = {
-    "latitude": 0.0,
-    "longitude": 0.0
-  }
+    latitude: 0.0,
+    longitude: 0.0,
+  };
   try {
     if (JBridge.getCoordinateFromAddress) {
-      const result = (JBridge.getCoordinateFromAddress(address));
-      return result != "NO_COORDINATE_FOUND" && isJSONString(result) ? JSON.parse(result) : defaultCoordinate;
-    }else{
+      const result = JBridge.getCoordinateFromAddress(address);
+      return result != "NO_COORDINATE_FOUND" && isJSONString(result)
+        ? JSON.parse(result)
+        : defaultCoordinate;
+    } else {
       return defaultCoordinate;
     }
   } catch (error) {
@@ -2142,9 +2376,11 @@ export const getLatLonFromAddress = function (address) {
 };
 
 export const hideLoader = function () {
-  JOS.emitEvent("java")("onEvent")(JSON.stringify({
-    event: "hide_loader"
-  }))()()
+  JOS.emitEvent("java")("onEvent")(
+    JSON.stringify({
+      event: "hide_loader",
+    })
+  )()();
 };
 
 export const getLayoutBounds = function (id) {
@@ -2153,13 +2389,13 @@ export const getLayoutBounds = function (id) {
     return bounds;
   }
   return {
-    "height": 0,
-    "width": 0
-  }
+    height: 0,
+    width: 0,
+  };
 };
 
 export const listDownloadedTranslationModels = function (cb) {
-  return function (delay){
+  return function (delay) {
     return function () {
       const fallbackCB = function () {
         cb([])();
@@ -2168,26 +2404,25 @@ export const listDownloadedTranslationModels = function (cb) {
       const modelsCB = callbackMapper.map(function (modelList) {
         clearTimeout(modelListTimer);
         cb(modelList)();
-      }); 
+      });
       if (JBridge.listDownloadedTranslationModels) {
         JBridge.listDownloadedTranslationModels(modelsCB);
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const horizontalScrollToPos = function (id, childId, scrollFocus) {
   if (window.JBridge.horizontalScrollToPos) {
     window.JBridge.horizontalScrollToPos(id, childId, scrollFocus);
   }
-}
+};
 
 // focus values --
 // left - 17
 // right - 66
 // top - 33
 // down - 130
-
 
 function between(x, min, max) {
   return x >= min && x <= max;
@@ -2197,32 +2432,38 @@ export const withinTimeRange = function (startTime) {
   return function (endTime) {
     return function (timeStr) {
       try {
-        return startTime < endTime ? between(timeStr, startTime, endTime) : between(timeStr, startTime, "23:59:59") || between(timeStr, "00:00:01", endTime);
+        return startTime < endTime
+          ? between(timeStr, startTime, endTime)
+          : between(timeStr, startTime, "23:59:59") ||
+              between(timeStr, "00:00:01", endTime);
       } catch (err) {
         return false;
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const askNotificationPermission = function () {
   if (window.JBridge.requestNotificationPermission) {
     return window.JBridge.requestNotificationPermission();
   }
-}
+};
 
 export const scrollViewFocus = function (parentID) {
   return function (index) {
     try {
       if (window.__OS == "ANDROID") {
-        let cmd = "set_scrollView=ctx->findViewById:i_" + parentID + ";"
-        cmd += "set_childView=get_scrollView->getChildAt:i_0;"
-        cmd += "set_focusChildView=get_childView->getChildAt:i_" + JSON.stringify(index) + ";"
-        cmd += "get_btm=get_focusChildView->getTop;"
-        cmd += "get_scrollView->smoothScrollTo:i_0,get_btm;"
+        let cmd = "set_scrollView=ctx->findViewById:i_" + parentID + ";";
+        cmd += "set_childView=get_scrollView->getChildAt:i_0;";
+        cmd +=
+          "set_focusChildView=get_childView->getChildAt:i_" +
+          JSON.stringify(index) +
+          ";";
+        cmd += "get_btm=get_focusChildView->getTop;";
+        cmd += "get_scrollView->smoothScrollTo:i_0,get_btm;";
         setTimeout(function () {
           window.Android.runInUI(cmd, null);
-        }, 200)
+        }, 200);
         return true;
       } else {
         if (window.JBridge.scrollViewFocus) {
@@ -2234,31 +2475,42 @@ export const scrollViewFocus = function (parentID) {
       console.log("error in scrollViewFocus : " + err);
     }
     return false;
-  }
-}
-
-export const addMediaPlayer = function (id) {
-  return function(source) {
-    return function (autoPlay) {
-      return function () {
-        try {
-          JBridge.addMediaPlayer(id,source,autoPlay);
-        }catch (e){
-          JBridge.addMediaPlayer(id,source);
-        }
-      }
-    }
   };
 };
 
-export const setYoutubePlayer = function (json, viewId, videoStatus, cb, action) {
+export const addMediaPlayer = function (id) {
+  return function (source) {
+    return function (autoPlay) {
+      return function () {
+        try {
+          JBridge.addMediaPlayer(id, source, autoPlay);
+        } catch (e) {
+          JBridge.addMediaPlayer(id, source);
+        }
+      };
+    };
+  };
+};
+
+export const setYoutubePlayer = function (
+  json,
+  viewId,
+  videoStatus,
+  cb,
+  action
+) {
   if (window.JBridge.setYoutubePlayer) {
     try {
       const callback = callbackMapper.map(function (id) {
         cb(action(id))();
       });
       console.log("Inside setYoutubePlayer ------------");
-      JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus, callback);
+      JBridge.setYoutubePlayer(
+        JSON.stringify(json),
+        viewId,
+        videoStatus,
+        callback
+      );
     } catch (err) {
       JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus);
       console.log("error in setYoutubePlayer");
@@ -2266,41 +2518,44 @@ export const setYoutubePlayer = function (json, viewId, videoStatus, cb, action)
   }
 };
 
-export const pauseYoutubeVideo = function (unit){
+export const pauseYoutubeVideo = function (unit) {
   if (JBridge.pauseYoutubeVideo) {
     return JBridge.pauseYoutubeVideo();
   }
-}
+};
 
-export const releaseYoutubeView = function (){
+export const releaseYoutubeView = function () {
   if (window.JBridge.releaseYoutubeView) {
     return window.JBridge.releaseYoutubeView();
   }
-}
+};
 
 export const downloadMLTranslationModel = function (language) {
-  if(JBridge.triggerDownloadForML){
+  if (JBridge.triggerDownloadForML) {
     return JBridge.triggerDownloadForML(language);
   }
-}
+};
 
 export const supportsInbuildYoutubePlayer = function () {
-  return JBridge.setYoutubePlayer ;
-}
+  return JBridge.setYoutubePlayer;
+};
 
 export const addCarouselWithVideoExists = function () {
   return JBridge.addCarouselWithVideo;
-}
+};
 
 export const addCarouselImpl = function (carouselModalJson, id) {
   const carouselJson = JSON.stringify(carouselModalJson);
   const data = JSON.parse(carouselJson);
   const originalArray = data.carouselData;
-  if(JBridge.addCarouselWithVideo){
+  if (JBridge.addCarouselWithVideo) {
     return JBridge.addCarouselWithVideo(carouselJson, id);
-  }
-  else if(JBridge.addCarousel){
-    const modifiedArray = originalArray.map(item => ({ image : item.imageConfig.image , title : item.titleConfig.text , description : item.descriptionConfig.text }));
+  } else if (JBridge.addCarousel) {
+    const modifiedArray = originalArray.map((item) => ({
+      image: item.imageConfig.image,
+      title: item.titleConfig.text,
+      description: item.descriptionConfig.text,
+    }));
     return JBridge.addCarousel(JSON.stringify(modifiedArray), id);
   }
 };
@@ -2321,9 +2576,9 @@ export const storeCallBackLocateOnMap = function (cb) {
       } catch (error) {
         console.log("Error occurred ", error);
       }
-    }
-  }
-}
+    };
+  };
+};
 
 export const debounceFunction = function (delay) {
   return function (cb) {
@@ -2338,22 +2593,22 @@ export const debounceFunction = function (delay) {
             }, delay);
           });
           window.callUICallback(callback);
-        }
-      }
-    }
-  }
-}
+        };
+      };
+    };
+  };
+};
 
 export const updateInputString = function (a) {
   console.log("UPDATED STRING " + a);
   inputForDebounce = a;
-}
+};
 export const isNetworkTimeEnabled = function () {
   if (JBridge.isNetworkTimeEnabled) {
     return JBridge.isNetworkTimeEnabled();
   }
   return true;
-}
+};
 
 export const renderCameraProfilePicture = function (id) {
   return function () {
@@ -2364,86 +2619,91 @@ export const renderCameraProfilePicture = function (id) {
 };
 
 export const isNotificationPermissionEnabled = function () {
-  return function() {
+  return function () {
     if (window.JBridge.isNotificationPermissionEnabled) {
       return window.JBridge.isNotificationPermissionEnabled();
     } else {
       return false;
     }
-  }
-}
+  };
+};
 
 export const displayBase64Image = (configObj) => {
   try {
     console.log("displayBase64Image success");
     return JBridge.displayBase64Image(JSON.stringify(configObj));
   } catch (err) {
-    try{
+    try {
       console.log("displayBase64Image error " + err);
       // Deprecated on 4th Jan 2024
-      return JBridge.renderBase64ImageFile(configObj.source, configObj.id, false, configObj.scaleType);
-    }catch(err2){
+      return JBridge.renderBase64ImageFile(
+        configObj.source,
+        configObj.id,
+        false,
+        configObj.scaleType
+      );
+    } catch (err2) {
       console.log("displayBase64Image error " + err2);
     }
   }
-} 
+};
 
-export const askRequestedPermissions = function(permissions){
-  if(window.JBridge.askRequestedPermissions)
+export const askRequestedPermissions = function (permissions) {
+  if (window.JBridge.askRequestedPermissions)
     return window.JBridge.askRequestedPermissions(permissions);
-}
+};
 
-export const askRequestedPermissionsWithCallback = function(permissions){
-  return function(cb) {
-    return function(action) {
+export const askRequestedPermissionsWithCallback = function (permissions) {
+  return function (cb) {
+    return function (action) {
       const callback = callbackMapper.map(function (isPermissionGranted) {
         cb(action(isPermissionGranted))();
       });
-      if(window.JBridge.askRequestedPermissionsWithCallback)
-        return window.JBridge.askRequestedPermissionsWithCallback(permissions, callback);
-    }
-  }
-}
+      if (window.JBridge.askRequestedPermissionsWithCallback)
+        return window.JBridge.askRequestedPermissionsWithCallback(
+          permissions,
+          callback
+        );
+    };
+  };
+};
 
-export const setupCamera = function(id){
-  return function(isBackCamera){
+export const setupCamera = function (id) {
+  return function (isBackCamera) {
     if (window.__OS == "IOS" && window.JBridge.renderCameraView) {
       return window.JBridge.renderCameraView(id);
-    }
-    else if(window.JBridge.setupCamera){
+    } else if (window.JBridge.setupCamera) {
       return window.JBridge.setupCamera(id, isBackCamera);
     }
-  }
-}
+  };
+};
 
-export const startRecord = function (cb){
-  return function (action){
+export const startRecord = function (cb) {
+  return function (action) {
     return function () {
       const callback = callbackMapper.map(function (videostatus, videoUri) {
         cb(action(videostatus)(videoUri))();
       });
       if (window.__OS == "IOS" && window.JBridge.startRecording) {
         return window.JBridge.startRecording(callback);
-      }
-      else if(window.JBridge.recordVideo){
+      } else if (window.JBridge.recordVideo) {
         return window.JBridge.recordVideo(callback);
       }
-    }
-  }
-}
-  
+    };
+  };
+};
 
-export const stopRecord = function(){
-  if(window.JBridge.stopRecord){
+export const stopRecord = function () {
+  if (window.JBridge.stopRecord) {
     return window.JBridge.stopRecord();
   }
-}
+};
 
-export const switchYoutubeVideo = function(videoId) {
-  if (window.JBridge.switchYoutubeVideo){
+export const switchYoutubeVideo = function (videoId) {
+  if (window.JBridge.switchYoutubeVideo) {
     return window.JBridge.switchYoutubeVideo(videoId);
   }
-}
+};
 
 export const startAudioPlayer = function (fileName, cb, action) {
   if (JBridge.startAudioPlayer) {
@@ -2452,15 +2712,15 @@ export const startAudioPlayer = function (fileName, cb, action) {
     });
     return JBridge.startAudioPlayer(fileName, callback);
   }
-}
+};
 
 export const pauseAudioPlayer = function () {
   if (JBridge.pauseAudioPlayer) {
-    JBridge.pauseAudioPlayer()
+    JBridge.pauseAudioPlayer();
   }
-}
+};
 export const clearAudioPlayer = function () {
   if (JBridge.clearAudioPlayer) {
-    JBridge.clearAudioPlayer()
+    JBridge.clearAudioPlayer();
   }
-}
+};
