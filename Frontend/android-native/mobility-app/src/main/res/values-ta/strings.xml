@@ -26,7 +26,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
-    <string name="includes_pickup_charges_10">பிக்அப் கட்டணங்கள் ₹10 அடங்கும்</string>
+    <string name="includes_pickup_charges_10">பிக்அப் கட்டணங்கள் ₹{#amount#} அடங்கும்</string>
     <string name="away">தொலைவில்</string>
     <string name="we_made_you_online">நாங்கள் உங்களை ஆன்லைனில் உருவாக்கினோம்</string>
     <string name="location_is_turned_on">இருப்பிடம் இயக்கப்பட்டது</string>

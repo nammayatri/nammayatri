@@ -135,13 +135,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
+            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
+            String pickupChargesText = formattedPickupChargesText;
             if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
-                String pickupChargesText = model.getCustomerTip() > 0 ?
-                        getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
-                        getString(R.string.includes_pickup_charges_10);
+                pickupChargesText = model.getCustomerTip() > 0 ?
+                        formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
+                        formattedPickupChargesText;
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
-                holder.textIncludesCharges.setText(pickupChargesText);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
@@ -164,6 +165,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
+
+            holder.textIncludesCharges.setText(pickupChargesText);
         });
     }
 
@@ -263,14 +266,17 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
             String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
+            LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
                 if (key != null && key.equals("nammayatriprovider"))
                     startApiLoader();
                 if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
-                    LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                     lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+                }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+                    lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
                 }
+
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 Handler handler = new Handler(Looper.getMainLooper());
                 executor.execute(() -> {
@@ -538,6 +544,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String requestedVehicleVariant = rideRequestBundle.getString("requestedVehicleVariant");
                     Boolean disabilityTag = rideRequestBundle.getBoolean("disabilityTag");
                     Boolean isTranslated = rideRequestBundle.getBoolean("isTranslated");
+                    int driverPickUpCharges = rideRequestBundle.getInt("driverPickUpCharges");
                     df.setMaximumFractionDigits(2);
                     final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -576,7 +583,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             requestedVehicleVariant,
                             disabilityTag,
                             isTranslated,
-                            gotoTag);
+                            gotoTag,
+                            driverPickUpCharges);
 
                     if (floatyView == null) {
                         startTimer();
@@ -847,6 +855,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         if (ackType.equals(getString(R.string.DRIVER_ASSIGNMENT))){
             if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
                 rawResource = R.raw.yatri_auto_accepted_lottie;
+            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+                rawResource = R.raw.ride_accepted_lottie_cab;
             }
             else
                 rawResource = R.raw.ride_accepted_lottie;
@@ -854,6 +864,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         else{
             if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
                 rawResource = R.raw.yatri_auto_declined;
+            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+                rawResource = R.raw.accepted_by_another_driver_lottie_cab;
             }
             else
                 rawResource = R.raw.accepted_by_another_driver_lottie;
