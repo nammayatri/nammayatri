@@ -126,7 +126,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString("requestedVehicleVariant"),
                     rideRequestBundle.getBoolean("disabilityTag"),
                     rideRequestBundle.getBoolean("isTranslated"),
-                    rideRequestBundle.getBoolean("gotoTag")
+                    rideRequestBundle.getBoolean("gotoTag"),
+                    rideRequestBundle.getInt("driverPickUpCharges")
             );
 
             sheetArrayList.add(sheetModel);
@@ -142,12 +143,14 @@ public class RideRequestActivity extends AppCompatActivity {
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
+            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
+            String pickupChargesText = formattedPickupChargesText;
             if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag()) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
-                holder.textIncludesCharges.setText(model.getCustomerTip() > 0 ?
-                        (getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip)) :
-                        getString(R.string.includes_pickup_charges_10));
+                pickupChargesText = model.getCustomerTip() > 0 ?
+                        (formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip)) :
+                        formattedPickupChargesText;
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
@@ -171,6 +174,7 @@ public class RideRequestActivity extends AppCompatActivity {
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
+            holder.textIncludesCharges.setText(pickupChargesText);
         });
     }
 
@@ -270,11 +274,14 @@ public class RideRequestActivity extends AppCompatActivity {
 
             String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", "");
             View progressDialog = findViewById(R.id.progress_loader);
+            LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
+
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
                 if (service.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
-                    LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                     lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+                }else if(service.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+                    lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
                 }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
@@ -421,13 +428,16 @@ public class RideRequestActivity extends AppCompatActivity {
         if (ackType.equals(getString(R.string.DRIVER_ASSIGNMENT))){
             if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
                 rawResource = R.raw.yatri_auto_accepted_lottie;
-            }
-            else
+            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+                rawResource = R.raw.ride_accepted_lottie_cab;
+            }else
                 rawResource = R.raw.ride_accepted_lottie;
         }
         else{
             if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
                 rawResource = R.raw.yatri_auto_declined;
+            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+                rawResource = R.raw.accepted_by_another_driver_lottie_cab;
             }
             else
                 rawResource = R.raw.accepted_by_another_driver_lottie;

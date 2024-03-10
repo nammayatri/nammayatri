@@ -18,6 +18,7 @@ public class SheetModel {
     private final int baseFare;
     private final int reqExpiryTime;
     private final int driverMinExtraFee;
+    private final int driverPickUpCharges;
     private final int driverMaxExtraFee;
     private final int rideRequestPopupDelayDuration;
     private final int negotiationUnit;
@@ -49,7 +50,8 @@ public class SheetModel {
                       String requestedVehicleVariant,
                       Boolean disabilityTag,
                       Boolean isTranslated,
-                      Boolean gotoTag){
+                      Boolean gotoTag,
+                      int driverPickUpCharges){
 
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
@@ -81,6 +83,7 @@ public class SheetModel {
         this.durationToPickup = durationToPickup;
         this.gotoTag = gotoTag;
         this.isTranslated = isTranslated;
+        this.driverPickUpCharges = driverPickUpCharges;
     }
 
     public boolean isGotoTag() {
@@ -233,5 +236,9 @@ public class SheetModel {
 
     public String getDurationToPickup(){
         return durationToPickup;
+    }
+
+    public int getDriverPickUpCharges() { 
+        return driverPickUpCharges;
     }
 }
