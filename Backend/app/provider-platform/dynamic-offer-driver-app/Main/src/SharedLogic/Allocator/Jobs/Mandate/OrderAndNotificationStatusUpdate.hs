@@ -1,5 +1,6 @@
 module SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate where
 
+import Data.List (nubBy)
 import qualified Domain.Action.UI.Payment as SharedPayment
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Merchant.TransporterConfig
@@ -45,7 +46,7 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
   allPendingNotification <- QNTF.findAllByStatusWithLimit [PaymentInterface.NOTIFICATION_CREATED, PaymentInterface.PENDING] merchantOpCityId batchSizeOfNotification
   QNTF.updateLastCheckedOn ((.id) <$> allPendingNotification)
   QNTF.updatePendingToFailed merchantOpCityId
-  allPendingOrders <- QINV.findAllByStatusWithLimit INV.ACTIVE_INVOICE merchantOpCityId batchSizeOfOrderStatus
+  allPendingOrders <- nubBy ((==) `on` (.id)) <$> QINV.findAllByStatusWithLimit INV.ACTIVE_INVOICE merchantOpCityId batchSizeOfOrderStatus
   QINV.updateLastCheckedOn ((.id) <$> allPendingOrders)
   updateInvoicesPendingToFailedAfterRetry transporterConfig
   forM_ allPendingNotification $ \notification -> do
