@@ -8,7 +8,7 @@ import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
+import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findAllWithOptionsKV', findOneWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -151,7 +151,7 @@ findAllByStatusWithLimit status merchantOperatingCityId limit = do
   endTime <- getCurrentTime
   let startTime = addUTCTime (-1 * 3 * 3600 * 24) endTime
   let lastCheckedAt = UTCTime (utctDay endTime) (secondsToDiffTime 0)
-  findAllWithOptionsKV
+  findAllWithOptionsKV'
     [ Se.And
         [ Se.Is BeamI.invoiceStatus $ Se.Eq status,
           Se.Is BeamI.createdAt $ Se.LessThanOrEq endTime,
@@ -163,7 +163,6 @@ findAllByStatusWithLimit status merchantOperatingCityId limit = do
             ]
         ]
     ]
-    (Se.Desc BeamI.createdAt)
     (Just limit)
     Nothing
 
