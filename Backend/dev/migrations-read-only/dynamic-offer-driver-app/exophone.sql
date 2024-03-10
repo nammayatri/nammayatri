@@ -11,3 +11,9 @@ ALTER TABLE atlas_driver_offer_bpp.exophone ADD COLUMN primary_phone text NOT NU
 ALTER TABLE atlas_driver_offer_bpp.exophone ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.exophone ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.exophone ADD PRIMARY KEY ( id, backup_phone, merchant_operating_city_id, primary_phone);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.exophone DROP CONSTRAINT exophone_pkey;
+ALTER TABLE atlas_driver_offer_bpp.exophone ADD PRIMARY KEY ( id);

@@ -17,3 +17,9 @@ ALTER TABLE atlas_app.ticket_booking ADD PRIMARY KEY ( id, person_id, short_id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking DROP CONSTRAINT ticket_booking_pkey;
+ALTER TABLE atlas_app.ticket_booking ADD PRIMARY KEY ( id);
