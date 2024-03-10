@@ -29,6 +29,8 @@ IdfyVerification:
     retryCount: Maybe Int
     nameOnCard: Maybe Text
 
+  beamInstance: MakeTableInstancesWithTModifier [("multipleRC", "multiple_r_c")]
+
   types:
     ImageExtractionValidation:
       enum: "Success,Skipped,Failed"

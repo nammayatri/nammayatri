@@ -18,6 +18,8 @@ MetaData:
     createdAt : UTCTime
     updatedAt : UTCTime
 
+  beamInstance: MakeTableInstancesWithTModifier [("deviceOS", "device_o_s")]
+
   constraints:
     driverId: PrimaryKey
 
