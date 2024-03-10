@@ -7,3 +7,9 @@ ALTER TABLE atlas_driver_offer_bpp.plan_translation ADD COLUMN plan_id character
 ALTER TABLE atlas_driver_offer_bpp.plan_translation ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.plan_translation ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.plan_translation ADD PRIMARY KEY ( plan_id, language);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan_translation DROP CONSTRAINT plan_translation_pkey;
+ALTER TABLE atlas_driver_offer_bpp.plan_translation ADD PRIMARY KEY ( plan_id);

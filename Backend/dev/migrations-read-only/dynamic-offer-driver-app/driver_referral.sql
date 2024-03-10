@@ -6,3 +6,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN referral_code char
 ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD PRIMARY KEY ( referral_code, driver_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_referral DROP CONSTRAINT driver_referral_pkey;
+ALTER TABLE atlas_driver_offer_bpp.driver_referral ADD PRIMARY KEY ( referral_code);

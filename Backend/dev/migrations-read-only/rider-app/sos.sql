@@ -17,3 +17,9 @@ ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.sos DROP CONSTRAINT sos_pkey;
 ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id, ride_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.sos DROP CONSTRAINT sos_pkey;
+ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id);

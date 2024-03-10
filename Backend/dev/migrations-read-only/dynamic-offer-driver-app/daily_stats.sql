@@ -9,3 +9,9 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN total_earnings integer
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD PRIMARY KEY ( id, driver_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats DROP CONSTRAINT daily_stats_pkey;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD PRIMARY KEY ( id);
