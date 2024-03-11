@@ -465,9 +465,9 @@ getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (\sc -> sc.useCACForFrontend) systemConfigs
+  let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   frntndfgs <- if useCACConfig then getFrontendConfigs merchantOpCityId mbToss else return $ Just DAKM.empty
-  let mbMd5Digest = (T.pack . show . MD5.md5 . DA.encode) <$> frntndfgs
+  let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   merchant <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)

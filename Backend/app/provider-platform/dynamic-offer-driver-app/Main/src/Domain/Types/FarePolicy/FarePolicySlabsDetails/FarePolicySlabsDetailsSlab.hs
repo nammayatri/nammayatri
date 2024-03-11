@@ -70,15 +70,15 @@ parseFromCACMiddleware :: Value -> Maybe FPSlabsDetailsSlab
 parseFromCACMiddleware k1 = do
   case k1 of
     Object config -> do
-      let waitingCharge = DAKM.lookup ("waitingCharge") config >>= fromJSONHelper
-          freeWaitingTime = DAKM.lookup ("freeWatingTime") config >>= fromJSONHelper
+      let waitingCharge = DAKM.lookup "waitingCharge" config >>= fromJSONHelper
+          freeWaitingTime = DAKM.lookup "freeWatingTime" config >>= fromJSONHelper
           waitingChargeInfo = WaitingChargeInfo <$> waitingCharge <*> freeWaitingTime
-          platformFeeCharge = DAKM.lookup ("platformFeeCharge") config >>= fromJSONHelper
-          platformFeeCgst = DAKM.lookup ("platformFeeCgst") config >>= fromJSONHelper
-          platformFeeSgst = DAKM.lookup ("platformFeeSgst") config >>= fromJSONHelper
+          platformFeeCharge = DAKM.lookup "platformFeeCharge" config >>= fromJSONHelper
+          platformFeeCgst = DAKM.lookup "platformFeeCgst" config >>= fromJSONHelper
+          platformFeeSgst = DAKM.lookup "platformFeeSgst" config >>= fromJSONHelper
           platformFeeInfo = PlatformFeeInfo <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst
           newKeyMap = KP.foldr (\(k, v) acc -> DAKM.insert k v acc) config [("waitingChargeInfo", DA.toJSON waitingChargeInfo), ("platformFeeInfo", DA.toJSON platformFeeInfo)]
-      (Object newKeyMap) ^? _JSON :: Maybe (FPSlabsDetailsSlab)
+      Object newKeyMap ^? _JSON :: Maybe FPSlabsDetailsSlab
     _ -> Nothing
 
 jsonToFPSlabsDetailsSlab :: DAKM.KeyMap Value -> String -> [FPSlabsDetailsSlab]

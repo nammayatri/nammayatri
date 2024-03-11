@@ -141,7 +141,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   isShuttingDown <- mkShutdown
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   cacAclMapRaw <- fromMaybe (error "AUTH_MAP not found in Env !!!!") <$> lookupEnv "AUTH_MAP"
-  let cacAclMap = fromMaybe (error "Unable to Parse AUTH_MAP of CAC") ((readMaybe cacAclMapRaw) :: Maybe [(String, [(String, String)])])
+  let cacAclMap = fromMaybe (error "Unable to Parse AUTH_MAP of CAC") (readMaybe cacAclMapRaw :: Maybe [(String, [(String, String)])])
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

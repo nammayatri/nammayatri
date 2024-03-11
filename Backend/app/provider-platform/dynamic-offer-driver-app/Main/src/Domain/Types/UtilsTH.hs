@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Domain.Types.UtilsTH where
@@ -48,7 +47,7 @@ mkCacParseInstance name = do
         [ Match
             (LitP (StringL (nameBase fieldName)))
             --    (NormalB ((VarE 'checkField) `AppE` (SigE (ConE 'Proxy) (AppT (ConT 'Proxy) fieldType)) `AppE` VarE value))
-            (NormalB ((VarE 'checkField) `AppE` (ConE pN `AppTypeE` fieldType) `AppE` (VarE value)))
+            (NormalB (VarE 'checkField `AppE` (ConE pN `AppTypeE` fieldType) `AppE` VarE value))
             []
           | (fieldName, fieldType) <- fieldNames
         ]
@@ -68,7 +67,7 @@ mkCacParseInstanceList name parseName = do
         [ Match
             (LitP (StringL parseName))
             --    (NormalB ((VarE 'checkField) `AppE` (SigE (ConE 'Proxy) (AppT (ConT 'Proxy) fieldType)) `AppE` VarE value))
-            (NormalB ((VarE 'checkField) `AppE` (ConE pN `AppTypeE` (AppT ListT (ConT name))) `AppE` (VarE value)))
+            (NormalB (VarE 'checkField `AppE` (ConE pN `AppTypeE` AppT ListT (ConT name)) `AppE` VarE value))
             []
         ]
           <> [Match WildP (NormalB (ConE 'True)) []]

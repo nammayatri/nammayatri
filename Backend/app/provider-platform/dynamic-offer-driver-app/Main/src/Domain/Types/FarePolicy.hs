@@ -16,8 +16,6 @@
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
--- import Data.Aeson as DA
-
 import Control.Lens.Combinators
 import Control.Lens.Fold
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
@@ -29,7 +27,6 @@ import Data.Aeson.Types
 import Data.List.NonEmpty
 import Data.Text as Text
 import qualified Data.Vector as DV
-import Debug.Trace as T
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
@@ -42,9 +39,6 @@ import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-
--- import Kernel.Utils.Logging
--- import Kernel.Utils.Common (CacheFlow)
 
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
@@ -61,28 +55,27 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   }
   deriving (Generic, Show)
 
--- jsonToFullDriverExtraFeeBounds :: String -> Object -> Parser (Id FarePolicy, [DriverExtraFeeBounds])
--- jsonToFullDriverExtraFeeBounds fpId v =
---   (,) <$> (pure (Id (Text.pack fpId))) <*> (jsonToDriverExtraFeeBounds v fpId)
-
--- jsontToNightShiftBounds :: Object -> Parser (Maybe DPM.NightShiftBounds)
--- jsontToNightShiftBounds k = do
---   nightShiftStart <- (readWithInfo' "farePolicy:nightShiftStart" <$> (k .: DAK.fromText (Text.pack "farePolicy:nightShiftStart"))) :: Parser (Maybe TimeOfDay)
---   nightShiftEnd <- (readWithInfo' "farePolicy:nightShiftEnd" <$> (k .: DAK.fromText (Text.pack "farePolicy:nightShiftEnd"))) :: Parser (Maybe TimeOfDay)
---   pure $ DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd
-
--- jsonToAllowedTripDistanceBounds :: Object -> Parser (Maybe DPM.AllowedTripDistanceBounds)
--- jsonToAllowedTripDistanceBounds k = do
---   maxAllowedTripDistance <- (readWithInfo' "farePolicy:maxAllowedTripDistance" <$> (k .: DAK.fromText (Text.pack "farePolicy:maxAllowedTripDistance"))) :: Parser (Maybe Meters)
---   minAllowedTripDistance <- (readWithInfo' "farePolicy:minAllowedTripDistance" <$> (k .: DAK.fromText (Text.pack "farePolicy:minAllowedTripDistance"))) :: Parser (Maybe Meters)
---   pure $ DPM.AllowedTripDistanceBounds <$> maxAllowedTripDistance <*> minAllowedTripDistance
-
 jsonToDriverExtraFeeBounds :: String -> String -> Maybe (NonEmpty DriverExtraFeeBounds)
-jsonToDriverExtraFeeBounds config key' = do
-  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyDriverExtraFeeBounds:") (itraversed . indices (\k -> Text.isPrefixOf "farePolicyDriverExtraFeeBounds:" (DAK.toText k))))
-      res'' = fromMaybe (DA.Array (DV.fromList [])) (DAKM.lookup (DAK.fromText (Text.pack key')) (DAKM.fromList res'))
-      res = res'' ^? _JSON :: (Maybe [DriverExtraFeeBounds])
-  nonEmpty $ fromMaybe [] res
+jsonToDriverExtraFeeBounds config key' =
+  let res' =
+        config
+          ^@.. _Value
+            . _Object
+            . reindexed
+              (dropPrefixFromConfig "farePolicyDriverExtraFeeBounds:")
+              ( itraversed
+                  . indices
+                    ( Text.isPrefixOf
+                        "farePolicyDriverExtraFeeBounds:"
+                        . DAK.toText
+                    )
+              )
+      res'' =
+        fromMaybe
+          (DA.Array (DV.fromList []))
+          (DAKM.lookup (DAK.fromText (Text.pack key')) (DAKM.fromList res'))
+      res = res'' ^? _JSON :: Maybe [DriverExtraFeeBounds]
+   in nonEmpty $ fromMaybe [] res
 
 farePolicyMiddleWare :: DAKM.KeyMap Value -> String -> String -> DAKM.KeyMap Value
 farePolicyMiddleWare configMap config key' = do
@@ -94,67 +87,31 @@ farePolicyMiddleWare configMap config key' = do
       nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd
       allowedTripDistanceBounds = DPM.AllowedTripDistanceBounds <$> maxAllowedTripDistance <*> minAllowedTripDistance
       configMap' = KP.foldr DAKM.delete configMap ["nightShiftStart", "nightShiftEnd", "maxAllowedTripDistance", "minAllowedTripDistance"]
-      -- Object (fromList [(\\\"contents\\\",Number 1.0),(\\\"tag\\\",String \\\"PerMinuteWaitingCharge\\\")]))
       configMap'' = case DAKM.lookup "farePolicyType" configMap' of
-        Just (String "Progressive") -> toJSON $ ProgressiveDetails <$> (jsonToFPProgressiveDetails config key')
-        Just (String "Slabs") -> toJSON $ SlabsDetails <$> (getFPSlabDetailsSlab config key')
-        Just (String "Rental") -> toJSON $ RentalDetails <$> (jsonToFPRentalDetails config key')
-        _ -> (toJSON (Nothing :: Maybe FarePolicyDetails))
+        Just (String "Progressive") -> toJSON $ ProgressiveDetails <$> jsonToFPProgressiveDetails config key'
+        Just (String "Slabs") -> toJSON $ SlabsDetails <$> getFPSlabDetailsSlab config key'
+        Just (String "Rental") -> toJSON $ RentalDetails <$> jsonToFPRentalDetails config key'
+        _ -> toJSON (Nothing :: Maybe FarePolicyDetails)
   KP.foldr (\(k, v) acc -> DAKM.insert k v acc) configMap' [("nightShiftBounds", DA.toJSON nightShiftBounds), ("allowedTripDistanceBounds", DA.toJSON allowedTripDistanceBounds), ("driverExtraFeeBounds", DA.toJSON dEFB), ("farePolicyDetails", configMap'')]
 
 jsonToFarePolicy :: String -> String -> Maybe FarePolicy
 jsonToFarePolicy config key' = do
-  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicy:") (itraversed . indices (\k -> Text.isPrefixOf "farePolicy:" (DAK.toText k))))
-      -- res'' = T.trace ("farepolicy key value here " <> show res') $ fromMaybe (DA.Array (DV.fromList [] )) (DAKM.lookup (DAK.fromText ( Text.pack key')) (DAKM.fromList res'))
-      res'' = T.trace ("farepolicy key value here " <> show res') $ farePolicyMiddleWare (DAKM.fromList res') config key'
-      res = T.trace ("farepolicy the list i'm getting " <> show res'') $ (Object res'') ^? _JSON :: (Maybe FarePolicy)
-  T.trace ("farePolicyParsed" <> show res <> "and " <> show (fromJSON (Object res'') :: Result FarePolicy)) $ res
-
--- jsonToFarePolicy :: Object -> String -> Parser (Maybe FarePolicy)
--- jsonToFarePolicy k key' = do
---   -- fullDEFB <- jsonToFullDriverExtraFeeBounds key k
---   fDEFB <- jsonToDriverExtraFeeBounds k key'
---   id <- pure (Id (Text.pack key'))
---   serviceCharge <- (readWithInfo' "farePolicy:serviceCharge" <$> (k .: DAK.fromText (Text.pack "farePolicy:serviceCharge")))
---   farePolicyType <- (readWithInfo "farePolicy:farePolicyType" <$> (k .: DAK.fromText (Text.pack "farePolicy:farePolicyType")))
---   nightShiftBounds <- jsontToNightShiftBounds k
---   allowedTripDistanceBounds <- jsonToAllowedTripDistanceBounds k
---   govtCharges <- (readWithInfo' "farePolicy:govtCharges" <$> (k .: DAK.fromText (Text.pack "farePolicy:govtCharges")))
---   perMinuteRideExtraTimeCharge <- (readWithInfo' "farePolicy:perMinuteRideExtraTimeCharge" <$> (k .: DAK.fromText (Text.pack "farePolicy:perMinuteRideExtraTimeCharge"))) :: Parser (Maybe HighPrecMoney)
---   description <- (readWithInfo' "farePolicy:description" <$> (k .: DAK.fromText (Text.pack "farePolicy:description")))
---   createdAt <- (readWithInfo "farePolicy:createdAt" <$> (k .: DAK.fromText (Text.pack "farePolicy:createdAt")))
---   updatedAt <- (readWithInfo "farePolicy:updatedAt" <$> (k .: DAK.fromText (Text.pack "farePolicy:updatedAt")))
---   mFarePolicyDetails <- case farePolicyType of
---     Progressive -> do
---       mFPPD <- jsonToFPProgressiveDetails key' k
---       pure $ Just (ProgressiveDetails mFPPD)
---     Slabs -> do
---       val <- (makeFPSlabsDetails' k key')
---       case val of
---         Just fpsd -> pure $ Just (SlabsDetails fpsd)
---         Nothing -> pure Nothing
---     Rental -> do
---       mFPRD <- jsonToFPRentalDetails key' k
---       pure $ Just (RentalDetails mFPRD)
---   case mFarePolicyDetails of
---     Just farePolicyDetails -> do
---       return . Just $
---         FarePolicy
---           { id,
---             serviceCharge,
---             nightShiftBounds,
---             allowedTripDistanceBounds,
---             govtCharges,
---             driverExtraFeeBounds = nonEmpty fDEFB,
---             farePolicyDetails,
---             perMinuteRideExtraTimeCharge,
---             description,
---             createdAt,
---             updatedAt
---           }
---     Nothing -> do
---       _ <- error "FarePolicyDetails not found"
---       pure $ Nothing
+  let res' =
+        config
+          ^@.. _Value
+            . _Object
+            . reindexed
+              (dropPrefixFromConfig "farePolicy:")
+              ( itraversed
+                  . indices
+                    ( Text.isPrefixOf
+                        "farePolicy:"
+                        . DAK.toText
+                    )
+              )
+      res'' = farePolicyMiddleWare (DAKM.fromList res') config key'
+      res = Object res'' ^? _JSON :: (Maybe FarePolicy)
+  res
 
 type FarePolicy = FarePolicyD 'DTC.Safe
 
@@ -178,28 +135,6 @@ instance ToJSON (FarePolicyDetailsD 'DTC.Unsafe)
 instance FromJSON (FarePolicyDetailsD 'DTC.Safe)
 
 instance ToJSON (FarePolicyDetailsD 'DTC.Safe)
-
--- readWithInfo' :: (Read a, Show a) => String -> Value -> Maybe a
--- readWithInfo' msg s = case s of
---   String str -> case KP.readMaybe (Text.unpack str) of
---     Just val -> Just val
---     Nothing -> Nothing
---   Number scientific -> case KP.readMaybe (show scientific) of
---     Just val -> Just val
---     Nothing -> Nothing
---   _ -> error . Text.pack $ "Failed to parse: for key: mes " <>  msg <> " and value: " ++ show s
-
--- jsonToFarePolicy :: Value -> Parser FarePolicy
--- jsonToFarePolicy v =
---   FarePolicy
---     <$> (Id <$> (v .: DAK.fromText (Text.pack "farePolicy:id")))
---     <*> ((readWithInfo' "driverExtraFeeBounds" <$> (v .: DAK.fromText (Text.pack "farePolicy:driverExtraFeeBounds"))) :: (Parser (Maybe (NonEmpty DriverExtraFeeBounds))))
---     <*> ((readWithInfo' "serviceCharge" <$> (v .: DAK.fromText (Text.pack "farePolicy:serviceCharge"))) :: (Parser (Maybe Money)))
---     <*> ((readWithInfo' "nightShiftBounds" <$> (v .: DAK.fromText (Text.pack "farePolicy:nightShiftBounds"))) :: (Parser (Maybe DPM.NightShiftBounds)))
---     <*> ((readWithInfo' "allowedTripDistanceBounds" <$> (v .: DAK.fromText (Text.pack "farePolicy:allowedTripDistanceBounds"))) :: (Parser (Maybe DPM.AllowedTripDistanceBounds)))
---     <*> ((readWithInfo' "govtCharges" <$> (v .: DAK.fromText (Text.pack "farePolicy:govtCharges"))) :: (Parser (Maybe Double)))
---     <*> ((readWithInfo' "perMinuteRideExtraTimeCharge" <$> (v .: DAK.fromText (Text.pack "farePolicy:perMinuteRideExtraTimeCharge"))) :: (Parser (Maybe HighPrecMoney)))
---     <*> ((v .: DAK.fromText (Text.pack "farePolicy:farePolicyDetails")) >>= jsonToFarePolicyDetails)
 
 data FarePolicyType = Progressive | Slabs | Rental
   deriving stock (Show, Eq, Read, Ord, Generic)

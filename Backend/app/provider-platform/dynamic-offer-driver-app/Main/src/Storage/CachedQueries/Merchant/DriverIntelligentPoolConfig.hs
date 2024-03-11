@@ -65,8 +65,8 @@ getDriverIntelligentPoolConfigFromDB id =
 
 getConfigFromCACStrict :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> m DriverIntelligentPoolConfig
 getConfigFromCACStrict merchantOpCityId srId = do
-  dipcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId))])
-  tenant <- liftIO (SE.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  dipcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId))]
+  tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   gen <- newStdGen
   let (toss', _) = randomR (1, 100) gen :: (Int, StdGen)
   toss <-
@@ -81,22 +81,22 @@ getConfigFromCACStrict merchantOpCityId srId = do
       )
       srId
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dipcCond toss
-  let res' = (contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverIntelligentPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverIntelligentPoolConfig:" (DAK.toText k))))
-      res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
+  let res' = contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverIntelligentPoolConfig:") (itraversed . indices (Text.isPrefixOf "driverIntelligentPoolConfig:" . DAK.toText))
+      res = DA.Object (DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
   pure . fromMaybe (error "error in fetching the context value driverIntelligentPoolConfig: ") $ res
 
 cacFallbackHelper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> m DriverIntelligentPoolConfig
 cacFallbackHelper id srId = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
-  tenant <- liftIO (SE.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   config <- KSQS.findById' $ Text.pack tenant
   _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getConfigFromCACStrict id srId
 
 getDriverIntelligentPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> m DriverIntelligentPoolConfig
 getDriverIntelligentPoolConfigFromCAC id srId = do
-  dipcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id))])
+  dipcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id))]
   gen <- newStdGen
   let (toss', _) = randomR (1, 100) gen :: (Int, StdGen)
   toss <-
@@ -110,10 +110,10 @@ getDriverIntelligentPoolConfigFromCAC id srId = do
               pure toss'
       )
       srId
-  tenant <- liftIO (SE.lookupEnv "TENANT") >>= pure . fromMaybe "driver_offer_bpp_v2"
+  tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "driver_offer_bpp_v2"
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dipcCond toss
-  let res' = (contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverIntelligentPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverIntelligentPoolConfig:" (DAK.toText k))))
-      res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
+  let res' = contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverIntelligentPoolConfig:") (itraversed . indices (Text.isPrefixOf "driverIntelligentPoolConfig:" . DAK.toText))
+      res = DA.Object (DAKM.fromList res') ^? _JSON :: (Maybe DriverIntelligentPoolConfig)
   maybe (cacFallbackHelper id srId) pure res
 
 getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> m DriverIntelligentPoolConfig
@@ -139,9 +139,9 @@ findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperating
 findByMerchantOpCityId id srId = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
-  case "driver_intelligent_pool_config" `GL.elem` useCACConfig of
-    False -> getDriverIntelligentPoolConfigFromDB id
-    True -> Just <$> getConfigFromInMemory id srId
+  if "driver_intelligent_pool_config" `GL.elem` useCACConfig
+    then Just <$> getConfigFromInMemory id srId
+    else getDriverIntelligentPoolConfigFromDB id
 
 cacheDriverIntelligentPoolConfig :: CacheFlow m r => DriverIntelligentPoolConfig -> m ()
 cacheDriverIntelligentPoolConfig cfg = do

@@ -55,8 +55,8 @@ findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => 
 findByMerchantOperatingCityId id = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
-  case "merchant_service_usage_config" `GL.elem` useCACConfig of
-    True -> do
+  if "merchant_service_usage_config" `GL.elem` useCACConfig
+    then do
       gen <- newStdGen
       let toss = fst (randomR (1, 100) gen :: (Int, StdGen))
       logDebug $ "The toss value is for MerchantServiceUsageConfig " <> show toss
@@ -65,10 +65,10 @@ findByMerchantOperatingCityId id = do
       let tenant = fromMaybe "atlas_app_v2" mbTenant
       config <- liftIO $ CM.evalExperimentAsString tenant context toss
       logDebug $ "The fetched config is : " <> Text.pack config
-      let formattedConfig = (config ^@.. _Object . reindexed (KTC.dropPrefixFromConfig (Text.pack "merchantServiceUsageConfig:")) (itraversed . indices (\k -> Text.isPrefixOf "merchantServiceUsageConfig:" (DAK.toText k))))
+      let formattedConfig = config ^@.. _Object . reindexed (KTC.dropPrefixFromConfig (Text.pack "merchantServiceUsageConfig:")) (itraversed . indices (Text.isPrefixOf "merchantServiceUsageConfig:" . DAK.toText))
       logDebug $ "res8 = " <> show formattedConfig
       logDebug $ "The json version of res8 : " <> show (DA.Object $ DAKM.fromList formattedConfig)
-      let mbParsedConfig = (DA.Object $ DAKM.fromList formattedConfig) ^? _JSON :: Maybe (MerchantServiceUsageConfigD 'Unsafe)
+      let mbParsedConfig = DA.Object (DAKM.fromList formattedConfig) ^? _JSON :: Maybe (MerchantServiceUsageConfigD 'Unsafe)
       logDebug $ "The decoded Merchant service usage config is 1 : " <> show mbParsedConfig
       case mbParsedConfig of
         Just cfg -> return $ Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig cfg
@@ -80,19 +80,15 @@ findByMerchantOperatingCityId id = do
           logDebug $ "The fetched Backup config is : " <> show cfg.configValue
           KTC.initializeCACThroughConfig CM.createClientFromConfig cfg.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
           Just <$> getMerchantServiceUsageConfigFromCACStrict id toss
-    False -> getCfgFromCache id
+    else getCfgFromCache id
 
 getMerchantServiceUsageConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m MerchantServiceUsageConfig
 getMerchantServiceUsageConfigFromCACStrict id' toss = do
-  logDebug $ "Fetching MerchantServiceUsageConfig from CAC second time"
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "RIDER_TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_app_v2" tenant) context toss
-  logDebug $ "The fetched config is 2 new : " <> Text.pack config
-  let formattedConfig = (config ^@.. _Object . reindexed (KTC.dropPrefixFromConfig (Text.pack "merchantServiceUsageConfig:")) (itraversed . indices (\k -> Text.isPrefixOf "merchantServiceUsageConfig:" (DAK.toText k))))
-  logDebug $ "res8 2 = " <> show formattedConfig
-  let parsedConfig = (DA.Object $ DAKM.fromList formattedConfig) ^? _JSON :: Maybe (MerchantServiceUsageConfigD 'Unsafe)
-  logDebug $ "The decoded Merchant service usage config is 2 new : " <> show parsedConfig
+  let formattedConfig = config ^@.. _Object . reindexed (KTC.dropPrefixFromConfig (Text.pack "merchantServiceUsageConfig:")) (itraversed . indices (Text.isPrefixOf "merchantServiceUsageConfig:" . DAK.toText))
+  let parsedConfig = DA.Object (DAKM.fromList formattedConfig) ^? _JSON :: Maybe (MerchantServiceUsageConfigD 'Unsafe)
   return $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig $ fromMaybe (error $ Text.pack $ "Could not find merchantServiceUsageConfig corresponding to the stated merchantOperatingCityId : " <> show id') parsedConfig
 
 getCfgFromCache :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)

@@ -24,7 +24,6 @@ where
 
 import qualified Client.Main as CM
 import qualified Data.Aeson as DA
--- import Data.Aeson.Types as DAT
 import Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text as Text
@@ -33,8 +32,6 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy
 import EulerHS.Language as L (getOption)
 import qualified EulerHS.Language as L
--- import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
-
 import qualified GHC.List as GL
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -50,15 +47,10 @@ import System.Random
 findFarePolicyFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> m (Maybe FarePolicy)
 findFarePolicyFromCAC id toss = do
   fp <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "farePolicyId", DA.String (getId id))]
-  logDebug $ "the context value is " <> show fp
   tenant <- liftIO $ SE.lookupEnv "TENANT"
-  -- contextValue <- liftIO $ CM.evalExperiment (fromMaybe "test" tenant) fp toss
   contextValue <- liftIO $ CM.evalExperimentAsString (fromMaybe "test" tenant) fp toss
-  -- logDebug $ "the context value is " <> show contextValue
-  -- let conf = jsonToDriverExtraFeeBounds' contextValue'' $ Text.unpack $ getId id
-  -- logDebug $ "the evaluted context value is driverextrafeebounds: " <> show conf
   let config = jsonToFarePolicy contextValue $ Text.unpack $ getId id
-  pure $ config
+  pure config
 
 getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> m (Maybe FarePolicy)
 getConfigFromInMemory id toss = do

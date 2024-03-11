@@ -12,9 +12,7 @@ data CacTypeValidationReq = CacTypeValidationReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-data CacTypeValidationResp = CacTypeValidationResp
-  { result :: Bool
-  }
+newtype CacTypeValidationResp = CacTypeValidationResp {result :: Bool}
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 typeCheckHandler :: CacTypeValidationReq -> Flow CacTypeValidationResp

@@ -57,14 +57,20 @@ import "utils" Utils.Common.Events as UE
 
 createCAC :: AppCfg -> IO ()
 createCAC appCfg = do
-  x <- (CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants)
+  x <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
   case x of
     0 -> CM.startCACPolling appCfg.cacConfig.tenants
-    _ -> error "CAC client failed to start"
+    _ -> do
+      -- logError "CAC client failed to start"
+      threadDelay 1000000
+      createCAC appCfg
   y <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
   case y of
     0 -> CM.runSuperPositionPolling appCfg.cacConfig.tenants
-    _ -> error "SuperPosition client failed to start"
+    _ -> do
+      -- logError "CAC super position client failed to start"
+      threadDelay 1000000
+      createCAC appCfg
 
 runRiderApp :: (AppCfg -> AppCfg) -> IO ()
 runRiderApp configModifier = do

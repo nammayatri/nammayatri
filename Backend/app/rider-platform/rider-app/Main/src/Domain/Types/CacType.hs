@@ -1,10 +1,5 @@
 module Domain.Types.CacType where
 
--- import qualified Domain.Types.DriverPoolConfig as DPC
-
--- import qualified Kernel.Types.Common as KTC
--- import qualified Kernel.Types.Id as KTI
--- import qualified Domain.Types.Merchant.MerchantOperatingCity as DTM
 import qualified Data.Aeson as A
 import Data.Text as Text
 import Domain.Types.Merchant

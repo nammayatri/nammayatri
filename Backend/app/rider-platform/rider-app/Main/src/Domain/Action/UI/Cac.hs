@@ -26,12 +26,12 @@ import Tools.Error
 getGetUiConfigs :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Int -> Environment.Flow Data.Aeson.Object
 getGetUiConfigs (mbPersonId, _) toss = do
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (\sc -> sc.useCACForFrontend) systemConfigs
+  let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   if useCACConfig
     then case mbPersonId of
       Just personId -> do
         person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-        fromMaybe (Data.Aeson.KeyMap.empty) <$> getFrontendConfigs person (Just toss)
+        fromMaybe Data.Aeson.KeyMap.empty <$> getFrontendConfigs person (Just toss)
       Nothing -> do
         logError "PersonId is null, hence context of city cannot be determined. Returning empty object."
         return Data.Aeson.KeyMap.empty

@@ -171,9 +171,9 @@ getPersonDetails (personId, _) mbToss = do
     _ -> return Nothing
   decPerson <- decrypt person
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (\sc -> sc.useCACForFrontend) systemConfigs
+  let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   frntndfgs <- if useCACConfig then getFrontendConfigs person mbToss else return $ Just DAKM.empty
-  let mbMd5Digest = (T.pack . show . MD5.md5 . DA.encode) <$> frntndfgs
+  let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   return $ makeProfileRes decPerson tag mbMd5Digest
   where
     makeProfileRes Person.Person {..} disability md5DigestHash =

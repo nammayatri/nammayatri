@@ -18,12 +18,6 @@ module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
   )
 where
 
--- import qualified Data.ByteString.Lazy as BL
-
--- import qualified Data.Text.Encoding as DTE
-
--- import qualified Data.Aeson as DA
-
 import Control.Lens.Combinators
 import Control.Lens.Fold
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
@@ -38,12 +32,9 @@ import qualified Data.Vector as DV
 import Debug.Trace as T
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
-import Kernel.Prelude
 import Kernel.Prelude as KP
 import Kernel.Types.Cac
 import Kernel.Types.Common
-
--- import Kernel.Types.Error
 
 data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
   { baseFare :: Money,
@@ -81,7 +72,21 @@ data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
 
 jsonToFPProgressiveDetailsPerExtraKmRateSection :: String -> String -> [FPProgressiveDetailsPerExtraKmRateSection]
 jsonToFPProgressiveDetailsPerExtraKmRateSection config key' = do
-  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyProgressiveDetailsPerExtraKmRateSection:") (itraversed . indices (\k -> Text.isPrefixOf "farePolicyProgressiveDetailsPerExtraKmRateSection:" (DAK.toText k))))
+  let res' =
+        config
+          ^@.. _Value
+            . _Object
+            . reindexed
+              ( dropPrefixFromConfig
+                  "farePolicyProgressiveDetailsPerExtraKmRateSection:"
+              )
+              ( itraversed
+                  . indices
+                    ( Text.isPrefixOf
+                        "farePolicyProgressiveDetailsPerExtraKmRateSection:"
+                        . DAK.toText
+                    )
+              )
       res'' = T.trace ("perKmRateSectionvalue" <> show res' <> "and key" <> show key') $ fromMaybe (DA.Array (DV.fromList [])) (KM.lookup (DAK.fromText (Text.pack key')) (KM.fromList res'))
       res = T.trace ("perKmRateSectionValue'" <> show res'') $ res'' ^? _JSON :: (Maybe [FPProgressiveDetailsPerExtraKmRateSection])
   fromMaybe [] res
@@ -89,17 +94,17 @@ jsonToFPProgressiveDetailsPerExtraKmRateSection config key' = do
 parsingMiddleware :: KM.KeyMap Value -> String -> String -> KM.KeyMap Value
 parsingMiddleware config configS key' =
   let perExtraKmRateSections = jsonToFPProgressiveDetailsPerExtraKmRateSection configS key'
-      waitingCharge = KM.lookup ("waitingCharge") config >>= fromJSONHelper
-      freeWaitingTime = KM.lookup ("freeWatingTime") config >>= fromJSONHelper
+      waitingCharge = KM.lookup "waitingCharge" config >>= fromJSONHelper
+      freeWaitingTime = KM.lookup "freeWatingTime" config >>= fromJSONHelper
       waitingChargeInfo = WaitingChargeInfo <$> waitingCharge <*> freeWaitingTime
-   in T.trace ("perExtraKmRateSection" <> show perExtraKmRateSections) $ KP.foldr (\(k, v) acc -> KM.insert k v acc) config [("perExtraKmRateSections", toJSON perExtraKmRateSections), ("waitingChargeInfo", DA.toJSON waitingChargeInfo)]
+   in KP.foldr (\(k, v) acc -> KM.insert k v acc) config [("perExtraKmRateSections", toJSON perExtraKmRateSections), ("waitingChargeInfo", DA.toJSON waitingChargeInfo)]
 
-jsonToFPProgressiveDetails :: String -> String -> (Maybe FPProgressiveDetails)
+jsonToFPProgressiveDetails :: String -> String -> Maybe FPProgressiveDetails
 jsonToFPProgressiveDetails config key' =
-  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyProgressiveDetails:") (itraversed . indices (\k -> Text.isPrefixOf "farePolicyProgressiveDetails:" (DAK.toText k))))
-      res'' = T.trace ("the farePolicyProgressiveDetails " <> show res' <> "and the config" <> show config) $ parsingMiddleware (KM.fromList res') config key'
-      res = T.trace ("farePolicyProgressiveDetails" <> show res'') $ (DA.Object res'') ^? _JSON :: (Maybe FPProgressiveDetails)
-   in T.trace ("farePolicyProgressiveDetails parsed " <> show res) $ res
+  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicyProgressiveDetails:") (itraversed . indices (Text.isPrefixOf "farePolicyProgressiveDetails:" . DAK.toText)))
+      res'' = parsingMiddleware (KM.fromList res') config key'
+      res = DA.Object res'' ^? _JSON :: (Maybe FPProgressiveDetails)
+   in res
 
 makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetailsAPIEntity
 makeFPProgressiveDetailsAPIEntity FPProgressiveDetails {..} =

@@ -22,7 +22,7 @@ import Tools.Auth
 getDriverGetUiConfigs :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Int -> Environment.Flow Data.Aeson.Object
 getDriverGetUiConfigs (_, _, merchantOpCityId) toss = do
   systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe False (\sc -> sc.useCACForFrontend) systemConfigs
+  let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   if useCACConfig
-    then getFrontendConfigs merchantOpCityId (Just toss) <&> fromMaybe (Data.Aeson.KeyMap.empty)
+    then getFrontendConfigs merchantOpCityId (Just toss) <&> fromMaybe Data.Aeson.KeyMap.empty
     else return Data.Aeson.KeyMap.empty

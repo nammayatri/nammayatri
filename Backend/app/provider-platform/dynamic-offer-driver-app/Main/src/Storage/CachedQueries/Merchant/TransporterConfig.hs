@@ -24,17 +24,9 @@ module Storage.CachedQueries.Merchant.TransporterConfig
 where
 
 import qualified Client.Main as CM
--- import Domain.Types.Merchant.DriverPoolConfig as DPC
-
--- import Data.Aeson.Key
--- import qualified Data.Time.Clock as DTC
--- import qualified Data.ByteString.Lazy.Char8 as BL
--- import qualified Data.Text.Encoding as DTE
-
--- import Kernel.Types.Cac
-
 import Control.Lens.Combinators
 import Control.Lens.Fold
+import Data.Aeson as A
 import qualified Data.Aeson as DA
 import Data.Aeson.Key as DAK
 import Data.Aeson.KeyMap as DAKM
@@ -43,16 +35,12 @@ import Data.Aeson.Types as DAT
 import Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as Text
--- import qualified Data.ByteString.Lazy.Char8 as BSL
-
 import qualified Domain.Types.Cac as DTC
 import Domain.Types.Common
 import Domain.Types.Location (dummyToLocationData)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import qualified EulerHS.Language as L
--- import Kernel.External.Types (Language)
-
 import qualified GHC.List as GL
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Notification.FCM.Types as FCM
@@ -60,12 +48,23 @@ import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Cac
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Merchant.TransporterConfig as Queries
 import qualified System.Environment as Se
 import System.Random
+
+valueToType :: FromJSON a => A.Value -> a
+valueToType val = case A.fromJSON val of
+  A.Success a -> a
+  A.Error _ -> error "Not a string"
+
+valueToText :: Value -> Text
+valueToText val = case val of
+  String text -> text
+  _ -> error "Not a string"
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
 create = Queries.create
@@ -75,16 +74,24 @@ getTransporterConfigFromCACStrict id' toss = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
-  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "transporterConfig:") (itraversed . indices (\k -> Text.isPrefixOf "transporterConfig:" (DAK.toText k))))
+  let res' =
+        config
+          ^@.. _Value
+            . _Object
+            . reindexed
+              (dropPrefixFromConfig "transporterConfig:")
+              ( itraversed
+                  . indices (Text.isPrefixOf "transporterConfig:" . DAK.toText)
+              )
       res'' = parsingMiddleware $ DAKM.fromList res'
-      res = (DA.Object res'') ^? _JSON :: Maybe TransporterConfig
-  maybe (error ("Could not find TransporterConfig config corresponding to the stated merchant id" <> show id')) pure res
+      res = DA.Object res'' ^? _JSON :: Maybe TransporterConfig
+  maybe (throwError (InternalError ("Could not find TransporterConfig config corresponding to the stated merchant id" <> id'.getId))) pure res
 
 createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m TransporterConfig
 createThroughConfigHelper id' toss = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
-  tenant <- liftIO (Se.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  tenant <- liftIO (Se.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   config <- KSQS.findById' $ Text.pack tenant
   _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getTransporterConfigFromCACStrict id' toss
@@ -99,9 +106,9 @@ parsingMiddleware km =
               _ -> v
           )
           km
-      fcmUrl = valueToType <$> (DAKM.lookup "fcmUrl" newObject'')
-      fcmServiceAccount = valueToText <$> (DAKM.lookup "fcmServiceAccount" newObject'')
-      fcmTokenKeyPrefix = valueToText <$> (DAKM.lookup "fcmTokenKeyPrefix" newObject'')
+      fcmUrl = valueToType <$> DAKM.lookup "fcmUrl" newObject''
+      fcmServiceAccount = valueToText <$> DAKM.lookup "fcmServiceAccount" newObject''
+      fcmTokenKeyPrefix = valueToText <$> DAKM.lookup "fcmTokenKeyPrefix" newObject''
       fcmConfig = FCM.FCMConfig <$> fcmUrl <*> fcmServiceAccount <*> fcmTokenKeyPrefix
       newObject = KP.foldr DAKM.delete newObject'' ["fcmUrl", "fcmServiceAccount", "fcmTokenKeyPrefix"]
    in DAKM.insert "fcmConfig" (toJSON fcmConfig) newObject
@@ -111,9 +118,17 @@ getConfig id toss = do
   confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(Text.pack "merchantOperatingCityId", DA.String (getId id))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) confCond toss
-  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "transporterConfig:") (itraversed . indices (\k -> Text.isPrefixOf "transporterConfig:" (DAK.toText k))))
+  let res' =
+        config
+          ^@.. _Value
+            . _Object
+            . reindexed
+              (dropPrefixFromConfig "transporterConfig:")
+              ( itraversed
+                  . indices (Text.isPrefixOf "transporterConfig:" . DAK.toText)
+              )
       res'' = parsingMiddleware $ DAKM.fromList res'
-      res = (DA.Object res'') ^? _JSON :: Maybe TransporterConfig
+      res = DA.Object res'' ^? _JSON :: Maybe TransporterConfig
   maybe (createThroughConfigHelper id toss) pure res
 
 getConfigFromMemory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m TransporterConfig
@@ -139,7 +154,7 @@ findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merc
 findByMerchantOpCityId id mbstickId = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
-  if ("transporter_config" `GL.elem` useCACConfig)
+  if "transporter_config" `GL.elem` useCACConfig
     then Just <$> findByMerchantOpCityIdCAC id mbstickId
     else getTransporterConfigFromDB id
 

@@ -64,16 +64,21 @@ newtype FPSlabsDetailsAPIEntity = FPSlabsDetailsAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
--- makeFPSlabsDetails' :: Object -> String -> Parser (Maybe FPSlabsDetails)
--- makeFPSlabsDetails' k key' = do
---   fpsdsl <- jsonToFPSlabsDetailsSlab k key'
---   case NE.nonEmpty fpsdsl of
---     Just fpsdsl' -> pure $ Just (FPSlabsDetails fpsdsl')
---     Nothing -> pure $ Nothing
-
-getFPSlabDetailsSlab :: String -> String -> (Maybe FPSlabsDetails)
+getFPSlabDetailsSlab :: String -> String -> Maybe FPSlabsDetails
 getFPSlabDetailsSlab config key' = do
-  let k = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "farePolicySlabsDetailsSlab:") (itraversed . indices (\k' -> Text.isPrefixOf "farePolicySlabsDetailsSlab:" (DAK.toText k'))))
+  let k =
+        config
+          ^@.. _Value
+            . _Object
+            . reindexed
+              (dropPrefixFromConfig "farePolicySlabsDetailsSlab:")
+              ( itraversed
+                  . indices
+                    ( Text.isPrefixOf
+                        "farePolicySlabsDetailsSlab:"
+                        . DAK.toText
+                    )
+              )
       fpsdsl = T.trace ("the value of fpsSlab" <> show k) $ jsonToFPSlabsDetailsSlab (DAKM.fromList k) key'
   case T.trace ("value of fpsSlab" <> show fpsdsl) (NE.nonEmpty fpsdsl) of
     Just fpsdsl' -> Just (FPSlabsDetails fpsdsl')

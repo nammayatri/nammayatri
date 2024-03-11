@@ -577,7 +577,6 @@ library
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
       Storage.Queries.WhiteListOrg
-      Test
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH
