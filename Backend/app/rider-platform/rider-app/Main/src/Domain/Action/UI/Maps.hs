@@ -78,6 +78,7 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
       when toCollectData $ do
         let autoCompleteDataCollectionCondition = (isJust sessionToken) && (isJust autoCompleteType)
         when autoCompleteDataCollectionCondition $ do
+          let reqOrigin = fromMaybe (Maps.LatLong 0 0) origin
           let token = fromMaybe "" sessionToken
           let typeOfSearch = fromMaybe DROP autoCompleteType
           let key = makeAutoCompleteKey token (show typeOfSearch)
@@ -86,11 +87,11 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
           case currentRecord of
             Just record -> do
               let currentSting = record.autocompleteInputs
-              let updatedRecord = AutoCompleteEventData (currentSting <> "|" <> input) record.customerId record.id record.isLocationSelectedOnMap record.searchRequestId record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.createdAt now
+              let updatedRecord = AutoCompleteEventData (currentSting <> "|" <> input) record.customerId record.id record.isLocationSelectedOnMap record.searchRequestId record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
               triggerAutoCompleteEvent updatedRecord
             Nothing -> do
               uid <- generateGUID
-              let autoCompleteData = AutoCompleteEventData input personId uid Nothing Nothing (show typeOfSearch) token merchantId merchantOperatingCityId now now
+              let autoCompleteData = AutoCompleteEventData input personId uid Nothing Nothing (show typeOfSearch) token merchantId merchantOperatingCityId (show reqOrigin.lat) (show reqOrigin.lon) now now
               triggerAutoCompleteEvent autoCompleteData
   Maps.autoComplete
     merchantId

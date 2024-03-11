@@ -19,7 +19,7 @@ PlanTranslation:
 
   constraints:
     planId: PrimaryKey
-    language: SecondaryKey
+    language: PrimaryKey
 
   queries:
     findByPlanIdAndLanguage:
