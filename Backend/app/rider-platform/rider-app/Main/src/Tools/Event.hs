@@ -76,6 +76,8 @@ data Payload
         sessionToken :: Text,
         merchantId :: Id Merchant,
         merchantOperatingCityId :: Id MerchantOperatingCity,
+        originLat :: Text,
+        originLon :: Text,
         createdAt :: UTCTime,
         updatedAt :: UTCTime
       }
@@ -137,6 +139,8 @@ data AutoCompleteEventData = AutoCompleteEventData
     sessionToken :: Text,
     merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
+    originLat :: Text,
+    originLon :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

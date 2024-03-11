@@ -306,11 +306,11 @@ search personId req bundleVersion clientVersion device = do
                 pickupRecord :: Maybe AutoCompleteEventData <- Redis.safeGet pickUpKey
                 dropRecord :: Maybe AutoCompleteEventData <- Redis.safeGet dropKey
                 whenJust pickupRecord $ \record -> do
-                  let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isSourceManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.createdAt now
+                  let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isSourceManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
                   -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isSourceManuallyMoved, DTA.updatedAt = now}
                   triggerAutoCompleteEvent updatedRecord
                 whenJust dropRecord $ \record -> do
-                  let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isDestinationManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.createdAt now
+                  let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id (oneWayReq.isDestinationManuallyMoved) (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
                   -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = oneWayReq.isDestinationManuallyMoved, DTA.updatedAt = now}
                   triggerAutoCompleteEvent updatedRecord
 

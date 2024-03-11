@@ -26,12 +26,12 @@ data PlanTranslationT f = PlanTranslationT
   deriving (Generic, B.Beamable)
 
 instance B.Table PlanTranslationT where
-  data PrimaryKey PlanTranslationT f = PlanTranslationId (B.C f Data.Text.Text)
+  data PrimaryKey PlanTranslationT f = PlanTranslationId (B.C f Kernel.External.Types.Language) (B.C f Data.Text.Text)
     deriving (Generic, B.Beamable)
-  primaryKey = PlanTranslationId . planId
+  primaryKey = PlanTranslationId <$> language <*> planId
 
 type PlanTranslation = PlanTranslationT Identity
 
-$(enableKVPG ''PlanTranslationT ['planId] [['language]])
+$(enableKVPG ''PlanTranslationT ['language, 'planId] [])
 
 $(mkTableInstances ''PlanTranslationT "plan_translation")

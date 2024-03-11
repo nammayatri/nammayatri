@@ -13,3 +13,9 @@ ALTER TABLE atlas_driver_offer_bpp.plan_translation ADD PRIMARY KEY ( plan_id, l
 
 ALTER TABLE atlas_driver_offer_bpp.plan_translation DROP CONSTRAINT plan_translation_pkey;
 ALTER TABLE atlas_driver_offer_bpp.plan_translation ADD PRIMARY KEY ( plan_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan_translation DROP CONSTRAINT plan_translation_pkey;
+ALTER TABLE atlas_driver_offer_bpp.plan_translation ADD PRIMARY KEY ( language, plan_id);

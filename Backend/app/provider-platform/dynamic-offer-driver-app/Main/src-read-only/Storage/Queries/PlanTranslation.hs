@@ -31,11 +31,12 @@ findByPlanIdAndLanguage (Kernel.Types.Id.Id planId) language = do
       Se.Is Beam.language $ Se.Eq language
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m (Maybe (Domain.Types.PlanTranslation.PlanTranslation))
-findByPrimaryKey (Kernel.Types.Id.Id planId) = do
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m (Maybe (Domain.Types.PlanTranslation.PlanTranslation))
+findByPrimaryKey language (Kernel.Types.Id.Id planId) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.planId $ Se.Eq planId
+        [ Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.planId $ Se.Eq planId
         ]
     ]
 
@@ -44,13 +45,13 @@ updateByPrimaryKey Domain.Types.PlanTranslation.PlanTranslation {..} = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.description description,
-      Se.Set Beam.language language,
       Se.Set Beam.name name,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.planId $ Se.Eq (Kernel.Types.Id.getId planId)
+        [ Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.planId $ Se.Eq (Kernel.Types.Id.getId planId)
         ]
     ]
 
