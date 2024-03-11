@@ -16,7 +16,6 @@
 module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
-import Data.List (sortBy)
 import Data.Ord
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
@@ -367,10 +366,8 @@ createMapping bookingId rideId merchantId merchantOperatingCityId = do
   fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
   fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
 
-  mbToLocationRideMapping <- do
-    mappings <- QLM.findByEntityId bookingId
-    let mbToLocMap = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
-    (\toLocMap -> SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)) `mapM` mbToLocMap
+  mbToLocationMapping <- QLM.getLatestEndByEntityId bookingId
+  mbToLocationRideMapping <- (\toLocMap -> SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)) `mapM` mbToLocationMapping
 
   QLM.create fromLocationRideMapping
   whenJust mbToLocationRideMapping QLM.create
@@ -386,7 +383,7 @@ instance FromTType' BeamR.Ride Ride where
           createMapping bookingId id merchantId merchantOperatingCityId
         else do
           fromLocationMapping' <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
-          let mbToLocationMapping' = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+          mbToLocationMapping' <- QLM.getLatestEndByEntityId id
           return (fromLocationMapping', mbToLocationMapping')
 
     fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)

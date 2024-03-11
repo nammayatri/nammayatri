@@ -16,8 +16,6 @@
 
 module Storage.Queries.Booking where
 
-import Data.List (sortBy)
-import Data.Ord
 import qualified Data.Text as T
 import Domain.Types.Booking
 import qualified Domain.Types.Booking.BookingLocation as DBBL
@@ -211,7 +209,7 @@ instance FromTType' BeamB.Booking Booking where
           fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
           tl <- do
-            let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+            mbToLocationMapping <- QLM.getLatestEndByEntityId id
             maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
 
           return (fl, tl)

@@ -108,7 +108,7 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-findLatestByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe BookingStatus)
+findLatestByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
 findLatestByRiderId (Id riderId) =
   do
     let options =
@@ -124,7 +124,6 @@ findLatestByRiderId (Id riderId) =
         limit' = Just 1
     findAllWithOptionsKV options sortBy' limit' Nothing
     <&> listToMaybe
-    <&> (Domain.status <$>)
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
@@ -189,11 +188,11 @@ findByRiderId (Id personId) = do
 findAssignedByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
 findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
 
-findBookingIdAssignedByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m (Maybe (Id Booking))
-findBookingIdAssignedByEstimateId (Id estimateId) = do
+findBookingIdAssignedByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> [BookingStatus] -> m (Maybe (Id Booking))
+findBookingIdAssignedByEstimateId (Id estimateId) statusList = do
   driverOffer <- findAllWithKV [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
   quote <- findAllWithKV [Se.Is BeamQ.driverOfferId $ Se.In $ map (\x -> Just (getId x.id)) driverOffer]
-  booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]
+  booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote, Se.Is BeamB.status $ Se.In statusList]
   return $ listToMaybe $ Domain.id <$> booking
 
 updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
@@ -304,8 +303,8 @@ instance FromTType' BeamB.Booking Booking where
           fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
           fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
-          let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
-              toLocId = (.locationId.getId) <$> mbToLocationMapping
+          mbToLocationMapping <- QLM.getLatestEndByEntityId id
+          let toLocId = (.locationId.getId) <$> mbToLocationMapping
 
           logTagDebug ("bookingId:-" <> id) $ "To Location Mapping:-" <> show mbToLocationMapping
           logTagDebug ("bookingId:-" <> id) $ "To Location Id:-" <> show toLocId

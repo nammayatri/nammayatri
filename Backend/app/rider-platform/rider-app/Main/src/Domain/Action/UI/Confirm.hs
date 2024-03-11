@@ -18,6 +18,7 @@ module Domain.Action.UI.Confirm
   )
 where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -38,6 +39,10 @@ import qualified Tools.Notifications as Notify
 
 confirm ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CacheFlow m r,
     EventStreamFlow m r,
     EncFlow m r

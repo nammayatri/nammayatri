@@ -14,7 +14,10 @@
 
 module SharedLogic.Confirm where
 
+import qualified Data.HashMap.Strict as HM
+import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.CancellationReason
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Location as DL
@@ -85,8 +88,12 @@ data ConfirmQuoteDetails
 
 confirm ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     CacheFlow m r,
     EventStreamFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EncFlow m r
   ) =>
   DConfirmReq ->
@@ -107,11 +114,15 @@ confirm DConfirmReq {..} = do
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
       DQuote.InterCityDetails details -> pure (Just details.quoteId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  activeBooking <- QRideB.findByRiderId personId
+  activeBooking <- QRideB.findLatestByRiderId personId
   scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
   let searchDist = round $ fromMaybe 0 $ (.getHighPrecMeters) <$> searchRequest.distance
       searchDur = fromMaybe 0 $ (.getSeconds) <$> searchRequest.estimatedRideDuration
       overlap = any (checkOverlap searchDist searchDur searchRequest.startTime) scheduledBookings
+  case (activeBooking, overlap) of
+    (_, True) -> throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
+    (Just booking, _) -> DQuote.processActiveBooking booking OnConfirm
+    _ -> pure ()
   unless (null activeBooking && not overlap) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired

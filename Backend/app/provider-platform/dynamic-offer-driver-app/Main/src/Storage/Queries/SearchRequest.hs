@@ -15,8 +15,6 @@
 
 module Storage.Queries.SearchRequest where
 
-import Data.List (sortBy)
-import Data.Ord
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as RD
@@ -94,8 +92,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
     fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
     fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
-    mappings <- QLM.findByEntityId id
-    let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    mbToLocationMapping <- QLM.getLatestEndByEntityId id
     toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
 
     let startTime_ = fromMaybe now startTime
