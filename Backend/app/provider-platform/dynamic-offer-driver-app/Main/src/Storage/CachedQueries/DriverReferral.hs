@@ -16,7 +16,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
 import qualified Storage.Queries.DriverReferral as Queries
 
-getNextRefferalCode :: (CacheFlow m r, EsqDBFlow m r) => m Integer
+getNextRefferalCode :: KvDbFlow m r => m Integer
 getNextRefferalCode =
   Hedis.safeGet makeLastRefferalCodeKey >>= \case
     Just (_ :: Integer) -> do

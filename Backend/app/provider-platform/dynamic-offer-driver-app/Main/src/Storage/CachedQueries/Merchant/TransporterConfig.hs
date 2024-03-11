@@ -33,10 +33,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.TransporterConfig as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+create :: KvDbFlow m r => TransporterConfig -> m ()
 create = Queries.create
 
-findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 findByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
@@ -55,11 +55,11 @@ makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:TransporterConfig:Merch
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-updateFCMConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
+updateFCMConfig :: KvDbFlow m r => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
 updateFCMConfig = Queries.updateFCMConfig
 
-updateReferralLinkPassword :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> m ()
+updateReferralLinkPassword :: KvDbFlow m r => Id MerchantOperatingCity -> Text -> m ()
 updateReferralLinkPassword = Queries.updateReferralLinkPassword
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+update :: KvDbFlow m r => TransporterConfig -> m ()
 update = Queries.update

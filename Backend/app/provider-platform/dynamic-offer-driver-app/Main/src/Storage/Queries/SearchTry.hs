@@ -30,20 +30,20 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.SearchRequest as QR
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchTry -> m ()
+create :: KvDbFlow m r => SearchTry -> m ()
 create = createWithKV
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m (Maybe SearchTry)
+findById :: KvDbFlow m r => Id SearchTry -> m (Maybe SearchTry)
 findById (Id searchTry) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTry]
 
 findLastByRequestId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchRequest ->
   m (Maybe SearchTry)
 findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
 findTryByRequestId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchRequest ->
   m (Maybe SearchTry)
 findTryByRequestId (Id searchRequest) =
@@ -55,7 +55,7 @@ findTryByRequestId (Id searchRequest) =
     <&> listToMaybe
 
 findActiveTryByQuoteId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Text ->
   m (Maybe SearchTry)
 findActiveTryByQuoteId quoteId =
@@ -71,7 +71,7 @@ findActiveTryByQuoteId quoteId =
     <&> listToMaybe
 
 cancelActiveTriesByRequestId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchRequest ->
   m ()
 cancelActiveTriesByRequestId (Id searchId) = do
@@ -87,7 +87,7 @@ cancelActiveTriesByRequestId (Id searchId) = do
     ]
 
 updateStatus ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchTry ->
   SearchTryStatus ->
   m ()
@@ -100,7 +100,7 @@ updateStatus (Id searchId) status_ = do
     [Se.Is BeamST.id $ Se.Eq searchId]
 
 getSearchTryStatusAndValidTill ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchTry ->
   m (Maybe (UTCTime, SearchTryStatus))
 getSearchTryStatusAndValidTill (Id searchTryId) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTryId] <&> fmap (\st -> (Domain.validTill st, Domain.status st))

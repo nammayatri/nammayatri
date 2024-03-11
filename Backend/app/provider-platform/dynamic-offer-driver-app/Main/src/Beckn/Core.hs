@@ -40,7 +40,7 @@ import SharedLogic.CallBAP (buildBppUrl)
 
 -- withCallbackV2' ::
 --   (m () -> m ()) ->
---   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
+--   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], KvDbFlow m r) =>
 --   DM.Merchant ->
 --   WithBecknCallbackMigV2 api callback_success m
 -- withCallbackV2' doWithCallback transporter action api context cbUrl internalEndPointHashMap f = do
@@ -56,8 +56,7 @@ import SharedLogic.CallBAP (buildBppUrl)
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
     HasShortDurationRetryCfg r c,
-    CacheFlow m r,
-    EsqDBFlow m r
+    KvDbFlow m r
   ) =>
   DM.Merchant ->
   WithBecknCallbackMig api callback_success m
@@ -65,7 +64,7 @@ withCallback = withCallback' withShortRetry
 
 withCallback' ::
   (m () -> m ()) ->
-  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], KvDbFlow m r) =>
   DM.Merchant ->
   WithBecknCallbackMig api callback_success m
 withCallback' doWithCallback transporter action api context cbUrl internalEndPointHashMap f = do

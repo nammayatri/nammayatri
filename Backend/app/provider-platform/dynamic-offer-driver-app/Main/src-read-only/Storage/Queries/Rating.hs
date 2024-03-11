@@ -14,30 +14,30 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as Beam
 import Storage.Queries.RatingExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Rating.Rating -> m ()
+create :: KvDbFlow m r => Domain.Types.Rating.Rating -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Rating.Rating] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.Rating.Rating] -> m ()
 createMany = traverse_ create
 
-findAllRatingsForPerson :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.Rating.Rating])
+findAllRatingsForPerson :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.Rating.Rating])
 findAllRatingsForPerson (Kernel.Types.Id.Id driverId) = do
   findAllWithKV
     [ Se.Is Beam.driverId $ Se.Eq driverId
     ]
 
-findRatingForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe (Domain.Types.Rating.Rating))
+findRatingForRide :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe (Domain.Types.Rating.Rating))
 findRatingForRide (Kernel.Types.Id.Id rideId) = do
   findOneWithKV
     [ Se.Is Beam.rideId $ Se.Eq rideId
     ]
 
-updateRating :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Rating.Rating -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
+updateRating :: KvDbFlow m r => Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Rating.Rating -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
 updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance (Kernel.Types.Id.Id id) (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -54,7 +54,7 @@ updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance (Ke
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Rating.Rating -> m (Maybe (Domain.Types.Rating.Rating))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Rating.Rating -> m (Maybe (Domain.Types.Rating.Rating))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -62,7 +62,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Rating.Rating -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.Rating.Rating -> m ()
 updateByPrimaryKey Domain.Types.Rating.Rating {..} = do
   _now <- getCurrentTime
   updateWithKV

@@ -31,10 +31,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
+create :: KvDbFlow m r => DriverIntelligentPoolConfig -> m ()
 create = Queries.create
 
-findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(DriverIntelligentPoolConfigD 'Unsafe) @DriverIntelligentPoolConfig a
@@ -53,5 +53,5 @@ makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:DriverIntelligentPoolCo
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
+update :: KvDbFlow m r => DriverIntelligentPoolConfig -> m ()
 update = Queries.update

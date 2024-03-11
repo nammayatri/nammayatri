@@ -19,19 +19,18 @@ import Domain.Types.Merchant.LeaderBoardConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.LeaderBoardConfig as BeamLBC
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LeaderBoardConfigs -> m ()
+create :: KvDbFlow m r => LeaderBoardConfigs -> m ()
 create = createWithKV
 
-findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [LeaderBoardConfigs]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [LeaderBoardConfigs]
 findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamLBC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-findLeaderBoardConfigbyType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType :: KvDbFlow m r => LeaderBoardType -> Id MerchantOperatingCity -> m (Maybe LeaderBoardConfigs)
 findLeaderBoardConfigbyType leaderBType merchantOperatingCityId = findOneWithKV [Se.And [Se.Is BeamLBC.leaderBoardType $ Se.Eq leaderBType, Se.Is BeamLBC.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)]]
 
 instance FromTType' BeamLBC.LeaderBoardConfigs LeaderBoardConfigs where

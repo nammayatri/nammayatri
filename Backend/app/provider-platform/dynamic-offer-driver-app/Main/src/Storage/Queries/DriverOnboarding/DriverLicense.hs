@@ -20,16 +20,15 @@ import Domain.Types.Person (Person)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()
+create :: KvDbFlow m r => DriverLicense -> m ()
 create = createWithKV
 
-upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()
+upsert :: KvDbFlow m r => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
   res <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
   if isJust res
@@ -46,18 +45,18 @@ upsert a@DriverLicense {..} = do
         [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
     else createWithKV a
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverLicense -> m (Maybe DriverLicense)
+findById :: KvDbFlow m r => Id DriverLicense -> m (Maybe DriverLicense)
 findById (Id dlId) = findOneWithKV [Se.Is BeamDL.id $ Se.Eq dlId]
 
-findByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe DriverLicense)
+findByDriverId :: KvDbFlow m r => Id Person -> m (Maybe DriverLicense)
 findByDriverId (Id personId) = findOneWithKV [Se.Is BeamDL.driverId $ Se.Eq personId]
 
-findByDLNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe DriverLicense)
+findByDLNumber :: (KvDbFlow m r, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
   dlNumberHash <- getDbHash dlNumber
   findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
 
-deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+deleteByDriverId :: KvDbFlow m r => Id Person -> m ()
 deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamDL.driverId (Se.Eq driverId)]
 
 instance FromTType' BeamDL.DriverLicense DriverLicense where

@@ -24,7 +24,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
 import qualified Storage.Queries.ValueAddNP as Queries
 
-isValueAddNP :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m Bool
+isValueAddNP :: KvDbFlow m r => Text -> m Bool
 isValueAddNP subscriberId =
   Hedis.safeGet lookupKey >>= \case
     Just npList -> return $ checkIfValueAddNP subscriberId npList

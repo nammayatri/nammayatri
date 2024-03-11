@@ -15,18 +15,18 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuestionInformation as Beam
 import Storage.Queries.Transformers.QuestionInformation
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.QuestionInformation.QuestionInformation -> m ()
+create :: KvDbFlow m r => Domain.Types.QuestionInformation.QuestionInformation -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.QuestionInformation.QuestionInformation] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.QuestionInformation.QuestionInformation] -> m ()
 createMany = traverse_ create
 
-findByIdAndLanguage :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> Kernel.External.Types.Language -> m (Maybe (Domain.Types.QuestionInformation.QuestionInformation))
+findByIdAndLanguage :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> Kernel.External.Types.Language -> m (Maybe (Domain.Types.QuestionInformation.QuestionInformation))
 findByIdAndLanguage (Kernel.Types.Id.Id questionId) language = do
   findOneWithKV
     [ Se.And
@@ -35,13 +35,13 @@ findByIdAndLanguage (Kernel.Types.Id.Id questionId) language = do
         ]
     ]
 
-getAllTranslationsByQuestionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ([Domain.Types.QuestionInformation.QuestionInformation])
+getAllTranslationsByQuestionId :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ([Domain.Types.QuestionInformation.QuestionInformation])
 getAllTranslationsByQuestionId (Kernel.Types.Id.Id questionId) = do
   findAllWithKV
     [ Se.Is Beam.questionId $ Se.Eq questionId
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe (Domain.Types.QuestionInformation.QuestionInformation))
+findByPrimaryKey :: KvDbFlow m r => Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe (Domain.Types.QuestionInformation.QuestionInformation))
 findByPrimaryKey language (Kernel.Types.Id.Id questionId) = do
   findOneWithKV
     [ Se.And
@@ -50,7 +50,7 @@ findByPrimaryKey language (Kernel.Types.Id.Id questionId) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.QuestionInformation.QuestionInformation -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.QuestionInformation.QuestionInformation -> m ()
 updateByPrimaryKey Domain.Types.QuestionInformation.QuestionInformation {..} = do
   _now <- getCurrentTime
   updateWithKV

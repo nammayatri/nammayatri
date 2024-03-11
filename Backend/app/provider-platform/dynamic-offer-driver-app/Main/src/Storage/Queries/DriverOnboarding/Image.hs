@@ -24,31 +24,30 @@ import Domain.Types.Person (Person)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import Kernel.Utils.Error.Throwing
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Person as QP
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Image -> m ()
+create :: KvDbFlow m r => Image -> m ()
 create = createWithKV
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Image -> m (Maybe Image)
+findById :: KvDbFlow m r => Id Image -> m (Maybe Image)
 findById (Id imageid) = findOneWithKV [Se.Is BeamI.id $ Se.Eq imageid]
 
-findImagesByPersonAndType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id Person -> ImageType -> m [Image]
+findImagesByPersonAndType :: KvDbFlow m r => Id Merchant -> Id Person -> ImageType -> m [Image]
 findImagesByPersonAndType (Id merchantId) (Id personId) imgType =
   findAllWithKV
     [ Se.And
         [Se.Is BeamI.personId $ Se.Eq personId, Se.Is BeamI.merchantId $ Se.Eq merchantId, Se.Is BeamI.imageType $ Se.Eq imgType]
     ]
 
-findRecentByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> ImageType -> m [Image]
+findRecentByPersonIdAndImageType :: KvDbFlow m r => Id Person -> Id DMOC.MerchantOperatingCity -> ImageType -> m [Image]
 findRecentByPersonIdAndImageType personId merchantOpCityId imgtype = do
   _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -62,22 +61,22 @@ findRecentByPersonIdAndImageType personId merchantOpCityId imgtype = do
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
-updateToValid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Image -> m ()
+updateToValid :: KvDbFlow m r => Id Image -> m ()
 updateToValid (Id id) =
   updateWithKV
     [Se.Set BeamI.isValid True]
     [Se.Is BeamI.id (Se.Eq id)]
 
-findByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [Image]
+findByMerchantId :: KvDbFlow m r => Id Merchant -> m [Image]
 findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamI.merchantId $ Se.Eq merchantId]
 
-addFailureReason :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Image -> DriverOnboardingError -> m ()
+addFailureReason :: KvDbFlow m r => Id Image -> DriverOnboardingError -> m ()
 addFailureReason (Id id) reason =
   updateWithKV
     [Se.Set BeamI.failureReason $ Just reason]
     [Se.Is BeamI.id (Se.Eq id)]
 
-deleteByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+deleteByPersonId :: KvDbFlow m r => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamI.personId (Se.Eq personId)]
 
 instance FromTType' BeamI.Image Image where

@@ -27,26 +27,24 @@ import Domain.Types.Person
 import Domain.Types.Plan as DPlan
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (EsqDBFlow, HighPrecMoney, MonadFlow, Money)
 import Kernel.Types.Id
 import Kernel.Types.Time
-import Kernel.Utils.Common (fork, fromMaybeM, getLocalCurrentTime)
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFee -> m ()
+create :: KvDbFlow m r => DriverFee -> m ()
 create = createWithKV
 
-createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DriverFee] -> m ()
+createMany :: KvDbFlow m r => [DriverFee] -> m ()
 createMany = traverse_ create
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m (Maybe DriverFee)
+findById :: KvDbFlow m r => Id DriverFee -> m (Maybe DriverFee)
 findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 
-findPendingFeesByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m (Maybe DriverFee)
+findPendingFeesByDriverFeeId :: KvDbFlow m r => Id DriverFee -> m (Maybe DriverFee)
 findPendingFeesByDriverFeeId (Id driverFeeId) =
   findOneWithKV
     [ Se.And
@@ -55,7 +53,7 @@ findPendingFeesByDriverFeeId (Id driverFeeId) =
         ]
     ]
 
-findPendingFeesByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m [DriverFee]
+findPendingFeesByDriverIdAndServiceName :: KvDbFlow m r => Id Driver -> ServiceNames -> m [DriverFee]
 findPendingFeesByDriverIdAndServiceName (Id driverId) serviceName =
   findAllWithKV
     [ Se.And
@@ -67,7 +65,7 @@ findPendingFeesByDriverIdAndServiceName (Id driverId) serviceName =
     ]
 
 findFeeByDriverIdAndServiceNameInRange ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Driver ->
   ServiceNames ->
   UTCTime ->
@@ -84,7 +82,7 @@ findFeeByDriverIdAndServiceNameInRange (Id driverId) serviceName from to =
         ]
     ]
 
-findLatestFeeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m (Maybe DriverFee)
+findLatestFeeByDriverIdAndServiceName :: KvDbFlow m r => Id Driver -> ServiceNames -> m (Maybe DriverFee)
 findLatestFeeByDriverIdAndServiceName (Id driverId) serviceName =
   findAllWithOptionsKV
     [ Se.And
@@ -99,7 +97,7 @@ findLatestFeeByDriverIdAndServiceName (Id driverId) serviceName =
     Nothing
     <&> listToMaybe
 
-findLatestRegisterationFeeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m (Maybe DriverFee)
+findLatestRegisterationFeeByDriverIdAndServiceName :: KvDbFlow m r => Id Driver -> ServiceNames -> m (Maybe DriverFee)
 findLatestRegisterationFeeByDriverIdAndServiceName (Id driverId) serviceName =
   findAllWithOptionsKV
     [ Se.And
@@ -114,7 +112,7 @@ findLatestRegisterationFeeByDriverIdAndServiceName (Id driverId) serviceName =
     Nothing
     <&> listToMaybe
 
-findOldestFeeByStatusAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> DriverFeeStatus -> ServiceNames -> m (Maybe DriverFee)
+findOldestFeeByStatusAndServiceName :: KvDbFlow m r => Id Driver -> DriverFeeStatus -> ServiceNames -> m (Maybe DriverFee)
 findOldestFeeByStatusAndServiceName (Id driverId) status serviceName =
   findAllWithOptionsKV
     [ Se.And
@@ -129,7 +127,7 @@ findOldestFeeByStatusAndServiceName (Id driverId) status serviceName =
     <&> listToMaybe
 
 findFeesInRangeWithStatusAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Maybe (Id Merchant) ->
   UTCTime ->
   UTCTime ->
@@ -153,7 +151,7 @@ findFeesInRangeWithStatusAndServiceName mbMerchantId startTime endTime status mb
     Nothing
 
 findAllFeesInRangeWithStatusAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Maybe (Id Merchant) ->
   Id MerchantOperatingCity ->
   UTCTime ->
@@ -178,7 +176,7 @@ findAllFeesInRangeWithStatusAndServiceName mbMerchantId merchantOperatingCityId 
     mbLimit
     Nothing
 
-findPendingPaymentByDriversAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> ServiceNames -> m [DriverFee]
+findPendingPaymentByDriversAndServiceName :: KvDbFlow m r => [Id Person] -> ServiceNames -> m [DriverFee]
 findPendingPaymentByDriversAndServiceName driverIds serviceName =
   findAllWithKV
     [ Se.And
@@ -189,7 +187,7 @@ findPendingPaymentByDriversAndServiceName driverIds serviceName =
     ]
 
 findFeeInRangeAndDriverIdAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   UTCTime ->
   UTCTime ->
   Id Person ->
@@ -208,7 +206,7 @@ findFeeInRangeAndDriverIdAndServiceName startTime endTime driverId serviceName =
     ]
 
 findWindowsWithStatusAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Person ->
   UTCTime ->
   UTCTime ->
@@ -233,7 +231,7 @@ findWindowsWithStatusAndServiceName (Id driverId) from to mbStatus limitVal offs
     (Just offsetVal)
 
 findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Id MerchantOperatingCity ->
   UTCTime ->
@@ -262,7 +260,7 @@ findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName merchantId merchantOp
     Nothing
 
 findWindowsAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Person ->
   UTCTime ->
   UTCTime ->
@@ -283,7 +281,7 @@ findWindowsAndServiceName (Id driverId) from to limitVal offsetVal serviceName =
     (Just limitVal)
     (Just offsetVal)
 
-findWindowsWithoutLimit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> UTCTime -> m [DriverFee]
+findWindowsWithoutLimit :: KvDbFlow m r => Id Person -> UTCTime -> UTCTime -> m [DriverFee]
 findWindowsWithoutLimit (Id driverId) from to = do
   findAllWithOptionsKV
     [ Se.And
@@ -297,7 +295,7 @@ findWindowsWithoutLimit (Id driverId) from to = do
     Nothing
     Nothing
 
-findOngoingAfterEndTimeAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> ServiceNames -> m (Maybe DriverFee)
+findOngoingAfterEndTimeAndServiceName :: KvDbFlow m r => Id Person -> UTCTime -> ServiceNames -> m (Maybe DriverFee)
 findOngoingAfterEndTimeAndServiceName (Id driverId) now serviceName =
   findOneWithKV
     [ Se.And
@@ -310,7 +308,7 @@ findOngoingAfterEndTimeAndServiceName (Id driverId) now serviceName =
     ]
 
 findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Id MerchantOperatingCity ->
   Int ->
@@ -338,7 +336,7 @@ findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId mercha
     Nothing
 
 findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Id MerchantOperatingCity ->
   Int ->
@@ -363,7 +361,7 @@ findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merch
     Nothing
 
 findDriverFeeInRangeEligibleForManualPaymentLinkByServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Int ->
   UTCTime ->
@@ -385,7 +383,7 @@ findDriverFeeInRangeEligibleForManualPaymentLinkByServiceName merchantId limit s
     Nothing
 
 findMaxBillNumberInRangeForServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
@@ -404,7 +402,7 @@ findMaxBillNumberInRangeForServiceName merchantOperatingCityId startTime endTime
     (Just 1)
     Nothing
 
-findUnpaidAfterPayByWithServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> ServiceNames -> m (Maybe DriverFee)
+findUnpaidAfterPayByWithServiceName :: KvDbFlow m r => Id Person -> UTCTime -> ServiceNames -> m (Maybe DriverFee)
 findUnpaidAfterPayByWithServiceName (Id driverId) now serviceName =
   findOneWithKV
     [ Se.And
@@ -417,7 +415,7 @@ findUnpaidAfterPayByWithServiceName (Id driverId) now serviceName =
     ]
 
 updateFee ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DriverFee ->
   Maybe Money ->
   Money ->
@@ -460,7 +458,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd boo
     toUpdateSpecialZoneMetricsInDriverFee = DTC.isRideOtpBooking booking.tripCategory
 
 resetFee ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DriverFee ->
   Money ->
   Domain.PlatformFee ->
@@ -481,14 +479,14 @@ resetFee driverFeeId govtCharges platformFee mbFeeWithoutDiscount mbAmountPaidBy
     )
     [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
 
-updateOfferId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id DriverFee -> UTCTime -> m ()
+updateOfferId :: KvDbFlow m r => Maybe Text -> Id DriverFee -> UTCTime -> m ()
 updateOfferId offerId driverFeeId now = do
   updateOneWithKV
     [Se.Set BeamDF.offerId offerId, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
 updateOfferAndPlanDetails ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Maybe Text ->
   Maybe Text ->
   Id DriverFee ->
@@ -506,14 +504,14 @@ updateOfferAndPlanDetails offerId planAndOfferTitle driverFeeId planId paymentMo
     ]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
-updateAutopayPaymentStageById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Domain.AutopayPaymentStage -> Id DriverFee -> m ()
+updateAutopayPaymentStageById :: KvDbFlow m r => Maybe Domain.AutopayPaymentStage -> Id DriverFee -> m ()
 updateAutopayPaymentStageById autopayPaymentStage driverFeeId = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamDF.autopayPaymentStage autopayPaymentStage, Se.Set BeamDF.stageUpdatedAt (Just now)]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
-updateNotificationRetryCountById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int -> Id DriverFee -> m ()
+updateNotificationRetryCountById :: KvDbFlow m r => Int -> Id DriverFee -> m ()
 updateNotificationRetryCountById retryCount driverFeeId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -522,7 +520,7 @@ updateNotificationRetryCountById retryCount driverFeeId = do
     ]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
-updateAutopayPaymentStageByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Domain.AutopayPaymentStage -> [Id DriverFee] -> m ()
+updateAutopayPaymentStageByIds :: KvDbFlow m r => Maybe Domain.AutopayPaymentStage -> [Id DriverFee] -> m ()
 updateAutopayPaymentStageByIds autopayPaymentStage driverFeeIds = do
   now <- getCurrentTime
   updateWithKV
@@ -531,7 +529,7 @@ updateAutopayPaymentStageByIds autopayPaymentStage driverFeeIds = do
     ]
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
-updateAutopayPaymentStageAndRetryCountByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Domain.AutopayPaymentStage -> Int -> [Id DriverFee] -> m ()
+updateAutopayPaymentStageAndRetryCountByIds :: KvDbFlow m r => Maybe Domain.AutopayPaymentStage -> Int -> [Id DriverFee] -> m ()
 updateAutopayPaymentStageAndRetryCountByIds autopayPaymentStage retryCount driverFeeIds = do
   now <- getCurrentTime
   updateWithKV
@@ -542,7 +540,7 @@ updateAutopayPaymentStageAndRetryCountByIds autopayPaymentStage retryCount drive
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
-updateStatusByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
+updateStatusByIds :: KvDbFlow m r => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
 updateStatusByIds status driverFeeIds now = do
   case status of
     CLEARED -> do
@@ -557,7 +555,7 @@ updateStatusByIds status driverFeeIds now = do
         [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
   fork "set bad recovery date" $ do updateBadDebtRecoveryDate status driverFeeIds
 
-updateFeeTypeByIds :: (MonadFlow m, EsqDBFlow m r) => FeeType -> [Id DriverFee] -> UTCTime -> m ()
+updateFeeTypeByIds :: KvDbFlow m r => FeeType -> [Id DriverFee] -> UTCTime -> m ()
 updateFeeTypeByIds feeType driverFeeIds now =
   updateWithKV
     [ Se.Set BeamDF.feeType feeType,
@@ -566,7 +564,7 @@ updateFeeTypeByIds feeType driverFeeIds now =
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
 updateDriverFeeOverlayScheduledByServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   [Id Person] ->
   Bool ->
   UTCTime ->
@@ -586,7 +584,7 @@ updateDriverFeeOverlayScheduledByServiceName driverIds val from to serviceName =
         ]
     ]
 
-updateBillNumberById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Id DriverFee -> m ()
+updateBillNumberById :: KvDbFlow m r => Maybe Int -> Id DriverFee -> m ()
 updateBillNumberById billNumber driverFeeId = do
   now <- getCurrentTime
   updateWithKV
@@ -595,7 +593,7 @@ updateBillNumberById billNumber driverFeeId = do
     ]
     [Se.Is BeamDF.id $ Se.Eq (driverFeeId.getId)]
 
-updateToManualFeeByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> m ()
+updateToManualFeeByDriverFeeIds :: KvDbFlow m r => [Id DriverFee] -> m ()
 updateToManualFeeByDriverFeeIds driverFeeIds = do
   now <- getCurrentTime
   updateWithKV
@@ -611,7 +609,7 @@ updateToManualFeeByDriverFeeIds driverFeeIds = do
     ]
 
 findAllByStatusAndDriverIdWithServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Person ->
   [Domain.DriverFeeStatus] ->
   ServiceNames ->
@@ -626,7 +624,7 @@ findAllByStatusAndDriverIdWithServiceName (Id driverId) driverFeeStatus serviceN
         ]
     ]
 
-findAllPendingAndDueDriverFeeByDriverIdForServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> ServiceNames -> m [DriverFee]
+findAllPendingAndDueDriverFeeByDriverIdForServiceName :: KvDbFlow m r => Id Person -> ServiceNames -> m [DriverFee]
 findAllPendingAndDueDriverFeeByDriverIdForServiceName (Id driverId) serviceName = do
   findAllWithKV
     [ Se.And
@@ -637,7 +635,7 @@ findAllPendingAndDueDriverFeeByDriverIdForServiceName (Id driverId) serviceName 
         ]
     ]
 
-findAllOverdueDriverFeeByDriverIdForServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> ServiceNames -> m [DriverFee]
+findAllOverdueDriverFeeByDriverIdForServiceName :: KvDbFlow m r => Id Person -> ServiceNames -> m [DriverFee]
 findAllOverdueDriverFeeByDriverIdForServiceName (Id driverId) serviceName =
   findAllWithKV
     [ Se.And
@@ -649,7 +647,7 @@ findAllOverdueDriverFeeByDriverIdForServiceName (Id driverId) serviceName =
     ]
 
 findAllPendingRegistrationDriverFeeByDriverIdForServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Person ->
   ServiceNames ->
   m [DriverFee]
@@ -663,7 +661,7 @@ findAllPendingRegistrationDriverFeeByDriverIdForServiceName (Id driverId) servic
         ]
     ]
 
-findAllDriverFeesRequiredToMovedIntoBadDebt :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> TransporterConfig -> m [DriverFee]
+findAllDriverFeesRequiredToMovedIntoBadDebt :: KvDbFlow m r => Id Merchant -> TransporterConfig -> m [DriverFee]
 findAllDriverFeesRequiredToMovedIntoBadDebt merchantId transporterConfig = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let badDebtTimeThreshold = fromIntegral transporterConfig.badDebtTimeThreshold
@@ -689,7 +687,7 @@ findAllDriverFeesRequiredToMovedIntoBadDebt merchantId transporterConfig = do
     Nothing
 
 -- add fee collection time later if req'd
-findAllByVolunteerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Text] -> UTCTime -> UTCTime -> m [DriverFee]
+findAllByVolunteerIds :: KvDbFlow m r => Id Merchant -> [Text] -> UTCTime -> UTCTime -> m [DriverFee]
 findAllByVolunteerIds (Id merchantId) volunteerIds from to = do
   findAllWithOptionsKV
     [ Se.And $
@@ -704,7 +702,7 @@ findAllByVolunteerIds (Id merchantId) volunteerIds from to = do
     Nothing
 
 findAllByStatusAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   DriverFeeStatus ->
   UTCTime ->
@@ -723,13 +721,13 @@ findAllByStatusAndServiceName (Id merchantId) status from to serviceName = do
     Nothing
     Nothing
 
-findAllByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> m [DriverFee]
+findAllByDriverFeeIds :: KvDbFlow m r => [Id DriverFee] -> m [DriverFee]
 findAllByDriverFeeIds driverFeeIds = do
   findAllWithKV
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
 findLatestByFeeTypeAndStatusWithServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Domain.FeeType ->
   [Domain.DriverFeeStatus] ->
   Id Person ->
@@ -751,7 +749,7 @@ findLatestByFeeTypeAndStatusWithServiceName feeType status driverId serviceName 
 
 -- TODO : Merge relevant queries
 findAllByTimeMerchantAndStatusWithServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   UTCTime ->
   UTCTime ->
@@ -770,7 +768,7 @@ findAllByTimeMerchantAndStatusWithServiceName (Id merchantId) startTime endTime 
     ]
 
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
-updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
+updateStatus :: KvDbFlow m r => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
 updateStatus status (Id driverFeeId) now = do
   updateOneWithKV
     ( [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
@@ -779,13 +777,13 @@ updateStatus status (Id driverFeeId) now = do
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
   fork "set bad recovery date" $ do updateBadDebtRecoveryDate status [Id driverFeeId]
 
-updateFeeType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FeeType -> UTCTime -> Id DriverFee -> m ()
+updateFeeType :: KvDbFlow m r => FeeType -> UTCTime -> Id DriverFee -> m ()
 updateFeeType feeType now (Id driverFeeId) = do
   updateOneWithKV
     [Se.Set BeamDF.feeType feeType, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
-updateAutoPayToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
+updateAutoPayToManual :: KvDbFlow m r => Id DriverFee -> m ()
 updateAutoPayToManual driverFeeId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -800,7 +798,7 @@ updateAutoPayToManual driverFeeId = do
         ]
     ]
 
-updateDriverFeeToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
+updateDriverFeeToManual :: KvDbFlow m r => Id DriverFee -> m ()
 updateDriverFeeToManual driverFeeId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -810,7 +808,7 @@ updateDriverFeeToManual driverFeeId = do
     ]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
-updateManualToAutoPay :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
+updateManualToAutoPay :: KvDbFlow m r => Id DriverFee -> m ()
 updateManualToAutoPay driverFeeId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -820,7 +818,7 @@ updateManualToAutoPay driverFeeId = do
     ]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
-updateRetryCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int -> UTCTime -> Id DriverFee -> m ()
+updateRetryCount :: KvDbFlow m r => Int -> UTCTime -> Id DriverFee -> m ()
 updateRetryCount retryCount now (Id driverFeeId) = do
   updateOneWithKV
     [Se.Set BeamDF.schedulerTryCount retryCount, Se.Set BeamDF.updatedAt now]
@@ -828,7 +826,7 @@ updateRetryCount retryCount now (Id driverFeeId) = do
 
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
 updateRegisterationFeeStatusByDriverIdForServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   DriverFeeStatus ->
   Id Person ->
   ServiceNames ->
@@ -848,7 +846,7 @@ updateRegisterationFeeStatusByDriverIdForServiceName status (Id driverId) servic
     ]
 
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
-updateCollectedPaymentStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> Maybe Text -> UTCTime -> Id DriverFee -> m ()
+updateCollectedPaymentStatus :: KvDbFlow m r => DriverFeeStatus -> Maybe Text -> UTCTime -> Id DriverFee -> m ()
 updateCollectedPaymentStatus status volunteerId now (Id driverFeeId) = do
   updateOneWithKV
     ( [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy volunteerId, Se.Set BeamDF.collectedAt (Just now)]
@@ -857,7 +855,7 @@ updateCollectedPaymentStatus status volunteerId now (Id driverFeeId) = do
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
   fork "set bad recovery date" $ do updateBadDebtRecoveryDate status [Id driverFeeId]
 
-updateAllExecutionPendingToManualOverdueByDriverIdForServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> ServiceNames -> m ()
+updateAllExecutionPendingToManualOverdueByDriverIdForServiceName :: KvDbFlow m r => Id Person -> ServiceNames -> m ()
 updateAllExecutionPendingToManualOverdueByDriverIdForServiceName driverId serviceName = do
   updateWithKV
     [Se.Set BeamDF.feeType RECURRING_INVOICE, Se.Set BeamDF.status PAYMENT_OVERDUE]
@@ -870,19 +868,19 @@ updateAllExecutionPendingToManualOverdueByDriverIdForServiceName driverId servic
         ]
     ]
 
-updateFeeWithoutDiscount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Maybe HighPrecMoney -> m ()
+updateFeeWithoutDiscount :: KvDbFlow m r => Id DriverFee -> Maybe HighPrecMoney -> m ()
 updateFeeWithoutDiscount driverFeeId mbFeeWithoutDiscount = do
   updateOneWithKV
     [Se.Set BeamDF.feeWithoutDiscount mbFeeWithoutDiscount]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
-updateAmountPaidByCoins :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Maybe HighPrecMoney -> m ()
+updateAmountPaidByCoins :: KvDbFlow m r => Id DriverFee -> Maybe HighPrecMoney -> m ()
 updateAmountPaidByCoins driverFeeId mbAmountPaidByCoin = do
   updateOneWithKV
     [Se.Set BeamDF.amountPaidByCoin mbAmountPaidByCoin]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
-updateBadDebtDateAllDriverFeeIds :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> [Id DriverFee] -> TransporterConfig -> m ()
+updateBadDebtDateAllDriverFeeIds :: KvDbFlow m r => Id Merchant -> [Id DriverFee] -> TransporterConfig -> m ()
 updateBadDebtDateAllDriverFeeIds merchantId driverFeeIds transporterConfig = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let lastDayOfPreviousMonth = getLastDayOfMonth now
@@ -895,7 +893,7 @@ updateBadDebtDateAllDriverFeeIds merchantId driverFeeIds transporterConfig = do
         ]
     ]
 
-updateBadDebtRecoveryDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverFeeStatus -> [Id DriverFee] -> m ()
+updateBadDebtRecoveryDate :: KvDbFlow m r => DriverFeeStatus -> [Id DriverFee] -> m ()
 updateBadDebtRecoveryDate status driverFeeIds = do
   utcNow <- getCurrentTime
   when (status `elem` [COLLECTED_CASH, CLEARED]) $ do
@@ -908,7 +906,7 @@ updateBadDebtRecoveryDate status driverFeeIds = do
           ]
       ]
 
-updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Id MerchantOperatingCity -> m ()
+updateMerchantOperatingCityId :: KvDbFlow m r => Id DriverFee -> Id MerchantOperatingCity -> m ()
 updateMerchantOperatingCityId driverFeeId merchantOperatingCityId = do
   updateOneWithKV
     [Se.Set BeamDF.merchantOperatingCityId (Just merchantOperatingCityId.getId)]

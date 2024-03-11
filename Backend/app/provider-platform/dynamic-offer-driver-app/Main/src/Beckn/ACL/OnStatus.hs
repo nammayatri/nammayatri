@@ -149,11 +149,9 @@ buildOnStatusMessage DStatus.BookingReallocationBuildReq {bookingReallocationInf
       }
 
 buildOnStatusReqV2 ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CacheFlow m r
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DM.Merchant ->
   DRB.Booking ->

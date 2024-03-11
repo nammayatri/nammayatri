@@ -33,13 +33,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.OnboardingDocumentConfig as BeamODC
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => OnboardingDocumentConfig -> m ()
+create :: KvDbFlow m r => OnboardingDocumentConfig -> m ()
 create = createWithKV
 
-findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [OnboardingDocumentConfig]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [OnboardingDocumentConfig]
 findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => OnboardingDocumentConfig -> m ()
+update :: KvDbFlow m r => OnboardingDocumentConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateWithKV
@@ -54,7 +54,7 @@ update config = do
     ]
     [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId config.merchantOperatingCityId, Se.Is BeamODC.documentType $ Se.Eq config.documentType]
 
-updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
+updateSupportedVehicleClassesJSON :: KvDbFlow m r => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
 updateSupportedVehicleClassesJSON merchantOperatingCityId supportedVehicleClasses = do
   now <- getCurrentTime
   updateWithKV

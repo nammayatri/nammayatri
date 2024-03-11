@@ -170,8 +170,8 @@ data DriverDuesEntity = DriverDuesEntity
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
 class Subscription a where
-  getSubcriptionStatusWithPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> Id SP.Person -> m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
-  updateSubscriptionStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DI.DriverAutoPayStatus -> Maybe Text -> m ()
+  getSubcriptionStatusWithPlan :: (MonadFlow m, KvDbFlow m r) => a -> Id SP.Person -> m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
+  updateSubscriptionStatus :: (MonadFlow m, KvDbFlow m r) => a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DI.DriverAutoPayStatus -> Maybe Text -> m ()
   createDriverPlan :: a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Plan -> SubscriptionServiceRelatedData -> Flow ()
   planSubscribe :: a -> Id Plan -> (Bool, Maybe MessageKey.MediaChannel) -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DI.DriverInformation -> SubscriptionServiceRelatedData -> Flow PlanSubscribeRes
   planSwitch :: a -> Id Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
@@ -213,7 +213,7 @@ instance Subscription ServiceNames where
 ---------------------------------------------------------------------------------------------------------
 
 getSubcriptionStatusWithPlanGeneric ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, KvDbFlow m r) =>
   ServiceNames ->
   Id SP.Person ->
   m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
@@ -229,7 +229,7 @@ getSubcriptionStatusWithPlanGeneric serviceName driverId = do
   return (autoPayStatus, driverPlan)
 
 updateSubscriptionStatusGeneric ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, KvDbFlow m r) =>
   ServiceNames ->
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe DI.DriverAutoPayStatus ->
@@ -747,7 +747,7 @@ mkMandateDetailEntity mandateId = do
     Nothing -> return Nothing
 
 mkDueDriverFeeInfoEntity ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, KvDbFlow m r) =>
   ServiceNames ->
   [DF.DriverFee] ->
   TransporterConfig ->
@@ -802,7 +802,7 @@ planMaxRides plan = do
     _ -> Nothing
 
 getPlanDataFromDriverFee ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, KvDbFlow m r) =>
   DF.DriverFee ->
   m (Maybe Plan)
 getPlanDataFromDriverFee driverFee = do

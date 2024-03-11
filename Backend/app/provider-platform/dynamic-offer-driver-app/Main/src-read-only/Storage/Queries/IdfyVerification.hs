@@ -17,29 +17,29 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.IdfyVerification as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.IdfyVerification.IdfyVerification -> m ()
+create :: KvDbFlow m r => Domain.Types.IdfyVerification.IdfyVerification -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.IdfyVerification.IdfyVerification] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.IdfyVerification.IdfyVerification] -> m ()
 createMany = traverse_ create
 
-deleteByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
+deleteByPersonId :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
 deleteByPersonId (Kernel.Types.Id.Id driverId) = do
   deleteWithKV
     [ Se.Is Beam.driverId $ Se.Eq driverId
     ]
 
-findAllByDriverId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.IdfyVerification.IdfyVerification])
+findAllByDriverId :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.IdfyVerification.IdfyVerification])
 findAllByDriverId (Kernel.Types.Id.Id driverId) = do
   findAllWithKV
     [ Se.Is Beam.driverId $ Se.Eq driverId
     ]
 
-findAllByDriverIdAndDocType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m ([Domain.Types.IdfyVerification.IdfyVerification])
+findAllByDriverIdAndDocType :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m ([Domain.Types.IdfyVerification.IdfyVerification])
 findAllByDriverIdAndDocType (Kernel.Types.Id.Id driverId) docType = do
   findAllWithKV
     [ Se.And
@@ -48,19 +48,19 @@ findAllByDriverIdAndDocType (Kernel.Types.Id.Id driverId) docType = do
         ]
     ]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe (Domain.Types.IdfyVerification.IdfyVerification))
+findById :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe (Domain.Types.IdfyVerification.IdfyVerification))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-findByRequestId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m (Maybe (Domain.Types.IdfyVerification.IdfyVerification))
+findByRequestId :: KvDbFlow m r => Kernel.Prelude.Text -> m (Maybe (Domain.Types.IdfyVerification.IdfyVerification))
 findByRequestId requestId = do
   findOneWithKV
     [ Se.Is Beam.requestId $ Se.Eq requestId
     ]
 
-findLatestByDriverIdAndDocType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m ([Domain.Types.IdfyVerification.IdfyVerification])
+findLatestByDriverIdAndDocType :: KvDbFlow m r => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m ([Domain.Types.IdfyVerification.IdfyVerification])
 findLatestByDriverIdAndDocType limit offset (Kernel.Types.Id.Id driverId) docType = do
   findAllWithOptionsKV
     [ Se.And
@@ -72,7 +72,7 @@ findLatestByDriverIdAndDocType limit offset (Kernel.Types.Id.Id driverId) docTyp
     limit
     offset
 
-updateExtractValidationStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.IdfyVerification.ImageExtractionValidation -> Kernel.Prelude.Text -> m ()
+updateExtractValidationStatus :: KvDbFlow m r => Domain.Types.IdfyVerification.ImageExtractionValidation -> Kernel.Prelude.Text -> m ()
 updateExtractValidationStatus imageExtractionValidation requestId = do
   _now <- getCurrentTime
   updateWithKV
@@ -82,7 +82,7 @@ updateExtractValidationStatus imageExtractionValidation requestId = do
     [ Se.Is Beam.requestId $ Se.Eq requestId
     ]
 
-updateResponse :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ()
+updateResponse :: KvDbFlow m r => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ()
 updateResponse status idfyResponse requestId = do
   _now <- getCurrentTime
   updateWithKV
@@ -93,7 +93,7 @@ updateResponse status idfyResponse requestId = do
     [ Se.Is Beam.requestId $ Se.Eq requestId
     ]
 
-updateStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ()
+updateStatus :: KvDbFlow m r => Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ()
 updateStatus status requestId = do
   _now <- getCurrentTime
   updateWithKV
@@ -103,7 +103,7 @@ updateStatus status requestId = do
     [ Se.Is Beam.requestId $ Se.Eq requestId
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe (Domain.Types.IdfyVerification.IdfyVerification))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe (Domain.Types.IdfyVerification.IdfyVerification))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -111,7 +111,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.IdfyVerification.IdfyVerification -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.IdfyVerification.IdfyVerification -> m ()
 updateByPrimaryKey Domain.Types.IdfyVerification.IdfyVerification {..} = do
   _now <- getCurrentTime
   updateWithKV

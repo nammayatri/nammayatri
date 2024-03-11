@@ -15,30 +15,30 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Exophone as Beam
 import Storage.Queries.ExophoneExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Exophone.Exophone -> m ()
+create :: KvDbFlow m r => Domain.Types.Exophone.Exophone -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Exophone.Exophone] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.Exophone.Exophone] -> m ()
 createMany = traverse_ create
 
-deleteByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ()
+deleteByMerchantOpCityId :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ()
 deleteByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do
   deleteWithKV
     [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
     ]
 
-findAllByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.Exophone.Exophone])
+findAllByMerchantOpCityId :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.Exophone.Exophone])
 findAllByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithKV
     [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
     ]
 
-findByMerchantOpCityIdServiceAndExophoneType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Call.Types.CallService -> Domain.Types.Exophone.ExophoneType -> m ([Domain.Types.Exophone.Exophone])
+findByMerchantOpCityIdServiceAndExophoneType :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Call.Types.CallService -> Domain.Types.Exophone.ExophoneType -> m ([Domain.Types.Exophone.Exophone])
 findByMerchantOpCityIdServiceAndExophoneType (Kernel.Types.Id.Id merchantOperatingCityId) callService exophoneType = do
   findAllWithKV
     [ Se.And
@@ -48,7 +48,7 @@ findByMerchantOpCityIdServiceAndExophoneType (Kernel.Types.Id.Id merchantOperati
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Exophone.Exophone -> m (Maybe (Domain.Types.Exophone.Exophone))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Exophone.Exophone -> m (Maybe (Domain.Types.Exophone.Exophone))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -56,7 +56,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Exophone.Exophone -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.Exophone.Exophone -> m ()
 updateByPrimaryKey Domain.Types.Exophone.Exophone {..} = do
   _now <- getCurrentTime
   updateWithKV

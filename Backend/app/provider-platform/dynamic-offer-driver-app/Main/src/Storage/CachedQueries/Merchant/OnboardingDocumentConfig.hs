@@ -31,16 +31,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.OnboardingDocumentConfig as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => OnboardingDocumentConfig -> m ()
+create :: KvDbFlow m r => OnboardingDocumentConfig -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DTO.OnboardingDocumentConfig]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [DTO.OnboardingDocumentConfig]
 findAllByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return a
     Nothing -> cacheOnboardingDocumentConfigs id /=<< Queries.findAllByMerchantOpCityId id
 
-findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
+findByMerchantOpCityIdAndDocumentType :: KvDbFlow m r => Id MerchantOperatingCity -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
 findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType = find (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
 
 cacheOnboardingDocumentConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DTO.OnboardingDocumentConfig] -> m ()
@@ -56,8 +56,8 @@ makeMerchantOpCityIdKey merchantOpCityId = "driver-offer:CachedQueries:Onboardin
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => OnboardingDocumentConfig -> m ()
+update :: KvDbFlow m r => OnboardingDocumentConfig -> m ()
 update = Queries.update
 
-updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
+updateSupportedVehicleClassesJSON :: KvDbFlow m r => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
 updateSupportedVehicleClassesJSON = Queries.updateSupportedVehicleClassesJSON

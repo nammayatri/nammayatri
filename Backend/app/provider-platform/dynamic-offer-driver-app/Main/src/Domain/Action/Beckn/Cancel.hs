@@ -76,7 +76,7 @@ newtype CancelSearchReq = CancelSearchReq
   deriving (Show)
 
 cancel ::
-  ( EsqDBFlow m r,
+  ( KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasHttpClientOptions r c,
@@ -156,7 +156,7 @@ cancel req merchant booking = do
             ..
           }
 
-customerCancellationChargesCalculation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> m ()
+customerCancellationChargesCalculation :: (MonadFlow m, KvDbFlow m r) => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> m ()
 customerCancellationChargesCalculation transporterConfig booking disToPickup = do
   logInfo $ "Entered CustomerCancellationDuesCalculation: " <> show disToPickup
   whenJust disToPickup $ \driverDistToPickup -> do
@@ -178,8 +178,7 @@ customerCancellationChargesCalculation transporterConfig booking disToPickup = d
       QRD.updateCancellationDues riderId (rider.cancellationDues + transporterConfig.cancellationFee)
 
 cancelSearch ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
   Id DM.Merchant ->
@@ -196,9 +195,7 @@ cancelSearch _merchantId searchTry = do
       Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driverReq.driverId driver_.deviceToken driverReq.searchTryId
 
 validateCancelSearchRequest ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id DM.Merchant ->
   SignatureAuthResult ->
   CancelSearchReq ->
@@ -209,8 +206,7 @@ validateCancelSearchRequest merchantId _ req = do
   QST.findTryByRequestId searchReq.id >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchReq.id.getId)
 
 validateCancelRequest ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
+  ( KvDbFlow m r
   ) =>
   Id DM.Merchant ->
   SignatureAuthResult ->

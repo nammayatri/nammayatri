@@ -28,7 +28,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (CacheFlow, Forkable (fork), MonadGuid (generateGUIDText), Money (Money), fromMaybeM, getCurrentTime, getLocalCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
+import Kernel.Utils.Common (Forkable (fork), KvDbFlow, MonadGuid (generateGUIDText), Money (Money), fromMaybeM, getCurrentTime, getLocalCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTCQ
@@ -41,12 +41,12 @@ import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.Ride as RQ
 import Tools.Error
 
-driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+driverScoreEventHandler :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
   logDebug $ "driverScoreEventHandler with payload: " <> show payload
   eventPayloadHandler merchantOpCityId payload
 
-eventPayloadHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+eventPayloadHandler :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchTryId
   case response of
@@ -119,7 +119,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
     isNotBackFilled :: DS.DriverStats -> Bool
     isNotBackFilled driverStats = driverStats.totalEarnings == 0 && driverStats.bonusEarned == 0 && driverStats.lateNightTrips == 0
 
-    isLateNightRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DR.Ride -> m Int
+    isLateNightRide :: (KvDbFlow m r, EsqDBReplicaFlow m r) => DR.Ride -> m Int
     isLateNightRide rd = do
       case rd.fareParametersId of
         Just fareParamId -> do
@@ -128,7 +128,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
           pure . maybe 0 (const 1) $ (.nightShiftCharge) =<< mbFareParam
         Nothing -> pure 0
 
-updateDailyStats :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> DR.Ride -> m ()
+updateDailyStats :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> DR.Ride -> m ()
 updateDailyStats driverId merchantOpCityId ride = do
   transporterConfig <- CTCQ.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -156,7 +156,7 @@ updateDailyStats driverId merchantOpCityId ride = do
           merchantLocalDate = utctDay localTime
       SQDS.updateByDriverId totalEarnings numRides totalDistance driverId merchantLocalDate
 
-createDriverStat :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> m DS.DriverStats
+createDriverStat :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> m DS.DriverStats
 createDriverStat driverId = do
   now <- getCurrentTime
   allRides <- B.runInReplica $ RQ.findAllRidesByDriverId driverId
@@ -189,7 +189,7 @@ createDriverStat driverId = do
   _ <- DSQ.create driverStat
   pure driverStat
 
-incrementOrSetTotaRides :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> DS.DriverStats -> m DS.DriverStats
+incrementOrSetTotaRides :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> DS.DriverStats -> m DS.DriverStats
 incrementOrSetTotaRides driverId driverStats = do
   incrementTotaRidesBy <-
     maybe
@@ -203,7 +203,7 @@ incrementOrSetTotaRides driverId driverStats = do
   _ <- DSQ.incrementTotalRidesAssigned (cast driverId) incrementTotaRidesBy
   pure $ driverStats {DS.totalRidesAssigned = Just $ fromMaybe 0 driverStats.totalRidesAssigned + incrementTotaRidesBy}
 
-getDriverStats :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe DS.DriverStats -> Id DP.Person -> Maybe Money -> m DS.DriverStats
+getDriverStats :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Maybe DS.DriverStats -> Id DP.Person -> Maybe Money -> m DS.DriverStats
 getDriverStats Nothing driverId _ = createDriverStat driverId
 getDriverStats (Just driverStats) driverId rideFare = do
   updatedTotalRideCount <- getTotalRideCount

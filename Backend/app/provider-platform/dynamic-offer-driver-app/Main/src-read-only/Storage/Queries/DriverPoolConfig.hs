@@ -15,18 +15,18 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 import qualified Storage.Beam.DriverPoolConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ()
+create :: KvDbFlow m r => Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DriverPoolConfig.DriverPoolConfig] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.DriverPoolConfig.DriverPoolConfig] -> m ()
 createMany = traverse_ create
 
-findAllByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DriverPoolConfig.DriverPoolConfig])
+findAllByMerchantOpCityId :: KvDbFlow m r => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DriverPoolConfig.DriverPoolConfig])
 findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithOptionsKV
     [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
@@ -35,7 +35,7 @@ findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCity
     limit
     offset
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig -> m (Maybe (Domain.Types.DriverPoolConfig.DriverPoolConfig))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig -> m (Maybe (Domain.Types.DriverPoolConfig.DriverPoolConfig))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -43,7 +43,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ()
 updateByPrimaryKey Domain.Types.DriverPoolConfig.DriverPoolConfig {..} = do
   _now <- getCurrentTime
   updateWithKV

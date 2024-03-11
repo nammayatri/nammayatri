@@ -6,7 +6,7 @@ import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Notification as Domain
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
+import Kernel.Beam.Functions (createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import Kernel.External.Payment.Interface.Types (MandateNotificationRes, NotificationStatus (NOTIFICATION_CREATED, NOTIFICATION_FAILURE, PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude
@@ -18,20 +18,20 @@ import qualified Sequelize as Se
 import Storage.Beam.Notification as BeamI hiding (Id)
 import qualified Storage.Queries.DriverFee as QDF
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.Notification -> m ()
+create :: KvDbFlow m r => Domain.Notification -> m ()
 create = createWithKV
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> m (Maybe Domain.Notification)
+findById :: KvDbFlow m r => Id Domain.Notification -> m (Maybe Domain.Notification)
 findById (Id notificationId) = findOneWithKV [Se.Is BeamI.id $ Se.Eq notificationId]
 
-findByShortId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Domain.Notification)
+findByShortId :: KvDbFlow m r => Text -> m (Maybe Domain.Notification)
 findByShortId shortId = findOneWithKV [Se.Is BeamI.shortId $ Se.Eq shortId]
 
-findAllByDriverFeeIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> NotificationStatus -> m [Domain.Notification]
+findAllByDriverFeeIdAndStatus :: KvDbFlow m r => [Id DF.DriverFee] -> NotificationStatus -> m [Domain.Notification]
 findAllByDriverFeeIdAndStatus driverFeeIds status = findAllWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds), Se.Is BeamI.status $ Se.Eq status]]
 
 findAllByStatusWithLimit ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   [NotificationStatus] ->
   Id DMOC.MerchantOperatingCity ->
   Int ->
@@ -57,7 +57,7 @@ findAllByStatusWithLimit status merchantOperatingCityId limit = do
     Nothing
 
 updatePendingToFailed ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   m ()
 updatePendingToFailed merchantOperatingCityId = do
@@ -72,7 +72,7 @@ updatePendingToFailed merchantOperatingCityId = do
         ]
     ]
 
-updateNotificationStatusAndResponseInfoById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> Payment.NotificationStatus -> Maybe Text -> Maybe Text -> m ()
+updateNotificationStatusAndResponseInfoById :: KvDbFlow m r => Id Domain.Notification -> Payment.NotificationStatus -> Maybe Text -> Maybe Text -> m ()
 updateNotificationStatusAndResponseInfoById notificationId notificationStatus responseCode responseMessage = do
   now <- getCurrentTime
   updateWithKV
@@ -83,7 +83,7 @@ updateNotificationStatusAndResponseInfoById notificationId notificationStatus re
     ]
     [Se.Is BeamI.id (Se.Eq $ getId notificationId)]
 
-updateLastCheckedOn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Domain.Notification] -> m ()
+updateLastCheckedOn :: KvDbFlow m r => [Id Domain.Notification] -> m ()
 updateLastCheckedOn notificationIds = do
   now <- getCurrentTime
   let lastCheckedAt = UTCTime (utctDay now) (secondsToDiffTime 0)
@@ -93,7 +93,7 @@ updateLastCheckedOn notificationIds = do
     ]
     [Se.Is BeamI.id (Se.In $ getId <$> notificationIds)]
 
-updateNotificationResponseById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> MandateNotificationRes -> m ()
+updateNotificationResponseById :: KvDbFlow m r => Id Domain.Notification -> MandateNotificationRes -> m ()
 updateNotificationResponseById notificationId response = do
   now <- getCurrentTime
   mNotification <- findById notificationId
@@ -111,7 +111,7 @@ updateNotificationResponseById notificationId response = do
     ]
     [Se.Is BeamI.id (Se.Eq $ getId notificationId)]
 
-updateMerchantOperatingCityIdByNotificationId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantOperatingCityIdByNotificationId :: KvDbFlow m r => Id Domain.Notification -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantOperatingCityIdByNotificationId notificationId merchantOperatingCityId = do
   now <- getCurrentTime
   updateWithKV

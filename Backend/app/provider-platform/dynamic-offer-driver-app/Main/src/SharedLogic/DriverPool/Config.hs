@@ -22,7 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import Kernel.Utils.Error
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 
@@ -34,7 +34,7 @@ data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   deriving (Generic)
 
 getSearchDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe Meters ->
   m DriverPoolConfig
@@ -46,7 +46,7 @@ getSearchDriverPoolConfig merchantOpCityId mbDist = do
   findDriverPoolConfig configs vehicle tripCategory distance
 
 getDriverPoolConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Variant.Variant ->
   DTC.TripCategory ->

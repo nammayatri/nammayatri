@@ -15,17 +15,17 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DailyStats as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DailyStats.DailyStats -> m ()
+create :: KvDbFlow m r => Domain.Types.DailyStats.DailyStats -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DailyStats.DailyStats] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.DailyStats.DailyStats] -> m ()
 createMany = traverse_ create
 
-findByDriverIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m (Maybe (Domain.Types.DailyStats.DailyStats))
+findByDriverIdAndDate :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m (Maybe (Domain.Types.DailyStats.DailyStats))
 findByDriverIdAndDate (Kernel.Types.Id.Id driverId) merchantLocalDate = do
   findOneWithKV
     [ Se.And
@@ -34,7 +34,7 @@ findByDriverIdAndDate (Kernel.Types.Id.Id driverId) merchantLocalDate = do
         ]
     ]
 
-updateByDriverId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Common.Money -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ()
+updateByDriverId :: KvDbFlow m r => Kernel.Types.Common.Money -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ()
 updateByDriverId totalEarnings numRides totalDistance (Kernel.Types.Id.Id driverId) merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -49,7 +49,7 @@ updateByDriverId totalEarnings numRides totalDistance (Kernel.Types.Id.Id driver
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Data.Text.Text -> m (Maybe (Domain.Types.DailyStats.DailyStats))
+findByPrimaryKey :: KvDbFlow m r => Data.Text.Text -> m (Maybe (Domain.Types.DailyStats.DailyStats))
 findByPrimaryKey id = do
   findOneWithKV
     [ Se.And
@@ -57,7 +57,7 @@ findByPrimaryKey id = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.DailyStats.DailyStats -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.DailyStats.DailyStats -> m ()
 updateByPrimaryKey Domain.Types.DailyStats.DailyStats {..} = do
   _now <- getCurrentTime
   updateWithKV

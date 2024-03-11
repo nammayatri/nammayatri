@@ -26,7 +26,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.BecknConfig as Queries
 
-findByMerchantIdDomainAndVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> VehicleCategory -> m (Maybe BecknConfig)
+findByMerchantIdDomainAndVehicle :: KvDbFlow m r => Id Merchant -> Text -> VehicleCategory -> m (Maybe BecknConfig)
 findByMerchantIdDomainAndVehicle merchantId domain vehicle = do
   Hedis.safeGet (makeMerchantIdDomainKey merchantId domain vehicle) >>= \case
     Just a -> return a

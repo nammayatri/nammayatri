@@ -54,8 +54,7 @@ bulkUploadCoinsHandler merchantShortId opCity Common.BulkUploadCoinsReq {..} = d
 bulkUpdateByDriverId ::
   ( MonadFlow m,
     MonadReader r m,
-    EsqDBFlow m r,
-    CacheFlow m r,
+    KvDbFlow m r,
     HasField
       "minTripDistanceForReferralCfg"
       r

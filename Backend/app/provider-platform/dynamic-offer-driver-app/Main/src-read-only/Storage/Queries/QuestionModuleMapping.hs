@@ -12,23 +12,23 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuestionModuleMapping as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ()
+create :: KvDbFlow m r => Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.QuestionModuleMapping.QuestionModuleMapping] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.QuestionModuleMapping.QuestionModuleMapping] -> m ()
 createMany = traverse_ create
 
-findAllWithModuleId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m ([Domain.Types.QuestionModuleMapping.QuestionModuleMapping])
+findAllWithModuleId :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m ([Domain.Types.QuestionModuleMapping.QuestionModuleMapping])
 findAllWithModuleId (Kernel.Types.Id.Id moduleId) = do
   findAllWithKV
     [ Se.Is Beam.moduleId $ Se.Eq moduleId
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe (Domain.Types.QuestionModuleMapping.QuestionModuleMapping))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe (Domain.Types.QuestionModuleMapping.QuestionModuleMapping))
 findByPrimaryKey (Kernel.Types.Id.Id moduleId) (Kernel.Types.Id.Id questionId) = do
   findOneWithKV
     [ Se.And
@@ -37,7 +37,7 @@ findByPrimaryKey (Kernel.Types.Id.Id moduleId) (Kernel.Types.Id.Id questionId) =
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ()
 updateByPrimaryKey Domain.Types.QuestionModuleMapping.QuestionModuleMapping {..} = do
   _now <- getCurrentTime
   updateWithKV

@@ -54,8 +54,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Tools.Maps as Maps
 
 isBatchNumExceedLimit ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
+  ( KvDbFlow m r
   ) =>
   DriverPoolConfig ->
   Id DST.SearchTry ->
@@ -71,8 +70,7 @@ previouslyAttemptedDriversKey searchTryId = "Driver-Offer:PreviouslyAttemptedDri
 prepareDriverPoolBatch ::
   ( EncFlow m r,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
+    KvDbFlow m r,
     LT.HasLocationService m r
   ) =>
   DriverPoolConfig ->
@@ -384,8 +382,7 @@ previouslyAttemptedDrivers searchTryId = do
       a -> return a
 
 sortWithDriverScore ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     MonadFlow m
   ) =>
   Id MerchantOperatingCity ->
@@ -464,9 +461,7 @@ sortWithDriverScore merchantOpCityId (Just transporterConfig) intelligentPoolCon
         HM.empty
 
 fetchScore ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
-  ) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   [(Id Driver, Meters)] ->
   [Id Driver] ->
@@ -517,9 +512,8 @@ poolRadiusStepKey searchTryId = "Driver-Offer:Allocator:PoolRadiusStep:SearchTry
 
 getNextDriverPoolBatch ::
   ( EncFlow m r,
-    CacheFlow m r,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     LT.HasLocationService m r
   ) =>
   DriverPoolConfig ->

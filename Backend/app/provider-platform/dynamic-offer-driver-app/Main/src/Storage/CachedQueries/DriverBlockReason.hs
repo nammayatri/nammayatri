@@ -17,12 +17,11 @@ module Storage.CachedQueries.DriverBlockReason where
 
 import Domain.Types.DriverBlockReason
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, KvDbFlow)
 import qualified Storage.Queries.DriverBlockReason as Queries
 
-findAll :: (CacheFlow m r, Esq.EsqDBFlow m r) => m [DriverBlockReason]
+findAll :: KvDbFlow m r => m [DriverBlockReason]
 findAll =
   Hedis.withCrossAppRedis (Hedis.safeGet makeDriverBlockReasonKey) >>= \case
     Just a -> pure a

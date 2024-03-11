@@ -29,7 +29,7 @@ import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
 import qualified Storage.Queries.BlackListOrg as Queries
 
-findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> m (Maybe BlackListOrg)
+findBySubscriberIdAndDomain :: KvDbFlow m r => ShortId Subscriber -> Domain -> m (Maybe BlackListOrg)
 findBySubscriberIdAndDomain subscriberId domain =
   Hedis.safeGet (makeShortIdKey subscriberId domain) >>= \case
     Just a -> return . Just $ coerce @(BlackListOrgD 'Unsafe) @BlackListOrg a

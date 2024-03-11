@@ -38,8 +38,7 @@ import Tools.Error
 import qualified Tools.Payment as TPayment
 
 sendPDNNotificationToDriver ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     EncFlow m r,
@@ -148,7 +147,7 @@ getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
 scheduleJobs ::
-  (CacheFlow m r, EsqDBFlow m r, HasField "schedulerType" r SchedulerType, JobCreatorEnv r) =>
+  (KvDbFlow m r, HasField "schedulerType" r SchedulerType, JobCreatorEnv r) =>
   TransporterConfig ->
   UTCTime ->
   UTCTime ->
@@ -186,8 +185,7 @@ sendAsyncNotification ::
   ( MonadFlow m,
     HasShortDurationRetryCfg r c,
     EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
   DriverInfoForPDNotification ->
@@ -244,7 +242,7 @@ sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscrip
             description = "Driver fee mandate notification"
           }
 
-handleNotificationFailureAfterRetiresEnd :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DF.DriverFee -> m ()
+handleNotificationFailureAfterRetiresEnd :: (MonadFlow m, KvDbFlow m r) => Id DF.DriverFee -> m ()
 handleNotificationFailureAfterRetiresEnd driverFeeId = do
   QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFeeId] Nothing
   QDF.updateAutoPayToManual driverFeeId

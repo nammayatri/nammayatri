@@ -39,12 +39,12 @@ data CallEventReq = CallEventReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-logCallEvent :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => CallEventReq -> m APISuccess.APISuccess
+logCallEvent :: (EncFlow m r, KvDbFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => CallEventReq -> m APISuccess.APISuccess
 logCallEvent CallEventReq {..} = do
   sendCallDataToKafka Nothing (Just rideId) (Just "ANONYMOUS_CALLER") Nothing Nothing User (Just exophoneNumber)
   pure APISuccess.Success
 
-sendCallDataToKafka :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Maybe Text -> Maybe (Id Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> EventTriggeredBy -> Maybe Text -> m ()
+sendCallDataToKafka :: (EncFlow m r, KvDbFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Maybe Text -> Maybe (Id Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> EventTriggeredBy -> Maybe Text -> m ()
 sendCallDataToKafka vendor mRideId callType callSid callStatus triggeredBy exophoneNumber = do
   case mRideId of
     Just rideId -> do

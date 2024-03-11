@@ -42,7 +42,7 @@ data DTrackRes = TrackRes
   }
 
 track ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id DM.Merchant ->
   DTrackReq ->
   m DTrackRes

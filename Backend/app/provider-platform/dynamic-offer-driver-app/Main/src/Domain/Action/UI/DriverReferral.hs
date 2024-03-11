@@ -36,9 +36,8 @@ newtype GenerateReferralCodeRes = GenerateReferralCodeRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createDriverReferral ::
-  ( CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
+    KvDbFlow m r,
     MonadTime m
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -76,9 +75,8 @@ createDriverReferral (driverId, _, merchantOpCityId) isDashboard ReferralLinkReq
 generateReferralCode ::
   ( HasCacheConfig r,
     Redis.HedisFlow m r,
-    MonadFlow m,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     MonadTime m
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->

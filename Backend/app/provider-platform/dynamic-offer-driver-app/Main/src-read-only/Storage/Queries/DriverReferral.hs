@@ -13,30 +13,30 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverReferral as Beam
 import Storage.Queries.DriverReferralExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverReferral.DriverReferral -> m ()
+create :: KvDbFlow m r => Domain.Types.DriverReferral.DriverReferral -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DriverReferral.DriverReferral] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.DriverReferral.DriverReferral] -> m ()
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe (Domain.Types.DriverReferral.DriverReferral))
+findById :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe (Domain.Types.DriverReferral.DriverReferral))
 findById (Kernel.Types.Id.Id driverId) = do
   findOneWithKV
     [ Se.Is Beam.driverId $ Se.Eq driverId
     ]
 
-findByRefferalCode :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral -> m (Maybe (Domain.Types.DriverReferral.DriverReferral))
+findByRefferalCode :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral -> m (Maybe (Domain.Types.DriverReferral.DriverReferral))
 findByRefferalCode (Kernel.Types.Id.Id referralCode) = do
   findOneWithKV
     [ Se.Is Beam.referralCode $ Se.Eq referralCode
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral -> m (Maybe (Domain.Types.DriverReferral.DriverReferral))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral -> m (Maybe (Domain.Types.DriverReferral.DriverReferral))
 findByPrimaryKey (Kernel.Types.Id.Id referralCode) = do
   findOneWithKV
     [ Se.And
@@ -44,7 +44,7 @@ findByPrimaryKey (Kernel.Types.Id.Id referralCode) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.DriverReferral.DriverReferral -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.DriverReferral.DriverReferral -> m ()
 updateByPrimaryKey Domain.Types.DriverReferral.DriverReferral {..} = do
   _now <- getCurrentTime
   updateWithKV

@@ -32,7 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FarePolicy as Queries
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
+findById :: KvDbFlow m r => Id FarePolicy -> m (Maybe FarePolicy)
 findById id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
@@ -57,8 +57,8 @@ clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
 clearCacheById fid = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fid)
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+update :: KvDbFlow m r => FarePolicy -> m ()
 update = Queries.update
 
-update' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+update' :: KvDbFlow m r => FarePolicy -> m ()
 update' = Queries.update'

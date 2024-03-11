@@ -18,19 +18,18 @@ module Storage.CachedQueries.GoHomeConfig where
 import Control.Monad
 import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Kernel.Beam.Lib.Utils (KvDbFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Error.Throwing
 import qualified Storage.Queries.GoHomeConfig as Queries
 import Tools.Error (GenericError (..))
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
+create :: KvDbFlow m r => GoHomeConfig -> m ()
 create = Queries.create
 
-findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m GoHomeConfig
 findByMerchantOpCityId id = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.safeGet (makeGoHomeKey id) >>= \case

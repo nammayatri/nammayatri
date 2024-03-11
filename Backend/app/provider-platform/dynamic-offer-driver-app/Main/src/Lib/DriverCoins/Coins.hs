@@ -50,9 +50,9 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.Notifications as Notify
 
-type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
+type EventFlow m r = (MonadFlow m, KvDbFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
 
-getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
+getCoinsByDriverId :: KvDbFlow m r => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = do
   now <- getCurrentTime
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
@@ -68,7 +68,7 @@ getCoinsByDriverId driverId timeDiffFromUtc = do
         setCoinAccumulationByDriverIdKey driverId currentDate coinBalance expirationPeriod
       pure coinBalance
 
-updateCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Seconds -> m ()
+updateCoinsByDriverId :: KvDbFlow m r => Id DP.Person -> Int -> Seconds -> m ()
 updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
   now <- getCurrentTime
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
@@ -239,7 +239,7 @@ getExpirationSeconds timeDiffFromUtc = do
   let expirationSeconds = round $ diffUTCTime (UTCTime (addDays 1 $ utctDay istTime) 0) istTime -- expire at 12:00 AM IST
   pure expirationSeconds
 
-incrementValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
+incrementValidRideCount :: KvDbFlow m r => Id DP.Person -> Int -> Int -> m ()
 incrementValidRideCount driverId expirationPeriod incrementValue = do
   validRideCountKeyExists <- getValidRideCountByDriverIdKey driverId
   case validRideCountKeyExists of
@@ -249,10 +249,10 @@ incrementValidRideCount driverId expirationPeriod incrementValue = do
 mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
 mkCoinAccumulationByDriverIdKey driverId date = "DriverCoinBalance:DriverId:" <> driverId.getId <> ":" <> date
 
-getCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> m (Maybe Int)
+getCoinAccumulationByDriverIdKey :: KvDbFlow m r => Id DP.Person -> Text -> m (Maybe Int)
 getCoinAccumulationByDriverIdKey driverId currentDate = Hedis.withCrossAppRedis $ Hedis.get (mkCoinAccumulationByDriverIdKey driverId currentDate)
 
-setCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> Int -> Int -> m ()
+setCoinAccumulationByDriverIdKey :: KvDbFlow m r => Id DP.Person -> Text -> Int -> Int -> m ()
 setCoinAccumulationByDriverIdKey driverId currentDate count expirationPeriod = do
   void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral count)
   Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
@@ -260,10 +260,10 @@ setCoinAccumulationByDriverIdKey driverId currentDate count expirationPeriod = d
 mkValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkValidRideCountByDriverIdKey driverId = "DriverValidRideCount:DriverId:" <> driverId.getId
 
-getValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
+getValidRideCountByDriverIdKey :: KvDbFlow m r => Id DP.Person -> m (Maybe Int)
 getValidRideCountByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdKey driverId)
 
-setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
+setValidRideCountByDriverIdKey :: KvDbFlow m r => Id DP.Person -> Int -> Int -> m ()
 setValidRideCountByDriverIdKey driverId expirationPeriod count = do
   void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
   Hedis.withCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod

@@ -13,18 +13,18 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Translations as Beam
 import Storage.Queries.TranslationsExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Translations.Translations -> m ()
+create :: KvDbFlow m r => Domain.Types.Translations.Translations -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Translations.Translations] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.Translations.Translations] -> m ()
 createMany = traverse_ create
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Translations.Translations -> m (Maybe (Domain.Types.Translations.Translations))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Translations.Translations -> m (Maybe (Domain.Types.Translations.Translations))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -32,7 +32,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Translations.Translations -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.Translations.Translations -> m ()
 updateByPrimaryKey Domain.Types.Translations.Translations {..} = do
   _now <- getCurrentTime
   updateWithKV

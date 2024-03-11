@@ -13,17 +13,17 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MetaData as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MetaData.MetaData -> m ()
+create :: KvDbFlow m r => Domain.Types.MetaData.MetaData -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MetaData.MetaData] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.MetaData.MetaData] -> m ()
 createMany = traverse_ create
 
-updateMetaData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
+updateMetaData :: KvDbFlow m r => Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
 updateMetaData device deviceOS deviceDateTime appPermissions (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -36,7 +36,7 @@ updateMetaData device deviceOS deviceDateTime appPermissions (Kernel.Types.Id.Id
     [ Se.Is Beam.driverId $ Se.Eq driverId
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe (Domain.Types.MetaData.MetaData))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe (Domain.Types.MetaData.MetaData))
 findByPrimaryKey (Kernel.Types.Id.Id driverId) = do
   findOneWithKV
     [ Se.And
@@ -44,7 +44,7 @@ findByPrimaryKey (Kernel.Types.Id.Id driverId) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.MetaData.MetaData -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.MetaData.MetaData -> m ()
 updateByPrimaryKey Domain.Types.MetaData.MetaData {..} = do
   _now <- getCurrentTime
   updateWithKV

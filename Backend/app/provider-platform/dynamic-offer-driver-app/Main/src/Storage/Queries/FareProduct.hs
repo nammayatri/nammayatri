@@ -27,17 +27,16 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareProduct as BeamFP
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FareProduct -> m ()
+create :: KvDbFlow m r => Domain.FareProduct -> m ()
 create = createWithKV
 
 findAllBoundedFareProductForVariants ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
   Domain.Area ->
@@ -53,7 +52,7 @@ findAllBoundedFareProductForVariants (Id merchantOpCityId) tripCategory area =
     ]
 
 findAllUnboundedFareProductForVariants ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
   Domain.Area ->
@@ -69,7 +68,7 @@ findAllUnboundedFareProductForVariants (Id merchantOpCityId) tripCategory area =
     ]
 
 findAllBoundedByMerchantOpCityIdVariantArea ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
   Variant ->
@@ -87,7 +86,7 @@ findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory v
     ]
 
 findUnboundedByMerchantOpCityIdVariantArea ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
   Variant ->
@@ -104,7 +103,7 @@ findUnboundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory ve
         ]
     ]
 
-findAllFareProductByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [Domain.FareProduct]
+findAllFareProductByMerchantOpCityId :: KvDbFlow m r => Id DMOC.MerchantOperatingCity -> m [Domain.FareProduct]
 findAllFareProductByMerchantOpCityId (Id merchantOpCityId) = findAllWithKV [Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId]
 
 instance ToTType' BeamFP.FareProduct FareProduct where

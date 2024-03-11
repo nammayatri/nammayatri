@@ -14,29 +14,29 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Volunteer as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Volunteer.Volunteer -> m ()
+create :: KvDbFlow m r => Domain.Types.Volunteer.Volunteer -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Volunteer.Volunteer] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.Volunteer.Volunteer] -> m ()
 createMany = traverse_ create
 
-findAllByPlace :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Data.Text.Text -> m ([Domain.Types.Volunteer.Volunteer])
+findAllByPlace :: KvDbFlow m r => Data.Text.Text -> m ([Domain.Types.Volunteer.Volunteer])
 findAllByPlace place = do
   findAllWithKV
     [ Se.Is Beam.place $ Se.Eq place
     ]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe (Domain.Types.Volunteer.Volunteer))
+findById :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe (Domain.Types.Volunteer.Volunteer))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe (Domain.Types.Volunteer.Volunteer))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe (Domain.Types.Volunteer.Volunteer))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -44,7 +44,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Volunteer.Volunteer -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.Volunteer.Volunteer -> m ()
 updateByPrimaryKey Domain.Types.Volunteer.Volunteer {..} = do
   _now <- getCurrentTime
   updateWithKV

@@ -6,7 +6,6 @@ module Storage.Queries.Instances.Person where
 import Data.Text (strip)
 import qualified Database.Beam.Query ()
 import Domain.Types.Person as Person
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -28,7 +27,7 @@ import Storage.Queries.Vehicle ()
 import Tools.Error
 
 instance FromTType' BeamP.Person Person where
-  fromTType' :: (L.MonadFlow m, Log m, CacheFlow m r, EsqDBFlow m r) => BeamP.Person -> m (Maybe Person)
+  fromTType' :: KvDbFlow m r => BeamP.Person -> m (Maybe Person)
   fromTType' BeamP.PersonT {..} = do
     bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
     clientVersion' <- mapM readVersion (strip <$> clientVersion)

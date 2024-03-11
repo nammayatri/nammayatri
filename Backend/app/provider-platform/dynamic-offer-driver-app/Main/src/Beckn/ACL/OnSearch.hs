@@ -27,7 +27,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
 mkOnSearchRequest ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, KvDbFlow m r) =>
   DSearch.DSearchRes ->
   Context.Action ->
   Context.Domain ->

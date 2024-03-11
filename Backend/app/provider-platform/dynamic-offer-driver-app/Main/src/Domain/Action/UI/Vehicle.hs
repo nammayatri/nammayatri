@@ -94,7 +94,7 @@ data Driver = Driver
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-listVehicles :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Maybe Variant.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
+listVehicles :: (KvDbFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Maybe Variant.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
 listVehicles admin variantM mbRegNum limitM offsetM = do
   let merchantId = admin.merchantId
   personList <- B.runInReplica $ QP.findAllByMerchantId [SP.DRIVER] merchantId
@@ -105,7 +105,7 @@ listVehicles admin variantM mbRegNum limitM offsetM = do
     limit = toInteger $ fromMaybe 50 limitM
     offset = toInteger $ fromMaybe 0 offsetM
 
-updateVehicle :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
+updateVehicle :: KvDbFlow m r => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
 updateVehicle admin driverId req = do
   let merchantId = admin.merchantId
   runRequestValidation validateUpdateVehicleReq req
@@ -133,7 +133,7 @@ updateVehicle admin driverId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity updatedVehicle
 
-getVehicle :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
+getVehicle :: (KvDbFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
 getVehicle (personId, _, _) registrationNoM vehicleIdM = do
   user <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   vehicle <- case (registrationNoM, vehicleIdM) of

@@ -32,10 +32,10 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.SearchRequest as QR
 
-createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [SearchRequestForDriver] -> m ()
+createMany :: KvDbFlow m r => [SearchRequestForDriver] -> m ()
 createMany = traverse_ createWithKV
 
-findAllActiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m [SearchRequestForDriver]
+findAllActiveBySTId :: KvDbFlow m r => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveBySTId (Id searchTryId) =
   findAllWithKV
     [ Se.And
@@ -44,7 +44,7 @@ findAllActiveBySTId (Id searchTryId) =
         ]
     ]
 
-findAllActiveBySRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveBySRId :: KvDbFlow m r => Id SearchRequest -> m [SearchRequestForDriver]
 findAllActiveBySRId (Id searchReqId) =
   findAllWithKV
     [ Se.And
@@ -53,7 +53,7 @@ findAllActiveBySRId (Id searchReqId) =
         ]
     ]
 
-findAllActiveWithoutRespBySearchTryId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m [SearchRequestForDriver]
+findAllActiveWithoutRespBySearchTryId :: KvDbFlow m r => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
   findAllWithKV
     [ Se.And
@@ -63,7 +63,7 @@ findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
         )
     ]
 
-findByDriverAndSearchTryId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchTryId :: KvDbFlow m r => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
   findOneWithKV
     [ Se.And
@@ -73,29 +73,29 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
         )
     ]
 
-findByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [SearchRequestForDriver]
+findByDriver :: KvDbFlow m r => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
 
-deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+deleteByDriverId :: KvDbFlow m r => Id Person -> m ()
 deleteByDriverId (Id personId) = do
   deleteWithKV
     [Se.Is BeamSRFD.driverId (Se.Eq personId)]
 
-setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m ()
+setInactiveBySTId :: KvDbFlow m r => Id SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = do
   updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
-setInactiveBySRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> m ()
+setInactiveBySRId :: KvDbFlow m r => Id SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) = do
   updateWithKV
     [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.requestId (Se.Eq searchReqId)]
 
-updateDriverResponse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m ()
+updateDriverResponse :: KvDbFlow m r => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m ()
 updateDriverResponse (Id id) response =
   updateOneWithKV
     [Se.Set BeamSRFD.response (Just response)]

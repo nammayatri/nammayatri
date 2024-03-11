@@ -34,10 +34,10 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Tools.Error
 
-createDSReq' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
+createDSReq' :: KvDbFlow m r => SearchRequest -> m ()
 createDSReq' = createWithKV
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
+create :: KvDbFlow m r => SearchRequest -> m ()
 create dsReq = do
   void $ whenNothingM_ (QL.findById dsReq.fromLocation.id) $ do QL.create dsReq.fromLocation
   case dsReq.toLocation of
@@ -45,7 +45,7 @@ create dsReq = do
     _ -> return ()
   createDSReq' dsReq
 
-createDSReq :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
+createDSReq :: KvDbFlow m r => SearchRequest -> m ()
 createDSReq searchRequest = do
   fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
   QLM.create fromLocationMap
@@ -56,14 +56,14 @@ createDSReq searchRequest = do
     _ -> return ()
   create searchRequest
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> m (Maybe SearchRequest)
+findById :: KvDbFlow m r => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
 
-findByTransactionIdAndMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id DM.Merchant -> m (Maybe SearchRequest)
+findByTransactionIdAndMerchantId :: KvDbFlow m r => Text -> Id DM.Merchant -> m (Maybe SearchRequest)
 findByTransactionIdAndMerchantId transactionId merchantId = findOneWithKV [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId, Se.Is BeamSR.providerId $ Se.Eq merchantId.getId]]
 
 updateAutoAssign ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchRequest ->
   Bool ->
   m ()
@@ -73,7 +73,7 @@ updateAutoAssign searchRequestId autoAssignedEnabled =
     [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
 
 updateRiderId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  KvDbFlow m r =>
   Id SearchRequest ->
   Id RD.RiderDetails ->
   m ()

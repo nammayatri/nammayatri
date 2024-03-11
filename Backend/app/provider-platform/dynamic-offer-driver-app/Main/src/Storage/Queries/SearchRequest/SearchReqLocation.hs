@@ -23,10 +23,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchReqLocation -> m ()
+create :: KvDbFlow m r => SearchReqLocation -> m ()
 create = createWithKV
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchReqLocation -> m (Maybe SearchReqLocation)
+findById :: KvDbFlow m r => Id SearchReqLocation -> m (Maybe SearchReqLocation)
 findById (Id searchReqLocationId) = findOneWithKV [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
 
 instance FromTType' BeamSRL.SearchReqLocation SearchReqLocation where

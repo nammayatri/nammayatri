@@ -35,10 +35,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.MerchantServiceConfig as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
+create :: KvDbFlow m r => MerchantServiceConfig -> m ()
 create = Queries.create
 
-findAllMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [MerchantServiceConfig]
+findAllMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [MerchantServiceConfig]
 findAllMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig) a
@@ -54,7 +54,7 @@ makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantServiceConfig:MerchantOperatingCityId-" <> id.getId
 
 findByMerchantIdAndServiceWithCity ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   ServiceName ->
   Id DMOC.MerchantOperatingCity ->
@@ -65,7 +65,7 @@ findByMerchantIdAndServiceWithCity id serviceName opCityId =
     Nothing -> flip whenJust (cacheMerchantServiceConfig opCityId) /=<< Queries.findByMerchantIdAndServiceWithCity id serviceName opCityId
 
 -- FIXME this is temprorary solution for backward compatibility
-findOne :: (CacheFlow m r, EsqDBFlow m r) => ServiceName -> m (Maybe MerchantServiceConfig)
+findOne :: KvDbFlow m r => ServiceName -> m (Maybe MerchantServiceConfig)
 findOne serviceName = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeServiceNameKey serviceName) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a
@@ -95,5 +95,5 @@ clearCache merchantId serviceName opCity = do
   Hedis.withCrossAppRedis $ Hedis.del (makeMerchantIdAndServiceWithCityKey merchantId serviceName opCity)
   Hedis.withCrossAppRedis $ Hedis.del (makeServiceNameKey serviceName)
 
-upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> Id DMOC.MerchantOperatingCity -> m ()
+upsertMerchantServiceConfig :: KvDbFlow m r => MerchantServiceConfig -> Id DMOC.MerchantOperatingCity -> m ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig

@@ -20,29 +20,28 @@ import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
-import Kernel.Types.App
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantOperatingCity as BeamMOC
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantOperatingCity -> m ()
+create :: KvDbFlow m r => MerchantOperatingCity -> m ()
 create = createWithKV
 
-findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
+findById :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
 findById (Id merchantOpCityId) = findOneWithKV [Se.Is BeamMOC.id $ Se.Eq merchantOpCityId]
 
-findAllByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> m [MerchantOperatingCity]
+findAllByMerchantId :: KvDbFlow m r => Id DM.Merchant -> m [MerchantOperatingCity]
 findAllByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamMOC.merchantId $ Se.Eq merchantId]]
 
-findByMerchantIdAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
+findByMerchantIdAndCity :: KvDbFlow m r => Id DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantIdAndCity (Id merchantId) city = findOneWithKV [Se.And [Se.Is BeamMOC.merchantId $ Se.Eq merchantId, Se.Is BeamMOC.city $ Se.Eq city]]
 
-findAllByMerchantIdAndState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Context.IndianState -> m [MerchantOperatingCity]
+findAllByMerchantIdAndState :: KvDbFlow m r => Id DM.Merchant -> Context.IndianState -> m [MerchantOperatingCity]
 findAllByMerchantIdAndState (Id merchantId) state = findAllWithKV [Se.And [Se.Is BeamMOC.merchantId $ Se.Eq merchantId, Se.Is BeamMOC.state $ Se.Eq state]]
 
-findByMerchantShortIdAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
+findByMerchantShortIdAndCity :: KvDbFlow m r => ShortId DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantShortIdAndCity (ShortId merchantShortId) city = findOneWithKV [Se.And [Se.Is BeamMOC.merchantShortId $ Se.Eq merchantShortId, Se.Is BeamMOC.city $ Se.Eq city]]
 
 instance FromTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where

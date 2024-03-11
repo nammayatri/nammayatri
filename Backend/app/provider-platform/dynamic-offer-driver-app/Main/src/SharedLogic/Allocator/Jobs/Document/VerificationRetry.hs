@@ -38,8 +38,7 @@ import qualified Tools.Verification as Verification
 retryDocumentVerificationJob ::
   ( TranslateFlow m r,
     EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r
+    KvDbFlow m r
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult

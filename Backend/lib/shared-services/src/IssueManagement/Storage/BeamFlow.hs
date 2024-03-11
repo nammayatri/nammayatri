@@ -9,12 +9,10 @@ import qualified IssueManagement.Storage.Beam.Issue.IssueReport as BeamIR
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as BeamIT
 import qualified IssueManagement.Storage.Beam.MediaFile as BeamMF
 import IssueManagement.Tools.UtilsTH
-import Kernel.Utils.Common
+import Kernel.Beam.Lib.Utils (KvDbFlow)
 
 type BeamFlow m r =
-  ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     HasSchemaName BeamC.CommentT,
     HasSchemaName BeamIC.IssueCategoryT,
     HasSchemaName BeamIC.IssueConfigT,

@@ -13,24 +13,24 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Servant.Client.Core
 import qualified Storage.Beam.BecknConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BecknConfig.BecknConfig -> m ()
+create :: KvDbFlow m r => Domain.Types.BecknConfig.BecknConfig -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.BecknConfig.BecknConfig] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.BecknConfig.BecknConfig] -> m ()
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m (Maybe (Domain.Types.BecknConfig.BecknConfig))
+findById :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m (Maybe (Domain.Types.BecknConfig.BecknConfig))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-findByMerchantIdAndDomain :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> m ([Domain.Types.BecknConfig.BecknConfig])
+findByMerchantIdAndDomain :: KvDbFlow m r => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> m ([Domain.Types.BecknConfig.BecknConfig])
 findByMerchantIdAndDomain merchantId domain = do
   findAllWithKV
     [ Se.And
@@ -39,7 +39,7 @@ findByMerchantIdAndDomain merchantId domain = do
         ]
     ]
 
-findByMerchantIdDomainAndVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Domain.Types.BecknConfig.VehicleCategory -> m (Maybe (Domain.Types.BecknConfig.BecknConfig))
+findByMerchantIdDomainAndVehicle :: KvDbFlow m r => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Domain.Types.BecknConfig.VehicleCategory -> m (Maybe (Domain.Types.BecknConfig.BecknConfig))
 findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory = do
   findOneWithKV
     [ Se.And
@@ -49,7 +49,7 @@ findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory = do
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m (Maybe (Domain.Types.BecknConfig.BecknConfig))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m (Maybe (Domain.Types.BecknConfig.BecknConfig))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -57,7 +57,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.BecknConfig.BecknConfig -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.BecknConfig.BecknConfig -> m ()
 updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   _now <- getCurrentTime
   updateWithKV

@@ -11,7 +11,7 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import Tools.Event as TE
 
-trackFromAutoPayToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EventStreamFlow m r) => DDF.DriverFee -> m ()
+trackFromAutoPayToManual :: (MonadFlow m, KvDbFlow m r, EventStreamFlow m r) => DDF.DriverFee -> m ()
 trackFromAutoPayToManual driverFee = do
   id <- generateGUIDText
   now <- getCurrentTime
@@ -33,7 +33,7 @@ trackFromAutoPayToManual driverFee = do
           }
   TE.triggerEventTrackerEvent eventData
 
-trackServiceUsageChargeToggle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EventStreamFlow m r) => DDPlan.DriverPlan -> Maybe Text -> m ()
+trackServiceUsageChargeToggle :: (MonadFlow m, KvDbFlow m r, EventStreamFlow m r) => DDPlan.DriverPlan -> Maybe Text -> m ()
 trackServiceUsageChargeToggle driverPlan mbReason = do
   id <- generateGUIDText
   now <- getCurrentTime
@@ -55,7 +55,7 @@ trackServiceUsageChargeToggle driverPlan mbReason = do
           }
   TE.triggerEventTrackerEvent eventData
 
-trackAutoPayStatusChange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EventStreamFlow m r) => DDPlan.DriverPlan -> Text -> m ()
+trackAutoPayStatusChange :: (MonadFlow m, KvDbFlow m r, EventStreamFlow m r) => DDPlan.DriverPlan -> Text -> m ()
 trackAutoPayStatusChange driverPlan toStatus = do
   id <- generateGUIDText
   now <- getCurrentTime

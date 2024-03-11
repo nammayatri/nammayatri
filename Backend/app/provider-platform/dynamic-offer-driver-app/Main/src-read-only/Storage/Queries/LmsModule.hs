@@ -15,23 +15,23 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.LmsModule as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.LmsModule.LmsModule -> m ()
+create :: KvDbFlow m r => Domain.Types.LmsModule.LmsModule -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.LmsModule.LmsModule] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.LmsModule.LmsModule] -> m ()
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe (Domain.Types.LmsModule.LmsModule))
+findById :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe (Domain.Types.LmsModule.LmsModule))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-getAllModules :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.LmsModule.LmsModule])
+getAllModules :: KvDbFlow m r => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.LmsModule.LmsModule])
 getAllModules limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithOptionsKV
     [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
@@ -40,7 +40,7 @@ getAllModules limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do
     limit
     offset
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe (Domain.Types.LmsModule.LmsModule))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe (Domain.Types.LmsModule.LmsModule))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -48,7 +48,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.LmsModule.LmsModule -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.LmsModule.LmsModule -> m ()
 updateByPrimaryKey Domain.Types.LmsModule.LmsModule {..} = do
   _now <- getCurrentTime
   updateWithKV

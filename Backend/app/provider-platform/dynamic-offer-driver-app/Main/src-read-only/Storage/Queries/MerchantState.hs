@@ -13,17 +13,17 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantState as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantState.MerchantState -> m ()
+create :: KvDbFlow m r => Domain.Types.MerchantState.MerchantState -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantState.MerchantState] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.MerchantState.MerchantState] -> m ()
 createMany = traverse_ create
 
-findByMerchantIdAndState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m (Maybe (Domain.Types.MerchantState.MerchantState))
+findByMerchantIdAndState :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m (Maybe (Domain.Types.MerchantState.MerchantState))
 findByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do
   findOneWithKV
     [ Se.And
@@ -32,7 +32,7 @@ findByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m (Maybe (Domain.Types.MerchantState.MerchantState))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m (Maybe (Domain.Types.MerchantState.MerchantState))
 findByPrimaryKey (Kernel.Types.Id.Id merchantId) state = do
   findOneWithKV
     [ Se.And
@@ -41,7 +41,7 @@ findByPrimaryKey (Kernel.Types.Id.Id merchantId) state = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.MerchantState.MerchantState -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.MerchantState.MerchantState -> m ()
 updateByPrimaryKey Domain.Types.MerchantState.MerchantState {..} = do
   _now <- getCurrentTime
   updateWithKV
