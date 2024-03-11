@@ -90,7 +90,7 @@ instance ToSchema OfferRes where
 estimateBuildLockKey :: Text -> Text
 estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
 
-getQuotes :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
+getQuotes :: (KvDbFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   activeBooking <- runInReplica $ QBooking.findLatestByRiderId searchRequest.riderId
@@ -110,7 +110,7 @@ getQuotes searchRequestId = do
           paymentMethods
         }
 
-processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => Booking -> CancellationStage -> m ()
+processActiveBooking :: (KvDbFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => Booking -> CancellationStage -> m ()
 processActiveBooking booking cancellationStage = do
   mbRide <- QRide.findActiveByRBId booking.id
   case mbRide of
@@ -130,7 +130,7 @@ processActiveBooking booking cancellationStage = do
             dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
             void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
 
-getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
+getOffers :: (HedisFlow m r, KvDbFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do
   logDebug $ "search Request is : " <> show searchRequest
   case searchRequest.toLocation of
@@ -167,7 +167,7 @@ getOffers searchRequest = do
     creationTime (OnRentalCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
-getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
+getEstimates :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
   estimates <- mapM DEstimate.mkEstimateAPIEntity (sortByEstimatedFare estimateList)
@@ -178,7 +178,7 @@ sortByEstimatedFare resultList = do
   let sortFunc = compare `on` (.estimatedFare)
   sortBy sortFunc resultList
 
-getPaymentMethods :: (CacheFlow m r, EsqDBFlow m r) => SSR.SearchRequest -> m [DMPM.PaymentMethodAPIEntity]
+getPaymentMethods :: KvDbFlow m r => SSR.SearchRequest -> m [DMPM.PaymentMethodAPIEntity]
 getPaymentMethods searchRequest = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   allMerchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId

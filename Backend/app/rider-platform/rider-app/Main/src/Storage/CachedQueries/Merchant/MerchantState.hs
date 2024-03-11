@@ -19,7 +19,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantState as Queries
 
-findByMerchantIdAndState :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Context.IndianState -> m (Maybe MerchantState)
+findByMerchantIdAndState :: KvDbFlow m r => Id Merchant -> Context.IndianState -> m (Maybe MerchantState)
 findByMerchantIdAndState merchantId state =
   Hedis.safeGet (makeMerchantIdAndStateKey merchantId state) >>= \case
     Just a -> return a

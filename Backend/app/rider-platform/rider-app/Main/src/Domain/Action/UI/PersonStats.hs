@@ -71,7 +71,7 @@ data FrequencyCategory = HIGH | MID | LOW | ZERO
 data UserCategory = POWER | REGULAR | IRREGULAR | RARE
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonStats :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> m PersonStatsRes
+getPersonStats :: (EsqDBReplicaFlow m r, EncFlow m r, KvDbFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> m PersonStatsRes
 getPersonStats (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   personStats_ <- runInReplica $ QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)

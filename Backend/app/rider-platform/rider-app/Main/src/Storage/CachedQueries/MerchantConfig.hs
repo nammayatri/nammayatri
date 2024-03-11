@@ -26,7 +26,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantConfig as Queries
 
-findAllByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m [MerchantConfig]
+findAllByMerchantOperatingCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [MerchantConfig]
 findAllByMerchantOperatingCityId id =
   Hedis.safeGet (makeMerchantOperatingCityIdKey id) >>= \case
     Just a -> return a

@@ -118,9 +118,7 @@ data DFareBreakup = DFareBreakup
 
 rideAssignedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
@@ -196,9 +194,7 @@ rideAssignedReqHandler RideAssignedReq {..} = do
 
 rideStartedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
@@ -239,9 +235,7 @@ rideStartedReqHandler RideStartedReq {..} = do
 
 rideCompletedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
@@ -332,9 +326,7 @@ rideCompletedReqHandler RideCompletedReq {..} = do
 
 driverArrivedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
@@ -359,9 +351,7 @@ driverArrivedReqHandler DriverArrivedReq {..} = do
 
 bookingCancelledReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,

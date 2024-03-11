@@ -19,16 +19,15 @@ import Domain.Types.Estimate
 import qualified Domain.Types.Estimate as DEB
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 
-create :: (MonadFlow m, EsqDBFlow m r) => EstimateBreakup -> m ()
+create :: KvDbFlow m r => EstimateBreakup -> m ()
 create = createWithKV
 
-findAllByEstimateIdT :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m [EstimateBreakup]
+findAllByEstimateIdT :: KvDbFlow m r => Id Estimate -> m [EstimateBreakup]
 findAllByEstimateIdT (Id estimateId) = findAllWithKVAndConditionalDB [Se.Is BeamEB.estimateId $ Se.Eq estimateId] Nothing
 
 instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where

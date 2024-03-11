@@ -30,10 +30,10 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BecknConfig as BeamM
 import qualified Storage.Queries.BecknConfig as Queries
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [BecknConfig]
+findAll :: KvDbFlow m r => m [BecknConfig]
 findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
-findByMerchantIdDomainAndVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> VehicleCategory -> m (Maybe BecknConfig)
+findByMerchantIdDomainAndVehicle :: KvDbFlow m r => Id Merchant -> Text -> VehicleCategory -> m (Maybe BecknConfig)
 findByMerchantIdDomainAndVehicle merchantId domain vehicle = do
   Hedis.safeGet (makeMerchantIdDomainKey merchantId domain vehicle) >>= \case
     Just a -> return a

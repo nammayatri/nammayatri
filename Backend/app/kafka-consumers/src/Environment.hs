@@ -17,6 +17,8 @@ module Environment where
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
+import Kernel.Beam.Functions
+import Kernel.Beam.Lib.Utils (DbFunctions)
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)

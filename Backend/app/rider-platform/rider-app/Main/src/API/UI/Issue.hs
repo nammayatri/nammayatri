@@ -15,7 +15,6 @@ import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
 import Kernel.Beam.Functions
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -59,7 +58,7 @@ customerIssueHandle =
       updateTicket = castUpdateTicket
     }
 
-castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
+castPersonById :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
 castPersonById personId = do
   person <- runInReplica $ QP.findById (cast personId)
   return $ fmap castPerson person
@@ -75,14 +74,14 @@ castPersonById personId = do
           merchantOperatingCityId = cast person.merchantOperatingCityId
         }
 
-castRideById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Ride -> m (Maybe Common.Ride)
+castRideById :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id Common.Ride -> m (Maybe Common.Ride)
 castRideById rideId = do
   ride <- runInReplica $ QR.findById (cast rideId)
   return $ fmap castRide ride
   where
     castRide ride = Common.Ride (cast ride.id) (ShortId $ show ride.shortId) ride.createdAt
 
-castRideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Ride -> m Common.RideInfoRes
+castRideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, KvDbFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Ride -> m Common.RideInfoRes
 castRideInfo merchantId _ rideId = do
   rideInfoRes <- DRide.rideInfo (cast merchantId) (cast rideId)
   return $ castRideInfoRes rideInfoRes
@@ -113,13 +112,13 @@ castRideInfo merchantId _ rideId = do
           area = ent.address.area
         }
 
-castCreateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
+castCreateTicket :: (EncFlow m r, KvDbFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
 castCreateTicket merchantId merchantOperatingCityId = TT.createTicket (cast merchantId) (cast merchantOperatingCityId)
 
-castUpdateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
+castUpdateTicket :: (EncFlow m r, KvDbFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
-buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DM.Merchant -> m MerchantConfig
+buildMerchantConfig :: KvDbFlow m r => Id DM.Merchant -> m MerchantConfig
 buildMerchantConfig merchantId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return

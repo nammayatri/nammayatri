@@ -30,7 +30,7 @@ type Domain = Text
 
 type SubscriberId = Text
 
-createIfNotPresent :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => BppDetails -> m ()
+createIfNotPresent :: KvDbFlow m r => BppDetails -> m ()
 createIfNotPresent bppDetails = do
   maybeBppDetails <- findBySubscriberIdAndDomain' bppDetails.subscriberId bppDetails.domain
   whenNothing maybeBppDetails $ do
@@ -39,12 +39,12 @@ createIfNotPresent bppDetails = do
   where
     whenNothing m f = when (isNothing m) f
 
-findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => SubscriberId -> Context.Domain -> m (Maybe BppDetails)
+findBySubscriberIdAndDomain :: KvDbFlow m r => SubscriberId -> Context.Domain -> m (Maybe BppDetails)
 findBySubscriberIdAndDomain subscriberId domain = do
   let domainText = show domain
   findBySubscriberIdAndDomain' subscriberId domainText
 
-findBySubscriberIdAndDomain' :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => SubscriberId -> Domain -> m (Maybe BppDetails)
+findBySubscriberIdAndDomain' :: KvDbFlow m r => SubscriberId -> Domain -> m (Maybe BppDetails)
 findBySubscriberIdAndDomain' subscriberId domain =
   Hedis.safeGet (makeSubscriberIdKey subscriberId domain) >>= \case
     Just a -> return $ Just a

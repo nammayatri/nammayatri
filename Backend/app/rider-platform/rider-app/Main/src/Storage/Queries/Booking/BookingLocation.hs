@@ -24,13 +24,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 
-create :: (MonadFlow m, EsqDBFlow m r) => BookingLocation -> m ()
+create :: KvDbFlow m r => BookingLocation -> m ()
 create = createWithKV
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BookingLocation -> m (Maybe BookingLocation)
+findById :: KvDbFlow m r => Id BookingLocation -> m (Maybe BookingLocation)
 findById (Id bookingLocationId) = findOneWithKV [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
 
-updateAddress :: (MonadFlow m, EsqDBFlow m r) => Id BookingLocation -> LocationAddress -> m ()
+updateAddress :: KvDbFlow m r => Id BookingLocation -> LocationAddress -> m ()
 updateAddress (Id blId) LocationAddress {..} = do
   now <- getCurrentTime
   updateOneWithKV

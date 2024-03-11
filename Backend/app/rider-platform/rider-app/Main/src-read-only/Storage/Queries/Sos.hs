@@ -15,29 +15,29 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Sos as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Sos.Sos -> m ()
+create :: KvDbFlow m r => Domain.Types.Sos.Sos -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Sos.Sos] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.Sos.Sos] -> m ()
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe (Domain.Types.Sos.Sos))
+findById :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe (Domain.Types.Sos.Sos))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-findByRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe (Domain.Types.Sos.Sos))
+findByRideId :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe (Domain.Types.Sos.Sos))
 findByRideId (Kernel.Types.Id.Id rideId) = do
   findOneWithKV
     [ Se.Is Beam.rideId $ Se.Eq rideId
     ]
 
-updateStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ()
+updateStatus :: KvDbFlow m r => Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ()
 updateStatus status (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -47,7 +47,7 @@ updateStatus status (Kernel.Types.Id.Id id) = do
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe (Domain.Types.Sos.Sos))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe (Domain.Types.Sos.Sos))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -55,7 +55,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Sos.Sos -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.Sos.Sos -> m ()
 updateByPrimaryKey Domain.Types.Sos.Sos {..} = do
   _now <- getCurrentTime
   updateWithKV

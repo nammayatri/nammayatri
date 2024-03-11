@@ -15,7 +15,6 @@
 module Storage.Beam.BeamFlow where
 
 import Kernel.Beam.Lib.UtilsTH as Reexport
-import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
 import qualified Storage.Beam.AccessMatrix as BeamAM
 import qualified Storage.Beam.Merchant as BeamM
@@ -26,9 +25,7 @@ import qualified Storage.Beam.Role as BeamR
 import qualified Storage.Beam.Transaction as BeamT
 
 type BeamFlow m r =
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
+  ( KvDbFlow m r,
     BeamFlow'
   )
 

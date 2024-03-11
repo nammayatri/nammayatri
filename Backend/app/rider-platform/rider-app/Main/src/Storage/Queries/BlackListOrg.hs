@@ -30,7 +30,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.BlackListOrg as BeamBLO
 
-findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> m (Maybe BlackListOrg)
+findBySubscriberIdAndDomain :: KvDbFlow m r => ShortId Subscriber -> Domain -> m (Maybe BlackListOrg)
 findBySubscriberIdAndDomain subscriberId domain = findOneWithKV [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId, Se.Is BeamBLO.domain $ Se.Eq domain]
 
 instance FromTType' BeamBLO.BlackListOrg BlackListOrg where

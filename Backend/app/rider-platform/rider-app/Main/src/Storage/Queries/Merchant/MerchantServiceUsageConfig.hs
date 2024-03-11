@@ -30,13 +30,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantServiceUsageConfig -> m ()
+create :: KvDbFlow m r => MerchantServiceUsageConfig -> m ()
 create = createWithKV
 
-findByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantOperatingCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantOperatingCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamMSUC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-updateMerchantServiceUsageConfig :: (MonadFlow m, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
+updateMerchantServiceUsageConfig :: KvDbFlow m r => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   now <- getCurrentTime
   updateWithKV

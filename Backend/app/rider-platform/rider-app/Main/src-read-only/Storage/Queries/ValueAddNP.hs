@@ -10,23 +10,23 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ValueAddNP as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.ValueAddNP.ValueAddNP -> m ()
+create :: KvDbFlow m r => Domain.Types.ValueAddNP.ValueAddNP -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ValueAddNP.ValueAddNP] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.ValueAddNP.ValueAddNP] -> m ()
 createMany = traverse_ create
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Bool -> m ([Domain.Types.ValueAddNP.ValueAddNP])
+findAll :: KvDbFlow m r => Kernel.Prelude.Bool -> m ([Domain.Types.ValueAddNP.ValueAddNP])
 findAll enabled = do
   findAllWithKV
     [ Se.Is Beam.enabled $ Se.Eq enabled
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m (Maybe (Domain.Types.ValueAddNP.ValueAddNP))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Prelude.Text -> m (Maybe (Domain.Types.ValueAddNP.ValueAddNP))
 findByPrimaryKey subscriberId = do
   findOneWithKV
     [ Se.And
@@ -34,7 +34,7 @@ findByPrimaryKey subscriberId = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.ValueAddNP.ValueAddNP -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.ValueAddNP.ValueAddNP -> m ()
 updateByPrimaryKey Domain.Types.ValueAddNP.ValueAddNP {..} = do
   _now <- getCurrentTime
   updateWithKV

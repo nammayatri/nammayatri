@@ -26,7 +26,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.PlaceBasedServiceConfig as Queries
 
-findByPlaceIdAndServiceName :: (CacheFlow m r, EsqDBFlow m r) => Id TicketPlace -> ServiceName -> m (Maybe PlaceBasedServiceConfig)
+findByPlaceIdAndServiceName :: KvDbFlow m r => Id TicketPlace -> ServiceName -> m (Maybe PlaceBasedServiceConfig)
 findByPlaceIdAndServiceName id serviceName =
   Hedis.safeGet (makePlaceIdAndServiceKey id serviceName) >>= \case
     Just a -> return . Just $ coerce @(PlaceBasedServiceConfigD 'Unsafe) @PlaceBasedServiceConfig a

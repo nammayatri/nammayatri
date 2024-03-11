@@ -40,16 +40,16 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Merchant as Queries
 import Tools.Error
 
-loadAllBaps :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
+loadAllBaps :: KvDbFlow m r => m [Merchant]
 loadAllBaps = Queries.findAll
 
-findById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Merchant -> m (Maybe Merchant)
+findById :: KvDbFlow m r => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
-findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: KvDbFlow m r => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ =
   Hedis.safeGet (makeShortIdKey shortId_) >>= \case
     Nothing -> findAndCache
@@ -60,7 +60,7 @@ findByShortId shortId_ =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId_
 
-findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: KvDbFlow m r => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
   Hedis.safeGet (makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
@@ -94,11 +94,11 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 makeSubscriberIdKey :: ShortId Subscriber -> Text
 makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
 
-update :: (MonadFlow m, EsqDBFlow m r) => Merchant -> m ()
+update :: KvDbFlow m r => Merchant -> m ()
 update = Queries.update
 
 -- Use only for backward compatibility
-getDefaultMerchantOperatingCity :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m DMOC.MerchantOperatingCity
+getDefaultMerchantOperatingCity :: KvDbFlow m r => Id Merchant -> m DMOC.MerchantOperatingCity
 getDefaultMerchantOperatingCity merchantId = do
   merchant <- findById merchantId >>= fromMaybeM (MerchantDoesNotExist $ "merchantId:- " <> merchantId.getId)
   CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
@@ -107,7 +107,7 @@ getDefaultMerchantOperatingCity merchantId = do
           "merchantId:- " <> merchant.id.getId <> " city:- " <> show merchant.defaultCity
       )
 
-getDefaultMerchantOperatingCity_ :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m DMOC.MerchantOperatingCity
+getDefaultMerchantOperatingCity_ :: KvDbFlow m r => ShortId Merchant -> m DMOC.MerchantOperatingCity
 getDefaultMerchantOperatingCity_ merchantShortId = do
   merchant <- findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist $ "merchantShortId:- " <> merchantShortId.getShortId)
   CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
@@ -116,5 +116,5 @@ getDefaultMerchantOperatingCity_ merchantShortId = do
           "merchantId:- " <> merchant.id.getId <> " city:- " <> show merchant.defaultCity
       )
 
-updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig :: KvDbFlow m r => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
 updateGeofencingConfig = Queries.updateGeofencingConfig

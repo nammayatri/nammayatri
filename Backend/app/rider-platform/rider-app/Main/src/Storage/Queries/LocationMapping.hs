@@ -29,20 +29,20 @@ import qualified Storage.Beam.LocationMapping as BeamLM
 latestTag :: Text
 latestTag = "LATEST"
 
-create :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> m ()
+create :: KvDbFlow m r => LocationMapping -> m ()
 create = createWithKV
 
-countOrders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m Int
+countOrders :: KvDbFlow m r => Text -> m Int
 countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing <&> length
 
-findByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
+findByEntityId :: KvDbFlow m r => Text -> m [LocationMapping]
 findByEntityId entityId =
   findAllWithKVAndConditionalDB
     [ Se.Is BeamLM.entityId $ Se.Eq entityId
     ]
     (Just (Se.Desc BeamLM.createdAt))
 
-getLatestStartByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
+getLatestStartByEntityId :: KvDbFlow m r => Text -> m (Maybe LocationMapping)
 getLatestStartByEntityId entityId =
   findOneWithKV
     [ Se.And
@@ -52,7 +52,7 @@ getLatestStartByEntityId entityId =
         ]
     ]
 
-getLatestEndByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
+getLatestEndByEntityId :: (KvDbFlow m r) => Text -> m (Maybe LocationMapping)
 getLatestEndByEntityId entityId =
   findAllWithKVAndConditionalDB
     [ Se.And
@@ -64,13 +64,13 @@ getLatestEndByEntityId entityId =
     (Just (Se.Desc BeamLM.createdAt))
     <&> listToMaybe
 
-findAllByEntityIdAndOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m [LocationMapping]
+findAllByEntityIdAndOrder :: KvDbFlow m r => Text -> Int -> m [LocationMapping]
 findAllByEntityIdAndOrder entityId order =
   findAllWithKVAndConditionalDB
     [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]]
     Nothing
 
-maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
+maxOrderByEntity :: KvDbFlow m r => Text -> m Int
 maxOrderByEntity entityId = do
   lms <- findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing
   let orders = map order lms
@@ -78,18 +78,18 @@ maxOrderByEntity entityId = do
     [] -> pure 0
     _ -> pure $ maximum orders
 
-updatePastMappingVersions :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m ()
+updatePastMappingVersions :: KvDbFlow m r => Text -> Int -> m ()
 updatePastMappingVersions entityId order = do
   mappings <- findAllByEntityIdAndOrder entityId order
   traverse_ incrementVersion mappings
 
 -- This function is not correct, need to correct it later
-incrementVersion :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> m ()
+incrementVersion :: KvDbFlow m r => LocationMapping -> m ()
 incrementVersion mapping = do
   newVersion <- getNewVersion mapping
   updateVersion mapping.id newVersion
 
-getNewVersion :: (MonadFlow m, EsqDBFlow m r) => LocationMapping -> m Text
+getNewVersion :: KvDbFlow m r => LocationMapping -> m Text
 getNewVersion mapping =
   case T.splitOn "-" mapping.version of
     ["v", versionNum] -> do
@@ -99,7 +99,7 @@ getNewVersion mapping =
       pure $ "v-" <> T.pack (show (oldVersionInt + 1))
     _ -> pure "v-1"
 
-updateVersion :: (MonadFlow m, EsqDBFlow m r) => Id LocationMapping -> Text -> m ()
+updateVersion :: KvDbFlow m r => Id LocationMapping -> Text -> m ()
 updateVersion id version = do
   now <- getCurrentTime
   updateWithKV

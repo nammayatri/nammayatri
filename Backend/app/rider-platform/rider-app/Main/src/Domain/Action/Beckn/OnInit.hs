@@ -71,7 +71,7 @@ data OnInitRes = OnInitRes
   }
   deriving (Generic, Show)
 
-onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
+onInit :: (KvDbFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
 onInit req = do
   void $ QRideB.updateBPPBookingId req.bookingId req.bppBookingId
   void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare req.paymentUrl

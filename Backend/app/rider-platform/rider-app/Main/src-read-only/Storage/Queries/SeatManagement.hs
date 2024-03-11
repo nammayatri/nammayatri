@@ -15,17 +15,17 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SeatManagement as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SeatManagement.SeatManagement -> m ()
+create :: KvDbFlow m r => Domain.Types.SeatManagement.SeatManagement -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.SeatManagement.SeatManagement] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.SeatManagement.SeatManagement] -> m ()
 createMany = traverse_ create
 
-findByTicketServiceCategoryIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m (Maybe (Domain.Types.SeatManagement.SeatManagement))
+findByTicketServiceCategoryIdAndDate :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m (Maybe (Domain.Types.SeatManagement.SeatManagement))
 findByTicketServiceCategoryIdAndDate (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   findOneWithKV
     [ Se.And
@@ -34,7 +34,7 @@ findByTicketServiceCategoryIdAndDate (Kernel.Types.Id.Id ticketServiceCategoryId
         ]
     ]
 
-updateBlockedSeats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ()
+updateBlockedSeats :: KvDbFlow m r => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ()
 updateBlockedSeats blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   _now <- getCurrentTime
   updateWithKV
@@ -47,7 +47,7 @@ updateBlockedSeats blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = d
         ]
     ]
 
-updateBookedSeats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ()
+updateBookedSeats :: KvDbFlow m r => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ()
 updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   _now <- getCurrentTime
   updateWithKV
@@ -60,7 +60,7 @@ updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.SeatManagement.SeatManagement -> m (Maybe (Domain.Types.SeatManagement.SeatManagement))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.SeatManagement.SeatManagement -> m (Maybe (Domain.Types.SeatManagement.SeatManagement))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -68,7 +68,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.SeatManagement.SeatManagement -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.SeatManagement.SeatManagement -> m ()
 updateByPrimaryKey Domain.Types.SeatManagement.SeatManagement {..} = do
   _now <- getCurrentTime
   updateWithKV

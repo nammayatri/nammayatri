@@ -17,6 +17,7 @@ module Environment where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import Domain.Types.ServerName
+import Kernel.Beam.Functions
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -28,6 +29,7 @@ import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
+import Kernel.Utils.Common (DbFunctions)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client

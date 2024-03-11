@@ -17,6 +17,7 @@ module Environment where
 
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
+import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
 import Kernel.Streaming.Kafka.Producer.Types
@@ -25,6 +26,7 @@ import Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.App (lookupDeploymentVersion)
+import Kernel.Utils.Common (DbFunctions)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Lib.Scheduler (SchedulerType)

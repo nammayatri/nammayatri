@@ -18,16 +18,15 @@ module Storage.Queries.TripTerms where
 import Domain.Types.TripTerms as DTT
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.TripTerms as BeamTT
 
-createTripTerms :: (MonadFlow m, EsqDBFlow m r) => TripTerms -> m ()
+createTripTerms :: KvDbFlow m r => TripTerms -> m ()
 createTripTerms = createWithKV
 
-findById'' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id TripTerms -> m (Maybe TripTerms)
+findById'' :: KvDbFlow m r => Id TripTerms -> m (Maybe TripTerms)
 findById'' tripTermsId = findOneWithKV [Se.Is BeamTT.id $ Se.Eq (getId tripTermsId)]
 
 instance FromTType' BeamTT.TripTerms TripTerms where

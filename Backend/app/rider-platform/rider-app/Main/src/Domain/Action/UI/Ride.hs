@@ -91,9 +91,8 @@ data EditLocation = EditLocation
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 getDriverLoc ::
-  ( CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
-    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "rideCfg" r RideConfig,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
@@ -136,9 +135,8 @@ getDriverLoc rideId = do
     driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
 
 getRideStatus ::
-  ( CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
-    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "rideCfg" r RideConfig,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
@@ -172,9 +170,8 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
       }
 
 editLocation ::
-  ( CacheFlow m r,
+  ( KvDbFlow m r,
     EncFlow m r,
-    EsqDBFlow m r,
     MonadFlow m,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

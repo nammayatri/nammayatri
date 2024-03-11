@@ -26,7 +26,6 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
@@ -98,10 +97,8 @@ createOrder (personId, merchantId) rideId = do
 -- order status -----------------------------------------------------
 
 getStatus ::
-  ( CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    L.MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
+    KvDbFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -115,9 +112,8 @@ getStatus (personId, merchantId) orderId = do
   DPayment.orderStatusService commonPersonId orderId orderStatusCall
 
 getOrder ::
-  ( CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
+    KvDbFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>

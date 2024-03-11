@@ -31,28 +31,28 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantOperatingCity as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantOperatingCity -> m ()
+create :: KvDbFlow m r => MerchantOperatingCity -> m ()
 create = Queries.create
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
+findById :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
 findById id =
   Hedis.safeGet (makeMerchantOperatingCityIdKey id) >>= \case
     Just a -> return a
     Nothing -> flip whenJust cachedMerchantOperatingCityId /=<< Queries.findById id
 
-findByMerchantIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
+findByMerchantIdAndCity :: KvDbFlow m r => Id Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantIdAndCity merchantId city =
   Hedis.safeGet (makeMerchantIdAndCityKey merchantId city) >>= \case
     Just a -> return a
     Nothing -> flip whenJust cachedMerchantIdAndCity /=<< Queries.findByMerchantIdAndCity merchantId city
 
-findByMerchantShortIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
+findByMerchantShortIdAndCity :: KvDbFlow m r => ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantShortIdAndCity merchantShortId city =
   Hedis.safeGet (makeMerchantShortIdAndCityKey merchantShortId city) >>= \case
     Just a -> return a
     Nothing -> flip whenJust cachedMerchantShortIdAndCity /=<< Queries.findByMerchantShortIdAndCity merchantShortId city
 
-findAllByMerchantIdAndState :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Context.IndianState -> m [MerchantOperatingCity]
+findAllByMerchantIdAndState :: KvDbFlow m r => Id Merchant -> Context.IndianState -> m [MerchantOperatingCity]
 findAllByMerchantIdAndState merchantId state =
   Hedis.safeGet (makeMerchantIdAndStateKey merchantId state) >>= \case
     Just a -> return a

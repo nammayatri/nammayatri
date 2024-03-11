@@ -25,6 +25,7 @@ where
 import qualified Data.Map as M
 import Data.String.Conversions (cs)
 import "rider-app" Environment (AppCfg (..))
+import Kernel.Beam.Functions
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)

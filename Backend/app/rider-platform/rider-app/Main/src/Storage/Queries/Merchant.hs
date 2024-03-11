@@ -31,19 +31,19 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
+findById :: KvDbFlow m r => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
 
-findByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: KvDbFlow m r => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId_]
 
-findBySubscriberId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: KvDbFlow m r => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamM.subscriberId $ Se.Eq $ getShortId subscriberId]
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
+findAll :: KvDbFlow m r => m [Merchant]
 findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
-update :: (MonadFlow m, EsqDBFlow m r) => Merchant -> m ()
+update :: KvDbFlow m r => Merchant -> m ()
 update org = do
   now <- getCurrentTime
   updateOneWithKV
@@ -54,7 +54,7 @@ update org = do
     ]
     [Se.Is BeamM.id (Se.Eq (getId org.id))]
 
-updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig :: KvDbFlow m r => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
 updateGeofencingConfig merchantId originRestriction destinationRestriction = do
   now <- getCurrentTime
   updateOneWithKV

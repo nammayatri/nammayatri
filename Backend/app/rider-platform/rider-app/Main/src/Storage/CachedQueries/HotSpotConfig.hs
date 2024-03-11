@@ -21,7 +21,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Queries.HotSpotConfig as Queries
 
-findConfigByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe HotSpotConfig)
+findConfigByMerchantId :: KvDbFlow m r => Id Merchant -> m (Maybe HotSpotConfig)
 findConfigByMerchantId merchantId =
   Hedis.safeGet (makeIdKey merchantId) >>= \case
     Just a -> return a

@@ -63,9 +63,7 @@ data ValidatedOnCancelReq = ValidatedBookingCancelledReq
 
 onCancel ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
+    KvDbFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
@@ -114,8 +112,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
       _ -> SBCR.ByDriver
 
 validateRequest ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,

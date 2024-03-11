@@ -27,19 +27,18 @@ import Domain.Types.Merchant.MerchantMessage
 import Domain.Types.MerchantOperatingCity as DOrg
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantMessage -> m ()
+create :: KvDbFlow m r => MerchantMessage -> m ()
 create = createWithKV
 
-findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [MerchantMessage]
+findAllByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m [MerchantMessage]
 findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamMM.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-findByMerchantOperatingCityIdAndMessageKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
+findByMerchantOperatingCityIdAndMessageKey :: KvDbFlow m r => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantOperatingCityIdAndMessageKey (Id merchantOperatingCityId) messageKey = findOneWithKV [Se.And [Se.Is BeamMM.merchantOperatingCityId $ Se.Eq merchantOperatingCityId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
 
 instance FromTType' BeamMM.MerchantMessage MerchantMessage where

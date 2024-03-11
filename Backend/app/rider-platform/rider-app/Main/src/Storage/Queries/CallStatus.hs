@@ -19,27 +19,26 @@ import Domain.Types.CallStatus
 import Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCS
 import qualified Tools.Call as Call
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CallStatus -> m ()
+create :: KvDbFlow m r => CallStatus -> m ()
 create cs = do
   callS <- findByCallSid (cs.callId)
   case callS of
     Nothing -> createWithKV cs
     Just _ -> pure ()
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id CallStatus -> m (Maybe CallStatus)
+findById :: KvDbFlow m r => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = findOneWithKV [Se.Is BeamCS.id $ Se.Eq callStatusId]
 
-findByCallSid :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe CallStatus)
+findByCallSid :: KvDbFlow m r => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCS.callId $ Se.Eq callSid]
 
-updateCallStatus :: (MonadFlow m, EsqDBFlow m r) => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
+updateCallStatus :: KvDbFlow m r => Id CallStatus -> Call.CallStatus -> Int -> Maybe Text -> m ()
 updateCallStatus (Id callId) status conversationDuration recordingUrl =
   updateWithKV
     [ Se.Set BeamCS.conversationDuration conversationDuration,
@@ -48,7 +47,7 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
     ]
     [Se.Is BeamCS.id (Se.Eq callId)]
 
-updateCallStatusInformation :: (MonadFlow m, EsqDBFlow m r) => Id CallStatus -> Maybe (Id Ride) -> Maybe Text -> Maybe Call.CallService -> Maybe Text -> m ()
+updateCallStatusInformation :: KvDbFlow m r => Id CallStatus -> Maybe (Id Ride) -> Maybe Text -> Maybe Call.CallService -> Maybe Text -> m ()
 updateCallStatusInformation (Id callStatusId) rideId merchantId callService dtmfNumberUsed =
   updateWithKV
     [ Se.Set BeamCS.merchantId merchantId,
@@ -58,7 +57,7 @@ updateCallStatusInformation (Id callStatusId) rideId merchantId callService dtmf
     ]
     [Se.Is BeamCS.id (Se.Eq callStatusId)]
 
-updateCallError :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Maybe Text -> Maybe Text -> Maybe Call.CallService -> m ()
+updateCallError :: KvDbFlow m r => Text -> Maybe Text -> Maybe Text -> Maybe Call.CallService -> m ()
 updateCallError callSid callError merchantId callService =
   updateWithKV
     [ Se.Set BeamCS.callError callError,

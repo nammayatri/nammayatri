@@ -45,6 +45,7 @@ healthCheck ::
     HasField "enableRedisLatencyLogging" r Bool,
     (HasField "cacheConfig" r CacheConfig),
     (HasField "esqDBEnv" r EsqDBEnv),
+    (HasField "dbFunctions" r DbFunctions),
     HasARTFlow r
   ) =>
   FlowHandlerR r Text

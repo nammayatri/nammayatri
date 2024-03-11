@@ -22,7 +22,6 @@ import Domain.Types.Quote as DQ
 import Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -35,7 +34,7 @@ import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
 
-createDetails :: (MonadFlow m, EsqDBFlow m r) => QuoteDetails -> m ()
+createDetails :: KvDbFlow m r => QuoteDetails -> m ()
 createDetails = \case
   OneWayDetails _ -> pure ()
   RentalDetails rentalDetails -> QueryRD.createRentalDetails rentalDetails
@@ -43,22 +42,22 @@ createDetails = \case
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
   InterCityDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
 
-createQuote :: (MonadFlow m, EsqDBFlow m r) => Quote -> m ()
+createQuote :: KvDbFlow m r => Quote -> m ()
 createQuote = createWithKV
 
-create :: (MonadFlow m, EsqDBFlow m r) => Quote -> m ()
+create :: KvDbFlow m r => Quote -> m ()
 create quote = do
   traverse_ QTT.createTripTerms (quote.tripTerms)
   _ <- createDetails (quote.quoteDetails)
   createQuote quote
 
-createMany :: (MonadFlow m, EsqDBFlow m r) => [Quote] -> m ()
+createMany :: KvDbFlow m r => [Quote] -> m ()
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Quote -> m (Maybe Quote)
+findById :: KvDbFlow m r => Id Quote -> m (Maybe Quote)
 findById quoteId = findOneWithKV [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]
 
-findByBppIdAndBPPQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Quote)
+findByBppIdAndBPPQuoteId :: KvDbFlow m r => Text -> Text -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = do
   dOffer <- QueryDO.findByBPPQuoteId bppQuoteId
   quoteList <- findAllWithKV [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId, Se.Is BeamQ.driverOfferId $ Se.In (map (Just . getId . DDO.id) dOffer)]]
@@ -78,16 +77,16 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = do
           else res
         )
 
-findAllBySRId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> m [Quote]
+findAllBySRId :: KvDbFlow m r => Id SearchRequest -> m [Quote]
 findAllBySRId searchRequestId = findAllWithKV [Se.Is BeamQ.requestId $ Se.Eq (getId searchRequestId)]
 
-findAllByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> DriverOfferStatus -> m [Quote]
+findAllByEstimateId :: KvDbFlow m r => Id Estimate -> DriverOfferStatus -> m [Quote]
 findAllByEstimateId estimateId status = do
   driverOffers <- findDOfferByEstimateId estimateId status
   let offerIds = map (Just . getId . DDO.id) driverOffers
   findAllWithKV [Se.Is BeamQ.driverOfferId (Se.In offerIds)]
 
-findDOfferByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
+findDOfferByEstimateId :: KvDbFlow m r => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
 findDOfferByEstimateId (Id estimateId) status = findAllWithKV [Se.And [Se.Is BeamDO.estimateId $ Se.Eq estimateId, Se.Is BeamDO.status $ Se.Eq status]]
 
 instance FromTType' BeamQ.Quote Quote where

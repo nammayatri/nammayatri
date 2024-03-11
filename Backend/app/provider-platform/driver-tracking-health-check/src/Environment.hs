@@ -15,6 +15,7 @@
 module Environment where
 
 import EulerHS.Prelude
+import Kernel.Beam.Functions
 import Kernel.External.Encryption (EncTools)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
@@ -23,7 +24,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig)
+import Kernel.Utils.Common (CacheConfig, DbFunctions)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
