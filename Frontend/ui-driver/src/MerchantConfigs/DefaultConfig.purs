@@ -92,7 +92,8 @@ config =
     thresholdTime : 180,
     routeDistance : 30,
     diffBtwTwoHeartBeats : 10,
-    straightLineDist : 0.015
+    straightLineDist : 0.015,
+    driverNearbythresholdDist : 0.1
   }
   , bottomNavConfig : {
       home : 

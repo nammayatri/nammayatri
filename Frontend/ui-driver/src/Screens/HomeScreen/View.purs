@@ -113,6 +113,7 @@ screen initialState =
           let localStage = getValueToLocalNativeStore LOCAL_STAGE
           if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "") then do
             void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+            void $ pure $ setValueToLocalStore DRIVER_NEARBY "false"
             push $ UpdateWaitTime ST.NoStatus
             void $ pure $ clearTimerWithId initialState.data.activeRide.waitTimerId
             pure unit

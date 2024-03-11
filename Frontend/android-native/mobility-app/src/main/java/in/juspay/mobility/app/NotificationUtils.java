@@ -87,6 +87,7 @@ public class NotificationUtils {
     public static final String RIDE_STARTED = "RIDE_STARTED";
     public static final String NO_VARIANT = "NO_VARIANT";
     public static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";
+    public static final String DRIVER_IS_NEARBY = "DRIVER_IS_NEARBY";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
@@ -332,7 +333,7 @@ public class NotificationUtils {
         System.out.println("showNotification:- " + notificationType);
         if (TRIP_STARTED.equals(notificationType)) {
             channelId = RIDE_STARTED;
-        } else if (CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType) || notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED) || notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED) || notificationType.equals(DRIVER_QUOTE_INCOMING) || notificationType.equals(DRIVER_ASSIGNMENT) || notificationType.equals(REALLOCATE_PRODUCT)) {
+        } else if (CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType) || DRIVER_IS_NEARBY.equals(notificationType) || notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED) || notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED) || notificationType.equals(DRIVER_QUOTE_INCOMING) || notificationType.equals(DRIVER_ASSIGNMENT) || notificationType.equals(REALLOCATE_PRODUCT)) {
             channelId = notificationType;
         } else if (TRIP_FINISHED.equals(notificationType) && disabilityName.equals("BLIND_LOW_VISION")){
             channelId = TRIP_FINISHED;
@@ -516,6 +517,11 @@ public class NotificationUtils {
                         channel.setName("Driver Arrived");
                         channel.setDescription("Used to notify when driver has arrived");
                         break;
+                    case DRIVER_IS_NEARBY:
+                        soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.driver_arrived);
+                        channel.setName("Driver Nearby");
+                        channel.setDescription("Used to notify when driver is nearby");
+                        break;
                     case TRIP_FINISHED:
                         soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
                         channel.setName("Ride Completed");
@@ -564,6 +570,7 @@ public class NotificationUtils {
                     case RIDE_STARTED:
                     case TRIP_FINISHED:
                     case DRIVER_HAS_REACHED:
+                    case DRIVER_IS_NEARBY:
                     case CANCELLED_PRODUCT:
                     case DRIVER_QUOTE_INCOMING:
                     case DRIVER_ASSIGNMENT:

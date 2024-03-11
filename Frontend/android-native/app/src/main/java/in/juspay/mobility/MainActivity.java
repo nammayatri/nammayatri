@@ -480,6 +480,7 @@ public class MainActivity extends AppCompatActivity {
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_FINISHED);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_IS_NEARBY);
         NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED);
         NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED);
     }

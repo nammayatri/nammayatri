@@ -102,7 +102,8 @@ import RemoteConfig as RC
 import Locale.Utils
 import Foreign (unsafeToForeign)
 import SessionCache (getValueFromWindow)
-
+import Debug
+import Engineering.Helpers.Suggestions as EHS
 
 instance showAction :: Show Action where
   show _ = ""
@@ -859,6 +860,10 @@ eval (TimeUpdate time lat lng) state = do
       true, ST.RideAccepted, false -> do
         let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
             insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
+        if dist <= state.data.config.waitTimeConfig.driverNearbythresholdDist && getValueToLocalStore DRIVER_NEARBY == "false" then do
+          void $ pure $ JB.sendMessage "dis0AP"
+          void $ pure $ setValueToLocalStore DRIVER_NEARBY "true"
+        else pure unit
         pure $ if insideThreshold then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
       _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
     ]
@@ -1158,6 +1163,7 @@ activeRideDetail state (RidesInfo ride) =
   riderName : fromMaybe "" ride.riderName,
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
   notifiedCustomer : getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered),
+  driverNearbyStatus : getValueToLocalStore DRIVER_NEARBY == "true",
   exoPhone : ride.exoPhone,
   waitTimeSeconds :if ride.status == "INPROGRESS" && isTimerValid then waitTime else -1,
   rideCreatedAt : ride.createdAt,

@@ -1767,6 +1767,7 @@ currentRideFlow activeRideResp = do
     noActiveRidePatch allState onBoardingSubscriptionViewCount = do
       setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+      void $ pure $ setValueToLocalStore DRIVER_NEARBY "false"
       when (allState.homeScreen.props.currentStage /= HomeScreen) $ do
         updateStage $ HomeScreenStage HomeScreen
       updateDriverDataToStates
@@ -1941,6 +1942,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
           void $ pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+          void $ pure $ setValueToLocalStore DRIVER_NEARBY "false"
           void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           currentRideFlow Nothing
@@ -2002,6 +2004,7 @@ homeScreenFlow = do
       liftFlowBT $ firebaseLogEvent "ny_driver_ride_ended"
       void $ pure $ removeAllPolylines ""
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+      void $ pure $ setValueToLocalStore DRIVER_NEARBY "false"
       void $ pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
       void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
@@ -2069,6 +2072,7 @@ homeScreenFlow = do
       API.DriverCancelRideResponse cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
       void $ pure if state.data.driverGotoState.timerId /= "" then clearTimerWithId state.data.driverGotoState.timerId else unit
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+      void $ pure $ setValueToLocalStore DRIVER_NEARBY "false"
       void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
       void $ pure $ removeAllPolylines ""
       void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
@@ -2090,6 +2094,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
           void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+          void $ pure $ setValueToLocalStore DRIVER_NEARBY "false"
           void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
           (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
           removeChatService ""
@@ -2123,6 +2128,7 @@ homeScreenFlow = do
       case driverArrived of
         Right _ -> do
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered)
+          void $ pure $ setValueToLocalStore DRIVER_NEARBY "false"
           void $ pure $ setValueToLocalStore WAITING_TIME_VAL $ state.data.activeRide.id <> "<$>" <> getCurrentUTC ""
           void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey EHS.chatSuggestion "dis1AP" "EN_US") else "dis1AP"
           liftFlowBT $ logEvent logField_ "ny_driver_i_have_arrived_clicked"
@@ -3024,6 +3030,7 @@ updateBannerAndPopupFlags = do
                 { autoPayBanner = autopayBannerType
                 , subscriptionPopupType = subscriptionPopupType
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
+                , driverNearbyStatus = getValueToLocalStore DRIVER_NEARBY == "true"
                 , showCoinsPopup = showCoinPopup
                 }
               }

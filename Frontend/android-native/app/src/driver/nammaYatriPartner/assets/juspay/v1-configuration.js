@@ -402,7 +402,8 @@ window.getMerchantConfig = function () {
     "thresholdDist" : 0.03,
     "routeDistance" : 30,
     "diffBtwTwoHeartBeats" : 10,
-    "straightLineDist" : 0.015
+    "straightLineDist" : 0.015,
+    "driverNearbythresholdDist" : 0.1
   }
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true

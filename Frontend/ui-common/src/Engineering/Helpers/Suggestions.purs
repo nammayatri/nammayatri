@@ -95,6 +95,7 @@ suggestionsDefinitions dummy =
   , { key: "cds2AP", value: { en_us: "Call me, You're unreachable", ta_in: "அணுக முடியவில்லை. கால் செய்யுங்கள்", kn_in: "ಕರೆ ಮಾಡಿ, ನೀವು ತಲುಪಲು ಸಾಧ್ಯವಿಲ್ಲ ", hi_in: "आपका फ़ोन नहीं लग रहा, कॉल कीजिये", ml_in: "എന്നെ വിളിക്കൂ, താങ്കൾ പരിധിക്കു പുറത്താണ്", bn_in: "আমাকে কল করুন, আপনার ফোনে যোগাযোগ করা যাচ্ছে না", te_in: "కాల్ చేయండి, మీరు అందుబాటులో లేరు" } }
   , { key: "cds1BP", value: { en_us: "Are you starting?", ta_in: "நீங்கள் தொடங்குகிறீர்களா?", kn_in: "ನೀವು ಪ್ರಾರಂಭಿಸುತ್ತಿದ್ದೀರಾ?", hi_in: "आप आ रहे है क्या? ", ml_in: "താങ്കൾ പുറപ്പെടുകയാണോ?", bn_in: "আপনি কি আসছেন ?", te_in: "మీరు బయలుదేరుతున్నారా ?" } }
   , { key: "cds2BP", value: { en_us: "Please come soon", ta_in: "விரைவாக வாருங்கள்", kn_in: "ದಯವಿಟ್ಟು ಬೇಗ ಬನ್ನಿ ", hi_in: "प्लीज थोड़ा जल्दी आइये", ml_in: "ദയവായി വേഗം വരൂ", bn_in: "দয়া করে তাড়াতাড়ি আসুন", te_in: "దయచేసి త్వరగా రండి" } }
+  , { key: "dis0AP", value: { en_us: "I'm nearby. Head to pickup point now", ta_in: "நான் அருகில் இருக்கிறேன். இப்போது பிக்அப் பாயிண்டிற்குச் செல்லவும்", kn_in: "ನಾನು ಹತ್ತಿರದಲ್ಲಿದ್ದೇನೆ. ಈಗ ಪಿಕಪ್ ಪಾಯಿಂಟ್‌ಗೆ ಹೋಗಿ ", hi_in: "मैं पास ही हूं. अभी पिकअप पॉइंट की ओर चलें", ml_in: "ഞാൻ അടുത്തുണ്ട്. ഇപ്പോൾ പിക്കപ്പ് പോയിൻ്റിലേക്ക് പോകുക", bn_in: "আমি কাছাকাছি আছি। এখন পিকআপ পয়েন্টে যান", te_in: "నేను సమీపంలోనే ఉన్నాను. ఇప్పుడు పికప్ పాయింట్‌కి వెళ్లండి" } }
   , { key: "dis1AP", value: { en_us: "I've arrived", ta_in: "நான் வந்துவிட்டேன்", kn_in: "ನಾನು ತಲುಪಿದೆ", hi_in: "मैं लोकेशन पे आ गया हूँ ", ml_in: "ഞാൻ എത്തി", bn_in: "আমি পৌঁছে গেছি", te_in: "నేను చేరుకున్నాను" } }
   , { key: "dis2AP", value: { en_us: "Please come fast, I am waiting", ta_in: "சீக்கிரம் வாருங்கள், காத்திருக்கிறேன்", kn_in: "ಬೇಗ ಬನ್ನಿ, ನಾನು ಕಾಯುತ್ತಿದ್ದೇನೆ.", hi_in: "प्लीज जल्दी आइये मैं लोकेशन पे हूँ", ml_in: "വേഗം വരൂ, ഞാൻ കാത്തിരിക്കുകയാണ്", bn_in: "দয়া করে তাড়াতাড়ি আসুন, আমি অপেক্ষা করছি", te_in: "దయచేసి త్వరగా రండి, నేను ఎదురుచూస్తున్నాను" } }
   , { key: "dis3AP", value: { en_us: "Call me, You're unreachable", ta_in: "அணுக முடியவில்லை. கால் செய்யுங்கள்", kn_in: "ಕರೆ ಮಾಡಿ, ನೀವು ತಲುಪಲು ಸಾಧ್ಯವಿಲ್ಲ ", hi_in: "आपका फ़ोन नहीं लग रहा, कॉल कीजिये", ml_in: "എന്നെ വിളിക്കൂ, താങ്കൾ പരിധിക്കു പുറത്താണ്", bn_in: "আমাকে কল করুন, আপনার ফোনে যোগাযোগ করা যাচ্ছে না", te_in: "కాల్ చేయండి, మీరు అందుబాటులో లేరు" } }
@@ -203,7 +204,8 @@ getSuggestions dummy =
   , { key: "cis4dr4BP", value: [ "cis4dr4cs1BP", "cis4dr4cs2BP" ] }
   , { key: "customerDefaultAP", value: [ "cds1AP", "cds2AP" ] }
   , { key: "customerDefaultBP", value: [ "cds1BP", "cds2BP" ] }
-  , { key: "driverInitialAP", value: [ "dis1AP", "dis2AP", "dis3AP" ] }
+  , { key: "driverInitialAP", value: [ "dis0AP", "dis1AP", "dis2AP", "dis3AP" ] }
+  , { key: "dis0AP", value: [ "dis1cr1AP", "dis1cr2AP", "dis1cr3AP" ] }
   , { key: "dis1AP", value: [ "dis1cr1AP", "dis1cr2AP", "dis1cr3AP" ] }
   , { key: "dis2AP", value: [ "dis2cr1AP", "dis2cr2AP", "dis2cr3AP" ] }
   , { key: "dis3AP", value: [ "dis3cr1AP", "dis3cr2AP" ] }

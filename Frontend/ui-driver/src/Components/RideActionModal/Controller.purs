@@ -42,6 +42,7 @@ type Config = {
   destinationAddress :: AddressConfig,
   estimatedRideFare :: Int,
   notifiedCustomer :: Boolean,
+  driverNearbyStatus :: Boolean,
   id :: String,
   buttonTimeOut :: Int,
   currentStage :: ST.HomeScreenStage,
@@ -87,5 +88,6 @@ config = {
   gotoTag : false,
   waitTimeStatus : ST.NoStatus,
   waitTimeSeconds : -1,
-  thresholdTime : 0
+  thresholdTime : 0,
+  driverNearbyStatus : false
 }

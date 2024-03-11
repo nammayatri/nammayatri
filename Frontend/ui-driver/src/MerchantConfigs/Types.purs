@@ -159,7 +159,8 @@ type WaitTimeConfig = {
   thresholdTime :: Int,
   routeDistance :: Int,
   diffBtwTwoHeartBeats :: Int,
-  straightLineDist :: Number
+  straightLineDist :: Number,
+  driverNearbythresholdDist :: Number
 }
 
 type FlowConfig = {

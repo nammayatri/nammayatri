@@ -646,5 +646,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         public static final String FOLLOW_RIDE = "FOLLOW_RIDE";
         public static final String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
         public static final String SAFETY_ALERT = "SAFETY_ALERT";
+        public static final String DRIVER_IS_NEARBY = "DRIVER_IS_NEARBY";
     }
 }
