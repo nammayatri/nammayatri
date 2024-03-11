@@ -23,8 +23,8 @@ import Data.Tuple (Tuple(Tuple), fst, snd)
 import Effect (Effect)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor)
+import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void, show, not, when)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout)
 import PrestoDOM.Elements.Elements (scrollView)
 import PrestoDOM.Events (onClick)
 import PrestoDOM.Properties (cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, padding, scrollBarY, weight)
@@ -49,18 +49,35 @@ import Font.Style as FontStyle
 import Screens.Types as ST
 import Types.App (defaultGlobalState)
 import Screens.HelpAndSupportScreen.ComponentConfig as Config
+import Timers
+import Components.PopUpModal as PopUpModal
+import Debug
+import Data.String as DS
+import Mobility.Prelude (boolToVisibility)
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "HelpAndSupportScreen"
-  , eval
   , globalEvents : [( \push -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
           (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT (FetchIssueListReq)
           lift $ lift $ doAff do liftEffect $ push $ FetchIssueListApiCall issueListResponse.issues
+          if initialState.props.startTimerforDummyRides then do
+            lift $ lift $ doAff do liftEffect $ startTimer 10 "dummyRideRequestTimer" "1" push UpdateTimer
+            else if (not (DS.null initialState.data.timerId)) then do
+                lift $ lift $ doAff do liftEffect $ push $ ClearTimer
+              else pure unit
         pure $ pure unit)]
+  , eval:
+      ( \action state -> do
+          let
+            _ = spy "HelpAndSupportScreen action" action
+          let
+            _ = spy "HelpAndSupportScreen state" state
+          eval action state
+      )
   }
 
 view
@@ -70,7 +87,7 @@ view
   -> PrestoDOM (Effect Unit) w
 view push state =
   Anim.screenAnimation $
-  linearLayout
+  relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -81,9 +98,9 @@ view push state =
      [height MATCH_PARENT
      , width MATCH_PARENT
      , orientation VERTICAL
-     , visibility (if (state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL) then GONE else VISIBLE)
+     , visibility $ boolToVisibility $ state.data.issueListType == ST.HELP_AND_SUPPORT_SCREEN_MODAL
      ]
-       [ headerLayout state push
+      [ headerLayout state push
         , scrollView
           [ height MATCH_PARENT
           , width MATCH_PARENT
@@ -92,17 +109,16 @@ view push state =
                [ height MATCH_PARENT
                , width MATCH_PARENT
                , orientation VERTICAL
-               ] [ reportAnIssueHeader state push (getString REPORT_AN_ISSUE)
+               ] [ testRideRequestView state push
+                 , reportAnIssueHeader state push (getString REPORT_AN_ISSUE)
                  , recentRideDetails state push
                  , reportAnIssueHeader state push (getString MORE_OPTIONS)
                  , allOtherTopics state push
-
-
                ]
           ]
-
        ]
    ,  if (state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL) then issueListModal push state else dummyTextView
+   , if state.props.enableDummyPopup then testRideConfirmation push state else linearLayout[][]
    ])
 
 
@@ -254,7 +270,59 @@ categoryView categoryGroup marginLeft marginRight state push =
       ]
   ]
 
+testRideRequestView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+testRideRequestView state push =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    ][ reportAnIssueHeader state push (getString CHECK_APP)
+     , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , padding $ Padding 10 15 10 15
+        ][ linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , stroke $ "1," <> Color.grey900
+            , cornerRadius 8.0
+            ][ imageView
+                [ width $ V 64
+                , height $ V 64
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_dummy_ride_request"
+                ]
+             , linearLayout
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                , margin $ MarginTop 10
+                ][ textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , text $ getString CHECK_YOUR_APP_BY_TEST_RIDE_REQUEST
+                    , color Color.black800
+                    ] <> FontStyle.body1 LanguageStyle
+                 , textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , text $ getString CHECK_NOW
+                    , color Color.blue900
+                    , margin $ MarginTop 3
+                    , onClick push $ const CheckDummyRide
+                    , clickable true
+                    ] <> FontStyle.body1 LanguageStyle
+                 ]
+             ]
+         ]
+    ]
 
+testRideConfirmation :: forall w . (Action -> Effect Unit) -> ST.HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
+testRideConfirmation push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.blackLessTrans
+  ][PopUpModal.view (push <<< PopUpModalAction) (Config.testRideConfirmationConfig state )]
 
 getCategoryName :: String -> String
 getCategoryName categoryName = case categoryName of

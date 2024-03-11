@@ -49,3 +49,6 @@ defaultSeparatorCount = 4
 
 globalPayload :: String
 globalPayload = "__payload"
+
+whatsAppSupportLink :: String
+whatsAppSupportLink = "https://wa.me/"

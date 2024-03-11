@@ -15,9 +15,9 @@
 
 module Screens.HelpAndSupportScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), discard, bind,map,(||),(==),(&&),(/=),(>),(<>),(/), void)
-import PrestoDOM (Eval, continue, exit)
-import Screens.Types (HelpAndSupportScreenState,IssueModalType(..),IssueInfo)
+import Prelude (class Show, pure, unit, ($), discard, bind,map,(||),(==),(&&),(/=),(>),(<>),(/), void, not, when)
+import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import Screens.Types (HelpAndSupportScreenState,IssueModalType(..),IssueInfo, UpdateDummyTestPopUpType(..))
 import PrestoDOM.Types.Core (class Loggable)
 import Components.SourceToDestination as SourceToDestinationController
 import Screens.HelpAndSupportScreen.ScreenData (IssueOptions(..))
@@ -25,7 +25,7 @@ import Language.Strings (getString)
 import Services.API (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..))
 import Language.Types(STR(..))
 import Services.Config (getSupportNumber)
-import JBridge (showDialer, differenceBetweenTwoUTC)
+import JBridge (showDialer, differenceBetweenTwoUTC, openUrlInApp)
 import Helpers.Utils (getTime,getCurrentUTC,toStringJSON, contactSupportNumber)
 import Data.Array (foldr,cons,filter,reverse)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
@@ -37,6 +37,10 @@ import Effect.Unsafe (unsafePerformEffect)
 import Components.IssueView.Controller as IssueViewController
 import Data.Function.Uncurried (runFn2)
 import Screens.HelpAndSupportScreen.Transformer (getApiIssueList)
+import Timers as TF
+import Data.String as DS
+import Components.PopUpModal as PopUpModal
+import Constants
 
 instance showAction :: Show Action where
   show _ = ""
@@ -59,18 +63,20 @@ instance loggableAction :: Loggable Action where
     RideHistoryAPIResponse resp -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "ride_history_api_resp"
     NoRidesAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "no_action_view_rides"
     NoAction -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "no_action"
+    CheckDummyRide -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "on_click_dummy_check_now"
     _ -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "on_click_done"
 
 
 data ScreenOutput = GoBack HelpAndSupportScreenState
                   | GoToWriteToUsScreen
-                  | GoToMyRidesScreen CategoryListType
-                  | GoToReportIssueChatScreen CategoryListType
+                  | GoToMyRidesScreen CategoryListType HelpAndSupportScreenState
+                  | GoToReportIssueChatScreen CategoryListType HelpAndSupportScreenState
                   | IssueListBackPressed HelpAndSupportScreenState
                   | RemoveIssue String HelpAndSupportScreenState
                   | OngoingIssuesScreen HelpAndSupportScreenState
                   | ResolvedIssuesScreen HelpAndSupportScreenState
-
+                  | DriverDummyRideRequest HelpAndSupportScreenState
+                  | GoToProfileScreen HelpAndSupportScreenState
 data Action = NoAction
              | BackPressed
              | SourceToDestinationAction SourceToDestinationController.Action
@@ -84,33 +90,101 @@ data Action = NoAction
              | OnClickOngoingIssues
              | OnClickResolvedIssues
              | FetchIssueListApiCall (Array IssueReportDriverListItem)
-
+             | CheckDummyRide
+             | ClearTimer
+             | UpdateTimer Int String String
+             | PopUpModalAction PopUpModal.Action
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 eval AfterRender state = continue state
-eval BackPressed state = exit (GoBack state)
+eval BackPressed state = do
+  when (not (DS.null state.data.timerId)) $ do
+    void $ pure $ TF.clearTimerWithId state.data.timerId
+  if state.props.enableDummyPopup then continue state {props{enableDummyPopup = false}}
+  else do
+    case state.data.goBackTo of
+        HELP_AND_SUPPORT_SCREEN -> exit (GoBack state {props{startTimerforDummyRides = false}, data{timerId = "",issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL, goBackTo = HELP_AND_SUPPORT_SCREEN}})
+        DRIVER_PROFILE_SCREEN -> exit (GoToProfileScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
+        _ -> continue state
 eval (SourceToDestinationAction (SourceToDestinationController.Dummy)) state = continue state
-eval (SelectRide selectedCategory) state = exit $ GoToMyRidesScreen selectedCategory
-eval (OpenChat selectedCategory)state = exit $ GoToReportIssueChatScreen selectedCategory
+eval (SelectRide selectedCategory) state = do
+  when (not (DS.null state.data.timerId)) $ do
+    void $ pure $ TF.clearTimerWithId state.data.timerId
+  exit $ GoToMyRidesScreen selectedCategory state {props{startTimerforDummyRides = false}, data{timerId = ""}}
+
+eval (OpenChat selectedCategory)state = do
+  when (not (DS.null state.data.timerId)) $ do
+    void $ pure $ TF.clearTimerWithId state.data.timerId
+  exit $ GoToReportIssueChatScreen selectedCategory state {props{startTimerforDummyRides = false}, data{timerId = ""}}
 
 eval (OptionClick optionIndex) state = do
+  when (not (DS.null state.data.timerId)) $ do
+    void $ pure $ TF.clearTimerWithId state.data.timerId
   case optionIndex of
-    OngoingIssues -> exit $ OngoingIssuesScreen state {data {issueListType = ONGOING_ISSUES_MODAL}}
-    ResolvedIssues -> exit $ ResolvedIssuesScreen state {data {issueListType = RESOLVED_ISSUES_MODAL}}
+    OngoingIssues -> do
+      exit $ OngoingIssuesScreen state {data {issueListType = ONGOING_ISSUES_MODAL, timerId = "", goBackTo = HELP_AND_SUPPORT_SCREEN}, props{startTimerforDummyRides = false}}
+    ResolvedIssues -> exit $ ResolvedIssuesScreen state {data {issueListType = RESOLVED_ISSUES_MODAL, timerId = "", goBackTo = HELP_AND_SUPPORT_SCREEN}, props{startTimerforDummyRides = false}}
     CallSupportCenter -> do
       void $ pure $ unsafePerformEffect $ contactSupportNumber "" -- TODO: FIX_DIALER -- unsafePerformEffect is temporary fix
-      continue state
-eval (IssueScreenModal (IssueList.AfterRender )) state = continue state
-eval (IssueScreenModal (IssueList.BackPressed )) state = exit $ GoBack state {data {issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL  }}
-eval (IssueScreenModal (IssueList.IssueViewAction (IssueViewController.Remove issueId)  )) state = exit $ RemoveIssue issueId state
+      continue state {props{startTimerforDummyRides = false}, data {timerId = "", goBackTo = DRIVER_PROFILE_SCREEN}}
+    WhatsAppSupport -> continueWithCmd state [do
+        let supportPhone = state.data.cityConfig.registration.supportWAN
+        void $ openUrlInApp $ whatsAppSupportLink <> supportPhone
+        pure NoAction]
+
+eval (IssueScreenModal (IssueList.AfterRender )) state = do
+       when (not (DS.null state.data.timerId)) $ do
+        void $ pure $ TF.clearTimerWithId state.data.timerId
+       continue state{props{startTimerforDummyRides= false}}
+
+eval (IssueScreenModal (IssueList.BackPressed )) state = do
+  when (not (DS.null state.data.timerId)) $ do
+    void $ pure $ TF.clearTimerWithId state.data.timerId
+  exit $ GoBack state {data {issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL, timerId = ""}, props{startTimerforDummyRides = false}}
+
+eval (IssueScreenModal (IssueList.IssueViewAction (IssueViewController.Remove issueId)  )) state = do
+  when (not (DS.null state.data.timerId)) $ do
+    void $ pure $ TF.clearTimerWithId state.data.timerId
+  exit $ RemoveIssue issueId state{props{startTimerforDummyRides = false}, data{timerId = ""}}
+
 eval (IssueScreenModal (IssueList.IssueViewAction (IssueViewController.CallSupportCenter ))) state = do
        void $ pure $ unsafePerformEffect $ contactSupportNumber ""-- TODO: FIX_DIALER -- unsafePerformEffect is temporary fix
-       continue state
+       when (not (DS.null state.data.timerId)) $ do
+        void $ pure $ TF.clearTimerWithId state.data.timerId
+       continue state{props{startTimerforDummyRides = false}}
+
 eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList
          updatedResolvedIssueList = reverse (getUpdatedIssueList "RESOLVED" apiIssueList)
          updatedOngoingIssueList = reverse (getUpdatedIssueList "NEW" apiIssueList)
      continue state {data {issueList =apiIssueList, resolvedIssueList =  updatedResolvedIssueList , ongoingIssueList =  updatedOngoingIssueList}}
+
+eval CheckDummyRide state = exit (DriverDummyRideRequest state{props{startTimerforDummyRides = true}})
+
+eval ClearTimer state = do
+    when (not (DS.null state.data.timerId)) $ do
+      void $ pure $ TF.clearTimerWithId state.data.timerId
+    continue state {data{timerId = ""}}
+  
+eval (UpdateTimer seconds status timerID) state = do
+  if status == "EXPIRED" then do 
+    void $ pure $ TF.clearTimerWithId timerID
+    continue state{ data {timerId = ""}, props{enableDummyPopup = true, startTimerforDummyRides = false, popupType = TEST_RIDE_RECIEVED} }
+    else do
+      continue state { data {timerId = timerID} }
+
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
+  case state.props.popupType of
+    TEST_RIDE_RECIEVED -> continue state {props{popupType = EVERYTHING_OK}}
+    _ -> continue state {props{enableDummyPopup = false}}
+
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {props{popupType = PROBLEM_WITH_TEST}}
+
+eval (PopUpModalAction (PopUpModal.OnSecondaryTextClick)) state = do
+   when (state.props.popupType == PROBLEM_WITH_TEST) $ do
+    void $ pure $ unsafePerformEffect $ contactSupportNumber "" -- TODO: FIX_DIALER -- unsafePerformEffect is temporary fix
+   continue state {props{startTimerforDummyRides = false}, data {timerId = "", goBackTo = DRIVER_PROFILE_SCREEN}}
+  
 eval _ state = continue state
 
 getIssueTitle :: IssueOptions -> String
@@ -119,6 +193,7 @@ getIssueTitle menuOption =
     OngoingIssues -> (getString ONGOING_ISSUES)
     ResolvedIssues -> (getString RESOLVED_ISSUES)
     CallSupportCenter -> (getString CALL_SUPPORT_CENTER)
+    WhatsAppSupport -> (getString GET_SUPPORT_ON_WHATSAPP)
 
 getExactTime :: Int -> String
 getExactTime sec = if (sec > 31536000) then (toStringJSON (sec / 31536000)) <> (" ") <> (getString YEARS_AGO)

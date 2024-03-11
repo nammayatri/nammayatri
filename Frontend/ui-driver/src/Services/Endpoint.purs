@@ -309,3 +309,6 @@ confirmQuestion _ = (getBaseUrl "") <> "/lms/question/confirm"
 
 getReelsData :: String -> String -> String
 getReelsData reelsKey language = (getBaseUrl "") <> "/reels/getAllReelVideos?language=" <> language <> "&reelsKey=" <> reelsKey
+
+dummyRideRequest :: String -> String
+dummyRideRequest _ =  (getBaseUrl "") <> "/driver/getDummyRideRequest"

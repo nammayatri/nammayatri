@@ -5,6 +5,8 @@
     <string name="request"> अनुरोध करें </string>
     <string name="decline">अस्वीकार करें</string>
     <string name="pickup">पिकअप जगह</string>
+    <string name="test_request">परीक्षण अनुरोध</string>
+    <string name="test_request_successful">टेस्ट राइड अनुरोध सफल!</string>
     <string name="trip"> यात्रा की दूरी </string>
     <string name="new_ride_assigned"> नई सवारी </string>
     <string name="waiting_for_customer_response">ग्राहक प्रतिक्रिया की प्रतीक्षा</string>

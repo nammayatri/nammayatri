@@ -1229,12 +1229,17 @@ type HelpAndSupportScreenData = {
   issueList :: Array IssueInfo,
   ongoingIssueList :: Array IssueInfo,
   resolvedIssueList :: Array IssueInfo,
-  issueListType :: IssueModalType
+  issueListType :: IssueModalType,
+  timerId :: String,
+  goBackTo :: ScreenName,
+  cityConfig :: CityConfig
 }
 
 type HelpAndSupportScreenProps = {
-  isNoRides :: Boolean
-
+  isNoRides :: Boolean,
+  enableDummyPopup :: Boolean,
+  startTimerforDummyRides :: Boolean,
+  popupType :: UpdateDummyTestPopUpType
 }
 
 type ReportIssueChatScreenState = {
@@ -1314,6 +1319,12 @@ data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | ONGOING_ISSUES_MODAL | RES
 
 derive instance genericIssueModalType :: Generic IssueModalType _
 instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
+
+data UpdateDummyTestPopUpType = TEST_RIDE_RECIEVED | PROBLEM_WITH_TEST | EVERYTHING_OK
+
+derive instance genericUpdateDummyTestPopUpType :: Generic UpdateDummyTestPopUpType _
+instance showUpdateDummyTestPopUpType :: Show UpdateDummyTestPopUpType where show = genericShow
+instance eqUpdateDummyTestPopUpType :: Eq UpdateDummyTestPopUpType where eq = genericEq
 --------------------------------------------- AboutUsScreenState ---------------------------
 type WriteToUsScreenState = {
   data :: WriteToUsScreenData,

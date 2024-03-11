@@ -76,7 +76,8 @@ type Config = {
     listViewArray :: Array String,
     coverMediaConfig :: CoverMediaConfig,
     timerId :: String,
-    onlyTopTitle :: Visibility
+    onlyTopTitle :: Visibility,
+    topTextVisibility :: Boolean
 }
 
 type CoverMediaConfig = {
@@ -451,7 +452,8 @@ config = {
       }
     },
     onlyTopTitle : VISIBLE,
-    timerId : ""
+    timerId : "",
+    topTextVisibility : false
 }
 
 

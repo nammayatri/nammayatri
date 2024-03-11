@@ -5,6 +5,8 @@
     <string name="request">ಕೋರಿಕೆ</string>
     <string name="decline">ತಿರಸ್ಕರಿಸು</string>
     <string name="pickup">ಪಿಕಪ್</string>
+    <string name="test_request">ಪರೀಕ್ಷಾ ವಿನಂತಿ</string>
+    <string name="test_request_successful">ಟೆಸ್ಟ್ ರೈಡ್ ವಿನಂತಿ ಯಶಸ್ವಿಯಾಗಿದೆ!</string>
     <string name="trip">ಪ್ರವಾಸ</string>
     <string name="new_ride_assigned">ಹೊಸ ಸವಾರಿಯನ್ನು ನಿಯೋಜಿಸಲಾಗಿದೆ</string>
     <string name="waiting_for_customer_response">ಗ್ರಾಹಕರ ಪ್ರತಿಕ್ರಿಯೆಗಾಗಿ ನಿರೀಕ್ಷಿಸಲಾಗುತ್ತಿದೆ</string>
