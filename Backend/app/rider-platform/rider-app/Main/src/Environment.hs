@@ -293,6 +293,7 @@ instance CacheEx Subscriber Flow where
 
 data RideConfig = RideConfig
   { driverReachedDistance :: Meters,
-    driverOnTheWayNotifyExpiry :: Seconds
+    driverOnTheWayNotifyExpiry :: Seconds,
+    driverIsNearbyDistance :: Meters
   }
   deriving (Generic, FromDhall)

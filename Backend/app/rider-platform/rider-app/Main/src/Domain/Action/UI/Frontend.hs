@@ -43,6 +43,7 @@ import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
@@ -140,11 +141,14 @@ handleRideTracking personId (Just isPolling) DPFS.RIDE_PICKUP {..} = do
   where
     notifyOnTheWayOrReached location = do
       driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
+      driverIsNearbyDistance <- asks (.rideCfg.driverIsNearbyDistance)
+
       driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
       mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
       mbHasReachedNotified <- Redis.get @() driverHasReached
+      mbIsNearbyNotified <- Redis.get @() driverIsNearby
 
-      when (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified) $ do
+      when (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified || isNothing mbIsNearbyNotified) $ do
         let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation location.currPoint
         mbStartDistance <- Redis.get @Meters distanceUpdates
         case mbStartDistance of
@@ -154,12 +158,13 @@ handleRideTracking personId (Just isPolling) DPFS.RIDE_PICKUP {..} = do
               Notify.notifyDriverOnTheWay personId
               Redis.setExp driverOnTheWay () driverOnTheWayNotifyExpiry
             when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
-              Notify.notifyDriverHasReached personId otp vehicleNumber
+              Notify.notifyDriverIsNearby personId
               Redis.setExp driverHasReached () 1500
       where
         distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
         driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
         driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
+        driverIsNearby = "Ride:GetDriverLoc:DriverIsNearby " <> rideId.getId
 handleRideTracking _ Nothing DPFS.DRIVER_ARRIVED {..} = return $ GetPersonFlowStatusRes Nothing (DPFS.RIDE_ASSIGNED rideId) Nothing -- handle backward compatibility, if isPolling is Nothing means old version of API Call, isValueAddNP is Nothing as its not needed in rideStage
 handleRideTracking personId (Just isPolling) DPFS.DRIVER_ARRIVED {..} = do
   trackUrl <- getTrackUrl rideId trackingUrl

@@ -158,7 +158,10 @@ let kafkaProducerCfg =
       }
 
 let rideConfig =
-      { driverReachedDistance = +100, driverOnTheWayNotifyExpiry = +3600 }
+      { driverReachedDistance = +100
+      , driverOnTheWayNotifyExpiry = +3600
+      , driverIsNearbyDistance = +30
+      }
 
 let cacheConfig = { configsExpTime = +86400 }
 

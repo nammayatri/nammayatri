@@ -109,6 +109,7 @@ getDriverLoc rideId = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let fromLocation = Maps.getCoordinates booking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
+  driverIsNearbyDistance <- asks (.rideCfg.driverIsNearbyDistance)
   driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
   mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
   mbHasReachedNotified <- Redis.get @() driverHasReached
@@ -122,14 +123,14 @@ getDriverLoc rideId = do
           Notify.notifyDriverOnTheWay booking.riderId
           Redis.setExp driverOnTheWay () driverOnTheWayNotifyExpiry
         when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
-          Notify.notifyDriverHasReached booking.riderId ride.otp ride.vehicleNumber
+          Notify.notifyDriverIsNearby booking.riderId
           Redis.setExp driverHasReached () 1500
-  return $
-    GetDriverLocResp
-      { lat = res.currPoint.lat,
-        lon = res.currPoint.lon,
-        lastUpdate = res.lastUpdate
-      }
+          return $
+            GetDriverLocResp
+              { lat = res.currPoint.lat,
+                lon = res.currPoint.lon,
+                lastUpdate = res.lastUpdate
+              }
   where
     distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
     driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId

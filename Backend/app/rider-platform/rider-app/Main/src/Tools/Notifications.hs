@@ -576,6 +576,36 @@ data DriverReachedParam = DriverReachedParam
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+notifyDriverIsNearby ::
+  ServiceFlow m r =>
+  Id Person ->
+  m ()
+notifyDriverIsNearby personId = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_IS_NEARBY merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.DRIVER_IS_NEARBY,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product personId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+      title = T.pack "Your driver is nearby"
+      body =
+        unwords
+          [ "Head to the pickup location for a swift start!"
+          ]
+  notifyPerson person.merchantId merchantOperatingCityId notificationData
+
 notifyDriverHasReached ::
   ServiceFlow m r =>
   Id Person ->
