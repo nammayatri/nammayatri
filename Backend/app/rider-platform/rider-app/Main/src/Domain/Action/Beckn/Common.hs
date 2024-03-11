@@ -132,7 +132,7 @@ rideAssignedReqHandler ::
   m ()
 rideAssignedReqHandler RideAssignedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   mbMerchant <- CQM.findById booking.merchantId
   ride <- buildRide mbMerchant booking bookingDetails
@@ -146,7 +146,7 @@ rideAssignedReqHandler RideAssignedReq {..} = do
 
   _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
-  when (not isInitiatedByCronJob) $ do
+  unless isInitiatedByCronJob $ do
     Notify.notifyOnRideAssigned booking ride
     when isDriverBirthDay $ do
       Notify.notifyDriverBirthDay booking.riderId driverName
@@ -212,7 +212,7 @@ rideStartedReqHandler ::
   m ()
 rideStartedReqHandler RideStartedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- runInReplica $ QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
@@ -233,7 +233,7 @@ rideStartedReqHandler RideStartedReq {..} = do
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
-  when (not isInitiatedByCronJob) $ do
+  unless isInitiatedByCronJob $ do
     fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
     Notify.notifyOnRideStarted booking ride
 
@@ -257,7 +257,7 @@ rideCompletedReqHandler ::
   m ()
 rideCompletedReqHandler RideCompletedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- runInReplica $ QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   let bookingCanBeCompleted = booking.status == DRB.TRIP_ASSIGNED
       rideCanBeCompleted = ride.status == DRide.INPROGRESS
@@ -318,7 +318,7 @@ rideCompletedReqHandler RideCompletedReq {..} = do
   --         }
   --   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   --   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
-  when (not isInitiatedByCronJob) $
+  unless isInitiatedByCronJob $
     Notify.notifyOnRideCompleted booking updRide
   where
     buildFareBreakup :: MonadFlow m => Id DRB.Booking -> DFareBreakup -> m DFareBreakup.FareBreakup
