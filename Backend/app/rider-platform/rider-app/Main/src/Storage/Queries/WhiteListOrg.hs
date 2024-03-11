@@ -30,10 +30,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.WhiteListOrg as BeamBLO
 
-findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Domain -> m (Maybe WhiteListOrg)
+findBySubscriberIdAndDomain :: KvDbFlow m r => ShortId Subscriber -> Domain -> m (Maybe WhiteListOrg)
 findBySubscriberIdAndDomain subscriberId domain = findOneWithKV [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId, Se.Is BeamBLO.domain $ Se.Eq domain]
 
-countTotalSubscribers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m Int
+countTotalSubscribers :: KvDbFlow m r => m Int
 countTotalSubscribers = findAllWithKV [Se.Is BeamBLO.id $ Se.Not $ Se.Eq ""] <&> length
 
 instance FromTType' BeamBLO.WhiteListOrg WhiteListOrg where

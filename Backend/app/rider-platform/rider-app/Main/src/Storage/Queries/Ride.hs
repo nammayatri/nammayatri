@@ -48,10 +48,10 @@ import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.Person ()
 import Tools.Error
 
-createRide' :: (MonadFlow m, EsqDBFlow m r) => Ride -> m ()
+createRide' :: KvDbFlow m r => Ride -> m ()
 createRide' = createWithKV
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
+create :: KvDbFlow m r => Ride -> m ()
 create ride = do
   _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
   _ <- whenJust ride.toLocation $ \location -> processLocation location
@@ -59,7 +59,7 @@ create ride = do
   where
     processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
 
-createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
+createRide :: KvDbFlow m r => Ride -> m ()
 createRide ride = do
   fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
   mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId) ride.toLocation
@@ -74,7 +74,7 @@ data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   }
   deriving (Generic, B.Database be)
 
-updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> RideStatus -> m ()
+updateStatus :: KvDbFlow m r => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
   now <- getCurrentTime
   updateOneWithKV
@@ -83,7 +83,7 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateTrackingUrl :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> BaseUrl -> m ()
+updateTrackingUrl :: KvDbFlow m r => Id Ride -> BaseUrl -> m ()
 updateTrackingUrl rideId url = do
   now <- getCurrentTime
   updateOneWithKV
@@ -92,7 +92,7 @@ updateTrackingUrl rideId url = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateRideRating :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Int -> m ()
+updateRideRating :: KvDbFlow m r => Id Ride -> Int -> m ()
 updateRideRating rideId rideRating = do
   now <- getCurrentTime
   updateOneWithKV
@@ -101,13 +101,13 @@ updateRideRating rideId rideRating = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe Ride)
+findById :: KvDbFlow m r => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
 
-findByBPPRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPRide -> m (Maybe Ride)
+findByBPPRideId :: KvDbFlow m r => Id BPPRide -> m (Maybe Ride)
 findByBPPRideId bppRideId_ = findOneWithKV [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
 
-updateMultiple :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Ride -> m ()
+updateMultiple :: KvDbFlow m r => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
   now <- getCurrentTime
   updateOneWithKV
@@ -124,18 +124,18 @@ updateMultiple rideId ride = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-findActiveByRBId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Ride)
+findActiveByRBId :: KvDbFlow m r => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
-findByRBId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Ride)
+findByRBId :: KvDbFlow m r => Id Booking -> m (Maybe Ride)
 findByRBId (Id bookingId) = findOneWithKV [Se.Is BeamR.bookingId $ Se.Eq bookingId]
 
-findLatestCompletedRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Ride)
+findLatestCompletedRide :: KvDbFlow m r => Id Person -> m (Maybe Ride)
 findLatestCompletedRide riderId = do
   booking <- findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId] (Se.Desc BeamB.createdAt) Nothing Nothing
   findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-updateDriverArrival :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe UTCTime -> m ()
+updateDriverArrival :: KvDbFlow m r => Id Ride -> Maybe UTCTime -> m ()
 updateDriverArrival rideId arrivalTime = do
   now <- getCurrentTime
   updateOneWithKV
@@ -144,7 +144,7 @@ updateDriverArrival rideId arrivalTime = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateSafetyCheckStatus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe Bool -> m ()
+updateSafetyCheckStatus :: KvDbFlow m r => Id Ride -> Maybe Bool -> m ()
 updateSafetyCheckStatus rideId status = do
   updateOneWithKV
     [ Se.Set BeamR.safetyCheckStatus status
@@ -157,7 +157,7 @@ data StuckRideItem = StuckRideItem
     riderId :: Id Person
   }
 
-findStuckRideItems :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems :: KvDbFlow m r => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems merchant moCity bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   bookings <-
@@ -190,7 +190,7 @@ findStuckRideItems merchant moCity bookingIds now = do
 
     mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
 
-cancelRides :: (MonadFlow m, EsqDBFlow m r) => [Id Ride] -> UTCTime -> m ()
+cancelRides :: KvDbFlow m r => [Id Ride] -> UTCTime -> m ()
 cancelRides rideIds now =
   updateWithKV
     [ Se.Set BeamR.status Ride.CANCELLED,
@@ -218,7 +218,7 @@ roundToMidnightUTCToDate :: UTCTime -> UTCTime
 roundToMidnightUTCToDate (UTCTime day _) = UTCTime (addDays 1 day) 0
 
 findAllRideItems ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Int ->
   Int ->
@@ -288,13 +288,13 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
           ..
         }
 
-findRiderIdByRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe (Id Person))
+findRiderIdByRideId :: KvDbFlow m r => Id Ride -> m (Maybe (Id Person))
 findRiderIdByRideId rideId = do
   ride <- findOneWithKV [Se.Is BeamR.id $ Se.Eq $ getId rideId]
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   pure $ Booking.riderId <$> booking
 
-findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
+findAllByRiderIdAndRide :: KvDbFlow m r => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
 findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
@@ -339,20 +339,20 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                 _ -> False
            in isJust maybeRide || isJust otpCode || isconfirmedRentalRideOrIntercityBooking
 
-countRidesByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m Int
+countRidesByRiderId :: KvDbFlow m r => Id Person -> m Int
 countRidesByRiderId riderId = do
   booking <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId]
   findAllWithKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] <&> length
 
-countRidesFromDateToNowByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> UTCTime -> m Int
+countRidesFromDateToNowByRiderId :: KvDbFlow m r => Id Person -> UTCTime -> m Int
 countRidesFromDateToNowByRiderId riderId date = do
   booking <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId]
   findAllWithKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED, Se.Is BeamR.createdAt $ Se.GreaterThan date]] <&> length
 
-findRideByRideShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Ride -> m (Maybe Ride)
+findRideByRideShortId :: KvDbFlow m r => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
-updateEditLocationAttempts :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe Int -> m ()
+updateEditLocationAttempts :: KvDbFlow m r => Id Ride -> Maybe Int -> m ()
 updateEditLocationAttempts rideId attempts = do
   now <- getCurrentTime
   updateOneWithKV
@@ -361,7 +361,7 @@ updateEditLocationAttempts rideId attempts = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m (DLM.LocationMapping, Maybe DLM.LocationMapping)
+createMapping :: KvDbFlow m r => Text -> Text -> Maybe Text -> Maybe Text -> m (DLM.LocationMapping, Maybe DLM.LocationMapping)
 createMapping bookingId rideId merchantId merchantOperatingCityId = do
   fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
   fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)

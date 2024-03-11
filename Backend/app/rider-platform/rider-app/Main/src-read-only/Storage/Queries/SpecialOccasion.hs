@@ -15,17 +15,17 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, KvDbFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialOccasion as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
+create :: KvDbFlow m r => Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.SpecialOccasion.SpecialOccasion] -> m ()
+createMany :: KvDbFlow m r => [Domain.Types.SpecialOccasion.SpecialOccasion] -> m ()
 createMany = traverse_ create
 
-findAllSpecialOccasionByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m ([Domain.Types.SpecialOccasion.SpecialOccasion])
+findAllSpecialOccasionByEntityId :: KvDbFlow m r => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m ([Domain.Types.SpecialOccasion.SpecialOccasion])
 findAllSpecialOccasionByEntityId entityId date = do
   findAllWithKV
     [ Se.And
@@ -34,7 +34,7 @@ findAllSpecialOccasionByEntityId entityId date = do
         ]
     ]
 
-findSpecialOccasionByEntityIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
+findSpecialOccasionByEntityIdAndDate :: KvDbFlow m r => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
 findSpecialOccasionByEntityIdAndDate entityId date = do
   findOneWithKV
     [ Se.And
@@ -43,7 +43,7 @@ findSpecialOccasionByEntityIdAndDate entityId date = do
         ]
     ]
 
-findSpecialOccasionByEntityIdAndDayOfWeek :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
+findSpecialOccasionByEntityIdAndDayOfWeek :: KvDbFlow m r => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
 findSpecialOccasionByEntityIdAndDayOfWeek entityId dayOfWeek = do
   findOneWithKV
     [ Se.And
@@ -52,7 +52,7 @@ findSpecialOccasionByEntityIdAndDayOfWeek entityId dayOfWeek = do
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
+findByPrimaryKey :: KvDbFlow m r => Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
@@ -60,7 +60,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
+updateByPrimaryKey :: KvDbFlow m r => Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
 updateByPrimaryKey Domain.Types.SpecialOccasion.SpecialOccasion {..} = do
   _now <- getCurrentTime
   updateWithKV

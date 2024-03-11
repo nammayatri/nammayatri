@@ -53,13 +53,13 @@ newtype BookingListRes = BookingListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m SRB.BookingAPIEntity
+bookingStatus :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m SRB.BookingAPIEntity
 bookingStatus bookingId _ = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   logInfo $ "booking: test " <> show booking
   SRB.buildBookingAPIEntity booking booking.riderId
 
-bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
+bookingList :: (KvDbFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
   logInfo $ "rbList: test " <> show rbList
@@ -122,7 +122,7 @@ validateStopReq booking isEdit = do
     SRB.OneWaySpecialZoneDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in special zone rides"
     SRB.InterCityDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in intercity rides"
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => StopReq -> m Location
+buildLocation :: KvDbFlow m r => StopReq -> m Location
 buildLocation req = do
   id <- generateGUID
   now <- getCurrentTime
@@ -136,7 +136,7 @@ buildLocation req = do
         ..
       }
 
-buildLocationMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> m DLM.LocationMapping
+buildLocationMapping :: KvDbFlow m r => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> m DLM.LocationMapping
 buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCityId = do
   id <- generateGUID
   now <- getCurrentTime

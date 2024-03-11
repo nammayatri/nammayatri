@@ -25,9 +25,8 @@ import Domain.Types.LocationAddress as LA
 import Domain.Types.Merchant
 import Kernel.External.Maps
 import Kernel.Prelude
-import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 
 data HotSpot = HotSpot
@@ -104,9 +103,7 @@ data HotSpotResponse = HotSpotResponse
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 convertToHotSpot ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
+  KvDbFlow m r =>
   LatLong ->
   Maybe LA.LocationAddress ->
   Id Merchant ->

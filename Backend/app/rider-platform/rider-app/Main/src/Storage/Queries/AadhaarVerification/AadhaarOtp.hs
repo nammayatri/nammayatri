@@ -19,22 +19,22 @@ import Domain.Types.AadhaarVerification.AadhaarOtp
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (KvDbFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.AadhaarVerification.AadhaarOtpReq as BeamAOR
 import qualified Storage.Beam.AadhaarVerification.AadhaarOtpVerify as BeamAOV
 
-createForGenerate :: (MonadFlow m, EsqDBFlow m r) => AadhaarOtpReq -> m ()
+createForGenerate :: KvDbFlow m r => AadhaarOtpReq -> m ()
 createForGenerate = createWithKV
 
-createForVerify :: (MonadFlow m, EsqDBFlow m r) => AadhaarOtpVerify -> m ()
+createForVerify :: KvDbFlow m r => AadhaarOtpVerify -> m ()
 createForVerify = createWithKV
 
-deleteByPersonIdForGenerate :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+deleteByPersonIdForGenerate :: KvDbFlow m r => Id Person -> m ()
 deleteByPersonIdForGenerate personId = deleteWithKV [Se.Is BeamAOR.personId (Se.Eq (getId personId))]
 
-deleteByPersonIdForVerify :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+deleteByPersonIdForVerify :: KvDbFlow m r => Id Person -> m ()
 deleteByPersonIdForVerify personId = deleteWithKV [Se.Is BeamAOV.personId (Se.Eq (getId personId))]
 
 instance FromTType' BeamAOR.AadhaarOtpReq AadhaarOtpReq where

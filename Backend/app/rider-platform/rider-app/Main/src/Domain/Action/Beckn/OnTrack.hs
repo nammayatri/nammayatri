@@ -38,10 +38,10 @@ data ValidatedOnTrackReq = ValidatedOnTrackReq
     ride :: Ride
   }
 
-onTrack :: (CacheFlow m r, EsqDBFlow m r) => ValidatedOnTrackReq -> m ()
+onTrack :: KvDbFlow m r => ValidatedOnTrackReq -> m ()
 onTrack ValidatedOnTrackReq {..} = void $ QRide.updateTrackingUrl ride.id trackUrl
 
-validateRequest :: (CacheFlow m r, EsqDBFlow m r) => OnTrackReq -> m ValidatedOnTrackReq
+validateRequest :: KvDbFlow m r => OnTrackReq -> m ValidatedOnTrackReq
 validateRequest OnTrackReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> bppRideId.getId)
   return $

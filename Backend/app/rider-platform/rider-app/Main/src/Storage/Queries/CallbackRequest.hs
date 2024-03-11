@@ -19,11 +19,11 @@ import Domain.Types.CallbackRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (KvDbFlow)
 import qualified Storage.Beam.CallbackRequest as BeamCR
 
-create :: (MonadFlow m, EsqDBFlow m r) => CallbackRequest -> m ()
+create :: KvDbFlow m r => CallbackRequest -> m ()
 create = createWithKV
 
 instance FromTType' BeamCR.CallbackRequest CallbackRequest where

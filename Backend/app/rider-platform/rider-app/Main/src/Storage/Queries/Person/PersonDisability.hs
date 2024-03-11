@@ -12,7 +12,7 @@ module Storage.Queries.Person.PersonDisability where
 
 import Domain.Types.Person
 import qualified Domain.Types.Person.PersonDisability as Domain
-import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, updateWithKV)
+import Kernel.Beam.Functions (createWithKV, deleteWithKV, findOneWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -20,13 +20,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Person.PersonDisability as BeamPD hiding (Id)
 
-create :: (MonadFlow m, EsqDBFlow m r) => Domain.PersonDisability -> m ()
+create :: KvDbFlow m r => Domain.PersonDisability -> m ()
 create = createWithKV
 
-findByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Domain.PersonDisability)
+findByPersonId :: KvDbFlow m r => Id Person -> m (Maybe Domain.PersonDisability)
 findByPersonId (Id personId) = findOneWithKV [Se.Is BeamPD.personId $ Se.Eq personId]
 
-updateDisabilityByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Text -> Text -> Maybe Text -> m ()
+updateDisabilityByPersonId :: KvDbFlow m r => Id Person -> Text -> Text -> Maybe Text -> m ()
 updateDisabilityByPersonId (Id personId) disabilityId tag description = do
   now <- getCurrentTime
   updateWithKV
@@ -37,7 +37,7 @@ updateDisabilityByPersonId (Id personId) disabilityId tag description = do
     ]
     [Se.Is BeamPD.personId (Se.Eq personId)]
 
-deleteByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+deleteByPersonId :: KvDbFlow m r => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamPD.personId (Se.Eq personId)]
 
 instance FromTType' BeamPD.PersonDisability Domain.PersonDisability where

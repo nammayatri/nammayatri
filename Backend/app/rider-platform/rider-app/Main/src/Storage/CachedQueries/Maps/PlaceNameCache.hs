@@ -17,24 +17,23 @@ module Storage.CachedQueries.Maps.PlaceNameCache where
 
 import Domain.Types.Maps.PlaceNameCache
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, KvDbFlow)
 import qualified Storage.Queries.Maps.PlaceNameCache as Queries
 
-findPlaceByPlaceId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m [PlaceNameCache]
+findPlaceByPlaceId :: KvDbFlow m r => Text -> m [PlaceNameCache]
 findPlaceByPlaceId placeId =
   Hedis.safeGet (makePlaceIdKey placeId) >>= \case
     Just a -> return a
     Nothing -> cachedPlaceByPlaceId placeId /=<< Queries.findPlaceByPlaceId placeId
 
-findPlaceByGeoHash :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m [PlaceNameCache]
+findPlaceByGeoHash :: KvDbFlow m r => Text -> m [PlaceNameCache]
 findPlaceByGeoHash geoHash =
   Hedis.safeGet (makeGeoHashIdKey geoHash) >>= \case
     Just a -> return a
     Nothing -> cachedPlaceByGeoHash geoHash /=<< Queries.findPlaceByGeoHash geoHash
 
-create :: (CacheFlow m r, Esq.EsqDBFlow m r) => PlaceNameCache -> m ()
+create :: KvDbFlow m r => PlaceNameCache -> m ()
 create = Queries.create
 
 -- test with empty list

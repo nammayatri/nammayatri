@@ -23,10 +23,10 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverAvailability -> m ()
+create :: KvDbFlow m r => Domain.DriverAvailability -> m ()
 create = createWithKV
 
-findLatestByDriverIdAndMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverId -> Domain.MerchantId -> m (Maybe Domain.DriverAvailability)
+findLatestByDriverIdAndMerchantId :: KvDbFlow m r => Domain.DriverId -> Domain.MerchantId -> m (Maybe Domain.DriverAvailability)
 findLatestByDriverIdAndMerchantId driverId merchantId =
   findAllWithOptionsKV
     [ Se.And
@@ -39,7 +39,7 @@ findLatestByDriverIdAndMerchantId driverId merchantId =
     Nothing
     <&> listToMaybe
 
-findAvailableTimeInBucketByDriverIdAndMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverId -> Domain.MerchantId -> UTCTime -> UTCTime -> m (Maybe Domain.DriverAvailability)
+findAvailableTimeInBucketByDriverIdAndMerchantId :: KvDbFlow m r => Domain.DriverId -> Domain.MerchantId -> UTCTime -> UTCTime -> m (Maybe Domain.DriverAvailability)
 findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime =
   findAllWithOptionsKV
     [ Se.And
@@ -54,7 +54,7 @@ findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStart
     Nothing
     <&> listToMaybe
 
-createOrUpdateDriverAvailability :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverAvailability -> m ()
+createOrUpdateDriverAvailability :: KvDbFlow m r => Domain.DriverAvailability -> m ()
 createOrUpdateDriverAvailability d@Domain.DriverAvailability {..} = do
   mbOldBucketAvailableTime <- findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime
   case mbOldBucketAvailableTime of

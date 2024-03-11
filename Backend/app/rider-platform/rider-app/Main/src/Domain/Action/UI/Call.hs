@@ -83,8 +83,7 @@ type GetCallStatusRes = DCS.CallStatusAPIEntity
 -- | Try to initiate a call customer -> driver
 initiateCallToDriver ::
   ( EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
+    KvDbFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Id SRide.Ride ->
@@ -124,14 +123,14 @@ initiateCallToDriver rideId = do
             createdAt = now
           }
 
-callStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => CallCallbackReq -> m CallCallbackRes
+callStatusCallback :: KvDbFlow m r => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
   void $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
   return Ack
 
-directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback :: (KvDbFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel callDurationFallback = do
   let callDuration = callDuratioExotel <|> callDurationFallback
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
@@ -155,7 +154,7 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   where
     updateCallStatus id callStatus url callDuration = QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
 
-getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
+getDriverMobileNumber :: (KvDbFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
   callId <- generateGUID
   callStatusObj <- buildCallStatus callId callSid (exotelStatusToInterfaceStatus callStatus)
@@ -200,7 +199,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
             createdAt = now
           }
 
-getDtmfFlow :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> Text -> Exophone -> m (Maybe Text, BT.Booking)
+getDtmfFlow :: (KvDbFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> Text -> Exophone -> m (Maybe Text, BT.Booking)
 getDtmfFlow dtmfNumber_ merchantId callSid exophone = do
   number <- maybe (throwCallError callSid (PersonWithPhoneNotFound $ show dtmfNumber_) (Just exophone.merchantId.getId) (Just exophone.callService)) pure dtmfNumber_
   let dtmfNumber = dropFirstZero $ removeQuotes number
@@ -212,11 +211,11 @@ getDtmfFlow dtmfNumber_ merchantId callSid exophone = do
     dropFirstZero = T.dropWhile (== '0')
     removeQuotes = T.replace "\"" ""
 
-getCallStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id CallStatus -> m GetCallStatusRes
+getCallStatus :: (KvDbFlow m r, EsqDBReplicaFlow m r) => Id CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
   runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
 
-getPerson :: (EsqDBFlow m r, CacheFlow m r, EncFlow m r) => BT.Booking -> m Person
+getPerson :: (KvDbFlow m r, EncFlow m r) => BT.Booking -> m Person
 getPerson booking = do
   let personId = booking.riderId
   Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -229,7 +228,7 @@ getPersonPhone Person {..} = do
   phonenum & fromMaybeM (InternalError "Customer has no phone number.")
 
 -- | Returns phones pair
-getCustomerAndDriverPhones :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SRide.Ride -> BT.Booking -> m (Text, Text)
+getCustomerAndDriverPhones :: (EncFlow m r, KvDbFlow m r) => SRide.Ride -> BT.Booking -> m (Text, Text)
 getCustomerAndDriverPhones ride booking = do
   person <- getPerson booking
   customerPhone <- getPersonPhone person
@@ -238,8 +237,7 @@ getCustomerAndDriverPhones ride booking = do
 throwCallError ::
   ( HasCallStack,
     MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     IsBaseException e
   ) =>
   Text ->

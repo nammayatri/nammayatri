@@ -26,16 +26,16 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.AadhaarVerification.AadhaarVerification as BeamAV
 
-create :: (MonadFlow m, EsqDBFlow m r) => AadhaarVerification -> m ()
+create :: KvDbFlow m r => AadhaarVerification -> m ()
 create = createWithKV
 
-findByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe AadhaarVerification)
+findByPersonId :: KvDbFlow m r => Id Person -> m (Maybe AadhaarVerification)
 findByPersonId (Id personId) = findOneWithKV [Se.Is BeamAV.personId $ Se.Eq personId]
 
-findByAadhaarNumberHash :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> m (Maybe AadhaarVerification)
+findByAadhaarNumberHash :: KvDbFlow m r => DbHash -> m (Maybe AadhaarVerification)
 findByAadhaarNumberHash aadhaarHash = findOneWithKV [Se.Is BeamAV.aadhaarNumberHash $ Se.Eq (Just aadhaarHash)]
 
-findByPhoneNumberAndUpdate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
+findByPhoneNumberAndUpdate :: KvDbFlow m r => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
 findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
   now <- getCurrentTime
   updateWithKV
@@ -48,10 +48,10 @@ findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId
     ]
     [Se.Is BeamAV.personId (Se.Eq $ getId personId)]
 
-deleteByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+deleteByPersonId :: KvDbFlow m r => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamAV.personId (Se.Eq personId)]
 
-updatePersonImagePath :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m ()
+updatePersonImagePath :: KvDbFlow m r => Id Person -> Text -> m ()
 updatePersonImagePath (Id personId) imagePath =
   updateOneWithKV
     [Se.Set BeamAV.personImagePath (Just imagePath)]

@@ -18,11 +18,11 @@ module Storage.Queries.OnSearchEvent where
 import Domain.Types.OnSearchEvent
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (KvDbFlow)
 import qualified Storage.Beam.OnSearchEvent as BeamOSE
 
-create :: (MonadFlow m, EsqDBFlow m r) => OnSearchEvent -> m ()
+create :: KvDbFlow m r => OnSearchEvent -> m ()
 create = createWithKV
 
 instance FromTType' BeamOSE.OnSearchEvent OnSearchEvent where

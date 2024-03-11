@@ -22,7 +22,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Queries.SavedReqLocation as Queries
 
-findByLatLonAndRiderId :: (CacheFlow m r, EsqDBFlow m r) => Id Person -> LatLong -> m (Maybe SavedReqLocation)
+findByLatLonAndRiderId :: KvDbFlow m r => Id Person -> LatLong -> m (Maybe SavedReqLocation)
 findByLatLonAndRiderId personId latLong =
   Hedis.safeGet (makeIdKey latLong personId) >>= \case
     Just a -> return a

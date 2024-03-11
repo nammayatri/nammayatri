@@ -53,10 +53,10 @@ import qualified Storage.Queries.Quote ()
 import qualified Storage.Queries.TripTerms as QTT
 import Tools.Error
 
-createBooking' :: (MonadFlow m, EsqDBFlow m r) => Booking -> m ()
+createBooking' :: KvDbFlow m r => Booking -> m ()
 createBooking' = createWithKV
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
+create :: KvDbFlow m r => Booking -> m ()
 create dBooking = do
   _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create (dBooking.fromLocation)
   _ <- case dBooking.bookingDetails of
@@ -67,7 +67,7 @@ create dBooking = do
     InterCityDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
   void $ createBooking' dBooking
 
-createBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
+createBooking :: KvDbFlow m r => Booking -> m ()
 createBooking booking = do
   fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
   mbToLocationMap <- case booking.bookingDetails of
@@ -81,7 +81,7 @@ createBooking booking = do
   void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
   create booking
 
-updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> BookingStatus -> m ()
+updateStatus :: KvDbFlow m r => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
   updateOneWithKV
@@ -90,7 +90,7 @@ updateStatus rbId rbStatus = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateBPPBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Id BPPBooking -> m ()
+updateBPPBookingId :: KvDbFlow m r => Id Booking -> Id BPPBooking -> m ()
 updateBPPBookingId rbId bppRbId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -99,7 +99,7 @@ updateBPPBookingId rbId bppRbId = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateOtpCodeBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Text -> m ()
+updateOtpCodeBookingId :: KvDbFlow m r => Id Booking -> Text -> m ()
 updateOtpCodeBookingId rbId otp = do
   now <- getCurrentTime
   updateOneWithKV
@@ -108,7 +108,7 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-findLatestByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
+findLatestByRiderId :: KvDbFlow m r => Id Person -> m (Maybe Booking)
 findLatestByRiderId (Id riderId) =
   do
     let options =
@@ -125,22 +125,22 @@ findLatestByRiderId (Id riderId) =
     findAllWithOptionsKV options sortBy' limit' Nothing
     <&> listToMaybe
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Booking)
+findById :: KvDbFlow m r => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
 
-findByBPPBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPBooking -> m (Maybe Booking)
+findByBPPBookingId :: KvDbFlow m r => Id BPPBooking -> m (Maybe Booking)
 findByBPPBookingId (Id bppRbId) = findOneWithKV [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
 
-findByIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> Id Merchant -> m (Maybe Booking)
+findByIdAndMerchantId :: KvDbFlow m r => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
 
-findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
+findAllByRiderId :: KvDbFlow m r => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
 findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
   let limit' = fmap fromIntegral $ mbLimit <|> Just 10
       offset' = fmap fromIntegral $ mbOffset <|> Just 0
   findAllWithOptionsKV [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
 
-findCountByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> m Int
+findCountByRiderIdAndStatus :: KvDbFlow m r => Id Person -> BookingStatus -> m Int
 findCountByRiderIdAndStatus (Id personId) status = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
@@ -154,7 +154,7 @@ findCountByRiderIdAndStatus (Id personId) status = do
 
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
-findCountByRideIdStatusAndTime :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
+findCountByRideIdStatusAndTime :: KvDbFlow m r => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
 findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
@@ -168,10 +168,10 @@ findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
 
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
-findByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> [BookingStatus] -> m [Booking]
+findByRiderIdAndStatus :: KvDbFlow m r => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus (Id personId) statusList = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
 
-findByRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe (Id Booking))
+findByRiderId :: KvDbFlow m r => Id Person -> m (Maybe (Id Booking))
 findByRiderId (Id personId) = do
   bookings <-
     findAllWithKV
@@ -185,17 +185,17 @@ findByRiderId (Id personId) = do
       ]
   return $ listToMaybe $ Domain.id <$> bookings
 
-findAssignedByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
+findAssignedByRiderId :: KvDbFlow m r => Id Person -> m (Maybe Booking)
 findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
 
-findBookingIdAssignedByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> [BookingStatus] -> m (Maybe (Id Booking))
+findBookingIdAssignedByEstimateId :: KvDbFlow m r => Id Estimate -> [BookingStatus] -> m (Maybe (Id Booking))
 findBookingIdAssignedByEstimateId (Id estimateId) statusList = do
   driverOffer <- findAllWithKV [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
   quote <- findAllWithKV [Se.Is BeamQ.driverOfferId $ Se.In $ map (\x -> Just (getId x.id)) driverOffer]
   booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote, Se.Is BeamB.status $ Se.In statusList]
   return $ listToMaybe $ Domain.id <$> booking
 
-updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
+updatePaymentInfo :: KvDbFlow m r => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime
   updateOneWithKV
@@ -207,7 +207,7 @@ updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = 
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updatePaymentUrl :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Text -> m ()
+updatePaymentUrl :: KvDbFlow m r => Id Booking -> Text -> m ()
 updatePaymentUrl bookingId paymentUrl = do
   now <- getCurrentTime
   updateOneWithKV
@@ -217,7 +217,7 @@ updatePaymentUrl bookingId paymentUrl = do
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 -- THIS IS TEMPORARY UNTIL WE HAVE PROPER ADD STOP FEATURE
-updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> m ()
+updateStop :: KvDbFlow m r => Booking -> Maybe DL.Location -> m ()
 updateStop booking mbStopLoc = do
   now <- getCurrentTime
   -- whenJust mbStopLoc $ \stopLoc -> do
@@ -231,13 +231,13 @@ updateStop booking mbStopLoc = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
 
-findAllByPersonIdLimitOffset :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
+findAllByPersonIdLimitOffset :: KvDbFlow m r => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
 findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
   let limit' = fmap fromIntegral $ mlimit <|> Just 100
       offset' = fmap fromIntegral $ moffset <|> Just 0
   findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq personId] (Se.Desc BeamB.createdAt) limit' offset'
 
-findStuckBookings :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings :: KvDbFlow m r => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [Id Booking]
 findStuckBookings merchant moCity bookingIds now =
   do
     let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
@@ -256,7 +256,7 @@ findStuckBookings merchant moCity bookingIds now =
       ]
     <&> (Domain.id <$>)
 
-findAllCancelledBookingIdsByRider :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [Id Booking]
+findAllCancelledBookingIdsByRider :: KvDbFlow m r => Id Person -> m [Id Booking]
 findAllCancelledBookingIdsByRider (Id riderId) =
   findAllWithDb
     [ Se.And
@@ -266,7 +266,7 @@ findAllCancelledBookingIdsByRider (Id riderId) =
     ]
     <&> (Domain.id <$>)
 
-cancelBookings :: (MonadFlow m, EsqDBFlow m r) => [Id Booking] -> UTCTime -> m ()
+cancelBookings :: KvDbFlow m r => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =
   updateWithKV
     [ Se.Set BeamB.status CANCELLED,
@@ -449,7 +449,7 @@ instance ToTType' BeamB.Booking Booking where
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r) => DBBL.BookingLocation -> m DL.Location
+buildLocation :: KvDbFlow m r => DBBL.BookingLocation -> m DL.Location
 buildLocation DBBL.BookingLocation {..} =
   return $
     DL.Location
@@ -457,7 +457,7 @@ buildLocation DBBL.BookingLocation {..} =
         ..
       }
 
-upsertFromLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id DBBL.BookingLocation) -> Text -> Text -> Maybe Text -> m DL.Location
+upsertFromLocationAndMappingForOldData :: KvDbFlow m r => Maybe (Id DBBL.BookingLocation) -> Text -> Text -> Maybe Text -> m DL.Location
 upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantOperatingCityId = do
   loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
   pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
@@ -465,7 +465,7 @@ upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantO
   void $ QL.create pickupLoc >> QLM.create fromLocationMapping
   return pickupLoc
 
-upsertToLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> Text -> Maybe Text -> m ()
+upsertToLocationAndMappingForOldData :: KvDbFlow m r => Maybe Text -> Text -> Text -> Maybe Text -> m ()
 upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantOperatingCityId = do
   toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId >>= fromMaybeM (InternalError "toLocation is null for one way booking")
   dropLoc <- buildLocation toLocation

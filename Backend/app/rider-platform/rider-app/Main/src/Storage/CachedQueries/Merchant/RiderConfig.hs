@@ -28,10 +28,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.RiderConfig as Queries
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RiderConfig -> m ()
+create :: KvDbFlow m r => RiderConfig -> m ()
 create = Queries.create
 
-findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m (Maybe RiderConfig)
+findByMerchantOperatingCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe RiderConfig)
 findByMerchantOperatingCityId id =
   Hedis.safeGet (makeMerchantOperatingCityIdKey id) >>= \case
     Just a -> return a

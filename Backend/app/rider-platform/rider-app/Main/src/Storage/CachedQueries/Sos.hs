@@ -29,7 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Sos as Queries
 
-findByRideId :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe DSos.Sos)
+findByRideId :: KvDbFlow m r => Id Ride -> m (Maybe DSos.Sos)
 findByRideId rideId = do
   Hedis.safeGet (makeIdKey rideId) >>= \case
     Just a -> pure a
