@@ -44,5 +44,6 @@
     <string name="new_ride_available_for_offering">Nouveau trajet disponible pour offrir </string>
     <string name="and">et </string>
     <string name="error_app_not_found">Application introuvable</string>
-    <string name="no_enabled_browser">Aucun navigateur activé trouvé sur votre appareil, veuillez activer ou installer un navigateur </string>
+    <string name="no_enabled_browser">Aucun navigateur activé trouvé sur votre appareil, veuillez activer ou installer un navigateur </string>\
+    <string name="test_request_successful">Test Ride Request Successful!</string>
 </resources>

@@ -32,12 +32,21 @@ helpAndSupportScreen = do
   case action of
     GoBack updatedState -> do
      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
-     App.BackT $ pure App.GoBack
+     App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_HELP_AND_SUPPORT updatedState)
     GoToWriteToUsScreen -> App.BackT $ App.BackPoint <$> pure WRITE_TO_US_SCREEN
-    GoToMyRidesScreen selectedCategory -> App.BackT $ App.BackPoint <$> pure (RIDE_SELECTION_SCREEN selectedCategory)
-    GoToReportIssueChatScreen selectedCategory -> App.BackT $ App.BackPoint <$> pure (REPORT_ISSUE_CHAT_SCREEN selectedCategory)
+    GoToMyRidesScreen selectedCategory updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> pure (RIDE_SELECTION_SCREEN selectedCategory)
+    GoToReportIssueChatScreen selectedCategory updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> pure (REPORT_ISSUE_CHAT_SCREEN selectedCategory)
     IssueListBackPressed updatedState -> App.BackT $ App.BackPoint <$> pure (ISSUE_LIST_GO_BACK_SCREEN updatedState)
     RemoveIssue issueId updatedState  -> App.BackT $ App.BackPoint <$> pure (REMOVE_ISSUE_SCREEN issueId updatedState)
     OngoingIssuesScreen updatedState -> App.BackT $ App.BackPoint <$> pure (ON_GOING_ISSUE_SCREEN updatedState)
     ResolvedIssuesScreen updatedState -> App.BackT $ App.BackPoint <$> pure (RESOLVED_ISSUE_SCREEN updatedState)
-    
+    DriverDummyRideRequest updatedState -> do
+       modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
+       App.BackT $ App.BackPoint <$> pure (DUMMY_RIDE_REQUEST updatedState)
+    GoToProfileScreen updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_PROFILE_SCREEN updatedState)

@@ -115,6 +115,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<TextView> tipsList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private String key = "";
+    private String DUMMY_FROM_LOCATION = "dummyFromLocation";
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     private SheetModel modelForLogs;
     @Override
@@ -137,7 +138,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             String variant = model.getRequestedVehicleVariant();
             String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
             String pickupChargesText = formattedPickupChargesText;
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
+            String searchRequestId = model.getSearchRequestId();
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
                 pickupChargesText = model.getCustomerTip() > 0 ?
                         formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
                         formattedPickupChargesText;
@@ -145,6 +147,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
                 holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
@@ -157,7 +160,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         holder.rideTypeTag.setVisibility(View.VISIBLE);
                     } else {
                         holder.rideTypeTag.setVisibility(View.VISIBLE);
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_non_ac_variant_tag);
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_orange_tag);
                         holder.rideTypeImage.setVisibility(View.GONE);
                     }
                     holder.rideTypeText.setText(variant);
@@ -281,6 +284,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 Handler handler = new Handler(Looper.getMainLooper());
                 executor.execute(() -> {
                     try {
+                        if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)) {
+                            respondDummyRequest();
+                            removeCard(position);
+                            return;
+                        }
                         Boolean isApiSuccess = driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, sheetArrayList.indexOf(model));
                         if (isApiSuccess) {
                             holder.reqButton.setClickable(false);
@@ -323,6 +331,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 Handler handler = new Handler(Looper.getMainLooper());
                 executor.execute(() -> {
                     try {
+                        if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)){
+                            respondDummyRequest();
+                            removeCard(position);
+                            return;
+                        }
                         new Thread(() -> driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), false, sheetArrayList.indexOf(model))).start();
                         isRideAcceptedOrRejected = true;
                         holder.rejectButton.setClickable(false);
@@ -406,6 +419,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             });
         }
     });
+
+    private void respondDummyRequest() {
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.post(() -> {
+            Toast.makeText(getApplicationContext(), getString(R.string.test_request_successful), Toast.LENGTH_SHORT).show();
+        });
+    }
 
     private void removeCard(int position) {
         try {

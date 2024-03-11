@@ -79,6 +79,35 @@
                             </LinearLayout>
 
                             <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:background="@drawable/ic_orange_tag"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:paddingHorizontal="3dp"
+                                android:visibility="gone"
+                                android:id="@+id/testRequestTag"
+                                android:layout_marginEnd="10dp"
+                                android:layout_height="wrap_content">
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ny_ic_test_request_icon_white"
+                                    android:layout_marginLeft="8dp"/>
+                                <TextView
+                                    android:id="@+id/test_request_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="@string/test_request"
+                                    android:lineHeight="20dp"
+                                    android:textColor="@color/colorWhite"
+                                    android:textSize="12dp" />
+                            </LinearLayout>
+
+                            <LinearLayout
                                 android:id="@+id/rideTypeTag"
                                 android:layout_width="wrap_content"
                                 android:layout_height="match_parent"

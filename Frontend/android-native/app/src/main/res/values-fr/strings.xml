@@ -5,6 +5,8 @@
     <string name="request"> Demande </string>
     <string name="decline">Déclin</string>
     <string name="pickup">Ramasser</string>
+    <string name="test_request">Demande de test</string>
+    <string name="test_request_successful">Demande d essai réussie!</string>
     <string name="trip"> Voyage </string>
     <string name="new_ride_assigned"> Nouveau trajet attribué </string>
     <string name="waiting_for_customer_response">En attente de réponse client </string>

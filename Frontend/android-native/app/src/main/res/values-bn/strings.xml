@@ -4,6 +4,8 @@
     <string name="request">অনুরোধ</string>
     <string name="decline">পতন</string>
     <string name="pickup">পিকআপ</string>
+    <string name="test_request">পরীক্ষার অনুরোধ</string>
+    <string name="test_request_successful">টেস্ট রাইডের অনুরোধ সফল!</string>
     <string name="trip">ট্রিপ</string>
     <string name="new_ride_assigned">নতুন যাত্রা নির্ধারিত</string>
     <string name="waiting_for_customer_response">গ্রাহকের প্রতিক্রিয়ার জন্য অপেক্ষা করছি</string>

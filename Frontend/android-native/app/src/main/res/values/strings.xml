@@ -5,6 +5,8 @@
     <string name="request">Request</string>
     <string name="decline">Decline</string>
     <string name="pickup">Pickup</string>
+    <string name="test_request">Test Request</string>
+    <string name="test_request_successful">Test Ride Request Successful!</string>
     <string name="trip">Trip</string>
     <string name="new_ride_assigned">New Ride Assigned</string>
     <string name="ride_cancelled">Ride Cancelled</string>

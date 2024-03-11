@@ -4107,3 +4107,27 @@ instance showReelVideoThresholdConfig :: Show ReelVideoThresholdConfig where sho
 instance standardReelVideoThresholdConfig :: StandardEncode ReelVideoThresholdConfig where standardEncode (ReelVideoThresholdConfig res) = standardEncode res
 instance decodeReelVideoThresholdConfig :: Decode ReelVideoThresholdConfig where decode = defaultDecode
 instance encodeReelVideoThresholdConfig :: Encode ReelVideoThresholdConfig where encode = defaultEncode
+
+---------------------------------------------------- Dummy Ride Request ---------------------------------------------------------------------------
+
+data DummyRideRequestReq = DummyRideRequestReq String
+
+newtype DummyRideRequestResp = DummyRideRequestResp ApiSuccessResult
+
+instance makeDummyRideRequestReq :: RestEndpoint DummyRideRequestReq DummyRideRequestResp where
+    makeRequest reqBody headers = defaultMakeRequest GET (EP.dummyRideRequest "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericDummyRideRequestResp :: Generic DummyRideRequestResp _
+derive instance newtypeDummyRideRequestResp :: Newtype DummyRideRequestResp _
+instance standardDummyRideRequestResp :: StandardEncode DummyRideRequestResp where standardEncode (DummyRideRequestResp id) = standardEncode id
+instance showDummyRideRequestResp :: Show DummyRideRequestResp where show = genericShow
+instance decodeDummyRideRequestsResp :: Decode DummyRideRequestResp where decode = defaultDecode
+instance encodeDummyRideRequestResp :: Encode DummyRideRequestResp where encode = defaultEncode
+
+derive instance genericDummyRideRequestReq :: Generic DummyRideRequestReq _
+instance showDummyRideRequestReq :: Show DummyRideRequestReq where show = genericShow
+instance decodeDummyRideRequestReq :: Decode DummyRideRequestReq where decode = defaultDecode
+instance encodeRDummyRideRequestReq :: Encode DummyRideRequestReq where encode = defaultEncode
+instance standardDummyRideRequestReq :: StandardEncode DummyRideRequestReq where standardEncode body = standardEncode {}

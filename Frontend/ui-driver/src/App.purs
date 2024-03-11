@@ -311,6 +311,9 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | RESOLVED_ISSUE_SCREEN HelpAndSupportScreenState
                                     | ON_GOING_ISSUE_SCREEN HelpAndSupportScreenState
                                     | ISSUE_LIST_GO_BACK_SCREEN HelpAndSupportScreenState
+                                    | DUMMY_RIDE_REQUEST HelpAndSupportScreenState
+                                    | GO_BACK_TO_PROFILE_SCREEN HelpAndSupportScreenState
+                                    | GO_BACK_TO_HELP_AND_SUPPORT HelpAndSupportScreenState
 
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW

@@ -15,26 +15,36 @@
 
 module Screens.HelpAndSupportScreen.ScreenData where
 
-import Screens.Types(HelpAndSupportScreenState)
 import Prelude (class Eq, (<>))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Screens.Types as ST
+import Common.Types.Config (CityConfig)
+import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import Screens as Screen
 
 
-initData :: HelpAndSupportScreenState
+initData :: ST.HelpAndSupportScreenState
 initData = {
   data:  {
           categories: [],
           issueList : [],
           resolvedIssueList : [],
           ongoingIssueList : [],
-          issueListType : ST.HELP_AND_SUPPORT_SCREEN_MODAL
+          issueListType : ST.HELP_AND_SUPPORT_SCREEN_MODAL,
+          timerId : "",
+          goBackTo : Screen.DRIVER_PROFILE_SCREEN,
+          cityConfig : dummyCityConfig
           },
-  props: {isNoRides: false }
+  props: {
+          isNoRides : false,
+          enableDummyPopup : false,
+          startTimerforDummyRides : false,
+          popupType : ST.TEST_RIDE_RECIEVED
+         }
 }
 
-data IssueOptions = OngoingIssues | ResolvedIssues | CallSupportCenter
+data IssueOptions = OngoingIssues | ResolvedIssues | CallSupportCenter | WhatsAppSupport
 
 derive instance genericIssueOptions :: Generic IssueOptions _
 instance eqIssueOptions :: Eq IssueOptions where eq = genericEq
@@ -46,5 +56,6 @@ otherIssueList =
     [
       {menuOptions: OngoingIssues},
       {menuOptions: ResolvedIssues},
-      {menuOptions: CallSupportCenter}
+      {menuOptions: CallSupportCenter},
+      {menuOptions: WhatsAppSupport}
     ]

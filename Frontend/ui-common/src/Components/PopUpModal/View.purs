@@ -95,7 +95,7 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER
-            , visibility state.coverImageConfig.visibility
+            , visibility if state.topTextVisibility then VISIBLE else state.coverImageConfig.visibility
             , cornerRadii state.cornerRadius
             , accessibility DISABLE_DESCENDANT
             , orientation VERTICAL
@@ -234,7 +234,7 @@ view push state =
         , linearLayout
           [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , gravity CENTER
+            , gravity state.secondaryText.gravity
             , margin $ state.secondaryText.margin
             , padding state.secondaryText.padding
             , visibility $ state.secondaryText.visibility

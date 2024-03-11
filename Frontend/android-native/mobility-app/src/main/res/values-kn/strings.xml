@@ -58,5 +58,5 @@
     <string name="safety_deviation_alert">ನಾವು ನಿನ್ನ ಸವಾರಿ ವೇಗದ ರೂಟ್ ಯಲ್ಲಿ ಇದ್ದೇವೆ ಎಂದು ಗುರುತಿಸಿದ್ದೇವೆ. ನೀವು ನಿಮ್ಮ ಪ್ರಯಾಣದಲ್ಲಿ ಸುರಕ್ಷಿತವಾಗಿದ್ದೀರಾ?</string>
     <string name="everything_okay">ಎಲ್ಲಾ ಸರಿಯಾಗಿದೆಯೇ?</string>
     <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">ನಾವು ನಿನ್ನ ಚಾಲಕನು ಸ್ವಲ್ಪ ಹೊಡೆಯುತ್ತಿಲ್ಲವೆನ್ನುತ್ತಿದ್ದೇವೆ. ನೀವು ನಿಜಾಯಿತು ಸುರಕ್ಷಿತವಾಗಿರುತ್ತಿದ್ದೀರಾ?</string>
-
+    <string name="test_request_successful">ಟೆಸ್ಟ್ ರೈಡ್ ವಿನಂತಿ ಯಶಸ್ವಿಯಾಗಿದೆ!</string>
 </resources>

@@ -5,6 +5,8 @@
     <string name="request">கோரிக்கை</string>
     <string name="decline">நிராகரி</string>
     <string name="pickup">பிக்கப்</string>
+    <string name="test_request">சோதனைச் சவாரி</string>
+    <string name="test_request_successful">சோதனைச் சவாரி வெற்றி!</string>
     <string name="trip">பயணம்</string>
     <string name="new_ride_assigned">புதிய சவாரி ஒதுக்கப்பட்டது</string>
     <string name="waiting_for_customer_response">வாடிக்கையாளர் பதிலுக்காக காத்திருக்கிறது</string>
