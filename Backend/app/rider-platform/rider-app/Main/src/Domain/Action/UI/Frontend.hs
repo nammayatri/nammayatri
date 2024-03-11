@@ -23,6 +23,8 @@ module Domain.Action.UI.Frontend
 where
 
 import qualified Data.HashMap.Strict as HM
+import Domain.Action.UI.Quote
+import Domain.Types.CancellationReason
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
@@ -94,13 +96,13 @@ getPersonFlowStatus personId mIsPolling = do
           _ <- QPFS.updateStatus personId DPFS.IDLE
           return $ GetPersonFlowStatusRes (Just personStatus) DPFS.IDLE isValueAddNp
 
-notifyEvent :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
+notifyEvent :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
 notifyEvent personId req = do
   _ <- case req.event of
     RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestByRiderId personId
-      whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_EXISTS")
+      whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
       QPFS.updateStatus personId DPFS.IDLE
   QPFS.clearCache personId
   pure APISuccess.Success

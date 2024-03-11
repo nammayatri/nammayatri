@@ -52,6 +52,18 @@ getLatestStartByEntityId entityId =
         ]
     ]
 
+getLatestEndByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
+getLatestEndByEntityId entityId =
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamLM.entityId $ Se.Eq entityId,
+          Se.Is BeamLM.order $ Se.Not $ Se.Eq 0,
+          Se.Is BeamLM.version $ Se.Eq latestTag
+        ]
+    ]
+    (Just (Se.Desc BeamLM.createdAt))
+    <&> listToMaybe
+
 findAllByEntityIdAndOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m [LocationMapping]
 findAllByEntityIdAndOrder entityId order =
   findAllWithKVAndConditionalDB

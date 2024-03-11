@@ -373,7 +373,7 @@ bookingCancelledReqHandler ::
   BookingCancelledReq ->
   m ()
 bookingCancelledReqHandler BookingCancelledReq {..} = do
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
   mbRide <- QRide.findActiveByRBId booking.id
   let isRideCancellable = maybe False (\ride -> ride.status `notElem` [DRide.INPROGRESS, DRide.CANCELLED]) mbRide
       bookingAlreadyCancelled = booking.status == DRB.CANCELLED

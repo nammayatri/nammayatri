@@ -18,11 +18,17 @@ module Domain.Action.UI.Quote
     OfferRes (..),
     getQuotes,
     estimateBuildLockKey,
+    processActiveBooking,
   )
 where
 
+import qualified Beckn.ACL.Cancel as CancelACL
 import Data.Char (toLower)
+import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Domain.Action.UI.Cancel as DCancel
+import Domain.Types.Booking
+import Domain.Types.CancellationReason
 import Domain.Types.Estimate (EstimateAPIEntity)
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Location as DL
@@ -41,6 +47,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Kernel.Utils.Schema as S
+import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.PublicTransport as PublicTransport
@@ -50,6 +57,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 
@@ -82,11 +90,11 @@ instance ToSchema OfferRes where
 estimateBuildLockKey :: Text -> Text
 estimateBuildLockKey searchReqid = "Customer:Estimate:Build:" <> searchReqid
 
-getQuotes :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
+getQuotes :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   activeBooking <- runInReplica $ QBooking.findLatestByRiderId searchRequest.riderId
-  whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
+  whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
   logDebug $ "search Request is : " <> show searchRequest
   let lockKey = estimateBuildLockKey (show searchRequestId)
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
@@ -101,6 +109,26 @@ getQuotes searchRequestId = do
           estimates,
           paymentMethods
         }
+
+processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => Booking -> CancellationStage -> m ()
+processActiveBooking booking cancellationStage = do
+  mbRide <- QRide.findActiveByRBId booking.id
+  case mbRide of
+    Just _ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
+    Nothing -> do
+      now <- getCurrentTime
+      if addUTCTime 900 booking.startTime >= now
+        then throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT") -- 15 mins buffer
+        else do
+          let cancelReq =
+                DCancel.CancelReq
+                  { reasonCode = CancellationReasonCode "Active booking",
+                    reasonStage = cancellationStage,
+                    additionalInfo = Nothing
+                  }
+          fork "active booking processing" $ do
+            dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
+            void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
 
 getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do

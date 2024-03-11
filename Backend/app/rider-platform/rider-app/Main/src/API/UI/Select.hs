@@ -34,6 +34,7 @@ import qualified Beckn.ACL.Select as ACL
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
+import Domain.Types.Booking.Type
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
@@ -127,7 +128,7 @@ selectResult (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . 
 
 cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
 cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  activeBooking <- B.runInReplica $ QRB.findLatestByRiderId personId
+  activeBooking <- B.runInReplica $ QRB.findBookingIdAssignedByEstimateId estimateId activeBookingStatus
   -- activeBooking <- QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
   if isJust activeBooking
     then do

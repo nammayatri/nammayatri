@@ -188,7 +188,7 @@ selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
     when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
-    bookingId <- MaybeT . runInReplica $ QBooking.findBookingIdAssignedByEstimateId estimate.id
+    bookingId <- MaybeT . runInReplica $ QBooking.findBookingIdAssignedByEstimateId estimate.id [TRIP_ASSIGNED]
     return $ QuotesResultResponse {bookingId = Just bookingId, selectedQuotes = Nothing}
   case res of
     Just r -> pure r
