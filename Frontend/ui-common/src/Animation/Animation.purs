@@ -378,8 +378,16 @@ scaleYAnimWithDelay delay =
     , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.94 0.94 1.0 1.0
     ] true
 
-triggerOnAnimationEnd :: Boolean -> PrestoAnim.Animation
-triggerOnAnimationEnd ifAnim =
+triggerOnAnimationEnd :: Boolean -> Int -> PrestoAnim.Animation
+triggerOnAnimationEnd ifAnim duration =
   PrestoAnim.Animation
-    [ PrestoAnim.duration 250
+    [ PrestoAnim.duration duration
     ] ifAnim
+
+translateYScreenAnimation :: forall w. PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
+translateYScreenAnimation screen =
+    PrestoAnim.entryAnimationSetForward [translateYAnim animConfig {fromY = 800, toY = 0, ifAnim = true, duration = 500}]
+    $ PrestoAnim.exitAnimationSetForward [translateYAnim animConfig {fromY = 0, toY = 800, ifAnim = true, duration = 500}]
+    $ PrestoAnim.entryAnimationSetBackward [translateYAnim animConfig {fromY = 800, toY = 0, ifAnim = true, duration = 500}]
+    $ PrestoAnim.exitAnimationSetBackward [translateYAnim animConfig {fromY = 0, toY = 800, ifAnim = true, duration = 500}]
+      screen

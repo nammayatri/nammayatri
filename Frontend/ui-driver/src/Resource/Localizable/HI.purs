@@ -1305,3 +1305,6 @@ getHI stringKey =
         ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "सवारी प्राप्त करने के लिए लोकेशन अनुमति सक्षम करें"
         ENABLE_LOC_PER_FROM_SETTINGS -> "कृपया नॉन-स्टॉप सवारी प्राप्त करने के लिए सेटिंग्स से लोकेशन अनुमतियाँ सक्षम करें"
         ENABLE_PERMISSION_STR -> "अनुमति सक्षम करें"
+        TO_GET_YOU_RIDES -> "आपको सवारी दिलाने के लिए, हमें आपके डिवाइस स्थान की आवश्यकता है।"
+        ALLOW -> "अनुमति दें"
+        PERMISSIONS_REQUIRED -> "अनुमतियाँ आवश्यक"

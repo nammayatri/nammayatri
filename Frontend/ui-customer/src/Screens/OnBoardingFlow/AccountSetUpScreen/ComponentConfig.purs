@@ -24,6 +24,7 @@ import Data.Maybe (Maybe(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
+import Helpers.Utils as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((/=), (==), negate)
@@ -35,6 +36,7 @@ import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
+import Components.StepsHeaderModel as SHM
 
 primaryButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
 primaryButtonConfig state = PrimaryButton.config
@@ -122,4 +124,12 @@ getRadioButtonConfig index item state = GenericRadioButton.config {
   }
   , isSelected = index == state.data.disabilityOptions.activeIndex
   , id = index
+}
+
+stepsHeaderData :: ST.AccountSetUpScreenState -> SHM.StepsHeaderModelState
+stepsHeaderData state = SHM.config{
+    activeIndex = 2,
+    textArray = [(getString LETS_GET_YOU_TRIP_READY), (getString GOT_AN_OTP), (getString JUST_ONE_LAST_THING)],
+    backArrowVisibility = HU.showCarouselScreen FunctionCall,
+    primaryBackground = state.data.config.primaryBackground
 }

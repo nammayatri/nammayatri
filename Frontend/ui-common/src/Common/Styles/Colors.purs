@@ -70,6 +70,9 @@ white40Alpha = "#66FFFFFF"
 white27 ::Color
 white27 = "#45FCFCFC"
 
+white400 :: Color
+white400 = "#66ffffff"
+
 white300 :: Color
 white300 = "#FDD56B"
 

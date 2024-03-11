@@ -67,7 +67,7 @@ import Log (printLog)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shimmerFrameLayout)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -217,6 +217,7 @@ screen initialState (GlobalState globalState) =
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 pure unit
+          void $ launchAff $ EHC.flowRunner defaultGlobalState $ doAff do liftEffect $ push $ CheckPermissionsAsync false
           runEffectFn1 consumeBP unit
           pure $ pure unit
         )
@@ -681,7 +682,8 @@ offlineView push state =
   , height MATCH_PARENT
   , gravity BOTTOM
   , background Color.black9000
-  ][ frameLayout
+  , orientation VERTICAL
+  ] $ [ frameLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       ][ linearLayout
@@ -752,7 +754,54 @@ offlineView push state =
           ]
       ]
     ]
-  ]
+  ] <> case state.props.missingPermission of
+        Just number -> [permissionRequired push number state]
+        Nothing -> []
+
+permissionRequired :: forall w . (Action -> Effect Unit) -> Int -> HomeScreenState -> PrestoDOM (Effect Unit) w
+permissionRequired push length state = 
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
+    relativeLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    ] $ [ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , background Color.red900
+          , gravity CENTER_VERTICAL
+          , padding $ Padding 16 8 16 8
+          , id $ getNewIDWithTag "PremissionRequiredLayout"
+          , onClick push $ const $ CheckPermissionsAsync true
+          ][  imageView
+              [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_missing_permissions"
+              , height $ V 40
+              , width $ V 40
+              , margin $ MarginLeft 8
+              ]
+            , textView $
+              [ text $ (getString PERMISSIONS_REQUIRED) <> " (" <> show length <> ")"
+              , height WRAP_CONTENT
+              , color Color.white900
+              , weight 1.0
+              , margin $ MarginLeft 8
+              ] <> FontStyle.body1 TypoGraphy
+            , imageView
+              [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_right_white"
+              , height $ V 20
+              , width $ V 20
+              ]
+          ]
+    ] <> if state.props.enablePermissionAnim then
+          [ PrestoAnim.animationSet [ Anim.triggerOnAnimationEnd true 700] $
+            shimmerFrameLayout
+            [ height $ V layoutHeight
+            , width MATCH_PARENT
+            , background Color.white400
+            , onAnimationEnd push $ const RemoveAnim
+            ][]
+          ] else []
+
+    where layoutHeight = (runFn1 JB.getLayoutBounds $ getNewIDWithTag "PremissionRequiredLayout").height
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 popupModelSilentAsk push state =

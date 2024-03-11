@@ -45,7 +45,7 @@ view push config =
         , gravity CENTER
         ]
         [ PrestoAnim.animationSet
-          [ Anim.triggerOnAnimationEnd true] $
+          [ Anim.triggerOnAnimationEnd true 250] $
           linearLayout
             ([ height config.height
             , cornerRadius config.cornerRadius
