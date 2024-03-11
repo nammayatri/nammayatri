@@ -90,8 +90,8 @@ getDriverPoolConfigFromDB merchantOpCityId vehicle tripCategory mbDist = do
 
 getConfigFromCACStrict :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> Maybe Text -> m DriverPoolConfig
 getConfigFromCACStrict merchantOpCityId mbvt tripCategory dist srId = do
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "variant", DA.String (Text.pack (show mbvt))), (pack "tripCategory", DA.String (Text.pack (show tripCategory))), (pack "tripDistance", DA.String (Text.pack (show dist)))])
-  tenant <- liftIO (SE.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "variant", DA.String (Text.pack (show mbvt))), (pack "tripCategory", DA.String (Text.pack (show tripCategory))), (pack "tripDistance", DA.String (Text.pack (show dist)))]
+  tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   gen <- newStdGen
   let (toss', _) = randomR (1, 100) gen :: (Int, StdGen)
   toss <-
@@ -106,39 +106,44 @@ getConfigFromCACStrict merchantOpCityId mbvt tripCategory dist srId = do
       )
       srId
   config <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
-  let res' = (config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
-      res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverPoolConfig)
+  let res' = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (Text.isPrefixOf "driverPoolConfig:" . DAK.toText))
+      res = DA.Object (DAKM.fromList res') ^? _JSON :: Maybe DriverPoolConfig
   maybe (error "error in fetching the context value driverPoolConfig: ") pure res
 
 helper :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> Maybe Text -> m DriverPoolConfig
 helper merchantOpCityId mbvt tripCategory dist srId = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
-  tenant <- liftIO (SE.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   config <- KSQS.findById' $ Text.pack tenant
   _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getConfigFromCACStrict merchantOpCityId mbvt tripCategory dist srId
 
 getDriverPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> Maybe Text -> m DriverPoolConfig
 getDriverPoolConfigFromCAC merchantOpCityId mbvt tripCategory dist srId = do
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "variant", DA.String (Text.pack (show mbvt))), (pack "tripCategory", DA.String (Text.pack (show tripCategory))), (pack "tripDistance", DA.String (Text.pack (show dist)))])
-  tenant <- liftIO (SE.lookupEnv "TENANT") >>= pure . fromMaybe "atlas_driver_offer_bpp_v2"
+  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "variant", DA.String (Text.pack (show mbvt))), (pack "tripCategory", DA.String (Text.pack (show tripCategory))), (pack "tripDistance", DA.String (Text.pack (show dist)))]
+  tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
   gen <- newStdGen
   let (toss', _) = randomR (1, 100) gen :: (Int, StdGen)
   toss <-
     maybe
       (pure toss')
       ( \srId' -> do
-          Hedis.withCrossAppRedis (Hedis.safeGet (makeCACDriverPoolConfigKey srId')) >>= \case
-            Just (a :: Int) -> pure a
-            Nothing -> do
-              _ <- cacheToss srId' toss'
-              pure toss'
+          Hedis.withCrossAppRedis
+            ( Hedis.safeGet
+                ( srId'
+                )
+            )
+            >>= \case
+              Just (a :: Int) -> pure a
+              Nothing -> do
+                _ <- cacheToss srId' toss'
+                pure toss'
       )
       srId
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
-  let res' = (contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (\k -> Text.isPrefixOf "driverPoolConfig:" (DAK.toText k))))
-      res = (DA.Object $ DAKM.fromList res') ^? _JSON :: (Maybe DriverPoolConfig)
+  let res' = contextValue ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "driverPoolConfig:") (itraversed . indices (Text.isPrefixOf "driverPoolConfig:" . DAK.toText))
+      res = DA.Object (DAKM.fromList res') ^? _JSON :: (Maybe DriverPoolConfig)
   maybe (helper merchantOpCityId mbvt tripCategory dist srId) pure res
 
 getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Variant.Variant -> DTC.TripCategory -> Meters -> Maybe Text -> m DriverPoolConfig
@@ -171,9 +176,9 @@ getDriverPoolConfig ::
 getDriverPoolConfig merchantOpCityId vehicle tripCategory mbDist srId = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
-  case "driver_pool_config" `GL.elem` useCACConfig of
-    False -> getDriverPoolConfigFromDB merchantOpCityId vehicle tripCategory mbDist
-    True -> getConfigFromInMemory merchantOpCityId vehicle tripCategory (fromMaybe 0 mbDist) srId
+  if "driver_pool_config" `GL.elem` useCACConfig
+    then getConfigFromInMemory merchantOpCityId vehicle tripCategory (fromMaybe 0 mbDist) srId
+    else getDriverPoolConfigFromDB merchantOpCityId vehicle tripCategory mbDist
 
 filterByDistAndDveh :: Maybe Variant.Variant -> Text -> Meters -> DriverPoolConfig -> Bool
 filterByDistAndDveh vehicle tripCategory dist cfg =
