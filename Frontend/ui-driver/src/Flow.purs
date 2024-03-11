@@ -334,6 +334,7 @@ loginFlow = do
 
 enterOTPFlow :: FlowBT String Unit
 enterOTPFlow = do
+  let _ = spy "LOG_DEBUG enterOTPFlow " "Inside enterOTPFlow"
   action <- UI.enterOTP
   logField_ <- lift $ lift $ getLogFields
   case action of
@@ -341,6 +342,7 @@ enterOTPFlow = do
       void $ lift $ lift $ loaderText (getString SENDING_OTP) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
       (VerifyTokenResp resp) <- Remote.verifyTokenBT (makeVerifyOTPReq updatedState.data.otp) updatedState.data.tokenId
+      let _ = spy "LOG_DEBUG enterOTPFlow : VerifyTokenResp" resp
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_driver_verify_otp"
       void $ pure $ metaLogEvent "ny_driver_verify_otp"
       let driverId = ((resp.person)^. _id)
@@ -358,6 +360,7 @@ enterOTPFlow = do
       else pure unit
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
       void $ lift $ lift $ toggleLoader false
+      let _ = spy "LOG_DEBUG enterOTPFlow " updateDriverResp
       getDriverInfoFlow Nothing Nothing true
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
@@ -368,6 +371,7 @@ enterOTPFlow = do
 
 getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Boolean -> FlowBT String Unit
 getDriverInfoFlow event activeRideResp updateShowSubscription = do
+  let _ = spy "LOG_DEBUG getDriverInfoFlow " "Inside getDriverInfoFlow"
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
   appConfig <- getAppConfigFlowBT Constants.appConfig
   case getDriverInfoApiResp of
@@ -382,7 +386,12 @@ getDriverInfoFlow event activeRideResp updateShowSubscription = do
         else
           pure unit
         setValueToLocalStore IS_DRIVER_ENABLED "true"
-        when updateShowSubscription $ updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appConfig
+        let _ = spy "LOG_DEBUG getDriverInfoFlow " "Before updateSubscriptionForVehicleVariant"
+        let _ = spy "LOG_DEBUG getDriverInfoFlow : updateShowSubscription" updateShowSubscription
+        if updateShowSubscription 
+          then updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appConfig
+          else pure unit
+        let _ = spy "LOG_DEBUG getDriverInfoFlow " "After updateSubscriptionForVehicleVariant"
         (GlobalState allState) <- getState -- TODO:: Temp fix - need to work on improving caching more using SQLite
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
         updateDriverDataToStates
@@ -397,12 +406,15 @@ getDriverInfoFlow event activeRideResp updateShowSubscription = do
             modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
             permissionsScreenFlow event activeRideResp
         else do
+          let _ = spy "LOG_DEBUG getDriverInfoFlow " "Inside else, driver disabled"
           -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
           setValueToLocalStore IS_DRIVER_ENABLED "false"
           if getDriverInfoResp.verified then do
+            let _ = spy "LOG_DEBUG getDriverInfoFlow " "Inside else, driver verified"
             setValueToLocalStore IS_DRIVER_VERIFIED "true"
           else do
             setValueToLocalStore IS_DRIVER_VERIFIED "false"
+            let _ = spy "LOG_DEBUG getDriverInfoFlow " "Inside else, driver not verified"
             modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen{data{phoneNumber = fromMaybe "" getDriverInfoResp.mobileNumber}} )
           onBoardingFlow
     Left errorPayload -> do
@@ -428,10 +440,13 @@ updateSubscriptionForVehicleVariant :: GetDriverInfoResp -> AppConfig -> FlowBT 
 updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appConfig = do
   let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       vehicleVariant = getDriverInfoResp.linkedVehicle
+      _ = spy "LOG_DEBUG updateSubscriptionForVehicleVariant " getDriverInfoResp
+      _ = spy "LOG_DEBUG updateSubscriptionForVehicleVariant " appConfig
   if cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription then do
     case vehicleVariant of
       Just (API.Vehicle vehicle) -> do
         let category = getCategoryFromVariant vehicle.variant
+            _ = spy "LOG_DEBUG updateSubscriptionForVehicleVariant " category
         case category of
           Just categoryValue -> do
             setValueToLocalStore VEHICLE_CATEGORY $ show categoryValue
@@ -442,18 +457,22 @@ updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appCon
                   "false"
           Nothing -> do
             void $ lift $ lift $ fork callGetAllRcData
+            let _ = spy "LOG_DEBUG updateSubscriptionForVehicleVariant " "Inside Nothing of API.Vehicle"
             pure unit
       Nothing -> do
         void $ lift $ lift $ fork callGetAllRcData
+        let _ = spy "LOG_DEBUG updateSubscriptionForVehicleVariant " "Inside Nothing"
         pure unit
   else do
     setValueToLocalStore SHOW_SUBSCRIPTIONS (show cityConfig.showSubscriptions)
     where 
     callGetAllRcData :: Flow GlobalState Unit
     callGetAllRcData = do
+      let _ = spy "LOG_DEBUG callGetAllRcData " "Inside callGetAllRcData"
       response <- Remote.getAllRcData (API.GetAllRcDataReq)
       case response of
         Right (API.GetAllRcDataResp getAllRcsDataResp) -> do
+            let _ = spy "LOG_DEBUG callGetAllRcData " getAllRcsDataResp
             let isCabVariant = foldl (\acc (API.GetAllRcDataRecords item) -> do
                     let API.VehicleDetails details = item.rcDetails
                     if details.vehicleVariant == Just "AUTO_RICKSHAW" then false
@@ -463,10 +482,13 @@ updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appCon
               JB.setKeyInSharedPrefKeys "SHOW_SUBSCRIPTIONS" "false"
             else do
               JB.setKeyInSharedPrefKeys "SHOW_SUBSCRIPTIONS" "true"
-        Left _ -> pure unit
+        Left _ -> do
+          let _ = spy "LOG_DEBUG callGetAllRcData " "Error in fetching all rc data"
+          pure unit
 
 handleDeepLinksFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> FlowBT String Unit
 handleDeepLinksFlow event activeRideResp = do
+  let _ = spy "LOG_DEBUG handleDeepLinksFlow " "Inside handleDeepLinksFlow"
   case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
         Just e -> 
           case e.data of
@@ -535,6 +557,7 @@ checkStatusAndStartLocationUpdates = do
 onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
   logField_ <- lift $ lift $ getLogFields
+  let _ = spy "LOG_DEBUG onBoardingFlow " "Inside onBoardingFlow"
   void $ pure $ hideKeyboardOnNavigation true
   config <- getAppConfigFlowBT Constants.appConfig
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
@@ -1497,6 +1520,7 @@ writeToUsFlow = do
 
 permissionsScreenFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> FlowBT String Unit
 permissionsScreenFlow event activeRideResp = do
+  let _ = spy "LOG_DEBUG" "permissionsScreenFlow"
   logField_ <- lift $ lift $ getLogFields
   liftFlowBT hideSplash
   void $ pure $ hideKeyboardOnNavigation true
@@ -1902,6 +1926,7 @@ onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
+  let _ = spy "LOG_DEBUG" "homeScreenFlow"
   logField_ <- lift $ lift $ getLogFields
   Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
     void $ pure $ cleverTapSetLocation unit

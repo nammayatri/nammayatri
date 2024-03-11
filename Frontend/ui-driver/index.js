@@ -435,8 +435,9 @@ if (typeof window.JOS != "undefined") {
 
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 
-if (sessionInfo.package_name.includes("debug")) {
+if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
   logger.enableLogger();
-} else {
+}else{
   logger.disableLogger();
+  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
 }
