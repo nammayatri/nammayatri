@@ -31,7 +31,6 @@ import qualified Data.Aeson as DA
 import Data.Aeson.Key as DAK
 import Data.Aeson.KeyMap as DAKM
 import Data.Aeson.Lens
-import Data.Aeson.Types as DAT
 import Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as Text

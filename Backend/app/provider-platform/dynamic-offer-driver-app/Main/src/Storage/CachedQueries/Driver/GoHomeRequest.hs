@@ -30,7 +30,7 @@ makeGoHomeReqKey = pack . ("CachedQueries:GoHomeRequest-driverId:" <>) . show
 
 getDriverGoHomeRequestInfo :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Maybe GoHomeConfig -> m CachedGoHomeRequest
 getDriverGoHomeRequestInfo driverId merchantOpCityId goHomeCfg = do
-  ghCfg <- maybe (CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId)) return goHomeCfg
+  ghCfg <- maybe (CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId)) return goHomeCfg
   let initCnt = ghCfg.startCnt
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let ghkey = makeGoHomeReqKey driverId
@@ -138,7 +138,7 @@ increaseDriverGoHomeRequestCount merchantOpCityId driverId = do
 
 setDriverGoHomeIsOnRideStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Bool -> m (Maybe (Id DriverGoHomeRequest))
 setDriverGoHomeIsOnRideStatus driverId merchantOpCityId status = do
-  ghCfg <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId)
+  ghCfg <- CQGHC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId)
   if ghCfg.enableGoHome
     then do
       currTime <- getLocalCurrentTime =<< ((CQTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))

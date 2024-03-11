@@ -25,10 +25,10 @@ import qualified Data.Aeson.KeyMap as DAKM
 import Data.Aeson.Lens
 import Data.HashMap.Strict as HashMap
 import Data.Text as Text
+import qualified Domain.Types.Cac as DTC
 import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
-import Domain.Types.Person as DP
-import EulerHS.Language as L (getOption)
+import EulerHS.Language as L (getOption, setOption)
 import qualified GHC.List as GL
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -88,45 +88,40 @@ getGoHomeConfigFromDB id = do
       Hedis.setExp (makeGoHomeKey id) cfg expTime
       return cfg
 
-findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe (Id DP.Person) -> m GoHomeConfig
-findByMerchantOpCityId id (Just personId) = do
+findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> m GoHomeConfig
+findByMerchantOpCityId id stickyId = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
   if "go_home_config" `GL.elem` useCACConfig
     then do
       tenant <- liftIO $ Se.lookupEnv "TENANT"
       isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
-      if isExp
-        then do
-          Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACGoHomeConfigKey personId) >>= \case
+      case isExp of
+        True -> do
+          Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACGoHomeConfigKey stickyId) >>= \case
             (Just (a :: Int)) -> do
               getGoHomeConfigFromCAC id a
             Nothing -> do
               gen <- newStdGen
               let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
               logDebug $ "the toss value is for goHomeConfig " <> show toss
-              _ <- cacheToss personId toss
+              _ <- cacheToss stickyId toss
               getGoHomeConfigFromCAC id toss
-        else getGoHomeConfigFromCAC id 1
-    else getGoHomeConfigFromDB id
-findByMerchantOpCityId id Nothing = do
-  systemConfigs <- L.getOption KBT.Tables
-  let useCACConfig = maybe [] (.useCAC) systemConfigs
-  if "go_home_config" `GL.elem` useCACConfig
-    then do
-      gen <- newStdGen
-      let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-      logDebug $ "the toss value is for goHomeConfig " <> show toss
-      getGoHomeConfigFromCAC id toss
-    else getGoHomeConfigFromDB id
+        False -> getConfigsFromMemory id
+  else getGoHomeConfigFromDB id
+
+getConfigsFromMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
+getConfigsFromMemory id = do
+  ghc <- L.getOption DTC.GoHomeConfig
+  maybe (L.setOption DTC.GoHomeConfig /=<< getGoHomeConfigFromCAC id 1) pure ghc
 
 makeGoHomeKey :: Id MerchantOperatingCity -> Text
 makeGoHomeKey id = "driver-offer:CachedQueries:GoHomeConfig:MerchantOpCityId-" <> id.getId
 
-cacheToss :: (CacheFlow m r) => Id Person -> Int -> m ()
-cacheToss personId toss = do
+cacheToss :: (CacheFlow m r) => Maybe Text -> Int -> m ()
+cacheToss stickyId toss = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeCACGoHomeConfigKey personId) toss expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeCACGoHomeConfigKey stickyId) toss expTime
 
-makeCACGoHomeConfigKey :: Id Person -> Text
-makeCACGoHomeConfigKey id = "driver-offer:CAC:CachedQueries:GoHomeConfig:PersonId-" <> id.getId
+makeCACGoHomeConfigKey :: Maybe Text -> Text
+makeCACGoHomeConfigKey id = "driver-offer:CAC:CachedQueries-" <> show id

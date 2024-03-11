@@ -273,7 +273,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
       pure $ (getCoordinates toLocation, Nothing)
 
-  goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just driverId)
+  goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId)
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
 
   homeLocationReached' <-

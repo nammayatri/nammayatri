@@ -129,11 +129,16 @@ getDriverPoolConfigFromCAC merchantOpCityId mbvt tripCategory dist srId = do
     maybe
       (pure toss')
       ( \srId' -> do
-          Hedis.withCrossAppRedis (Hedis.safeGet (makeCACDriverPoolConfigKey srId')) >>= \case
-            Just (a :: Int) -> pure a
-            Nothing -> do
-              _ <- cacheToss srId' toss'
-              pure toss'
+          Hedis.withCrossAppRedis
+            ( Hedis.safeGet
+                ( srId'
+                )
+            )
+            >>= \case
+              Just (a :: Int) -> pure a
+              Nothing -> do
+                _ <- cacheToss srId' toss'
+                pure toss'
       )
       srId
   contextValue <- liftIO $ CM.evalExperimentAsString tenant dpcCond toss
