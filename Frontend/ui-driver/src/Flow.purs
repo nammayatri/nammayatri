@@ -3381,6 +3381,7 @@ driverEarningsFlow = do
     REFRESH_EARNINGS_SCREEN state -> driverEarningsFlow
     EARNINGS_HISTORY _ -> driverEarningsFlow
     GOTO_PAYMENT_HISTORY_FROM_COINS -> paymentHistoryFlow
+    GOTO_MY_PLAN_FROM_COINS -> updateAvailableAppsAndGoToSubs
     GOTO_TRIP_DETAILS  selectedCard -> do
       sourceMod <- translateString selectedCard.source 400
       destinationMod <- translateString selectedCard.destination 400

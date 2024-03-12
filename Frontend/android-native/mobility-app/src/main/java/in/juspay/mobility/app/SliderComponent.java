@@ -56,8 +56,8 @@ public class SliderComponent {
             SeekBar seekBar = new SeekBar(context);
             ShapeDrawable thumbDrawable = new ShapeDrawable(new OvalShape());
             thumbDrawable.getPaint().setColor(Color.parseColor("#2194FF"));
-            thumbDrawable.setIntrinsicHeight(dpToPx(context, 20));
-            thumbDrawable.setIntrinsicWidth(dpToPx(context, 20));
+            thumbDrawable.setIntrinsicHeight(dpToPx(context, 25));
+            thumbDrawable.setIntrinsicWidth(dpToPx(context, 25));
             seekBar.setThumb(thumbDrawable);
             LayerDrawable progressDrawable = (LayerDrawable) seekBar.getProgressDrawable().mutate();
             Drawable backgroundDrawable = progressDrawable.findDrawableByLayerId(android.R.id.background);
@@ -88,7 +88,7 @@ public class SliderComponent {
             tooltipLayout.setLayoutParams(new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT));
-            tooltipLayout.setPadding(22, 16, 22, 16);
+            tooltipLayout.setPadding(22, 10, 22, 13);
             tooltipLayout.setGravity(Gravity.CENTER_VERTICAL);
             TextView prefTextView = new TextView(context);
             prefTextView.setLayoutParams(new LinearLayout.LayoutParams(

@@ -12,7 +12,7 @@ window.getMerchantConfig = function () {
     "USER_APP_LINK": "https://yatricustomer.page.link/pcJb",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
     "SPECIAL_ZONE_OTP_VIEW": "false",
-    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CORPORATE_ADDRESS", "CORPORATE_ADDRESS_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS", "REGISTERED_ADDRESS_DESCRIPTION", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL", "REFERRED_DRIVERS_INFO", "REFERRED_CUSTOMERS_INFO", "DOWNLOAD_NAMMA_YATRI"],
+    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CORPORATE_ADDRESS", "CORPORATE_ADDRESS_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS", "REGISTERED_ADDRESS_DESCRIPTION", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL", "REFERRED_DRIVERS_INFO", "REFERRED_CUSTOMERS_INFO", "DOWNLOAD_NAMMA_YATRI", "SHARE_NAMMA_YATRI"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -58,6 +58,7 @@ window.getMerchantConfig = function () {
       "DOWNLOAD_NAMMA_YATRI": "Download Yatri",
       "REFERRED_DRIVERS_INFO" : "Referred Drivers who have registered on Yatri",
       "REFERRED_CUSTOMERS_INFO" : "Referred Customers who have registered on Yatri",
+      "SHARE_NAMMA_YATRI" : "Share Yatri"
     },
     "malayalamStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "ആപ്പ് അടച്ചിരിക്കുമ്പോഴും ഉപയോഗത്തിലില്ലെങ്കിലും ഡ്രൈവർ നിലവിലെ ലൊക്കേഷൻ നിരീക്ഷിക്കാൻ നിങ്ങളുടെ ലൊക്കേഷൻ പങ്കിടുന്നത് പ്രവർത്തനക്ഷമമാക്കാൻ യാത്രി പങ്കാളി ലൊക്കേഷൻ ഡാറ്റ ശേഖരിക്കുന്നു.",
@@ -76,6 +77,7 @@ window.getMerchantConfig = function () {
       "DOWNLOAD_NAMMA_YATRI": "യാത്രാ ഡൗൺലോഡുചെയ്യുക",
       "REFERRED_DRIVERS_INFO": "യാത്രിയിൽ രജിസ്റ്റർ ചെയ്ത പരാമർശിച്ച ഡ്രൈവേഴ്സ്",
       "REFERRED_CUSTOMERS_INFO": "യാത്രിയിൽ രജിസ്റ്റർ ചെയ്ത പരാമർശിച്ച കസ്റ്റമേഴ്സ്",
+      "SHARE_NAMMA_YATRI" : "യാത്രാ പങ്കിടുക"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"

@@ -250,6 +250,7 @@ data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS DriverEarni
                                    | REFRESH_EARNINGS_SCREEN DriverEarningsScreenState
                                    | EARNINGS_HISTORY DriverEarningsScreenState
                                    | GOTO_PAYMENT_HISTORY_FROM_COINS
+                                   | GOTO_MY_PLAN_FROM_COINS
                                    | GOTO_TRIP_DETAILS IndividualRideCardState
                                    | LOAD_MORE_HISTORY DriverEarningsScreenState
 

@@ -36,7 +36,8 @@ window.getMerchantConfig = function () {
       "DOWNLOAD_NAMMA_YATRI",
       "START_TAKING_RIDES_AND_REFER",
       "REFERRED_DRIVERS_INFO",
-      "REFERRED_CUSTOMERS_INFO"
+      "REFERRED_CUSTOMERS_INFO",
+      "SHARE_NAMMA_YATRI"
     ],
     "leaderBoard": {
       "isMaskedName": false
@@ -102,6 +103,7 @@ window.getMerchantConfig = function () {
       "START_TAKING_RIDES_AND_REFER" : "Start taking rides and referring drivers to sign up on Yatri Sathi Driver App",
       "REFERRED_DRIVERS_INFO" : "Referred Drivers who have registered on Yatri Sathi",
       "REFERRED_CUSTOMERS_INFO" : "Referred Customers who have registered on Yatri Sathi",
+      "SHARE_NAMMA_YATRI" : "Share Yatri Sathi"
     },
     "hindiStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "Yatri Sathi partner ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
@@ -130,6 +132,7 @@ window.getMerchantConfig = function () {
       "START_TAKING_RIDES_AND_REFER" : "यात्री साथी ड्राइवर ऐप पर साइन अप करने के लिए सवारी लेना और ड्राइवरों को रेफर करना शुरू करें",
       "REFERRED_DRIVERS_INFO" : "यात्री साथी पर पंजीकृत हुए सुझाए गए ड्राइवर्स",
       "REFERRED_CUSTOMERS_INFO" : "यात्री साथी पर पंजीकृत हुए सुझाए गए ग्राहक",
+      "SHARE_NAMMA_YATRI" : "यात्री साथी को साझा करें"
     },
     "bengaliStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "জাটি সাথি ড্রাইভার ড্রাইভারের বর্তমান অবস্থান নিরীক্ষণের জন্য আপনার অবস্থানটি ভাগ করে নিতে সক্ষম করতে অবস্থানের ডেটা সংগ্রহ করে, এমনকি অ্যাপটি বন্ধ থাকলেও বা ব্যবহার না করা হয়।",
@@ -158,6 +161,7 @@ window.getMerchantConfig = function () {
       "START_TAKING_RIDES_AND_REFER" : "যাত্রী সাথী ড্রাইভার অ্যাপে সাইন আপ করতে রাইড করা এবং ড্রাইভারদের রেফার করা শুরু করুন",
       "REFERRED_DRIVERS_INFO" : "যাত্রী সাথীতে নিবেশন করেছেন যাদেরকে সূচনা দেওয়া হয়েছে",
       "REFERRED_CUSTOMERS_INFO" : "যাত্রী সাথীতে নিবেশন করেছেন যাদেরকে সূচনা দেওয়া হয়েছে",
+      "SHARE_NAMMA_YATRI" : "যাত্রী সহযোগী ভাগ করুন"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"

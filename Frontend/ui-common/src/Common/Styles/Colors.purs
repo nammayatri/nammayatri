@@ -295,9 +295,6 @@ atlantisGreen = "#E1E7F5"
 greenCoin :: Color
 greenCoin = "#1A53BB6F"
 
-redCoin :: Color
-redCoin = "#1AE55454"
-
 blackOpacity12 :: Color
 blackOpacity12 = "#373A45"
 

@@ -100,6 +100,7 @@ instance loggableAction :: Loggable Action where
     (OpenTripDetails _) -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "open_trip_details" "open_trip_details"
     LoadMore -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "load_more" "load_more"
     YoutubeVideoStatus _ -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "youtube_video_status" "youtube_video_status"
+    ShowMyPlanPage -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "my_plan_page" "my_plan_page"
 
 data ScreenOutput
   = GoBack
@@ -113,6 +114,7 @@ data ScreenOutput
   | PaymentHistory
   | TripDetails DriverEarningsScreenState
   | LoaderOutput DriverEarningsScreenState
+  | MyPlanPage
 
 data Action
   = NoAction
@@ -148,6 +150,7 @@ data Action
   | OpenTripDetails Int
   | LoadMore
   | YoutubeVideoStatus String
+  | ShowMyPlanPage
 
 eval :: Action -> DriverEarningsScreenState -> Eval Action ScreenOutput DriverEarningsScreenState
 eval BackPressed state = 
@@ -407,6 +410,10 @@ eval (UpdateRidesEver anyRidesAssignedEver) state = continue state { data { anyR
 eval ShowPaymentHistory state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_view_details_click_coins"
   exit $ PaymentHistory
+
+eval ShowMyPlanPage state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_view_my_plan_click_coins"
+  exit $ MyPlanPage
 
 eval FaqViewAction state = continue $ state { props { showShimmer = false } }
 

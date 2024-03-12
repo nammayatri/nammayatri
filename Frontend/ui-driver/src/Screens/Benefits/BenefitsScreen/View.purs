@@ -153,8 +153,8 @@ tabView push state =
     , margin $ MarginBottom 16
     , gravity CENTER
     ]
-    [ tabItem push (state.props.driverReferralType == DRIVER) (getString REFER_DRIVER) "ny_ic_new_avatar_profile" DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
-    , tabItem push (state.props.driverReferralType == CUSTOMER) (getString REFER_CUSTOMER) "ny_ic_new_avatar_profile_customer" CUSTOMER bothTabsEnabled $ cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral
+    [ tabItem push (state.props.driverReferralType == CUSTOMER) (getString REFER_CUSTOMER) "ny_ic_new_avatar_profile_customer" CUSTOMER bothTabsEnabled $ cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral
+    ,  tabItem push (state.props.driverReferralType == DRIVER) (getString REFER_DRIVER) "ny_ic_new_avatar_profile" DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
     ]
   where
   cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
@@ -233,6 +233,7 @@ driverReferralCode push state =
             , orientation VERTICAL
             , gravity CENTER
             , cornerRadius 10.0
+            , onClick push $ const ShowQRCode
             ]
             [ imageView
                 [ width $ V 148
@@ -248,7 +249,6 @@ driverReferralCode push state =
                 $ [ width MATCH_PARENT
                   , gravity CENTER
                   , text $ getString CLICK_TO_EXPAND
-                  , onClick push $ const ShowQRCode
                   , color Color.black800
                   , background Color.blue600
                   , padding $ PaddingBottom 2
@@ -280,6 +280,30 @@ driverReferralCode push state =
                 , fontStyle $ FontStyle.feFont LanguageStyle
                 , textSize FontSize.a_30
                 , margin $ MarginTop 10
+                ]
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , cornerRadius 24.0
+                , background Color.white900
+                , orientation HORIZONTAL
+                , margin $ MarginTop 12
+                , onClick push $ const $ ShareQRLink
+                ]
+                [ imageView
+                  [ height $ V 30
+                  , width $ V 30
+                  , padding $ PaddingHorizontal 10 5
+                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_grey"
+                  ]
+                , textView
+                  $ [ height MATCH_PARENT
+                    , width MATCH_PARENT
+                    , color Color.black900
+                    , padding $ Padding 0 4 10 0
+                    , text $ getString SHARE 
+                    ]
+                  <> FontStyle.body1 TypoGraphy
                 ]
             ]
         ]
@@ -359,6 +383,7 @@ referralCountView showStar text' count visibility' push popupType =
               , width $ V 14
               , margin $ Margin 4 2 0 0
               , onClick push $ const $ ShowReferedInfo popupType
+              , padding $ PaddingBottom 2
               ]
         ]
     , textView

@@ -1,6 +1,6 @@
 module Screens.Benefits.BenefitsScreen.Controller where
 
-import JBridge (minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage, setCleverTapUserProp)
+import JBridge (shareTextMessage, minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage, setCleverTapUserProp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($))
 import PrestoDOM (Eval, continue, exit)
@@ -13,6 +13,8 @@ import Components.GenericHeader as GenericHeader
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, negate, (-), (>), (/=), (<))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 import Components.BottomNavBar as BottomNavBar
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, getValueToLocalStore)
 import Helpers.Utils (incrementValueOfLocalStoreKey, generateReferralLink, generateQR)
@@ -41,7 +43,6 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
       GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "forward_icon"
     ShowQRCode -> pure unit
-    ShareOptions -> pure unit
     BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
       trackAppActionClick appId (getScreen REFERRAL_SCREEN) "bottom_nav_bar" "on_navigate"
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
@@ -61,13 +62,13 @@ instance loggableAction :: Loggable Action where
     OpenModule _->  trackAppActionClick appId (getScreen REFERRAL_SCREEN) "go_to_module" "go_to_lms_video_screen"
     UpdateModuleList _ ->  trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list" "update_module_list"
     UpdateModuleListErrorOccurred -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list_error_occurred" "update_module_list"
-
+    ShareQRLink -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "render_qr_link"
 
 data Action = BackPressed
             | AfterRender
             | GenericHeaderActionController GenericHeader.Action
             | ShowQRCode
-            | ShareOptions
+            | ShareQRLink
             | BottomNavBarAction BottomNavBar.Action
             | LearnMore
             | PrimaryButtonActionController BenefitsScreenState PrimaryButton.Action
@@ -105,10 +106,11 @@ eval ShowQRCode state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_app_qr_code_click"
   continue state {props {showDriverReferralQRCode = true}}
 
-eval ShareOptions state = do
+eval ShareQRLink state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_share_referral_code_click"
-  let message = "👋 Hey,\n\nMy " <> state.data.config.appData.name <> " Referral Code is " <> (state.data.referralCode) <> ".\n\nScan the QR code and download " <> state.data.config.appData.name <> " app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
-  void $ pure $ shareImageMessage message (shareImageMessageConfig state)
+  let title = getString $ SHARE_NAMMA_YATRI "SHARE_NAMMA_YATRI"
+  let message = (getString SHARE_NAMMA_YATRI_MESSAGE) <> title <> " " <> (getString NOW) <> "! \n" <> (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType state.data.config.appData.website) <> (getString BE_OPEN_CHOOSE_OPEN) 
+  _ <- pure $ shareTextMessage title message
   continue state
 
 eval LearnMore state = exit $ GoToDriverContestScreen state
