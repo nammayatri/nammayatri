@@ -203,7 +203,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
-      let lockKey = DQ.estimateBuildLockKey $ show searchRequest.id
+      let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
       Redis.withLockRedis lockKey 5 $ do
         _ <- QEstimate.createMany estimates
         _ <- QQuote.createMany quotes

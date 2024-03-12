@@ -23,20 +23,17 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Quote as DQ
-import qualified Domain.Types.RideRoute as RI
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
-import qualified SharedLogic.Ride as SR
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -105,15 +102,6 @@ handler merchantId req validatedReq = do
       ValidatedQuote quote -> do
         booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing
         QRB.createBooking booking
-        -- moving route from search request id to booking id
-        routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (SR.searchRequestKey $ getId searchRequest.id)
-        case routeInfo of
-          Just route -> Redis.setExp (SR.searchRequestKey $ getId booking.id) route 3600
-          Nothing -> logDebug "Unable to get the key"
-        multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.safeGet $ SR.multipleRouteKey $ getId searchRequest.id
-        case multipleRoutes of
-          Just routes -> Redis.setExp (SR.multipleRouteKey $ getId booking.id) routes 3600
-          Nothing -> logInfo "Unable to get the multiple route key"
         return (booking, Nothing, Nothing)
 
   let paymentMethodInfo = req.paymentMethodInfo

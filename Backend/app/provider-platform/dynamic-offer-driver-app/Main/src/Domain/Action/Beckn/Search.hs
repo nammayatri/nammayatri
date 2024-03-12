@@ -150,13 +150,13 @@ handler ValidatedDSearchReq {..} sReq = do
         logDebug $ "distance: " <> show estimatedDistance
         let routeInfo = RouteInfo {distance = Just estimatedDistance, duration = Just estimatedDuration, points = sReq.routePoints}
         toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
-        let setRouteInfo srId =
+        let setRouteInfo transactionId =
               ( do
-                  Redis.setExp (searchRequestKey $ getId srId) routeInfo 3600
+                  Redis.setExp (searchRequestKey transactionId) routeInfo 3600
                   case sReq.multipleRoutes of
                     Just routes -> do
                       let multipleRoutesInfo = map createRouteInfo routes
-                      Redis.setExp (multipleRouteKey $ getId srId) multipleRoutesInfo 3600
+                      Redis.setExp (multipleRouteKey transactionId) multipleRoutesInfo 3600
                     Nothing -> logInfo "No multiple routes found"
               )
 
@@ -175,7 +175,7 @@ handler ValidatedDSearchReq {..} sReq = do
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneId, mbDefaultDriverExtra)
   let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneId
   searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area
-  whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo searchReq.id
+  whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
