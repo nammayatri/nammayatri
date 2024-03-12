@@ -766,6 +766,7 @@ type HomeScreenStateData =
   , bannerData :: BannerCarousalData
   , contactList :: Array NewContacts
   , followers :: Maybe (Array Followers)
+  , vehicleVariant :: String
   }
 
 type RentalsInfo = 

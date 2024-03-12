@@ -150,6 +150,7 @@ initData = {
     } 
     , contactList : []
     , followers : Nothing
+    , vehicleVariant : ""
     },
     props: {
       rideRequestFlow : false

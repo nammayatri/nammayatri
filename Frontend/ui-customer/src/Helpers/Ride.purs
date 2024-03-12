@@ -67,7 +67,8 @@ checkRideStatus rideAssigned = do
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
-                    , currentSearchResultType = if isQuotes then QUOTES else ESTIMATES},
+                    , currentSearchResultType = if isQuotes then QUOTES else ESTIMATES
+                    , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant},
                   props
                     { currentStage = rideStatus
                     , rideRequestFlow = true
@@ -167,6 +168,7 @@ checkRideStatus rideAssigned = do
                             rideId = currRideListItem.id
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}
+                          , vehicleVariant = currRideListItem.vehicleVariant
                           }
                 })
                 updateLocalStage RideCompleted
