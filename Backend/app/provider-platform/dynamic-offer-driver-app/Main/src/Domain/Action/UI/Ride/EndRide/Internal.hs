@@ -366,7 +366,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
         DFare.RentalDetails _ -> (0, 0, 0)
   let totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
+  lastDriverFee <- QDF.findLatestFeeByDriverIdTypeAndServiceName driverId [DF.RECURRING_INVOICE, DF.RECURRING_EXECUTION_INVOICE] DF.ONGOING serviceName
   driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig (Just booking)
   let toUpdateOrCreateDriverfee = totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)
   when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft) $ do

@@ -99,13 +99,13 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
         _ -> return $ Just "AUTOPAY_NOT_SET"
 
     getAllManualDuesWithoutFilter driverId serviceName = do
-      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName driverId serviceName
+      pendingDriverFees <- QDF.findDriverFeeByTypeStatusAndServiceName driverId [DDF.RECURRING_INVOICE] [DDF.PAYMENT_OVERDUE] serviceName
       return $ sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
 
     getManualDues driverId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays serviceName = do
       windowEndTime <- getLocalCurrentTime timeDiffFromUtc
       let windowStartTime = addUTCTime (-1 * fromIntegral driverFeeOverlaySendingTimeLimitInDays * 86400) (UTCTime (utctDay windowEndTime) (secondsToDiffTime 0))
-      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName driverId serviceName
+      pendingDriverFees <- QDF.findDriverFeeByTypeStatusAndServiceName driverId [DDF.RECURRING_INVOICE] [DDF.PAYMENT_OVERDUE] serviceName
       let filteredDriverFees = filter (\driverFee -> driverFee.startTime >= windowStartTime) pendingDriverFees
       return $
         if null filteredDriverFees

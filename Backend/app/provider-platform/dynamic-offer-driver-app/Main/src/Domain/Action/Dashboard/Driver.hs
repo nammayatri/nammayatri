@@ -149,7 +149,7 @@ import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
-import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
+import Storage.Queries.DriverFee
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
@@ -307,7 +307,7 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
   merchant <- findMerchantByShortId merchantShortId
   mobileNumber <- getDbHash phone
   driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
-  driverFees <- findPendingFeesByDriverIdAndServiceName (cast driver.id) YATRI_SUBSCRIPTION
+  driverFees <- findDriverFeeByTypeStatusAndServiceName (cast driver.id) [RECURRING_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE] YATRI_SUBSCRIPTION
   driverFeeByInvoices <- case driverFees of
     [] -> pure []
     _ -> SLDriverFee.groupDriverFeeByInvoices driverFees
@@ -517,7 +517,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  driverFees <- findPendingFeesByDriverIdAndServiceName driverId serviceName
+  driverFees <- findDriverFeeByTypeStatusAndServiceName driverId [RECURRING_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE] serviceName
   let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -1381,7 +1381,7 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceNam
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   maybe (pure ()) (`QDriverInfo.updateSubscription` personId) subscribed
-  dueDriverFee <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName personId serviceName
+  dueDriverFee <- QDF.findDriverFeeByTypeStatusAndServiceName personId [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE] serviceName
   let invoicesDataToUpdate = maybe [] mapToInvoiceInfoToUpdateAfterParse invoices
   mapM_ (\inv -> QINV.updateStatusAndTypeByMbdriverFeeIdAndInvoiceId inv.invoiceId inv.invoiceStatus Nothing inv.driverFeeId) invoicesDataToUpdate
   allDriverFeeByIds <- QDF.findAllByDriverFeeIds (maybe [] (map (\df -> cast (Id df.driverFeeId))) driverFees)
@@ -1760,7 +1760,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
     getManualDues personId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays = do
       windowEndTime <- getLocalCurrentTime timeDiffFromUtc
       let windowStartTime = addUTCTime (-1 * fromIntegral driverFeeOverlaySendingTimeLimitInDays * 86400) (UTCTime (utctDay windowEndTime) (secondsToDiffTime 0))
-      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName personId YATRI_SUBSCRIPTION
+      pendingDriverFees <- QDF.findDriverFeeByTypeStatusAndServiceName personId [RECURRING_INVOICE] [PAYMENT_OVERDUE] YATRI_SUBSCRIPTION
       let filteredDriverFees = filter (\driverFee -> driverFee.startTime >= windowStartTime) pendingDriverFees
       return $
         if null filteredDriverFees

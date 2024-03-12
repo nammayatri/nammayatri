@@ -258,9 +258,9 @@ processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoi
   transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let invoice = listToMaybe invoices
+      driverFeeIds = invoices <&> (.driverFeeId)
   when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
-    maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS)) (invoice <&> (.driverFeeId))
-  let driverFeeIds = (.driverFeeId) <$> invoices
+    QDF.updateAutopayPaymentStageByIds (Just EXECUTION_SUCCESS) driverFeeIds
   Redis.whenWithLockRedis (paymentProcessingLockKey driver.id.getId) 60 $ do
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
@@ -274,7 +274,7 @@ updatePaymentStatus ::
   DP.ServiceNames ->
   m ()
 updatePaymentStatus driverId merchantOpCityId serviceName = do
-  dueInvoices <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
+  dueInvoices <- QDF.findDriverFeeByTypeStatusAndServiceName driverId [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE] serviceName
   let totalDue = sum $ calcDueAmount dueInvoices
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
@@ -318,7 +318,7 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
     case activeExecutionInvoice of
       Just invoice' -> do
         QDF.updateAutoPayToManual invoice'.driverFeeId
-        QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) invoice'.driverFeeId
+        QDF.updateAutopayPaymentStageByIds (Just EXECUTION_FAILED) [invoice'.driverFeeId]
       Nothing -> pure ()
     when (subsConfig.sendInAppFcmNotifications) $ do
       notifyPaymentFailureIfNotNotified paymentMode
@@ -402,7 +402,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
             then do
               QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
               QDF.updateManualToAutoPay driverFeeId
-              QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFeeId
+              QDF.updateAutopayPaymentStageByIds (Just NOTIFICATION_SCHEDULED) [driverFeeId]
               QDF.updateNotificationRetryCountById (driverFee.notificationRetryCount + 1) driverFeeId
             else do
               QDF.updateAutoPayToManual driverFeeId
@@ -412,7 +412,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
         unless (driverFee.status == CLEARED) $ do
           QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
           QDF.updateManualToAutoPay driverFeeId
-        QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
+        QDF.updateAutopayPaymentStageByIds (Just EXECUTION_SCHEDULED) [driverFeeId]
       _ -> pure ()
     QNTF.updateNotificationStatusAndResponseInfoById notification.id notificationStatus respCode respMessage
 

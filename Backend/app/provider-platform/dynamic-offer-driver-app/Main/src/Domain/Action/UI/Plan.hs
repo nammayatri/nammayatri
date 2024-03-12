@@ -499,7 +499,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   let allowDueAddition = subscriptionConfig.allowDueAddition
   let paymentServiceName = subscriptionConfig.paymentServiceName
-  driverManualDuesFees <- if allowAtMerchantLevel && allowDueAddition then QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] serviceName else return []
+  driverManualDuesFees <- if allowAtMerchantLevel && allowDueAddition then QDF.findDriverFeeByTypeStatusAndServiceName driverId [DF.RECURRING_INVOICE] [DF.PAYMENT_OVERDUE] serviceName else return []
   let currentDues = calculateDues driverManualDuesFees
   now <- getCurrentTime
   (driverRegisterationFee, invoice) <- getLatestMandateRegistrationFeeAndCheckIfEligible currentDues now
@@ -530,7 +530,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
           mandateEndDate = T.pack $ show $ utcTimeToPOSIXSeconds $ addUTCTime (secondsToNominalDiffTime (fromIntegral (60 * 60 * 24 * 365 * mandateValidity))) now
         }
     getLatestMandateRegistrationFeeAndCheckIfEligible currentDues' now = do
-      registerFee' <- QDF.findLatestRegisterationFeeByDriverIdAndServiceName (cast driverId) serviceName
+      registerFee' <- QDF.findLatestFeeByDriverIdTypeAndServiceName (cast driverId) [DF.MANDATE_REGISTRATION] DF.PAYMENT_PENDING serviceName
       case registerFee' of
         Just registerFee -> do
           invoices <- QINV.findActiveMandateSetupInvoiceByFeeId registerFee.id
@@ -617,8 +617,8 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
 
 convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Plan -> Flow PlanEntity
 convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {..} = do
-  dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId serviceName
-  pendingRegistrationDfee <- B.runInReplica $ QDF.findAllPendingRegistrationDriverFeeByDriverIdForServiceName driverId serviceName
+  dueDriverFees <- B.runInReplica $ QDF.findDriverFeeByTypeStatusAndServiceName driverId [DF.RECURRING_INVOICE, DF.RECURRING_EXECUTION_INVOICE] [DF.PAYMENT_PENDING, DF.PAYMENT_OVERDUE] serviceName
+  pendingRegistrationDfee <- B.runInReplica $ QDF.findDriverFeeByTypeStatusAndServiceName driverId [DF.MANDATE_REGISTRATION] [DF.PAYMENT_PENDING] serviceName
   transporterConfig_ <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   offers <- SPayment.offerListCache merchantId merchantOpCityId plan.serviceName =<< makeOfferReq applicationDate plan.paymentMode transporterConfig_
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee

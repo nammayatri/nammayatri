@@ -169,7 +169,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 updatePendingPayment True (cast driverFeeUpdateWithPlanAndOffer.driverId)
           -------------------------------------------------------------------------------
           -- blocking
-          dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverFee.driverId) serviceName -- Problem with lazy evaluation?
+          dueDriverFees <- QDF.findDriverFeeByTypeStatusAndServiceName (cast driverFee.driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE] serviceName
           let driverFeeIds = map (.id) dueDriverFees
               due = sum $ map (\fee -> roundToHalf $ fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
           if roundToHalf (due + totalFee - min coinCashLeft totalFee) >= plan.maxCreditLimit
@@ -229,7 +229,7 @@ processDriverFee paymentMode driverFee subscriptionConfig = do
       updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
       invoice <- mkInvoiceAgainstDriverFee driverFee (False, True)
       QINV.create invoice
-      QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFee.id
+      QDF.updateAutopayPaymentStageByIds (Just NOTIFICATION_SCHEDULED) [driverFee.id]
 
 processRestFee ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
