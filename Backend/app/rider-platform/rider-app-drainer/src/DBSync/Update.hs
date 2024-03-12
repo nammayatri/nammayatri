@@ -10,6 +10,7 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
+import qualified Data.HashMap.Strict as HM
 import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
 import Data.Text as T hiding (elem, map)
@@ -17,6 +18,7 @@ import qualified Data.Text.Encoding as TE
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.KVConnector.Types as EKT
+import qualified EulerHS.KVConnector.Types as KV
 import EulerHS.KVConnector.Utils as Utils
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
@@ -24,7 +26,7 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Functions as BeamFunction
-import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
+import Kernel.Beam.Lib.Utils (replaceMappings)
 import qualified Kernel.Beam.Types as KBT
 import Sequelize (Model, Set, Where)
 import Text.Casing
@@ -82,6 +84,21 @@ getUpdatedValue tag _ = do
             Right _ -> return $ Left (UnexpectedError "Redis Error: No Data for the key")
             Left _ -> return $ Left (UnexpectedError "Redis Error: Decode Failed")
     _ -> return $ Left (UnexpectedError "Redis Error")
+
+getTableMappings' ::
+  forall beM be table.
+  ( HasCallStack,
+    ET.BeamRuntime be beM,
+    KV.TableMappings (table Identity),
+    ET.BeamRunner beM,
+    Model be table,
+    MeshMeta be table,
+    B.HasQBuilder be,
+    Serialize.Serialize (table Identity)
+  ) =>
+  Where be table ->
+  HashMap Text Text
+getTableMappings' _ = HM.fromList (map (bimap T.pack T.pack) (getTableMappings @(table Identity)))
 
 runUpdateCommands :: (UpdateDBCommand, ByteString) -> Text -> Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
 runUpdateCommands (cmd, val) streamKey = do
@@ -145,12 +162,11 @@ runUpdateCommands (cmd, val) streamKey = do
       if not isPushToKafka'
         then runUpdate id value dbStreamKey' setClause whereClause model dbConf
         else do
-          res <- getUpdatedValue tag whereClause
-          case res of
-            Right dataObj -> do
+          updatedObject <- EL.runIO $ getUpdatedModel value
+          case updatedObject of
+            Just dataObj -> do
               Env {..} <- ask
-              let mappings = getMappings [dataObj]
-                  newObject = replaceMappings (toJSON dataObj) mappings
+              newObject <- getNewUpdatedObject whereClause dataObj
               res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
                 ( \error' -> do
@@ -160,10 +176,11 @@ runUpdateCommands (cmd, val) streamKey = do
                 )
                 (\_ -> pure $ Right id)
                 res''
-            Left _ -> do
-              let updatedJSON = getDbUpdateDataJson model (A.String "No Data in Redis for updated condition")
+            Nothing -> do
+              updatedModel <- getUpdatedValue tag whereClause
+              newObject <- either (const $ pure A.Null) (getNewUpdatedObject whereClause) updatedModel
               Env {..} <- ask
-              res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
+              res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
                 ( \error' -> do
                     void $ publishDBSyncMetric $ Event.KafkaPushFailure "Update" model
@@ -195,6 +212,10 @@ runUpdateCommands (cmd, val) streamKey = do
           pure $ Left (UnexpectedError "Update failed for model", id)
         (Right _, _) -> do
           pure $ Right id
+
+    getNewUpdatedObject whereClause value = do
+      let mappings = getTableMappings' whereClause
+      pure $ replaceMappings (toJSON value) mappings
 
 streamRiderDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> Text -> IO (Either Text ())
 streamRiderDrainerUpdates producer dbObject dbStreamKey model = do
@@ -232,3 +253,10 @@ getPKeyandValuesList pKeyAndValue = go (T.splitOn "_" pKeyTrimmed) []
     pKeyTrimmed = case T.splitOn "{" pKeyAndValue of
       [] -> ""
       (x : _) -> x
+
+getUpdatedModel :: ByteString -> IO (Maybe A.Value)
+getUpdatedModel val = case A.decode $ BSL.fromStrict val of
+  Just (A.Object obj) -> case AKM.lookup "updatedModel" obj of
+    Just (A.Object obj') -> pure $ Just $ A.Object obj'
+    _ -> pure Nothing
+  _ -> pure Nothing
