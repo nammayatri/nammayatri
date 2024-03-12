@@ -183,10 +183,10 @@ processPayment merchantId driverId orderId sendNotification = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   invoices <- QIN.findAllByInvoiceId (cast orderId)
   let invoice = listToMaybe invoices
-  when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
-    maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS)) (invoice <&> (.driverFeeId))
   let driverFeeIds = (.driverFeeId) <$> invoices
   Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
+    when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
+      maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS)) (invoice <&> (.driverFeeId))
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driverId merchantId
