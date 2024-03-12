@@ -313,11 +313,12 @@ updateDriverInformation (Id driverId) canDowngradeToSedan canDowngradeToHatchbac
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateDriverDowngradeTaxiForSuv :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Bool -> m ()
-updateDriverDowngradeTaxiForSuv (Id driverId) canDowngradeToTaxi = do
+updateDriverDowngradeForSuv :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Bool -> Bool -> m ()
+updateDriverDowngradeForSuv (Id driverId) canDowngradeToTaxi canDowngradeToHatchback = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDI.canDowngradeToTaxi canDowngradeToTaxi,
+      Se.Set BeamDI.canDowngradeToHatchback canDowngradeToHatchback,
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
