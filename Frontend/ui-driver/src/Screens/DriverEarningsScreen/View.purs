@@ -613,7 +613,7 @@ balanceView push state =
                   , linearLayout
                       [ height WRAP_CONTENT
                       , width WRAP_CONTENT
-                      , background if isPositiveEarning then Color.greenCoin else Color.redCoin
+                      , background if isPositiveEarning then Color.greenCoin else Color.redOpacity10
                       , margin $ Margin 4 0 0 8
                       , cornerRadius 100.0
                       , gravity CENTER_VERTICAL
@@ -698,6 +698,21 @@ balanceView push state =
                 , margin $ MarginRight 8
                 ]
               <> FontStyle.body1 TypoGraphy
+          ]
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          , margin $ MarginTop 12
+          ]
+          [ textView
+            $ [ textFromHtml $ "<u>" <> (getString KNOW_ABOUT_COINS) <> "</u>"
+              , color Color.black700
+              , gravity CENTER
+              , onClick push $ const $ ChangeTab ST.FAQ_VIEW
+              , padding $ PaddingRight 5
+              ]
+            <> FontStyle.body3 TypoGraphy
           ]
       , linearLayout
           [ height WRAP_CONTENT
@@ -1377,19 +1392,18 @@ coinsUsageAlertView push state =
     , cornerRadii $ Corners 24.0 false false true true
     , background Color.yellowOpacity40
     ]
-    [ maybe dummyView (\val -> alertView push "ny_ic_check_green" (getVarString HAS_BEEN_ADJUSTED_IN_YOUR_SUBSCRIPTION_DUES [ show val ]) true Color.transparent 0.0 (Margin 0 0 0 0)) $ state.data.coinConvertedToCashUsedForLatestDues
+    [ maybe dummyView (\val -> alertView push "ny_ic_check_green" (getVarString HAS_BEEN_ADJUSTED_IN_YOUR_SUBSCRIPTION_DUES [ show val ]) "" "" true Color.transparent 0.0 (Margin 0 0 0 0)) $ state.data.coinConvertedToCashUsedForLatestDues
     , if state.data.coinConvertedTocashLeft /= 0.0 then
-        alertView push "ny_ic_info_yellow" (getVarString WILL_BE_ADJUSTED_IN_YOUR_FUTURE_SUBSCRIPTION_DUES [ getFixedTwoDecimals state.data.coinConvertedTocashLeft ]) false Color.transparent 0.0 (Margin 0 0 0 0)
+        alertView push "ny_ic_info_yellow" (getVarString WILL_BE_ADJUSTED_IN_YOUR_FUTURE_SUBSCRIPTION_DUES [ getFixedTwoDecimals state.data.coinConvertedTocashLeft ]) "" "" false Color.transparent 0.0 (Margin 0 0 0 0)
       else
         dummyView
     ]
 
-alertView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> String -> Number -> Margin -> PrestoDOM (Effect Unit) w
-alertView push image message showButton backgroundColor cornerRadius' margin' =
+alertView :: forall w. (Action -> Effect Unit) -> String -> String -> String -> String -> Boolean -> String -> Number -> Margin -> PrestoDOM (Effect Unit) w
+alertView push image messagePref message messageSuf showButton backgroundColor cornerRadius' margin' =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , gravity CENTER
     , background backgroundColor
     , cornerRadius cornerRadius'
     , margin margin'
@@ -1397,9 +1411,10 @@ alertView push image message showButton backgroundColor cornerRadius' margin' =
     [ linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , weight 1.0
-        , gravity CENTER
+        , gravity CENTER_VERTICAL
         , padding $ Padding 16 8 16 8
+        , orientation HORIZONTAL
+        , weight 1.0
         ]
         [ imageView
             [ imageWithFallback $ fetchImage FF_ASSET $ image
@@ -1407,12 +1422,33 @@ alertView push image message showButton backgroundColor cornerRadius' margin' =
             , width $ V 14
             , margin $ MarginRight 8
             ]
-        , textView
-            $ [ text message
-              , color Color.black700
-              , weight 1.0
+        , linearLayout 
+           [ height WRAP_CONTENT
+           , width WRAP_CONTENT
+           , orientation VERTICAL
+           ][ textView
+              $ [ text messagePref
+                , color Color.black700
+                ]
+              <> FontStyle.tags TypoGraphy
+          , linearLayout
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              ][  textView
+                  $ [ text message
+                    , color Color.blue800
+                    , visibility $ boolToVisibility (not (DS.null message)) 
+                    , onClick push $ const $ ShowMyPlanPage
+                    ]
+                  <> FontStyle.tags TypoGraphy
+              , textView
+                  $ [ text messageSuf
+                    , color Color.black700
+                    , visibility $ boolToVisibility (not (DS.null messageSuf)) 
+                    ]
+                  <> FontStyle.tags TypoGraphy
               ]
-            <> FontStyle.tags TypoGraphy
+           ]
         ]
     , textView
         $ [ text $ getString VIEW_DETAILS
@@ -1433,7 +1469,7 @@ convertView push state =
 
     setVisibility = if state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue || not state.data.hasActivePlan then VISIBLE else GONE
 
-    coinBalanceNearest250 = (state.data.coinBalance `div` state.data.config.coinsConfig.minCoinSliderValue) * state.data.config.coinsConfig.minCoinSliderValue
+    coinBalanceNearest250 = ((state.data.coinBalance + state.data.config.coinsConfig.minCoinSliderValue - 1) / state.data.config.coinsConfig.minCoinSliderValue) * state.data.config.coinsConfig.minCoinSliderValue
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -1460,10 +1496,10 @@ convertView push state =
               , onClick push $ const $ ShowCoinsUsagePopup
               ]
           ]
-      , if state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue then
-          alertView push "ny_ic_info_yellow" (getString MINIMUM <> " " <> show state.data.config.coinsConfig.minCoinSliderValue <> " " <> getString COINS_IS_REQUIRED_FOR_CONVERSION) false Color.yellowOpacity40 8.0 (MarginBottom 8)
+     , if state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue then
+          alertView push "ny_ic_info_yellow" (getString MINIMUM <> " " <> show state.data.config.coinsConfig.minCoinSliderValue <> " " <> getString COINS_IS_REQUIRED_FOR_CONVERSION) "" "" false Color.yellowOpacity40 8.0 (MarginBottom 8)
         else if not state.data.hasActivePlan then
-          alertView push "ny_ic_info_yellow" (getString USING_COINS_REQUIRES_AN_ACTIVE_PLAN <> " " <> getString CHOOSE_A_PLAN_TO_GET_STARTED) false Color.yellowOpacity40 8.0 (MarginBottom 8)
+          alertView push "ny_ic_info_yellow" (getString USING_COINS_REQUIRES_AN_ACTIVE_PLAN <> " ") (getString CHOOSE_A_PLAN <> " ") (getString TO_GET_STARTED) false Color.yellowOpacity40 8.0 (MarginBottom 8)
         else
           dummyView
       , linearLayout
@@ -1528,7 +1564,11 @@ convertView push state =
                   ]
                   []
               ]
-          , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig (state.data.coinBalance >= state.data.config.coinsConfig.minCoinSliderValue && state.data.hasActivePlan))
+          , if state.data.coinsToUse > state.data.coinBalance then
+              alertView push "ny_ic_alert_red" (getString NOT_ENOUGH_COINS_DESCRIPTION) "" "" false Color.redOpacity10 6.0 (Margin 16 20 16 0)
+            else
+              dummyView
+          , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig (state.data.coinBalance >= state.data.config.coinsConfig.minCoinSliderValue && state.data.hasActivePlan && state.data.coinsToUse <= state.data.coinBalance))
           ]
       ]
 
