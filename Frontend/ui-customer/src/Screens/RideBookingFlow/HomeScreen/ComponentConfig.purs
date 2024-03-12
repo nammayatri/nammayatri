@@ -57,7 +57,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -843,6 +843,8 @@ rateCardConfig state =
     fareInfoText =  mkFareInfoText state.props.city
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     nightShiftMultiplier = if city == Delhi then "1.25" else "1.5"
+    nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
+    nightChargeTill = "5 AM"
     freeWaitingTime = " 3 "
     waitingChargesPerMin = cityBasedWaitingCharge city
     rateCardConfig' =
@@ -857,7 +859,7 @@ rateCardConfig state =
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
         , driverAdditionsImage = fetchImage FF_ASSET $ if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2"  else "ny_ic_driver_additions_yatri" 
         , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
-                                 else (getString DAY_TIMES_OF) <> (nightShiftMultiplier) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+                                 else (getString DAY_TIMES_OF) <> (nightShiftMultiplier) <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill)
         , title = case MU.getMerchant FunctionCall of
                       MU.NAMMAYATRI ->  case city of
                                         Delhi -> getString RATE_CARD
