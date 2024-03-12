@@ -34,6 +34,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (isHaveFare, getCityFromString)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
+import Mobility.Prelude
 import Storage
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
@@ -236,4 +237,10 @@ getFareText fareType baseDistance = case fareType of
                       "PLATFORM_FEE" -> getString PLATFORM_FEE
                       "SGST" -> getString PLATFORM_GST
                       "CUSTOMER_CANCELLATION_DUES" -> getString CUSTOMER_CANCELLATION_DUES
-                      _ -> "BASE_FARE"
+                      _ -> formatFareType fareType
+
+formatFareType :: String -> String
+formatFareType fareType = 
+  let str = DS.replace (DS.Pattern "_") (DS.Replacement " ") fareType
+  in
+  spaceSeparatedPascalCase str

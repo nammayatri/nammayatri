@@ -1266,9 +1266,7 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
-quoteListModelViewState state = let vehicleVariant = case (getSelectedEstimatesObject "Lazy") of
-                                                        Nothing -> state.data.selectedEstimatesObject.vehicleVariant
-                                                        Just obj -> obj.vehicleVariant
+quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
                                 in
                                 { source: state.data.source
                                 , destination: state.data.destination
@@ -1739,7 +1737,7 @@ feedbackPillDataWithRating3 state = [
   [{id : "8", text : getString UNPROFESSIONAL_DRIVER},
   {id : "8", text : getString RASH_DRIVING}],
   [{id : "8", text : getString DRIVER_CHARGED_MORE},
-  {id : "11", text : if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB}],
+  {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB}],
   [{id : "3", text : getString TRIP_GOT_DELAYED},
   {id : "3", text : getString FELT_UNSAFE}]
 ]
@@ -1749,7 +1747,7 @@ feedbackPillDataWithRating4 state = [
   [{id : "9", text : getString POLITE_DRIVER},
   {id : "9", text : getString EXPERT_DRIVING}],
   [{id : "9", text : getString ASKED_FOR_EXTRA_FARE},
-  {id : "11", text : if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB}],
+  {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB}],
   [{id : "4", text : getString TRIP_GOT_DELAYED},
   {id : "4", text : getString SAFE_RIDE}]
 ]
@@ -1758,7 +1756,7 @@ feedbackPillDataWithRating5 :: ST.HomeScreenState -> Array (Array RatingCard.Fee
 feedbackPillDataWithRating5 state = [
   [{id : "10", text : getString POLITE_DRIVER},
   {id : "5", text : getString EXPERT_DRIVING}],
-  [{id : "12", text : if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else getString CLEAN_CAB},
+  [{id : "12", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else getString CLEAN_CAB},
   {id : "10", text : getString ON_TIME}],
   [{id : "10", text : getString SKILLED_NAVIGATOR},
   {id : "5", text : getString SAFE_RIDE}]
@@ -1814,14 +1812,6 @@ safetyIssueOptions forceEnglish =
     }
   ]
 
-setSelectedEstimatesObject :: Encode ChooseVehicle.Config => ChooseVehicle.Config -> Effect Unit
-setSelectedEstimatesObject object = void $ pure $ setValueToLocalStore ESTIMATE_DATA (encodeJSON object)
-
-getSelectedEstimatesObject :: String -> Maybe ChooseVehicle.Config
-getSelectedEstimatesObject dummy =
-  case runExcept (decodeJSON (getValueToLocalStore ESTIMATE_DATA) :: _ ChooseVehicle.Config) of
-    Right res -> Just res
-    Left err -> Nothing
 
 getChatSuggestions :: ST.HomeScreenState -> Array String
 getChatSuggestions state = do
