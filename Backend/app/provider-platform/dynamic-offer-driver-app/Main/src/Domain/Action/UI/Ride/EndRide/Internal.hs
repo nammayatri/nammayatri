@@ -79,6 +79,7 @@ import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -131,7 +132,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   QDriverStats.updateIdleTime driverId
   QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
-
+  Hedis.del $ multipleRouteKey booking.transactionId
+  Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
 
   when (thresholdConfig.subscription) $ do

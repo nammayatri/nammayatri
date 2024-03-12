@@ -1,1 +1,0 @@
-alter table atlas_driver_offer_bpp.idfy_verification add column dashboard_passed_vehicle_variant character varying(255);

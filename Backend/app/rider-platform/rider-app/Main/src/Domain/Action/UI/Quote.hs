@@ -96,7 +96,7 @@ getQuotes searchRequestId = do
   activeBooking <- runInReplica $ QBooking.findLatestByRiderId searchRequest.riderId
   whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
   logDebug $ "search Request is : " <> show searchRequest
-  let lockKey = estimateBuildLockKey (show searchRequestId)
+  let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
     estimates <- getEstimates searchRequestId

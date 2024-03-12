@@ -24,7 +24,6 @@ import Domain.Types.Person
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as SRD
-import Domain.Types.RideRoute
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Domain.Types.SearchTry
@@ -32,7 +31,6 @@ import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
@@ -61,10 +59,9 @@ initializeRide ::
   DPerson.Person ->
   DBooking.Booking ->
   Maybe Text ->
-  Text ->
   Maybe Bool ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchantId driver booking mbOtpCode routeInfoId enableFrequentLocationUpdates = do
+initializeRide merchantId driver booking mbOtpCode enableFrequentLocationUpdates = do
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp
@@ -88,17 +85,6 @@ initializeRide merchantId driver booking mbOtpCode routeInfoId enableFrequentLoc
   QRideD.create rideDetails
   QDI.updateOnRide (cast driver.id) True
   void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
-
-  routeInfo :: Maybe RouteInfo <- Redis.safeGet (searchRequestKey routeInfoId)
-  case routeInfo of
-    Just route -> Redis.setExp (searchRequestKey $ getId ride.id) route 14400
-    Nothing -> logDebug "Unable to get the key"
-  multipleRoutes :: Maybe [RouteAndDeviationInfo] <- Redis.safeGet $ multipleRouteKey routeInfoId
-  case multipleRoutes of
-    Just routes -> do
-      logInfo $ "Setting multiple route key for rideId" <> getId ride.id <> " with routes " <> show routes
-      Redis.setExp (multipleRouteKey $ getId ride.id) routes 14400
-    Nothing -> logInfo "Unable to get the multiple route key"
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id

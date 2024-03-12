@@ -41,20 +41,6 @@ CREATE TABLE atlas_driver_offer_bpp.driver_rc_association
     CONSTRAINT DriverRCAssociationT_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_driver_offer_bpp.person(id)
 );
 
-CREATE TABLE atlas_driver_offer_bpp.idfy_verification
-(
-    id character(36) NOT NULL,
-    driver_id character varying(36) NOT NULL,
-    request_id character varying(36) NOT NULL,
-    doc_type character varying(36) NOT NULL,
-    status character varying(20) NOT NULL,
-    idfy_response character (2555),
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT unique_request_id UNIQUE (request_id),
-    CONSTRAINT IdfyVerificationT_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_driver_offer_bpp.person(id)
-);
-
 ALTER TABLE atlas_driver_offer_bpp.driver_license DROP COLUMN image_s3_path;
 ALTER TABLE atlas_driver_offer_bpp.driver_license DROP COLUMN verification_try_count;
 ALTER TABLE atlas_driver_offer_bpp.driver_license DROP COLUMN license_start;

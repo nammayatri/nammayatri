@@ -23,6 +23,7 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
+import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
@@ -33,6 +34,7 @@ import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
+import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import SharedLogic.SearchTry
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -107,6 +109,8 @@ cancelRideImpl rideId bookingCReason = do
       _ -> cancelRideTransactionForNonReallocation booking Nothing merchant bookingCReason.source
   where
     cancelRideTransactionForNonReallocation booking mbEstimateId merchant bookingCancellationReason = do
+      Redis.del $ multipleRouteKey booking.transactionId
+      Redis.del $ searchRequestKey booking.transactionId
       whenJust mbEstimateId $ \estimateId ->
         void $ clearCachedFarePolicyByEstOrQuoteId estimateId
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
