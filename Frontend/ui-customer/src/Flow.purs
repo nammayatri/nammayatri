@@ -886,7 +886,7 @@ homeScreenFlow = do
                                         (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
                                         let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
                                             (RideBookingDetails contents) = bookingDetails.contents
-                                            (RideAPIEntity ride) = spy "printing ride details -> " (fromMaybe dummyRideAPIEntity (resp.rideList !! 0))
+                                            (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
                                             finalAmount =  getFinalAmount (RideBookingRes resp)
                                             differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
                                             nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime

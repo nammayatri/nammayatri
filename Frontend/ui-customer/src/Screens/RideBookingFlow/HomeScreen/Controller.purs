@@ -2446,17 +2446,12 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehic
   continue state{ props{ defaultPickUpPoint = "" } }
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
-  if config.activeIndex == config.index then 
-    continueWithCmd state [do
-      pure (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config)))
-    ]
-  else do
-    let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
-        newState = state{data{specialZoneQuoteList = updatedQuotes}}
-    void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
-    if state.data.currentSearchResultType == QUOTES then
-      continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
-    else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
+  let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
+      newState = state{data{specialZoneQuoteList = updatedQuotes}}
+  void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
+  if state.data.currentSearchResultType == QUOTES then
+    continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
+  else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state =
   continue state{ props { showRateCard = true }
