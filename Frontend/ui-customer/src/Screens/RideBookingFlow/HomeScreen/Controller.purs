@@ -1405,7 +1405,22 @@ eval BackPressed state = do
             pure $ terminateApp state.props.currentStage false
           else 
             pure unit
-          updateAndExit state{props{autoScroll = false, currentStage = HomeScreen, homeScreenSheetState = COLLAPSED, showShimmer = true, isSearchLocation = NoView}} $ GoToHome state{data{tripSuggestions = state.data.tripSuggestions, destinationSuggestions = state.data.destinationSuggestions}}
+          updateAndExit 
+            state
+              { props
+                  { autoScroll = false
+                  , currentStage = HomeScreen
+                  , homeScreenSheetState = COLLAPSED
+                  , isSearchLocation = NoView
+                  }
+              } 
+            $ GoToHome 
+              state
+                { data
+                    { tripSuggestions = state.data.tripSuggestions
+                    , destinationSuggestions = state.data.destinationSuggestions
+                    }
+                }
     SettingPrice -> do
       _ <- pure $ performHapticFeedback unit
       void $ pure $ clearTimerWithId state.props.repeatRideTimerId
@@ -1655,11 +1670,11 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
   void $ pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_live_stats_dashboard"
   if os == "IOS" then do
-    continueWithCmd state [do
+    continueWithCmd state{props{showShimmer = false}} [do
       void $ openUrlInApp state.data.config.dashboard.url
       pure NoAction
     ]
-  else continue state {props {showLiveDashboard = true}}
+  else continue state {props {showShimmer = false,showLiveDashboard = true}}
 
 eval OpenLiveDashboard state = do
   void $ pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
