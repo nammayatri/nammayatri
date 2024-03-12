@@ -21,7 +21,6 @@ import Data.Ord (comparing)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Vector as DV
-import Debug.Trace as T
 import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Cac
@@ -87,9 +86,9 @@ jsonToFPRentalDetailsDistanceBuffers config key' = do
                         . DAK.toText
                     )
               )
-      res'' = T.trace ("rentaldetailsDistanceBuffers" <> show res') $ fromMaybe (DA.Array (DV.fromList [])) (KM.lookup (DAK.fromText (Text.pack key')) (KM.fromList res'))
-      res = T.trace ("rentaldetailsDistanceBuffers'" <> show res'') $ res'' ^? _JSON :: (Maybe [FPRentalDetailsDistanceBuffers])
-  T.trace ("rentaldetailsDistanceBuffers''" <> show res'') $ fromMaybe [] res
+      res'' = fromMaybe (DA.Array (DV.fromList [])) (KM.lookup (DAK.fromText (Text.pack key')) (KM.fromList res'))
+      res = res'' ^? _JSON :: (Maybe [FPRentalDetailsDistanceBuffers])
+  fromMaybe [] res
 
 makeFPRentalDetailsDistanceBuffersList :: [FPRentalDetailsDistanceBuffersAPIEntity] -> [FPRentalDetailsDistanceBuffers]
 makeFPRentalDetailsDistanceBuffersList = fmap makeFPRentalDetailsDistanceBuffers

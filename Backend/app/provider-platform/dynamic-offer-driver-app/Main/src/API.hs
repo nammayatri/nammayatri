@@ -15,7 +15,6 @@
 module API where
 
 import qualified API.Beckn as Beckn
-import qualified API.Cac as CacApi
 import qualified API.Dashboard as Dashboard
 import qualified API.Internal as Internal
 import qualified API.UI as UI
@@ -68,9 +67,6 @@ type MainAPI =
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> Internal.API
-    :<|> CacAPI
-
-type CacAPI = "cac" :> CacApi.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
@@ -87,7 +83,6 @@ mainServer =
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
-    :<|> CacApi.handler
 
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =

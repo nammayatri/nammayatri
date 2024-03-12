@@ -135,7 +135,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     maybe
       (pure False)
       ( \_ -> do
-          transporterConfig <- QTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just booking.transactionId) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
+          transporterConfig <- QTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
           pure $ transporterConfig.openMarketUnBlocked
       )
       driverInfo.merchantId

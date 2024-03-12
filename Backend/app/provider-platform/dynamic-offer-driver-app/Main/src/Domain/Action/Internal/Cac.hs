@@ -1,4 +1,4 @@
-module Domain.Action.Cac where
+module Domain.Action.Internal.Cac where
 
 import Data.Aeson
 import Data.Text (unpack)
@@ -16,4 +16,5 @@ newtype CacTypeValidationResp = CacTypeValidationResp {result :: Bool}
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 typeCheckHandler :: CacTypeValidationReq -> Flow CacTypeValidationResp
-typeCheckHandler req = return $ CacTypeValidationResp $ checkParseCommon (unpack (req.key), req.value) -- Here Goes Akhilesh's logic
+typeCheckHandler req = do
+  return $ CacTypeValidationResp $ checkParseCommon (unpack (req.key), req.value)

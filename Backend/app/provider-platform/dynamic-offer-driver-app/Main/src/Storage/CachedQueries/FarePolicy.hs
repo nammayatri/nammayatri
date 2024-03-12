@@ -33,10 +33,12 @@ import Domain.Types.FarePolicy
 import EulerHS.Language as L (getOption)
 import qualified EulerHS.Language as L
 import qualified GHC.List as GL
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Cac
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
@@ -44,19 +46,24 @@ import qualified Storage.Queries.FarePolicy as Queries
 import qualified System.Environment as SE
 import System.Random
 
-findFarePolicyFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> m (Maybe FarePolicy)
-findFarePolicyFromCAC id toss = do
+findFarePolicyFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> Maybe Text -> Maybe Text -> m (Maybe FarePolicy)
+findFarePolicyFromCAC id toss txnId idName = do
   fp <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "farePolicyId", DA.String (getId id))]
   tenant <- liftIO $ SE.lookupEnv "TENANT"
-  contextValue <- liftIO $ CM.evalExperimentAsString (fromMaybe "test" tenant) fp toss
+  contextValue <- liftIO $ CM.evalExperimentAsString (fromMaybe "atlas_driver_offer_bpp_v2" tenant) fp toss
   let config = jsonToFarePolicy contextValue $ Text.unpack $ getId id
+  when (isJust txnId) do
+    variantIds <- liftIO $ CM.getVariants (fromMaybe "atlas_driver_offer_bpp_v2" tenant) fp toss
+    let idName' = fromMaybe (error "idName not found") idName
+        cacData = CACData (fromJust txnId) idName' (Text.pack fp) "farePolicy" (Text.pack (show variantIds))
+    pushToKafka cacData "cac-data" ""
   pure config
 
 getConfigFromInMemory :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> Int -> m (Maybe FarePolicy)
 getConfigFromInMemory id toss = do
   fp <- L.getOption DTC.FarePolicy
   maybe
-    ( findFarePolicyFromCAC id toss
+    ( findFarePolicyFromCAC id toss Nothing Nothing
         >>= ( \config -> do
                 L.setOption DTC.FarePolicy (fromJust config)
                 pure config
@@ -65,8 +72,8 @@ getConfigFromInMemory id toss = do
     (pure . Just)
     fp
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Id FarePolicy -> m (Maybe FarePolicy)
-findById txnId id = do
+findById :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Text -> Id FarePolicy -> m (Maybe FarePolicy)
+findById txnId idName id = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
   ( if "fare_policy" `GL.elem` useCACConfig
@@ -78,14 +85,13 @@ findById txnId id = do
               then do
                 Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACFarePolicy (fromJust txnId)) >>= \case
                   Just (a :: Int) -> do
-                    findFarePolicyFromCAC id a
+                    findFarePolicyFromCAC id a txnId idName
                   Nothing -> do
                     gen <- newStdGen
                     let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-                    logDebug $ "the toss value is for farePolicy " <> show toss
                     _ <- cacheToss (fromJust txnId) toss
-                    getConfigFromInMemory id toss
-              else findFarePolicyFromCAC id 1
+                    findFarePolicyFromCAC id toss txnId idName
+              else getConfigFromInMemory id 1
         )
       else
         ( do

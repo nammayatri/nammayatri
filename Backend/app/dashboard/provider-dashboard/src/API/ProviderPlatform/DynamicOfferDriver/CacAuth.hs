@@ -54,4 +54,4 @@ cacAuthHandler mbToken = withFlowHandlerAPI' $ do
             auth_type = "Bearer",
             ..
           }
-    Nothing -> throwError CacAuthError
+    Nothing -> throwError CacInvalidToken

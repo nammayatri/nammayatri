@@ -3766,11 +3766,11 @@
     },
     "services-flake_2": {
       "locked": {
-        "lastModified": 1709843710,
-        "narHash": "sha256-BP9Bp725C6Cp3k4YZfNbvPiRm6+3s5SCCPKOPyFpGZY=",
+        "lastModified": 1710233668,
+        "narHash": "sha256-XnIKZhGnz7+E+Y+g3pktaWpFIcpWW+TAqHg0nHCGQNw=",
         "owner": "juspay",
         "repo": "services-flake",
-        "rev": "218fa6cc9a875c20def622e974fb4e0f391b3b6d",
+        "rev": "8c25972cfb166f8c0718ea8e44859c8236a2fb89",
         "type": "github"
       },
       "original": {
@@ -3796,11 +3796,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1710011305,
-        "narHash": "sha256-wyRo7JNbUaeTTPqNjamAph12TYtdN6vPy4R+t1U2cbw=",
+        "lastModified": 1710427950,
+        "narHash": "sha256-zHO76leOfjwyPuyjyQLZEbthTdBQAEdHl3XX2eZ5hWk=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "fab18d32f297cc6b5eb7f02c0af36ae68168333f",
+        "rev": "d24bff78a2c2073727a013aa5349c1a0f7136389",
         "type": "github"
       },
       "original": {

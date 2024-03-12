@@ -43,7 +43,7 @@ findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 -}
 instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
   fromTType' BeamQSZ.QuoteSpecialZoneT {..} = do
-    farePolicy <- maybe (pure Nothing) ((BeamFPolicy.findById Nothing) . Id) farePolicyId
+    farePolicy <- maybe (pure Nothing) (BeamFPolicy.findById Nothing Nothing . Id) farePolicyId
     fareParams <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in Quote for id: " <> show fareParametersId)
     return $
       Just
@@ -76,5 +76,5 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.specialLocationTag = specialLocationTag,
         BeamQSZ.fareParametersId = getId fareParams.id,
         BeamQSZ.isScheduled = Just isScheduled,
-        BeamQSZ.farePolicyId = (getId . (.id)) <$> farePolicy
+        BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy
       }

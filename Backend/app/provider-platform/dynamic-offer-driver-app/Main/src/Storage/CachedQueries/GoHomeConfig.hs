@@ -30,6 +30,7 @@ import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import EulerHS.Language as L (getOption, setOption)
 import qualified GHC.List as GL
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -50,32 +51,51 @@ import Tools.Error (GenericError (..))
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
 create = Queries.create
 
-getGoHomeConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
-getGoHomeConfigFromCACStrict id' toss = do
-  context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id'))]
+getGoHomeConfigFromCACStrict :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Maybe Text -> Maybe Text -> String -> m GoHomeConfig
+getGoHomeConfigFromCACStrict toss stickyId idName context = do
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
   let res8 = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (Text.isPrefixOf "goHomeConfig:" . DAK.toText))
       res9 = DA.Object (DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
-  maybe (error ("Could not find Go-To config corresponding to the stated merchant id" <> show id')) pure res9
+  maybe
+    (error "Could not find Go-To config")
+    ( \res'' -> do
+        when (isJust stickyId) do
+          variantIds <- liftIO $ CM.getVariants (fromMaybe "driver_offer_bpp_v2" tenant) context toss
+          let idName' = fromMaybe (error "idName not found") idName
+              cacData = CACData (fromJust stickyId) idName' (Text.pack context) "goHomeConfig" (Text.pack (show variantIds))
+          pushToKafka cacData "cac-data" ""
+        pure res''
+    )
+    res9
 
-createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
-createThroughConfigHelper id' toss = do
+createThroughConfigHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Int -> Maybe Text -> Maybe Text -> String -> m GoHomeConfig
+createThroughConfigHelper toss stickyId idName context = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
   tenant <- liftIO (Se.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
-  config <- KSQS.findById' $ Text.pack tenant
-  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
-  getGoHomeConfigFromCACStrict id' toss
+  config <- KSQS.findById $ Text.pack tenant
+  _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "config not found for goHomeConfig in db") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
+  getGoHomeConfigFromCACStrict toss stickyId idName context
 
-getGoHomeConfigFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> m GoHomeConfig
-getGoHomeConfigFromCAC id' toss = do
+getGoHomeConfigFromCAC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Int -> Maybe Text -> Maybe Text -> m GoHomeConfig
+getGoHomeConfigFromCAC id' toss stickyId idName = do
   context <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id'))]
   tenant <- liftIO $ Se.lookupEnv "TENANT"
   config <- liftIO $ CM.evalExperimentAsString (fromMaybe "driver_offer_bpp_v2" tenant) context toss
   let res8 = config ^@.. _Value . _Object . reindexed (dropPrefixFromConfig "goHomeConfig:") (itraversed . indices (Text.isPrefixOf "goHomeConfig:" . DAK.toText))
       res9 = DA.Object (DAKM.fromList res8) ^? _JSON :: Maybe GoHomeConfig
-  maybe (createThroughConfigHelper id' toss) pure res9
+  maybe
+    (createThroughConfigHelper toss stickyId idName context)
+    ( \res'' -> do
+        when (isJust stickyId) do
+          variantIds <- liftIO $ CM.getVariants (fromMaybe "driver_offer_bpp_v2" tenant) context toss
+          let idName' = fromMaybe (error "idName not found") idName
+              cacData = CACData (fromJust stickyId) idName' (Text.pack context) "goHomeConfig" (Text.pack (show variantIds))
+          pushToKafka cacData "cac-data" ""
+        pure res''
+    )
+    res9
 
 getGoHomeConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
 getGoHomeConfigFromDB id = do
@@ -88,32 +108,32 @@ getGoHomeConfigFromDB id = do
       Hedis.setExp (makeGoHomeKey id) cfg expTime
       return cfg
 
-findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> m GoHomeConfig
-findByMerchantOpCityId id stickyId = do
+findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> Maybe Text -> m GoHomeConfig
+findByMerchantOpCityId id stickyId idName = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe [] (.useCAC) systemConfigs
   if "go_home_config" `GL.elem` useCACConfig
     then do
       tenant <- liftIO $ Se.lookupEnv "TENANT"
       isExp <- liftIO $ CM.isExperimentsRunning (fromMaybe "driver_offer_bpp_v2" tenant)
-      case isExp of
-        True -> do
+      if isExp
+        then do
           Hedis.withCrossAppRedis (Hedis.safeGet $ makeCACGoHomeConfigKey stickyId) >>= \case
             (Just (a :: Int)) -> do
-              getGoHomeConfigFromCAC id a
+              getGoHomeConfigFromCAC id a stickyId idName
             Nothing -> do
               gen <- newStdGen
               let (toss, _) = randomR (1, 100) gen :: (Int, StdGen)
-              logDebug $ "the toss value is for goHomeConfig " <> show toss
-              _ <- cacheToss stickyId toss
-              getGoHomeConfigFromCAC id toss
-        False -> getConfigsFromMemory id
-  else getGoHomeConfigFromDB id
+              when (isJust stickyId) do
+                cacheToss stickyId toss
+              getGoHomeConfigFromCAC id toss stickyId idName
+        else getConfigsFromMemory id
+    else getGoHomeConfigFromDB id
 
 getConfigsFromMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
 getConfigsFromMemory id = do
   ghc <- L.getOption DTC.GoHomeConfig
-  maybe (L.setOption DTC.GoHomeConfig /=<< getGoHomeConfigFromCAC id 1) pure ghc
+  maybe (L.setOption DTC.GoHomeConfig /=<< getGoHomeConfigFromCAC id 1 Nothing Nothing) pure ghc
 
 makeGoHomeKey :: Id MerchantOperatingCity -> Text
 makeGoHomeKey id = "driver-offer:CachedQueries:GoHomeConfig:MerchantOpCityId-" <> id.getId

@@ -26,7 +26,7 @@ type API =
   "bpp"
     :> ( DynamicOfferDriver.API
            :<|> DynamicOfferDriver.APIV2
-           :<|> DynamicOfferDriver.APIV3
+           :<|> DynamicOfferDriver.CacAPI
        )
 
 handler :: FlowServer API

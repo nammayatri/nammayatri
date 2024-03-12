@@ -27,7 +27,6 @@ import Data.Aeson.Types
 import qualified Data.List.NonEmpty as NE
 import Data.Ord
 import qualified Data.Text as Text
-import Debug.Trace as T
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as Reexport
 import Kernel.Prelude
@@ -79,8 +78,8 @@ getFPSlabDetailsSlab config key' = do
                         . DAK.toText
                     )
               )
-      fpsdsl = T.trace ("the value of fpsSlab" <> show k) $ jsonToFPSlabsDetailsSlab (DAKM.fromList k) key'
-  case T.trace ("value of fpsSlab" <> show fpsdsl) (NE.nonEmpty fpsdsl) of
+      fpsdsl = jsonToFPSlabsDetailsSlab (DAKM.fromList k) key'
+  case NE.nonEmpty fpsdsl of
     Just fpsdsl' -> Just (FPSlabsDetails fpsdsl')
     Nothing -> Nothing
 

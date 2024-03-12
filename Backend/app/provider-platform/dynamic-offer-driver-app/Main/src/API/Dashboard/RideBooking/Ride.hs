@@ -70,7 +70,7 @@ rideEnd merchantShortId opCity reqRideId Common.EndRideReq {point, odometerReadi
   let merchantId = merchant.id
   let odometer = (\value -> DRide.OdometerReading value Nothing) <$> odometerReadingValue
   let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId, merchantOperatingCityId, odometer}
-  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId Nothing
+  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId
   EHandler.dashboardEndRide shandle rideId dashboardReq
 
 currentActiveRide :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler (Id Common.Ride)

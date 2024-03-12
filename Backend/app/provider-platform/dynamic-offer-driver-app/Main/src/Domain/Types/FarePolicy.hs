@@ -119,9 +119,9 @@ instance FromJSON (FarePolicyD 'DTC.Unsafe)
 
 instance ToJSON (FarePolicyD 'DTC.Unsafe)
 
-instance FromJSON (FarePolicyD 'DTC.Safe)
+instance FromJSON FarePolicy
 
-instance ToJSON (FarePolicyD 'DTC.Safe)
+instance ToJSON FarePolicy
 
 data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s)
   deriving (Generic, Show)
@@ -166,9 +166,9 @@ instance FromJSON (FullFarePolicyD 'DTC.Unsafe)
 
 instance ToJSON (FullFarePolicyD 'DTC.Unsafe)
 
-instance FromJSON (FullFarePolicyD 'DTC.Safe)
+instance FromJSON FullFarePolicy
 
-instance ToJSON (FullFarePolicyD 'DTC.Safe)
+instance ToJSON FullFarePolicy
 
 type FullDriverExtraFeeBounds = (Id FarePolicy, DriverExtraFeeBounds)
 

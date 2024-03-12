@@ -109,8 +109,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
 
     prepareDriverPoolBatch' previousBatchesDrivers batchNum doGoHomePooling merchantOpCityId_ txnId = withLogTag ("BatchNum - " <> show batchNum) $ do
       radiusStep <- getPoolRadiusStep searchTry.id
-      transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId_ Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
-      intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId_ txnId >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
+      transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId_ Nothing Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
+      intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId_ txnId (Just "driverId") >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (\riderId -> Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversForRiderKey riderId)) searchReq.riderId
       let blockListedDrivers = blockListedDriversForSearch <> blockListedDriversForRider
@@ -319,7 +319,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
           nonGoHomeDriversWithValidReqCount <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId merchantOpCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) driversWithValidReqAmount
           let nonGoHomeNormalDriversWithValidReqCount = filter (\ngd -> ngd.driverPoolResult.driverId `notElem` blockListedDrivers) nonGoHomeDriversWithValidReqCount
           let fillSize = batchSize - length batch
-          transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId Nothing
+          transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId Nothing Nothing
           (batch <>)
             <$> case sortingType of
               Intelligent -> do

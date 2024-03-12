@@ -15,7 +15,7 @@
 module API.ProviderPlatform.DynamicOfferDriver
   ( API,
     APIV2,
-    APIV3,
+    CacAPI,
     handler,
     handlerV2,
     handlerV3,
@@ -55,7 +55,7 @@ type APIV2 =
     :> Capture "city" City.City
     :> API'
 
-type APIV3 =
+type CacAPI =
   "driver-offer"
     :> CacAuth.API
 
@@ -117,5 +117,5 @@ handlerV2 merchantId city =
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
 
-handlerV3 :: FlowServer APIV3
+handlerV3 :: FlowServer CacAPI
 handlerV3 = CacAuth.handler

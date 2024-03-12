@@ -78,7 +78,7 @@ multipleRideEnd merchantShortId opCity req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateMultipleRideEndReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  shandle <- EHandler.buildEndRideHandle merchant.id merchantOpCityId Nothing
+  shandle <- EHandler.buildEndRideHandle merchant.id merchantOpCityId
   logTagInfo "dashboard -> multipleRideEnd : " $ show (req.rides <&> (.rideId))
   respItems <- forM req.rides $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do

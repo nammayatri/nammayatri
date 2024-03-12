@@ -29,7 +29,6 @@ import Data.Aeson.Types
 import Data.List.NonEmpty
 import Data.Text as Text
 import qualified Data.Vector as DV
-import Debug.Trace as T
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
 import Kernel.Prelude as KP
@@ -87,8 +86,8 @@ jsonToFPProgressiveDetailsPerExtraKmRateSection config key' = do
                         . DAK.toText
                     )
               )
-      res'' = T.trace ("perKmRateSectionvalue" <> show res' <> "and key" <> show key') $ fromMaybe (DA.Array (DV.fromList [])) (KM.lookup (DAK.fromText (Text.pack key')) (KM.fromList res'))
-      res = T.trace ("perKmRateSectionValue'" <> show res'') $ res'' ^? _JSON :: (Maybe [FPProgressiveDetailsPerExtraKmRateSection])
+      res'' = fromMaybe (DA.Array (DV.fromList [])) (KM.lookup (DAK.fromText (Text.pack key')) (KM.fromList res'))
+      res = res'' ^? _JSON :: (Maybe [FPProgressiveDetailsPerExtraKmRateSection])
   fromMaybe [] res
 
 parsingMiddleware :: KM.KeyMap Value -> String -> String -> KM.KeyMap Value

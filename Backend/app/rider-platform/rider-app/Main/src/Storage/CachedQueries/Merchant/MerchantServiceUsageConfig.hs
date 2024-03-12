@@ -74,11 +74,10 @@ findByMerchantOperatingCityId id = do
         Just cfg -> return $ Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig cfg
         _ -> do
           logError $ "Could not find the config for tenant " <> Text.pack tenant <> " for the stated merchantOperatingCityId. Trying to restart Client with backup...."
-          cfg <- KSQS.findById' $ Text.pack tenant
+          cfg <- KSQS.findById $ Text.pack tenant
           mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
           mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
-          logDebug $ "The fetched Backup config is : " <> show cfg.configValue
-          KTC.initializeCACThroughConfig CM.createClientFromConfig cfg.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
+          KTC.initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "Config not found in db for merchantServiceUsageConfig") cfg) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
           Just <$> getMerchantServiceUsageConfigFromCACStrict id toss
     else getCfgFromCache id
 

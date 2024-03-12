@@ -104,10 +104,10 @@ initiateDriverSearchBatch ::
   Bool ->
   m ()
 initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCategory vehicleVariant estOrQuoteId customerExtraFee messageId isRepeatSearch = do
-  farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleVariant searchReq.area estOrQuoteId (Just searchReq.transactionId)
+  farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleVariant searchReq.area estOrQuoteId (Just searchReq.transactionId) (Just "transactionId")
   searchTry <- createNewSearchTry farePolicy searchReq.customerCancellationDues
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleVariant searchTry.tripCategory searchReq.estimatedDistance (Just searchReq.transactionId)
-  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId)
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleVariant searchTry.tripCategory searchReq.estimatedDistance (Just searchReq.transactionId) (Just "transactionId")
+  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just searchReq.transactionId) (Just "transactionId")
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
   if not searchTry.isScheduled
     then do
