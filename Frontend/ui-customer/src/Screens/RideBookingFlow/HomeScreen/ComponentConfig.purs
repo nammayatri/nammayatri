@@ -1052,7 +1052,7 @@ nyRateCardListForDelhi :: ST.HomeScreenState -> Array FareList
 nyRateCardListForDelhi state = 
   ([{key : ((getString MIN_FARE_UPTO) <> " 1.5 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹30")},
     { key : "1.5 km - 5 km" , val : "₹15 / km"},
-    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹10 / km"},
+    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹11 / km"},
     {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
     [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
