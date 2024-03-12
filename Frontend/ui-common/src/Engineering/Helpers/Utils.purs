@@ -281,6 +281,7 @@ cityCodeMap =
   , Tuple "std:033" "kolkata"
   , Tuple "std:001" "paris"
   , Tuple "std:484" "kochi"
+  , Tuple "std:0484" "kochi"
   , Tuple "std:011" "delhi"
   , Tuple "std:040" "hyderabad"
   , Tuple "std:022" "mumbai"
