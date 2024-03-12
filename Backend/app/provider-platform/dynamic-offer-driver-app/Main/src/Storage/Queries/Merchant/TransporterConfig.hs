@@ -146,6 +146,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             dummyFromLocation = fromMaybe dummyFromLocationData (valueToMaybe =<< dummyFromLocation),
             dummyToLocation = fromMaybe dummyToLocationData (valueToMaybe =<< dummyToLocation),
             scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
+            canSuvDowngradeToHatchback = fromMaybe False canSuvDowngradeToHatchback,
             ..
           }
     where
@@ -222,6 +223,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.canSwitchToRental = canSwitchToRental,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.canSuvDowngradeToTaxi = canSuvDowngradeToTaxi,
+        BeamTC.canSuvDowngradeToHatchback = Just canSuvDowngradeToHatchback,
         BeamTC.avgSpeedOfVehicle = toJSON <$> avgSpeedOfVehicle,
         BeamTC.aadhaarImageResizeConfig = toJSON <$> aadhaarImageResizeConfig,
         BeamTC.enableFaceVerification = enableFaceVerification,

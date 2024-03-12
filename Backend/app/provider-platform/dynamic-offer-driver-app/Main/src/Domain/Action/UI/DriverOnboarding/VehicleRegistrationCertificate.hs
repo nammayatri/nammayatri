@@ -358,7 +358,7 @@ activateRC driverId merchantId merchantOpCityId now rc = do
       transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == Vehicle.SUV) $
-          DIQuery.updateDriverDowngradeTaxiForSuv driverId transporterConfig.canSuvDowngradeToTaxi
+          DIQuery.updateDriverDowngradeForSuv driverId transporterConfig.canSuvDowngradeToTaxi transporterConfig.canSuvDowngradeToHatchback
       let vehicle = Domain.makeVehicleFromRC now driverId merchantId rcNumber rc
       VQuery.create vehicle
 

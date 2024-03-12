@@ -151,7 +151,6 @@ import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
@@ -826,6 +825,9 @@ addVehicle merchantShortId opCity reqDriverId req = do
     vehicle <- buildVehicle merchantId personId req
     -- Esq.runTransaction $ do
     QVehicle.create vehicle
+    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    when (vehicle.variant == DVeh.SUV) $
+      QDriverInfo.updateDriverDowngradeForSuv personId transporterConfig.canSuvDowngradeToTaxi transporterConfig.canSuvDowngradeToHatchback
 
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
@@ -1126,7 +1128,7 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
         Just planId -> pure planId
     callSubscribeFlowForDriver :: Id Plan -> Flow ()
     callSubscribeFlowForDriver planId = do
-      driverInfo' <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+      driverInfo' <- QDriverInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
       let serviceSpecificData = DDPlan.RentedVehicleNumber vehicleNo
       _ <- DTPlan.planSubscribe serviceName planId (True, Just WHATSAPP) (cast driverId, mId, mOpCityId) driverInfo' serviceSpecificData
       pure ()
@@ -1451,7 +1453,7 @@ clearOnRideStuckDrivers merchantShortId _ dbSyncTime = do
   driverIds <-
     mapM
       ( \dI -> do
-          QDI.updateOnRide (cast dI.driverInfo.driverId) False
+          QDriverInfo.updateOnRide (cast dI.driverInfo.driverId) False
           void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon
           return (cast dI.driverInfo.driverId)
       )
