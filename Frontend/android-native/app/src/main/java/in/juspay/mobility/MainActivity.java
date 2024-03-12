@@ -30,6 +30,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -334,8 +335,6 @@ public class MainActivity extends AppCompatActivity {
                 deepLinkJson = notificationDeepLinkVector.get(1);
             }
 
-            WebView.setWebContentsDebuggingEnabled(true);
-
             if (MERCHANT_TYPE.equals("DRIVER")) {
                 widgetService = new Intent(this, WidgetService.class);
                 getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -370,6 +369,8 @@ public class MainActivity extends AppCompatActivity {
         initApp();
 
         handleSplashScreen();
+
+        WebView.setWebContentsDebuggingEnabled(true);
 
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
