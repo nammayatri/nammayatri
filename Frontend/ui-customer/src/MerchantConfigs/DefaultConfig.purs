@@ -204,7 +204,7 @@ config =
       }
   , customerTip : {
       auto : true,
-      cabs : false
+      cabs : true
     }
   , feature : {
     enableAutoReadOtp : true,
