@@ -33,7 +33,6 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -45,7 +44,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.fragment.app.FragmentActivity;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
@@ -70,22 +68,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -106,7 +95,6 @@ import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
-import in.juspay.mobility.app.reels.ExoplayerItem;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
 import in.juspay.mobility.common.Utils;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
@@ -334,8 +322,6 @@ public class MainActivity extends AppCompatActivity {
                 deepLinkJson = notificationDeepLinkVector.get(1);
             }
 
-            WebView.setWebContentsDebuggingEnabled(true);
-
             if (MERCHANT_TYPE.equals("DRIVER")) {
                 widgetService = new Intent(this, WidgetService.class);
                 getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -370,6 +356,8 @@ public class MainActivity extends AppCompatActivity {
         initApp();
 
         handleSplashScreen();
+
+        WebView.setWebContentsDebuggingEnabled(true);
 
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
