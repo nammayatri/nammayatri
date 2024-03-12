@@ -1694,6 +1694,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       SettingPrice -> do
                         _ <- pure $ performHapticFeedback unit
                         _ <- pure $ updateLocalStage FindingQuotes
+                        void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
                         let updatedState = state{data{rideHistoryTrip = Nothing}, props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
                         updateAndExit (updatedState) (GetQuotes updatedState)
       _            -> continue state
@@ -2567,10 +2568,10 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
   else do
     let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
         newState = state{data{specialZoneQuoteList = updatedQuotes}}
-    if state.data.currentSearchResultType == QUOTES then do
-                _ <- pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
-                continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
-                else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
+    void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
+    if state.data.currentSearchResultType == QUOTES then
+      continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
+    else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state =
   continue state{ props { showRateCard = true }
@@ -2583,6 +2584,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
   let _ = unsafePerformEffect $ Events.addEventData "External.SearchId" state.props.searchId
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
+  void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
   if state.data.currentSearchResultType == QUOTES then  do
     _ <- pure $ updateLocalStage ConfirmingRide
     exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
@@ -2965,23 +2967,17 @@ tipEnabledState :: HomeScreenState -> HomeScreenState
 tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDriver= (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! (state.props.customerTip.tipActiveIndex-1)))}}}
 
 isTipEnabled :: HomeScreenState -> Boolean
-isTipEnabled state = do
+isTipEnabled state =
     let tipConfig = state.data.config.customerTip
-        selectedEstimatesObject = getSelectedEstimatesObject "Lazy"
-    case selectedEstimatesObject of
-      Just obj -> 
-        case obj.vehicleVariant of 
-            "AUTO_RICKSHAW" -> tipConfig.auto
-            _ -> tipConfig.cabs
-      Nothing -> case state.data.selectedEstimatesObject.vehicleVariant of 
-                    "AUTO_RICKSHAW" -> tipConfig.auto
-                    _ -> tipConfig.cabs
+    in 
+    case state.data.selectedEstimatesObject.vehicleVariant of 
+      "AUTO_RICKSHAW" -> tipConfig.auto
+      _ -> tipConfig.cabs
 
 specialZoneFlow :: Array OfferRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 specialZoneFlow estimatedQuotes state = do
   let quoteList = getSpecialZoneQuotes estimatedQuotes state.data.config.estimateAndQuoteConfig
       defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
-  void $ pure $ setSelectedEstimatesObject defaultQuote
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
@@ -2996,7 +2992,6 @@ specialZoneFlow estimatedQuotes state = do
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
   let estimatesInfo = getEstimatesInfo estimates "" state
-  void $ pure $ setSelectedEstimatesObject estimatesInfo.defaultQuote
   if ((not (null estimatesInfo.quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
         nearByDrivers = getNearByDrivers estimates
