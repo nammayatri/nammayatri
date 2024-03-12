@@ -32,8 +32,9 @@ import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig,
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare)
+import Helpers.Utils (isHaveFare, getCityFromString)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
+import Storage
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -104,7 +105,11 @@ view push state =
 
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
-  (if (state.data.selectedItem.nightCharges ) then [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ] else [])
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+      nightChargeFrom = if city == ST.Delhi then "11 PM" else "10 PM"
+      nightChargeTill = "5 AM"
+  in
+  (if (state.data.selectedItem.nightCharges ) then [ "1.5" <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) ] else [])
     <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
     <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else [])
     <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])
