@@ -22,7 +22,7 @@ import Data.Lens ((^.))
 import Data.Maybe (fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||))
@@ -30,9 +30,9 @@ import PrestoDOM.Types.Core (toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
-import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..))
+import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..))
 import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..))
-import Storage (isLocalStageOn)
+import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Data.Ord (abs)
 import ConfigProvider
 import Screens.RideSelectionScreen.ScreenData 
@@ -78,7 +78,10 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
     specialTags = getSpecialTag ride.specialLocationTag
-    referenceString' = (if nightChargesVal && (getMerchant FunctionCall) /= YATRI then "1.5" <> getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT else "")
+    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+    nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
+    nightChargeTill = "5 AM"
+    referenceString' = (if nightChargesVal && (getMerchant FunctionCall) /= YATRI then "1.5" <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")
                         <> (if isHaveFare "DRIVER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO else "")
                         <> (if isHaveFare "WAITING_CHARGES" updatedFareList then "\n\n" <> getEN WAITING_CHARGE_DESCRIPTION else "")
                         <> (if isHaveFare "EARLY_END_RIDE_PENALTY" updatedFareList then "\n\n" <> getEN EARLY_END_RIDE_CHARGES_DESCRIPTION else "")
