@@ -241,6 +241,20 @@ window.getMerchantConfig = function () {
     , "defaultLanguage" : "EN_US"
     , "isEmergencyContacts": "true"
     , "enableGeocoder" : false
+    , "metroTicketingConfig" : [
+      { "cityName" : "kochi"
+      , "cityCode" : "std:0484"      
+      , "metroStationTtl" : 10080
+      , "bookingStartTime" : "00:00:00"
+      , "bookingEndTime" : "23:59:59"
+      },
+      { "cityName" : "chennai"
+      , "cityCode" : "std:040"  
+      , "metroStationTtl" : 10080
+      , "bookingStartTime" : "04:30:00"
+      , "bookingEndTime" : "22:30:00"
+      }
+    ]
     , "specialLocationView" : true
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"

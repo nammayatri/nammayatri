@@ -3071,7 +3071,7 @@ instance showFollowers :: Show Followers where show = genericShow
 instance decodeFollowers :: Decode Followers where decode = defaultDecode
 instance encodeFollowers :: Encode Followers where encode = defaultEncode
 --------------------------------------------------- GetMetroStation ----------------------------------------------------
-data GetMetroStationReq = GetMetroStationReq 
+data GetMetroStationReq = GetMetroStationReq String
 
 newtype GetMetroStationResponse = GetMetroStationResponse (Array GetMetroStationResp)
 
@@ -3093,13 +3093,13 @@ instance decodeGetMetroStationResponse :: Decode GetMetroStationResponse where d
 data StationType = START | END | TRANSIT | INTERMEDIATE
 
 instance makeGetMetroStationReq :: RestEndpoint GetMetroStationReq GetMetroStationResponse where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getMetroStations "") headers reqBody Nothing
+    makeRequest reqBody@(GetMetroStationReq city) headers = defaultMakeRequest GET (EP.getMetroStations city) headers reqBody Nothing
     decodeResponse    = decodeJSON
     encodeRequest = standardEncode
 
 derive instance genericGetMetroStationReq :: Generic GetMetroStationReq _
 instance showGetMetroStationReq     :: Show GetMetroStationReq where show     = genericShow
-instance standardGetMetroStationReq :: StandardEncode GetMetroStationReq where standardEncode (GetMetroStationReq ) = standardEncode {}
+instance standardGetMetroStationReq :: StandardEncode GetMetroStationReq where standardEncode (GetMetroStationReq _) = standardEncode {}
 instance decodeGetMetroStationReq   :: Decode GetMetroStationReq where decode = defaultDecode
 instance encodeGetMetroStationReq   :: Encode GetMetroStationReq where encode = defaultEncode
 
@@ -3225,6 +3225,8 @@ newtype ConfirmMetroQuoteResp = ConfirmMetroQuoteResp MetroTicketBookingStatus
 
 newtype MetroTicketBookingStatus = MetroTicketBookingStatus {
   bookingId :: String
+  , city :: String
+  , updatedAt :: String
   , status :: String --FRFSTicketBookingStatus
   , _type :: String--FRFSQuoteType
   , quantity :: Int
@@ -3366,6 +3368,111 @@ instance standardEncodeRetryMetrTicketPaymentResp :: StandardEncode RetryMetrTic
 instance showRetryMetrTicketPaymentResp :: Show RetryMetrTicketPaymentResp where show = genericShow
 instance decodeRetryMetrTicketPaymentResp :: Decode RetryMetrTicketPaymentResp where decode = defaultDecode
 instance encodeRetryMetrTicketPaymentResp  :: Encode RetryMetrTicketPaymentResp where encode = defaultEncode
+
+----------------------------------------------------- softCancelMetroBooking ---------------------------------------------------
+
+data MetroBookingSoftCancelReq = MetroBookingSoftCancelReq String
+
+newtype MetroBookingSoftCancelResp = MetroBookingSoftCancelResp 
+  {
+    result :: String
+  }
+
+derive instance genericMetroBookingSoftCancelResp :: Generic MetroBookingSoftCancelResp _
+derive instance newtypeMetroBookingSoftCancelResp :: Newtype MetroBookingSoftCancelResp _
+instance showMetroBookingSoftCancelResp :: Show MetroBookingSoftCancelResp where show = genericShow
+instance decodeMetroBookingSoftCancelResp :: Decode MetroBookingSoftCancelResp where decode = defaultDecode
+instance encodeMetroBookingSoftCancelResp :: Encode MetroBookingSoftCancelResp where encode = defaultEncode
+
+instance metroBookingSoftCancelReq :: RestEndpoint MetroBookingSoftCancelReq MetroBookingSoftCancelResp where
+ makeRequest reqBody@(MetroBookingSoftCancelReq bookingId) headers = defaultMakeRequest POST (EP.metroBookingSoftCancel bookingId) headers reqBody Nothing
+ decodeResponse    = decodeJSON
+ encodeRequest = standardEncode
+
+derive instance genericMetroBookingSoftCancelReq :: Generic MetroBookingSoftCancelReq _
+instance showMetroBookingSoftCancelReq     :: Show MetroBookingSoftCancelReq where show     = genericShow
+instance standardMetroBookingSoftCancelReq :: StandardEncode MetroBookingSoftCancelReq where standardEncode (MetroBookingSoftCancelReq _) = standardEncode {}
+instance decodeMetroBookingSoftCancelReq   :: Decode MetroBookingSoftCancelReq where decode = defaultDecode
+instance encodeMetroBookingSoftCancelReq   :: Encode MetroBookingSoftCancelReq where encode = defaultEncode
+
+----------------------------------------------------- softCancelMetroBookingStatus ---------------------------------------------------
+
+data MetroBookingSoftCancelStatusReq = MetroBookingSoftCancelStatusReq String
+
+newtype MetroBookingSoftCancelStatusResp = MetroBookingSoftCancelStatusResp 
+  { cancellationCharges :: Maybe Number,
+    isCancellable :: Maybe Boolean,
+    refundAmount :: Maybe Number
+  }
+
+derive instance genericMetroBookingSoftCancelStatusResp :: Generic MetroBookingSoftCancelStatusResp _
+derive instance newtypeMetroBookingSoftCancelStatusResp :: Newtype MetroBookingSoftCancelStatusResp _
+instance showMetroBookingSoftCancelStatusResp :: Show MetroBookingSoftCancelStatusResp where show = genericShow
+instance decodeMetroBookingSoftCancelStatusResp :: Decode MetroBookingSoftCancelStatusResp where decode = defaultDecode
+instance encodeMetroBookingSoftCancelStatusResp :: Encode MetroBookingSoftCancelStatusResp where encode = defaultEncode
+
+instance metroBookingSoftCancelStatusReq :: RestEndpoint MetroBookingSoftCancelStatusReq MetroBookingSoftCancelStatusResp where
+ makeRequest reqBody@(MetroBookingSoftCancelStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingSoftCancelStatus bookingId) headers reqBody Nothing
+ decodeResponse    = decodeJSON
+ encodeRequest = standardEncode
+
+derive instance genericMetroBookingSoftCancelStatusReq :: Generic MetroBookingSoftCancelStatusReq _
+instance showMetroBookingSoftCancelStatusReq     :: Show MetroBookingSoftCancelStatusReq where show     = genericShow
+instance standardMetroBookingSoftCancelStatusReq :: StandardEncode MetroBookingSoftCancelStatusReq where standardEncode (MetroBookingSoftCancelStatusReq _) = standardEncode {}
+instance decodeMetroBookingSoftCancelStatusReq   :: Decode MetroBookingSoftCancelStatusReq where decode = defaultDecode
+instance encodeMetroBookingSoftCancelStatusReq   :: Encode MetroBookingSoftCancelStatusReq where encode = defaultEncode
+
+------------------------------------------------------ hardCancelMetroBooking --------------------------------------------------
+
+data MetroBookingHardCancelReq = MetroBookingHardCancelReq String
+
+newtype MetroBookingHardCancelResp = MetroBookingHardCancelResp 
+  {
+    result :: String
+  }
+
+derive instance genericMetroBookingHardCancelResp :: Generic MetroBookingHardCancelResp _
+derive instance newtypeMetroBookingHardCancelResp :: Newtype MetroBookingHardCancelResp _
+instance showMetroBookingHardCancelResp :: Show MetroBookingHardCancelResp where show = genericShow
+instance decodeMetroBookingHardCancelResp :: Decode MetroBookingHardCancelResp where decode = defaultDecode
+instance encodeMetroBookingHardCancelResp :: Encode MetroBookingHardCancelResp where encode = defaultEncode
+
+instance metroBookingHardCancelReq :: RestEndpoint MetroBookingHardCancelReq MetroBookingHardCancelResp where
+ makeRequest reqBody@(MetroBookingHardCancelReq bookingId) headers = defaultMakeRequest POST (EP.metroBookingHardCancel bookingId) headers reqBody Nothing
+ decodeResponse    = decodeJSON
+ encodeRequest = standardEncode
+
+derive instance genericMetroBookingHardCancelReq :: Generic MetroBookingHardCancelReq _
+instance showMetroBookingHardCancelReq     :: Show MetroBookingHardCancelReq where show     = genericShow
+instance standardMetroBookingHardCancelReq :: StandardEncode MetroBookingHardCancelReq where standardEncode (MetroBookingHardCancelReq _) = standardEncode {}
+instance decodeMetroBookingHardCancelReq   :: Decode MetroBookingHardCancelReq where decode = defaultDecode
+instance encodeMetroBookingHardCancelReq   :: Encode MetroBookingHardCancelReq where encode = defaultEncode
+
+------------------------------------------------------- hardCancelMetroBookingStatus ----------------------------------------------
+
+data MetroBookingHardCancelStatusReq = MetroBookingHardCancelStatusReq String
+
+newtype MetroBookingHardCancelStatusResp = MetroBookingHardCancelStatusResp 
+  { cancellationCharges :: Maybe Number,
+    refundAmount :: Maybe Number
+  }
+
+derive instance genericMetroBookingHardCancelStatusResp :: Generic MetroBookingHardCancelStatusResp _
+derive instance newtypeMetroBookingHardCancelStatusResp :: Newtype MetroBookingHardCancelStatusResp _
+instance showMetroBookingHardCancelStatusResp :: Show MetroBookingHardCancelStatusResp where show = genericShow
+instance decodeMetroBookingHardCancelStatusResp :: Decode MetroBookingHardCancelStatusResp where decode = defaultDecode
+instance encodeMetroBookingHardCancelStatusResp :: Encode MetroBookingHardCancelStatusResp where encode = defaultEncode
+
+instance metroBookingHardCancelStatusReq :: RestEndpoint MetroBookingHardCancelStatusReq MetroBookingHardCancelStatusResp where
+ makeRequest reqBody@(MetroBookingHardCancelStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingHardCancelStatus bookingId) headers reqBody Nothing
+ decodeResponse    = decodeJSON
+ encodeRequest = standardEncode
+
+derive instance genericMetroBookingHardCancelStatusReq :: Generic MetroBookingHardCancelStatusReq _
+instance showMetroBookingHardCancelStatusReq     :: Show MetroBookingHardCancelStatusReq where show     = genericShow
+instance standardMetroBookingHardCancelStatusReq :: StandardEncode MetroBookingHardCancelStatusReq where standardEncode (MetroBookingHardCancelStatusReq _) = standardEncode {}
+instance decodeMetroBookingHardCancelStatusReq   :: Decode MetroBookingHardCancelStatusReq where decode = defaultDecode
+instance encodeMetroBookingHardCancelStatusReq   :: Encode MetroBookingHardCancelStatusReq where encode = defaultEncode
 
 ----------------------------- SDK Events -----------------------------------------------------
 newtype SDKEventsReq = SDKEventsReq {

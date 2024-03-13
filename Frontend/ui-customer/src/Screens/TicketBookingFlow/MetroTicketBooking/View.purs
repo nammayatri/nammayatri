@@ -24,7 +24,7 @@ import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText.View as PrimaryEditText
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getMetroConfigFromAppConfig, getCityFromString, CityMetroConfig(..), getMetroConfigFromCity)
 import Prelude
 import Screens.TicketBookingFlow.MetroTicketBooking.Controller
 import Screens.TicketBookingFlow.MetroTicketBooking.ComponentConfig
@@ -57,6 +57,10 @@ import Control.Transformers.Back.Trans (runBackT)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Control.Monad.Trans.Class (lift)
 import Storage 
+import Mobility.Prelude (boolToVisibility)
+import Components.Banner as Banner
+import ConfigProvider (getAppConfig)
+import Constants
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -74,7 +78,11 @@ screen initialState =
   }
   where
     getQuotes push = do
-      let withinTimeRange = JB.withinTimeRange initialState.config.metroTicketingConfig.bookingStartTime initialState.config.metroTicketingConfig.bookingEndTime  $ EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
+      let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+          config = getAppConfig appConfig
+          cityMetroConfig = getMetroConfigFromAppConfig config (show city)
+          withinTimeRange = JB.withinTimeRange cityMetroConfig.bookingStartTime cityMetroConfig.bookingEndTime $ 
+            EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
       push $ ShowMetroBookingTimeError withinTimeRange
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 initialState push GetMetroQuotesAction
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getSDKPolling initialState.data.bookingId 3000.0 initialState push GetSDKPollingAC
@@ -116,6 +124,10 @@ getSDKPolling bookingId delayDuration state push action = do
 
 view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
+  let
+    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+    cityMetroConfig = getMetroConfigFromCity city
+  in
     PrestoAnim.animationSet [Anim.fadeIn true]  $ frameLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -134,15 +146,15 @@ view push state =
           , width MATCH_PARENT
           , background Color.greySmoke
           ][]
-        , infoSelectioView state push
+        , infoSelectioView state push cityMetroConfig
         ]
         , updateButtonView state push
-    ] <> if state.props.showMetroBookingTimeError then [InfoCard.view (push <<< InfoCardAC) (metroTimeErrorPopupConfig state)] else [linearLayout [visibility GONE] []]
+    ] <> if state.props.showMetroBookingTimeError then [InfoCard.view (push <<< InfoCardAC) (metroTimeErrorPopupConfig state cityMetroConfig)] else [linearLayout [visibility GONE] []]
 
-infoSelectioView :: forall w . ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-infoSelectioView state push =
+infoSelectioView :: forall w . ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> CityMetroConfig -> PrestoDOM (Effect Unit) w
+infoSelectioView state push cityMetroConfig =
     scrollView
-      [ height if EHC.os == "IOS" then V (EHC.screenHeight unit) else MATCH_PARENT
+      [ height MATCH_PARENT
       , width MATCH_PARENT    
       , padding $ PaddingBottom 75
       , scrollBarY false
@@ -151,40 +163,28 @@ infoSelectioView state push =
           , width MATCH_PARENT
           , orientation VERTICAL
           ]
-          [
-            linearLayout
+          [ bannerView push cityMetroConfig
+          , linearLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
-                    , margin (Margin 16 24 16 20)
+                    , margin (Margin 16 0 16 20)
                     , padding (Padding 20 20 20 20)
                     , background Color.white900
                     , cornerRadius 8.0
                     , orientation VERTICAL
                     ][ 
-                      linearLayout
-                        [ height MATCH_PARENT
-                        , width MATCH_PARENT
-                        , orientation VERTICAL
-                        , padding $ PaddingBottom 20
-                        ][  linearLayout
-                            [ width MATCH_PARENT
-                            , height WRAP_CONTENT
-                            , orientation HORIZONTAL
-                            , padding (Padding 2 2 2 2)
-                            , background Color.white900
-                            , stroke $ "1," <> Color.grey900
-                            , cornerRadius if EHC.os == "IOS" then 18.0 else 30.0
-                            , gravity CENTER
-                            ][ selectionTab (getString ONE_WAY_STR)  ST.ONE_WAY push state
-                            , selectionTab (getString ROUND_TRIP_STR) ST.ROUND_TRIP push state
-                            ]
-                        ]
-                    , srcTextView push state
-                    , destTextView push state
+                      textView $ [
+                        text $ getString PLAN_YOUR_JOURNEY
+                      , color Color.black800  
+                      , margin $ MarginBottom 9 
+                      ] <> FontStyle.subHeading1 TypoGraphy
+                    , locationSelectionView push state
+                    , incrementDecrementView push state
+                    , roundTripCheckBox push state
                     , linearLayout
                         [ height WRAP_CONTENT
                         , width MATCH_PARENT
-                        , gravity BOTTOM
+                        , margin $ MarginTop 10
                             ][ textView $ 
                                 [ text $ getString UNCERTAIN_ABOUT_METRO_ROUTES
                                 , color Color.black800
@@ -197,38 +197,50 @@ infoSelectioView state push =
                                 ] <> FontStyle.subHeading1 TypoGraphy
                             ]
                     ]
-                  , incrementDecrementView push state
-                  , linearLayout
-                      [ height WRAP_CONTENT
-                      , width MATCH_PARENT
-                      , gravity BOTTOM
-                      , margin $ MarginHorizontal 16 16
-                      , onClick push $ const ToggleTermsAndConditions
-                          ][  imageView
-                              [ height $ V 16
-                              , width $ V 16 
-                              , layoutGravity "center_vertical"
-                              , margin $ MarginRight 8
-                              , imageWithFallback $ fetchImage FF_COMMON_ASSET (if state.props.termsAndConditionsSelected then "ny_ic_checked" else "ny_ic_unchecked")
-                              ]
-                            , textView $ 
-                              [ text $ getString I_AGREE_TO_THE
-                              , color Color.black800
-                              ] <> FontStyle.body1 TypoGraphy
-                            , textView $ 
-                              [ text $ " " <> (getString TERMS_AND_CONDITIONS)
-                              , color Color.blue900
-                              , onClick (\action -> do
-                                      _<- push action
-                                      _ <- JB.openUrlInApp $ "https://metro-terms.triffy.in/chennai/index.html"
-                                      pure unit
-                                      ) (const NoAction)
-                              ] <> FontStyle.body1 TypoGraphy
-                          ]
-                  , termsAndConditionsView (getTermsAndConditions "") true
+                  , termsAndConditionsView push cityMetroConfig true
           ]
       ]
 
+bannerView :: forall w . (Action -> Effect Unit) ->  CityMetroConfig -> PrestoDOM (Effect Unit) w
+bannerView push cityMetroConfig = 
+  linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , cornerRadius 8.0  
+  , margin $ (Margin 16 0 16 0)
+  ][ Banner.view (push <<< const NoAction) (metroBannerConfig cityMetroConfig)
+  ]
+
+roundTripCheckBox :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> forall w . PrestoDOM (Effect Unit) w
+roundTripCheckBox push state = 
+  let
+    isRoundTripSelected = ST.ROUND_TRIP == state.data.ticketType
+    ticketType = if isRoundTripSelected then ST.ONE_WAY else ST.ROUND_TRIP
+  in
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , padding $ Padding 4 4 4 4
+    , margin $ MarginTop 20
+    ][linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT 
+      , onClick (\action -> push action
+            ) (const $ ChangeTicketTab ticketType)
+    ][imageView
+      [ height $ V 16
+      , width $ V 16
+      , layoutGravity "center_vertical"
+      , margin $ MarginRight 4
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET (if isRoundTripSelected then "ny_ic_checked" else "ny_ic_unchecked")
+      ]
+      , textView $ 
+       [ text $ " " <> (getString BOOK_ROUND_TRIP)
+       , color Color.black800
+       ] <> FontStyle.body2 TypoGraphy
+     ]
+    ]
 selectionTab :: forall w . String  -> ST.TicketType -> (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 selectionTab _text ticketType push state = 
   let ticketEnabled = ticketType == state.data.ticketType
@@ -252,27 +264,51 @@ selectionTab _text ticketType push state =
             ) (const $ ChangeTicketTab ticketType)
   ]
 
-termsAndConditionsView :: forall w . Array String -> Boolean -> PrestoDOM (Effect Unit) w
-termsAndConditionsView termsAndConditions isMarginTop =
-  linearLayout
-  [ width MATCH_PARENT
+termsAndConditionsView :: forall w . (Action -> Effect Unit) -> CityMetroConfig -> Boolean -> PrestoDOM (Effect Unit) w
+termsAndConditionsView push (CityMetroConfig cityMetroConfig) isMarginTop = 
+  linearLayout[
+    width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , margin $ Margin 16 13 16 0
-  ] (mapWithIndex (\index item ->
-      linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation HORIZONTAL
-      ][ textView $
-         [ textFromHtml $ " &#8226;&ensp; " <> item
-         , color Color.black700
-         ] <> FontStyle.tags TypoGraphy
-      ]
-  ) termsAndConditions )
-
-getTermsAndConditions :: forall w . String -> Array String
-getTermsAndConditions _ = [getString METRO_TERM_1 ,getString METRO_TERM_2]
+  , margin $ Margin 16 12 16 15
+  ][ linearLayout
+     [ height WRAP_CONTENT
+     , width MATCH_PARENT
+     , margin $ MarginBottom 12
+     ][ imageView
+        [ height $ V 16
+        , width $ V 16 
+        , layoutGravity "center_vertical"
+        , margin $ MarginRight 6
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info"
+        ]
+        , textView $ 
+          [ textFromHtml $ " " <> getString BY_PROCEEDING_YOU_AGREE <> "<span style='color:#0066FF'> " <> 
+              (getString TERMS_AND_CONDITIONS_FULL) <> "</span>"
+          , onClick (\action -> do
+                  _<- push action
+                  _ <- JB.openUrlInApp $ cityMetroConfig.termsAndConditionsUrl
+                  pure unit
+                  ) (const NoAction)
+          ] <> FontStyle.body1 TypoGraphy
+     ]
+     , linearLayout
+       [ width MATCH_PARENT
+       , height WRAP_CONTENT
+       , orientation VERTICAL
+       , margin $ MarginLeft 4
+       ] (mapWithIndex (\index item ->
+           linearLayout
+           [ width MATCH_PARENT
+           , height WRAP_CONTENT
+           , orientation HORIZONTAL
+           ][ textView $
+              [ textFromHtml $ " &#8226;&ensp; " <> item
+              , color Color.black700
+              ] <> FontStyle.paragraphText TypoGraphy
+           ]
+       ) cityMetroConfig.termsAndConditions )
+  ]
 
 headerView :: forall w. ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push =
@@ -315,20 +351,13 @@ incrementDecrementView push state =
   let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then 6 else 6
       limitReached = (state.data.ticketType == ST.ROUND_TRIP && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY && state.data.ticketCount >= ticketLimit)
   in 
-  linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , margin $ Margin 16 0 16 16
-        , cornerRadius 8.0
-        , background Color.white900
-        , orientation VERTICAL
-        ][ linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , cornerRadius 8.0
-      , orientation VERTICAL
-      , margin $ Margin 16 20 16 20
-      ][  textView $
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , cornerRadius 8.0
+    , orientation VERTICAL
+    , margin $ MarginTop 20
+    ][  textView $
           [ text $ getString NO_OF_PASSENGERS
           , color Color.black800
           , margin $ MarginBottom 8
@@ -376,28 +405,29 @@ incrementDecrementView push state =
               ] <> FontStyle.body10 TypoGraphy
           ]
         , linearLayout
-                  [ height MATCH_PARENT
+                  [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   , orientation HORIZONTAL
-                  , gravity CENTER_VERTICAL
+                  , visibility $ boolToVisibility limitReached
+                  , margin $ MarginTop 6
                   ][  imageView $
-                      [ width $ V 20
-                      , height MATCH_PARENT
-                      , padding $ PaddingVertical 5 3
+                      [ width $ V 16
+                      , height $ V 16
                       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey" 
+                      , layoutGravity "center_vertical"
+                      , margin $ MarginRight 4
                       ]
                     , textView $
                       [ height WRAP_CONTENT
                       , width WRAP_CONTENT
                       , text $ " " <> (getString MAXIMUM) <> " " <> (show ticketLimit) <> " " <> (getString TICKETS_ALLOWED_PER_USER)
-                      , color Color.black600
+                      , color Color.black700
                       , gravity LEFT
                       , singleLine true
                       , alpha 1.0
-                      ]  <> FontStyle.body3 TypoGraphy
+                      ]  <> FontStyle.paragraphText TypoGraphy
                   ]
       ]
-  ]
 
 updateButtonView :: forall w. ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updateButtonView state push = 
@@ -413,58 +443,63 @@ updateButtonView state push =
       , width MATCH_PARENT
       , background Color.white900
       , padding $ PaddingVertical 5 24
-      ][ PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)]
+      ][PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)]
     ]
 
-textViewForLocation :: forall w. String -> ST.LocationActionId -> (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
-textViewForLocation label actionId push state =
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , margin $ MarginBottom 16
-    ][ textView $ 
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text label
-          , color Color.black900
-          , gravity LEFT
-          , singleLine true
-          , margin $ MarginBottom 10
-          , alpha 1.0
-          , accessibility ENABLE
-          ] <> (FontStyle.getFontStyle FontStyle.Body3 LanguageStyle)
-    , linearLayout
-    [ height $ V 54
-    , width MATCH_PARENT
-    , background Color.white900
-    , cornerRadius 5.0
-    , gravity CENTER_VERTICAL
-    , rippleColor Color.rippleShade
-    , onClick push $ const (SelectLocation actionId)
-    , stroke ("1," <> Color.borderColorLight)
-    ][
-      textView $ 
-        [ height MATCH_PARENT
-        , width WRAP_CONTENT
-        , text $ if actionId == Src then 
-                    if (DS.null state.data.srcLoc) then (getString STARTING_FROM) <> "?" else state.data.srcLoc
-                  else 
-                    if (DS.null state.data.destLoc) then (getString WHERE_TO) else state.data.destLoc
-        , color Color.black800
-        , gravity CENTER_VERTICAL
-        , singleLine true
-        , margin $ MarginHorizontal 20 10
-        , alpha $ if actionId == Src then 
-                    if (DS.null state.data.srcLoc) then 0.5 else 1.0
-                  else 
-                    if (DS.null state.data.destLoc) then 0.5 else 1.0
-        ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)
-    ]
-    ]
+locationSelectionView :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState ->  forall w. PrestoDOM (Effect Unit) w
+locationSelectionView push state = 
+  linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , cornerRadius 8.0
+  , stroke ("1," <> Color.borderColorLight)
+  , orientation VERTICAL
+  , gravity CENTER
+  ][
+    srcTextView push state
+  , linearLayout[
+      height $ V 1
+    , width $ V 280
+    , background Color.borderColorLight
+    ][]
+  , destTextView push state
+  ]
 
 srcTextView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 srcTextView push state = textViewForLocation (getString FROM) Src push state
 
 destTextView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 destTextView push state = textViewForLocation (getString TO) Dest push state
+
+textViewForLocation :: forall w. String -> ST.LocationActionId -> (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
+textViewForLocation label actionId push state =
+  let 
+    fieldConfig = case actionId of
+      Src -> do
+        let fieldValue = if (DS.null state.data.srcLoc) then (getString STARTING_FROM) <> "?" else state.data.srcLoc
+            alpha = if (DS.null state.data.srcLoc) then 0.5 else 1.0
+        {fieldText : fieldValue, alphaValue : alpha}
+      Dest -> do
+        let fieldValue = if (DS.null state.data.destLoc) then (getString WHERE_TO) else state.data.destLoc
+            alpha = if (DS.null state.data.destLoc) then 0.5 else 1.0
+        {fieldText : fieldValue, alphaValue : alpha}
+  in
+    linearLayout 
+    [ height $ V 54
+    , width MATCH_PARENT
+    , background Color.white900
+    , gravity CENTER_VERTICAL
+    , rippleColor Color.rippleShade
+    , cornerRadius 8.0
+    , onClick push $ const (SelectLocation actionId)
+    ][  textView $ 
+        [ height MATCH_PARENT
+        , width WRAP_CONTENT
+        , text $ fieldConfig.fieldText
+        , color Color.black800
+        , gravity CENTER_VERTICAL
+        , singleLine true
+        , margin $ MarginHorizontal 20 10
+        , alpha fieldConfig.alphaValue
+        ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)
+    ]

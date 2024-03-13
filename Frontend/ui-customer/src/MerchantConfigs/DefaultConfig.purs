@@ -264,11 +264,22 @@ config =
       , animationDuration : 500
       , vehicleMarkerSize: 150
       }
-  , metroTicketingConfig : {
-    metroStationTtl : 10080 -- in Minutes
-  , bookingStartTime : "04:30:00"
-  , bookingEndTime : "22:30:00"
-  }
+  , metroTicketingConfig : [
+    { 
+      cityName : "chennai"
+    , cityCode : "std:040"
+    , metroStationTtl : 10080 -- in Minutes
+    , bookingStartTime : "04:30:00"
+    , bookingEndTime : "22:30:00"
+    },
+    {
+      cityName : "kochi"
+    , cityCode : "std:0484"
+    , metroStationTtl : 10080
+    , bookingStartTime : "00:00:00"
+    , bookingEndTime : "23:59:59"
+    }
+  ]
   , purpleRideConfig : {
       genericVideoUrl : "" ,
       visualImpairmentVideo : "" ,

@@ -252,8 +252,11 @@ copyTransactionIdView state push  =
 bookingStatusBody :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus ->  PrestoDOM (Effect Unit) w
 bookingStatusBody state push paymentStatus = 
   let 
+    (API.MetroTicketBookingStatus resp) = state.data.resp
+    city = getCityNameFromCode $ Just resp.city
+    (CityMetroConfig config) = getMetroConfigFromCity city
     headerImgConfig = {
-                        src : fetchImage FF_COMMON_ASSET "ny_ic_chennai_metro"
+                        src : fetchImage FF_COMMON_ASSET config.logoImage
                       , width : V 41
                       , height : V 41
                       }
@@ -287,7 +290,7 @@ bookingStatusBody state push paymentStatus =
                     , imageWithFallback headerImgConfig.src
                     , margin $ MarginRight 4
                     ]
-                  , commonTV push state.data.ticketName Color.black900 (FontStyle.subHeading1 TypoGraphy) 0 LEFT NoAction
+                  , commonTV push config.title Color.black900 (FontStyle.subHeading1 TypoGraphy) 0 LEFT NoAction
                 ]
           , linearLayout
             [ height WRAP_CONTENT

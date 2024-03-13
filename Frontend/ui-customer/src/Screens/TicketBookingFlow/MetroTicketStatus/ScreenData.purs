@@ -28,7 +28,6 @@ initData =
     data : { 
       shortOrderId: "",
       keyValArray : [],
-      ticketName : "",
       validUntil : "",
       bookingId : "",
       resp : dummyMetroBookingStatus,
@@ -48,6 +47,8 @@ dummyMetroBookingStatus =
     _type: "SingleJourney",
     createdAt : "",
     bookingId : "",
+    city : "",
+    updatedAt : "",
     payment : Nothing,
     price: 1,
     quantity: 2,
