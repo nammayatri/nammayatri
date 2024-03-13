@@ -23,6 +23,7 @@ module Lib.DriverCoins.Coins
     incrementValidRideCount,
     updateDriverCoins,
     sendCoinsNotification,
+    safeIncrBy,
   )
 where
 
@@ -74,7 +75,7 @@ updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
   let currentDate = show $ utctDay istTime
   expirationPeriod <- getExpirationSeconds timeDiffFromUtc
-  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue)
+  safeIncrBy (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue) driverId timeDiffFromUtc
   Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
 updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Seconds -> m ()
@@ -267,3 +268,8 @@ setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
 setValidRideCountByDriverIdKey driverId expirationPeriod count = do
   void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
   Hedis.withCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod
+
+safeIncrBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Id DP.Person -> Seconds -> m ()
+safeIncrBy key value driverId timeDiffFromUtc = do
+  _ <- getCoinsByDriverId driverId timeDiffFromUtc
+  void $ Hedis.withCrossAppRedis $ Hedis.incrby key value
