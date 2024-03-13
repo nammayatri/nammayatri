@@ -316,15 +316,18 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void deleteDb(String dbName){
         Context context = bridgeComponents.getContext();
-        DatabaseHelper dbHelper = new DatabaseHelper(context, dbName);
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        dbHelper.deleteDb(context);
+        try (DatabaseHelper dbHelper = new DatabaseHelper(context, dbName)) {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            dbHelper.deleteDb(context);
+        } catch (Exception e) {
+            Log.e("SQLiteLog", "Exception while deleting db ", e);
+            // Handle the exception here
+        }
     }
 
     @JavascriptInterface
     public void createTable(String dbName, String tableName, String _columns){
-        try {
-            DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
             JSONArray columns = new JSONObject(_columns).getJSONArray("columns");
             SQLiteDatabase db = dbHelper.getWritableDatabase();
             dbHelper.createTable(db, tableName, columns);
@@ -335,9 +338,8 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void deleteTable(String dbName, String tableName){
-        try {
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)) {
             Log.i("SQLiteLog", "deleting table" + tableName);
-            DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
             SQLiteDatabase db = dbHelper.getWritableDatabase();
             db.execSQL("DROP TABLE IF EXISTS " + tableName);
         } catch (Exception e){
@@ -347,8 +349,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public int addToSqlite(String dbName, String tableName, String record){
-        try{
-            DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
             SQLiteDatabase db = dbHelper.getWritableDatabase();
             JSONObject recordObj = new JSONObject(record);
             return dbHelper.createRecord(db, tableName, recordObj);
@@ -360,8 +361,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public String readFromSqlite(String dbName, String tableName, String selection, String _selectionArgs){
-        try{
-            DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
             SQLiteDatabase db = dbHelper.getWritableDatabase();
             JSONArray selectionArgs = new JSONObject(_selectionArgs).getJSONArray("selectionArgs");
             String[] selectionArgsArr = new String[selectionArgs.length()];
@@ -380,8 +380,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public int updateInSqlite(String dbName, String tableName, String selection, String _selectionArgs, String _record){
-        try{
-            DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
             SQLiteDatabase db = dbHelper.getWritableDatabase();
             JSONArray selectionArgs = new JSONObject(_selectionArgs).getJSONArray("selectionArgs");
             JSONObject record = new JSONObject(_record);
@@ -401,8 +400,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public Boolean deleteFromSqlite(String dbName, String tableName, String selection, String _selectionArgs){
-        try{
-            DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName);
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
             SQLiteDatabase db = dbHelper.getWritableDatabase();
             JSONArray selectionArgs = new JSONObject(_selectionArgs).getJSONArray("selectionArgs");
             String[] selectionArgsArr = new String[selectionArgs.length()];

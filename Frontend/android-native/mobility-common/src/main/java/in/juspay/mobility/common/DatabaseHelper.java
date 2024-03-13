@@ -21,35 +21,49 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         this.dbName = _dbName;
     }
 
-    public void deleteDb(Context context) {
+    public void deleteDb(Context context) throws Exception {
         try {
             context.deleteDatabase(this.dbName);
         } catch (Exception e){
-            Log.i("SQLiteLog", "Exception while deleting db " + e);
+            Log.e("SQLiteLog", "Exception while deleting db ", e);
+            throw e;
         }
     }
 
-    public boolean isTableExists(String tableName) {
+    public boolean isTableExists(String tableName) throws Exception {
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name=?", new String[]{tableName});
-        boolean exists = cursor.getCount() > 0;
-        cursor.close();
-        return exists;
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name=?", new String[]{tableName});
+            return cursor.getCount() > 0;
+        } catch (Exception e) {
+            Log.i("SQLiteLog", "Error checking if table exists: " + e);
+            throw e;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
     }
 
-    public void createTable(SQLiteDatabase db, String tableName, JSONArray columns){
-        try{
-            if(!isTableExists(tableName)){
-                StringBuilder createString = new StringBuilder("create table " + tableName + "(" + columns.getJSONObject(0).getString("key") + " " + columns.getJSONObject(0).getString("type"));
-                for(int i=1;i<columns.length() ;i++){
-                    createString.append(",").append(columns.getJSONObject(i).getString("key")).append(" ").append(columns.getJSONObject(i).getString("type"));
+    public void createTable(SQLiteDatabase db, String tableName, JSONArray columns) throws Exception {
+        try {
+            if (!isTableExists(tableName)) {
+                StringBuilder createString = new StringBuilder(String.format("CREATE TABLE %s (", tableName));
+                for (int i = 0; i < columns.length(); i++) {
+                    JSONObject column = columns.getJSONObject(i);
+                    if (i > 0) {
+                        createString.append(", ");
+                    }
+                    createString.append(String.format("%s %s", column.getString("key"), column.getString("type")));
                 }
                 createString.append(")");
-                Log.i("SQLiteLog", "createtable String : " + createString);
+                Log.i("SQLiteLog", "createTable String : " + createString);
                 db.execSQL(createString.toString());
             }
-        } catch(Exception e){
+        } catch (Exception e) {
             Log.i("SQLiteLog", "Error creating table: " + e);
+            throw e;
         }
     }
 
@@ -59,62 +73,53 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) { }
 
-    public int createRecord(SQLiteDatabase db, String tableName, JSONObject record){
-        try{
+    public int createRecord(SQLiteDatabase db, String tableName, JSONObject record) throws Exception {
+        try {
             ContentValues contentValues = new ContentValues();
             String[] columns = db.query(tableName, null, null, null, null, null, null).getColumnNames();
-            for(String col : columns) {
-                if (!col.equals("id")) contentValues.put(col, record.getString(col));
+            for (String col : columns) {
+                if (!col.equals("id")) {
+                    contentValues.put(col, record.optString(col, ""));
+                }
             }
-            int key = (int) db.insert(tableName, null, contentValues);
-            db.close();
-            return key;
-        } catch(Exception e){
+            return (int) db.insert(tableName, null, contentValues);
+        } catch (Exception e) {
             Log.i("SQLiteLog", "Error writing to " + tableName + ":" + e);
-            return -1;
+            throw e;
         }
     }
 
-    public JSONObject readRecord(SQLiteDatabase db, String tableName, String selection, String[] selectionArgs){
-        try{
-            JSONObject data = new JSONObject();
-            String[] columns = db.query(tableName, null, null, null, null, null, null).getColumnNames();
-            Cursor cursor;
-            cursor = db.query(tableName, columns, selection, selectionArgs, null, null, null);
-            if (cursor.moveToFirst()) {
-                for(String col : columns) data.put(col, cursor.getString(cursor.getColumnIndex(col)));
+    public JSONObject readRecord(SQLiteDatabase db, String tableName, String selection, String[] selectionArgs) throws Exception {
+        JSONObject data = new JSONObject();
+        String[] columns = db.query(tableName, null, null, null, null, null, null).getColumnNames();
+        Cursor cursor = db.query(tableName, columns, selection, selectionArgs, null, null, null);
+        if (cursor.moveToFirst()) {
+            for(String col : columns) {
+                int index = cursor.getColumnIndex(col);
+                if (index != -1) {
+                    data.put(col, cursor.getString(index));
+                }
             }
-            cursor.close();
-            db.close();
-            return data;
-        } catch(Exception e){
-            Log.i("SQLiteLog", "Error reading from " + tableName + ": " + e);
-            return new JSONObject();
         }
+        cursor.close();
+        return data;
     }
 
-    public int updateRecord(SQLiteDatabase db, String tableName, JSONObject record, String selection, String[] selectionArgs){
-        try{
-            ContentValues newRec = new ContentValues();
-            String[] columns = db.query(tableName, null, null, null, null, null, null).getColumnNames();
-            for (String col: columns) {
-                if(!col.equals("id"))
-                    newRec.put(col, record.getString(col));
-            }
-            int updatedRecId = db.update(tableName, newRec, selection, selectionArgs);
-            db.close();
-            return updatedRecId;
-        } catch(Exception e){
-            Log.i("SQLiteLog", "Error updating in " + tableName + ":" + e);
-            return -1;
+    public int updateRecord(SQLiteDatabase db, String tableName, JSONObject record, String selection, String[] selectionArgs) throws Exception {
+        ContentValues newRec = new ContentValues();
+        String[] columns = db.query(tableName, null, null, null, null, null, null).getColumnNames();
+        for (String col: columns) {
+            if(!col.equals("id"))
+                newRec.put(col, record.optString(col, ""));
         }
+        return db.update(tableName, newRec, selection, selectionArgs);
     }
 
     public Boolean deleteRecord(SQLiteDatabase db, String tableName, String selection, String[] selectionArgs){
         try{
-            db.delete(tableName, selection, selectionArgs);
+            int rowsDeleted = db.delete(tableName, selection, selectionArgs);
             db.close();
-            return true;
+            return rowsDeleted > 0;
         } catch(Exception e){
             Log.i("SQLiteLog", "Error deleting record from " + tableName + ":" + e);
             return false;

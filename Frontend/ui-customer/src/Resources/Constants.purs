@@ -35,6 +35,7 @@ import JBridge as JB
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
 import ConfigProvider
 import Data.String as DS
+import Engineering.Helpers.SQLiteUtils as EHSU
 
 type Language
   = { name :: String
@@ -310,3 +311,29 @@ ticketCamId = "d8f47b42-50a5-4a97-8dda-e80a3633d7ab"
 
 maxImageUploadInIssueReporting :: Int  
 maxImageUploadInIssueReporting = 3 
+
+dbName :: String
+dbName = "atlas-app"
+
+driverTableName :: String
+driverTableName = "DriverInfo"
+
+driverSchema :: Array (EHSU.SqlSchema)
+driverSchema = 
+  [ { "key" : "id", "type" : "integer primary key autoincrement" }
+  , { "key": "userId", "type": "string unique" }
+  , { "key": "otp", "type": "string" }
+  , { "key": "driverName", "type": "string" }
+  , { "key": "vehicleDetails", "type": "string" }
+  , { "key": "registrationNumber", "type": "string" }
+  , { "key": "rating", "type": "string" }
+  , { "key": "source", "type": "string" }
+  , { "key": "destination", "type": "string" }
+  , { "key": "price", "type": "string" }
+  , { "key": "distance", "type": "string" }
+  , { "key": "estimatedDistance", "type": "string" }
+  , { "key": "driverNumber", "type": "string" }
+  , { "key": "merchantExoPhone", "type": "string" }
+  , { "key": "vehicleVariant", "type": "string" }
+  , { "key": "rideId", "type": "string" }
+  ]
