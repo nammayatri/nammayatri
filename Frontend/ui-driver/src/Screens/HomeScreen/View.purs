@@ -104,10 +104,6 @@ screen initialState =
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
-          when (initialState.data.driverStats == false) do
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-              driverStats <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (HU.getcurrentdate ""))            
-              lift $ lift $ doAff do liftEffect $ push $ DriverStats driverStats
           when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do              
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
@@ -238,10 +234,16 @@ view push state =
           void $ Events.endMeasuringDuration "onCreateToHomeScreenRenderDuration"
           void $ Events.endMeasuringDuration "initAppToHomeScreenRenderDuration"
           void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ liftFlowBT HU.hideSplash
-          _ <- push action          
+          _ <- push action
           _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
           _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
           _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap
+          if state.data.driverStats == false
+            then do
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+                driverStats <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (HU.getcurrentdate ""))            
+                lift $ lift $ doAff do liftEffect $ push $ DriverStats driverStats
+            else pure unit
           pure unit
         ) (const AfterRender)
       , onBackPressed push (const BackPressed)
@@ -865,6 +867,7 @@ statsModel push state =
               , height WRAP_CONTENT
               , text $ "₹" <> formatCurrencyWithCommas (show state.data.totalEarningsOfDay)
               , color Color.black800
+              , visibility $ boolToVisibility state.data.driverStats
               ] <> FontStyle.h2 TypoGraphy
             , imageView 
               [ width $ V 12
@@ -899,7 +902,7 @@ statsModel push state =
                               true -> getString COINS
                               false -> show state.data.coinBalance
                   , color Color.black700
-                  , visibility $ if state.data.driverStats then VISIBLE else GONE
+                  , visibility $ boolToVisibility state.data.driverStats
                   ] <> FontStyle.tags TypoGraphy
               ]
             , imageView 
