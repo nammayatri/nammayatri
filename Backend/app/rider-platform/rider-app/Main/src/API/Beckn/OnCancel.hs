@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import Environment
 import Kernel.Prelude
@@ -38,24 +39,27 @@ onCancel ::
   OnCancel.OnCancelReqV2 ->
   FlowHandler AckResponse
 onCancel _ req = withFlowHandlerBecknAPI do
-  cancelMsg <- req.onCancelReqMessage & fromMaybeM (InvalidRequest "Missing onCancel Message")
-  cancelStatus <- cancelMsg.confirmReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "Missing onCancel orderStatus")
-  logDebug $ "cancelStatus in bpp " <> cancelStatus
+  transactionId <- Utils.getTransactionId req.onCancelReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
+    logTagInfo "onCancel API Flow" $ "Received onCancel request:-" <> show req
+    cancelMsg <- req.onCancelReqMessage & fromMaybeM (InvalidBecknSchema "Missing message in on_cancel")
+    cancelStatus' <- cancelMsg.confirmReqMessageOrder.orderStatus & fromMaybeM (InvalidBecknSchema "Missing order.status in on_cancel message")
+    logDebug $ "cancelStatus in bpp " <> cancelStatus'
+    cancelStatus <- (readMaybe $ T.unpack cancelStatus') & fromMaybeM (InvalidBecknSchema $ "Invalid order.status:-" <> cancelStatus')
 
-  when (cancelStatus == show Enums.CANCELLED) do
-    (mbDOnCancelReq, messageId) <- do
-      transactionId <- Utils.getTransactionId req.onCancelReqContext
-      Utils.withTransactionIdLogTag transactionId $ do
+    case cancelStatus of
+      Enums.CANCELLED -> do
         mbDOnCancelReq <- ACL.buildOnCancelReq req
         messageId <- Utils.getMessageIdText req.onCancelReqContext
-        pure (mbDOnCancelReq, messageId)
-    whenJust mbDOnCancelReq $ \onCancelReq ->
-      Redis.whenWithLockRedis (onCancelLockKey messageId) 60 $ do
-        validatedOnCancelReq <- DOnCancel.validateRequest onCancelReq
-        fork "on cancel processing" $ do
-          Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $
-            DOnCancel.onCancel validatedOnCancelReq
-  pure Ack
+
+        whenJust mbDOnCancelReq $ \onCancelReq ->
+          Redis.whenWithLockRedis (onCancelLockKey messageId) 60 $ do
+            validatedOnCancelReq <- DOnCancel.validateRequest onCancelReq
+            fork "on cancel processing" $ do
+              Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $ do
+                DOnCancel.onCancel validatedOnCancelReq
+        pure Ack
+      _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED, received:-" <> cancelStatus'
 
 onCancelLockKey :: Text -> Text
 onCancelLockKey id = "Customer:OnCancel:MessageId-" <> id

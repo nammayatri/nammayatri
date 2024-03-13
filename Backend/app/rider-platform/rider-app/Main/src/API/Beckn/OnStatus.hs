@@ -48,7 +48,7 @@ onStatus _ reqBS = withFlowHandlerBecknAPI do
     Right reqV2 -> do
       transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
       messageId <- Utils.getMessageIdText reqV2.onStatusReqContext
-      onStatusReq <- Utils.withTransactionIdLogTag transactionId $ ACL.buildOnStatusReqV2 reqV2
+      onStatusReq <- Utils.withTransactionIdLogTag transactionId $ ACL.buildOnStatusReqV2 reqV2 transactionId
       return (onStatusReq, messageId)
     Left reqV1 ->
       throwError $ InvalidRequest $ "On Status v1 req shouldn't come" <> show reqV1

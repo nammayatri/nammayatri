@@ -62,7 +62,7 @@ data Ride = Ride
     driverImage :: Maybe Text,
     vehicleNumber :: Text,
     vehicleModel :: Text,
-    vehicleColor :: Text,
+    vehicleColor :: Maybe Text,
     vehicleVariant :: VehicleVariant,
     otp :: Text,
     endOtp :: Maybe Text,
@@ -121,6 +121,7 @@ makeRideAPIEntity Ride {..} =
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
+      vehicleColor' = fromMaybe "NA" vehicleColor -- TODO::remove this default value
    in RideAPIEntity
         { shortRideId = shortId,
           driverNumber = driverMobileNumber',
@@ -129,5 +130,6 @@ makeRideAPIEntity Ride {..} =
           rideOtp = otp,
           computedPrice = totalFare,
           chargeableRideDistance = chargeableDistance,
+          vehicleColor = vehicleColor',
           ..
         }

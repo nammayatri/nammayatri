@@ -72,19 +72,19 @@ parseEventV2 transactionId messageId order = do
   -- TODO::Beckn, fix this codes after correct v2-spec mapping
   case eventType of
     "RIDE_ASSIGNED" -> do
-      assignedReq <- Common.parseRideAssignedEvent order messageId
+      assignedReq <- Common.parseRideAssignedEvent order messageId transactionId
       return $ DOnUpdate.OURideAssignedReq assignedReq
     "RIDE_ARRIVED_PICKUP" -> do
-      arrivedReq <- Common.parseDriverArrivedEvent order messageId
+      arrivedReq <- Common.parseDriverArrivedEvent order messageId transactionId
       return $ DOnUpdate.OUDriverArrivedReq arrivedReq
     "RIDE_STARTED" -> do
-      startedReq <- Common.parseRideStartedEvent order messageId
+      startedReq <- Common.parseRideStartedEvent order messageId transactionId
       return $ DOnUpdate.OURideStartedReq startedReq
     "RIDE_ENDED" -> do
-      completedReq <- Common.parseRideCompletedEvent order messageId
+      completedReq <- Common.parseRideCompletedEvent order messageId transactionId
       return $ DOnUpdate.OURideCompletedReq completedReq
     "RIDE_CANCELLED" -> do
-      cancelledReq <- Common.parseBookingCancelledEvent order messageId
+      cancelledReq <- Common.parseBookingCancelledEvent order messageId transactionId
       return $ DOnUpdate.OUBookingCancelledReq cancelledReq
     "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
     "NEW_MESSAGE" -> parseNewMessageEvent order

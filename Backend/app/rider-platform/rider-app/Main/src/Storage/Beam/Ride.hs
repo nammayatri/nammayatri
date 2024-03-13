@@ -39,7 +39,7 @@ data RideT f = RideT
     driverRegisteredAt :: B.C f (Maybe UTCTime),
     vehicleNumber :: B.C f Text,
     vehicleModel :: B.C f Text,
-    vehicleColor :: B.C f Text,
+    vehicleColor :: B.C f (Maybe Text),
     vehicleVariant :: B.C f VehVar.VehicleVariant,
     otp :: B.C f Text,
     endOtp :: B.C f (Maybe Text),

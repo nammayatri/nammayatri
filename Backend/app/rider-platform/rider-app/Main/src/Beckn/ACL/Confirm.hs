@@ -63,7 +63,7 @@ tfOrder res bapConfig = do
       orderCancellation = Nothing,
       orderCancellationTerms = Nothing,
       orderFulfillments = tfFulfillments res,
-      orderId = Just res.bppBookingId.getId,
+      orderId = res.bppBookingId >>= Just . (.getId),
       orderItems = tfItems res,
       orderPayments = tfPayments res bapConfig,
       orderProvider = tfProvider res,
@@ -144,10 +144,11 @@ tfCustomer res =
         customerPerson = mkPerson
       }
   where
-    mkContact =
+    mkContact = do
+      let trimCountryCode number = fromMaybe number (T.stripPrefix "+91" number)
       Just $
         Spec.Contact
-          { contactPhone = Just res.riderPhoneNumber
+          { contactPhone = Just $ trimCountryCode res.riderPhoneNumber
           -- handling of passing virtual number at on_init domain handler.
           }
 

@@ -37,7 +37,7 @@ import Tools.Notifications
 
 data OnInitReq = OnInitReq
   { bookingId :: Id Booking,
-    bppBookingId :: Id BPPBooking,
+    bppBookingId :: Maybe (Id BPPBooking),
     estimatedFare :: Money,
     discount :: Maybe Money,
     -- estimatedTotalFare :: Money,
@@ -48,7 +48,7 @@ data OnInitReq = OnInitReq
 
 data OnInitRes = OnInitRes
   { bookingId :: Id DRB.Booking,
-    bppBookingId :: Id DRB.BPPBooking,
+    bppBookingId :: Maybe (Id DRB.BPPBooking),
     bookingDetails :: DRB.BookingDetails,
     paymentUrl :: Maybe Text,
     vehicleVariant :: Veh.VehicleVariant,
@@ -75,7 +75,7 @@ data OnInitRes = OnInitRes
 
 onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
 onInit req = do
-  void $ QRideB.updateBPPBookingId req.bookingId req.bppBookingId
+  whenJust req.bppBookingId $ QRideB.updateBPPBookingId req.bookingId
   void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedFare req.paymentUrl -- TODO : 4th parameter is discounted fare (not implemented)
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -86,7 +86,7 @@ onInit req = do
     if isValueAddNP
       then decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
       else pure booking.primaryExophone
-  bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  let bppBookingId = booking.bppBookingId
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)

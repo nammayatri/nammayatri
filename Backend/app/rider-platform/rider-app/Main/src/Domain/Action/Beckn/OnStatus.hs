@@ -89,6 +89,7 @@ data RideCompletedInfo = RideCompletedInfo
 data RideDetails
   = NewBookingDetails
   | RideAssignedDetails DCommon.RideAssignedReq
+  | RideEnroutePickupDetails
   | RideStartedDetails DCommon.RideStartedReq
   | RideCompletedDetails DCommon.RideCompletedReq
   | BookingCancelledDetails DCommon.BookingCancelledReq
@@ -186,6 +187,9 @@ onStatus req = do
         bookingNewStatus = DB.NEW
         rideNewStatus = DRide.CANCELLED
     ValidatedRideAssignedDetails request -> DCommon.rideAssignedReqHandler request
+    RideEnroutePickupDetails -> do
+      logTagInfo "OnStatus" "RIDE_ENROUTE_PICKUP event received"
+      pure ()
     ValidatedDriverArrivedDetails request -> DCommon.driverArrivedReqHandler request
     ValidatedRideStartedDetails request -> DCommon.rideStartedReqHandler request
     ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request

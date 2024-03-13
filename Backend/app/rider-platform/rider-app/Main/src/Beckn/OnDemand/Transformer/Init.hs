@@ -116,10 +116,11 @@ tfCustomer res =
         customerPerson = mkPerson
       }
   where
-    mkContact =
+    mkContact = do
+      let trimCountryCode mbNumber = mbNumber <&> \number -> fromMaybe number (Data.Text.stripPrefix "+91" number)
       Just $
         BecknV2.OnDemand.Types.Contact
-          { contactPhone = res.riderPhone
+          { contactPhone = trimCountryCode res.riderPhone
           -- handling of passing virtual number at UIconfirm domain handler.
           }
 

@@ -62,7 +62,7 @@ data BookingDetails = BookingDetails
     driverRating :: Maybe Centesimal,
     driverRegisteredAt :: Maybe UTCTime,
     vehicleNumber :: Text,
-    vehicleColor :: Text,
+    vehicleColor :: Maybe Text,
     vehicleModel :: Text,
     otp :: Text,
     isInitiatedByCronJob :: Bool
@@ -70,6 +70,7 @@ data BookingDetails = BookingDetails
 
 data RideAssignedReq = RideAssignedReq
   { bookingDetails :: BookingDetails,
+    transactionId :: Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool
   }
@@ -187,8 +188,10 @@ rideAssignedReqHandler ::
   ) =>
   ValidatedRideAssignedReq ->
   m ()
-rideAssignedReqHandler ValidatedRideAssignedReq {..} = do
-  let BookingDetails {..} = bookingDetails
+rideAssignedReqHandler req = do
+  let BookingDetails {..} = req.bookingDetails
+  void $ QRB.updateBPPBookingId req.booking.id bppBookingId -- JAYPAL : Should we only update it here in offus case?
+  let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
   mbMerchant <- CQM.findById booking.merchantId
   ride <- buildRide mbMerchant bookingDetails
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
@@ -203,7 +206,7 @@ rideAssignedReqHandler ValidatedRideAssignedReq {..} = do
   QPFS.clearCache booking.riderId
   unless isInitiatedByCronJob $ do
     Notify.notifyOnRideAssigned booking ride
-    when isDriverBirthDay $ do
+    when req.isDriverBirthDay $ do
       Notify.notifyDriverBirthDay booking.riderId driverName
   withLongRetry $ CallBPP.callTrack booking ride
   where
@@ -241,7 +244,7 @@ rideAssignedReqHandler ValidatedRideAssignedReq {..} = do
             rideEndTime = Nothing,
             rideRating = Nothing,
             safetyCheckStatus = Nothing,
-            isFreeRide = Just isFreeRide,
+            isFreeRide = Just req.isFreeRide,
             endOtp = Nothing,
             startOdometerReading = Nothing,
             endOdometerReading = Nothing,
@@ -463,11 +466,11 @@ validateRideAssignedReq ::
   m ValidatedRideAssignedReq
 validateRideAssignedReq RideAssignedReq {..} = do
   let BookingDetails {..} = bookingDetails
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId) -- JAYPAL:: we haven't stored bppBookingId in OFFus during on_init, should we rely on transactionId?
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   return $ ValidatedRideAssignedReq {..}
   where
-    isAssignable booking = booking.status `elem` [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT]
+    isAssignable booking = booking.status `elem` [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW]
 
 validateRideStartedReq ::
   ( CacheFlow m r,

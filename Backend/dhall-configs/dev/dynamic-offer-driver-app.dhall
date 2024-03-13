@@ -150,7 +150,7 @@ let eventStreamMappings =
         }
       ]
 
-let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
+let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +10 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
@@ -159,7 +159,7 @@ let slackCfg =
       , slackToken = common.slackToken
       }
 
-let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
+let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +10 }
 
 let driverLocationUpdateRateLimitOptions =
       { limit = +100, limitResetTimeInSec = +1 }

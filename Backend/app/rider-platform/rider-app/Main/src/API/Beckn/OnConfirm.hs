@@ -49,7 +49,7 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
             DOnConfirm.RideAssigned rideAssignedReq -> rideAssignedReq.bppBookingId
             DOnConfirm.BookingConfirmed bookingConfirmedReq -> bookingConfirmedReq.bppBookingId
       Redis.whenWithLockRedis (onConfirmLockKey bppBookingId.getId) 60 $ do
-        validatedReq <- DOnConfirm.validateRequest onConfirmReq
+        validatedReq <- DOnConfirm.validateRequest onConfirmReq transactionId
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $
             DOnConfirm.onConfirm validatedReq

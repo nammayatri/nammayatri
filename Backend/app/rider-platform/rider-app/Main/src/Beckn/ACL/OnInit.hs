@@ -24,6 +24,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Tools.Error
 
 buildOnInitReqV2 ::
   ( HasFlowEnv m r '["_version" ::: Text]
@@ -34,9 +35,7 @@ buildOnInitReqV2 req = do
   ContextV2.validateContext Context.ON_INIT $ req.onInitReqContext
   handleErrorV2 req $ \_message ->
     case parsedData of
-      Left err -> do
-        logTagError "on_init req" $ "on_init error: " <> show err
-        pure Nothing
+      Left err -> throwError . InvalidBecknSchema $ "on_init req," <> "on_init error: " <> show err
       Right (bookingId, bppBookingId, estimatedFare, paymentId) -> do
         return $
           Just $
@@ -47,7 +46,7 @@ buildOnInitReqV2 req = do
                 ..
               }
   where
-    parsedData :: Either Text (Id Booking, Id BPPBooking, Int, Maybe Text)
+    parsedData :: Either Text (Id Booking, Maybe (Id BPPBooking), Int, Maybe Text)
     parsedData = do
       order <- maybe (Left "Invalid Order") (Right . (.confirmReqMessageOrder)) req.onInitReqMessage
 
@@ -56,10 +55,8 @@ buildOnInitReqV2 req = do
           & maybe (Left "Invalid messageId") Right
       let bookingId = Id bookingIdText
 
-      bppBookingIdText <-
-        order.orderId
-          & maybe (Left "Invalid OrderId") Right
-      let bppBookingId = Id bppBookingIdText
+      let bppBookingIdText = order.orderId
+      let bppBookingId = Id <$> bppBookingIdText
 
       estimatedFare <-
         order.orderQuote
