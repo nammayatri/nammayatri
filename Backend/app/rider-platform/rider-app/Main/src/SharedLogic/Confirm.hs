@@ -123,7 +123,6 @@ confirm DConfirmReq {..} = do
     (_, True) -> throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
     (Just booking, _) -> DQuote.processActiveBooking booking OnConfirm
     _ -> pure ()
-  unless (null activeBooking && not overlap) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
