@@ -267,7 +267,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
                     | EarningsScreen ST.HomeScreenState Boolean
-                    | DriverStatsUpdate ST.HomeScreenState DriverProfileStatsResp
+                    | DriverStatsUpdate DriverProfileStatsResp
 
 data Action = NoAction
             | BackPressed
@@ -1093,7 +1093,7 @@ eval (GoToEarningsScreen showCoinsView) state = do
   exit $ EarningsScreen state showCoinsView
 
 eval (DriverStats driverStats) state = do
-  exit $ DriverStatsUpdate state driverStats
+  exit $ DriverStatsUpdate driverStats
 
 eval _ state = continue state
 
