@@ -28,6 +28,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.provider.Settings;
 import android.text.Html;
 import android.util.Log;
 import android.view.Gravity;
@@ -531,6 +532,44 @@ public class MobilityAppBridge extends HyperBridge {
                 bridgeComponents.getJsCallback().addJsToWebView(javascript);
             }
         });
+
+        ReelController.registerReelActivity(new ReelController.ReelActivityInterface() {
+            @Override
+            public void onPauseCallback() {
+
+                try{
+                    SharedPreferences sharedPrefs = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                    sharedPrefs.edit().putString("ANOTHER_ACTIVITY_LAUNCHED", "false").apply();
+                    Intent widgetService = new Intent(context, WidgetService.class);
+                    String merchant = context.getResources().getString(R.string.service);
+                    String merchantType = merchant.contains("partner") || merchant.contains("driver") || merchant.contains("provider") ? "DRIVER" : "USER";
+                    if (merchantType.equals("DRIVER") &&
+                            widgetService != null && Settings.canDrawOverlays(context) &&
+                            !sharedPrefs.getString(context.getResources().getString(in.juspay.mobility.app.R.string.REGISTERATION_TOKEN), "null").equals("null") &&
+                            !sharedPrefs.getString("DISABLE_WIDGET", "true").equals("true") &&
+                            !sharedPrefs.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true")) {
+                        widgetService.putExtra("payload", "{}");
+                        widgetService.putExtra("data", "{}");
+                        context.startService(widgetService);
+                    }
+                }catch(Exception e){
+                    Log.i("REELS", "Error in onPauseCallback");
+                }
+            }
+
+            @Override
+            public void onResumeCallback() {
+                try{
+                    SharedPreferences sharedPrefs = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                    sharedPrefs.edit().putString("ANOTHER_ACTIVITY_LAUNCHED", "true").apply();
+                    Intent widgetService = new Intent(context, WidgetService.class);
+                    context.stopService(widgetService);
+                }catch(Exception e){
+                    Log.i("REELS", "Error in onResumeCallback");
+                }
+            }
+        });
+
 
         Intent newIntent = new Intent (context, ReelsPlayerView.class);
         newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

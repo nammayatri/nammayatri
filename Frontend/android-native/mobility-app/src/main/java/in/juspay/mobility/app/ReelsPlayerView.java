@@ -66,6 +66,7 @@ public class ReelsPlayerView extends AppCompatActivity {
         }catch(Exception e){
             Log.e("REEL_ON_PAUSE", e.toString());
         }
+        reelController.sendPauseActivityCallback();
         isActivityVisible = false;
         super.onPause();
     }
@@ -77,6 +78,7 @@ public class ReelsPlayerView extends AppCompatActivity {
         }catch (Exception e){
             Log.e("REEL_ON_RESUME", e.toString());
         }
+        reelController.sendResumeActivityCallback();
         isActivityVisible = true;
         if(!isAudioFocusGranted) {
             getAudioFocus();

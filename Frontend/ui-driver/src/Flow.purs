@@ -1956,6 +1956,7 @@ homeScreenFlow = do
     when globalState.homeScreen.data.config.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
     when globalState.homeScreen.data.config.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
     updateBannerAndPopupFlags
+    void $ lift $ lift $ toggleLoader false
     liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED  
   liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration"
   action <- UI.homeScreen
