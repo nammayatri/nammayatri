@@ -51,26 +51,25 @@ driverDetailsView :: forall w. DriverDetailsType -> String -> PrestoDOM (Effect 
 driverDetailsView config uid =
  linearLayout
   [ orientation HORIZONTAL
-  , height $ V 150
-  , padding $ PaddingHorizontal 16 16
+  , height WRAP_CONTENT
+  , padding $ Padding 16 16 16 12
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
   , margin $ Margin 16 (if config.searchType == QUOTES then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
   , background Color.white900
   , cornerRadius 8.0
   , visibility $  boolToVisibility $ if config.searchType == QUOTES then config.rideStarted else true
-  , gravity BOTTOM
+  , gravity CENTER_VERTICAL
   ][  linearLayout
       [ orientation VERTICAL
-      , height MATCH_PARENT
-      , width WRAP_CONTENT
-      , gravity CENTER_VERTICAL
-      , alignParentLeft "true,-1"
+      , height WRAP_CONTENT
+      , width $ V ((screenWidth unit) /2 - 20)
       ][linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity LEFT
-        ][ frameLayout
+        ][ 
+          frameLayout
           [ orientation VERTICAL
           , height WRAP_CONTENT
           , width WRAP_CONTENT
@@ -107,7 +106,7 @@ driverDetailsView config uid =
           , color Color.black700
           , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <> getVehicleType
           , accessibility ENABLE
-          , width $ V ((screenWidth unit) /2 - 20)
+          , width MATCH_PARENT
           , maxLines 2
           , singleLine false
           , height WRAP_CONTENT
@@ -120,83 +119,105 @@ driverDetailsView config uid =
       , orientation VERTICAL
       , accessibility DISABLE
       , gravity RIGHT
-      ][  frameLayout
-          [ height MATCH_PARENT
-          , width $ V 144
-          , gravity BOTTOM
-          , margin $ MarginBottom 16
-          , accessibility DISABLE 
-          ][  imageView
-              [ imageWithFallback (getVehicleImage config.vehicleVariant config.vehicleDetails config.merchantCity)
-              , height $ V 125
-              , gravity RIGHT
-              , width MATCH_PARENT
-              , margin $ MarginBottom 15
-              , accessibility DISABLE_DESCENDANT
-              ]
-            , linearLayout
-              [ height $ V 134
-              , width MATCH_PARENT
-              , gravity BOTTOM
-              , accessibility ENABLE
-              , accessibilityHint $ "Vehicle Number " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") config.registrationNumber)
-              ][  linearLayout
-                  [ height $ V 38
-                  , width MATCH_PARENT
-                  , background config.config.driverInfoConfig.numberPlateBackground
-                  , cornerRadius 4.0
-                  , orientation HORIZONTAL
-                  , gravity BOTTOM
-                  , padding $ Padding 2 2 2 2
-                  , alignParentBottom "true,-1"
-                  ][
-                    linearLayout
-                    [ height $ V 34
-                    , width MATCH_PARENT
-                    , stroke $ "2," <> Color.black
-                    , cornerRadius 4.0
-                    , orientation HORIZONTAL
-                    ][  imageView
-                        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_number_plate"
-                        , gravity LEFT
-                        , visibility if config.config.driverInfoConfig.showNumberPlatePrefix then VISIBLE else GONE
-                        , background "#1C4188"
-                        , height MATCH_PARENT
-                        , width $ V 22
-                        ]
-                        , textView $
-                        [ margin $ Margin 2 2 2 2
-                        , weight 1.0
-                        , height MATCH_PARENT
-                        , text $ (makeNumber config.registrationNumber)
-                        , color Color.black800
-                        , fontStyle $ FontStyle.feFont LanguageStyle
-                        , gravity CENTER
-                        , textSize FontSize.a_14
-                        ]
-                        , imageView
-                        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_number_plate_suffix"
-                        , gravity RIGHT
-                        , visibility if config.config.driverInfoConfig.showNumberPlateSuffix then VISIBLE else GONE
-                        , height MATCH_PARENT
-                        , width $ V 13
-                        ]
-                      ]
-                    ]
-                ]
-            ]
+      ][ 
+          imageView [ 
+            imageWithFallback (getVehicleImage config.vehicleVariant config.vehicleDetails config.merchantCity)
+          , height $ (if true then V 89 else V 66)
+          , gravity CENTER
+          , width MATCH_PARENT
+          , accessibility DISABLE_DESCENDANT
+          ]
+        , numberPlateView config uid 
+        , brandingBannerView config.config.driverInfoConfig Nothing
         ]
-    ]
-  where getVehicleType = case getMerchant FunctionCall of
-                          YATRISATHI -> case config.vehicleVariant of
-                                          "TAXI" -> getEN NON_AC_TAXI
-                                          "SUV"  -> getEN AC_SUV
-                                          _      -> getEN AC_CAB
-                          _          -> case config.vehicleVariant of
-                                        "TAXI_PLUS" -> (getEN AC_TAXI)
-                                        "TAXI" -> (getEN NON_AC_TAXI)
-                                        _ -> ""
+      ]
+  where 
+    getVehicleType = case getMerchant FunctionCall of
+      YATRISATHI -> case config.vehicleVariant of
+        "TAXI" -> getEN NON_AC_TAXI
+        "SUV"  -> getEN AC_SUV
+        _      -> getEN AC_CAB
+      _ -> case config.vehicleVariant of
+        "TAXI_PLUS" -> (getEN AC_TAXI)
+        "TAXI" -> (getEN NON_AC_TAXI)
+        _ -> ""
 
+
+numberPlateView :: forall w. DriverDetailsType -> String -> PrestoDOM (Effect Unit) w
+numberPlateView config uid = 
+  linearLayout [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER_HORIZONTAL
+  ][
+    linearLayout[
+      height $ V 34
+    , width WRAP_CONTENT
+    , background config.config.driverInfoConfig.numberPlateBackground
+    , cornerRadius 4.0
+    , orientation HORIZONTAL
+    , accessibility ENABLE
+    , accessibilityHint $ "Vehicle Number " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") config.registrationNumber)
+    , gravity CENTER
+    ][
+      linearLayout
+      [ height $ V 30
+      , width WRAP_CONTENT
+      , stroke $ "2," <> Color.black
+      , cornerRadius 4.0
+      , orientation HORIZONTAL
+      ][  imageView[ 
+            imageWithFallback $ fetchImage FF_ASSET "ny_ic_number_plate"
+          , gravity LEFT
+          , visibility if config.config.driverInfoConfig.showNumberPlatePrefix then VISIBLE else GONE
+          , background "#1C4188"
+          , height MATCH_PARENT
+          , width $ V 20
+          ]
+        , textView $ [ 
+            margin $ Margin 2 2 2 2
+          , weight 1.0
+          , height MATCH_PARENT
+          , text $ (makeNumber config.registrationNumber)
+          , color Color.black800
+          , fontStyle $ FontStyle.feFont LanguageStyle
+          , gravity CENTER
+          , textSize FontSize.a_14
+          ]
+        , imageView[ 
+            imageWithFallback $ fetchImage FF_ASSET "ny_ic_number_plate_suffix"
+          , gravity RIGHT
+          , visibility if config.config.driverInfoConfig.showNumberPlateSuffix then VISIBLE else GONE
+          , height MATCH_PARENT
+          , width $ V 13
+          ]
+        ]
+      ]
+  ]
+
+brandingBannerView :: forall w. DriverInfoConfig -> Maybe String -> PrestoDOM (Effect Unit) w
+brandingBannerView driverInfoConfig uid = 
+  linearLayout
+    ([ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , gravity CENTER_HORIZONTAL
+    , background driverInfoConfig.footerBackgroundColor
+    , visibility $ boolToVisibility  driverInfoConfig.footerVisibility
+    , padding $ PaddingVertical 7 7
+    ] <> if isJust uid then [id $ getNewIDWithTag $ fromMaybe "" uid] else [])
+    [textView $
+    [ text $ getString POWERED_BY 
+    , width WRAP_CONTENT    
+    , height WRAP_CONTENT
+    , color Color.black800
+    , padding $ PaddingRight 6
+    ] <> FontStyle.body3 TypoGraphy
+  , imageView
+    [ imageWithFallback $ driverInfoConfig.footerImageUrl
+    , width $ V 62
+    , height $ V 20
+    ]
+  ]
 
 ---------------------------------- ratingView ---------------------------------------
 
