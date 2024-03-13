@@ -510,7 +510,9 @@ getEstimatesInfo estimates vehicleVariant state =
       nightShiftMultiplier = case nightShiftRate of
         Just nSMultiplier -> fromMaybe 0.0 (nSMultiplier ^. _nightShiftMultiplier)
         Nothing -> 0.0
-      nightCharges = withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
+      nightCharges = if isJust nightShiftRate 
+                     then withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
+                     else false
       baseFare = case (DA.head (DA.filter (\item -> item ^. _title == "BASE_DISTANCE_FARE") estimateFareBreakup)) of
         Just baseDistFare -> round $ (toNumber $ baseDistFare ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
         Nothing -> 0
