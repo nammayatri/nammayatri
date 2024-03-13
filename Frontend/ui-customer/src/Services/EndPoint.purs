@@ -228,7 +228,7 @@ followRide :: String -> String
 followRide _ = (getBaseUrl "47") <> "/follow/ride"
 
 getMetroStations :: String -> String
-getMetroStations dummy = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"METRO\""
+getMetroStations city = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"METRO\"" <> "&city=" <> city  
 
 searchMetro :: String -> String
 searchMetro dummy = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"METRO\""
@@ -247,6 +247,18 @@ getMetroBookingList dummy = (getBaseUrl "52") <> "/frfs/booking/list"
 
 retryMetrTicketPayment :: String -> String
 retryMetrTicketPayment quoteId = (getBaseUrl "53") <> "/frfs/quote/" <> quoteId <> "/payment/retry"
+
+metroBookingSoftCancel :: String -> String
+metroBookingSoftCancel bookingId = (getBaseUrl "54") <> "/frfs/booking/" <> bookingId <> "/canCancel"
+
+getMetroBookingSoftCancelStatus :: String -> String
+getMetroBookingSoftCancelStatus bookingId = (getBaseUrl "55") <> "/frfs/booking/" <> bookingId <> "/canCancel/status"
+
+metroBookingHardCancel :: String -> String
+metroBookingHardCancel bookingId = (getBaseUrl "56") <> "/frfs/booking/" <> bookingId <> "/cancel"
+
+getMetroBookingHardCancelStatus :: String -> String
+getMetroBookingHardCancelStatus bookingId = (getBaseUrl "57") <> "/frfs/booking/cancel/" <> bookingId <> "/status"
 
 pushSDKEvents :: String -> String
 pushSDKEvents _ =  (getBaseUrl "") <> "/sdk/events"

@@ -32,7 +32,8 @@ import Components.RequestInfoCard as InfoCard
 import Language.Strings 
 import Resources.Localizable.EN
 import Language.Types
-
+import Helpers.Utils (CityMetroConfig(..))
+import Components.Banner as Banner
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -75,23 +76,41 @@ updateButtonConfig state = let
         }
     in updateButtonConfig'
 
+metroBannerConfig :: CityMetroConfig -> Banner.Config
+metroBannerConfig (CityMetroConfig cityMetroConfig) =
+  let
+    config = Banner.config
+    config' = config
+      {
+        backgroundColor = cityMetroConfig.bannerBackgroundColor
+      , stroke = "1," <> Color.grey900
+      , imageHeight = V 84
+      , imageWidth = V 124
+      , margin = MarginVertical 12 12
+      , imagePadding = PaddingVertical 0 0
+      , title = getString EXPERIENCE_HASSLE_FREE_METRO_BOOKING
+      , titleColor = cityMetroConfig.bannerTextColor
+      , padding = PaddingLeft 5
+      , actionTextVisibility = false
+      , cornerRadius = 8.0
+      , imageUrl = fetchImage FF_COMMON_ASSET cityMetroConfig.bannerImage
+      , imageMargin = Margin 18 6 6 6
+      }
+  in config'
 
-
-metroTimeErrorPopupConfig :: ST.MetroTicketBookingScreenState -> InfoCard.Config
-metroTimeErrorPopupConfig state = let
-  startTime = fromMaybe "4:30 AM" $ convertTo12HourFormat state.config.metroTicketingConfig.bookingStartTime
-  endTime = fromMaybe "11:30 PM" $ convertTo12HourFormat state.config.metroTicketingConfig.bookingEndTime
+metroTimeErrorPopupConfig :: ST.MetroTicketBookingScreenState -> CityMetroConfig -> InfoCard.Config
+metroTimeErrorPopupConfig state (CityMetroConfig cityMetroConfig) = let
   requestInfoCardConfig' =  InfoCard.config{
     title {
       text = getString METRO_BOOKING_TIMINGS, 
       accessibilityHint = "Metro Booking Timings"
     }
   , primaryText {
-      text = (getString $ CHENNAI_METRO_TIME startTime endTime) ,
+      text = cityMetroConfig.errorPopupTitle ,
       padding = Padding 16 16 0 0,
       textStyle = FontStyle.ParagraphText,
       color = Color.black700,
-      accessibilityHint = "Chennai Metro allows QR ticket purchase from "<> startTime <>" to "<> endTime <>" on all days."
+      accessibilityHint = cityMetroConfig.errorPopupTitle
     }
   , secondaryText {
       text = getString PLEASE_COME_BACK_LATER_METRO,

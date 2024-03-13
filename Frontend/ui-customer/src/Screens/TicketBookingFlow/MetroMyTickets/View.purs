@@ -44,6 +44,8 @@ import Services.Backend as Remote
 import Engineering.Helpers.Commons as EHC
 import Services.API as API
 import Engineering.Helpers.Utils as EHU
+import Screens.TicketBookingFlow.MetroMyTickets.ComponentConfig as Config
+import Components.PrimaryButton as PrimaryButton 
 
 screen :: ST.MetroMyTicketsScreenState -> Screen Action ST.MetroMyTicketsScreenState ScreenOutput
 screen initialState =
@@ -69,6 +71,9 @@ screen initialState =
 
 view :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
 view push state = 
+  let 
+    etvVisibility = null state.data.activeTickets && null state.data.pastTickets
+  in
   Anim.screenAnimation $ linearLayout[
     width MATCH_PARENT
   , height MATCH_PARENT
@@ -78,8 +83,9 @@ view push state =
   , orientation VERTICAL
   , afterRender push $ const AfterRender
   ] [ headerView push state
-        , scrollableView push state
-        ]
+    , emptyTicketsView push (boolToVisibility etvVisibility)
+    , scrollableView push state (boolToVisibility$ not etvVisibility)
+    ]
 
 shimmerView :: forall w . ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
@@ -115,9 +121,59 @@ shimmerView state =
       )
     ]
 
+emptyTicketsView :: forall w . (Action -> Effect Unit) -> Visibility -> PrestoDOM (Effect Unit) w
+emptyTicketsView push etvVisibility = 
+  linearLayout[
+    height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , gravity CENTER
+  , visibility etvVisibility
+  ][
+    linearLayout[ 
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , weight 1.0
+    , gravity CENTER
+    , orientation VERTICAL
+    , padding $ PaddingHorizontal 20 20
+    ]
+    [ imageView
+      [ width $ V 128
+      , height $ V 128
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket_grey"
+      ]
+    , textView $
+      [ width $ V 188
+      , height WRAP_CONTENT
+      , text $ getString YOUR_BOOKED_TICKETS
+      , color Color.black900
+      , gravity CENTER
+      , margin $ MarginTop 5
+      ] <> FontStyle.paragraphText TypoGraphy
+    ]
+    , bookTicketsButtonView push
+  ]
+
+bookTicketsButtonView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bookTicketsButtonView push = 
+  linearLayout
+  [ orientation VERTICAL
+  , height WRAP_CONTENT
+  , width MATCH_PARENT
+  , background Color.white900
+  , padding $ PaddingVertical 5 24
+  , alignParentBottom "true,-1"
+  ][  linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT
+      , background Color.greySmoke
+      , margin $ MarginBottom 16
+      ][]
+    , PrimaryButton.view (push <<< GoToMetroBookingScreen) Config.bookTicketsButtonConfig]
 
 headerView :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
-headerView push state = 
+headerView push state =
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -148,12 +204,13 @@ headerView push state =
     ]
   ]
 
-scrollableView :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
-scrollableView push state = 
+scrollableView :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> Visibility -> PrestoDOM (Effect Unit) w
+scrollableView push state svVisibility = 
   scrollView [
     width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
+  , visibility svVisibility
   ][
     linearLayout [
       width MATCH_PARENT
@@ -190,6 +247,9 @@ activeTicketsListView push state =
 
 activeTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
 activeTicketView push ticketCard = 
+  let
+    isStatusPending = ticketCard.status == "PAYMENT_PENDING"
+  in
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT 
@@ -198,7 +258,7 @@ activeTicketView push ticketCard =
   , orientation VERTICAL
   , background Color.grey900
   , margin $ MarginBottom 16
-  , onClick push $ const $ ActiveTicketPressed ticketCard.metroTicketStatusApiResp
+  , onClick push $ const $ TicketPressed ticketCard.metroTicketStatusApiResp
   ][ 
     linearLayout [
       width MATCH_PARENT
@@ -220,7 +280,7 @@ activeTicketView push ticketCard =
           imageView [
             width $ V 41
           , height $ V 41
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chennai_metro"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard)
           ]
         ]
       , linearLayout [
@@ -263,6 +323,7 @@ activeTicketView push ticketCard =
             , color Color.black700
             ] <> FontStyle.tags TypoGraphy
           ]
+          , statusView ticketCard $ boolToVisibility isStatusPending
         ]
       ]
     , linearLayout [
@@ -270,12 +331,12 @@ activeTicketView push ticketCard =
       , height $ V 1
       , margin $ MarginVertical 16 16
       , background Color.grey900
-      , visibility $ boolToVisibility $ ticketCard.status /= "PAYMENT_PENDING"
+      , visibility $ boolToVisibility $ not isStatusPending
       ][]
     , linearLayout [
         width MATCH_PARENT
       , height WRAP_CONTENT
-      , visibility $ boolToVisibility $ ticketCard.status /= "PAYMENT_PENDING"
+      , visibility $ boolToVisibility $ not isStatusPending
       ][
         linearLayout [
           width WRAP_CONTENT
@@ -285,7 +346,7 @@ activeTicketView push ticketCard =
           imageView [
             width $ V 16
           , height $ V 16
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_clock_filled"
           , margin $ MarginRight 4
           ] 
         , textView $ [
@@ -346,28 +407,6 @@ pastTicketsListView push state =
 
 pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
 pastTicketView push ticketCard = 
-  let status = case ticketCard.status of
-        "PAYMENT_PENDING" -> getString PENDING_STR 
-        "CONFIRMING" -> getString CONFIRMING_STR 
-        "FAILED" -> getString FAILED_STR
-        "CONFIRMED" -> getString CONFIRMED_STR
-        "EXPIRED" -> "Exipired" -- getString EXPIRED_STR
-        _ -> ""
-      statusColor = case ticketCard.status of
-        "PAYMENT_PENDING" -> Color.yellow900
-        "CONFIRMING" -> Color.yellow900
-        "FAILED" -> Color.red900
-        "CONFIRMED" -> Color.green900
-        "EXPIRED" -> Color.black800 -- getString EXPIRED_STR
-        _ -> Color.black900
-      statusIcon = case ticketCard.status of
-        "PAYMENT_PENDING" -> fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock"
-        "CONFIRMING" -> fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock"
-        "FAILED" -> fetchImage FF_COMMON_ASSET "ny_ic_red_triangle_warning"
-        "CONFIRMED" -> fetchImage FF_COMMON_ASSET "ny_ic_green_tick"
-        "EXPIRED" -> fetchImage FF_ASSET "ny_ic_info"
-        _ ->  ""
-  in
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -376,6 +415,7 @@ pastTicketView push ticketCard =
   , margin $ MarginBottom 16
   , background Color.grey900
   , gravity CENTER
+  , onClick push $ const $ TicketPressed ticketCard.metroTicketStatusApiResp
   ][
     linearLayout [
       width MATCH_PARENT
@@ -392,7 +432,7 @@ pastTicketView push ticketCard =
         imageView [
           width $ V 30
         , height $ V 30
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chennai_metro"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard)
         ]
       ]
     , linearLayout [
@@ -435,27 +475,33 @@ pastTicketView push ticketCard =
           , color Color.black700
           ] <> FontStyle.tags TypoGraphy
         ]
-      , linearLayout [
-        width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , gravity CENTER_VERTICAL
-      , margin $ MarginTop 6
-      ][
-        imageView [
-          width $ V 16
-        , height $ V 16
-        , imageWithFallback statusIcon
-        , margin $ MarginRight 4
-        ]
-      , textView $ [
-          width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text $ status
-        , color statusColor
-        ] <> FontStyle.body3 TypoGraphy
-      ]
+      , statusView ticketCard VISIBLE
     ]
   ]
 ]
-  
- 
+
+statusView :: forall w . ST.MetroTicketCardData -> Visibility -> PrestoDOM (Effect Unit) w
+statusView ticketCard statusVisibility = 
+  let
+    (Config.StatusConfig statusConfig) = Config.getTicketStatusConfig ticketCard
+  in
+    linearLayout [
+      width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , gravity CENTER_VERTICAL
+    , margin $ MarginTop 6
+    , visibility $ statusVisibility
+    ][
+      imageView [
+        width $ V 16
+      , height $ V 16
+      , imageWithFallback statusConfig.statusIcon
+      , margin $ MarginRight 4
+      ]
+    , textView $ [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text $ statusConfig.status
+      , color statusConfig.statusColor
+      ] <> FontStyle.body3 TypoGraphy
+    ]

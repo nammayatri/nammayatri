@@ -42,7 +42,7 @@ import Data.Number (pi, sin, cos, sqrt, asin, abs)
 import Data.Ord (comparing, Ordering)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
-import Data.String (replace, split, Pattern(..), Replacement(..))
+import Data.String (replace, split, Pattern(..), Replacement(..), toLower)
 import Data.String as DS
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Traversable (traverse)
@@ -77,7 +77,7 @@ import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStationsList)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
 import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
@@ -100,6 +100,7 @@ import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode.Parser as ADP
 import Common.DefaultConfig as CC
 import Common.Types.Config as CCT
+import MerchantConfig.Types 
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -396,7 +397,7 @@ addToPrevCurrLoc currLoc currLocArr =
     else currLocArr
 
  --------------------------------------------------------------------------------------------------
-fetchMetroStations :: Decode MetroStationsList => String -> Flow GlobalState (Maybe MetroStationsList)
+fetchMetroStations :: Decode MetroStations => String -> Flow GlobalState (Maybe (Array MetroStations))
 fetchMetroStations objName = do
   (maybeEncodedState :: Maybe String) <- liftFlow $ fetchFromLocalStore' objName Just Nothing
   void $ pure $ spy "fetchMetroStations: maybeEncodedState" maybeEncodedState
@@ -410,16 +411,13 @@ fetchMetroStations objName = do
           pure Nothing
     Nothing -> pure Nothing
 
-getMetroStationsObjFromLocal :: String -> Flow GlobalState MetroStationsList
+getMetroStationsObjFromLocal :: String -> Flow GlobalState (Array MetroStations)
 getMetroStationsObjFromLocal _ = do
-  (metroStationsList :: Maybe MetroStationsList) <- (fetchMetroStations "METRO_STATIONS")
+  (metroStationsList :: Maybe (Array MetroStations)) <- (fetchMetroStations "METRO_STATIONS")
   case metroStationsList of
     Just stations -> pure stations
-    Nothing -> pure emptyMetroStationsList
+    Nothing -> pure []
 
-
-emptyMetroStationsList :: MetroStationsList
-emptyMetroStationsList = {stations : [],lastUpdatedAt : "" }
  --------------------------------------------------------------------------------------------------
 
 checkPrediction :: LocationListItemState -> Array LocationListItemState -> Boolean
@@ -910,3 +908,50 @@ findSpecialPickupZone stringGeoJson gates lat lon =
                 Nothing -> Nothing
         Nothing -> Nothing
     _, _ -> Nothing
+
+newtype CityMetroConfig = CityMetroConfig { 
+    logoImage :: String
+  , title :: String
+  , mapImage :: String
+  , bannerImage :: String
+  , bannerBackgroundColor :: String
+  , bannerTextColor :: String
+  , termsAndConditionsUrl :: String
+  , termsAndConditions :: Array String
+  , errorPopupTitle :: String
+  , showCancelButton :: Boolean
+}
+
+getMetroConfigFromAppConfig :: AppConfig -> String -> MetroConfig
+getMetroConfigFromAppConfig config city = do
+  let cityConfig = find (\cityCfg -> cityCfg.cityName == toLower city) config.metroTicketingConfig
+  case cityConfig of
+    Nothing -> {
+        cityName : ""
+      , cityCode : ""
+      , metroStationTtl : 10080
+      , bookingStartTime : "04:30:00"
+      , bookingEndTime : "22:30:00"
+     }
+    Just cfg -> cfg
+
+getMetroConfigFromCity :: City -> CityMetroConfig
+getMetroConfigFromCity city =
+  case city of
+    Kochi -> mkCityBasedConfig "ny_ic_kochi_metro" (getString TICKETS_FOR_KOCHI_METRO) "ny_ic_kochi_metro_map" "ny_ic_kochi_metro_banner" "#F5FFFF" "#02B0AF" "https://metro-terms.triffy.in/kochi/index.html" [getString KOCHI_METRO_TERM_1 ,getString KOCHI_METRO_TERM_2] (getString KOCHI_METRO_TIME)  true
+    Chennai -> mkCityBasedConfig "ny_ic_chennai_metro" (getString TICKETS_FOR_CHENNAI_METRO) "ny_ic_chennai_metro_map" "ny_ic_chennai_metro_banner" "#D8E2FF" "#2250BF" "https://metro-terms.triffy.in/chennai/index.html" [getString CHENNAI_METRO_TERM_2 ,getString CHENNAI_METRO_TERM_1] (getString $ CHENNAI_METRO_TIME "04:30:00" "22:30:00") false
+    _ -> mkCityBasedConfig "" "" "" "" "" "" "" [] "" false
+  where
+    mkCityBasedConfig logoImage title mapImage bannerImage bannerBackgroundColor bannerTextColor termsAndConditionsUrl termsAndConditions errorPopupTitle showCancelButton = 
+      CityMetroConfig
+        { logoImage
+        , title
+        , mapImage
+        , bannerImage
+        , bannerBackgroundColor
+        , bannerTextColor
+        , termsAndConditionsUrl
+        , termsAndConditions
+        , errorPopupTitle
+        , showCancelButton
+        }
