@@ -15,7 +15,15 @@
     ];
 
     haskellProjects.default = {
-      projectRoot = ./.;
+      projectRoot = builtins.toString (pkgs.lib.fileset.toSource {
+        root = ./.;
+        fileset = pkgs.lib.fileset.unions [
+          ./app
+          ./lib
+          ./test
+          ./cabal.project
+        ];
+      });
       imports = [
         inputs.beckn-gateway.haskellFlakeProjectModules.output
         # inputs.namma-dsl.haskellFlakeProjectModules.output
