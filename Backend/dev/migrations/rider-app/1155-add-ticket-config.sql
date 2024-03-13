@@ -10,8 +10,4 @@ FROM atlas_app.merchant m;
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN issue_ticket_service character varying(30) DEFAULT 'Kapture' NOT NULL;
 
-ALTER TABLE atlas_app.issue RENAME COLUMN ride_booking_id to booking_id;
-ALTER TABLE atlas_app.issue ADD COLUMN ticket_id character varying(255);
-ALTER TABLE atlas_app.issue ADD COLUMN status character varying(255) DEFAULT 'OPEN' NOT NULL;
-
 CREATE INDEX idx_ticket_id ON atlas_app.issue USING btree (ticket_id);

@@ -1,0 +1,43 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+PersonStats:
+  tableName: person_stats
+
+  fields:
+    personId : Id Person
+    userCancelledRides : Int
+    driverCancelledRides : Int
+    completedRides : Int
+    weekendRides : Int
+    weekdayRides : Int
+    offPeakRides : Int
+    eveningPeakRides : Int
+    morningPeakRides : Int
+    weekendPeakRides : Int
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    personId: PrimaryKey
+
+  beamType:
+    createdAt: Maybe UTCTime
+
+  fromTType:
+    createdAt: Kernel.Prelude.fromMaybe updatedAt|I
+
+  toTType:
+    createdAt: Kernel.Prelude.Just|I
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId]

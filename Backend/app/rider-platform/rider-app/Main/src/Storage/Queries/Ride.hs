@@ -363,7 +363,7 @@ updateEditLocationAttempts rideId attempts = do
 
 createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m (DLM.LocationMapping, Maybe DLM.LocationMapping)
 createMapping bookingId rideId merchantId merchantOperatingCityId = do
-  fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
+  fromLocationMapping <- QLM.getLatestStartByEntityId bookingId 0 QLM.latestTag >>= fromMaybeM (FromLocationMappingNotFound bookingId)
   fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
 
   mbToLocationMapping <- QLM.getLatestEndByEntityId bookingId
@@ -382,8 +382,8 @@ instance FromTType' BeamR.Ride Ride where
           void $ QBooking.findById (Id bookingId)
           createMapping bookingId id merchantId merchantOperatingCityId
         else do
-          fromLocationMapping' <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
-          mbToLocationMapping' <- QLM.getLatestEndByEntityId id
+          fromLocationMapping' <- QLM.getLatestStartByEntityId id 0 QLM.latestTag >>= fromMaybeM (FromLocationMappingNotFound id)
+          mbToLocationMapping' <- QLM.getLatestStartByEntityId id 0 QLM.latestTag
           return (fromLocationMapping', mbToLocationMapping')
 
     fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)

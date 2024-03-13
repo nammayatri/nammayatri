@@ -95,7 +95,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
     bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
     clientVersion' <- mapM readVersion (strip <$> clientVersion)
 
-    fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+    fromLocationMapping <- QLM.getLatestStartByEntityId id 0 QLM.latestTag >>= fromMaybeM (FromLocationMappingNotFound id)
     fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
     mbToLocationMapping <- QLM.getLatestEndByEntityId id

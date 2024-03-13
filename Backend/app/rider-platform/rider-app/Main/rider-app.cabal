@@ -196,9 +196,6 @@ library
       Domain.Action.UI.Support
       Domain.Action.UI.TicketService
       Domain.Action.UI.Whatsapp
-      Domain.Types.AadhaarVerification.AadhaarOtp
-      Domain.Types.AadhaarVerification.AadhaarVerification
-      Domain.Types.AppInstalls
       Domain.Types.BlackListOrg
       Domain.Types.Booking
       Domain.Types.Booking.API
@@ -206,40 +203,29 @@ library
       Domain.Types.Booking.Type
       Domain.Types.BookingCancellationReason
       Domain.Types.CacType
-      Domain.Types.CallbackRequest
-      Domain.Types.CallStatus
       Domain.Types.CancellationReason
       Domain.Types.Common
       Domain.Types.DriverOffer
       Domain.Types.Estimate
-      Domain.Types.Exophone
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.FeedbackForm
       Domain.Types.Geometry
       Domain.Types.HotSpot
-      Domain.Types.HotSpotConfig
-      Domain.Types.Issue
       Domain.Types.Location
       Domain.Types.LocationAddress
-      Domain.Types.LocationMapping
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
-      Domain.Types.MerchantConfig
-      Domain.Types.OnSearchEvent
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonDisability
       Domain.Types.Person.PersonFlowStatus
-      Domain.Types.Person.PersonStats
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.Quote
-      Domain.Types.Rating
-      Domain.Types.RegistrationToken
       Domain.Types.RentalDetails
       Domain.Types.Ride
       Domain.Types.SavedReqLocation
@@ -268,17 +254,11 @@ library
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
-      Storage.Beam.AadhaarVerification.AadhaarOtpReq
-      Storage.Beam.AadhaarVerification.AadhaarOtpVerify
-      Storage.Beam.AadhaarVerification.AadhaarVerification
-      Storage.Beam.AppInstalls
       Storage.Beam.BecknRequest
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
-      Storage.Beam.CallbackRequest
-      Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
       Storage.Beam.Common
       Storage.Beam.Disability
@@ -286,35 +266,26 @@ library
       Storage.Beam.DriverOffer
       Storage.Beam.Estimate
       Storage.Beam.EstimateBreakup
-      Storage.Beam.Exophone
       Storage.Beam.FarePolicy.FareBreakup
       Storage.Beam.FeedbackForm
       Storage.Beam.Geometry
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
-      Storage.Beam.HotSpotConfig
-      Storage.Beam.Issue
       Storage.Beam.IssueManagement
       Storage.Beam.Location
-      Storage.Beam.LocationMapping
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
-      Storage.Beam.MerchantConfig
-      Storage.Beam.OnSearchEvent
       Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
       Storage.Beam.Person.PersonDisability
       Storage.Beam.Person.PersonFlowStatus
-      Storage.Beam.Person.PersonStats
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.Quote
-      Storage.Beam.Rating
-      Storage.Beam.RegistrationToken
       Storage.Beam.RentalDetails
       Storage.Beam.Ride
       Storage.Beam.SavedReqLocation
@@ -353,52 +324,47 @@ library
       Storage.Clickhouse.FareBreakup
       Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
-      Storage.Queries.AadhaarVerification.AadhaarOtp
-      Storage.Queries.AadhaarVerification.AadhaarVerification
-      Storage.Queries.AppInstalls
+      Storage.Queries.AppInstallsExtra
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
-      Storage.Queries.CallbackRequest
-      Storage.Queries.CallStatus
+      Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReason
       Storage.Queries.Disability
       Storage.Queries.DriverOffer
       Storage.Queries.Estimate
       Storage.Queries.EstimateBreakup
-      Storage.Queries.Exophone
+      Storage.Queries.ExophoneExtra
       Storage.Queries.FareBreakup
       Storage.Queries.FeedbackForm
       Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.Geometry
-      Storage.Queries.HotSpotConfig
-      Storage.Queries.Issues
+      Storage.Queries.IssueExtra
       Storage.Queries.Location
-      Storage.Queries.LocationMapping
+      Storage.Queries.LocationMappingExtra
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
-      Storage.Queries.MerchantConfig
-      Storage.Queries.OnSearchEvent
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonDisability
       Storage.Queries.Person.PersonFlowStatus
-      Storage.Queries.Person.PersonStats
+      Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.Quote
-      Storage.Queries.Rating
-      Storage.Queries.RegistrationToken
+      Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RentalDetails
       Storage.Queries.Ride
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SpecialZoneQuote
+      Storage.Queries.Transformers.AppInstalls
+      Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.TripTerms
       Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
@@ -432,9 +398,16 @@ library
       API.Types.UI.Invoice
       API.Types.UI.Sos
       API.Types.UI.TicketService
+      Domain.Types.AadhaarOtpReq
+      Domain.Types.AadhaarOtpVerify
+      Domain.Types.AadhaarVerification
+      Domain.Types.AppInstalls
       Domain.Types.BecknConfig
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
+      Domain.Types.CallbackRequest
+      Domain.Types.CallStatus
+      Domain.Types.Exophone
       Domain.Types.FRFSQuote
       Domain.Types.FRFSRecon
       Domain.Types.FRFSSearch
@@ -442,9 +415,17 @@ library
       Domain.Types.FRFSTicketBooking
       Domain.Types.FRFSTicketBookingPayment
       Domain.Types.FRFSTrip
+      Domain.Types.HotSpotConfig
+      Domain.Types.Issue
+      Domain.Types.LocationMapping
+      Domain.Types.MerchantConfig
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
+      Domain.Types.OnSearchEvent
+      Domain.Types.PersonStats
+      Domain.Types.Rating
+      Domain.Types.RegistrationToken
       Domain.Types.RiderConfig
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
@@ -459,9 +440,16 @@ library
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Domain.Types.ValueAddNP
+      Storage.Beam.AadhaarOtpReq
+      Storage.Beam.AadhaarOtpVerify
+      Storage.Beam.AadhaarVerification
+      Storage.Beam.AppInstalls
       Storage.Beam.BecknConfig
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
+      Storage.Beam.CallbackRequest
+      Storage.Beam.CallStatus
+      Storage.Beam.Exophone
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSSearch
@@ -469,9 +457,17 @@ library
       Storage.Beam.FRFSTicketBooking
       Storage.Beam.FRFSTicketBookingPayment
       Storage.Beam.FRFSTrip
+      Storage.Beam.HotSpotConfig
+      Storage.Beam.Issue
+      Storage.Beam.LocationMapping
+      Storage.Beam.MerchantConfig
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
+      Storage.Beam.OnSearchEvent
+      Storage.Beam.PersonStats
+      Storage.Beam.Rating
+      Storage.Beam.RegistrationToken
       Storage.Beam.RiderConfig
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
@@ -486,9 +482,16 @@ library
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Beam.ValueAddNP
+      Storage.Queries.AadhaarOtpReq
+      Storage.Queries.AadhaarOtpVerify
+      Storage.Queries.AadhaarVerification
+      Storage.Queries.AppInstalls
       Storage.Queries.BecknConfig
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
+      Storage.Queries.CallbackRequest
+      Storage.Queries.CallStatus
+      Storage.Queries.Exophone
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSSearch
@@ -496,9 +499,24 @@ library
       Storage.Queries.FRFSTicketBooking
       Storage.Queries.FRFSTicketBookingPayment
       Storage.Queries.FRFSTrip
+      Storage.Queries.HotSpotConfig
+      Storage.Queries.Issue
+      Storage.Queries.LocationMapping
+      Storage.Queries.MerchantConfig
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantState
       Storage.Queries.NotificationSoundsConfig
+      Storage.Queries.OnSearchEvent
+      Storage.Queries.OrphanInstances.AppInstalls
+      Storage.Queries.OrphanInstances.CallStatus
+      Storage.Queries.OrphanInstances.Exophone
+      Storage.Queries.OrphanInstances.Issue
+      Storage.Queries.OrphanInstances.LocationMapping
+      Storage.Queries.OrphanInstances.PersonStats
+      Storage.Queries.OrphanInstances.RegistrationToken
+      Storage.Queries.PersonStats
+      Storage.Queries.Rating
+      Storage.Queries.RegistrationToken
       Storage.Queries.RiderConfig
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
