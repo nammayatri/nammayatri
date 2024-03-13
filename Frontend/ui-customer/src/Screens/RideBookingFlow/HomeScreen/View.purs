@@ -387,9 +387,7 @@ view push state =
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
                 , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then VISIBLE else GONE
-                ][ rideTrackingView push state 
-                , DriverInfoCard.brandingBannerView state.data.config.driverInfoConfig VISIBLE
-                ]
+                ][ rideTrackingView push state ]
             , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
             , if ((state.props.currentStage /= RideRating) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
