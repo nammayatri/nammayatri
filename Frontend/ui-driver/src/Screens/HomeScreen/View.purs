@@ -104,10 +104,12 @@ screen initialState =
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
-          when (initialState.data.driverStats == false) do
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-              driverStats <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (HU.getcurrentdate ""))            
-              lift $ lift $ doAff do liftEffect $ push $ DriverStats driverStats
+          if initialState.data.driverStats == false
+            then do
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+                driverStats <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (HU.getcurrentdate ""))            
+                lift $ lift $ doAff do liftEffect $ push $ DriverStats driverStats
+            else pure unit
           when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do              
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
@@ -237,9 +239,7 @@ view push state =
         (\action -> do
           void $ Events.endMeasuringDuration "onCreateToHomeScreenRenderDuration"
           void $ Events.endMeasuringDuration "initAppToHomeScreenRenderDuration"
-          void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-            liftFlowBT HU.hideSplash
-            void $ lift $ lift $ toggleLoader false  
+          void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ liftFlowBT HU.hideSplash            
           _ <- push action          
           _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
           _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
