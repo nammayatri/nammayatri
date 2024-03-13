@@ -152,6 +152,7 @@ initData = {
     } 
     , contactList : Nothing
     , followers : Nothing
+    , vehicleVariant : ""
     },
     props: {
       rideRequestFlow : false

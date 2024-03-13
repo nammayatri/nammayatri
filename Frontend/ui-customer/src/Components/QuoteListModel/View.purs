@@ -23,7 +23,7 @@ import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
 import Components.SeparatorView.View as SeparatorView
 import Data.Array (filter, head, null, (!!), mapWithIndex)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
 import Font.Size as FontSize
@@ -36,7 +36,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.Types (Stage(..), QuoteListItemState(..))
+import Screens.Types (Stage(..), QuoteListItemState(..), City(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
@@ -255,7 +255,7 @@ findingRidesView state push =
       lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
-                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = if (state.appConfig.autoVariantEnabled && state.vehicleVariant == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text_auto.json" else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
+                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
                     pure unit)(const NoAction)
       , height $ V state.appConfig.quoteListModel.lottieHeight
       , accessibility DISABLE
@@ -720,3 +720,12 @@ separatorConfig =
   , layoutHeight : V 15
   , color : Color.black500
   }
+
+
+getAutoLottie :: City -> String
+getAutoLottie city = 
+  case city of 
+    Hyderabad -> "lottie/finding_rides_loader_auto_yellow_black.json"
+    Kochi     -> "lottie/finding_rides_loader_auto_kochi.json"
+    Chennai   -> "lottie/finding_rides_loader_auto_yellow_black.json"
+    _         -> "lottie/finding_rides_loader_with_text_auto.json"
