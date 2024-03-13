@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=), (+))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd, horizontalScrollView, scrollBarX)
+import PrestoDOM 
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -54,6 +54,10 @@ import JBridge(fromMetersToKm)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Helpers.Utils (parseFloat)
 import MerchantConfig.Types (DriverInfoConfig)
+import Mobility.Prelude
+import Data.Maybe
+import Data.String as STR
+import Engineering.Helpers.Commons
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -117,7 +121,6 @@ driverInfoViewSpecialZone push state =
               ][ dropPointView push state
                 , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
                 , cancelRideLayout push state
-                , brandingBannerView state.data.config.driverInfoConfig INVISIBLE
               ]
             ]
       ]
@@ -706,45 +709,11 @@ driverInfoView push state =
                 ][ if state.props.currentSearchResultType == QUOTES then destinationView push state else if not state.data.config.showPickUpandDrop then dummyView push else sourceDistanceView push state
                   , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ])
                   , cancelRideLayout push state
-                  , brandingBannerView state.data.config.driverInfoConfig INVISIBLE
                 ]
               ]
          ]
       ]
   ]
-
-brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> PrestoDOM (Effect Unit) w
-brandingBannerView driverInfoConfig isVisible = 
-  let brandingVisibility = if not driverInfoConfig.footerVisibility then GONE else isVisible
-  in 
-    linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , alignParentBottom "true,-1"
-    , gravity BOTTOM
-    , visibility $ brandingVisibility
-    ][ separator (MarginTop 0) (V 1) Color.grey900 true
-      , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , gravity CENTER
-        , background driverInfoConfig.footerBackgroundColor
-        , padding $ Padding 12 12 12 (12+safeMarginBottom)
-        ][ textView $
-            [ text $ getString POWERED_BY 
-            , width WRAP_CONTENT    
-            , height WRAP_CONTENT
-            , color Color.black800
-            , padding $ PaddingRight 6
-            ] <> FontStyle.body3 TypoGraphy
-        , imageView
-            [ imageWithFallback $ driverInfoConfig.footerImageUrl
-            , width $ V 62
-            , height $ V 20
-            ]
-        ]
-    ]
 
 cancelRideLayout :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 cancelRideLayout push state =
@@ -851,17 +820,15 @@ driverDetailsView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> 
 driverDetailsView push state =
  linearLayout
   [ orientation HORIZONTAL
-  , height $ V 170
-  , padding $ Padding 16 16 16 16
+  , height WRAP_CONTENT
+  , padding $ Padding 16 16 16 12
   , width MATCH_PARENT
   , visibility if state.props.currentSearchResultType == QUOTES then (if state.props.currentStage == RideStarted then VISIBLE else GONE) else VISIBLE
-  , gravity BOTTOM
+  , gravity CENTER_VERTICAL
   ][  linearLayout
       [ orientation VERTICAL
-      , height MATCH_PARENT
-      , width WRAP_CONTENT
-      , gravity BOTTOM
-      , alignParentLeft "true,-1"
+      , height WRAP_CONTENT
+      , width $ V ((screenWidth unit) /2 - 20)
       ][  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -895,7 +862,7 @@ driverDetailsView push state =
                                           _ -> ""
           , color Color.black700
           , accessibility DISABLE
-          , width $ V ((screenWidth unit) /2 - 20)
+          , width WRAP_CONTENT
           , maxLines 2
           , singleLine false
           , height WRAP_CONTENT
@@ -910,66 +877,96 @@ driverDetailsView push state =
       , orientation VERTICAL
       , accessibility DISABLE_DESCENDANT
       , gravity RIGHT
-      ][  frameLayout
-          [ height MATCH_PARENT
-          , width $ V 172
-          , gravity BOTTOM
-          ][  imageView
-              [ imageWithFallback (getVehicleImage state.data.vehicleVariant state.data.vehicleDetails state.props.merchantCity)
-              , height $ V 100
-              , gravity RIGHT
-              , width MATCH_PARENT
-              , margin $ MarginBottom 15
-              ]
-            , linearLayout
-              [ height $ V 138
-              , width MATCH_PARENT
-              , gravity BOTTOM
-              ][  linearLayout
-                  [ height $ V 38
-                  , width MATCH_PARENT
-                  , background state.data.config.driverInfoConfig.numberPlateBackground
-                  , cornerRadius 4.0
-                  , orientation HORIZONTAL
-                  , gravity BOTTOM
-                  , padding $ Padding 2 2 2 2
-                  , alignParentBottom "true,-1"
-                  ][
-                    linearLayout
-                    [ height $ V 34
-                    , width MATCH_PARENT
-                    , stroke $ "2," <> Color.black
-                    , cornerRadius 4.0
-                    , orientation HORIZONTAL
-                    ][  imageView
-                        [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_number_plate"
-                        , gravity LEFT
-                        , visibility if state.data.config.driverInfoConfig.showNumberPlatePrefix then VISIBLE else GONE
-                        , background "#1C4188"
-                        , height MATCH_PARENT
-                        , width $ V 22
-                        ]
-                        , textView $
-                        [ margin $ Margin 2 2 2 2
-                        , weight 1.0
-                        , height MATCH_PARENT
-                        , text $ (makeNumber state.data.registrationNumber)
-                        , color Color.black
-                        , gravity CENTER
-                        ] <> FontStyle.body7 TypoGraphy
-                        , imageView
-                        [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_number_plate_suffix"
-                        , gravity RIGHT
-                        , visibility if state.data.config.driverInfoConfig.showNumberPlateSuffix then VISIBLE else GONE
-                        , height MATCH_PARENT
-                        , width $ V 13
-                        ]
-                      ]
-                    ]
-                ]
-            ]
+      ][ 
+        imageView [ 
+          imageWithFallback (getVehicleImage state.data.vehicleVariant state.data.vehicleDetails state.props.merchantCity)
+        , height $ (if true then V 89 else V 66)
+        , gravity CENTER
+        , width MATCH_PARENT
+        , accessibility DISABLE_DESCENDANT
         ]
+      , numberPlateView state
+      , brandingBannerView state.data.config.driverInfoConfig Nothing
+      ]
     ]
+
+numberPlateView :: forall w. DriverInfoCardState -> PrestoDOM (Effect Unit) w
+numberPlateView state = 
+  linearLayout [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER_HORIZONTAL
+  ][
+    linearLayout[
+      height $ V 34
+    , width WRAP_CONTENT
+    , background state.data.config.driverInfoConfig.numberPlateBackground
+    , cornerRadius 4.0
+    , orientation HORIZONTAL
+    , accessibility ENABLE
+    , accessibilityHint $ "Vehicle Number " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") state.data.registrationNumber)
+    , gravity CENTER
+    ][
+      linearLayout
+      [ height $ V 30
+      , width WRAP_CONTENT
+      , stroke $ "2," <> Color.black
+      , cornerRadius 4.0
+      , orientation HORIZONTAL
+      ][  imageView[ 
+            imageWithFallback $ fetchImage FF_ASSET "ny_ic_number_plate"
+          , gravity LEFT
+          , visibility if state.data.config.driverInfoConfig.showNumberPlatePrefix then VISIBLE else GONE
+          , background "#1C4188"
+          , height MATCH_PARENT
+          , width $ V 20
+          ]
+        , textView $ [ 
+            margin $ Margin 2 2 2 2
+          , weight 1.0
+          , height MATCH_PARENT
+          , text $ (makeNumber state.data.registrationNumber)
+          , color Color.black800
+          , fontStyle $ FontStyle.feFont LanguageStyle
+          , gravity CENTER
+          , textSize FontSize.a_14
+          ]
+        , imageView[ 
+            imageWithFallback $ fetchImage FF_ASSET "ny_ic_number_plate_suffix"
+          , gravity RIGHT
+          , visibility if state.data.config.driverInfoConfig.showNumberPlateSuffix then VISIBLE else GONE
+          , height MATCH_PARENT
+          , width $ V 13
+          ]
+        ]
+      ]
+  ]
+
+brandingBannerView :: forall w. DriverInfoConfig -> Maybe String -> PrestoDOM (Effect Unit) w
+brandingBannerView driverInfoConfig uid = 
+  linearLayout
+    ([ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , gravity CENTER_HORIZONTAL
+    , background driverInfoConfig.footerBackgroundColor
+    , visibility $ boolToVisibility  driverInfoConfig.footerVisibility
+    , padding $ PaddingVertical 7 7
+    ] <> if isJust uid then [id $ getNewIDWithTag $ fromMaybe "" uid] else [])
+    [textView $
+    [ text $ getString POWERED_BY 
+    , width WRAP_CONTENT    
+    , height WRAP_CONTENT
+    , color Color.black800
+    , padding $ PaddingRight 6
+    ] <> FontStyle.body3 TypoGraphy
+  , imageView
+    [ imageWithFallback $ driverInfoConfig.footerImageUrl
+    , width $ V 62
+    , height $ V 20
+    ]
+  ]
+
+
 
 ---------------------------------- ratingView ---------------------------------------
 
