@@ -883,7 +883,7 @@ getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text 
 getFleetDriverVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset = do
   let limit = min 25 $ fromMaybe 10 mbLimit -- TODO: we have to make this query more efficient
       offset = fromMaybe 0 mbOffset
-  listOfAllDrivers <- FDV.findAllDriverByFleetOwnerId fleetOwnerId limit offset
+  listOfAllDrivers <- FDV.findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId Nothing limit offset
   listOfAllVehicle <- RCQuery.findAllByFleetOwnerId' fleetOwnerId
   listItems <- createDriverVehicleAssociationListItem listOfAllDrivers listOfAllVehicle
   let filteredItems = filter (.isRcAssociated) listItems
@@ -924,12 +924,13 @@ getFleetDriverAssociation ::
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
   Bool ->
   Flow Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo _isSearch = do
+getFleetDriverAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo mbIsActive _isSearch = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
-  listOfAllDrivers <- FDV.findAllDriverByFleetOwnerId fleetOwnerId limit offset
+  listOfAllDrivers <- FDV.findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId mbIsActive limit offset
   listItems <- filterForSearch <$> createFleetDriverAssociationListItem listOfAllDrivers
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems}
   where

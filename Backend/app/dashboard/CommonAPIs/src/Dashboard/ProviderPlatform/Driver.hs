@@ -1018,6 +1018,7 @@ data DrivertoVehicleAssociationRes = DrivertoVehicleAssociationRes
 type GetFleetDriverAssociationAPI =
   "fleet"
     :> "driverAssociation"
+    :> QueryParam "isActive" Bool
     :> QueryParam "Limit" Int
     :> QueryParam "Offset" Int
     :> Get '[JSON] DrivertoVehicleAssociationRes

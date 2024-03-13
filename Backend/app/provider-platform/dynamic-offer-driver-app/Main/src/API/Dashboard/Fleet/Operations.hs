@@ -141,6 +141,7 @@ type GetFleetDriverAssociationAPI =
   Capture "fleetOwnerId" Text
     :> "fleet"
     :> "getFleetDriverAssociation"
+    :> QueryParam "isActive" Bool
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> Get '[JSON] Common.DrivertoVehicleAssociationRes
@@ -226,14 +227,14 @@ setVehicleDriverRcStatusForFleet merchantShortId opCity driverId fleetOwnerId re
 getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
 getFleetDriverVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetDriverVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset
 
-getFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset Nothing Nothing False
+getFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Bool -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbIsActive mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset Nothing Nothing mbIsActive False
 
 getFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
 getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset Nothing Nothing False
 
 getFleetDriverAssociationBySearch :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociationBySearch merchantShortId opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo True
+getFleetDriverAssociationBySearch merchantShortId opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo Nothing True
 
 getFleetVehicleAssociationBySearch :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler Common.DrivertoVehicleAssociationRes
 getFleetVehicleAssociationBySearch merchantShortId opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbDriverPhNo = withFlowHandlerAPI $ DDriver.getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbDriverPhNo True
