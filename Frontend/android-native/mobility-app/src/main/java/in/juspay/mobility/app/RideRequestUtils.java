@@ -47,6 +47,7 @@ import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -465,5 +466,14 @@ public class RideRequestUtils {
                 firebaseLogEventWithParams("exception_in_logging_ride_req_event", "exception", Objects.requireNonNull(e.getMessage()).substring(0, 40), context);
             }
         });
+    }
+
+    public static String calculateDp(String durationToPickup, DecimalFormat df) {
+        try {
+            return df.format(Integer.parseInt(durationToPickup) / 60);
+        } catch (NumberFormatException e) {
+            Log.e("ParseInt Error", e.toString());
+            return "";
+        }
     }
 }

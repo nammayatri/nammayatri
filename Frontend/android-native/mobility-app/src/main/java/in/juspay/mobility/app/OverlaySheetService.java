@@ -230,7 +230,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.currency.setText(String.valueOf(model.getCurrency()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
 
-            if( key.equals("yatrisathiprovider") ){
+            if( key.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
                 holder.durationToPickup.setVisibility(View.VISIBLE);
                 holder.durationToPickupImage.setVisibility(View.VISIBLE);
                 holder.durationToPickup.setText(model.getDurationToPickup() + " min");
@@ -629,7 +629,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     }
                     SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                             (df.format(distanceTobeCovered / 1000)),
-                            (df.format(Integer.parseInt(durationToPickup)/ 60)),
+                            RideRequestUtils.calculateDp(durationToPickup, df),
                             addressPickUp,
                             addressDrop,
                             baseFare,
