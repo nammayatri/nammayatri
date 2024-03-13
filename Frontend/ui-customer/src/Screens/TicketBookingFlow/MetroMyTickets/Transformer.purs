@@ -46,7 +46,7 @@ metroTicketListApiToMyTicketsTransformer ticketList state =
     pastTicketEvaluator :: String -> Array FRFSTicketAPI -> Boolean
     pastTicketEvaluator status tickets = 
       let validTill =  maybe "" (\(FRFSTicketAPI ticket) -> ticket.validTill) (head tickets)
-      in (any (_ == status) ["FAILED"]) || (isTicketExpired validTill)
+      in (any (_ == status) ["CANCELLED", "FAILED"]) || (isTicketExpired validTill)
 
 
 metroTicketCardTransformer :: Array MetroTicketBookingStatus -> Array MetroTicketCardData
@@ -62,12 +62,9 @@ ticketItemTransformer (MetroTicketBookingStatus bookingItem) =
     sourceName' = getStationName sourceStationEnum
     destinationName' = getStationName destinationStationEnum
     noOfTickets' = bookingItem.quantity
-    createdAt' = (convertUTCtoISC bookingItem.createdAt "Do MMM YYYY")
+    createdAt' = (convertUTCtoISC (getCurrentUTC "") "Do MMM YYYY")
     metroTicketStatusApiResp' = (MetroTicketBookingStatus bookingItem)
-    status' = if isTicketExpired utcValidTill then 
-                "EXPIRED"
-              else 
-                bookingItem.status
+    status' = bookingItem.status
     validUntill' = (convertUTCtoISC bookingItem.validTill "hh:mm A") <> ", " <> (convertUTCtoISC bookingItem.validTill "Do MMM YYYY") 
   in 
   {

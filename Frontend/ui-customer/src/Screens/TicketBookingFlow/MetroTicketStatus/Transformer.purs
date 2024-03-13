@@ -37,7 +37,6 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
       "PAYMENT_PENDING" -> PP.Pending
       "CONFIRMING" -> PP.Pending
       _ -> PP.Failed
-    ticketName' = getString TICKETS_FOR_CHENNAI_METRO
     validUntil' =  metroTicketBookingStatus.validTill
     paymentOrder = metroTicketBookingStatus.payment >>= (\(FRFSBookingPaymentAPI payment') ->  payment'.paymentOrder)
     transactionId = case paymentOrder of 
@@ -47,11 +46,11 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
   in
     state {
       data{
-        ticketName = ticketName'
-      , keyValArray = keyValArray'
+        keyValArray = keyValArray'
       , shortOrderId = transactionId
       , validUntil = validUntil'
       , bookingId = bookingId'
+      , resp = MetroTicketBookingStatus metroTicketBookingStatus
       }
     , props{
         paymentStatus =  paymentStatus'

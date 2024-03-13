@@ -49,7 +49,6 @@ data Action = BackPressed
             | IncrementTicket
             | DecrementTicket
             | MetroRouteMapAction
-            | ToggleTermsAndConditions
             | GetMetroQuotesAction (Array MetroQuote)
             | SelectLocation ST.LocationActionId
             | ShowMetroBookingTimeError Boolean
@@ -85,8 +84,6 @@ eval DecrementTicket state = do
 
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
 
-eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSelected = not state.props.termsAndConditionsSelected, currentStage  = ST.MetroTicketSelection}}
-
 eval (ChangeTicketTab ticketType) state = do 
   if state.props.currentStage == ST.ConfirmMetroQuote then do
     let ticketTypeUpdatedState = state {data {ticketType = ticketType}}
@@ -114,7 +111,7 @@ eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd 
 eval (ShowMetroBookingTimeError withinTimeRange) state = 
   continue state {
     props{
-      showMetroBookingTimeError = not withinTimeRange
+      showMetroBookingTimeError = false-- not withinTimeRange
     }
   }
 

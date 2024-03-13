@@ -62,7 +62,7 @@ import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage)
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (printLog)
@@ -120,7 +120,7 @@ import Screens.TicketBookingFlow.PlaceList.View as PlaceListS
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.Types (Gender(..)) as Gender
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationScreenState, SearchLocationTextField(..), SearchLocationStage(..), LocationInfo, SearchLocationActionType(..),Station(..),MetroTicketBookingStage(..),MetroStationsList(..))
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationScreenState, SearchLocationTextField(..), SearchLocationStage(..), LocationInfo, SearchLocationActionType(..),Station(..),MetroTicketBookingStage(..),MetroStations(..))
 import Screens.Types as ST
 import Screens.Types
 import Services.Backend as Remote
@@ -2959,19 +2959,16 @@ metroTicketBookingFlow = do
   (GlobalState currentState) <- getState
   config <- getAppConfigFlowBT appConfig
   metroStationsList <- lift $ lift $ getMetroStationsObjFromLocal ""
-  let diffSec = runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") metroStationsList.lastUpdatedAt
-      metroStationValidTill  = config.metroTicketingConfig.metroStationTtl
-  if ( getValueToLocalStore METRO_STATIONS == "__failed" || getValueToLocalStore METRO_STATIONS == "(null)" || diffSec > metroStationValidTill || null metroStationsList.stations ) then do
-    (GetMetroStationResponse getMetroStationResp) <- Remote.getMetroStationBT ""
-    void $ pure $ saveObject "METRO_STATIONS" (getMetroStationsList getMetroStationResp)
-    let parsedMetroStation = map (\(GetMetroStationResp item) -> {
-                          stationName : item.name,
-                          stationCode : item.code
-                        }) getMetroStationResp
-    modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-    modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{data {metroStations = parsedMetroStation, updatedMetroStations = parsedMetroStation}})
-    else do
-      pure unit
+  let currentCity = getValueToLocalStore CUSTOMER_LOCATION
+      stationsForCurrentCity = (findMetroStationsForCity currentCity metroStationsList)
+  parsedMetroStation <- case stationsForCurrentCity of
+    Just stations -> do
+      let diffSec = runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") stations.lastUpdatedAt
+          metroStationValidTill = config.metroTicketingConfig.metroStationTtl
+      if diffSec > metroStationValidTill
+        then fetchMetroStations currentCity metroStationsList
+        else pure $ parseMetroStations stations.stations
+    Nothing -> fetchMetroStations currentCity metroStationsList
   flow <- UI.metroTicketBookingScreen
   case flow of
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET state -> homeScreenFlow
@@ -2981,11 +2978,6 @@ metroTicketBookingFlow = do
                       Src -> Just SearchLocPickup
                       Dest -> Just SearchLocDrop
       if null searchLocationState.data.metroStations then do
-        metroStationsList <- lift $ lift $ getMetroStationsObjFromLocal ""
-        let parsedMetroStation = map (\(GetMetroStationResp item) -> {
-                          stationName : item.name,
-                          stationCode : item.code
-                        }) metroStationsList.stations
         modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
         modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = parsedMetroStation, updatedMetroStations = parsedMetroStation}})
       else do
@@ -3008,8 +3000,9 @@ metroTicketBookingFlow = do
       modifyScreenState $ MetroMyTicketsScreenStateType (\metroMyTicketsScreen -> metroMyTicketsScreen{props{entryPoint = ST.MetroTicketBookingToMetroMyTickets}})
       metroMyTicketsFlow
     GO_TO_METRO_ROUTE_MAP -> do
+      let currentCity = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
       modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
-      modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{stage = ST.MetroMapStage, previousScreenStage = ST.MetroTicketSelectionStage}})
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{data{city = currentCity}, props{stage = ST.MetroMapStage, previousScreenStage = ST.MetroTicketSelectionStage}})
       metroTicketDetailsFlow
     REFRESH_METRO_TICKET_SCREEN state -> do
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{props { currentStage = ConfirmMetroQuote }})
@@ -3020,11 +3013,42 @@ metroTicketBookingFlow = do
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{props { currentStage = ConfirmMetroQuote }})
       metroTicketPaymentFlow orderResp bookingId
     where
-      getMetroStationsList :: Array GetMetroStationResp -> ST.MetroStationsList
-      getMetroStationsList metroStationArr = {
-                                                stations : metroStationArr
-                                              , lastUpdatedAt : getCurrentUTC ""
-                                            }        
+      fetchMetroStations currentCity metroStationsList = do
+        (GetMetroStationResponse getMetroStationResp) <- Remote.getMetroStationBT currentCity
+        void $ pure $ saveObject "METRO_STATIONS" (getMetroStations currentCity getMetroStationResp metroStationsList)
+        let parsedStations_ = parseMetroStations getMetroStationResp
+        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{data {metroStations = parsedStations_, updatedMetroStations = parsedStations_}})
+        pure parsedStations_
+
+      getMetroStations :: String -> Array GetMetroStationResp -> Array MetroStations -> Array ST.MetroStations
+      getMetroStations city metroStationsResp metroStationArr = 
+        let  
+          currentCity = getCityFromString city
+          filteredStationArr = filter (\station -> station.city /= currentCity) metroStationArr
+          currentCityStations = 
+              [{ city : currentCity
+              , stations : metroStationsResp
+              , lastUpdatedAt : getCurrentUTC ""
+              }]
+        in filteredStationArr <> currentCityStations
+      
+      findMetroStationsForCity :: String -> Array MetroStations -> Maybe MetroStations
+      findMetroStationsForCity city stations =
+        let
+          currentCity = getCityFromString city
+        in
+          if null stations 
+            then Nothing
+            else Arr.find (\station -> station.city == currentCity) stations
+
+      parseMetroStations :: Array GetMetroStationResp -> Array {stationName :: String, stationCode :: String}
+      parseMetroStations stations = 
+        map (\(GetMetroStationResp item) -> {
+          stationName : item.name,
+          stationCode : item.code
+        }) stations
+
 
 metroTicketPaymentFlow :: CreateOrderRes ->  String -> FlowBT String Unit
 metroTicketPaymentFlow (CreateOrderRes orderResp) bookingId= do
@@ -3272,6 +3296,14 @@ metroTicketDetailsFlow = do
     BACK_TO_SEARCH_METRO_LOCATION -> metroTicketBookingFlow
     GO_BACK_TO_HOME_SCREEN -> homeScreenFlow
     GO_TO_MY_METRO_TICKETS_FLOW ->  metroMyTicketsFlow
+    SOFT_CANCEL_BOOKING state -> do
+      (MetroBookingSoftCancelResp result) <- Remote.metroBookingSoftCancelBT state.data.bookingId
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\state -> state{props { stage = MetroSoftCancelStatusStage, showLoader = true }})
+      metroTicketDetailsFlow
+    HARD_CANCEL_BOOKING state -> do
+      (MetroBookingHardCancelResp result) <- Remote.metroBookingHardCancelBT state.data.bookingId
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\state -> state{props { stage = MetroHardCancelStatusStage , showLoader = true , isBookingCancellable = Nothing}})
+      metroTicketDetailsFlow
     _ -> metroTicketDetailsFlow
 
 metroMyTicketsFlow :: FlowBT String Unit
@@ -3286,6 +3318,12 @@ metroMyTicketsFlow = do
         modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> 
           let transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
           in transformedState {props{previousScreenStage = ST.MetroMyTicketsStage}}
+        )
+        metroTicketDetailsFlow
+      else if (metroTicketBookingStatus.status == "CANCELLED") then do
+        modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> 
+          let transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+          in transformedState {props{previousScreenStage = ST.MetroMyTicketsStage, stage = MetroHardCancelStatusStage}}
         )
         metroTicketDetailsFlow
       else if (any (_ == metroTicketBookingStatus.status) ["PAYMENT_PENDING", "FAILED"]) then do
@@ -3346,8 +3384,9 @@ searchLocationFlow = do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       searchLocationFlow 
     SearchLocationController.GoToMetroRouteMap -> do
+      let currentCity = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
       modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
-      modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{stage = ST.MetroMapStage, previousScreenStage = ST.SearchMetroLocationStage}})
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{data{city = currentCity}, props{stage = ST.MetroMapStage, previousScreenStage = ST.SearchMetroLocationStage}})
       metroTicketDetailsFlow
     SearchLocationController.NoOutput -> pure unit
     SearchLocationController.SearchPlace searchString state -> searchPlaceFlow searchString state
@@ -3578,9 +3617,6 @@ predictionClickedFlow prediction state = do
         metroTicketBookingFlow
       else do
         void $ pure $ spy "else do" state
-        modifyScreenState 
-          $ SearchLocationScreenStateType 
-              (\slsScreen -> slsScreen{data { updatedMetroStations = state.data.metroStations }})
         if state.props.focussedTextField == Just SearchLocPickup then 
           void $ pure $ showKeyboard (getNewIDWithTag (show SearchLocPickup))
           else do
@@ -3628,6 +3664,7 @@ predictionClickedFlow prediction state = do
       when (state.props.focussedTextField == Just SearchLocDrop) $ do 
         setSuggestionsMapInLocal prediction srcLat srcLon placeLat placeLon locServiceable state.appConfig
       pure unit
+
       
 getServiceability :: Number -> Number -> SearchLocationTextField -> FlowBT String {pickUpPoints :: Array Location, locServiceable :: Boolean, city :: Maybe String, geoJson :: String, specialLocCategory :: String}
 getServiceability placeLat placeLon currTextField = do

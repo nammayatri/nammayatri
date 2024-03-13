@@ -37,4 +37,10 @@ metroTicketDetailsScreen = do
     GoToHome -> App.BackT $ App.NoBack <$> (pure $ GO_BACK_TO_HOME_SCREEN)
     BackToSearchMetroLocation -> App.BackT $ App.NoBack <$> (pure $ BACK_TO_SEARCH_METRO_LOCATION)
     GoToMyMetroTickets -> App.BackT $ App.NoBack <$> (pure $ GO_TO_MY_METRO_TICKETS_FLOW)
+    SoftCancelBooking updatedState -> do
+      void $ modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SOFT_CANCEL_BOOKING updatedState)
+    HardCancelBooking updatedState -> do
+      void $ modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ HARD_CANCEL_BOOKING updatedState)
     _  -> App.BackT $ App.NoBack <$> (pure $ METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_OUTPUT)
