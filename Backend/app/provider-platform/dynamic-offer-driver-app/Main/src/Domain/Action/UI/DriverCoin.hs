@@ -26,7 +26,6 @@ import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -236,7 +235,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
       let result = accumulateCoins coins histories
       logDebug $ "result : " <> show result
       mapM_ (\(id, coinValue, status) -> CHistory.updateStatusOfCoins id coinValue status) result
-      void $ Hedis.withCrossAppRedis $ Hedis.incrby (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins))
+      Coins.safeIncrBy (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins)) driverId transporterConfig.timeDiffFromUtc
     else do
       throwError $ InsufficientCoins driverId.getId coins
   pure Success
