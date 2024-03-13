@@ -1005,7 +1005,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         int maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         if (currentVolume / maxVolume < 0.7) {
             try{
-                audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
+                audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.FLAG_SHOW_UI);
             }catch (Exception e){
                 RideRequestUtils.firebaseLogEventWithParams("exception_in_increase_volume", "increase_volume", String.valueOf(e), this);
             }

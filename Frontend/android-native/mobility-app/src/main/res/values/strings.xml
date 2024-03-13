@@ -35,19 +35,19 @@
     <string name="location_is_turned_off_permission_is_disabled">Location is turned off / permission is disabled</string>
     <string name="ride_assigned_to_another_driver">Ride assigned to another driver</string>
     <string name="select_date">Select Date</string>
-    <string name="chatting_is_enabled">Chatting is enabled</string>
-    <string name="you_can_now_chat_with_driver">You can now chat with driver</string>
-    <string name="you_can_now_chat_with_customer">You can now chat with customer</string>
-    <string name="new_ride_req">New Ride Request</string>
-    <string name="new_ride_available_for_offering">New ride available for offering</string>
-    <string name="and">and</string>
+    <string name="chatting_is_enabled" translatable="false">Chatting is enabled</string>
+    <string name="you_can_now_chat_with_driver" translatable="false">You can now chat with driver</string>
+    <string name="you_can_now_chat_with_customer" translatable="false">You can now chat with customer</string>
+    <string name="new_ride_req" translatable="false">New Ride Request</string>
+    <string name="new_ride_available_for_offering" translatable="false">New ride available for offering</string>
+    <string name="and" translatable="false">and</string>
     <string name="service" translatable="false">for_compilation</string>
-    <string name="tip_included">" tip included!"</string>
+    <string name="tip_included" translatable="false">" tip included!"</string>
     <string name="message_from_customer">Message from Customer</string>
     <string name="assistance_required">Assistance Required</string>
     <string name="tip">Tip</string>
-    <string name="merchant_id">for_compilation</string>
-    <string name="client_id">for_compilation</string>
+    <string name="merchant_id" translatable="false">for_compilation</string>
+    <string name="client_id" translatable="false">for_compilation</string>
     <string name="qr_for_your_vpa_is_downloaded">QR for your vpa is downloaded!!!</string>
     <string name="invoice_downloaded">Invoice Downloaded!!!</string>
     <string name="driver_receipt_downloaded">Driver Receipt Downloaded!!!</string>
@@ -62,4 +62,10 @@
     <string name="app_name" translatable="false">for_compilation</string>
     <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">We noticed your driver hasn\'t moved for a while. Are you feeling safe on your trip?</string>
     <string name="test_request_successful">Test Ride Request Successful!</string>
+    <string name="test_request" translatable="false">Test Request</string>
+    <string name="call_support" translatable="false">Call Support</string>
+    <string name="go_to" translatable="false">Go-To</string>
+    <string gender="female" name="com_facebook_loginview_logged_in_using_facebook_f1gender" translatable="false">Connected with Facebook</string>
+    <string name="upload_image">Upload Image</string>
+    <string name="no_enabled_browser" translatable="false">No enabled browser found in your device, please enable or install a browser</string>
 </resources>
