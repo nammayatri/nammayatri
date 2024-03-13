@@ -112,7 +112,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     (df.format(distanceTobeCovered / 1000)),
-                    (df.format(Integer.parseInt(durationToPickup)/ 60)),
+                    RideRequestUtils.calculateDp(durationToPickup, df),
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP)),
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP)),
                     rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE)),
@@ -240,7 +240,7 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
 
-            if( service.equals("yatrisathiprovider") ){
+            if( service.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
                 holder.durationToPickup.setVisibility(View.VISIBLE);
                 holder.durationToPickupImage.setVisibility(View.VISIBLE);
                 holder.durationToPickup.setText(model.getDurationToPickup() + " min");
