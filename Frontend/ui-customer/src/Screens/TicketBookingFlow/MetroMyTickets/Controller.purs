@@ -29,6 +29,7 @@ import Common.Types.App as Common
 import Language.Strings
 import Language.Types
 import PrestoDOM.Types.Core (class Loggable)
+import Components.PrimaryButton as PrimaryButton 
 import Services.API
 import Screens.TicketBookingFlow.MetroMyTickets.Transformer (metroTicketListApiToMyTicketsTransformer)
 
@@ -43,9 +44,10 @@ instance loggableAction :: Loggable Action where
 data Action = NoAction
             | BackPressed
             | AfterRender
-            | ActiveTicketPressed MetroTicketBookingStatus
+            | TicketPressed MetroTicketBookingStatus
             | PastTicketPressed MetroTicketBookingStatus
             | MetroBookingListRespAC (Array MetroTicketBookingStatus)
+            | GoToMetroBookingScreen PrimaryButton.Action
 
 data ScreenOutput = NoOutput
                   | GoToMetroTicketDetailsFlow String
@@ -60,7 +62,7 @@ eval :: Action -> MetroMyTicketsScreenState -> Eval Action ScreenOutput MetroMyT
 eval (MetroBookingListRespAC bookingList) state = 
   continue $ metroTicketListApiToMyTicketsTransformer bookingList state
 
-eval (ActiveTicketPressed (MetroTicketBookingStatus ticketApiResp)) state = do 
+eval (TicketPressed (MetroTicketBookingStatus ticketApiResp)) state = do 
   exit $ GoToMetroTicketDetailsFlow ticketApiResp.bookingId
 
 eval (PastTicketPressed ticketApiResp) state = exit $ GoToMetroTicketStatusFlow ticketApiResp
@@ -71,6 +73,9 @@ eval AfterRender state =
       showShimmer = false
     }
   }
+
+eval (GoToMetroBookingScreen PrimaryButton.OnClick) state = 
+  exit $ GoToMetroBooking
 
 eval BackPressed state = 
   case state.props.entryPoint of 

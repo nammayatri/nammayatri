@@ -1209,9 +1209,9 @@ retryMetroTicketPayment quoteId = do
     unwrapResponse x = x
 
 getMetroStationBT :: String -> FlowBT String GetMetroStationResponse
-getMetroStationBT _ = do
+getMetroStationBT city = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getMetroStations "") (\x -> x) errorHandler (lift $ lift $ callAPI headers GetMetroStationReq)
+    withAPIResultBT (EP.getMetroStations city) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq city)
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
@@ -1260,6 +1260,50 @@ getMetroStatusBT bookingId = do
         where
           errorHandler _ = do
                 BackT $ pure GoBack
+
+metroBookingSoftCancelBT :: String -> FlowBT String MetroBookingSoftCancelResp
+metroBookingSoftCancelBT bookingId = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.metroBookingSoftCancel bookingId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (MetroBookingSoftCancelReq bookingId))
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+
+metroBookingSoftCancelStatusBT :: String -> FlowBT String MetroBookingSoftCancelStatusResp
+metroBookingSoftCancelStatusBT bookingId = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getMetroBookingSoftCancelStatus bookingId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (MetroBookingSoftCancelStatusReq bookingId))
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+
+metroBookingSoftCancelStatus bookingId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getMetroBookingSoftCancelStatus bookingId) unwrapResponse $ callAPI headers (MetroBookingSoftCancelStatusReq bookingId)
+    where
+    unwrapResponse x = x
+
+metroBookingHardCancelBT :: String -> FlowBT String MetroBookingHardCancelResp
+metroBookingHardCancelBT bookingId = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.metroBookingHardCancel bookingId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (MetroBookingHardCancelReq bookingId))
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+
+metroBookingHardCancelStatusBT :: String -> FlowBT String MetroBookingHardCancelStatusResp
+metroBookingHardCancelStatusBT bookingId = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getMetroBookingHardCancelStatus bookingId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (MetroBookingHardCancelStatusReq bookingId))
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+
+metroBookingHardCancelStatus bookingId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getMetroBookingHardCancelStatus bookingId) unwrapResponse $ callAPI headers (MetroBookingHardCancelStatusReq bookingId)
+    where
+    unwrapResponse x = x
 
 ------------------------------------------------------------------------- Push SDK Events -----------------------------------------------------------------------------
 pushSDKEvents :: Flow GlobalState (Either ErrorResponse SDKEventsResp)

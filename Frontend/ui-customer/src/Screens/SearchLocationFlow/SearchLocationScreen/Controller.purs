@@ -77,7 +77,7 @@ data Action = NoAction
             | BackPressed
             | SpecialZoneInfoTag
 
-data ScreenOutput = NoOutput  
+data ScreenOutput = NoOutput SearchLocationScreenState
                   | Reload SearchLocationScreenState
                   | SearchPlace String SearchLocationScreenState
                   | SaveFavLoc SearchLocationScreenState (Array LocationListItemState)
@@ -90,7 +90,7 @@ data ScreenOutput = NoOutput
                   | RentalsScreen SearchLocationScreenState
                   | LocSelectedOnMap SearchLocationScreenState
                   | MetroTicketBookingScreen SearchLocationScreenState
-                  | GoToMetroRouteMap
+                  | GoToMetroRouteMap SearchLocationScreenState
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
@@ -131,8 +131,12 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
 
 eval (InputViewAC globalProps (InputViewController.ClearTextField textField)) state = do 
   pure $ setText (getNewIDWithTag textField) $ ""
-  continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations }
-                 , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
+  if state.props.focussedTextField == MB.Just SearchLocPickup then
+    continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, srcLoc = MB.Nothing }
+                   , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
+  else
+    continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, destLoc = MB.Nothing }
+                   , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
   
 eval (InputViewAC _ (InputViewController.BackPress)) state = handleBackPress state  
 
@@ -250,7 +254,7 @@ eval (LocFromMap key lat lon) state = do
           exit $ UpdateLocName state{data{defaultGate = key}} lat lon
         MB.Nothing -> continue state
 
-eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
+eval MetroRouteMapAction state = exit $ GoToMetroRouteMap state
 
 eval BackPressed state = do
  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 

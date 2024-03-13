@@ -49,7 +49,6 @@ data Action = BackPressed
             | IncrementTicket
             | DecrementTicket
             | MetroRouteMapAction
-            | ToggleTermsAndConditions
             | GetMetroQuotesAction (Array MetroQuote)
             | SelectLocation ST.LocationActionId
             | ShowMetroBookingTimeError Boolean
@@ -85,8 +84,6 @@ eval DecrementTicket state = do
 
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
 
-eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSelected = not state.props.termsAndConditionsSelected, currentStage  = ST.MetroTicketSelection}}
-
 eval (ChangeTicketTab ticketType) state = do 
   if state.props.currentStage == ST.ConfirmMetroQuote then do
     let ticketTypeUpdatedState = state {data {ticketType = ticketType}}
@@ -94,8 +91,7 @@ eval (ChangeTicketTab ticketType) state = do
         updatedState = ticketTypeUpdatedState { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId }}
     updateAndExit updatedState $ Refresh updatedState
   else do
-    let ticketCount = if ticketType == ST.ONE_WAY then state.data.ticketCount else 1
-    continue state { data {ticketType = ticketType, ticketCount = ticketCount }, props {currentStage  = ST.MetroTicketSelection}}
+    continue state { data {ticketType = ticketType, ticketCount = state.data.ticketCount}, props {currentStage  = ST.MetroTicketSelection}}
 
 eval (SelectLocation loc ) state = updateAndExit state{props{currentStage  = ST.MetroTicketSelection}} $ SelectSrcDest loc state{props{currentStage  = ST.MetroTicketSelection}}
 
@@ -103,7 +99,7 @@ eval (GetMetroQuotesAction resp) state = do
   void $ pure $ toggleBtnLoader "" false
   if null resp then do
     void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
-    continue state
+    continue state{ props{currentStage = ST.MetroTicketSelection}}
   else do
     let quoteData = getquoteData state resp
         updatedState = state { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = resp }, props { currentStage = ST.ConfirmMetroQuote}}

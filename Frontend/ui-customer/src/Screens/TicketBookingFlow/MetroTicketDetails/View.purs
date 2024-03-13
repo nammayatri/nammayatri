@@ -16,13 +16,9 @@
 module Screens.TicketBookingFlow.MetroTicketDetails.View where
 
 import Prelude
-
-
-import Prelude
 import Common.Types.App (LazyCheck(..))
 
 import Data.Array 
-import Presto.Core.Types.Language.Flow 
 import Effect.Aff 
 import Types.App
 import Control.Monad.Except.Trans 
@@ -36,7 +32,6 @@ import PrestoDOM
 import Screens.TicketBookingFlow.MetroTicketDetails.Controller
 import Screens.Types as ST
 import Styles.Colors as Color
-import Data.Array as DA
 import Font.Size as FontSize
 import Mobility.Prelude
 import Debug
@@ -47,23 +42,68 @@ import Animation as Anim
 import Engineering.Helpers.Commons
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Presto.Core.Types.Language.Flow (doAff, Flow, delay)
 import Language.Strings
 import Language.Types
 import Data.String as DS
+import Services.API (MetroBookingSoftCancelStatusResp(..), MetroBookingHardCancelStatusResp(..))
+import Screens.Types
+import Services.Backend as Remote
+import Data.Either (Either(..))
+import Engineering.Helpers.Commons as EHC
+import Components.PopUpModal as PopUpModal
+import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
+import Components.PrimaryButton (view) as PrimaryButton
+import Components.PrimaryButton.Controller as PrimaryButton
+import Data.Tuple (Tuple(..))
+import JBridge (startLottieProcess, lottieAnimationConfig)
+import Screens.TicketBookingFlow.MetroTicketDetails.ComponentConfig as Config
 
 screen :: ST.MetroTicketDetailsScreenState -> Screen Action ST.MetroTicketDetailsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "MetroTicketDetailsScreen"
-  , globalEvents : []
+  , globalEvents : [getCancelStatus]
   , eval :
     \action state -> do
         let _ = spy "MetroTicketDetailsScreen action " action
         let _ = spy "MetroTicketDetailsScreen state " state
         eval action state
   }
+  where
+    getCancelStatus push = do
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ getCancelStatusPolling initialState.data.bookingId 18 5000.0 initialState push
+        pure $ pure unit
 
+getCancelStatusPolling :: forall action. String -> Int -> Number -> ST.MetroTicketDetailsScreenState -> (Action -> Effect Unit) -> Flow GlobalState Unit
+getCancelStatusPolling bookingId count delayDuration state push = do
+  let stage = state.props.stage
+  if bookingId /= "" && count > 0 then do
+    if stage == MetroSoftCancelStatusStage then do
+      metroBookingSoftCancelStatusResp <- Remote.metroBookingSoftCancelStatus bookingId
+      case metroBookingSoftCancelStatusResp of
+        Right (MetroBookingSoftCancelStatusResp response) -> do
+          if (isJust response.isCancellable) then do
+            doAff do liftEffect $ push $ ShowCancelBookingPopup (MetroBookingSoftCancelStatusResp response)
+          else do
+            void $ delay $ Milliseconds delayDuration
+            getCancelStatusPolling bookingId (count - 1) delayDuration state push
+        Left _ -> pure unit
+    else if stage == MetroHardCancelStatusStage then do
+      metroBookingHardCancelStatusResp <- Remote.metroBookingHardCancelStatus bookingId
+      case metroBookingHardCancelStatusResp of
+        Right (MetroBookingHardCancelStatusResp response) -> do
+          if (isJust response.refundAmount) then do
+              doAff do liftEffect $ push $ ShowMetroBookingCancelledView (MetroBookingHardCancelStatusResp response)
+            else do
+              void $ delay $ Milliseconds delayDuration
+              getCancelStatusPolling bookingId (count - 1) delayDuration state push 
+        Left _ -> pure unit 
+    else
+      pure unit
+  else
+    pure unit
 
 view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 view push state =  
@@ -72,25 +112,36 @@ view push state =
                   ST.MetroTicketDetailsStage -> metroTicketDetailsView
                   ST.MetroMapStage -> mapView
                   ST.MetroRouteDetailsStage -> routeDetailsView
+                  ST.MetroSoftCancelStatusStage -> metroTicketDetailsView
+                  ST.MetroHardCancelStatusStage -> metroTicketDetailsView
+                  ST.MetroBookingCancelledStage -> cancelledBookingView
   in
-    Anim.screenAnimation $ linearLayout[
+    Anim.screenAnimation $ 
+    relativeLayout [
       width MATCH_PARENT
     , height MATCH_PARENT
-    , background Color.grey700
-    , clickable true
-    , onBackPressed push $ const BackPressed
-    , padding $ PaddingVertical safeMarginTop 16
-    , orientation VERTICAL
-    ][
-      headerView push state
-    , linearLayout
-          [ height $ V 1
-          , width MATCH_PARENT
-          , background Color.greySmoke
-          ][]
-    , bodyView push state
-    ] 
-
+    ] [
+      linearLayout[
+        width MATCH_PARENT
+      , height MATCH_PARENT
+      , background Color.grey700
+      , clickable true
+      , onBackPressed push $ const BackPressed
+      , padding $ PaddingVertical safeMarginTop 16
+      , orientation VERTICAL
+      ][
+        headerView push state
+      , linearLayout
+            [ height $ V 1
+            , width MATCH_PARENT
+            , background Color.greySmoke
+            ][]
+      , bodyView push state
+      ]
+      , if (isJust state.props.isBookingCancellable) then cancelBookingPopUpView push state else linearLayout [][]
+      , softCancelStatusLottieLoader push state
+    ]
+ 
 headerView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 headerView push state = 
   let 
@@ -98,7 +149,11 @@ headerView push state =
                   ST.MetroTicketDetailsStage -> TICKET_DETAILS
                   ST.MetroMapStage -> MAP_STR
                   ST.MetroRouteDetailsStage -> ROUTE_DETAILS
-    shareButtonVisibility =  boolToVisibility $ state.props.stage == ST.MetroTicketDetailsStage
+                  ST.MetroSoftCancelStatusStage -> TICKET_DETAILS
+                  ST.MetroHardCancelStatusStage -> TICKET_DETAILS
+                  ST.MetroBookingCancelledStage -> TICKET_DETAILS
+    (Config.StatusPillConfig config) = Config.getStatusPillConfig state
+    shareButtonVisibility =  boolToVisibility $ config.ticketStatus == "ACTIVE"
   in 
     linearLayout[
       width MATCH_PARENT
@@ -160,142 +215,305 @@ metroTicketDetailsView push state =
     ][
       ticketDetailsView push state
     , paymentInfoView push state
+    , PrimaryButton.view (push <<< CancelBookingAction) (Config.cancelBookingButtonConfig state)
     ]
   ]
 
-ticketDetailsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
-ticketDetailsView push state = 
-   let 
-    currentTicket = state.data.ticketsInfo !! state.props.currentTicketIndex
-    ticketStatus = case currentTicket of 
-                    Just ticket ->  case ticket.status of
-                                     "ACTIVE" -> getString ACTIVE_STR
-                                     "EXPIRED" ->getString  EXPIRED_STR
-                                     "USED" -> getString USED_STR
-                                     _ -> ticket.status
-                    Nothing -> ""
-    ticketStatusPillColor = case currentTicket of 
-                    Just ticket -> case ticket.status of
-                                     "ACTIVE" -> Color.green900
-                                     "EXPIRED" -> Color.red900
-                                     "USED" -> Color.grey900 
-                                     _ -> Color.grey900
-                    Nothing -> ""
+cancelBookingPopUpView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
+cancelBookingPopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity BOTTOM
+    ] [PopUpModal.view (push <<< CancelBookingPopUpAC) (Config.cancelBookingPopupConfig state)]
+
+softCancelStatusLottieLoader :: forall w. (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
+softCancelStatusLottieLoader push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity CENTER
+  , clickable true
+  , background Color.blackLessTrans
+  , visibility if state.props.showLoader then VISIBLE else GONE
+  ][  lottieAnimationView
+      [ height $ if os == "IOS" then V 170 else V 130
+      , width $ V 130
+      , padding $ PaddingBottom 80
+      , margin (MarginTop ((screenHeight unit)/ 7 - (if os == "IOS" then 140 else 90)))
+      , gravity CENTER
+      , id (getNewIDWithTag "softCancelStatusLoader")
+      , afterRender (\action -> do
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "softCancelStatusLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+        push action
+        ) (const NoAction)
+      ]
+    ]
+
+cancelledBookingView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
+cancelledBookingView push state = 
+  linearLayout[
+    width $ MATCH_PARENT
+  , height $ WRAP_CONTENT
+  , orientation $ VERTICAL
+  ][ cancelledBookingViewTop push state
+   , cancelledBookingViewDetails push state
+  ]
+
+cancelledBookingViewTop :: forall w. (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
+cancelledBookingViewTop push state = 
+  let
+    Tuple refundAmount refundVisibility = findRefundAmountAndVisibility state
   in
-  linearLayout [
+    linearLayout
+      [ width $ MATCH_PARENT
+      , height $ WRAP_CONTENT
+      , gravity CENTER
+      , margin $ MarginTop 20
+      , orientation VERTICAL
+      , padding $ Padding 20 0 20 0
+      ]
+      [ imageView
+        [ width $ V 65
+        , height $ V 65
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_payment_failed"
+        ]
+      , textView $
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ getString BOOKING_CANCELLED
+        , color Color.black900
+        , gravity CENTER
+        , margin $ MarginTop 10
+        ] <> FontStyle.h1 TypoGraphy
+      , textView $
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ getString REFUND_IS_IN_PROCESS
+        , color Color.black700
+        , gravity CENTER
+        , margin $ MarginTop 5
+        , visibility refundVisibility
+        ] <> FontStyle.subHeading1 TypoGraphy
+      ]
+
+
+cancelledBookingViewDetails :: forall w. (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
+cancelledBookingViewDetails push state =
+  linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , gravity CENTER
-  , id $ getNewIDWithTag "metro_ticket_details_view"
-  ][ relativeLayout
-    [ height WRAP_CONTENT
+  , padding $ Padding 16 30 16 16
+  , margin $ Margin 16 24 16 0
+  , background Color.white900
+  , cornerRadii $ Corners 8.0 true true true true
+  ][
+     metroHeaderView push state (FontStyle.body10 TypoGraphy) false
+   , cancellationDetailsView push state
+   , originAndDestinationView push state HORIZONTAL (FontStyle.body3 TypoGraphy) (FontStyle.body6 TypoGraphy) RIGHT
+  ]
+
+cancellationDetailsView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
+cancellationDetailsView push state = 
+  let
+    Tuple totalRefund refundVisibility = findRefundAmountAndVisibility state
+    noOfTickets = show $ length state.data.ticketsInfo
+    cancellationDate = convertUTCtoISC state.data.bookingUpdatedAt "DD, MMM YYYY"
+  in
+    linearLayout [
+      height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    ][
-      linearLayout[
-        width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      , padding $ Padding 16 30 16 16
-      , margin $ Margin 16 24 16 0
-      , background Color.white900
-      , cornerRadii $ Corners 8.0 true true false false
-      ][
-        metroHeaderView push state
-      , qrCodeView push state
-      , ticketNumberAndValidView push state
-      ]    
-    , linearLayout[
-        width MATCH_PARENT
-      , height WRAP_CONTENT
-      , margin $ MarginTop 12
-      , gravity CENTER_HORIZONTAL
-      ] [statusPillView]
+    , margin $ MarginTop 10
+    ][ fieldView push state (getString TOTAL_REFUND) (parseFloat totalRefund 0) refundVisibility
+     , fieldView push state (getString CANCELLATION_DATE) cancellationDate VISIBLE  
+     , fieldView push state (getString NO_OF_TICKETS) noOfTickets VISIBLE
     ]
-  , linearLayout[
+
+findRefundAmountAndVisibility :: ST.MetroTicketDetailsScreenState -> Tuple Number Visibility
+findRefundAmountAndVisibility state = 
+  let
+    totalRefund = fromMaybe 0.0 state.props.refundAmount
+    refundVisibility = if totalRefund == 0.0 then GONE else VISIBLE
+  in Tuple totalRefund refundVisibility
+
+fieldView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> String -> String -> Visibility -> PrestoDOM (Effect Unit) w
+fieldView push state fieldName fieldValue visibility_ = 
+  linearLayout 
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , visibility visibility_
+  ][ linearLayout 
+     [ width MATCH_PARENT
+     , height WRAP_CONTENT
+     , orientation HORIZONTAL
+     ]
+     [ textView $ 
+         [ width WRAP_CONTENT
+         , height WRAP_CONTENT
+         , text fieldName
+         , color Color.black700
+         ] <> FontStyle.body3 TypoGraphy
+     , linearLayout 
+         [ height WRAP_CONTENT
+         , width MATCH_PARENT
+         , gravity RIGHT
+         ]
+         [ textView $ 
+             [ width WRAP_CONTENT
+             , height WRAP_CONTENT 
+             , text fieldValue
+             ] <> FontStyle.body6 TypoGraphy
+         ]
+     ]
+   ,  linearLayout 
+       [ width MATCH_PARENT
+       , height $ V 1
+       , background $ Color.ghostWhite
+       , margin $ MarginVertical 12 12
+       ]
+       []
+   ]
+
+ticketDetailsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
+ticketDetailsView push state = 
+  let 
+    statusPillConfig = Config.getStatusPillConfig state 
+  in
+    linearLayout [
       width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , background Color.white900
-    , padding $ Padding 16 30 16 16
-    , margin $ MarginHorizontal 16 16 
-    , cornerRadii $ Corners 8.0 false false true true 
-    ][
-      originAndDestinationView push state
+    , gravity CENTER
+    , id $ getNewIDWithTag "metro_ticket_details_view"
+    ][ relativeLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ][
+        linearLayout[
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , padding $ Padding 16 30 16 16
+        , margin $ Margin 16 24 16 0
+        , background Color.white900
+        , cornerRadii $ Corners 8.0 true true false false
+        ][
+          metroHeaderView push state (FontStyle.body20 TypoGraphy) true
+        , qrCodeView push state
+        , ticketNumberAndValidView push state
+        ]    
+      , linearLayout[
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , margin $ MarginTop 12
+        , gravity CENTER_HORIZONTAL
+        ] [statusPillView statusPillConfig]
+      ]
+    , linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , background Color.white900
+      , padding $ Padding 16 30 16 16
+      , margin $ MarginHorizontal 16 16 
+      , cornerRadii $ Corners 8.0 false false true true 
+      ][
+        originAndDestinationView push state VERTICAL (FontStyle.body3 TypoGraphy) (FontStyle.body1 TypoGraphy) LEFT
+      ]
     ]
-  ]
 
-statusPillView :: forall w . PrestoDOM (Effect Unit) w
-statusPillView  = 
+statusPillView :: Config.StatusPillConfig -> forall w . PrestoDOM (Effect Unit) w
+statusPillView (Config.StatusPillConfig statusPillConfig) = 
   linearLayout [
     width WRAP_CONTENT
   , height WRAP_CONTENT
   , padding $ Padding 8 5 8 5
   , cornerRadius 12.0
-  , background Color.green900
+  , background statusPillConfig.statusPillColor
   ][
     textView $ [
       width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text $ getString ACTIVE_STR
+    , text $ statusPillConfig.statusString
     , color Color.white900
     ] <> FontStyle.tags TypoGraphy
   ]
 
-metroHeaderView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
-metroHeaderView push state = 
-  linearLayout [
-    width MATCH_PARENT
-  , height WRAP_CONTENT
-  ][
-    imageView [
-      width $ V 41
-    , height $ V 41
-    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chennai_metro"
-    ]
-  , linearLayout [
-      width WRAP_CONTENT
+metroHeaderView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> (forall properties. (Array (Prop properties))) -> Boolean -> PrestoDOM (Effect Unit) w
+metroHeaderView push state headerFontStyle detailVisibility = 
+  let 
+    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city
+  in
+    linearLayout [
+      width MATCH_PARENT
     , height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , margin $ MarginLeft 10
-    , orientation VERTICAL
     ][
-      textView $ [
-        width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , text $ getString TICKETS_FOR_CHENNAI_METRO
-      , color Color.black800
-      ] <> FontStyle.body20 TypoGraphy
+      imageView [
+        width $ V 41
+      , height $ V 41
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET cityConfig.logoImage
+      ]
     , linearLayout [
         width WRAP_CONTENT
       , height WRAP_CONTENT
-      , margin $ MarginTop 3
-      , gravity CENTER_VERTICAL
-      ] [
+      , width WRAP_CONTENT
+      , margin $ MarginLeft 10
+      , orientation VERTICAL
+      ][
         textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ getString if state.data.ticketType == "SingleJourney" then ONWORD_JOURNEY else ROUND_TRIP_STR
+        , text $ cityConfig.title
         , color Color.black800
-        ] <> FontStyle.tags TypoGraphy
+        ] <> headerFontStyle
       , linearLayout [
-          width $ V 4
-        , height $ V 4
-        , cornerRadius 2.0
-        , margin $ MarginHorizontal 6 6
-        , background Color.black500
-        , gravity CENTER_VERTICAL
-        ][]
-      , textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ (show $ state.data.noOfTickets) <> " " <> (getString $ if state.data.noOfTickets > 0 then TICKETS else TICKET)
-        , color Color.black800
-        ] <> FontStyle.tags TypoGraphy
+        , margin $ MarginTop 3
+        , gravity CENTER_VERTICAL
+        , visibility $ boolToVisibility detailVisibility
+        ] [
+          textView $ [
+            width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString if state.data.ticketType == "SingleJourney" then ONWORD_JOURNEY else ROUND_TRIP_STR
+          , color Color.black800
+          ] <> FontStyle.tags TypoGraphy
+        , linearLayout [
+            width $ V 4
+          , height $ V 4
+          , cornerRadius 2.0
+          , margin $ MarginHorizontal 6 6
+          , background Color.black500
+          , gravity CENTER_VERTICAL
+          ][]
+        , textView $ [
+            width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ (show $ state.data.noOfTickets) <> " " <> (getString $ if state.data.noOfTickets > 0 then TICKETS else TICKET)
+          , color Color.black800
+          ] <> FontStyle.tags TypoGraphy
+        , linearLayout [
+            width $ V 4
+          , height $ V 4
+          , cornerRadius 2.0
+          , margin $ MarginHorizontal 6 6
+          , background Color.black500
+          , gravity CENTER_VERTICAL
+          ][]
+        , textView $ [
+            width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ "₹" <> show state.data.ticketPrice
+          , color Color.black800
+          ] <> FontStyle.tags TypoGraphy
       ]
+        ]
     ]
-  ]
 
 qrCodeView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 qrCodeView push state = 
@@ -308,6 +526,9 @@ qrCodeView push state =
     headerText = (show $ state.props.currentTicketIndex + 1) 
                   <> if state.data.noOfTickets > 1 then  "/" <> (show $ length state.data.ticketsInfo) else "" 
                   <> ticketStr
+    qrAplha = case currentTicket of 
+      Just ticket -> if ticket.status == "EXPIRED" then 0.25 else 1.0
+      Nothing -> 1.0
   in 
     linearLayout [
       width MATCH_PARENT
@@ -329,6 +550,7 @@ qrCodeView push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER
+      , alpha qrAplha
       ][
         imageView [
           width $ V 32
@@ -414,8 +636,8 @@ ticketNumberAndValidView push state =
       ]
     ]
 
-originAndDestinationView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
-originAndDestinationView push state = 
+originAndDestinationView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> Orientation -> (forall properties. (Array (Prop properties))) -> (forall properties. (Array (Prop properties))) -> Gravity -> PrestoDOM (Effect Unit) w
+originAndDestinationView push state fieldOrientation fieldFontStyle valueFontStyle valueGravity = 
   let originStation = state.data.metroRoute !! 0
       destinationStation = state.data.metroRoute !! ((length state.data.metroRoute) - 1)
       originConfig = case originStation of
@@ -447,10 +669,10 @@ originAndDestinationView push state =
       linearLayout [
         width MATCH_PARENT
       , height WRAP_CONTENT
-      , orientation VERTICAL
+      , orientation fieldOrientation
       ][
         linearLayout [
-          width MATCH_PARENT
+          width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
@@ -467,18 +689,19 @@ originAndDestinationView push state =
           , text "Origin"
           , color Color.black700
           , margin $ MarginLeft 6
-          ] <> FontStyle.body3 TypoGraphy
+          ] <> fieldFontStyle
         ]
       , linearLayout [
           width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation HORIZONTAL
+        , gravity valueGravity
         ][
           textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
           , text originConfig.name
-          ] <> FontStyle.body1 TypoGraphy
+          ] <> valueFontStyle
         -- , linePillView originConfig.line -- need to enabled once metro line is available
         ]
       ]
@@ -491,10 +714,10 @@ originAndDestinationView push state =
     , linearLayout [
         width MATCH_PARENT
       , height WRAP_CONTENT
-      , orientation VERTICAL
+      , orientation fieldOrientation
       ][
         linearLayout [
-          width MATCH_PARENT
+          width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
@@ -511,18 +734,19 @@ originAndDestinationView push state =
           , text $ getString DESTINATION
           , color Color.black700
           , margin $ MarginLeft 6
-          ] <> FontStyle.body3 TypoGraphy
+          ] <> fieldFontStyle
         ]
       , linearLayout [
           width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation HORIZONTAL
+        , gravity valueGravity 
         ][
           textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
           , text destinationConfig.name
-          ] <> FontStyle.body1 TypoGraphy
+          ] <> valueFontStyle
         -- , linePillView destinationConfig.line -- need to enabled once metro line is available
         ]
       ]
@@ -538,6 +762,7 @@ paymentInfoView push state =
   , onClick push $ const ViewPaymentInfoClick
   , background Color.white900
   , cornerRadius 8.0
+  , visibility GONE
   ][
     textView $ [
       width WRAP_CONTENT
@@ -584,18 +809,21 @@ linePillView line =
 
 mapView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 mapView push state = 
-  PrestoAnim.animationSet [Anim.fadeIn true] $  linearLayout [
-    width MATCH_PARENT
-  , height WRAP_CONTENT
-  , gravity START 
-  ][
-    imageView [
+  let
+    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city
+  in
+    PrestoAnim.animationSet [Anim.fadeIn true] $  linearLayout [
       width MATCH_PARENT
-    , height $ V (screenWidth unit)
-    , margin $ MarginTop 24
-    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chennai_metro_map"
+    , height WRAP_CONTENT
+    , gravity START 
+    ][
+      imageView [
+        width MATCH_PARENT
+      , height $ V (screenWidth unit)
+      , margin $ MarginTop 24
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET cityConfig.mapImage
+      ]
     ]
-  ]
 
 routeDetailsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 routeDetailsView push state = 

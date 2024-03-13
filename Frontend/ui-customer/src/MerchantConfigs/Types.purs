@@ -2,6 +2,7 @@ module MerchantConfig.Types where
 
 import Common.Types.Config
 import Common.Types.App
+import Foreign.Object (Object)
 
 type AppConfig = AppConfigCustomer CommonAppConfig
 
@@ -56,7 +57,7 @@ type AppConfigCustomer a =
   , showDisabilityBanner :: Boolean
   , showCheckoutRentalBanner :: Boolean
   , mapConfig :: MapConfig
-  , metroTicketingConfig :: MetroConfig
+  , metroTicketingConfig :: Array MetroConfig
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
@@ -278,7 +279,9 @@ type MapConfig = {
 }
 
 type MetroConfig = {
-  metroStationTtl :: Int
+  cityName :: String
+, cityCode :: String
+, metroStationTtl :: Int
 , bookingStartTime :: String
 , bookingEndTime :: String
 }

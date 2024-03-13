@@ -22,6 +22,7 @@ import Common.Types.App
 import Data.Array
 import Data.Maybe
 import Engineering.Helpers.Commons
+import Helpers.Utils (getCityNameFromCode)
 
 metroTicketDetailsTransformer :: MetroTicketBookingStatus -> MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState 
 metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus) state = 
@@ -29,18 +30,25 @@ metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus
     
     metroRoute' = metroRouteTrasformer metroTicketBookingStatus.stations
     ticketsInfo' = ticketsInfoTransformer metroTicketBookingStatus.tickets
-
   in 
     state {
       data {
         metroRoute = metroRoute'
+      , bookingId = metroTicketBookingStatus.bookingId
+      , city = getCityNameFromCode $ Just metroTicketBookingStatus.city
+      , bookingUpdatedAt = metroTicketBookingStatus.updatedAt
       , ticketsInfo = ticketsInfo'
       , ticketType = metroTicketBookingStatus._type
       , noOfTickets = metroTicketBookingStatus.quantity
+      , ticketPrice = metroTicketBookingStatus.price
       }
     , props {
         stage = MetroTicketDetailsStage
       , currentTicketIndex =  0
+      , showLoader = false
+      , isBookingCancellable = Nothing
+      , cancellationCharges = Nothing
+      , refundAmount = Nothing
       }
     }
 
@@ -108,6 +116,6 @@ ticketsInfoTransformer tickets =
     qrString : ticket.qrData
     , ticketNumber : ticket.ticketNumber
     , validUntil : (convertUTCtoISC ticket.validTill "hh:mm A") <> ", " <> (convertUTCtoISC ticket.validTill "Do MMM YYYY") 
-    , status : show ticket.status
+    , status : ticket.status
   }) tickets
 

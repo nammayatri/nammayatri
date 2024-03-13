@@ -7,7 +7,7 @@ import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Components.BannerCarousel as BannerCarousel
 import Data.Maybe (Maybe(..), isJust)
-import Helpers.Utils (FetchImageFrom(..), fetchImage, getAssetLink)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, getAssetLink, getCommonAssetLink, getMetroConfigFromCity, CityMetroConfig(..))
 import Language.Types (STR(..))
 import Screens.Types (City, HomeScreenState)
 import Screens.Types as ST
@@ -19,10 +19,11 @@ import Prelude (not, show, ($), (&&), (<>), (==))
 import Locale.Utils (getLanguageLocale)
 import SessionCache (getValueFromWindow)
 import RemoteConfig as RC
+import Debug
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
-  (if state.props.city == ST.Chennai
+  (if state.props.city == ST.Chennai || state.props.city == ST.Kochi
   then [metroBannerConfig state action]
   else [])
   <>
@@ -103,6 +104,7 @@ metroBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config 
 metroBannerConfig state action =
   let
     config = BannerCarousel.config action
+    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.props.city 
     config' = config
       {
         backgroundColor = Color.blue600'
@@ -111,7 +113,7 @@ metroBannerConfig state action =
       , actionText = getString BOOK_NOW
       , actionTextBackgroundColour = Color.blue800
       , actionTextColor = Color.white900
-      , imageUrl = (getAssetLink FunctionCall) <> "ny_ic_metro_banner.png"
+      , imageUrl = (getCommonAssetLink FunctionCall) <> (cityConfig.bannerImage <> ".png")
       , margin = MarginTop 0
       , imageHeight = V 100
       , imageWidth = V 120

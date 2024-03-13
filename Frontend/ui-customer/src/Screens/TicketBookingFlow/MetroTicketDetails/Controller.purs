@@ -32,6 +32,12 @@ import Data.Array
 import Data.Maybe
 import Engineering.Helpers.Commons
 import JBridge
+import Services.API (MetroBookingSoftCancelStatusResp(..), MetroBookingHardCancelStatusResp(..))
+import Screens.Types as ST
+import Components.PopUpModal.Controller as PopUpModalController
+import Components.PrimaryButton.Controller as PrimaryButton
+import Components.PopUpModal.Controller as PopUpModal
+import Debug
 
 instance showAction :: Show Action where
   show _ = ""
@@ -48,9 +54,12 @@ data Action = NoAction
             | PrevTicketClick 
             | NextTicketClick
             | TicketQRRendered String String
+            | CancelBookingAction PrimaryButton.Action
+            | ShowCancelBookingPopup MetroBookingSoftCancelStatusResp
+            | CancelBookingPopUpAC PopUpModalController.Action
+            | ShowMetroBookingCancelledView MetroBookingHardCancelStatusResp
 
-data ScreenOutput = NoOutput | GoBack | BackToSearchMetroLocation | GoToHome | GoToMyMetroTickets
-
+data ScreenOutput = NoOutput | GoBack | BackToSearchMetroLocation | GoToHome | GoToMyMetroTickets | SoftCancelBooking ST.MetroTicketDetailsScreenState | HardCancelBooking ST.MetroTicketDetailsScreenState
 
 eval :: Action -> MetroTicketDetailsScreenState -> Eval Action ScreenOutput MetroTicketDetailsScreenState
 
@@ -140,6 +149,50 @@ eval (TicketQRRendered id text) state  =
     runEffectFn4 generateQR text id 200 0
     pure $ NoAction
   ]
+
+eval (CancelBookingAction PrimaryButton.OnClick) state = 
+  exit (SoftCancelBooking state)
+
+eval (ShowCancelBookingPopup (MetroBookingSoftCancelStatusResp resp)) state = do
+  continue 
+    state { 
+      props { 
+          isBookingCancellable = resp.isCancellable,
+          refundAmount = resp.refundAmount,
+          cancellationCharges = resp.cancellationCharges,
+          showLoader = false
+        }
+      }
+
+eval (CancelBookingPopUpAC (PopUpModal.OnButton1Click)) state =
+  exit (HardCancelBooking state)
+
+eval (CancelBookingPopUpAC (PopUpModal.OnButton2Click)) state =
+  continue
+    state {
+      props {
+        isBookingCancellable = Nothing
+      }
+    }
+
+eval (CancelBookingPopUpAC (PopUpModal.OptionWithHtmlClick)) state =
+  continue
+    state {
+      props {
+        isBookingCancellable = Nothing
+      }
+    }
+
+eval (ShowMetroBookingCancelledView (MetroBookingHardCancelStatusResp resp)) state =
+  continue
+    state {
+      props {
+        stage = MetroBookingCancelledStage,
+        cancellationCharges = resp.cancellationCharges,
+        refundAmount = resp.refundAmount,
+        showLoader = false
+      }
+    }
 
 eval _ state = continue state
 
