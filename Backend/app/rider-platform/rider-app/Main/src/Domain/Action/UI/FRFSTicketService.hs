@@ -152,7 +152,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
     void $ QFRFSTicketBooking.updateValidTillById validTill dConfirmRes.id
     let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
     bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes' bapConfig Utils.BppData {bppId = dConfirmRes.bppSubscriberId, bppUri = dConfirmRes.bppSubscriberUrl}
-    logDebug $ "FRFS SearchReq " <> encodeToText bknInitReq
+    logDebug $ "FRFS InitReq " <> encodeToText bknInitReq
     void $ CallBPP.init providerUrl bknInitReq
   return $ makeBookingStatusAPI dConfirmRes stations
   where
@@ -280,7 +280,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
                 mRiderNumber <- mapM decrypt person.mobileNumber
                 bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) updatedBooking bapConfig txnId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
-                logDebug $ "FRFS SearchReq " <> encodeToText bknConfirmReq
+                logDebug $ "FRFS ConfirmReq " <> encodeToText bknConfirmReq
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
             else do
@@ -351,7 +351,7 @@ callBPPStatus booking bapConfig = do
   fork "FRFS Status Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     bknStatusReq <- ACL.buildStatusReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
-    logDebug $ "FRFS SearchReq " <> encodeToText bknStatusReq
+    logDebug $ "FRFS StatusReq " <> encodeToText bknStatusReq
     void $ CallBPP.status providerUrl bknStatusReq
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]

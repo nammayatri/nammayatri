@@ -164,5 +164,5 @@ callBPPCancel booking bapConfig = do
   fork "FRFS Cancel Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     bknCancelReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
-    logDebug $ "FRFS SearchReq " <> encodeToText bknCancelReq
+    logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
     void $ CallBPP.cancel providerUrl bknCancelReq
