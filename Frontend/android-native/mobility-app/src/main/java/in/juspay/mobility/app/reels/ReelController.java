@@ -42,8 +42,19 @@ public class ReelController {
 
     public static ArrayList<ReelControllerCallback> callbackList = new ArrayList<>();
 
+    public static ReelActivityInterface reelActivityInterface ;
+
     public interface ReelControllerCallback {
         void sendJsCallBack(String javascript);
+    }
+
+    public interface ReelActivityInterface {
+        void onPauseCallback();
+        void onResumeCallback();
+    }
+
+    public static void registerReelActivity (ReelActivityInterface reelActivityIn){
+        reelActivityInterface = reelActivityIn;
     }
 
     public static void registerCallback(ReelControllerCallback callback){
@@ -306,6 +317,18 @@ public class ReelController {
     public void sendJsCallback(String javaScript){
         for(ReelControllerCallback callback : callbackList){
             callback.sendJsCallBack(javaScript);
+        }
+    }
+
+    public void sendPauseActivityCallback(){
+        if(reelActivityInterface != null){
+            reelActivityInterface.onPauseCallback();
+        }
+    }
+
+    public void sendResumeActivityCallback(){
+        if(reelActivityInterface != null){
+            reelActivityInterface.onResumeCallback();
         }
     }
 

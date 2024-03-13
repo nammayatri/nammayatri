@@ -237,9 +237,7 @@ view push state =
         (\action -> do
           void $ Events.endMeasuringDuration "onCreateToHomeScreenRenderDuration"
           void $ Events.endMeasuringDuration "initAppToHomeScreenRenderDuration"
-          void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-            liftFlowBT HU.hideSplash
-            void $ lift $ lift $ toggleLoader false  
+          void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ liftFlowBT HU.hideSplash
           _ <- push action          
           _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
           _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
