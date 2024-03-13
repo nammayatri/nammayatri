@@ -781,10 +781,10 @@ getFleetDriverVehicleAssociation merchantId opCity apiTokenInfo mbLimit mbOffset
   checkedMerchantId <- merchantCityAccessCheck merchantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getFleetDriverVehicleAssociation) apiTokenInfo.personId.getId mbLimit mbOffset
 
-getFleetDriverAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ do
+getFleetDriverAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Bool -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetDriverAssociation merhcantId opCity apiTokenInfo mbIsActive mbLimit mbOffset = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getFleetDriverAssociation) apiTokenInfo.personId.getId mbLimit mbOffset
+  Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getFleetDriverAssociation) apiTokenInfo.personId.getId mbIsActive mbLimit mbOffset
 
 getFleetVehicleAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
 getFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ do

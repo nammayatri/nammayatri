@@ -57,10 +57,19 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset = do
     (Just limit)
     (Just offset)
 
-findAllDriverByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Int -> m [FleetDriverAssociation]
-findAllDriverByFleetOwnerId fleetOwnerId limit offset = do
+findAllDriverByFleetOwnerIdAndMbIsActive ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  Maybe Bool ->
+  Int ->
+  Int ->
+  m [FleetDriverAssociation]
+findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId mbIsActive limit offset = do
   findAllWithOptionsKV
-    [Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId]
+    [ Se.And $
+        [Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId]
+          <> [Se.Is BeamFDVA.isActive (Se.Eq isActive) | Just isActive <- [mbIsActive]]
+    ]
     (Se.Desc BeamFDVA.updatedAt)
     (Just limit)
     (Just offset)
