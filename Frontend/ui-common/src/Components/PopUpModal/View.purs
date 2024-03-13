@@ -239,7 +239,14 @@ view push state =
             , padding state.secondaryText.padding
             , visibility $ state.secondaryText.visibility
             , onClick push $ const OnSecondaryTextClick
-          ][ textView $
+          ][ imageView [
+               width state.secondaryText.prefixImage.width
+               , height state.secondaryText.prefixImage.height
+               , imageWithFallback state.secondaryText.prefixImage.imageUrl
+               , visibility state.secondaryText.prefixImage.visibility
+               , margin state.secondaryText.prefixImage.margin
+             ]
+            , textView $
              [ width WRAP_CONTENT
              , height WRAP_CONTENT
              , color $ state.secondaryText.color

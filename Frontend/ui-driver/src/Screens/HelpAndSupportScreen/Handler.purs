@@ -50,3 +50,10 @@ helpAndSupportScreen = do
     GoToProfileScreen updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_PROFILE_SCREEN updatedState)
+    GoToHomeScreen updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_HOME_SCREEN_FROM_HELP updatedState)
+    GoToTripDetailsScreen updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_TRIP_DETAILS updatedState)
+    

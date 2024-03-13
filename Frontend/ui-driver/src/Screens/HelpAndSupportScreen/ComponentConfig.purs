@@ -85,10 +85,18 @@ testRideConfirmationConfig state = let
     secondaryText {
       visibility = boolToVisibility $ not (state.props.popupType == ST.TEST_RIDE_RECIEVED)
     , text = case state.props.popupType of
-                ST.PROBLEM_WITH_TEST -> "<span style='color:#2194FF'><u>"<> (getString CALL_OUR_SUPPORT_TEAM) <>"</u></span>"
+                ST.PROBLEM_WITH_TEST -> "<span style='color:#2194FF'>"<> (getString CALL_OUR_SUPPORT_TEAM) <>"</span>"
                 _ -> getString MOVE_TO_HIGH_DEMAND_AREA
     , margin = MarginTop 6
     , gravity = if popupType then LEFT else CENTER
+    , prefixImage = {
+        visibility : boolToVisibility $ state.props.popupType == ST.PROBLEM_WITH_TEST 
+        , imageUrl : fetchImage FF_ASSET "ny_ic_phone_filled_blue"
+        , height : (V 14)
+        , width : (V 14)
+        , margin : Margin 0 3 3 0
+        , padding : PaddingRight 2
+      }
     },
     option1 {
       text = getString NO

@@ -77,6 +77,8 @@ data ScreenOutput = GoBack HelpAndSupportScreenState
                   | ResolvedIssuesScreen HelpAndSupportScreenState
                   | DriverDummyRideRequest HelpAndSupportScreenState
                   | GoToProfileScreen HelpAndSupportScreenState
+                  | GoToHomeScreen HelpAndSupportScreenState
+                  | GoToTripDetailsScreen HelpAndSupportScreenState
 data Action = NoAction
              | BackPressed
              | SourceToDestinationAction SourceToDestinationController.Action
@@ -97,14 +99,18 @@ data Action = NoAction
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 eval AfterRender state = continue state
-eval BackPressed state = do
+eval BackPressed state = do 
   when (not (DS.null state.data.timerId)) $ do
     void $ pure $ TF.clearTimerWithId state.data.timerId
-  if state.props.enableDummyPopup then continue state {props{enableDummyPopup = false}}
+  if not (state.data.issueListType == HELP_AND_SUPPORT_SCREEN_MODAL) then do
+     exit (GoBack state {props{startTimerforDummyRides = false}, data{timerId = "",issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL}})
+  else if state.props.enableDummyPopup then continue state {props{enableDummyPopup = false}}
   else do
     case state.data.goBackTo of
-        HELP_AND_SUPPORT_SCREEN -> exit (GoBack state {props{startTimerforDummyRides = false}, data{timerId = "",issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL, goBackTo = HELP_AND_SUPPORT_SCREEN}})
+        HELP_AND_SUPPORT_SCREEN -> exit (GoBack state {props{startTimerforDummyRides = false}, data{timerId = "",issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL}})
         DRIVER_PROFILE_SCREEN -> exit (GoToProfileScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
+        HOME_SCREEN -> exit (GoToHomeScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
+        TRIP_DETAILS_SCREEN -> exit (GoToTripDetailsScreen state {props{startTimerforDummyRides = false}, data{timerId = ""}})
         _ -> continue state
 eval (SourceToDestinationAction (SourceToDestinationController.Dummy)) state = continue state
 eval (SelectRide selectedCategory) state = do
@@ -122,11 +128,11 @@ eval (OptionClick optionIndex) state = do
     void $ pure $ TF.clearTimerWithId state.data.timerId
   case optionIndex of
     OngoingIssues -> do
-      exit $ OngoingIssuesScreen state {data {issueListType = ONGOING_ISSUES_MODAL, timerId = "", goBackTo = HELP_AND_SUPPORT_SCREEN}, props{startTimerforDummyRides = false}}
-    ResolvedIssues -> exit $ ResolvedIssuesScreen state {data {issueListType = RESOLVED_ISSUES_MODAL, timerId = "", goBackTo = HELP_AND_SUPPORT_SCREEN}, props{startTimerforDummyRides = false}}
+      exit $ OngoingIssuesScreen state {data {issueListType = ONGOING_ISSUES_MODAL, timerId = ""}, props{startTimerforDummyRides = false}}
+    ResolvedIssues -> exit $ ResolvedIssuesScreen state {data {issueListType = RESOLVED_ISSUES_MODAL, timerId = ""}, props{startTimerforDummyRides = false}}
     CallSupportCenter -> do
       void $ pure $ unsafePerformEffect $ contactSupportNumber "" -- TODO: FIX_DIALER -- unsafePerformEffect is temporary fix
-      continue state {props{startTimerforDummyRides = false}, data {timerId = "", goBackTo = DRIVER_PROFILE_SCREEN}}
+      continue state {props{startTimerforDummyRides = false}, data {timerId = ""}}
     WhatsAppSupport -> continueWithCmd state [do
         let supportPhone = state.data.cityConfig.registration.supportWAN
         void $ openUrlInApp $ whatsAppSupportLink <> supportPhone
@@ -181,9 +187,10 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {props{popupType = PROBLEM_WITH_TEST}}
 
 eval (PopUpModalAction (PopUpModal.OnSecondaryTextClick)) state = do
-   when (state.props.popupType == PROBLEM_WITH_TEST) $ do
+   if (state.props.popupType == PROBLEM_WITH_TEST) then do
     void $ pure $ unsafePerformEffect $ contactSupportNumber "" -- TODO: FIX_DIALER -- unsafePerformEffect is temporary fix
-   continue state {props{startTimerforDummyRides = false}, data {timerId = "", goBackTo = DRIVER_PROFILE_SCREEN}}
+    else pure unit
+   continue state {props{startTimerforDummyRides = false}, data {timerId = ""}}
   
 eval _ state = continue state
 

@@ -308,6 +308,7 @@ testRideRequestView state push =
                     , text $ getString CHECK_NOW
                     , color Color.blue900
                     , margin $ MarginTop 3
+                    , padding $ PaddingBottom 4
                     , onClick push $ const CheckDummyRide
                     , clickable true
                     ] <> FontStyle.body1 LanguageStyle
