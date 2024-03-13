@@ -315,6 +315,8 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | DUMMY_RIDE_REQUEST HelpAndSupportScreenState
                                     | GO_BACK_TO_PROFILE_SCREEN HelpAndSupportScreenState
                                     | GO_BACK_TO_HELP_AND_SUPPORT HelpAndSupportScreenState
+                                    | GO_BACK_TO_HOME_SCREEN_FROM_HELP HelpAndSupportScreenState
+                                    | GO_BACK_TO_TRIP_DETAILS HelpAndSupportScreenState
 
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW

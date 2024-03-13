@@ -1075,7 +1075,7 @@ driverProfileFlow = do
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
       let temp = categoryTransformer response.categories language
       let categories' = sortBy compareByOrder temp
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.DRIVER_PROFILE_SCREEN } } )
       helpAndSupportFlow
     GO_TO_DRIVER_HISTORY_SCREEN -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
@@ -1548,6 +1548,12 @@ helpAndSupportFlow = do
     GO_BACK_TO_HELP_AND_SUPPORT updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
       helpAndSupportFlow
+    GO_BACK_TO_HOME_SCREEN_FROM_HELP updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+      homeScreenFlow
+    GO_BACK_TO_TRIP_DETAILS updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+      tripDetailsScreenFlow
 
 writeToUsFlow :: FlowBT String Unit
 writeToUsFlow = do
@@ -1787,7 +1793,7 @@ tripDetailsScreenFlow = do
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
       let temp = categoryTransformer response.categories language
       let categories' = sortBy compareByOrder temp
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.TRIP_DETAILS_SCREEN} } )
       helpAndSupportFlow
 
 currentRideFlow :: Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
@@ -2001,7 +2007,7 @@ homeScreenFlow = do
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
       let temp = categoryTransformer response.categories language
       let categories' = sortBy compareByOrder temp
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.HOME_SCREEN } } )
       helpAndSupportFlow
     GO_TO_EDIT_GENDER_SCREEN -> driverProfileFlow
     GO_TO_START_RIDE {id, otp , lat, lon, ts} updatedState -> do

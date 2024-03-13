@@ -112,7 +112,8 @@ type TextConfig = {
   visibility :: Visibility,
   textStyle :: Style,
   accessibilityHint :: String,
-  suffixImage :: ImageConfig
+  suffixImage :: ImageConfig,
+  prefixImage :: ImageConfig
 }
 type ButtonConfig = {
   background :: String,
@@ -223,6 +224,14 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
       }
     }
   , secondaryText : {
@@ -235,6 +244,14 @@ config = {
       textStyle : ParagraphText,
       accessibilityHint : "", 
       suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
         visibility : GONE
         , imageUrl : ""
         , height : (V 0)
@@ -346,6 +363,14 @@ config = {
           , width : (V 0)
           , margin : (Margin 0 0 0 0)
           , padding : (Padding 0 0 0 0)
+        }, 
+        prefixImage : {
+          visibility : GONE
+          , imageUrl : ""
+          , height : (V 0)
+          , width : (V 0)
+          , margin : (Margin 0 0 0 0)
+          , padding : (Padding 0 0 0 0)
         }
       },
       textOpt2 : {
@@ -358,6 +383,14 @@ config = {
         textStyle : Heading2,
         accessibilityHint : "", 
         suffixImage : {
+          visibility : GONE
+          , imageUrl : ""
+          , height : (V 0)
+          , width : (V 0)
+          , margin : (Margin 0 0 0 0)
+          , padding : (Padding 0 0 0 0)
+        }, 
+        prefixImage : {
           visibility : GONE
           , imageUrl : ""
           , height : (V 0)
@@ -448,6 +481,14 @@ config = {
             , width : V 0
             , margin : Margin 0 0 0 0
             , padding : Padding 0 0 0 0
+          }, 
+          prefixImage : {
+            visibility : GONE
+            , imageUrl : ""
+            , height : (V 0)
+            , width : (V 0)
+            , margin : (Margin 0 0 0 0)
+            , padding : (Padding 0 0 0 0)
           }
       }
     },
