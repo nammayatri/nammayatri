@@ -117,7 +117,7 @@ onInit onInitReq merchant booking_ = do
     Just _ -> do
       void $ QFRFSTicketBookingPayment.create ticketBookingPayment
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
-      void $ QFRFSTicketBooking.updateFinalPriceById onInitReq.totalPrice booking.id
+      void $ QFRFSTicketBooking.updateFinalPriceById (Just onInitReq.totalPrice) booking.id
     Nothing -> do
       void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
       throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"

@@ -57,8 +57,8 @@ updateFinalPriceById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Pr
 updateFinalPriceById finalPrice (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.finalPrice $ finalPrice,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.finalPrice finalPrice,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.Is Beam.id $ Se.Eq id
     ]
@@ -102,8 +102,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.bppOrderId bppOrderId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
-      Se.Set Beam.estimatedPrice $ estimatedPrice,
-      Se.Set Beam.finalPrice $ finalPrice,
+      Se.Set Beam.estimatedPrice estimatedPrice,
+      Se.Set Beam.finalPrice finalPrice,
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.paymentTxnId paymentTxnId,
       Se.Set Beam.price price,
