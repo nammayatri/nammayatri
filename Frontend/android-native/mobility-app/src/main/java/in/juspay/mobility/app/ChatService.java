@@ -106,12 +106,7 @@ public class ChatService extends Service {
         merchant = getApplicationContext().getResources().getString(R.string.service);
         merchantType = merchant.contains("partner") || merchant.contains("driver") || merchant.contains("provider") ? "DRIVER" : "USER";
         sharedPrefs = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            );
-        }else {
-            this.startForeground(serviceNotificationID, createNotification());
-        }
+        startServiceWithType();
         if (sharedPrefs != null) {
             chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");
             baseUrl = sharedPrefs.getString("BASE_URL", "null");
@@ -122,11 +117,7 @@ public class ChatService extends Service {
         sendMessageCallBackOverlay = this::sendMessages;
         MessageOverlayService.registerSendMessageCallBack(sendMessageCallBackOverlay);
         if (!isChatServiceRunning) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-            }else {
-                this.startForeground(serviceNotificationID, createNotification());
-            }
+            startServiceWithType();
             FirebaseUser user = firebaseAuth.getCurrentUser();
             if (user != null) {
                 startChatService();
@@ -137,13 +128,17 @@ public class ChatService extends Service {
 
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    private void startServiceWithType(){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-        }else{
+        }else {
             this.startForeground(serviceNotificationID, createNotification());
         }
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        startServiceWithType();
         handleMessages();
         return START_STICKY;
     }

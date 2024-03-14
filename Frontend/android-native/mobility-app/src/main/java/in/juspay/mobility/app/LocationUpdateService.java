@@ -10,6 +10,7 @@
 package in.juspay.mobility.app;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
 
 import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
 
@@ -165,11 +166,7 @@ public class LocationUpdateService extends Service {
         initialiseJSONObjects();
         context = getApplicationContext();
         isLocationUpdating = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            this.startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        } else{
-            this.startForeground(notificationServiceId, createNotification());
-        }
+        startServiceWithType();
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         fusedLocClientForDistanceCal = LocationServices.getFusedLocationProviderClient(this);
         executorLocUpdate = Executors.newSingleThreadExecutor();
@@ -212,17 +209,20 @@ public class LocationUpdateService extends Service {
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
+    private void startServiceWithType(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            this.startForeground(notificationServiceId, createNotification(), FOREGROUND_SERVICE_TYPE_LOCATION);
+        }else {
+            this.startForeground(notificationServiceId, createNotification());
+        }
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         /* Start the service if the driver is active*/
         Log.i("LOCATION_UPDATE_WORKER", "Location update service is started");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        }else {
-            startForeground(notificationServiceId, createNotification());
-        }
-
-        if (intent != null) {
+        startServiceWithType();
+		if (intent != null) {
             String startDistanceCalStr = intent.hasExtra("TRIP_STATUS") ? intent.getStringExtra("TRIP_STATUS") : null;
             if (!isDistanceCalulation && startDistanceCalStr != null && startDistanceCalStr.equals("started")) {
                 Log.d(LOG_TAG, "OnStart - StartDistanceCalculation");

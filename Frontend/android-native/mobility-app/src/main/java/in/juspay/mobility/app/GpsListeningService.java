@@ -8,6 +8,7 @@
  */
 
 package in.juspay.mobility.app;
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
 import static android.graphics.Color.rgb;
 
 import android.Manifest;
@@ -52,6 +53,14 @@ public class GpsListeningService extends Service {
     private final String LOG_TAG = "GpsListeningService";
     private BroadcastReceiver gpsReceiver;
 
+    private void startServiceWithType(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            this.startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), FOREGROUND_SERVICE_TYPE_LOCATION);
+        }else {
+            this.startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        }
+    }
+
     public void startLocationService(Context context) {
         Log.i(LOG_TAG, "able to access service");
         Intent locationUpdateService = new Intent(this, LocationUpdateService.class);
@@ -71,11 +80,7 @@ public class GpsListeningService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        }else {
-            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
-        }
+        startServiceWithType();
         IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
         registerReceiver(gpsReceiver, intentFilter);
         return START_STICKY;
@@ -90,11 +95,7 @@ public class GpsListeningService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        }else{
-            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
-        }
+        startServiceWithType();
     }
 
     @Override
