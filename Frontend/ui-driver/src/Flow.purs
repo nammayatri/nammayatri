@@ -3237,10 +3237,7 @@ referralFlow :: FlowBT String Unit
 referralFlow = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-      referralType = case (cityConfig.showDriverReferral || appConfig.enableDriverReferral), (cityConfig.showCustomerReferral || appConfig.enableCustomerReferral) of
-                      false, true -> ST.CUSTOMER
-                      _, _ -> ST.DRIVER
-  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { props {driverReferralType = referralType}})
+  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { props {driverReferralType = ST.CUSTOMER}})
   benefitsScreenFlow
 
 lmsVideoScreenFlow :: FlowBT String Unit
