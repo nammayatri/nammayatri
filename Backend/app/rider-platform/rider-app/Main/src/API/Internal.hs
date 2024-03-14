@@ -12,8 +12,9 @@ import Tools.Auth ()
 
 type API =
   "internal"
-    :> Rating.API
-    :<|> FRFS.API
+    :> ( Rating.API
+           :<|> FRFS.API
+       )
 
 handler :: FlowServer API
 handler =
