@@ -26,6 +26,7 @@ import Domain.Types (BknPaymentParams)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicket as Ticket
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
@@ -38,13 +39,15 @@ buildContext ::
   Text ->
   Maybe Text ->
   Maybe BppData ->
+  Context.City ->
   m Spec.Context
-buildContext action bapConfig txnId msgId mTTL bppData = do
+buildContext action bapConfig txnId msgId mTTL bppData city = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
   let bapUrl = showBaseUrl bapConfig.subscriberUrl
   let bapId = bapConfig.subscriberId
       contextBppId = bppData <&> (.bppId)
       contextBppUri = bppData <&> (.bppUri)
+  cityCode <- getCodeFromCity city
   return $
     Spec.Context
       { contextAction = encodeToText' action,
@@ -54,13 +57,19 @@ buildContext action bapConfig txnId msgId mTTL bppData = do
         contextBppUri,
         contextDomain = encodeToText' Spec.FRFS,
         contextKey = Nothing,
-        contextLocation = Just $ tfLocation "std:044",
+        contextLocation = Just $ tfLocation cityCode,
         contextMessageId = Just msgId,
         contextTimestamp = Just now,
         contextTransactionId = Just txnId,
         contextTtl = mTTL,
         contextVersion = Just "2.0.0"
       }
+  where
+    getCodeFromCity city_ = do
+      let cityCode = toJSON city_
+      case cityCode of
+        String code -> pure code
+        _ -> throwError $ InvalidRequest "Incorrect city"
 
 tfLocation :: Text -> Spec.Location
 tfLocation location_code =

@@ -54,6 +54,7 @@ Station:
     lat: Maybe Double
     lon: Maybe Double
     address: Maybe Text
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   types:
     FRFSVehicleType:

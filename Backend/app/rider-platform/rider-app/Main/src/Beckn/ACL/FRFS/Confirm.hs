@@ -25,6 +25,7 @@ import Domain.Types (BknPaymentParams)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
 
 type RiderName = Text
@@ -38,8 +39,9 @@ buildConfirmReq ::
   BecknConfig ->
   Text ->
   Utils.BppData ->
+  Context.City ->
   m (Spec.ConfirmReq)
-buildConfirmReq rider booking bapConfig txnId bppData = do
+buildConfirmReq rider booking bapConfig txnId bppData city = do
   let transactionId = booking.searchId.getId
       messageId = booking.id.getId
 
@@ -47,7 +49,7 @@ buildConfirmReq rider booking bapConfig txnId bppData = do
   let ttl = diffUTCTime booking.validTill now
   let mPaymentParams = bapConfig.paymentParamsJson >>= decodeFromText
   let mSettlementType = bapConfig.settlementType
-  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData)
+  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city
 
   pure $
     Spec.ConfirmReq

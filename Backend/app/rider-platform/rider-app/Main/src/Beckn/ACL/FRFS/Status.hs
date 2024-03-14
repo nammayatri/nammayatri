@@ -23,6 +23,7 @@ import qualified BecknV2.FRFS.Utils as Utils
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Utils.Common
 
@@ -31,15 +32,16 @@ buildStatusReq ::
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Utils.BppData ->
+  Context.City ->
   m (Spec.StatusReq)
-buildStatusReq booking bapConfig bppData = do
+buildStatusReq booking bapConfig bppData city = do
   now <- getCurrentTime
   let transactionId = booking.searchId.getId
   messageId <- generateGUID
   let validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
 
-  context <- Utils.buildContext Spec.STATUS bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData)
+  context <- Utils.buildContext Spec.STATUS bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $

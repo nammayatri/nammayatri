@@ -24,6 +24,7 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.Station as DStation
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
 
 buildSearchReq ::
@@ -32,15 +33,16 @@ buildSearchReq ::
   BecknConfig ->
   DStation.Station ->
   DStation.Station ->
+  Context.City ->
   m (Spec.SearchReq)
-buildSearchReq search bapConfig fromStation toStation = do
+buildSearchReq search bapConfig fromStation toStation city = do
   now <- getCurrentTime
   messageId <- generateGUID
   let transactionId = search.id.getId
       validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
 
-  context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId (Just $ Utils.durationToText ttl) Nothing
+  context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId (Just $ Utils.durationToText ttl) Nothing city
 
   pure $
     Spec.SearchReq

@@ -18,10 +18,10 @@ data StationT f = StationT
     id :: B.C f Kernel.Prelude.Text,
     lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

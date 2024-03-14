@@ -15,6 +15,7 @@ imports:
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSVehicleType: Domain.Types.Station
   CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
+  City: Kernel.Types.Beckn.Context
 
 module: FRFSTicketService
 types:
@@ -78,6 +79,8 @@ apis:
       auth: TokenAuth
       mandatoryQuery:
         vehicleType: FRFSVehicleType
+      query:
+        city: City
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
