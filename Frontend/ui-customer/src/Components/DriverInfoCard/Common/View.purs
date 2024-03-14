@@ -27,7 +27,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout)
+import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, alignParentRight)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -38,17 +38,17 @@ import Common.Styles.Colors as CommonColor
 import Storage (KeyStore(..))
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
-import JBridge(fromMetersToKm)
+import JBridge(fromMetersToKm, getLayoutBounds)
 import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Helpers.Utils (parseFloat)
 import Data.Int(toNumber)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
-
+import Data.Function.Uncurried(runFn1)
 
 ---------------------------------- driverDetailsView ---------------------------------------
-driverDetailsView :: forall w. DriverDetailsType -> String -> PrestoDOM (Effect Unit) w
-driverDetailsView config uid =
+driverDetailsView :: forall w. DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
+driverDetailsView config uid nid =
  linearLayout
   [ orientation HORIZONTAL
   , height $ V 150
@@ -63,7 +63,7 @@ driverDetailsView config uid =
   ][  linearLayout
       [ orientation VERTICAL
       , height MATCH_PARENT
-      , width WRAP_CONTENT
+      , width $ V ((screenWidth unit) /2 - 64)
       , gravity CENTER_VERTICAL
       , alignParentLeft "true,-1"
       ][linearLayout
@@ -87,15 +87,15 @@ driverDetailsView config uid =
             ]
           ]
         , textView $
-          [ text config.driverName
-          , maxLines 1
+          [ text config.driverName 
+          , maxLines 2
           , ellipsize true
           , accessibility DISABLE
           , color Color.black800
-          , width MATCH_PARENT
+          , width $ V ((screenWidth unit) /2 - 64)
           , height WRAP_CONTENT
           , gravity LEFT
-          ] <> FontStyle.body9 TypoGraphy
+          ] <> FontStyle.body27 TypoGraphy
         , textView (
           [ text $ config.vehicleDetails <> " " 
                     <> case getMerchant FunctionCall of
@@ -107,52 +107,61 @@ driverDetailsView config uid =
           , color Color.black700
           , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <> getVehicleType
           , accessibility ENABLE
-          , width $ V ((screenWidth unit) /2 - 20)
+          , width $ V ((screenWidth unit) /2 - 64)
           , maxLines 2
-          , singleLine false
+          , ellipsize true
           , height WRAP_CONTENT
           , gravity LEFT
           ] <> FontStyle.captions TypoGraphy)
       ]
     , linearLayout
       [ height WRAP_CONTENT
-      , width MATCH_PARENT
+      , width $ V ((screenWidth unit) / 2)
       , orientation VERTICAL
       , accessibility DISABLE
       , gravity RIGHT
       ][  frameLayout
           [ height MATCH_PARENT
-          , width $ V 144
-          , gravity BOTTOM
+          , width WRAP_CONTENT
+          , id $ getNewIDWithTag nid
           , margin $ MarginBottom 16
           , accessibility DISABLE 
-          ][  imageView
-              [ imageWithFallback (getVehicleImage config.vehicleVariant config.vehicleDetails config.merchantCity)
-              , height $ V 125
-              , gravity RIGHT
-              , width MATCH_PARENT
-              , margin $ MarginBottom 15
-              , accessibility DISABLE_DESCENDANT
-              ]
+          ][linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity CENTER_HORIZONTAL
+            ][ imageView
+               [ imageWithFallback $ getVehicleImage config.vehicleVariant config.vehicleDetails config.merchantCity
+               , height $ V 125
+               , width $ V 125
+               , margin if os == "IOS" then Margin vehicleMargin 0 0 15 else MarginBottom 15
+               , accessibility DISABLE_DESCENDANT
+               ]
+            ]
             , linearLayout
-              [ height $ V 134
+              [ height $ V 130
               , width MATCH_PARENT
               , gravity BOTTOM
               , accessibility ENABLE
               , accessibilityHint $ "Vehicle Number " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") config.registrationNumber)
-              ][  linearLayout
+              , accessibility DISABLE_DESCENDANT
+              ][linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity RIGHT
+                ][ linearLayout
                   [ height $ V 38
-                  , width MATCH_PARENT
+                  , width WRAP_CONTENT
                   , background config.config.driverInfoConfig.numberPlateBackground
                   , cornerRadius 4.0
                   , orientation HORIZONTAL
                   , gravity BOTTOM
+                  , margin $ MarginRight 2
                   , padding $ Padding 2 2 2 2
                   , alignParentBottom "true,-1"
-                  ][
-                    linearLayout
+                  ][linearLayout
                     [ height $ V 34
-                    , width MATCH_PARENT
+                    , width WRAP_CONTENT
                     , stroke $ "2," <> Color.black
                     , cornerRadius 4.0
                     , orientation HORIZONTAL
@@ -183,7 +192,8 @@ driverDetailsView config uid =
                         ]
                       ]
                     ]
-                ]
+                 ]
+              ]
             ]
         ]
     ]
@@ -196,6 +206,9 @@ driverDetailsView config uid =
                                         "TAXI_PLUS" -> (getEN AC_TAXI)
                                         "TAXI" -> (getEN NON_AC_TAXI)
                                         _ -> ""
+        vehicleMargin = do 
+          let width = (runFn1 getLayoutBounds $ getNewIDWithTag nid).width
+          if width > 125 then ((width - 125)/2) else 0
 
 
 ---------------------------------- ratingView ---------------------------------------
