@@ -87,7 +87,7 @@ screen initialState globalState =
               _ -> do
                 _ <- pure $ enableMyLocation false
                 let currentFollower = getCurrentFollower initialState.data.currentFollower
-                void $ pure $ logEventWithMultipleParams initialState.data.logField "ny_user_following_ride" 
+                logEventWithMultipleParams initialState.data.logField "ny_user_following_ride" 
                   $ [ { key : "BookingId", value : unsafeToForeign $ currentFollower.bookingId},
                       { key : "FollowerId", value : unsafeToForeign $ getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys }
                     ]

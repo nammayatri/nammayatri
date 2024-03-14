@@ -288,6 +288,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
             LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
             holder.reqButton.setOnClickListener(view -> {
+                if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)) {
+                    respondDummyRequest();
+                    removeCard(position);
+                    return;
+                }
                 holder.reqButton.setClickable(false);
                 if (key != null && key.equals("nammayatriprovider"))
                     startApiLoader();
@@ -301,11 +306,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 Handler handler = new Handler(Looper.getMainLooper());
                 executor.execute(() -> {
                     try {
-                        if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)) {
-                            respondDummyRequest();
-                            removeCard(position);
-                            return;
-                        }
                         Boolean isApiSuccess = driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, sheetArrayList.indexOf(model));
                         if (isApiSuccess) {
                             holder.reqButton.setClickable(false);

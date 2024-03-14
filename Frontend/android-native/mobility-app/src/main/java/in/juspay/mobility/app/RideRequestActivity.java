@@ -288,6 +288,11 @@ public class RideRequestActivity extends AppCompatActivity {
             LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
 
             holder.reqButton.setOnClickListener(view -> {
+                if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)) {
+                    respondDummyRequest();
+                    removeCard(position);
+                    return;
+                }
                 holder.reqButton.setClickable(false);
                 if (service.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
                     lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
@@ -296,11 +301,6 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
-                    if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)) {
-                        respondDummyRequest();
-                        removeCard(position);
-                        return;
-                    }
                     Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), true, RideRequestActivity.this, sheetArrayList.indexOf(model));
                     if (isApiSuccess) {
                         mainLooper.post(executor::shutdown);

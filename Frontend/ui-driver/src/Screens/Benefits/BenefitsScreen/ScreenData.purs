@@ -41,7 +41,7 @@ initData = {
     props : {
       showDriverReferralQRCode : false,
       showNewDriverReferralText : true,
-      driverReferralType : DRIVER,
+      driverReferralType : CUSTOMER,
       referralInfoPopType : NO_REFERRAL_POPUP,
       selectedModule : Nothing,
       showShimmer : true
