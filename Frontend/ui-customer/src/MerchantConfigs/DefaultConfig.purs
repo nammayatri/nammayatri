@@ -365,6 +365,10 @@ config =
   , cityConfig :
       [ { cityCode : "std:080"
         , cityName : "Bangalore"
+        , iopConfig : {
+          enable : false,
+          autoSelectTime : 8
+          }
         , geoCodeConfig :
             { radius : 50000
             , strictBounds : true
@@ -380,6 +384,10 @@ config =
         }
       , { cityCode : "std:044"
         , cityName : "Chennai"
+        , iopConfig : {
+          enable : false,
+          autoSelectTime : 8
+          }
         , geoCodeConfig :
             { radius : 50000
             , strictBounds : true
@@ -430,5 +438,9 @@ defaultCityConfig =
     featureConfig : {
       enableCabBanner : false,
       enableChangeRideVariant : false
+    }
+    , iopConfig : {
+      enable : false,
+      autoSelectTime : 8
     }
   }

@@ -1108,3 +1108,13 @@ getTE stringKey =
     BOOK name -> "బుక్ " <> name
     FARE_FOR limit -> limit <> " కోసం ధర" 
     WAITING_CHARGE_LIMIT timeLimit -> "వైటింగ్ ఛార్జీలు ("<> timeLimit <>" నిమిషాల తర్వాత)"
+    SHOWING_FARE_FROM_MULTI_PROVIDER -> "బహుళ ప్రొవైడర్ల నుండి ఛార్జీలను చూపుతోంది"
+    LIVE_CHAT -> "ప్రత్యక్ష చాట్"
+    DRIVER_TIP_ADDITION -> "డ్రైవర్ చిట్కా యొక్క జోడింపు"
+    LIVE_RIDE_SHARING -> "లైవ్ రైడ్ భాగస్వామ్యం"
+    ENHANCED_SAFETY -> "మెరుగైన భద్రత"
+    CONFIRM_PROVIDER -> "ప్రొవైడర్‌ని నిర్ధారించండి"
+    SELECT_A_PROVIDER -> "ప్రొవైడర్‌ని ఎంచుకోండి"
+    CONFIRMING_SELECTED_PROVIDER -> "ఇందులో ఎంచుకున్న ప్రొవైడర్‌ని నిర్ధారిస్తోంది: "
+    BOOK_TOP_PROVIDER -> "బుక్ టాప్ ప్రొవైడర్"
+    CHOOSE_FROM_PROVIDERS -> "అందుబాటులో ఉన్న అందరు ప్రొవైడర్ల నుండి ఎంచుకోండి"

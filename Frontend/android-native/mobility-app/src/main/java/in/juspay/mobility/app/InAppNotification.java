@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -47,9 +48,19 @@ public class InAppNotification extends AppCompatActivity {
         callBack.remove(notificationCallBack);
     }
 
-    public void generateNotification(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds) throws JSONException {
+    public void generateNotification( JSONObject jsonObject) throws JSONException {
         Notification notification;
         // if channel id is not in our channels then we will create new channelId and attach layout for this channelId
+        String title = jsonObject.optString("title");
+        String message = jsonObject.optString("message");
+        String channelId = jsonObject.optString("channelId");
+        String action1Text = jsonObject.optString("action1Text");
+        String action2Text = jsonObject.optString("action2Text");
+        String action1Image = jsonObject.optString("action1Image");
+        String action2Image = jsonObject.optString("action2Image");
+        String onTapAction = jsonObject.optString("onTapAction");
+        boolean showLoader = jsonObject.optBoolean("showLoader", false);
+        int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
         if (!notificationChannels.has(channelId) && mainLayout != null) {
             notification = new Notification(channelId);
             notification.attachEventListenerToNotification(onTapAction);
@@ -90,7 +101,7 @@ public class InAppNotification extends AppCompatActivity {
                 }
             });
         }
-        notification.setContent(title, message, action1Text, action2Text, action1Image, action2Image);
+        notification.setContent(title, message, action1Text, action2Text, action1Image, action2Image, showLoader);
         notification.handleNotificationHandler(durationInMilliSeconds);
         notification.ring();
     }
@@ -134,15 +145,17 @@ public class InAppNotification extends AppCompatActivity {
             counterView.setVisibility(View.GONE);
         }
 
-        private void setContent(String title, String message, String action1Text, String action2Text, String action1Image, String action2Image) {
+        private void setContent(String title, String message, String action1Text, String action2Text, String action1Image, String action2Image, boolean showLoader) {
             TextView titleView = view.findViewById(R.id.title);
             TextView descriptionView = view.findViewById(R.id.desc);
             TextView action1TextView = view.findViewById(R.id.action1_text);
             TextView action2TextView = view.findViewById(R.id.action2_text);
             ImageView action1ImageView = view.findViewById(R.id.action1_image);
             ImageView action2ImageView = view.findViewById(R.id.action2_image);
+            ProgressBar progressBar = view.findViewById(R.id.progress_loader_bar);
             View action1View = view.findViewById(R.id.first_action_button);
             View action2View = view.findViewById(R.id.second_action_button);
+            progressBar.setVisibility(showLoader?View.VISIBLE:View.GONE);
             if (action1Text.length() > 0 && action1Image.length() > 0) {
                 action1TextView.setText(action1Text);
                 action1ImageView.setImageResource(Utils.getResIdentifier(context,action1Image, "drawable"));

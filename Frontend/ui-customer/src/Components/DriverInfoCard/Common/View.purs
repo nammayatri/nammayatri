@@ -130,6 +130,7 @@ driverDetailsView config uid nid =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER_HORIZONTAL
+            , alpha if config.providerType == ONUS then 1.0 else 0.5
             ][ imageView
                [ imageWithFallback $ getVehicleImage config.vehicleVariant config.vehicleDetails config.merchantCity
                , height $ V 125

@@ -1095,3 +1095,13 @@ getML stringKey =
         BOOK name -> "ബുക്ക് " <> name
         FARE_FOR limit -> limit <> " കോടതി"
         WAITING_CHARGE_LIMIT timeLimit -> "കാത്തിരിക്കൽ ചാർജുകൾ ("<> timeLimit <>" മിനിറ്റ് ശേഷം)"
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "ഒന്നിലധികം ദാതാക്കളിൽ നിന്നുള്ള നിരക്കുകൾ കാണിക്കുന്നു"
+        LIVE_CHAT -> "തത്സമയ ചാറ്റ്"
+        DRIVER_TIP_ADDITION -> "ഡ്രൈവർ നുറുങ്ങ് കൂട്ടിച്ചേർക്കൽ"
+        LIVE_RIDE_SHARING -> "തത്സമയ റൈഡ് പങ്കിടൽ"
+        ENHANCED_SAFETY -> "മെച്ചപ്പെടുത്തിയ സുരക്ഷ"
+        CONFIRM_PROVIDER -> "ദാതാവിനെ സ്ഥിരീകരിക്കുക"
+        SELECT_A_PROVIDER -> "ഒരു ദാതാവിനെ തിരഞ്ഞെടുക്കുക"
+        CONFIRMING_SELECTED_PROVIDER -> "ഇതിൽ തിരഞ്ഞെടുത്ത ദാതാവിനെ സ്ഥിരീകരിക്കുന്നു: "
+        BOOK_TOP_PROVIDER -> "ബുക്ക് ടോപ്പ് പ്രൊവൈഡർ"
+        CHOOSE_FROM_PROVIDERS -> "ലഭ്യമായ എല്ലാ ദാതാക്കളിൽ നിന്നും തിരഞ്ഞെടുക്കുക"

@@ -377,6 +377,89 @@ getQuotes searchId = do
     where
         unwrapResponse (x) = x
 
+-- getQuotes searchId = pure $ Right dummyResp
+--     where
+--     dummyResp = 
+--         GetQuotesRes {
+--             "quotes" : [],
+--             "toLocation" : Nothing,
+--             "fromLocation" : SearchReqLocationAPIEntity {
+--                             "lat" : 0.0,
+--                             "lon" : 0.0
+--                             },
+--             "estimates" : [
+--                 EstimateAPIEntity $ {
+--                     "agencyCompletedRidesCount": Nothing,
+--                     "agencyName": "Juspay Transporter",
+--                     "agencyNumber": "",
+--                     "createdAt": "2024-02-13T08:47:02.375117812Z",
+--                     "discount": Nothing,
+--                     "driversLatLong": [],
+--                     "estimateFareBreakup": Nothing,
+--                     "estimatedFare": 55,
+--                     "estimatedTotalFare": 55,
+--                     "id": "e1606c0b-1935-4650-9527-7ad571b6020e",
+--                     "nightShiftRate": Nothing,
+--                     "specialLocationTag": Nothing,
+--                     "totalFareRange": Just $ FareRange {
+--                             "maxFare" : 10,
+--                             "minFare" : 5
+--                         },
+--                     "tripTerms": [],
+--                     "vehicleVariant": "AUTO_RICKSHAW",
+--                     "providerName" : Just "NammaYatri",
+--                     "providerId" : Just "00000-11111",
+--                     "isValueAddNP" : Just true
+--                 },
+--                 EstimateAPIEntity $ {
+--                     "agencyCompletedRidesCount": Nothing,
+--                     "agencyName": "Juspay Transporter",
+--                     "agencyNumber": "",
+--                     "createdAt": "2024-02-13T08:47:02.375117812Z",
+--                     "discount": Nothing,
+--                     "driversLatLong": [],
+--                     "estimateFareBreakup": Nothing,
+--                     "estimatedFare": 55,
+--                     "estimatedTotalFare": 55,
+--                     "id": "e16086c0b-1935-4650-9527-7ad571b6020e",
+--                     "nightShiftRate": Nothing,
+--                     "specialLocationTag": Nothing,
+--                     "totalFareRange": Just $ FareRange {
+--                             "maxFare" : 10,
+--                             "minFare" : 5
+--                         },
+--                     "tripTerms": [],
+--                     "vehicleVariant": "AUTO_RICKSHAW",
+--                     "providerName" : Just "Yarry",
+--                     "providerId" : Just "99999-22222",
+--                     "isValueAddNP" : Just false
+--                 },
+--                 EstimateAPIEntity $ {
+--                     "agencyCompletedRidesCount": Nothing,
+--                     "agencyName": "Juspay Transporter",
+--                     "agencyNumber": "",
+--                     "createdAt": "2024-02-13T08:47:02.375117812Z",
+--                     "discount": Nothing,
+--                     "driversLatLong": [],
+--                     "estimateFareBreakup": Nothing,
+--                     "estimatedFare": 55,
+--                     "estimatedTotalFare": 55,
+--                     "id": "e16086c0b-1935-4650-fvficou9527-7ad571b6020e",
+--                     "nightShiftRate": Nothing,
+--                     "specialLocationTag": Nothing,
+--                     "totalFareRange": Just $ FareRange {
+--                             "maxFare" : 11,
+--                             "minFare" : 2
+--                         },
+--                     "tripTerms": [],
+--                     "vehicleVariant": "AUTO_RICKSHAW",
+--                     "providerName" : Just "Yarry",
+--                     "providerId" : Just "9995999-22222",
+--                     "isValueAddNP" : Just false
+--                 }
+--             ]
+--         }
+
 ------------------------------------------------------------------------ RideConfirm Function ---------------------------------------------------------------------------------------
 rideConfirm quoteId = do
         headers <- getHeaders "" false

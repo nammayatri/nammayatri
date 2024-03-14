@@ -1110,3 +1110,13 @@ getTA stringKey =
     BOOK name -> "புத்தகம் " <> name
     FARE_FOR limit -> limit <> " வரை கட்டணம்"
     WAITING_CHARGE_LIMIT timeLimit -> "காத்திருப்பு கட்டணம் ("<> timeLimit <>" நிமிடங்கள் பின்பு)"
+    SHOWING_FARE_FROM_MULTI_PROVIDER -> "பல வழங்குநர்களிடமிருந்து கட்டணங்களைக் காட்டுகிறது"
+    LIVE_CHAT -> "நேரடி அரட்டை"
+    DRIVER_TIP_ADDITION -> "டிரைவர் உதவிக்குறிப்பு சேர்த்தல்"
+    LIVE_RIDE_SHARING -> "நேரடி சவாரி பகிர்வு"
+    ENHANCED_SAFETY -> "மேம்படுத்தப்பட்ட பாதுகாப்பு"
+    CONFIRM_PROVIDER -> "வழங்கலை உறுதிப்படுத்தவும்"
+    SELECT_A_PROVIDER -> "ஒரு வழங்குநரைத் தேர்ந்தெடு"
+    CONFIRMING_SELECTED_PROVIDER -> "தேர்ந்தெடுக்கப்பட்ட வழங்குநரை இதில் உறுதிப்படுத்துகிறது: "
+    BOOK_TOP_PROVIDER -> "புக் டாப் வழங்குநர்"
+    CHOOSE_FROM_PROVIDERS -> "கிடைக்கும் அனைத்து வழங்குநர்களிடமிருந்தும் தேர்வு செய்யவும்"

@@ -110,10 +110,11 @@ messageOutAnimConfig ifAnim = animConfig {
 , ifAnim = ifAnim
 }
 
-translateFullYAnimWithDurationConfig :: Int -> Common.AnimConfig
-translateFullYAnimWithDurationConfig duration = animConfig {
+translateFullYAnimWithDurationConfig :: Int-> Boolean  -> Common.AnimConfig
+translateFullYAnimWithDurationConfig duration ifAnim = animConfig {
   duration = duration
 , fromY = screenHeight unit
 , toY = 0
 , interpolator = PrestoAnim.EaseInOut
+, ifAnim = ifAnim
 }

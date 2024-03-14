@@ -1093,3 +1093,13 @@ getEN stringKey =
         BOOK name -> "Book " <> name
         FARE_FOR limit -> "Fare for " <> limit
         WAITING_CHARGE_LIMIT timeLimit -> "Waiting Charges (after " <> timeLimit <> " mins)"
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "Showing fares from multiple providers"
+        LIVE_CHAT -> "Live Chat"
+        DRIVER_TIP_ADDITION -> "Driver Tip Addition"
+        LIVE_RIDE_SHARING -> "Live Ride Sharing"
+        ENHANCED_SAFETY -> "Enhanced Safety"
+        CONFIRM_PROVIDER -> "Confirm Provider"
+        SELECT_A_PROVIDER -> "Select a provider"
+        CONFIRMING_SELECTED_PROVIDER -> "Confirming selected provider in: "
+        BOOK_TOP_PROVIDER -> "Book top provider"
+        CHOOSE_FROM_PROVIDERS -> "Choose from all available providers"

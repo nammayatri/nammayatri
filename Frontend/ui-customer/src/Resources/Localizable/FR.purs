@@ -1096,3 +1096,13 @@ getFR stringKey =
         BOOK name -> "Réserver " <> name
         FARE_FOR limit -> "Tarif pour " <> limit
         WAITING_CHARGE_LIMIT timeLimit -> "Frais d'attente après " <> timeLimit
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "Affichage des tarifs de plusieurs fournisseurs"
+        LIVE_CHAT -> "Chat en direct"
+        DRIVER_TIP_ADDITION -> "Ajout d'une astuce pour le pilote"
+        LIVE_RIDE_SHARING -> "Partage de trajet en direct"
+        ENHANCED_SAFETY -> "Sécurité améliorée"
+        CONFIRM_PROVIDER -> "Confirmer le fournisseur"
+        SELECT_A_PROVIDER -> "Sélectionnez un fournisseur"
+        CONFIRMING_SELECTED_PROVIDER -> "Confirmation du fournisseur sélectionné dans : "
+        BOOK_TOP_PROVIDER -> "Réservez le meilleur fournisseur"
+        CHOOSE_FROM_PROVIDERS -> "Choisissez parmi tous les fournisseurs disponibles"

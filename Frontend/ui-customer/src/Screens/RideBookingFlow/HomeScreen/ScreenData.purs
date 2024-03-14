@@ -32,6 +32,8 @@ import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map 
 import JBridge (Location)
 import Data.HashMap as DHM
+import Common.Types.App as CT
+import MerchantConfig.DefaultConfig as MRC
 
 initData :: HomeScreenState
 initData = {
@@ -109,7 +111,8 @@ initData = {
       , activeIndex: 0
       , index: 0
       , id: ""
-      , maxPrice : 0
+      , maxPrice : Nothing
+      , minPrice : Nothing
       , basePrice : 0
       , showInfo : true
       , searchResultType : CV.ESTIMATES
@@ -128,6 +131,9 @@ initData = {
       , airConditioned : Nothing
       , showEditButton : false
       , editBtnText : ""
+      , providerName : ""
+      , providerId : ""
+      , providerType : CT.ONUS
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -145,6 +151,7 @@ initData = {
         wasOfferedAssistance : Nothing
     }
     , config : getAppConfig appConfig
+    , currentCityConfig : MRC.defaultCityConfig
     , logField : empty
     , nearByDrivers : Nothing
     , disability : Nothing
@@ -167,6 +174,15 @@ initData = {
     , followers : Nothing
     , vehicleVariant : ""
     , hotSpotInfo : []
+    , iopState : {
+        timerId : "",
+        timerVal : "",
+        showMultiProvider : false,
+        providerPrefVisible : false,
+        providerSelectionStage : false,
+        showPrefButton : false,
+        providerPrefInfo : false
+    }
     },
     props: {
       rideRequestFlow : false
@@ -430,6 +446,8 @@ dummyDriverInfo =
   , destinationAddress : dummyAddress
   , status : ""
   , serviceTierName : Nothing
+  , providerName : ""
+  , providerType : CT.ONUS
   }
 
 dummySettingBar :: SettingSideBarState
@@ -544,7 +562,9 @@ dummyRideBooking = RideBookingRes
   hasDisability : Nothing,
   sosStatus: Nothing,
   serviceTierName : Nothing, 
-  airConditioned : Nothing
+  airConditioned : Nothing,
+  isValueAddNP : Nothing,
+  providerName : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
