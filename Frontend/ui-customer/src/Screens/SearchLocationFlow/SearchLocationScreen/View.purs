@@ -84,7 +84,7 @@ searchLocationScreen initialState globalProps =
 
 view :: forall w. GlobalProps -> (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w 
 view globalProps push state = 
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ 
+  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ 
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -388,7 +388,7 @@ locateOnMapFooterView push state = let
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage
   locateOnMapData = getDataBasedActionType state.props.actionType 
   
-  in PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ linearLayout
+  in PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , alignParentBottom "true,-1"
@@ -501,7 +501,7 @@ predictionsView push state globalProps = let
                 else 
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $ 
+  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ 
   scrollView
     [ height WRAP_CONTENT
     , width MATCH_PARENT

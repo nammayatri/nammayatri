@@ -96,7 +96,7 @@ view push state =
 
 savedLocationListView :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM (Effect Unit) w
 savedLocationListView push state =
-  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 ] $
+  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 true] $
   scrollView
       [ height MATCH_PARENT
       , width MATCH_PARENT

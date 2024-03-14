@@ -4,6 +4,7 @@ import Prelude
 
 import MerchantConfig.Types (AppConfig)
 import Screens.Types (City, SearchResultType)
+import Common.Types.App as CTP
 
 type DriverDetailsType
   = { searchType :: SearchResultType
@@ -16,6 +17,7 @@ type DriverDetailsType
   , config :: AppConfig
   , rideStarted :: Boolean
   , enablePaddingBottom :: Boolean
+  , providerType :: CTP.ProviderType
     }
 
 type TripDetails a

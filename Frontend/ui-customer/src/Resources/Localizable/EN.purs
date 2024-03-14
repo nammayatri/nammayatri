@@ -1021,3 +1021,13 @@ getEN stringKey =
         MESSAGE_FROM name -> "Message from " <> name
         RIDE_CANCELLED -> "Ride Cancelled"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Hey,\n\nI am riding with " <> appName <>" Driver " <> driverName <> "! Track this ride on: " <> trackLink <> "\n\nVehicle number: " <> vehicleNumber
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "Showing fares from multiple providers"
+        LIVE_CHAT -> "Live Chat"
+        DRIVER_TIP_ADDITION -> "Driver Tip Addition"
+        LIVE_RIDE_SHARING -> "Live Ride Sharing"
+        ENHANCED_SAFETY -> "Enhanced Safety"
+        CONFIRM_PROVIDER -> "Confirm Provider"
+        SELECT_A_PROVIDER -> "Select a provider"
+        CONFIRMING_SELECTED_PROVIDER -> "Confirming selected provider in: "
+        BOOK_TOP_PROVIDER -> "Book top provider"
+        CHOOSE_FROM_PROVIDERS -> "Choose from all available providers"

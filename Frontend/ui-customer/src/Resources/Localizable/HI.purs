@@ -1023,3 +1023,13 @@ getHI stringKey =
         MESSAGE_FROM name -> name <> " की तरफ से संदेश"
         RIDE_CANCELLED -> "सफर रद्द कर दिया गया है"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 नमस्ते, मैं" <> appName <> "ड्राइवर," <> driverName <> "के साथ सवारी कर रहा हूँ! इस सवारी का ट्रैकिंग करें:" <> trackLink <> "वाहन नंबर:" <> vehicleNumber
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "एकाधिक प्रदाताओं से किराए दिखाए जा रहे हैं"
+        LIVE_CHAT -> "लाइव चैट"
+        DRIVER_TIP_ADDITION -> "ड्राइवर टिप जोड़"
+        LIVE_RIDE_SHARING -> "लाइव राइड शेयरिंग"
+        ENHANCED_SAFETY -> "उन्नत सुरक्षा"
+        CONFIRM_PROVIDER -> "प्रदाता की पुष्टि करें"
+        SELECT_A_PROVIDER -> "एक प्रदाता चुनें"
+        CONFIRMING_SELECTED_PROVIDER -> "चयनित प्रदाता की पुष्टि की जा रही है:"
+        BOOK_TOP_PROVIDER -> "बुक टॉप प्रदाता"
+        CHOOSE_FROM_PROVIDERS -> "सभी उपलब्ध प्रदाताओं में से चुनें"

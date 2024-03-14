@@ -1039,3 +1039,13 @@ getTA stringKey =
     MESSAGE_FROM name -> name <> " இலிருந்து செய்தி"
     RIDE_CANCELLED -> "சவாரி ரத்து செய்யப்பட்டது"
     TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 ஹாய்,\n\nநான் ரைட் செய்கிறேன் " <> appName <> " டிரைவர் " <> driverName <> "! இந்த சுற்றி டிரைக் செய்யவும்: " <> trackLink <> "\n\nவாகன எண்: " <> vehicleNumber
+    SHOWING_FARE_FROM_MULTI_PROVIDER -> "பல வழங்குநர்களிடமிருந்து கட்டணங்களைக் காட்டுகிறது"
+    LIVE_CHAT -> "நேரடி அரட்டை"
+    DRIVER_TIP_ADDITION -> "டிரைவர் உதவிக்குறிப்பு சேர்த்தல்"
+    LIVE_RIDE_SHARING -> "நேரடி சவாரி பகிர்வு"
+    ENHANCED_SAFETY -> "மேம்படுத்தப்பட்ட பாதுகாப்பு"
+    CONFIRM_PROVIDER -> "வழங்கலை உறுதிப்படுத்தவும்"
+    SELECT_A_PROVIDER -> "ஒரு வழங்குநரைத் தேர்ந்தெடு"
+    CONFIRMING_SELECTED_PROVIDER -> "தேர்ந்தெடுக்கப்பட்ட வழங்குநரை இதில் உறுதிப்படுத்துகிறது: "
+    BOOK_TOP_PROVIDER -> "புக் டாப் வழங்குநர்"
+    CHOOSE_FROM_PROVIDERS -> "கிடைக்கும் அனைத்து வழங்குநர்களிடமிருந்தும் தேர்வு செய்யவும்"

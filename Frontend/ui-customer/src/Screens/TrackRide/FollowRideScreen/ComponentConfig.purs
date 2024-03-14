@@ -104,6 +104,7 @@ getDriverDetails state =
     , config: state.data.config
     , rideStarted: true
     , enablePaddingBottom: true
+    , providerType : Common.ONUS
     }
 
 

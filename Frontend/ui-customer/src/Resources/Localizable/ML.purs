@@ -1022,3 +1022,13 @@ getML stringKey =
         MESSAGE_FROM name -> name <> " നിന്ന് സന്ദേശം"
         RIDE_CANCELLED -> "യാത്ര റദ്ദാക്കി"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 ഹലോ,\n\nഞാൻ " <> appName <> " ഡ്രൈവർ " <> driverName <> " നും സഹായിക്കാൻ പോകുന്നു! ഈ റൈഡ് ട്രാക്കുചെയ്യുവാൻ: " <> trackLink <> "\n\nവാഹന നമ്പർ: " <> vehicleNumber
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "ഒന്നിലധികം ദാതാക്കളിൽ നിന്നുള്ള നിരക്കുകൾ കാണിക്കുന്നു"
+        LIVE_CHAT -> "തത്സമയ ചാറ്റ്"
+        DRIVER_TIP_ADDITION -> "ഡ്രൈവർ നുറുങ്ങ് കൂട്ടിച്ചേർക്കൽ"
+        LIVE_RIDE_SHARING -> "തത്സമയ റൈഡ് പങ്കിടൽ"
+        ENHANCED_SAFETY -> "മെച്ചപ്പെടുത്തിയ സുരക്ഷ"
+        CONFIRM_PROVIDER -> "ദാതാവിനെ സ്ഥിരീകരിക്കുക"
+        SELECT_A_PROVIDER -> "ഒരു ദാതാവിനെ തിരഞ്ഞെടുക്കുക"
+        CONFIRMING_SELECTED_PROVIDER -> "ഇതിൽ തിരഞ്ഞെടുത്ത ദാതാവിനെ സ്ഥിരീകരിക്കുന്നു: "
+        BOOK_TOP_PROVIDER -> "ബുക്ക് ടോപ്പ് പ്രൊവൈഡർ"
+        CHOOSE_FROM_PROVIDERS -> "ലഭ്യമായ എല്ലാ ദാതാക്കളിൽ നിന്നും തിരഞ്ഞെടുക്കുക"

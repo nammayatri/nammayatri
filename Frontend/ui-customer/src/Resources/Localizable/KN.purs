@@ -1024,3 +1024,13 @@ getKN stringKey =
         MESSAGE_FROM name -> name <> " ಇಂದ ಸಂದೇಶ"
         RIDE_CANCELLED -> "ಸವಾರಿ ರದ್ದು ಮಾಡಲಾಗಿದೆ"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 ಹಲೋ,\n\nನಾನು " <> appName <> " ಡ್ರೈವರ್ " <> driverName <> " ಜೊತೆ ಸವಾರಿ ಮಾಡುತ್ತಿದ್ದೇನೆ! ಈ ಸವಾರಿಯನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಲು: " <> trackLink <> "\n\nವಾಹನ ಸಂಖ್ಯೆ: " <> vehicleNumber
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "ಬಹು ಪೂರೈಕೆದಾರರಿಂದ ದರಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ"
+        LIVE_CHAT -> "ಲೈವ್ ಚಾಟ್"
+        DRIVER_TIP_ADDITION -> "ಚಾಲಕ ಸಲಹೆ ಸೇರ್ಪಡೆ"
+        LIVE_RIDE_SHARING -> "ಲೈವ್ ರೈಡ್ ಹಂಚಿಕೆ"
+        ENHANCED_SAFETY -> "ವರ್ಧಿತ ಸುರಕ್ಷತೆ"
+        CONFIRM_PROVIDER -> "ಒದಗಿಸುವವರನ್ನು ದೃಢೀಕರಿಸಿ"
+        SELECT_A_PROVIDER -> "ಒದಗಿಸುವವರನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+        CONFIRMING_SELECTED_PROVIDER -> "ಇದರಲ್ಲಿ ಆಯ್ಕೆಮಾಡಿದ ಪೂರೈಕೆದಾರರನ್ನು ದೃಢೀಕರಿಸಲಾಗುತ್ತಿದೆ: "
+        BOOK_TOP_PROVIDER -> "ಬುಕ್ ಟಾಪ್ ಪ್ರೊವೈಡರ್"
+        CHOOSE_FROM_PROVIDERS -> "ಎಲ್ಲಾ ಲಭ್ಯವಿರುವ ಪೂರೈಕೆದಾರರಿಂದ ಆರಿಸಿ"

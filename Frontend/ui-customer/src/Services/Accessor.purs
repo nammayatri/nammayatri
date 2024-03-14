@@ -287,3 +287,6 @@ _peopleCategories = lens (unwrap >>> _.peopleCategories) (\oldRec newVal -> wrap
 
 _createdAt :: forall a b c. Newtype a { createdAt :: b | c } => Lens' a b
 _createdAt = lens (unwrap >>> _.createdAt) (\oldRec newVal -> wrap ((unwrap oldRec) { createdAt = newVal }))
+
+_isValueAddNP :: forall a b c. Newtype a { isValueAddNP :: b | c } => Lens' a b
+_isValueAddNP = lens (unwrap >>> _.isValueAddNP) (\oldRec newVal -> wrap ((unwrap oldRec) { isValueAddNP = newVal }))
