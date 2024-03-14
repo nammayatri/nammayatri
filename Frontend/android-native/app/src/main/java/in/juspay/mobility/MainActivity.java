@@ -203,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public String getDeviceRAM() {
+    public String getAndUpdateRAMinSP() {
         String deviceRAM = "__failed";
         if (sharedPref != null) {
             deviceRAM = sharedPref.getString("DEVICE_RAM", "__failed");
@@ -212,10 +212,7 @@ public class MainActivity extends AppCompatActivity {
             return deviceRAM;
         long memory;
         try {
-            ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
-            ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
-            activityManager.getMemoryInfo(memInfo);
-            memory = 1 + memInfo.totalMem / (1024 * 1024 * 1024);
+            memory = Utils.getDeviceRAM();
             deviceRAM = memory == 0 ? "null" : memory + " GB";
             sharedPref.edit().putString("DEVICE_RAM", deviceRAM).apply();
         } catch (Exception e) {
@@ -262,7 +259,7 @@ public class MainActivity extends AppCompatActivity {
             String bModel = Build.MODEL;
             String bBrand = Build.BRAND;
             String[] dim = getScreenDimensions();
-            String deviceRAM = getDeviceRAM();
+            String deviceRAM = getAndUpdateRAMinSP();
             if (bModel == null || bModel.equals(""))
                 bModel = "null";
             if (bBrand == null || bBrand.equals(""))

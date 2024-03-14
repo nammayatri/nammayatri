@@ -236,10 +236,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                                 overlayPolylines.remove();
                                 overlayPolylines = null;
                             }
-                            if(polylineAnimatorSet != null){
-                                polylineAnimatorSet.cancel();
-                                polylineAnimatorSet = null;
-                            }
                             polyline.remove();
                             polyline = null;
 
