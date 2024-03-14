@@ -592,11 +592,10 @@ sendSafetyAlertToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   T.Text ->
-  T.Text ->
   DP.Person ->
   DVeh.Vehicle ->
   m ()
-sendSafetyAlertToBAP booking ride code reason driver vehicle = do
+sendSafetyAlertToBAP booking ride reason driver vehicle = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-

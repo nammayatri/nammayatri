@@ -53,6 +53,5 @@ data DNewMessageReq = DNewMessageReq
 
 data DSafetyAlertReq = DSafetyAlertReq
   { bookingDetails :: BookingDetails,
-    code :: Text,
     reason :: Text
   }

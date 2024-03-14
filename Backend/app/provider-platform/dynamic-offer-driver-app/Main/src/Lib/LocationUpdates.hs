@@ -268,4 +268,4 @@ performSafetyCheck ride booking = do
     when riderDetails.nightSafetyChecks $ do
       driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-      BP.sendSafetyAlertToBAP booking ride "deviation" "Route Deviation Detected" driver vehicle
+      BP.sendSafetyAlertToBAP booking ride "Route Deviation Detected" driver vehicle
