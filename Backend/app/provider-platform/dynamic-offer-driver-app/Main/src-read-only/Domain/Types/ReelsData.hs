@@ -4,7 +4,6 @@
 
 module Domain.Types.ReelsData where
 
-import qualified Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Kernel.External.Types

@@ -6,14 +6,10 @@
 module Storage.Beam.TicketService where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.BusinessHour
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketService
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data TicketServiceT f = TicketServiceT

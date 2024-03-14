@@ -6,9 +6,6 @@ module API.Types.UI.FollowRide where
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Booking
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
-import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id

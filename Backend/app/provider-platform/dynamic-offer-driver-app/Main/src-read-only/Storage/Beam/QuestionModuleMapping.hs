@@ -6,12 +6,9 @@
 module Storage.Beam.QuestionModuleMapping where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.LmsModule
-import qualified Domain.Types.QuestionModuleMapping
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data QuestionModuleMappingT f = QuestionModuleMappingT

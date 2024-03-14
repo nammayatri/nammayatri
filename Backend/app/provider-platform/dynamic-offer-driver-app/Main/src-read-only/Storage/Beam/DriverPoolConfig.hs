@@ -6,15 +6,11 @@
 module Storage.Beam.DriverPoolConfig where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.DriverPoolConfig
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 import Tools.Beam.UtilsTH
 

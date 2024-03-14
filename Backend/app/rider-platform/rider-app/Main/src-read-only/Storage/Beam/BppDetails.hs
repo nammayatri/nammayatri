@@ -6,11 +6,9 @@
 module Storage.Beam.BppDetails where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.BppDetails
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data BppDetailsT f = BppDetailsT

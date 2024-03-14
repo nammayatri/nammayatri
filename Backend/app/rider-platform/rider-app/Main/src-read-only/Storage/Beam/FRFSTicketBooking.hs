@@ -7,17 +7,12 @@ module Storage.Beam.FRFSTicketBooking where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FRFSQuote
-import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingT f = FRFSTicketBookingT

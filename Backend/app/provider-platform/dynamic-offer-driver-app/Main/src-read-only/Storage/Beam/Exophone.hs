@@ -8,13 +8,10 @@ module Storage.Beam.Exophone where
 import qualified Data.Text
 import qualified Database.Beam as B
 import qualified Domain.Types.Exophone
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data ExophoneT f = ExophoneT

@@ -6,14 +6,9 @@
 module Storage.Beam.ServiceCategory where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.ServiceCategory
-import qualified Domain.Types.ServicePeopleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data ServiceCategoryT f = ServiceCategoryT

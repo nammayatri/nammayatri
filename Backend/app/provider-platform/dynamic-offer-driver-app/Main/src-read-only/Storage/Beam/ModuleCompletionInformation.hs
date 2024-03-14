@@ -6,12 +6,10 @@
 module Storage.Beam.ModuleCompletionInformation where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.DriverModuleCompletion
 import qualified Domain.Types.ModuleCompletionInformation
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data ModuleCompletionInformationT f = ModuleCompletionInformationT

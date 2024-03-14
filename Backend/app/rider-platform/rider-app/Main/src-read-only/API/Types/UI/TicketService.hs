@@ -7,8 +7,6 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Types.BusinessHour
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceCategory
 import qualified Domain.Types.ServicePeopleCategory
 import qualified Domain.Types.SpecialOccasion
@@ -16,7 +14,6 @@ import qualified Domain.Types.TicketBooking
 import qualified Domain.Types.TicketBookingService
 import qualified Domain.Types.TicketPlace
 import qualified Domain.Types.TicketService
-import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common

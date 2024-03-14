@@ -6,15 +6,10 @@
 module Storage.Beam.FRFSTicketBookingPayment where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
-import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingPaymentT f = FRFSTicketBookingPaymentT

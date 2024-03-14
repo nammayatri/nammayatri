@@ -4,7 +4,6 @@
 
 module Domain.Types.DriverReferral where
 
-import qualified Data.Text
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id

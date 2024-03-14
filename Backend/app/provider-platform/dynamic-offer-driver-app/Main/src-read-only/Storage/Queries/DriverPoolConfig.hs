@@ -7,17 +7,13 @@ module Storage.Queries.DriverPoolConfig where
 import qualified Domain.Types.DriverPoolConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Vehicle.Variant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
-import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 import qualified Storage.Beam.DriverPoolConfig as Beam
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ()

@@ -7,13 +7,9 @@ module Storage.Beam.Rating where
 
 import qualified Data.Text
 import qualified Database.Beam as B
-import qualified Domain.Types.Person
-import qualified Domain.Types.Rating
-import qualified Domain.Types.Ride
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data RatingT f = RatingT

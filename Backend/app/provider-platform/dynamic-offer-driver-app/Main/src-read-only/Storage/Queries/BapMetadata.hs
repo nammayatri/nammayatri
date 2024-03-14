@@ -4,7 +4,6 @@
 
 module Storage.Queries.BapMetadata where
 
-import qualified Data.Text
 import qualified Domain.Types.BapMetadata
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -14,7 +13,6 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
-import qualified Servant.Client.Core
 import qualified Storage.Beam.BapMetadata as Beam
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BapMetadata.BapMetadata -> m ()

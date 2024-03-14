@@ -4,7 +4,6 @@
 
 module Domain.Types.QuestionInformation where
 
-import qualified Data.Aeson
 import qualified Domain.Types.LmsEnumTypes
 import qualified Domain.Types.QuestionModuleMapping
 import qualified Kernel.External.Types

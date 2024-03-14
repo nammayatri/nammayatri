@@ -6,14 +6,10 @@
 module Storage.Beam.FRFSTrip where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTrip
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data FRFSTripT f = FRFSTripT

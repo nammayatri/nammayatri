@@ -7,15 +7,10 @@ module Storage.Beam.DriverModuleCompletion where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverModuleCompletion
-import qualified Domain.Types.LmsModule
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data DriverModuleCompletionT f = DriverModuleCompletionT

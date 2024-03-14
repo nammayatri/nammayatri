@@ -7,11 +7,9 @@ module Storage.Beam.MetaData where
 
 import qualified Data.Text
 import qualified Database.Beam as B
-import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data MetaDataT f = MetaDataT

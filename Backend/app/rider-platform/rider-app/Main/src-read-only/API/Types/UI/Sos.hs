@@ -5,11 +5,8 @@ module API.Types.UI.Sos where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Domain.Types.Sos
-import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
