@@ -1308,7 +1308,6 @@ eval (DriverInfoCardActionController (DriverInfoCardController.WaitingInfo)) sta
 eval (SendQuickMessage chatSuggestion) state = do
   if state.props.canSendSuggestion then do
     _ <- pure $ sendMessage chatSuggestion
-    let _ = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
     continue state {props {unReadMessages = false}}
   else continue state
 
@@ -1343,7 +1342,6 @@ eval MessageViewAnimationEnd state = do
 eval (MessagingViewActionController (MessagingView.SendSuggestion chatSuggestion)) state = do
   if state.props.canSendSuggestion then do
     _ <- pure $ sendMessage chatSuggestion
-    void $ pure $ logChatSuggestion state chatSuggestion
     continue state {data {chatSuggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
@@ -3139,6 +3137,3 @@ getPeekHeight state =
           let androidPixels = runFn1 getPixels FunctionCall
               androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
           in (screenHeight unit) - ( ceil(((toNumber homescreenHeader)/androidPixels) *androidDensity))
-
-logChatSuggestion :: HomeScreenState -> String -> Unit
-logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
