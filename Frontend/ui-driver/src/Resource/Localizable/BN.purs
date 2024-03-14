@@ -1,6 +1,7 @@
 module Resources.Localizable.BN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getBN :: STR -> String
 getBN stringKey =
@@ -1240,21 +1241,21 @@ getBN stringKey =
         TELUGU -> "তেলেগু"
         FRENCH -> "ফরাসি"
         MALAYALAM -> "মালায়ালম"
-        BENGALI -> "বাঙালি"
+        BENGALI -> "বাংলা"
         ENGLISH -> "ইংরেজি"
-        YOU_HAVE_SUCCESSFULLY_COMPLETED -> "আপনি সফলভাবে সম্পন্ন করেছেন"
-        ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE -> "সম্পন্ন করতে সমস্ত উত্তর সঠিক হতে হবে"
+        YOU_HAVE_SUCCESSFULLY_COMPLETED moduleName -> "আপনি সফলভাবে সম্পন্ন করেছেন " <> moduleName
+        ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE moduleName -> moduleName <> " সম্পন্ন করতে সমস্ত উত্তর সঠিক হতে হবে"
         QUESTIONS_SHOULD_BE_CORRECT_TO_COMPLETE -> "সম্পন্ন করতে প্রশ্নগুলি সঠিক হতে হবে"
         CORRECT -> "সঠিক"
         RETAKE_QUIZ -> "কুইজ আবার নিন"
         TAKE_A_QUIZ -> "একটি কুইজ নিন"
         PLAY_AGAIN -> "আবার খেলুন"
         PLAY_NOW -> "এখন খেলুন"
-        WATCH_ALL_VIDEOS_TO_LEARN -> "সব ভিডিও দেখুন শেখার জন্য"
+        WATCH_ALL_VIDEOS_TO_LEARN -> "শেখার জন্য সব ভিডিও দেখুন"
         PLAY_QUIZ_TO_COMPLETE_YOUR_TRAINING -> "আপনার প্রশিক্ষণ সম্পন্ন করতে কুইজ খেলুন"
         TRAINING_COMPLETED -> "প্রশিক্ষণ সম্পন্ন"
         WATCHED -> "দেখা হয়েছে"
-        UH_OH_SOMETHING_WENT_WRONG -> "উহ-হো! কিছু ভুল হয়েছে"
+        UH_OH_SOMETHING_WENT_WRONG -> "কিছু ভুল হয়েছে"
         WATCH_ALL_VIDEOS_TO_UNLOCK_QUIZ -> "সব ভিডিও দেখুন কুইজ আনলক করতে"
         INCOMPLETE -> "অসম্পূর্ণ"
         NEW_C -> "নতুন"

@@ -1,6 +1,7 @@
 module Resources.Localizable.EN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
@@ -1242,8 +1243,8 @@ getEN stringKey =
         MALAYALAM -> "Malayalam"
         BENGALI -> "Bengali"
         ENGLISH -> "English"
-        YOU_HAVE_SUCCESSFULLY_COMPLETED -> "You have successfully completed"
-        ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE -> "All answers should be correct to complete"
+        YOU_HAVE_SUCCESSFULLY_COMPLETED moduleName -> "You have successfully completed " <> moduleName
+        ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE moduleName -> "All answers should be correct to complete " <> moduleName
         QUESTIONS_SHOULD_BE_CORRECT_TO_COMPLETE -> "questions should be correct to complete"
         CORRECT -> "Correct"
         RETAKE_QUIZ -> "Retake Quiz"

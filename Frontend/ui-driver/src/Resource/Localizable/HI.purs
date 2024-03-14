@@ -1,6 +1,7 @@
 module Resources.Localizable.HI where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getHI :: STR -> String
 getHI stringKey =
@@ -1242,8 +1243,8 @@ getHI stringKey =
         MALAYALAM -> "मलयालम"
         BENGALI -> "বাঙালি"
         ENGLISH -> "इंग्लिश"
-        YOU_HAVE_SUCCESSFULLY_COMPLETED -> "आपने सफलतापूर्वक पूरा किया है"
-        ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE -> "सभी जवाब सही होने चाहिए ताकि पूरा हो"
+        YOU_HAVE_SUCCESSFULLY_COMPLETED moduleName -> "आपने सफलतापूर्वक पूरा किया है " <> moduleName
+        ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE moduleName -> "सभी जवाब सही होने चाहिए ताकि पूरा हो " <> moduleName
         QUESTIONS_SHOULD_BE_CORRECT_TO_COMPLETE -> "प्रश्न सही होने चाहिए ताकि पूरा हो"
         CORRECT -> "सही"
         RETAKE_QUIZ -> "क्विज़ फिर से लें"

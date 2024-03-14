@@ -48,7 +48,7 @@ lmsQuizScreen = do
       App.BackT $ App.NoBack <$> (pure $ RETAKE_QUIZ_SO updatedState)
     GoToChangeLanguage updatedState ->do
       modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ SELECT_LANGUAGE_FOR_QUESTION updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SELECT_LANGUAGE_FOR_QUESTION updatedState)
     GoToLmsVideosScreenSO state -> do
       modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> LmsQuizScreenData.initData)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_LMS_VIDEOS_SCREEN_FROM_QUIZ state)
