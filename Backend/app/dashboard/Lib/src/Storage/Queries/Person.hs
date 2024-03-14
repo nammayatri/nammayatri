@@ -112,7 +112,7 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
       pure $ groupByPerson $ catMaybes finalRes
     Left _ -> pure []
   where
-    limitVal = fromMaybe 100 mbLimit
+    limitVal = fromMaybe 99 mbLimit
     offsetVal = fromMaybe 1 mbOffset
     groupByPerson ::
       [(Person, Role, Maybe MerchantAccess)] ->
