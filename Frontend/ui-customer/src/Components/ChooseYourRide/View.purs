@@ -60,7 +60,7 @@ view push config =
           -- , width MATCH_PARENT
           -- , background Color.transparent
           -- , accessibility DISABLE
-          -- , peakHeight $ getPeekHeight config
+          -- , peakHeight $ getPeekHeight config isSingleEstimate
           -- , topShift 0.0
           -- , sheetState COLLAPSED
           -- , bottomShift 1.0
@@ -91,13 +91,14 @@ view push config =
       [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config) ]
     ]
   where
-    getPeekHeight :: Config -> Int
-    getPeekHeight config = 
+    getPeekHeight :: Config -> Boolean -> Int
+    getPeekHeight config isSingleEstimate = 
       let
         headerLayout = runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout"
         bottomButtonLayout = runFn1 getLayoutBounds $ EHC.getNewIDWithTag "bottomButtonLayout"
         len = length config.quoteList
-        estimateItemHeight = config.selectedEstimateHeight
+        quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
+        estimateItemHeight = if quoteHeight == 0 then (if isSingleEstimate then 48 else 84) else quoteHeight
         quoteViewVisibleHeight = if len > 2 then (3 * estimateItemHeight) else (len * estimateItemHeight) + (estimateItemHeight / 2)
         
         pixels = runFn1 HU.getPixels FunctionCall
@@ -398,7 +399,7 @@ quoteListView push config isSingleEstimate =
     , afterRender push (const NoAction)
     ]
     [ scrollView
-      [ height $ getQuoteListViewHeight config
+      [ height $ getQuoteListViewHeight config isSingleEstimate
       , width MATCH_PARENT
       ][  linearLayout
           [ height WRAP_CONTENT
@@ -411,12 +412,12 @@ quoteListView push config isSingleEstimate =
               ) config.quoteList
           )]]
 
-getQuoteListViewHeight :: Config -> Length
-getQuoteListViewHeight config =
+getQuoteListViewHeight :: Config -> Boolean -> Length
+getQuoteListViewHeight config isSingleEstimate =
     let len = length config.quoteList
         quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
-        height = if quoteHeight == 0 then 84 else quoteHeight
-    in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then (if EHC.os == "IOS" then 18 else 16) else 5
+        height = if quoteHeight == 0 then (if isSingleEstimate then 48 else 84) else quoteHeight
+    in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then 16 else 5
 
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config

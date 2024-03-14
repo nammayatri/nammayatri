@@ -132,7 +132,7 @@ driverInfoViewSpecialZone push state =
                  ][]
                ]
               , titleAndETA push state
-              , driverDetailsView (getDriverDetails state) "SpecialDriverDetailsView"
+              , driverDetailsView (getDriverDetails state) "SpecialDriverDetailsView" "SpecialNumberPlate"
               , navigateView push state
               , paymentMethodView push state (getString FARE_ESTIMATE) true "SpecialPaymentMethodView"
               , sizedBox (V 12) MATCH_PARENT
@@ -610,7 +610,7 @@ driverInfoView push state =
                       , width MATCH_PARENT
                       , orientation VERTICAL
                       , margin $ MarginTop if state.props.showBanner then 12 else 0
-                      ][driverDetailsView (getDriverDetails state) "DriverDetailsView"
+                      ][driverDetailsView (getDriverDetails state) "DriverDetailsView" "NumberPlate"
                       , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
                       , sizedBox (V 12) MATCH_PARENT
                       ]

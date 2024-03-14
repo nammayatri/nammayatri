@@ -594,7 +594,7 @@ driverInfoView push state =
               , visibility $ boolToVisibility isRideData
               , padding $ PaddingBottom $ safeMarginBottomWithDefault 16
               ]
-              [ driverDetailsView (getDriverDetails state) "FollowRideDriverDetailsView"
+              [ driverDetailsView (getDriverDetails state) "FollowRideDriverDetailsView" "FollowNumberPlate"
               ]
       , PrestoAnim.animationSet [ fadeOut isRideData ]
           $ linearLayout

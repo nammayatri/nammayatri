@@ -2591,8 +2591,9 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
     let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
     updateAndExit (updatedState) (GetQuotes updatedState)
 
-eval (ChooseYourRideAction ChooseYourRideController.NoAction) state =
-  continue state{ props{ defaultPickUpPoint = "" } }
+eval (ChooseYourRideAction ChooseYourRideController.NoAction) state = do
+  let height = (runFn1 getLayoutBounds $ getNewIDWithTag state.props.estimateId).height
+  continue state{ props{ defaultPickUpPoint = "", selectedEstimateHeight = height } }
 
 eval MapReadyAction state = continueWithCmd state [ do
       permissionConditionA <- isLocationPermissionEnabled unit
