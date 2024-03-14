@@ -277,8 +277,6 @@ eval action state = case action of
   SendQuickMessage chatSuggestion -> do
     if state.props.canSendSuggestion then do
       _ <- pure $ sendMessage chatSuggestion
-      let
-        _ = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
       continue state { props { unReadMessages = false } }
     else
       continue state
