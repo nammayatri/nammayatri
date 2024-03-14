@@ -117,6 +117,12 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
       nightShiftBounds = farePolicy.nightShiftBounds
 
+      serviceChargeCaption = show Tags.SERVICE_CHARGE
+      serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . show . (.getMoney)) <$> farePolicy.serviceCharge
+
+      governmentChargeCaption = show Tags.GOVERNMENT_CHARGE
+      governmentChargeItem = mkBreakupItem governmentChargeCaption . (mkValue . show) <$> farePolicy.govtCharges
+
       driverMinExtraFee = driverExtraFeeBounds <&> (.minFee)
       driverMinExtraFeeCaption = show Tags.DRIVER_MIN_EXTRA_FEE
       driverMinExtraFeeItem = mkBreakupItem driverMinExtraFeeCaption . (mkValue . show . (.getMoney)) <$> driverMinExtraFee
@@ -135,7 +141,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
 
       additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
   catMaybes
-    [ driverMinExtraFeeItem,
+    [ serviceChargeItem,
+      governmentChargeItem,
+      driverMinExtraFeeItem,
       driverMaxExtraFeeItem,
       nightShiftStartItem,
       nightShiftEndItem
@@ -171,34 +179,82 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
 
     mkAdditionalProgressiveBreakups det = do
       let perExtraKmFareSections = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
+
           mkPerExtraKmFareItem section = do
             let perExtraKmFareCaption = show Tags.EXTRA_PER_KM_FARE
             mkBreakupItem perExtraKmFareCaption (mkValue $ show (round section.perExtraKmRate :: Money))
-
           perExtraKmFareItems = mkPerExtraKmFareItem <$> (toList perExtraKmFareSections)
 
-      perExtraKmFareItems
+          perExtraKmStepFareCaption = show Tags.EXTRA_PER_KM_STEP_FARE
+          mkPerExtraKmStepFareBreakup = mkBreakupItem perExtraKmStepFareCaption (mkValue $ show perExtraKmFareSections)
+
+          baseDistanceCaption = show Tags.BASE_DISTANCE
+          baseDistanceBreakup = mkBreakupItem baseDistanceCaption (mkValue $ show det.baseDistance)
+
+          baseFareCaption = show Tags.BASE_FARE
+          baseFareBreakup = mkBreakupItem baseFareCaption (mkValue $ show det.baseFare)
+
+          pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
+          pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
+
+      [baseDistanceBreakup, baseFareBreakup, mkPerExtraKmStepFareBreakup, pickupChargeBreakup]
+        <> perExtraKmFareItems
         <> (waitingChargeBreakups det.waitingChargeInfo)
         <> (nightShiftChargeBreakups det.nightShiftCharge)
 
     mkAdditionalSlabBreakups det = do
-      (waitingChargeBreakups det.waitingChargeInfo)
+      let baseDistanceCaption = show Tags.BASE_DISTANCE
+          baseDistanceBreakup = mkBreakupItem baseDistanceCaption (mkValue $ show det.startDistance)
+
+          baseFareCaption = show Tags.BASE_FARE
+          baseFareBreakup = mkBreakupItem baseFareCaption (mkValue $ show det.baseFare)
+
+      [baseDistanceBreakup, baseFareBreakup]
+        <> (platformFeeBreakups det.platformFeeInfo)
+        <> (waitingChargeBreakups det.waitingChargeInfo)
         <> (nightShiftChargeBreakups det.nightShiftCharge)
+
+    platformFeeBreakups Nothing = []
+    platformFeeBreakups (Just platformFeeInfo) = do
+      let (mbProgressivePlatformFee, mbConstantPlatformFee) =
+            platformFeeInfo.platformFeeCharge & \case
+              FarePolicyD.ProgressivePlatformFee ppf -> (Just $ show ppf, Nothing)
+              FarePolicyD.ConstantPlatformFee cpf -> (Nothing, Just $ show cpf)
+
+          mbProgressivePlatformFeeCaption = show Tags.PROGRESSIVE_PLATFORM_CHARGE
+          mbProgressivePlatformFeeItem = mkBreakupItem mbProgressivePlatformFeeCaption . mkValue <$> mbProgressivePlatformFee
+
+          mbConstantPlatformFeeCation = show Tags.CONSTANT_PLATFORM_CHARGE
+          mbConstantPlatformFeeItem = mkBreakupItem mbConstantPlatformFeeCation . mkValue <$> mbConstantPlatformFee
+
+          mbPlatformFeeCgstCation = show Tags.PLATFORM_FEE_CGST
+          mbPlatformFeeCgstItem = mkBreakupItem mbPlatformFeeCgstCation (mkValue $ show platformFeeInfo.cgst)
+
+          mbPlatformFeeSgstCation = show Tags.PLATFORM_FEE_SGST
+          mbPlatformFeeSgstItem = mkBreakupItem mbPlatformFeeSgstCation (mkValue $ show platformFeeInfo.sgst)
+
+      catMaybes [mbProgressivePlatformFeeItem, mbConstantPlatformFeeItem, Just mbPlatformFeeCgstItem, Just mbPlatformFeeSgstItem]
 
     waitingChargeBreakups Nothing = []
     waitingChargeBreakups (Just waitingChargeInfo) = do
-      let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) =
+      let (mbWaitingChargePerMin, mbConstantWaitingCharges) =
             waitingChargeInfo.waitingCharge & \case
               DPM.PerMinuteWaitingCharge hpm -> (Just $ show (round hpm :: Money), Nothing)
               DPM.ConstantWaitingCharge mo -> (Nothing, Just $ show mo)
 
-          waitingOrPickupChargesCaption = show Tags.WAITING_OR_PICKUP_CHARGES
-          mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkValue <$> mbWaitingOrPickupCharges
+          waitingOrPickupChargesCaption = show Tags.WAITING_OR_PICKUP_CHARGES -- TODO :: To be deprecated
+          mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkValue <$> mbConstantWaitingCharges
 
           mbWaitingChargePerMinCaption = show Tags.WAITING_CHARGE_PER_MIN
           mbWaitingChargePerMinItem = mkBreakupItem mbWaitingChargePerMinCaption . mkValue <$> mbWaitingChargePerMin
 
-      catMaybes [mbWaitingOrPickupChargesItem, mbWaitingChargePerMinItem]
+          mbConstantWaitingChargeCaption = show Tags.CONSTANT_WAITING_CHARGE
+          mbConstantWaitingChargeItem = mkBreakupItem mbConstantWaitingChargeCaption . mkValue <$> mbConstantWaitingCharges
+
+          freeWaitingTimeCation = show Tags.FREE_WAITING_TIME_IN_MINUTES
+          freeWaitingTimeItem = mkBreakupItem freeWaitingTimeCation . mkValue . show $ waitingChargeInfo.freeWaitingTime.getMinutes
+
+      catMaybes [mbWaitingOrPickupChargesItem, mbWaitingChargePerMinItem, mbConstantWaitingChargeItem, Just freeWaitingTimeItem]
 
     nightShiftChargeBreakups nightShiftChargeInfo = do
       let getNightShiftChargeValue (DPM.ProgressiveNightShiftCharge a) = show (round a :: Money) -- fix from customer side first
