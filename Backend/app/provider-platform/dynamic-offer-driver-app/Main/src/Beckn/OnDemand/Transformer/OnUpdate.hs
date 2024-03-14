@@ -135,7 +135,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let safetyAlertTags = Utils.mkSafetyAlertTags reason code
+    let safetyAlertTags = Utils.mkSafetyAlertTags reason
     fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False (Just $ show Event.SAFETY_ALERT) isValueAddNP -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
