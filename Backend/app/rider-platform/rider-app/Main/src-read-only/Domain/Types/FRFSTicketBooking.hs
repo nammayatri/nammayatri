@@ -23,6 +23,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     bppOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
+    estimatedPrice :: Kernel.Types.Common.HighPrecMoney,
+    finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     paymentTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -23,6 +23,8 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     bppOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppSubscriberId :: B.C f Kernel.Prelude.Text,
     bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
+    estimatedPrice :: B.C f Kernel.Types.Common.HighPrecMoney,
+    finalPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     paymentTxnId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -76,6 +76,16 @@ updateBppBankDetailsById bppBankAccountNumber bppBankCode (Kernel.Types.Id.Id id
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
+updateFinalPriceById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updateFinalPriceById finalPrice (Kernel.Types.Id.Id id) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.finalPrice $ finalPrice,
+      Se.Set Beam.updatedAt $ now
+    ]
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
 updatePriceById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
 updatePriceById price (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
@@ -137,6 +147,8 @@ updateByPrimaryKey Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..} = do
       Se.Set Beam.bppOrderId bppOrderId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
+      Se.Set Beam.estimatedPrice $ estimatedPrice,
+      Se.Set Beam.finalPrice $ finalPrice,
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.paymentTxnId paymentTxnId,
       Se.Set Beam.price price,
@@ -174,6 +186,8 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             bppOrderId = bppOrderId,
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
+            estimatedPrice = estimatedPrice,
+            finalPrice = finalPrice,
             fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
             paymentTxnId = paymentTxnId,
@@ -206,6 +220,8 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.bppOrderId = bppOrderId,
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
+        Beam.estimatedPrice = estimatedPrice,
+        Beam.finalPrice = finalPrice,
         Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.paymentTxnId = paymentTxnId,

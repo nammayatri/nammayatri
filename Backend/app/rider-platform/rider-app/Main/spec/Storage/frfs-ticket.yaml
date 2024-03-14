@@ -156,6 +156,8 @@ FRFSTicketBooking:
     providerName: Text
     providerDescription: Maybe Text
     price: HighPrecMoney
+    estimatedPrice: HighPrecMoney
+    finalPrice: Maybe HighPrecMoney
     validTill: UTCTime
     paymentTxnId : Maybe Text
     bppBankAccountNumber: Maybe Text
@@ -196,6 +198,10 @@ FRFSTicketBooking:
     updateBPPOrderIdAndStatusById:
       kvFunction: updateWithKV
       params: [bppOrderId, status, updatedAt]
+      where: id
+    updateFinalPriceById:
+      kvFunction: updateWithKV
+      params: [finalPrice, updatedAt]
       where: id
     updatePriceById:
       kvFunction: updateWithKV
