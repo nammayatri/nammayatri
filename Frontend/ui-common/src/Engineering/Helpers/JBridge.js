@@ -693,7 +693,7 @@ export const storeCallBackMessageUpdated = function (cb) {
                 delay: 0
               }
               window.chatMessages = window.chatMessages || [];
-              if (sentBy /= window.currentUser) window.didReceiverMessage = true;
+              if (sentBy != window.currentUser) window.didReceiverMessage = true;
               window.chatMessages.push(messageObj);
               if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
                 cb(action(message)(sentBy)(timeStamp)(messagesSize))();
