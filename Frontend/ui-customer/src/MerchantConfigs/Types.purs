@@ -403,6 +403,7 @@ type CityBasedFeatures = {
 
 type EstimateConfig = {
   showInfoIcon :: Boolean
+  iopConfig :: InteroperabilityConfig
 }
 
 type GeoCodeConfig = {
@@ -421,4 +422,9 @@ type Banners = {
 
 type Safety = {
   pastRideInterval :: Int
+}
+
+type InteroperabilityConfig = {
+  enable :: Boolean,
+  autoSelectTime :: Int
 }

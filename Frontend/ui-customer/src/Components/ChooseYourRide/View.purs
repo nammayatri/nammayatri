@@ -8,7 +8,7 @@ import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (mapWithIndex, length, (!!), any)
+import Data.Array (mapWithIndex, length, (!!), filter, nubBy, any)
 import Data.Function.Uncurried (runFn1)
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
@@ -20,7 +20,7 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import JBridge (getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), (/=))
+import Prelude (Unit, ($), (<>), const, pure, unit, bind, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), map, (/=))
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -31,6 +31,13 @@ import Data.Int (toNumber,ceil)
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
 import Screens.Types (ZoneType(..), TipViewStage(..))
+import Data.Array (groupBy, head, sortBy, fromFoldable)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Ord (comparing)
+import Data.Traversable (traverse)
+import Data.Foldable (minimumBy, maximumBy)
+import Data.Ord (compare)
+import Data.Function (on)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -504,6 +511,18 @@ chooseYourRideView push config isSingleEstimate =
                   , background Color.grey900
                   ][]
                 ]
+          , textView $
+            [ text $ getString SHOWING_FARE_FROM_MULTI_PROVIDER
+            , color Color.black700
+            , height WRAP_CONTENT
+            , gravity CENTER
+            , width MATCH_PARENT
+            , margin $ Margin 16 16 16 0
+            , padding $ Padding 12 12 12 12
+            , background Color.blue600
+            , cornerRadius 8.0
+            , visibility $ boolToVisibility config.showMultiProvider
+            ] <> FontStyle.paragraphText TypoGraphy
           , quoteListView push config isSingleEstimate
           ]  
        ]
@@ -543,6 +562,10 @@ estimatedTimeAndDistanceView push config =
 
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
 quoteListView push config isSingleEstimate =
+  let variantBasedList = filterVariantAndEstimate config.quoteList
+      topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
+      viewHeight = getQuoteListViewHeight config isSingleEstimate $ length if config.showMultiProvider then variantBasedList else topProviderList
+  in 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -551,7 +574,7 @@ quoteListView push config isSingleEstimate =
     , afterRender push (const NoAction)
     ]
     [ scrollView
-      [ height $ getQuoteListViewHeight config isSingleEstimate
+      [ height $ viewHeight
       , width MATCH_PARENT
       ][  linearLayout
           [ height WRAP_CONTENT
@@ -559,16 +582,29 @@ quoteListView push config isSingleEstimate =
           , padding $ PaddingBottom 10
           , margin $ MarginHorizontal 16 16
           , orientation VERTICAL
-          ]( mapWithIndex
-              ( \index item -> 
-                  ChooseVehicle.view (push <<< ChooseVehicleAC) (item{isSingleEstimate = isSingleEstimate})
-              ) config.quoteList
-          )]]
+          ][  if config.showMultiProvider  then 
+                linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ]( map( \item -> do
+                    let vehicleImage = if isSingleEstimate then (HU.fetchImage HU.FF_ASSET "ny_ic_single_estimate_auto") else item.vehicleImage 
+                    ChooseVehicle.view (push <<< ChooseVehicleAC) item{isSingleEstimate = isSingleEstimate, vehicleImage = vehicleImage}) variantBasedList
+                  )
+              else 
+                linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ]( map (\item -> do
+                    let vehicleImage = if isSingleEstimate then (HU.fetchImage HU.FF_ASSET "ny_ic_single_estimate_auto") else item.vehicleImage 
+                    ChooseVehicle.view (push <<< ChooseVehicleAC) item{isSingleEstimate = isSingleEstimate, vehicleImage = vehicleImage}) topProviderList 
+                  )
+          ]]]
 
-getQuoteListViewHeight :: Config -> Boolean -> Length
-getQuoteListViewHeight config isSingleEstimate =
-    let len = length config.quoteList
-        quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
+getQuoteListViewHeight :: Config -> Boolean -> Int -> Length
+getQuoteListViewHeight config isSingleEstimate len =
+    let quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
         height = if quoteHeight == 0 then (if isSingleEstimate then 48 else 84) else quoteHeight
     in V $ (if len >= 4 then 3 * height else len * height) + if len == 1 then 16 else 5
 
@@ -590,3 +626,18 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
               Just selectedItem -> fromMaybe "" selectedItem.serviceTierName
               Nothing -> ""
 
+filterVariantAndEstimate :: Array ChooseVehicle.Config -> Array ChooseVehicle.Config -- showing unique quotes based on variant and arrange price range (In case of multiple provider)
+filterVariantAndEstimate configArray = fromMaybe [] $ do
+  let grouped = map fromFoldable $ groupBy ((==) `on` _.vehicleVariant) (sortBy (comparing _.vehicleVariant) configArray)
+  traverse mergeGroup grouped
+  where 
+    mergeGroup :: Array ChooseVehicle.Config -> Maybe ChooseVehicle.Config
+    mergeGroup group = do
+      first <- head group
+      minPriceItem <- minimumBy (compare `on` _.minPrice) group
+      maxPriceItem <- maximumBy (compare `on` _.maxPrice) group
+      minBPItem <- minimumBy (compare `on` _.basePrice) group
+      maxBPItem <- maximumBy (compare `on` _.basePrice) group
+      case minPriceItem.minPrice, maxPriceItem.maxPrice of 
+        Just minP, Just maxP -> pure $ first { showInfo = false, price = "₹" <> show minP <> " - ₹" <> show maxP }
+        _ , _ -> pure $ first { showInfo = false, price =  "₹" <> show minBPItem.basePrice <> " - ₹" <>  show maxBPItem.basePrice }

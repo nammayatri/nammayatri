@@ -82,7 +82,7 @@ foreign import fetchPackageName :: Unit -> Effect String
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
-foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
+foreign import showInAppNotification :: InAppNotificationPayload -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 foreign import isBackgroundLocationEnabled :: Unit -> Effect Boolean
@@ -542,6 +542,8 @@ type MapRouteConfig = {
   , isAnimation :: Boolean
   , polylineAnimationConfig :: PolylineAnimationConfig
   , autoZoom :: Boolean
+  , dashUnit :: Int
+  , gapUnit :: Int
 }
 
 type Coordinates = Array Paths
@@ -584,18 +586,55 @@ type UpdateRouteConfig = {
   , autoZoom :: Boolean
 }
 
+type InAppNotificationPayload = {
+  event :: String,
+  title :: String,
+  message :: String,
+  onTapAction :: String,
+  action1Text :: String,
+  action2Text :: String,
+  action1Image :: String,
+  action2Image :: String,
+  channelId :: String,
+  durationInMilliSeconds :: Int,
+  showLoader :: Boolean
+}
+
+inAppNotificationPayload :: InAppNotificationPayload
+inAppNotificationPayload = {
+  event : "in_app_notification",
+  title : "",
+  message : "",
+  onTapAction : "",
+  action1Text : "",
+  action2Text : "",
+  action1Image : "",
+  action2Image : "",
+  channelId : "channel",
+  durationInMilliSeconds : 5000,
+  showLoader : false
+}
+
 updateRouteConfig :: UpdateRouteConfig
 updateRouteConfig = {
     json : {points: []}
   , destMarker : ""
   , eta : ""
   , srcMarker : ""
-  , specialLocation : {
+  , specialLocation : mapRouteConfig
+  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+  , autoZoom : true
+}
+
+mapRouteConfig :: MapRouteConfig
+mapRouteConfig = {
       sourceSpecialTagIcon: "", 
       destSpecialTagIcon: "", 
       vehicleSizeTagIcon: 0, 
       isAnimation: false, 
       autoZoom : true,
+      dashUnit : 1,
+      gapUnit : 0,
       polylineAnimationConfig: {
         color: "", 
         draw: 0, 
@@ -603,9 +642,6 @@ updateRouteConfig = {
         delay: 0
       } 
   }
-  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
-  , autoZoom : true
-}
 
 -- type Point = Array Number
 

@@ -144,7 +144,7 @@ driverInfoViewSpecialZone push state =
             , background Color.grey700
             ][if not state.data.config.showPickUpandDrop then dummyView push else sourceDestinationView push (getTripDetails state)
               , cancelRideLayout push state
-              , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing
+              , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing true ""
             ]
           ]
       ]
@@ -165,7 +165,7 @@ shareRideButton push state =
   [ height $ WRAP_CONTENT
   , width $ WRAP_CONTENT
   , orientation VERTICAL
-  , clickable true
+  , clickable $ state.data.providerType == ONUS -- true
   , accessibility DISABLE
   , clipChildren false
   ][ linearLayout
@@ -175,7 +175,7 @@ shareRideButton push state =
      , background Color.white900
      , stroke $ "1,"<> Color.grey900
      , cornerRadius if os == "IOS" then 20.0 else 32.0
-     , clickable true
+     , clickable $ state.data.providerType == ONUS -- true
      , accessibilityHint "Share Ride : Button : Select to share ride details"
      , accessibility ENABLE
      , onClick push $ const ShareRide
@@ -187,6 +187,7 @@ shareRideButton push state =
        , height $ V 16
        , width $ V 16
        , accessibility DISABLE
+       , alpha if state.data.providerType == ONUS then 1.0 else 0.5
        ]
      ]
   ]
@@ -635,7 +636,7 @@ driverInfoView push state =
                 , background Color.grey700
                 ][if not state.data.config.showPickUpandDrop then dummyView push else sourceDestinationView push (getTripDetails state)
                 , cancelRideLayout push state
-                , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing
+                , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing true ""
                 ]
          ]
       ]
@@ -690,9 +691,10 @@ distanceView push state =
   , if state.props.isChatWithEMEnabled then chatButtonView push state else dummyView push
   ]
 
-brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> PrestoDOM (Effect Unit) w
-brandingBannerView driverInfoConfig isVisible uid = 
-  let brandingVisibility = if not driverInfoConfig.footerVisibility then GONE else isVisible
+brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> Boolean -> String -> PrestoDOM (Effect Unit) w
+brandingBannerView driverInfoConfig isVisible uid onUsRide providerName = 
+  let providerRideText = if onUsRide then "Guaranteed Ride" else "This ride is fulfilled by: " <> providerName
+      style = if onUsRide then FontStyle.captions else FontStyle.body3
   in 
     linearLayout
     [ width MATCH_PARENT
@@ -700,7 +702,7 @@ brandingBannerView driverInfoConfig isVisible uid =
     , orientation VERTICAL
     , alignParentBottom "true,-1"
     , gravity BOTTOM
-    , visibility $ brandingVisibility
+    , visibility $ isVisible
     ][ separator (MarginTop 0) (V 1) Color.grey900 true
      , linearLayout
        ([ width MATCH_PARENT
@@ -709,18 +711,19 @@ brandingBannerView driverInfoConfig isVisible uid =
        , background driverInfoConfig.footerBackgroundColor
        , padding $ Padding 12 12 12 (12+safeMarginBottom)
        ] <> if isJust uid then [id $ getNewIDWithTag $ fromMaybe "" uid] else [])
-       [textView $
-        [ text $ getString POWERED_BY 
-        , width WRAP_CONTENT    
-        , height WRAP_CONTENT
-        , color Color.black800
-        , padding $ PaddingRight 6
-        ] <> FontStyle.body3 TypoGraphy
-      , imageView
-        [ imageWithFallback $ driverInfoConfig.footerImageUrl
-        , width $ V 62
-        , height $ V 20
-        ]
+       [ imageView
+          [ imageWithFallback $ driverInfoConfig.footerImageUrl
+          , height $ V 20
+          , width $ V 62
+          , margin $ MarginHorizontal 10 10
+          , visibility $ boolToVisibility $ onUsRide
+          ]
+        , textView $ 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , margin $ MarginLeft 5
+          , text providerRideText
+          ] <> style TypoGraphy
       ]
     ]
 
@@ -758,10 +761,6 @@ cancelRideLayout push state =
 ---------------------------------- contactView ---------------------------------------
 contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 contactView push state =
-  let
-    feature = state.data.config.feature
-    eta = secondsToHms (fromMaybe 0 state.data.eta)
-  in
   linearLayout
     [ orientation HORIZONTAL
     , height WRAP_CONTENT
@@ -795,6 +794,7 @@ contactView push state =
          ]
       , chatButtonView push state
     ]
+    where eta = secondsToHms (fromMaybe 0 state.data.eta)
 
 chatButtonView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 chatButtonView push state = 
@@ -814,12 +814,18 @@ chatButtonView push state =
       , accessibility ENABLE
       , rippleColor Color.rippleShade
       ][ imageView
-          [ imageWithFallback  $ if state.data.config.feature.enableChat then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
+          [ imageWithFallback imageAsset
           , height $ V state.data.config.driverInfoConfig.callHeight
           , width $ V state.data.config.driverInfoConfig.callWidth
           ]
       ]
     ]
+    where 
+      feature = state.data.config.feature
+      imageAsset = case feature.enableChat, state.data.providerType of
+                            true, ONUS -> fetchImage FF_ASSET if state.props.unReadMessages then "ic_chat_badge_green" else "ic_call_msg"
+                            _, _ -> fetchImage FF_COMMON_ASSET "ny_ic_call"
+      -- if state.data.config.feature.enableChat then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
 
 
 ---------------------------------- ratingView ---------------------------------------
@@ -1244,6 +1250,7 @@ getDriverDetails state = {
   , config : state.data.config
   , rideStarted : state.props.currentStage == RideStarted
   , enablePaddingBottom : false
+  , providerType : state.data.providerType
 }
 
 getTripDetails :: DriverInfoCardState -> TripDetails Action

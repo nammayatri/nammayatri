@@ -9,6 +9,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Margin(..))
 import Data.Maybe (Maybe(..))
 import Common.Types.App (RateCardType(..))
+import Common.Types.App as CT
 
 data Action
   = NoAction
@@ -29,13 +30,13 @@ type Config
     , index :: Int
     , activeIndex :: Int
     , id :: String
-    , maxPrice :: Int
+    , maxPrice :: Maybe Int
+    , minPrice :: Maybe Int
     , basePrice :: Int
     , showInfo :: Boolean
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
     , pickUpCharges :: Int 
-    , layoutMargin :: Margin
     , isSingleEstimate :: Boolean
     , tollCharge :: Int
     , serviceTierShortDesc :: Maybe String
@@ -48,6 +49,10 @@ type Config
     , airConditioned :: Maybe Boolean
     , showEditButton :: Boolean
     , editBtnText :: String
+    , layoutMargin :: Margin 
+    , providerName :: String
+    , providerId :: String
+    , providerType :: CT.ProviderType
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -72,7 +77,8 @@ config =
   , activeIndex: 0
   , index: 0
   , id: ""
-  , maxPrice : 123
+  , maxPrice : Nothing
+  , minPrice : Nothing
   , basePrice : 0 
   , showInfo : false
   , searchResultType : QUOTES
@@ -91,4 +97,7 @@ config =
   , airConditioned : Nothing
   , showEditButton : false
   , editBtnText : ""
+  , providerName : ""
+  , providerId : ""
+  , providerType : CT.ONUS
   }

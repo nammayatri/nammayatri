@@ -101,7 +101,7 @@ view push state =
                   , sourceDestinationEditTextView state push
                   ]]
                   , PrestoAnim.animationSet
-                    [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]
+                    [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true]
                     $ linearLayout
                       [ height $ V 1
                       , width MATCH_PARENT
@@ -114,7 +114,7 @@ view push state =
                     , height MATCH_PARENT
                     , weight 1.0
                     ][ PrestoAnim.animationSet
-                      [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500]
+                      [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true]
                       $ searchResultsParentView state push 
                       , linearLayout
                         [ width MATCH_PARENT

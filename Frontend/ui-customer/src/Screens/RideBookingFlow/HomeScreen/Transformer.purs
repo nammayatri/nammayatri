@@ -58,6 +58,7 @@ import ConfigProvider
 import Locale.Utils
 import Data.Either (Either(..))
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
+import Common.Types.App as CT
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -107,10 +108,11 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
     (DRIVER_OFFER contents) -> 
       let (DriverOfferAPIEntity quoteDetails) = contents
           expiryTime = (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
+          timeLeft = fromMaybe 0 quoteDetails.durationToPickup
       in {  seconds : expiryTime
           , id : quoteEntity.id
           , timer : show expiryTime
-          , timeLeft : (fromMaybe 0 quoteDetails.durationToPickup)/60
+          , timeLeft : timeLeft/60
           , driverRating : fromMaybe 0.0 quoteDetails.rating
           , profile : ""
           , price :  show quoteEntity.estimatedTotalFare
@@ -159,6 +161,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
       , config : getAppConfig appConfig
+      , providerName : resp.agencyName
+      , providerType : maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) resp.isValueAddNP -- get from API
       , vehicleVariant : if rideList.vehicleVariant /= "" 
                             then rideList.vehicleVariant 
                          else
@@ -200,7 +204,7 @@ dummyRideAPIEntity = RideAPIEntity{
   createdAt : "",
   driverNumber : Nothing,
   shortRideId : "",
-  driverRegisteredAt : "",
+  driverRegisteredAt : Nothing,
   vehicleNumber : "",
   rideOtp : "",
   driverName : "",
@@ -431,6 +435,9 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       baseFare = maybe 0 calculateBaseFare (find hasBaseDistanceFare estimateFareBreakup)
       hasBaseDistanceFare item = item ^. _title == "BASE_DISTANCE_FARE"
       calculateBaseFare baseDistFare = round $ (toNumber $ baseDistFare ^. _price) * fareMultiplier
+      extractFare f = case estimate.totalFareRange of
+                        Just (FareRange fareRange) -> Just (f fareRange)
+                        _ -> Nothing
   in ChooseVehicle.config {
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
@@ -454,6 +461,11 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , nightShiftMultiplier = nightShiftMultiplier
       , nightCharges = nightCharges
       , baseFare = baseFare
+      , providerName = fromMaybe "" estimate.providerName
+      , providerId = fromMaybe "" estimate.providerId
+      , providerType = maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) estimate.isValueAddNP
+      , maxPrice = extractFare _.maxFare
+      , minPrice = extractFare _.minFare
       }
 
 dummyFareRange :: FareRange
@@ -607,7 +619,7 @@ dummyEstimateEntity =
     , estimatedFare: 0
     , tripTerms: []
     , id: ""
-    , agencyCompletedRidesCount: 0
+    , agencyCompletedRidesCount: Nothing
     , estimateFareBreakup: Nothing
     , totalFareRange: Nothing
     , nightShiftRate: Nothing
@@ -616,6 +628,9 @@ dummyEstimateEntity =
     , serviceTierShortDesc: Nothing
     , serviceTierName : Nothing
     , airConditioned : Nothing
+    , providerName : Nothing
+    , providerId : Nothing
+    , isValueAddNP : Nothing
     }
 
 getSpecialTag :: Maybe String -> SpecialTags

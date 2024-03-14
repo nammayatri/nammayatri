@@ -1093,3 +1093,13 @@ getML stringKey =
         PLEASE_STAY_CALM_TEAM_ALERTED appName -> "ദയവായി ശാന്തമായി ഇരുക്കുക, "<> appName <>" സുരക്ഷ ടീമ് അറിയിക്കപ്പെടുന്നു!"
         INDICATION_TO_EMERGENCY_CONTACTS appName -> appName <>" നിങ്ങളുടെ എമർജൻസി കോൺടാക്റ്റുകൾക്ക് ഇത് ഒരു പരീക്ഷണ പരിശീലനമായി ഇരിക്കുന്നുവെന്ന് സൂചിപ്പിക്കുന്നു."
         BOOK name -> "ബുക്ക് " <> name
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "ഒന്നിലധികം ദാതാക്കളിൽ നിന്നുള്ള നിരക്കുകൾ കാണിക്കുന്നു"
+        LIVE_CHAT -> "തത്സമയ ചാറ്റ്"
+        DRIVER_TIP_ADDITION -> "ഡ്രൈവർ നുറുങ്ങ് കൂട്ടിച്ചേർക്കൽ"
+        LIVE_RIDE_SHARING -> "തത്സമയ റൈഡ് പങ്കിടൽ"
+        ENHANCED_SAFETY -> "മെച്ചപ്പെടുത്തിയ സുരക്ഷ"
+        CONFIRM_PROVIDER -> "ദാതാവിനെ സ്ഥിരീകരിക്കുക"
+        SELECT_A_PROVIDER -> "ഒരു ദാതാവിനെ തിരഞ്ഞെടുക്കുക"
+        CONFIRMING_SELECTED_PROVIDER -> "ഇതിൽ തിരഞ്ഞെടുത്ത ദാതാവിനെ സ്ഥിരീകരിക്കുന്നു: "
+        BOOK_TOP_PROVIDER -> "ബുക്ക് ടോപ്പ് പ്രൊവൈഡർ"
+        CHOOSE_FROM_PROVIDERS -> "ലഭ്യമായ എല്ലാ ദാതാക്കളിൽ നിന്നും തിരഞ്ഞെടുക്കുക"

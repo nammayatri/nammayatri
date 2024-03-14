@@ -1091,3 +1091,13 @@ getEN stringKey =
         APPLICABLE_TOLL_CHARGES -> "Applicable Toll charges are included in the fares"
         UPDATE_TIP_STR -> "Update Tip"
         BOOK name -> "Book " <> name
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "Showing fares from multiple providers"
+        LIVE_CHAT -> "Live Chat"
+        DRIVER_TIP_ADDITION -> "Driver Tip Addition"
+        LIVE_RIDE_SHARING -> "Live Ride Sharing"
+        ENHANCED_SAFETY -> "Enhanced Safety"
+        CONFIRM_PROVIDER -> "Confirm Provider"
+        SELECT_A_PROVIDER -> "Select a provider"
+        CONFIRMING_SELECTED_PROVIDER -> "Confirming selected provider in: "
+        BOOK_TOP_PROVIDER -> "Book top provider"
+        CHOOSE_FROM_PROVIDERS -> "Choose from all available providers"

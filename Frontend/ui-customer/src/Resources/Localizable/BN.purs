@@ -1093,3 +1093,13 @@ getBN stringKey =
         PLEASE_STAY_CALM_TEAM_ALERTED appName -> "দয়া করে শান্ত থাকুন, "<> appName <>" সুরক্ষা দলকে সতর্ক করা হয়েছে!"
         INDICATION_TO_EMERGENCY_CONTACTS appName -> appName <> "আপনার আত্মীয়দের জানাবে যে এটি একটি পরীক্ষামূলক ড্রিল, যাতে তারা স্ট্রেস-ফ্রি অভিজ্ঞতা পাবেন।"
         BOOK name -> "বুক " <> name
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "একাধিক প্রদানকারীর থেকে ভাড়া দেখানো হচ্ছে"
+        LIVE_CHAT -> "লাইভ চ্যাট"
+        DRIVER_TIP_ADDITION -> "ড্রাইভার টিপ সংযোজন"
+        LIVE_RIDE_SHARING -> "লাইভ রাইড শেয়ারিং"
+        ENHANCED_SAFETY -> "উন্নত নিরাপত্তা"
+        CONFIRM_PROVIDER -> "প্রদানকারী নিশ্চিত করুন"
+        SELECT_A_PROVIDER -> "একটি প্রদানকারী নির্বাচন করুন"
+        CONFIRMING_SELECTED_PROVIDER -> "নির্বাচিত প্রদানকারীকে এতে নিশ্চিত করা হচ্ছে: "
+        BOOK_TOP_PROVIDER -> "বুক শীর্ষ প্রদানকারী"
+        CHOOSE_FROM_PROVIDERS -> "সমস্ত উপলব্ধ প্রদানকারী থেকে চয়ন করুন"

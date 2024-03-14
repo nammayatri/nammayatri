@@ -1108,3 +1108,13 @@ getTA stringKey =
     PLEASE_STAY_CALM_TEAM_ALERTED appName -> "தயவுசெய்து சுமாராக இருங்கள், "<> appName <>" பாதுகாப்பு குழு அறிக்கை அளிக்கப்படும்!"
     INDICATION_TO_EMERGENCY_CONTACTS appName -> appName <>" உங்கள் எதிர்கால உதவி தொடர்புகளுக்கு இது ஒரு சோதனை வழிமுறை என்று அறிவிக்கும்."
     BOOK name -> "புத்தகம் " <> name
+    SHOWING_FARE_FROM_MULTI_PROVIDER -> "பல வழங்குநர்களிடமிருந்து கட்டணங்களைக் காட்டுகிறது"
+    LIVE_CHAT -> "நேரடி அரட்டை"
+    DRIVER_TIP_ADDITION -> "டிரைவர் உதவிக்குறிப்பு சேர்த்தல்"
+    LIVE_RIDE_SHARING -> "நேரடி சவாரி பகிர்வு"
+    ENHANCED_SAFETY -> "மேம்படுத்தப்பட்ட பாதுகாப்பு"
+    CONFIRM_PROVIDER -> "வழங்கலை உறுதிப்படுத்தவும்"
+    SELECT_A_PROVIDER -> "ஒரு வழங்குநரைத் தேர்ந்தெடு"
+    CONFIRMING_SELECTED_PROVIDER -> "தேர்ந்தெடுக்கப்பட்ட வழங்குநரை இதில் உறுதிப்படுத்துகிறது: "
+    BOOK_TOP_PROVIDER -> "புக் டாப் வழங்குநர்"
+    CHOOSE_FROM_PROVIDERS -> "கிடைக்கும் அனைத்து வழங்குநர்களிடமிருந்தும் தேர்வு செய்யவும்"

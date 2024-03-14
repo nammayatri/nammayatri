@@ -21,6 +21,7 @@ import Services.API (BookingLocationAPIEntity(..))
 import ConfigProvider
 import Prelude ((<>))
 import Foreign.Object (empty)
+import Common.Types.App as CTP
 
 initData :: MyRidesScreenState
 initData =
@@ -109,4 +110,6 @@ dummyIndividualCard = {
   , optionsVisibility : false
   , merchantExoPhone : ""
   , serviceTierName : Nothing
+  , providerName : ""
+  , providerType : CTP.ONUS
 }

@@ -46,6 +46,7 @@ import Screens(ScreenName)
 import PrestoDOM.List
 import JBridge (Location)
 import Data.HashMap as DHM
+import MerchantConfig.Types as MRC
 
 type Contacts = {
   name :: String,
@@ -452,6 +453,8 @@ type IndividualRideCardState =
   , optionsVisibility :: Boolean
   , merchantExoPhone :: String
   , serviceTierName :: Maybe String
+  , providerName :: String
+  , providerType :: ProviderType
   }
 
 
@@ -612,7 +615,19 @@ type HomeScreenStateData =
   , followers :: Maybe (Array Followers)
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
+  , iopState :: InteroperabilityState
+  , currentCityConfig :: MRC.CityConfig
   }
+
+type InteroperabilityState = {
+  timerId :: String,
+  timerVal :: String,
+  showMultiProvider :: Boolean,
+  providerPrefVisible :: Boolean,
+  providerSelectionStage :: Boolean,
+  showPrefButton :: Boolean,
+  providerPrefInfo :: Boolean
+}
 
 type RentalsInfo = 
   {
@@ -1152,6 +1167,8 @@ type DriverInfoCard =
   , destinationAddress :: Address
   , status :: String
   , serviceTierName :: Maybe String
+  , providerType :: ProviderType
+  , providerName :: String
   }
 
 type RatingCard =
