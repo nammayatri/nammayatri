@@ -46,7 +46,7 @@ instance FromJSON (MerchantPaymentMethodD 'Unsafe)
 
 instance ToJSON (MerchantPaymentMethodD 'Unsafe)
 
-data PaymentType = ON_FULFILLMENT
+data PaymentType = ON_FULFILLMENT | POSTPAID
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, Ord, ToSchema)
 
 data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash

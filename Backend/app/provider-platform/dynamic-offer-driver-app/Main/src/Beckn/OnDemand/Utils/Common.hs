@@ -215,6 +215,7 @@ rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
 
 castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
+castDPaymentType DMPM.POSTPAID = show Enums.ON_FULFILLMENT
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe Variant.Variant
 parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of

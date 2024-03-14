@@ -38,13 +38,16 @@ findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithOptionsKV [S
 
 instance FromTType' BeamMPM.MerchantPaymentMethod MerchantPaymentMethod where
   fromTType' BeamMPM.MerchantPaymentMethodT {..} = do
+    let pType = case paymentType of
+          ON_FULFILLMENT -> ON_FULFILLMENT
+          POSTPAID -> ON_FULFILLMENT
     pure $
       Just
         MerchantPaymentMethod
           { id = Id id,
             merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
-            paymentType = paymentType,
+            paymentType = pType,
             paymentInstrument = paymentInstrument,
             collectedBy = collectedBy,
             priority = priority,
