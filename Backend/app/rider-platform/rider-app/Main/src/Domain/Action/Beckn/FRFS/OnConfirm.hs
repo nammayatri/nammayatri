@@ -163,6 +163,7 @@ callBPPCancel :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environm
 callBPPCancel booking bapConfig = do
   fork "FRFS Cancel Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-    bknCancelReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
+    merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
+    bknCancelReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city
     logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
     void $ CallBPP.cancel providerUrl bknCancelReq

@@ -15,6 +15,7 @@ import qualified Domain.Types.Station
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -22,7 +23,7 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  TokenAuth :> "frfs" :> "stations" :> MandatoryQueryParam "vehicleType" (Domain.Types.Station.FRFSVehicleType) :> Get '[JSON] [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+  TokenAuth :> "frfs" :> "stations" :> QueryParam "city" (Kernel.Types.Beckn.Context.City) :> MandatoryQueryParam "vehicleType" (Domain.Types.Station.FRFSVehicleType) :> Get '[JSON] [API.Types.UI.FRFSTicketService.FRFSStationAPI]
     :<|> TokenAuth :> "frfs" :> "search" :> MandatoryQueryParam "vehicleType" (Domain.Types.Station.FRFSVehicleType) :> ReqBody '[JSON] API.Types.UI.FRFSTicketService.FRFSSearchAPIReq :> Post '[JSON] API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
     :<|> TokenAuth :> "frfs" :> "search" :> Capture "searchId" (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch) :> "quote" :> Get '[JSON] [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
     :<|> TokenAuth :> "frfs" :> "quote" :> Capture "quoteId" (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote) :> "confirm" :> Post '[JSON] API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
@@ -40,8 +41,8 @@ handler =
     :<|> getFrfsBookingStatus
     :<|> getFrfsBookingList
 
-getFrfsStations :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.Station.FRFSVehicleType -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]
-getFrfsStations a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getFrfsStations :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) -> Domain.Types.Station.FRFSVehicleType -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+getFrfsStations a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postFrfsSearch :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Types.Station.FRFSVehicleType -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 postFrfsSearch a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

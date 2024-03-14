@@ -14,8 +14,13 @@
 
 module Domain.Action.Beckn.FRFS.Common where
 
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Station as QStation
 
 data DFareBreakUp = DFareBreakUp
   { title :: Text,
@@ -42,3 +47,12 @@ data DTicket = DTicket
     validTill :: UTCTime,
     status :: Text
   }
+
+getMerchantOperatingCityFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m DMOC.MerchantOperatingCity
+getMerchantOperatingCityFromBooking tBooking = do
+  moCityId <- case tBooking.merchantOperatingCityId of
+    Nothing -> do
+      station <- QStation.findById tBooking.fromStationId >>= fromMaybeM (InternalError $ "Station with id - " <> show tBooking.fromStationId <> " not found.")
+      return station.merchantOperatingCityId
+    Just moCityId -> return moCityId
+  CQMOC.findById moCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show moCityId)

@@ -34,11 +34,11 @@ findByStationCode code = do
     [ Se.Is Beam.code $ Se.Eq code
     ]
 
-getTicketPlacesByMerchantOperatingCityIdAndVehicleType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Station.FRFSVehicleType -> m ([Domain.Types.Station.Station])
-getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOperatingCityId vehicleType = do
+getTicketPlacesByMerchantOperatingCityIdAndVehicleType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Station.FRFSVehicleType -> m ([Domain.Types.Station.Station])
+getTicketPlacesByMerchantOperatingCityIdAndVehicleType (Kernel.Types.Id.Id merchantOperatingCityId) vehicleType = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
           Se.Is Beam.vehicleType $ Se.Eq vehicleType
         ]
     ]
@@ -68,7 +68,7 @@ updateByPrimaryKey Domain.Types.Station.Station {..} = do
       Se.Set Beam.name name,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -87,10 +87,10 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
             id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
             vehicleType = vehicleType,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -103,10 +103,10 @@ instance ToTType' Beam.Station Domain.Types.Station.Station where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,
         Beam.lon = lon,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
         Beam.vehicleType = vehicleType,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
