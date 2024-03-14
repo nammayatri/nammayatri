@@ -278,8 +278,8 @@ mkNewMessageTags message =
             tagValue = Just message
           }
 
-mkSafetyAlertTags :: Text -> Text -> Maybe [Spec.TagGroup]
-mkSafetyAlertTags reason code =
+mkSafetyAlertTags :: Text -> Maybe [Spec.TagGroup]
+mkSafetyAlertTags reason =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -302,7 +302,7 @@ mkSafetyAlertTags reason code =
           { tagDescriptor =
               Just $
                 Spec.Descriptor
-                  { descriptorCode = Just code,
+                  { descriptorCode = Just $ show Tags.DEVIATION,
                     descriptorName = Just "Safety Alert Trigger",
                     descriptorShortDesc = Nothing
                   },
