@@ -31,6 +31,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.BasicAuth ()
@@ -38,6 +39,7 @@ import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp, throwError)
 import Servant.OpenApi
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.Payment as TPayment
 
 type API =
   MainAPI
@@ -54,6 +56,9 @@ type MainAPI =
     -- :<|> Beckn.APIV2 -- TODO : Revert after 2.x release
     :<|> MetroBeckn.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceType" TPayment.PaymentServiceType
+             :> QueryParam "placeId" Text
              :> Juspay.JuspayWebhookAPI
          )
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
@@ -104,8 +109,11 @@ writeOpenAPIFlow = pure openAPI
 
 juspayWebhookHandler ::
   ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe TPayment.PaymentServiceType ->
+  Maybe Text ->
   BasicAuthData ->
   Value ->
   FlowHandler AckResponse
-juspayWebhookHandler merchantShortId secret =
-  withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId secret
+juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret =
+  withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret

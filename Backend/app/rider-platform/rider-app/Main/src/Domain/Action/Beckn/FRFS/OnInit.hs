@@ -111,7 +111,7 @@ onInit onInitReq merchant booking_ = do
 
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchant.id
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-      createOrderCall = Payment.createOrder merchant.id Nothing
+      createOrderCall = Payment.createOrder merchant.id Nothing Payment.FRFSBooking
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just _ -> do
