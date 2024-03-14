@@ -37,6 +37,7 @@ import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import SharedLogic.SearchTry
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.CachedQueries.Merchant.TransporterConfig as QMTC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
@@ -85,8 +86,9 @@ cancelRideImpl rideId bookingCReason = do
         let searchRepeatLimit = transpConf.searchRepeatLimit
         now <- getCurrentTime
         let isSearchTryValid = searchTry.validTill > now
-        driverReachedDistance <- highPrecMetersToMeters <$> asks (.driverReachedDistance)
-        let driverHasNotArrived = isNothing ride.driverArrivalTime || maybe True (> driverReachedDistance) bookingCReason.driverDistToPickup
+        transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+        let arrivedPickupThreshold = highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
+        let driverHasNotArrived = isNothing ride.driverArrivalTime || maybe True (> arrivedPickupThreshold) bookingCReason.driverDistToPickup
         let isRepeatSearch =
               searchTry.searchRepeatCounter < searchRepeatLimit
                 && bookingCReason.source == SBCR.ByDriver

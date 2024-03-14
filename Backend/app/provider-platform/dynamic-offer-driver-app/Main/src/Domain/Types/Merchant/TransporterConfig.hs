@@ -158,6 +158,7 @@ data TransporterConfigD u = TransporterConfig
     canAddCancellationFee :: Bool,
     allowDefaultPlanAllocation :: Bool,
     arrivedStopThreshold :: Maybe HighPrecMeters,
+    arrivedPickupThreshold :: HighPrecMeters,
     specialDrivers :: [Text],
     specialLocationTags :: [Text],
     createdAt :: UTCTime,

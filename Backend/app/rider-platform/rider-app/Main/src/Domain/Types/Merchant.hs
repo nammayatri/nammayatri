@@ -59,7 +59,9 @@ data MerchantD (s :: UsageSafety) = Merchant
     publicMediaFileUrlPattern :: Text,
     scheduleRideBufferTime :: NominalDiffTime,
     fakeOtpMobileNumbers :: [Text],
-    kaptureDisposition :: Text
+    kaptureDisposition :: Text,
+    arrivedPickupThreshold :: Meters,
+    driverOnTheWayNotifyExpiry :: Seconds
   }
   deriving (Generic, Show)
 

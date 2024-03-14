@@ -40,7 +40,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
-import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -102,7 +101,6 @@ getDriverLoc ::
     EsqDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     EsqDBReplicaFlow m r,
-    HasField "rideCfg" r RideConfig,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasLongDurationRetryCfg r c
   ) =>
@@ -127,8 +125,7 @@ getDriverLoc rideId = do
               lastUpdate = trackingLoc.updatedAt
             }
   let fromLocation = Maps.getCoordinates booking.fromLocation
-  driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
-  driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
+  merchant <- CQMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
   mbHasReachedNotified <- Redis.get @() driverHasReached
   when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
@@ -139,8 +136,8 @@ getDriverLoc rideId = do
       Just startDistance -> when (startDistance - 50 > distance) $ do
         unless (isJust mbIsOnTheWayNotified) $ do
           Notify.notifyDriverOnTheWay booking.riderId
-          Redis.setExp driverOnTheWay () driverOnTheWayNotifyExpiry
-        when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
+          Redis.setExp driverOnTheWay () merchant.driverOnTheWayNotifyExpiry.getSeconds
+        when (isNothing mbHasReachedNotified && distance <= merchant.arrivedPickupThreshold) $ do
           Notify.notifyDriverHasReached booking.riderId ride.otp ride.vehicleNumber
           Redis.setExp driverHasReached () 1500
   return $
@@ -159,7 +156,6 @@ getRideStatus ::
     EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HasField "rideCfg" r RideConfig,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id SRide.Ride ->

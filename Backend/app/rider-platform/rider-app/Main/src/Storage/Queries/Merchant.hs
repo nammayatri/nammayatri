@@ -111,6 +111,8 @@ instance FromTType' BeamM.Merchant Merchant where
             publicMediaFileUrlPattern = publicMediaFileUrlPattern,
             kaptureDisposition = kaptureDisposition,
             scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
+            arrivedPickupThreshold = fromMaybe 50 arrivedPickupThreshold,
+            driverOnTheWayNotifyExpiry = fromMaybe 3600 driverOnTheWayNotifyExpiry,
             ..
           }
 
@@ -153,5 +155,7 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.publicMediaFileUrlPattern = publicMediaFileUrlPattern,
         BeamM.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
         BeamM.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
-        BeamM.kaptureDisposition = kaptureDisposition
+        BeamM.kaptureDisposition = kaptureDisposition,
+        BeamM.arrivedPickupThreshold = Just arrivedPickupThreshold,
+        BeamM.driverOnTheWayNotifyExpiry = Just driverOnTheWayNotifyExpiry
       }

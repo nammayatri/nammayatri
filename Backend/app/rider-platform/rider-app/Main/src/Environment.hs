@@ -20,7 +20,6 @@ module Environment
     AppCfg (..),
     AppEnv (..),
     BAPs (..),
-    RideConfig (..),
     buildAppEnv,
     releaseAppEnv,
   )
@@ -42,7 +41,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache
-import Kernel.Types.Common (HighPrecMeters, Meters, Seconds)
+import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow
@@ -127,7 +126,6 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
-    rideCfg :: RideConfig,
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
@@ -201,7 +199,6 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs,
-    rideCfg :: RideConfig,
     internalAPIKey :: Text,
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
@@ -314,9 +311,3 @@ instance Cache Subscriber Flow where
 
 instance CacheEx Subscriber Flow where
   setKeyEx ttl = (\k v -> Redis.setExp k v ttl.getSeconds) . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
-
-data RideConfig = RideConfig
-  { driverReachedDistance :: Meters,
-    driverOnTheWayNotifyExpiry :: Seconds
-  }
-  deriving (Generic, FromDhall)
