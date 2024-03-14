@@ -1004,6 +1004,10 @@ eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continueW
   void $ runEffectFn1 removeMediaPlayer ""
   pure NoAction
   ] 
+  
+eval (PopUpModalAccessibilityAction PopUpModal.NoAction) state = continueWithCmd state [do
+  pure $ PopUpModalAccessibilityAction PopUpModal.OnButton1Click
+]
 
 eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false, safetyAudioAutoPlay = false}} [ do 
   _ <- pure $ pauseYoutubeVideo unit
