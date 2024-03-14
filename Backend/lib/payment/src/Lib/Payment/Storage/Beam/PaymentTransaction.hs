@@ -25,6 +25,7 @@ import Kernel.Types.Common hiding (id)
 data PaymentTransactionT f = PaymentTransactionT
   { id :: B.C f Text,
     txnUUID :: B.C f (Maybe Text),
+    txnId :: B.C f (Maybe Text),
     paymentMethodType :: B.C f (Maybe Text),
     paymentMethod :: B.C f (Maybe Text),
     respMessage :: B.C f (Maybe Text),

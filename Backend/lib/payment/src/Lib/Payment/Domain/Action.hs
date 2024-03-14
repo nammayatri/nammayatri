@@ -287,6 +287,7 @@ orderStatusService personId orderId orderStatusCall = do
 
 data OrderTxn = OrderTxn
   { transactionUUID :: Maybe Text,
+    txnId :: Maybe Text,
     transactionStatusId :: Int,
     transactionStatus :: Payment.TransactionStatus,
     paymentMethodType :: Maybe Text,
