@@ -745,7 +745,6 @@ eval (ChatViewActionController (ChatView.SendSuggestion suggestions)) state = do
   if state.props.canSendSuggestion then do
     let message = if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant Common.FunctionCall)) then (getMessageFromKey chatSuggestion suggestions "EN_US") else suggestions
     _ <- pure $ sendMessage message
-    let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") suggestions)))
     continue state{data {chatSuggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
