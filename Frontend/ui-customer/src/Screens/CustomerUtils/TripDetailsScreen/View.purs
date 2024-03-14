@@ -37,7 +37,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility)
 import Prelude ((<>), show)
 import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==), (/), not, (-), (||))
-import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd)
+import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha)
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (PaymentMode(..))
 import Screens.Types as ST
@@ -84,6 +84,31 @@ view push state =
     ]
   ]
 
+providerDetails :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+providerDetails state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginVertical 16 16
+  , background Color.grey900
+  , gravity CENTER
+  , cornerRadius 14.0
+  , padding $ Padding 5 5 5 5
+  , visibility $ boolToVisibility $ state.data.selectedItem.providerType == ONUS
+  ][  imageView
+        [ height $ V 20
+        , width $ V 20
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
+        , padding $ Padding 2 2 2 2
+        , margin $ MarginHorizontal 5 5
+        ]
+      , textView $
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ "Ride fulfilled by: " <> state.data.selectedItem.providerName
+        ] <> FontStyle.tags LanguageStyle
+  ]
+
 tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tripDetailsLayout state push =
   linearLayout
@@ -102,6 +127,7 @@ tripDetailsLayout state push =
           , margin $ MarginBottom 24
           ][ tripDetailsView state
            , separatorView
+           , providerDetails state push
            , tripIdView push state
            , SourceToDestination.view (push <<< SourceToDestinationActionController) (sourceToDestinationConfig state)
            , ratingAndInvoiceView state push
@@ -327,6 +353,7 @@ invoiceView state push =
     , orientation HORIZONTAL
     , disableClickFeedback false
     , onClick push $ const ViewInvoice
+    , alpha if state.data.selectedItem.providerType == ONUS then 1.0 else 0.5
     , visibility if state.data.selectedItem.status == "CANCELLED" then GONE else VISIBLE
     ][ imageView [
           imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_invoice_sheet_icon"

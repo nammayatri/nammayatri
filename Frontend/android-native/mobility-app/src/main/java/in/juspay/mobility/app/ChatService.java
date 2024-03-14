@@ -35,6 +35,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -317,7 +318,8 @@ public class ChatService extends Service {
                 } else if (appState.equals("onResume") && merchantType.equals("DRIVER") && !(stage.equals("ChatWithCustomer"))) {
                     String notificationId = String.valueOf(random.nextInt(1000000));
                     for (ShowNotificationCallBack inAppCallBack : inAppCallBacks) {
-                        inAppCallBack.showInAppNotification("From " + getCustomerApp(appName) + " " +  _sentBy, message, MobilityAppBridge.storeCallBackOpenChatScreen, "", "", "", "", notificationId, 5000, context);
+                        JSONObject jsonObject = Utils.createNotificationPayload("From " + getCustomerApp(appName) + " " +  _sentBy, message, MobilityAppBridge.storeCallBackOpenChatScreen, "", "", "", "", notificationId, 5000);
+                        inAppCallBack.showInAppNotification(jsonObject, context);
                     }
                 }
             }

@@ -27,6 +27,7 @@ type Config
     , flowWithoutOffers :: Boolean
     , enableSingleEstimate :: Boolean
     , selectedEstimateHeight :: Int
+    , showMultiProvider :: Boolean
     }
 
 config :: Config
@@ -42,4 +43,5 @@ config =
   , flowWithoutOffers : false
   , enableSingleEstimate : false
   , selectedEstimateHeight : 0
+  , showMultiProvider : false
   }

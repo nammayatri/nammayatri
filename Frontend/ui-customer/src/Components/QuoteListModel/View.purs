@@ -16,8 +16,6 @@
 module Components.QuoteListModel.View where
 
 import Common.Types.App
-import Animation (translateYAnimFromTop)
-import Animation.Config (translateFullYAnimWithDurationConfig)
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
@@ -33,8 +31,8 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor)
+import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard, (*), negate, (-))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor, fillViewport, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..), QuoteListItemState(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -42,10 +40,16 @@ import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
 import Locale.Utils
+import Components.ProviderModel as PM
+import Components.ChooseVehicle.Controller as CVC
+import Mobility.Prelude (boolToVisibility)
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
+import Animation.Config as AnimConfig
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
-  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ] $
+  PrestoAnim.animationSet [Anim.translateYAnimFromTop $ AnimConfig.translateFullYAnimWithDurationConfig 500 state.showAnim] $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -58,26 +62,36 @@ view push state =
        , accessibility DISABLE
       , clickable true
       ][ quoteListTopSheetView state push
-        , selectRideAndConfirmView state push
-        , linearLayout
-          [ height $ V 1
-          , width MATCH_PARENT
-          , background Color.grey900
-          , visibility if ( null state.quoteListModel) then GONE else VISIBLE
-          ][]
-        , quotesView state push
+        , providerQuoteList push state
+        , offersView push state
         ]
       --, primaryButtonView state push
       , paymentView state
     ]
 
+offersView :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
+offersView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , visibility $ boolToVisibility $ not state.providerSelectionStage
+  ][  selectRideAndConfirmView state push
+    , linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT
+      , background Color.grey900
+      , visibility if ( null state.quoteListModel) then GONE else VISIBLE
+      ][]
+    , quotesView state push
+  ]
 
 paymentView :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
 paymentView state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , visibility if state.selectedQuote == Nothing && (null state.quoteListModel) && (not isLocalStageOn FindingQuotes) && (not state.findingRidesAgain) then GONE else VISIBLE
+  -- , visibility if state.selectedQuote == Nothing && (null state.quoteListModel) && (not isLocalStageOn FindingQuotes) && (not state.findingRidesAgain) then GONE else VISIBLE
   , alignParentBottom "true,-1"
   , background Color.white900
   , accessibility DISABLE
@@ -720,3 +734,88 @@ separatorConfig =
   , layoutHeight : V 15
   , color : Color.black500
   }
+
+providerQuoteList :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
+providerQuoteList push state =
+  scrollView
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , visibility $ boolToVisibility state.providerSelectionStage
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ][  animationtimer push state
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , margin $ Margin 16 16 16 16
+          , orientation VERTICAL
+          ](map (\element -> PM.view (push <<< ProviderModelAC) (providerModelConfig state element) ) filteredWithSelectedVariant)
+      ]
+  ]
+  where filteredWithSelectedVariant = (filter (\x -> state.selectedEstimatesObject.vehicleVariant == x.vehicleVariant) state.quoteList)
+
+animationtimer :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
+animationtimer push state = 
+  let timerRunning = state.selectProviderTimer /= "0"
+  in relativeLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , stroke $ "1," <> Color.grey900
+  ][ PrestoAnim.animationSet
+        [ Anim.translateOutXBackwardAnimY AnimConfig.animConfig
+            { duration = (state.animEndTime * 1000) - 1000
+            , toX = 0 
+            , fromX = - (screenWidth unit)
+            , ifAnim = true
+            }
+        ] $ linearLayout
+            [ height $ V 50
+            , width MATCH_PARENT
+            , alpha 0.5
+            , visibility $ boolToVisibility $ timerRunning
+            , background Color.blue700
+            ][]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height $ V 50
+      , gravity CENTER_VERTICAL
+      , padding $ Padding 5 6 5 6
+      , background Color.transparent
+      ][ textView
+          [ weight 1.0
+          , height WRAP_CONTENT
+          , margin $ MarginLeft 16
+          , text if timerRunning then (getString CONFIRMING_SELECTED_PROVIDER <> state.selectProviderTimer <> "s") else (getString SELECT_A_PROVIDER)
+          ]
+        , imageView
+          [ height $ V 30
+          , width $ V 30
+          , accessibility DISABLE
+          , visibility $ boolToVisibility $ timerRunning
+          , padding $ Padding 6 6 6 6
+          , rippleColor Color.rippleShade
+          , onClick push $ const CancelTimer
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_close"
+          ]
+      ]
+
+  ]
+
+providerModelConfig :: QuoteListModelState -> CVC.Config -> PM.Config
+providerModelConfig config quoteItem = 
+  let onus = quoteItem.providerType == ONUS
+  in PM.config {
+    isActive = quoteItem.id == config.selectedEstimatesObject.id,
+    pillsVisibility = if onus then VISIBLE else GONE,
+    id = quoteItem.id,
+    name = quoteItem.providerName,
+    logo = if onus then "ny_ic_ny_network" else "ny_ic_ondc_network",
+    selectButtonVisibility = GONE,
+    showExpandAnim = true,
+    priceRange = quoteItem.price,
+    capacity = quoteItem.capacity,
+    vehicleType = quoteItem.vehicleType,
+    vehicleImage = quoteItem.vehicleImage
+}

@@ -1036,3 +1036,13 @@ getTE stringKey =
     MESSAGE_FROM name -> name <> " నుండి సందేశం"
     RIDE_CANCELLED -> "రైడ్ రద్దు చేయబడింది"
     TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 హాయ్,\n\n" <> appName <>" డ్రైవర్ " <> driverName <> " తో నా రైడ్ అవుతుంది! ఈ రైడ్ను ఇక్కడ ట్రాక్ చేయండి: " <> trackLink <> "\n\nవెహికల్ నెంబర్: " <> vehicleNumber
+    SHOWING_FARE_FROM_MULTI_PROVIDER -> "బహుళ ప్రొవైడర్ల నుండి ఛార్జీలను చూపుతోంది"
+    LIVE_CHAT -> "ప్రత్యక్ష చాట్"
+    DRIVER_TIP_ADDITION -> "డ్రైవర్ చిట్కా యొక్క జోడింపు"
+    LIVE_RIDE_SHARING -> "లైవ్ రైడ్ భాగస్వామ్యం"
+    ENHANCED_SAFETY -> "మెరుగైన భద్రత"
+    CONFIRM_PROVIDER -> "ప్రొవైడర్‌ని నిర్ధారించండి"
+    SELECT_A_PROVIDER -> "ప్రొవైడర్‌ని ఎంచుకోండి"
+    CONFIRMING_SELECTED_PROVIDER -> "ఇందులో ఎంచుకున్న ప్రొవైడర్‌ని నిర్ధారిస్తోంది: "
+    BOOK_TOP_PROVIDER -> "బుక్ టాప్ ప్రొవైడర్"
+    CHOOSE_FROM_PROVIDERS -> "అందుబాటులో ఉన్న అందరు ప్రొవైడర్ల నుండి ఎంచుకోండి"

@@ -20,6 +20,9 @@ import com.facebook.appevents.AppEventsLogger;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.theartofdev.edmodo.cropper.CropImage;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
@@ -106,6 +109,21 @@ public class Utils {
             case "TOP" :  return Gravity.TOP;
             case "BOTTOM" : return Gravity.BOTTOM;
             default: return Gravity.CENTER;}
+    }
+
+    public static JSONObject createNotificationPayload(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds) throws JSONException {
+        JSONObject notificationPayload = new JSONObject();
+        notificationPayload
+                .put("title", title)
+                .put("message", message)
+                .put("channelId", channelId)
+                .put("action1Text", action1Text)
+                .put("action2Text", action2Text)
+                .put("action1Image", action1Image)
+                .put("action2Image", action2Image)
+                .put("onTapAction", onTapAction)
+                .put("durationInMilliSeconds", durationInMilliSeconds);
+        return  notificationPayload;
     }
 
 }

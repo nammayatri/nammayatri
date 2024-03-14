@@ -1023,3 +1023,13 @@ getBN stringKey =
         MESSAGE_FROM name -> name <> " থেকে বার্তা"
         RIDE_CANCELLED -> "রাইড বাতিল করা হয়েছে"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 হ্যালো,\n\nআমি " <> appName <> " ড্রাইভার " <> driverName <> " সাথে রাইড করছি! এই রাইডটি ট্র্যাক করতে: " <> trackLink <> "\n\nগাড়ীর নম্বর: " <> vehicleNumber
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "একাধিক প্রদানকারীর থেকে ভাড়া দেখানো হচ্ছে"
+        LIVE_CHAT -> "লাইভ চ্যাট"
+        DRIVER_TIP_ADDITION -> "ড্রাইভার টিপ সংযোজন"
+        LIVE_RIDE_SHARING -> "লাইভ রাইড শেয়ারিং"
+        ENHANCED_SAFETY -> "উন্নত নিরাপত্তা"
+        CONFIRM_PROVIDER -> "প্রদানকারী নিশ্চিত করুন"
+        SELECT_A_PROVIDER -> "একটি প্রদানকারী নির্বাচন করুন"
+        CONFIRMING_SELECTED_PROVIDER -> "নির্বাচিত প্রদানকারীকে এতে নিশ্চিত করা হচ্ছে: "
+        BOOK_TOP_PROVIDER -> "বুক শীর্ষ প্রদানকারী"
+        CHOOSE_FROM_PROVIDERS -> "সমস্ত উপলব্ধ প্রদানকারী থেকে চয়ন করুন"

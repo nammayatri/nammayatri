@@ -1025,3 +1025,13 @@ getFR stringKey =
         MESSAGE_FROM name -> "Message de " <> name
         RIDE_CANCELLED -> "Trajet annulé"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Salut,\n\nJe suis en train de rouler avec le chauffeur " <> driverName <> " de " <> appName <> "! Suivez ce trajet sur : " <> trackLink <> "\n\nNuméro de véhicule : " <> vehicleNumber
+        SHOWING_FARE_FROM_MULTI_PROVIDER -> "Affichage des tarifs de plusieurs fournisseurs"
+        LIVE_CHAT -> "Chat en direct"
+        DRIVER_TIP_ADDITION -> "Ajout d'une astuce pour le pilote"
+        LIVE_RIDE_SHARING -> "Partage de trajet en direct"
+        ENHANCED_SAFETY -> "Sécurité améliorée"
+        CONFIRM_PROVIDER -> "Confirmer le fournisseur"
+        SELECT_A_PROVIDER -> "Sélectionnez un fournisseur"
+        CONFIRMING_SELECTED_PROVIDER -> "Confirmation du fournisseur sélectionné dans : "
+        BOOK_TOP_PROVIDER -> "Réservez le meilleur fournisseur"
+        CHOOSE_FROM_PROVIDERS -> "Choisissez parmi tous les fournisseurs disponibles"

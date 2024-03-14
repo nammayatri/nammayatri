@@ -50,7 +50,7 @@ import LocalStorage.Cache (getValueFromCache)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
- PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $ 
+ PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 true] $ 
   relativeLayout
   [ height $ MATCH_PARENT
   , width MATCH_PARENT

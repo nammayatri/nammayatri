@@ -328,6 +328,10 @@ config =
   , cityConfig :
       [ { cityCode : "std:080"
         , cityName : "Bangalore"
+        , iopConfig : {
+          enable : false,
+          autoSelectTime : 8
+          }
         , geoCodeConfig :
             { radius : 50000
             , strictBounds : true
@@ -345,6 +349,10 @@ defaultCityConfig :: CityConfig
 defaultCityConfig =
   { cityName : "",
     cityCode : "",
+    iopConfig : {
+      enable : false,
+      autoSelectTime : 8
+    },
     geoCodeConfig :
       { radius : 100000
       , strictBounds : false

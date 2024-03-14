@@ -473,7 +473,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         polylineOptions.add(toPointObj);
                         polylineOptions.add(fromPointObj);
                     }
-                    Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
+                    Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth, null);
 
                     if (sourceMarker != null && !sourceMarker.equals("")) {
                         Bitmap sourceBitmap = constructBitmap(90, sourceMarker);

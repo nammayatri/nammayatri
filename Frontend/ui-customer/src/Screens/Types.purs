@@ -44,6 +44,7 @@ import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
 import PrestoDOM.List
+import MerchantConfig.Types as MRC
 
 type Contacts = {
   name :: String,
@@ -449,6 +450,8 @@ type IndividualRideCardState =
   , isSrcServiceable :: Boolean
   , optionsVisibility :: Boolean
   , merchantExoPhone :: String
+  , providerName :: String
+  , providerType :: ProviderType
   }
 
 
@@ -607,7 +610,19 @@ type HomeScreenStateData =
   , bannerData :: BannerCarousalData
   , contactList :: Maybe (Array NewContacts)
   , followers :: Maybe (Array Followers)
+  , iopState :: InteroperabilityState
+  , currentCityConfig :: MRC.CityConfig
   }
+
+type InteroperabilityState = {
+  timerId :: String,
+  timerVal :: String,
+  showMultiProvider :: Boolean,
+  providerPrefVisible :: Boolean,
+  providerSelectionStage :: Boolean,
+  showPrefButton :: Boolean,
+  providerPrefInfo :: Boolean
+}
 
 type RentalsInfo = 
   {
@@ -1146,6 +1161,8 @@ type DriverInfoCard =
   , sourceAddress :: Address
   , destinationAddress :: Address
   , status :: String
+  , providerType :: ProviderType
+  , providerName :: String
   }
 
 type RatingCard =
