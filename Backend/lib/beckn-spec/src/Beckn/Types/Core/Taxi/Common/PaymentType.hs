@@ -19,7 +19,7 @@ import Kernel.Prelude
 import Kernel.Utils.JSON (constructorsWithHyphens)
 import Kernel.Utils.Schema
 
-data PaymentType = ON_FULFILLMENT
+data PaymentType = ON_FULFILLMENT | POSTPAID
   deriving (Generic, Eq, Show)
 
 instance FromJSON PaymentType where
