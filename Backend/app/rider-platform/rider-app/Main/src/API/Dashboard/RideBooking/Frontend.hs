@@ -20,11 +20,14 @@ import qualified Domain.Action.UI.Frontend as DFrontend
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
+import Kernel.Beam.Functions as B
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Person as QP
 
 data RideNotifyEventEndPoint = NotifyEventEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
@@ -55,7 +58,9 @@ handler =
     :<|> callNotifyEvent
 
 callGetPersonFlowStatus :: Id DP.Person -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
-callGetPersonFlowStatus personId = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId
+callGetPersonFlowStatus personId isPolling = withFlowHandlerAPI $ do
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) --
+  DFrontend.getPersonFlowStatus personId person.merchantId isPolling
 
 callNotifyEvent :: Id DP.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
 callNotifyEvent personId = withFlowHandlerAPI . DFrontend.notifyEvent personId

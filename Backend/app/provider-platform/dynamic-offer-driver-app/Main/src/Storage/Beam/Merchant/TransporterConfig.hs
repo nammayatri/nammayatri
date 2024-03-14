@@ -142,6 +142,7 @@ data TransporterConfigT f = TransporterConfigT
     kaptureDisposition :: B.C f Text,
     dummyFromLocation :: B.C f (Maybe A.Value),
     arrivedStopThreshold :: B.C f (Maybe HighPrecMeters),
+    arrivedPickupThreshold :: B.C f (Maybe HighPrecMeters),
     dummyToLocation :: B.C f (Maybe A.Value),
     scheduleRideBufferTime :: B.C f Seconds,
     fakeOtpMobileNumbers :: B.C f [Text],

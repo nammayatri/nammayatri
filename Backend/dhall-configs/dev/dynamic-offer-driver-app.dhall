@@ -305,7 +305,6 @@ in  { esqDBCfg
     , cacheConfig
     , metricsSearchDurationTimeout = +45
     , driverLocationUpdateRateLimitOptions
-    , driverReachedDistance = +100
     , cacheTranslationConfig
     , driverLocationUpdateTopic = "location-updates"
     , broadcastMessageTopic = "broadcast-messages"

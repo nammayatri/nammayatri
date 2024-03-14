@@ -74,7 +74,9 @@ data MerchantT f = MerchantT
     numOfAllowedEditPickupLocationAttemptsThreshold :: B.C f Int,
     publicMediaFileUrlPattern :: B.C f Text,
     kaptureDisposition :: B.C f Text,
-    fakeOtpMobileNumbers :: B.C f [Text]
+    fakeOtpMobileNumbers :: B.C f [Text],
+    arrivedPickupThreshold :: B.C f (Maybe Meters),
+    driverOnTheWayNotifyExpiry :: B.C f (Maybe Seconds)
   }
   deriving (Generic, B.Beamable)
 

@@ -147,6 +147,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             dummyToLocation = fromMaybe dummyToLocationData (valueToMaybe =<< dummyToLocation),
             scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
             canSuvDowngradeToHatchback = fromMaybe False canSuvDowngradeToHatchback,
+            arrivedPickupThreshold = fromMaybe 100 arrivedPickupThreshold,
             ..
           }
     where
@@ -273,6 +274,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
         BeamTC.considerDriversForSearch = considerDriversForSearch,
         BeamTC.arrivedStopThreshold = arrivedStopThreshold,
+        BeamTC.arrivedPickupThreshold = Just arrivedPickupThreshold,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.specialDrivers = specialDrivers,

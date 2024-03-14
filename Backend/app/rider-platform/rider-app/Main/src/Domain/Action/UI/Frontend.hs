@@ -25,6 +25,7 @@ where
 import qualified Data.HashMap.Strict as HM
 import Domain.Action.UI.Quote
 import Domain.Types.CancellationReason
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
@@ -39,6 +40,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
@@ -64,8 +66,8 @@ newtype NotifyEventReq = NotifyEventReq
 
 type NotifyEventResp = APISuccess
 
-getPersonFlowStatus :: Id DP.Person -> Maybe Bool -> Flow GetPersonFlowStatusRes
-getPersonFlowStatus personId mIsPolling = do
+getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Flow GetPersonFlowStatusRes
+getPersonFlowStatus personId merchantId mIsPolling = do
   -- should not be run in replica
   personStatus <- QPFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logTagDebug "person-status" . show $ personStatus
@@ -79,9 +81,9 @@ getPersonFlowStatus personId mIsPolling = do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       findValueAddNP estimate.providerId personStatus
     DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ -> expirePersonStatusIfNeeded personStatus Nothing
-    DPFS.RIDE_PICKUP {} -> handleRideTracking personId mIsPolling personStatus
-    DPFS.RIDE_STARTED {} -> handleRideTracking personId mIsPolling personStatus
-    DPFS.DRIVER_ARRIVED {} -> handleRideTracking personId mIsPolling personStatus
+    DPFS.RIDE_PICKUP {} -> handleRideTracking personId merchantId mIsPolling personStatus
+    DPFS.RIDE_STARTED {} -> handleRideTracking personId merchantId mIsPolling personStatus
+    DPFS.DRIVER_ARRIVED {} -> handleRideTracking personId merchantId mIsPolling personStatus
     a -> return $ GetPersonFlowStatusRes Nothing a Nothing
   where
     findValueAddNP providerId personStatus = do
@@ -112,22 +114,22 @@ handleRideTracking ::
     EncFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    HasField "rideCfg" r RideConfig,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id DP.Person ->
+  Id DM.Merchant ->
   Maybe Bool ->
   DPFS.FlowStatus ->
   m GetPersonFlowStatusRes
-handleRideTracking _ Nothing DPFS.RIDE_STARTED {..} = return $ GetPersonFlowStatusRes Nothing (DPFS.RIDE_ASSIGNED rideId) Nothing -- handle backward compatibility, if isPolling is Nothing means old version of API Call , isValueAddNP is Nothing as its not needed in rideStage
-handleRideTracking personId (Just isPolling) DPFS.RIDE_STARTED {..} = do
+handleRideTracking _ _ Nothing DPFS.RIDE_STARTED {..} = return $ GetPersonFlowStatusRes Nothing (DPFS.RIDE_ASSIGNED rideId) Nothing -- handle backward compatibility, if isPolling is Nothing means old version of API Call , isValueAddNP is Nothing as its not needed in rideStage
+handleRideTracking personId _ (Just isPolling) DPFS.RIDE_STARTED {..} = do
   trackUrl <- getTrackUrl rideId trackingUrl
   newDriverLocation <- if isPolling then Just . (.currPoint) <$> CallBPP.callGetDriverLocation trackUrl else return Nothing
   let updatedStatus = DPFS.RIDE_STARTED {trackingUrl = trackUrl, driverLocation = newDriverLocation, ..}
   updateStatus personId updatedStatus
   return $ GetPersonFlowStatusRes Nothing updatedStatus Nothing
-handleRideTracking _ Nothing DPFS.RIDE_PICKUP {..} = return $ GetPersonFlowStatusRes Nothing (DPFS.RIDE_ASSIGNED rideId) Nothing -- handle backward compatibility, if isPolling is Nothing means old version of API Call, isValueAddNP is Nothing as its not needed in rideStage
-handleRideTracking personId (Just isPolling) DPFS.RIDE_PICKUP {..} = do
+handleRideTracking _ _ Nothing DPFS.RIDE_PICKUP {..} = return $ GetPersonFlowStatusRes Nothing (DPFS.RIDE_ASSIGNED rideId) Nothing -- handle backward compatibility, if isPolling is Nothing means old version of API Call, isValueAddNP is Nothing as its not needed in rideStage
+handleRideTracking personId merchantId (Just isPolling) DPFS.RIDE_PICKUP {..} = do
   trackUrl <- getTrackUrl rideId trackingUrl
   newDriverLocation <-
     if isPolling
@@ -141,8 +143,7 @@ handleRideTracking personId (Just isPolling) DPFS.RIDE_PICKUP {..} = do
   return $ GetPersonFlowStatusRes Nothing updatedStatus Nothing -- isValueAddNP is Nothing as its not needed in rideStage
   where
     notifyOnTheWayOrReached location = do
-      driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
-      driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
       mbHasReachedNotified <- Redis.get @() driverHasReached
 
@@ -154,22 +155,22 @@ handleRideTracking personId (Just isPolling) DPFS.RIDE_PICKUP {..} = do
           Just startDistance -> when (startDistance - 50 > distance) $ do
             unless (isJust mbIsOnTheWayNotified) $ do
               Notify.notifyDriverOnTheWay personId
-              Redis.setExp driverOnTheWay () driverOnTheWayNotifyExpiry
-            when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
+              Redis.setExp driverOnTheWay () merchant.driverOnTheWayNotifyExpiry.getSeconds
+            when (isNothing mbHasReachedNotified && distance <= merchant.arrivedPickupThreshold) $ do
               Notify.notifyDriverHasReached personId otp vehicleNumber
               Redis.setExp driverHasReached () 1500
       where
         distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
         driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
         driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
-handleRideTracking _ Nothing DPFS.DRIVER_ARRIVED {..} = return $ GetPersonFlowStatusRes Nothing (DPFS.RIDE_ASSIGNED rideId) Nothing -- handle backward compatibility, if isPolling is Nothing means old version of API Call, isValueAddNP is Nothing as its not needed in rideStage
-handleRideTracking personId (Just isPolling) DPFS.DRIVER_ARRIVED {..} = do
+handleRideTracking _ _ Nothing DPFS.DRIVER_ARRIVED {..} = return $ GetPersonFlowStatusRes Nothing (DPFS.RIDE_ASSIGNED rideId) Nothing -- handle backward compatibility, if isPolling is Nothing means old version of API Call, isValueAddNP is Nothing as its not needed in rideStage
+handleRideTracking personId _ (Just isPolling) DPFS.DRIVER_ARRIVED {..} = do
   trackUrl <- getTrackUrl rideId trackingUrl
   newDriverLocation <- if isPolling then Just . (.currPoint) <$> CallBPP.callGetDriverLocation trackUrl else return Nothing
   let updatedStatus = DPFS.DRIVER_ARRIVED {trackingUrl = trackUrl, driverLocation = newDriverLocation, ..}
   updateStatus personId updatedStatus
   return $ GetPersonFlowStatusRes Nothing updatedStatus Nothing -- isValueAddNP is Nothing as its not needed in rideStage
-handleRideTracking _ _ status = return $ GetPersonFlowStatusRes Nothing status Nothing -- isValueAddNP is Nothing as its not needed in rideStage
+handleRideTracking _ _ _ status = return $ GetPersonFlowStatusRes Nothing status Nothing -- isValueAddNP is Nothing as its not needed in rideStage
 
 updateStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DP.Person -> DPFS.FlowStatus -> m ()
 updateStatus personId updatedStatus = do

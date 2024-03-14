@@ -51,7 +51,7 @@ handler =
     :<|> notifyEvent
 
 getPersonFlowStatus :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
-getPersonFlowStatus (personId, _) = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId
+getPersonFlowStatus (personId, merchantId) = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId merchantId
 
 notifyEvent :: (Id Person.Person, Id Merchant.Merchant) -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
 notifyEvent (personId, _) = withFlowHandlerAPI . DFrontend.notifyEvent personId
