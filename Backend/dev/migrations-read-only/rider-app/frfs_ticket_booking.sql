@@ -32,3 +32,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN payment_txn_id text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_bank_code text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_bank_account_number text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN final_price double precision ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN estimated_price double precision NOT NULL;

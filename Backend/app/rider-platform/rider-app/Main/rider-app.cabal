@@ -66,6 +66,7 @@ library
       API.FRFS
       API.Internal
       API.Internal.Cac
+      API.Internal.FRFS
       API.Internal.Rating
       API.MetroBeckn
       API.MetroBeckn.OnSearch
@@ -162,6 +163,7 @@ library
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Route
       Domain.Action.Internal.Cac
+      Domain.Action.Internal.FRFS
       Domain.Action.Internal.Rating
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
