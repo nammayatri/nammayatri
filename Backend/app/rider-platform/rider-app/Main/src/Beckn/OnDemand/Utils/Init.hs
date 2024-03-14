@@ -91,6 +91,7 @@ mkPayment _ bapConfig city = do
 
 castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
+castDPaymentType DMPM.POSTPAID = show Enums.ON_FULFILLMENT
 
 mkFulfillmentTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]
 mkFulfillmentTags mbMaxDistance = do
