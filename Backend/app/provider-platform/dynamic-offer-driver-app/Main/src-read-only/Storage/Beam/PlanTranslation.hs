@@ -7,12 +7,10 @@ module Storage.Beam.PlanTranslation where
 
 import qualified Data.Text
 import qualified Database.Beam as B
-import qualified Domain.Types.Plan
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data PlanTranslationT f = PlanTranslationT

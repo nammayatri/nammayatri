@@ -8,12 +8,10 @@ module Storage.Beam.DailyStats where
 import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
-import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data DailyStatsT f = DailyStatsT

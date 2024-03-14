@@ -5,9 +5,6 @@
 module Storage.Queries.SpecialOccasion where
 
 import qualified Data.Time.Calendar
-import qualified Domain.Types.BusinessHour
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SpecialOccasion
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

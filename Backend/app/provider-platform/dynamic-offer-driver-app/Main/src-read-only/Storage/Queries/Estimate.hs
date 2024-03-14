@@ -6,15 +6,10 @@ module Storage.Queries.Estimate where
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.Estimate
-import qualified Domain.Types.FareParameters
-import qualified Domain.Types.FarePolicy
-import qualified Domain.Types.SearchRequest
-import qualified Domain.Types.Vehicle
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)

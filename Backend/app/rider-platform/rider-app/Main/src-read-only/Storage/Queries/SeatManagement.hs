@@ -5,8 +5,6 @@
 module Storage.Queries.SeatManagement where
 
 import qualified Data.Time.Calendar
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SeatManagement
 import qualified Domain.Types.ServiceCategory
 import Kernel.Beam.Functions

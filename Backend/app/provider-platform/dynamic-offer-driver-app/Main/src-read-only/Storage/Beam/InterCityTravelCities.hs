@@ -6,12 +6,10 @@
 module Storage.Beam.InterCityTravelCities where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Merchant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data InterCityTravelCitiesT f = InterCityTravelCitiesT

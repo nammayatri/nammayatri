@@ -4,13 +4,11 @@
 
 module Storage.Queries.DriverReferral (module Storage.Queries.DriverReferral, module ReExport) where
 
-import qualified Data.Text
 import qualified Domain.Types.DriverReferral
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)

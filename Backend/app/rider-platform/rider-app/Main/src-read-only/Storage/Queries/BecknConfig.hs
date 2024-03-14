@@ -6,7 +6,6 @@ module Storage.Queries.BecknConfig where
 
 import qualified Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -15,7 +14,6 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
-import qualified Servant.Client.Core
 import qualified Storage.Beam.BecknConfig as Beam
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BecknConfig.BecknConfig -> m ()

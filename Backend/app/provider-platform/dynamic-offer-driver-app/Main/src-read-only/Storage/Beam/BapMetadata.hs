@@ -7,12 +7,9 @@ module Storage.Beam.BapMetadata where
 
 import qualified Data.Text
 import qualified Database.Beam as B
-import qualified Domain.Types.BapMetadata
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
-import qualified Servant.Client.Core
 import Tools.Beam.UtilsTH
 
 data BapMetadataT f = BapMetadataT

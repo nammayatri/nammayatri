@@ -7,16 +7,11 @@ module Storage.Beam.Estimate where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Common
-import qualified Domain.Types.Estimate
-import qualified Domain.Types.FareParameters
-import qualified Domain.Types.FarePolicy
-import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT

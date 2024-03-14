@@ -6,15 +6,10 @@
 module Storage.Beam.TicketBookingServiceCategory where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.TicketBookingService
-import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data TicketBookingServiceCategoryT f = TicketBookingServiceCategoryT

@@ -3,19 +3,13 @@
 
 module Storage.Queries.OrphanInstances.Exophone where
 
-import qualified Data.Text
 import qualified Domain.Types.Exophone
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
-import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Sequelize as Se
 import qualified Storage.Beam.Exophone as Beam
 
 instance FromTType' Beam.Exophone Domain.Types.Exophone.Exophone where

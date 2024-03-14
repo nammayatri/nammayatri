@@ -11,7 +11,6 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Plan
 import Kernel.Prelude
-import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 

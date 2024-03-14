@@ -7,13 +7,9 @@ module Storage.Beam.BecknConfig where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.BecknConfig
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
-import qualified Servant.Client.Core
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT

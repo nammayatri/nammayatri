@@ -4,13 +4,8 @@
 module API.Types.UI.Reels where
 
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
 import qualified Domain.Types.ReelsData
-import qualified Environment
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 

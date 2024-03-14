@@ -6,8 +6,6 @@ module Storage.Queries.DriverModuleCompletion where
 
 import qualified Domain.Types.DriverModuleCompletion
 import qualified Domain.Types.LmsModule
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

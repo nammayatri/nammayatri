@@ -6,13 +6,10 @@
 module Storage.Beam.MerchantOperatingCity where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data MerchantOperatingCityT f = MerchantOperatingCityT

@@ -4,7 +4,6 @@
 
 module Domain.Types.LmsVideoTranslation where
 
-import qualified Data.Aeson
 import qualified Domain.Types.LmsModuleVideoInformation
 import qualified Domain.Types.ReelsData
 import qualified Kernel.External.Types

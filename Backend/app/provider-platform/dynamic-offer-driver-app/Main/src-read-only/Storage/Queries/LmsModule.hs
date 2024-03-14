@@ -7,12 +7,9 @@ module Storage.Queries.LmsModule where
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Vehicle.Variant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Types
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)

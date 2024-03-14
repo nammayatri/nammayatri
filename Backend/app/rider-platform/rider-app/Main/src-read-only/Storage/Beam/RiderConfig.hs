@@ -6,13 +6,10 @@
 module Storage.Beam.RiderConfig where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data RiderConfigT f = RiderConfigT

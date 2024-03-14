@@ -10,13 +10,10 @@ import qualified Domain.Types.DriverModuleCompletion
 import qualified Domain.Types.LmsEnumTypes
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.LmsModuleVideoInformation
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
 import qualified Domain.Types.QuestionInformation
 import qualified Domain.Types.QuestionModuleMapping
 import qualified Domain.Types.ReelsData
 import qualified Domain.Types.Vehicle.Variant
-import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude

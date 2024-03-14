@@ -11,10 +11,7 @@ import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTrip
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
 import qualified Domain.Types.Station
-import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude

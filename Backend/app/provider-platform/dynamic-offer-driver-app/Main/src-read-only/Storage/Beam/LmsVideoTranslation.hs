@@ -7,13 +7,10 @@ module Storage.Beam.LmsVideoTranslation where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
-import qualified Domain.Types.LmsModuleVideoInformation
-import qualified Domain.Types.ReelsData
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data LmsVideoTranslationT f = LmsVideoTranslationT

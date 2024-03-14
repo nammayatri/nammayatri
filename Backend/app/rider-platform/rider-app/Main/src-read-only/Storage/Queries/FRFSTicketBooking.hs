@@ -5,12 +5,8 @@
 module Storage.Queries.FRFSTicketBooking where
 
 import qualified Domain.Types.FRFSQuote
-import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.Station
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

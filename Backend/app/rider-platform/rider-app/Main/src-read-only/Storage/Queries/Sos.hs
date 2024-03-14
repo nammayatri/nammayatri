@@ -4,15 +4,11 @@
 
 module Storage.Queries.Sos where
 
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Domain.Types.Sos
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)

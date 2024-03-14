@@ -6,14 +6,10 @@
 module Storage.Beam.LmsModuleTranslation where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.LmsModule
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data LmsModuleTranslationT f = LmsModuleTranslationT

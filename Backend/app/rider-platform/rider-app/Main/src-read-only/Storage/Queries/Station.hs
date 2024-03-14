@@ -4,7 +4,6 @@
 
 module Storage.Queries.Station where
 
-import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Station
 import Kernel.Beam.Functions

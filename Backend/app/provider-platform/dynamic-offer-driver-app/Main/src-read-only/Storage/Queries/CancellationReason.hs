@@ -4,7 +4,6 @@
 
 module Storage.Queries.CancellationReason where
 
-import qualified Data.Text
 import qualified Domain.Types.CancellationReason
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

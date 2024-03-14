@@ -5,18 +5,15 @@
 
 module Storage.Beam.SubscriptionConfig where
 
-import qualified Data.Time
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantMessage
-import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Plan
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data SubscriptionConfigT f = SubscriptionConfigT

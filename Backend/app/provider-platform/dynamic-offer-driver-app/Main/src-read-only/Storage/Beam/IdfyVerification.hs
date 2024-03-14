@@ -8,15 +8,10 @@ module Storage.Beam.IdfyVerification where
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverOnboarding.Image
 import qualified Domain.Types.IdfyVerification
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Person
 import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
-import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data IdfyVerificationT f = IdfyVerificationT
