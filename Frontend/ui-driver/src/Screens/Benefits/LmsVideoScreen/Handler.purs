@@ -39,7 +39,7 @@ lmsVideoScreen = do
       App.BackT $ App.NoBack <$> (pure GO_TO_BENEFITS_SCREEN)
     GoToSelectLanguage updatedState -> do
       modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ SELECT_LANGUAGE_FOR_VIDEOS updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SELECT_LANGUAGE_FOR_VIDEOS updatedState)
     GoToTakeQuiz updatedState -> do
       modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_QUIZ_SCREEN updatedState)

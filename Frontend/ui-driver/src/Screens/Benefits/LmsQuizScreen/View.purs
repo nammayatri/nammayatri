@@ -612,7 +612,7 @@ quizCompletedScreenInformationView push state =
      ] <> FontStyle.title2 LanguageStyle
   ,  quizStatusPillView push state (Margin sWidth 0 sWidth 0) (Padding 0 0 0 0)
   ,  textView $
-     [ text $ if isPassed then ((getStringFromLocal state.props.selectedLanguage YOU_HAVE_SUCCESSFULLY_COMPLETED)<> " " <> moduleName) else getStringAccoringToPassingLimit totalQuestions moduleName
+     [ text $ if isPassed then (getStringFromLocal state.props.selectedLanguage (YOU_HAVE_SUCCESSFULLY_COMPLETED moduleName)) else getStringAccoringToPassingLimit totalQuestions moduleName
      , width $ WRAP_CONTENT
      , height $ WRAP_CONTENT
      , margin $ MarginHorizontal (sWidth/2) (sWidth/2)
@@ -624,9 +624,8 @@ quizCompletedScreenInformationView push state =
     sWidth = (screenWidth unit) / 5
 
     getStringAccoringToPassingLimit totalQuestions moduleName  = let passingLimit = (getPassingLimit state) in
-                                                                    if totalQuestions == passingLimit then (getStringFromLocal state.props.selectedLanguage ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE) <> " " <> moduleName
+                                                                    if totalQuestions == passingLimit then (getStringFromLocal state.props.selectedLanguage (ALL_ANSWERS_SHOULD_BE_CORRECT_TO_COMPLETE moduleName ))
                                                                     else (show passingLimit) <> "/" <> (show totalQuestions) <> " " <> (getStringFromLocal state.props.selectedLanguage QUESTIONS_SHOULD_BE_CORRECT_TO_COMPLETE) <> " " <> moduleName
-
 
 getTotalCorrectQuestions :: LmsQuizScreenState -> Int
 getTotalCorrectQuestions state = foldl (\acc eQuestion -> acc + (if (isCorrectQuestion eQuestion)then 1 else 0)) 0 state.data.questions

@@ -3256,12 +3256,15 @@ lmsVideoScreenFlow = do
           case res of
             Right resp -> do
                 let (API.LmsGetQuizRes extractedData ) = resp
+                    questionsData = transformQuizRespToQuestions resp
+                    retryEnabled = getRetryEnabled $ questionsData !! 0
                 modifyScreenState 
                  $ LmsQuizScreenStateType 
-                    (\lmsQuizScreen -> lmsQuizScreen { data  {  questions = transformQuizRespToQuestions resp}, 
+                    (\lmsQuizScreen -> lmsQuizScreen { data  {  questions = questionsData}, 
                                                        props {  selectedLanguage = state.props.selectedLanguage,
                                                                 selectedTranslatedModule = Just $ extractedData.selectedModuleInfo,
                                                                 currentQuestionIndex = 0,
+                                                                isRetryEnabled = retryEnabled,
                                                                 currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing, selectedMultipleOptions : []}
                                                             }
                                                       }
@@ -3331,11 +3334,7 @@ goToQuizNextQuestionFlow state = do
                                   Just (API.LmsQuizHistory history) -> if history.status == API.CORRECT then ST.QUESTION_CORRECT else ST.QUESTION_INCORRECT
             in question {questionStatusDuringQuiz = updatedStatus}
       else question ) state.data.questions
-  let retryEnabled = case state.data.questions !! (state.props.currentQuestionIndex + 1) of
-                        Nothing -> false
-                        Just question -> case question.previousHistory of
-                                          Nothing -> false
-                                          Just (API.LmsQuizHistory history) -> history.status == API.INCORRECT
+  let retryEnabled = getRetryEnabled (state.data.questions !! (state.props.currentQuestionIndex + 1))
   modifyScreenState $ LmsQuizScreenStateType (\lmsQuizScreen -> lmsQuizScreen { data {questions = updatedQuestions}, 
       props {isRetryEnabled = retryEnabled, currentQuestionIndex = state.props.currentQuestionIndex + 1, currentQuestionSelectedOptionsData = {selectedSingleOption : Nothing, selectedMultipleOptions : []}}})
   pure $ toggleBtnLoader "QuizPrimaryButton_NEXT_QUESTION" false
@@ -3346,14 +3345,16 @@ retakeQuizFlow state =
   case state.props.selectedTranslatedModule of
     Nothing -> pure unit
     Just selModule -> do
-      res <- lift $ lift $ Remote.getAllLmsQuestions (selModule ^. _moduleId) (HU.getLanguageTwoLetters $ Just (getLanguageLocale languageKey))
+      res <- lift $ lift $ Remote.getAllLmsQuestions (selModule ^. _moduleId) (HU.getLanguageTwoLetters $  Just state.props.selectedLanguage)
       case res of
         Right resp -> do
             let (API.LmsGetQuizRes extractedResp) = resp
+                questionsData = transformQuizRespToQuestions resp
+                retryEnabled = getRetryEnabled (questionsData !! 0)
             modifyScreenState 
              $ LmsQuizScreenStateType 
                (\lmsQuizScreen -> lmsQuizScreen { data {questions = transformQuizRespToQuestions resp}, 
-                                                  props { isRetryEnabled = false,
+                                                  props { isRetryEnabled = retryEnabled,
                                                           showShimmer = false,
                                                           selectedTranslatedModule = Just $ extractedResp.selectedModuleInfo,
                                                           currentQuestionIndex = 0,
@@ -3365,6 +3366,9 @@ retakeQuizFlow state =
         Left err -> do
           pure $ toast $ getString SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
           lmsVideoScreenFlow
+
+getRetryEnabled :: Maybe ST.LmsQuestion -> Boolean
+getRetryEnabled mbQuestion = maybe false  (\question -> maybe false (\(API.LmsQuizHistory history) -> history.status == API.INCORRECT ) question.previousHistory ) mbQuestion
 
 confirmQuestionFlow :: ST.LmsQuizScreenState -> FlowBT String Unit
 confirmQuestionFlow state = let moduleId = maybe "" (\selModule -> selModule ^. _moduleId) state.props.selectedTranslatedModule in

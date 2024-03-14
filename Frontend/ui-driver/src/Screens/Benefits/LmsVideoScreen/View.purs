@@ -310,7 +310,7 @@ videoInformation push state index (LmsVideoRes video) =
   , height $ V 92
   , orientation VERTICAL
   , gravity CENTER_VERTICAL
-  , padding $ Padding 12 12 12 12
+  , padding $ Padding 12 3 12 3
   ]([ textView $
       [ text video.title
       , maxLines 2
