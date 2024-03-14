@@ -1,6 +1,9 @@
 package in.juspay.mobility.common;
 
+import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
+
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -211,6 +214,20 @@ public class Utils {
             e.printStackTrace();
         }
     }
-
-
+    
+    // Return: Device total RAM in GB
+    public static int getDeviceRAM(){
+        try{
+            Context context = getApplicationContext();
+            if(context == null)
+                return 0;
+            ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
+            activityManager.getMemoryInfo(memInfo);
+            return (int)(1L + memInfo.totalMem / (1024L * 1024L * 1024L));
+        }catch (Exception e){
+            e.printStackTrace();
+            return 0;
+        }
+    }
 }
