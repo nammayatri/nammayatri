@@ -463,8 +463,9 @@ public class MainActivity extends AppCompatActivity {
             mFirebaseAnalytics.logEvent("exception_while_reading_city_config",bundle);
         }
         resourceHandler.close();
-        if (animationFile != null && !animationFile.equals("")) {
+        if (animationFile != null && !animationFile.isEmpty()) {
             if (animationFile.startsWith("http")) {
+                view.setFailureListener(throwable -> mFirebaseAnalytics.logEvent("failure_in_set_animation_from_url",new Bundle()));
                 view.setAnimationFromUrl(animationFile);
             } else {
                 view.setAnimationFromJson(animationFile,null);
