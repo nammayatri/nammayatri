@@ -290,6 +290,7 @@ FRFSRecon:
     ticketNumber: Text
     transactionRefNumber: Text # transactionId
     transactionUUID : Maybe Text # transaction uuid
+    txnId : Maybe Text # transaction uuid
     fare: HighPrecMoney # per ticket price
     buyerFinderFee: HighPrecMoney # populated from bapConfig
     totalOrderValue: HighPrecMoney # amount paid by customer
