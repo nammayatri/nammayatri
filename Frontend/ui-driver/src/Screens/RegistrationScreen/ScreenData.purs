@@ -107,7 +107,8 @@ dummyCityConfig = {
                     variantSubscriptionConfig : {
                       enableVariantBasedSubscription : true,
                       variantList : ["AutoCategory"]
-                    }
+                    },
+                    showEarningSection: true
                   }
           
 type VehicleInfo = {

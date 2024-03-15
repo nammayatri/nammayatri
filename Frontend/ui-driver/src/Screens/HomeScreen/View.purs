@@ -854,14 +854,14 @@ statsModel push state =
            , text $ getString TODAYS_EARNINGS_STR
            , color Color.black700
            , weight 1.0
-           , onClick push $ const $ ToggleStatsModel
+           , onClick push $ const $ if cityConfig.showEarningSection then ToggleStatsModel else NoAction
            , padding $ PaddingVertical 6 6
            ] <> FontStyle.tags TypoGraphy
          , linearLayout
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
            , gravity CENTER_VERTICAL
-           , onClick push $ const $ ToggleStatsModel
+           , onClick push $ const $ if cityConfig.showEarningSection then ToggleStatsModel else NoAction
            ][ textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
@@ -872,6 +872,7 @@ statsModel push state =
             , imageView 
               [ width $ V 12
               , height $ V 12
+              , visibility $ boolToVisibility cityConfig.showEarningSection
               , margin $ MarginLeft 5
               , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_down"
               ]
