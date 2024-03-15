@@ -33,7 +33,8 @@ type Config =
     totalRidesOfDay :: Int,
     totalEarningsOfDay :: Int,
     bonusEarned :: Int,
-    visibility :: Visibility
+    visibility :: Visibility,
+    showBonus :: Boolean
   }
 
 type TextConfig =
@@ -87,5 +88,6 @@ config =
     totalRidesOfDay : 2,
     totalEarningsOfDay : 2,
     bonusEarned : 0,
-    visibility : VISIBLE
+    visibility : VISIBLE,
+    showBonus : true
   }

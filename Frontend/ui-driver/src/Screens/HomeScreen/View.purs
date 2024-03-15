@@ -840,7 +840,7 @@ statsModel push state =
     , gravity CENTER
     , padding $ Padding 16 10 16 10
     ][  if not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then
-          StatsModel.view (push <<< StatsModelAction) (statsModelConfig state)
+          StatsModel.view (push <<< StatsModelAction) (statsModelConfig state cityConfig.showEarningSection)
         else linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
