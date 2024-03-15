@@ -161,10 +161,13 @@ FRFSTicketBooking:
     paymentTxnId : Maybe Text
     bppBankAccountNumber: Maybe Text
     bppBankCode : Maybe Text
+    cancellationCharges : Maybe HighPrecMoney
+    refundAmount : Maybe HighPrecMoney
+    isBookingCancellable : Maybe Bool
 
   types:
     FRFSTicketBookingStatus:
-      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED"
+      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED"
 
   queries:
     findById:
@@ -176,6 +179,9 @@ FRFSTicketBooking:
     findByBppOrderId:
       kvFunction: findOneWithKV
       where: bppOrderId
+    findBySearchId:
+      kvFunction: findOneWithKV
+      where: searchId
     findAllByStatus:
       kvFunction: findAllWithKV
       where: status
@@ -206,6 +212,16 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [bppBankAccountNumber, bppBankCode, updatedAt]
       where: id
+    updateRefundCancellationChargesAndIsCancellableByBookingId:
+      kvFunction: updateOneWithKV
+      params: [refundAmount, cancellationCharges, isBookingCancellable, updatedAt]
+      where: id
+    updateIsBookingCancellableByBookingId:
+      kvFunction: updateOneWithKV
+      params: [isBookingCancellable, updatedAt]
+      where: id
+
+
 # Make use of FareBreakup to store the fare breakup of a ticket
 
 # Get transaction_id from Payment Transaction table
@@ -224,7 +240,7 @@ FRFSTicket:
 
   types:
     FRFSTicketStatus:
-      enum: "ACTIVE, EXPIRED, USED"
+      enum: "ACTIVE, EXPIRED, USED, CANCELLED"
 
   queries:
     findById:
@@ -241,6 +257,11 @@ FRFSTicket:
       params: [status, updatedAt]
       where:
         and: [frfsTicketBookingId, ticketNumber]
+    updateAllStausByBookingId :
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where:
+        and: [frfsTicketBookingId]
 
 FRFSTicketBookingPayment:
   tableName: frfs_ticket_booking_payment

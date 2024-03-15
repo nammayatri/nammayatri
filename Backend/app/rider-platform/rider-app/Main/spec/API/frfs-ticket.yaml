@@ -39,6 +39,8 @@ types:
   FRFSTicketBookingStatusAPIRes:
     bookingId: Id FRFSTicketBooking
     status: FRFSTicketBookingStatus
+    city: City
+    updatedAt: UTCTime
     _type: FRFSQuoteType
     quantity: Int
     vehicleType: FRFSVehicleType
@@ -71,6 +73,15 @@ types:
     stationType: Maybe StationType
     color: Maybe Text
     sequenceNum: Maybe Int
+
+  FRFSCanCancelStatus:
+    cancellationCharges : Maybe HighPrecMoney
+    refundAmount : Maybe HighPrecMoney
+    isCancellable : Maybe Bool
+
+  FRFSCancelStatus:
+    cancellationCharges : Maybe HighPrecMoney
+    refundAmount : Maybe HighPrecMoney
 
 apis:
   # GET metro stops for the merchant city
@@ -137,3 +148,39 @@ apis:
       auth: TokenAuth
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]"
+
+  # Booking Soft Cancel
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/canCancel
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # Booking Soft Cancel Status
+  - GET:
+      endpoint: /frfs/booking/{bookingId}/canCancel/status
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
+
+  # Booking Cancel
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/cancel
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # Booking Cancel Status
+  - GET:
+      endpoint: /frfs/booking/cancel/{bookingId}/status
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSCancelStatus
