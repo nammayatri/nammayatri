@@ -2429,11 +2429,12 @@ public class MobilityCommonBridge extends HyperBridge {
                         }
                     });
                     if (rawJson.contains("http")) {
-                            animationView.setAnimationFromUrl(rawJson);
-                            if (forceToUseRemote)
-                                animationView.setCacheComposition(false);
+                        animationView.setFailureListener(throwable -> Log.d(UTILS, "Failure in setAnimationFromUrl", throwable));
+                        animationView.setAnimationFromUrl(rawJson);
+                        if (forceToUseRemote)
+                            animationView.setCacheComposition(false);
                     }else {
-                            animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
+                        animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
                     }
                     animationView.setRepeatCount(repeat ? ValueAnimator.INFINITE : 0);
                     animationView.setSpeed(speed);

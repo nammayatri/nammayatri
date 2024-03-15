@@ -103,7 +103,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private WindowManager windowManager;
     private SharedPreferences sharedPref;
     private MediaPlayer mediaPlayer;
-    private int time = 0;
+    private int time = 0, retryAddViewCount = 31;;
     private View progressDialog, apiLoader, floatyView;
     private CountDownTimer rideStatusListener;
     private WindowManager.LayoutParams params;
@@ -122,6 +122,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private String DUMMY_FROM_LOCATION = "dummyFromLocation";
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     private SheetModel modelForLogs;
+    private final String BRAND_VIVO = "vivo";
     @Override
     public void onCreate() {
         super.onCreate();
@@ -752,10 +753,34 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         viewPager = floatyView.findViewById(R.id.view_pager);
         sheetAdapter.setViewPager(viewPager);
         viewPager.setAdapter(sheetAdapter);
-        windowManager.addView(floatyView, params);
+        addPagerLayoutToWindow();
         setIndicatorClickListener();
         firebaseLogEvent("Overlay_is_popped_up");
         RideRequestUtils.addRideReceivedEvent(null, rideRequestBundle,null,"overlay_is_popped_up", this);
+    }
+
+    private void addPagerLayoutToWindow(){
+        String deviceMan = android.os.Build.MANUFACTURER;
+        if (!deviceMan.equals(BRAND_VIVO)){
+            windowManager.addView(floatyView, params);
+            return;
+        }
+        try {
+            if (retryAddViewCount > 1) {
+                retryAddViewCount --;
+                windowManager.addView(floatyView, params);
+            }else {
+                firebaseLogEvent("not_able_to_add_view_to_window");
+                cleanUp();
+            }
+        } catch (Exception e){
+            for (View windowView : new ArrayList<>(Arrays.asList(floatyView, progressDialog, apiLoader))) {
+                if (windowView != null && windowView.isAttachedToWindow()) {
+                    windowManager.removeView(windowView);
+                }
+            }
+            addPagerLayoutToWindow();
+        }
     }
 
     private void startTimer() {
