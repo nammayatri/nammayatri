@@ -168,7 +168,7 @@ checkForDeviationInSingleRoute :: [LatLong] -> Meters -> Meters -> Ride -> Booki
 checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking = do
   let rideId = ride.id
   logInfo $ "Checking for deviation in single route for rideId: " <> getId rideId
-  let key = searchRequestKey (getId rideId)
+  let key = searchRequestKey booking.transactionId
   mbRouteInfo :: Maybe RI.RouteInfo <- Redis.get key
   case mbRouteInfo of
     Just routeInfo -> do

@@ -62,11 +62,11 @@ findFullSpecialLocationsByMerchantOperatingCityId mocId = do
 findSpecialLocationByLatLongFull :: Transactionable m => LatLong -> Int -> m (Maybe SpecialLocationFull)
 findSpecialLocationByLatLongFull point radius = do
   mbRes <-
-    Esq.findOne $ do
+    Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
       where_ $ pointCloseByOrWithin (point.lon, point.lat) (val radius)
       return (specialLocation, F.getGeomGeoJSON)
-  mapM makeFullSpecialLocation mbRes
+  mapM makeFullSpecialLocation (listToMaybe mbRes)
 
 findSpecialLocationByLatLongNearby :: Transactionable m => LatLong -> Int -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLongNearby point radius = do
