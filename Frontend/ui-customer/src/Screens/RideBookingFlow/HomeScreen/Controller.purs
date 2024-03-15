@@ -1090,6 +1090,7 @@ eval (RepeatRideCountDown seconds status timerID) state = do
     void $ pure $ clearTimerWithId timerID
     void $ pure $ performHapticFeedback unit
     void $ pure $ updateLocalStage FindingQuotes
+    void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
     let updatedState = state{data{rideHistoryTrip = Nothing}, props{repeatRideTimerId = "", currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
     updateAndExit (updatedState) (GetQuotes updatedState)
   else continue state{props{repeatRideTimer = (show seconds), repeatRideTimerId = timerID}}
