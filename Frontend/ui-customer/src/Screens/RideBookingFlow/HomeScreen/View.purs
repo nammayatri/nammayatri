@@ -381,9 +381,7 @@ view push state =
                 relativeLayout 
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
-                ][ rideTrackingView push state 
-                , DriverInfoCard.brandingBannerView state.data.config.driverInfoConfig VISIBLE (Just "BrandingBanner")
-                ]
+                ][ rideTrackingView push state ]
               else emptyTextView state
             , if state.props.currentStage == ChatWithDriver then messagingView push state else emptyTextView state
             , if state.props.currentStage /= RideRating && state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI) && state.props.currentStage == HomeScreen then (sourceUnserviceableView push state) else emptyTextView state

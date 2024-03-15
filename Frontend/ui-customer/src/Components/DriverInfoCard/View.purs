@@ -144,7 +144,6 @@ driverInfoViewSpecialZone push state =
             , background Color.grey700
             ][if not state.data.config.showPickUpandDrop then dummyView push else sourceDestinationView push (getTripDetails state)
               , cancelRideLayout push state
-              , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing
             ]
           ]
       ]
@@ -623,7 +622,6 @@ driverInfoView push state =
                 , background Color.grey700
                 ][if not state.data.config.showPickUpandDrop then dummyView push else sourceDestinationView push (getTripDetails state)
                 , cancelRideLayout push state
-                , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing
                 ]
          ]
       ]
@@ -670,39 +668,6 @@ distanceView push state =
   , if state.props.isChatWithEMEnabled then chatButtonView push state else dummyView push
   ]
 
-brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> PrestoDOM (Effect Unit) w
-brandingBannerView driverInfoConfig isVisible uid = 
-  let brandingVisibility = if not driverInfoConfig.footerVisibility then GONE else isVisible
-  in 
-    linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , alignParentBottom "true,-1"
-    , gravity BOTTOM
-    , visibility $ brandingVisibility
-    ][ separator (MarginTop 0) (V 1) Color.grey900 true
-     , linearLayout
-       ([ width MATCH_PARENT
-       , height WRAP_CONTENT
-       , gravity CENTER
-       , background driverInfoConfig.footerBackgroundColor
-       , padding $ Padding 12 12 12 (12+safeMarginBottom)
-       ] <> if isJust uid then [id $ getNewIDWithTag $ fromMaybe "" uid] else [])
-       [textView $
-        [ text $ getString POWERED_BY 
-        , width WRAP_CONTENT    
-        , height WRAP_CONTENT
-        , color Color.black800
-        , padding $ PaddingRight 6
-        ] <> FontStyle.body3 TypoGraphy
-      , imageView
-        [ imageWithFallback $ driverInfoConfig.footerImageUrl
-        , width $ V 62
-        , height $ V 20
-        ]
-      ]
-    ]
 
 cancelRideLayout :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 cancelRideLayout push state =
