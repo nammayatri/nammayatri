@@ -1458,15 +1458,15 @@ homeScreenFlow = do
                 _     ->   modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{ selectedLocationListItem = Just selectedLocationListItem{lat = Just (placeLatLong.lat), lon = Just (placeLatLong.lon) }}})
               getDistanceDiff  state{data{ saveFavouriteCard{selectedItem{lat = Just (placeLatLong.lat), lon =Just (placeLatLong.lon) }},selectedLocationListItem = Just selectedLocationListItem{lat = Just (placeLatLong.lat), lon = Just (placeLatLong.lon) }}} (placeLatLong.lat) (placeLatLong.lon)
     GO_TO_CALL_EMERGENCY_CONTACT state -> do
-        (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "EmergencyContact" state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo) state.data.driverInfoCardState.rideId)
+        (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "EmergencyContact" state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo) state.data.driverInfoCardState.rideId false)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
         homeScreenFlow
     GO_TO_CALL_POLICE state -> do
-        (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "Police" "") state.data.driverInfoCardState.rideId)
+        (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "Police" "") state.data.driverInfoCardState.rideId false)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
         homeScreenFlow
     GO_TO_CALL_SUPPORT state -> do
-        (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "CustomerCare" "") state.data.driverInfoCardState.rideId)
+        (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "CustomerCare" "") state.data.driverInfoCardState.rideId false)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
         homeScreenFlow
     GO_TO_SOS_STATUS state -> do
@@ -3822,7 +3822,7 @@ activateSafetyScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{sosBannerType = Nothing}})
           pure unit
         else do
-          (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow flowType "") rideId)
+          (UserSosRes res) <- Remote.userSosBT $ Remote.makeUserSosReq (Remote.createUserSosFlow flowType "") rideId state.props.reportPastRide
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{contactList = Nothing}})
           if (not isPoliceFlow) then do
             modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data {sosId = res.sosId}})
@@ -3898,7 +3898,7 @@ sosActiveFlow = do
   case flow of
     SosActiveScreen.UpdateAsSafe state -> do
       let sosId = if state.props.showTestDrill then "mock-sos" else state.data.sosId
-      _ <- lift $ lift $ Remote.markRideAsSafe sosId state.props.showTestDrill
+      void $ lift $ lift $ Remote.markRideAsSafe sosId state.props.showTestDrill state.props.reportPastRide
       when (not $ DS.null state.data.rideId) $ do
         void $ pure $ cleverTapCustomEventWithParams "ny_user_sos_marked_safe" "current_time" (getCurrentUTC "")
         pure unit

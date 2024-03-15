@@ -30,7 +30,7 @@ getBannerConfigs state action =
   (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
     then [disabilityBannerConfig state action] 
     else [])
-  <> (if  state.data.config.banners.homeScreenSafety && isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
+  <> (if  state.data.config.banners.homeScreenSafety && state.props.sosBannerType == Just ST.SETUP_BANNER && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
   <> (if (state.data.config.feature.enableZooTicketBookingFlow)
     then [ticketBannerConfig state action] else [])
   <> (getRemoteBannerConfigs state.props.city)
@@ -78,19 +78,19 @@ sosSetupBannerConfig state action =
 
     bannerConfig =
       case state.props.sosBannerType of
-        Just ST.SETUP_BANNER -> {title: getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE, actionText: getString SETUP_NOW, image : "ny_ic_banner_sos_red"}
-        Just ST.MOCK_DRILL_BANNER -> {title: getString COMPLETE_YOUR_TEST_DRILL, actionText: getString TEST_DRILL, image : "ny_ic_mock_drill_banner_red"}
-        Nothing -> {title: "", actionText: "", image : ""}
+        Just ST.SETUP_BANNER -> {title: getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE, actionText: getString SETUP_NOW, image : "ny_ic_banner_sos_red", backgroundColor: Color.red200, color : Color.darkRed, shieldImage: "ny_ic_shield_red"}
+        Just ST.MOCK_DRILL_BANNER -> {title: getString COMPLETE_YOUR_TEST_DRILL, actionText: getString TEST_DRILL, image : "ny_ic_mock_drill_banner_blue", backgroundColor: Color.azureWhite, color : Color.policeBlue, shieldImage: "ny_ic_shield_blue"}
+        Nothing -> {title: "", actionText: "", image : "", backgroundColor: "", color : "", shieldImage: ""}
     config' =
       config
-        { backgroundColor = Color.red200
+        { backgroundColor = bannerConfig.backgroundColor
         , title = bannerConfig.title
-        , titleColor = Color.darkRed
+        , titleColor = bannerConfig.color
         , actionText = bannerConfig.actionText
         , actionTextColor = Color.white900
-        , actionTextBackgroundColour = Color.darkRed
+        , actionTextBackgroundColour = bannerConfig.color
         , imageUrl = (getAssetLink FunctionCall) <> bannerConfig.image <> ".png"
-        , actionIconUrl = (getAssetLink FunctionCall) <> "ny_ic_shield_red.png" 
+        , actionIconUrl = (getAssetLink FunctionCall) <> bannerConfig.shieldImage <> ".png"
         , actionIconVisibility = true
         , actionArrowIconVisibility = false
         , type = BannerCarousel.Safety

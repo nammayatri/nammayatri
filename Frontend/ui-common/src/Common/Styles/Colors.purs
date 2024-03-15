@@ -329,3 +329,9 @@ white13 = "#21000000"
 
 black150 :: Color
 black150 = "#373F50"
+
+policeBlue :: Color
+policeBlue = "#2A5465"
+
+azureWhite :: Color
+azureWhite = "#D6EBF5"

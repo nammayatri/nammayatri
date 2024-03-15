@@ -454,7 +454,6 @@ view push state =
             , if state.props.currentStage == DistanceOutsideLimits then (distanceOutsideLimitsView push state) else emptyTextView state
             , if state.props.currentStage == ShortDistance && (not state.props.suggestedRideFlow) && (not state.props.isRepeatRide)then (shortDistanceView push state) else emptyTextView state
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
-            , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
             , if state.props.showShareAppPopUp && state.data.config.feature.enableShareApp then shareAppPopUp push state else emptyTextView state
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
@@ -590,7 +589,7 @@ messageWidgetView push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.props.bottomSheetState == STATE_EXPANDED || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
+  , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.showRateCard || state.props.bottomSheetState == STATE_EXPANDED || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
   , orientation VERTICAL
   ][ (if disableSuggestions state then 
         PrestoAnim.animationSet[] 
@@ -1301,7 +1300,7 @@ homeScreenTopIconView push state =
                     , height $ V 24
                     , width $ V 24
                     , margin (Margin 16 16 16 16)
-                    , accessibility if state.props.emergencyHelpModal || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver then DISABLE else ENABLE
+                    , accessibility if state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver then DISABLE else ENABLE
                     , accessibilityHint "Navigation : Button"
                     ]
                 ]
@@ -1462,7 +1461,7 @@ topLeftIconView state push =
             , orientation HORIZONTAL
             , visibility $ boolToVisibility  state.data.config.showHamMenu
             , margin $ Margin 16 20 0 0
-            , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
+            , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.showRateCard || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
             ]
             [ linearLayout
                 [ height $ V 48
@@ -2037,15 +2036,6 @@ estimatedTimeAndDistanceView push state =
       ] <> FontStyle.paragraphText LanguageStyle
   ]
 
-emergencyHelpModal :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-emergencyHelpModal push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ]
-    [ EmergencyHelp.view (push <<< EmergencyHelpModalAC) $ emergencyHelpModelViewState state ]
-
 locationTrackingPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationTrackingPopUp push state =
   relativeLayout
@@ -2390,7 +2380,7 @@ rideTrackingView push state =
     , padding (Padding 0 0 0 0)
     , margin $ MarginTop topMargin
     , background Color.transparent
-    , accessibility if (state.data.settingSideBar.opened /= SettingSideBar.CLOSED) || state.props.currentStage == ChatWithDriver || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.isCancelRide || state.props.emergencyHelpModal || state.props.isLocationTracking || state.props.callSupportPopUp || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp) || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
+    , accessibility if (state.data.settingSideBar.opened /= SettingSideBar.CLOSED) || state.props.currentStage == ChatWithDriver || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp) || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
     , alignParentBottom "true,-1" -- Check it in Android.
     , onBackPressed push (const $ BackPressed)
     ]
@@ -3087,7 +3077,7 @@ confirmingLottieView push state =
     ]
 
 isAnyOverlayEnabled :: HomeScreenState -> Boolean
-isAnyOverlayEnabled state = state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp || state.data.waitTimeInfo)
+isAnyOverlayEnabled state = state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp || state.data.waitTimeInfo)
 
 carouselView:: HomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 carouselView state push = 
@@ -3455,7 +3445,7 @@ pickupLocationView push state =
                   [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_menu"
                   , height $ V 23
                   , width $ V 23
-                  , accessibility if state.props.emergencyHelpModal || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver then DISABLE else ENABLE
+                  , accessibility if state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver then DISABLE else ENABLE
                   , accessibilityHint "Navigation : Button"
                   ]
               ] 

@@ -45,7 +45,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.SourceToDestination as SourceToDestination
 import Data.Either (Either (..))
 import PrestoDOM.Animation as PrestoAnim
-import Animation
+import JBridge as JB
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -70,7 +70,11 @@ screen initialState =
                                       EHC.liftFlow $ push $ UpdateSosId sos
                                       pure unit
                                     Nothing -> pure unit
-                                Left err -> pure unit
+                                Left err -> do
+                                  let errMessage = if err.code == 400 
+                                                     then err.response.errorMessage 
+                                                     else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                                  void $ pure $ JB.toast errMessage
                             else
                               EHC.liftFlow $ push $ GoToActiveSos
                       EHC.liftFlow $ push $ DisableShimmer
@@ -115,12 +119,12 @@ view push state =
             , padding padding'
             , visibility $ boolToVisibility $ not state.props.showShimmer
             ]
-            [ case state.props.showTestDrill, state.props.confirmTestDrill || state.props.triggeringSos, state.props.reportPastRide of
+            [ case state.props.showTestDrill, state.props.confirmTestDrill || state.props.triggeringSos, state.props.reportPastRide && not state.props.confirmTestDrill of
                 _, _, true -> Header.view (push <<< SafetyHeaderAction) $ postRideHeaderConfig state
                 true, _,_ -> Header.testSafetyHeaderView (push <<< SafetyHeaderAction)
                 _, true, _ -> emptyTextView
                 false, false,_ -> Header.view (push <<< SafetyHeaderAction) headerConfig
-            , case state.props.confirmTestDrill, state.props.triggeringSos, state.props.showCallPolice, state.props.reportPastRide of
+            , case state.props.confirmTestDrill, state.props.triggeringSos, (state.props.showCallPolice || state.props.isSafetyCenterDisabled), state.props.reportPastRide of
                 true, _, _, _ -> confirmSafetyDrillView state push
                 _, _, true, _ -> dialPoliceView state push
                 _, _, _, true -> postRideSosView push state
@@ -251,6 +255,7 @@ type ImageTextViewConfig
     , useFullWidth :: Boolean
     , image :: Maybe String
     , visibility :: Boolean
+    , textStyle :: FontStyle.Style
     }
 
 imageWithTextView :: ImageTextViewConfig -> forall w. PrestoDOM (Effect Unit) w
@@ -283,7 +288,7 @@ imageWithTextView config =
           , height WRAP_CONTENT
           , singleLine false
           ]
-        <> FontStyle.tags TypoGraphy
+        <> (FontStyle.getFontStyle config.textStyle LanguageStyle)
     ]
 
 emergencyContactsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -325,7 +330,7 @@ emergencyContactsView state push =
             <> FontStyle.body1 TypoGraphy
         ]
     , textView
-        $ [ text $ getString EMERGENCY_CONTACTS_CAN_TAKE_ACTION
+        $ [ text $ getString $ EMERGENCY_CONTACTS_CAN_TAKE_ACTION "EMERGENCY_CONTACTS_CAN_TAKE_ACTION"
           , color Color.white900
           , visibility $ boolToVisibility $ state.props.showTestDrill && not (null state.data.emergencyContactsList)
           , gravity CENTER
@@ -391,10 +396,11 @@ emergencyContactsView state push =
     , usePadding: false
     , image: Nothing
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
   configDescTwo =
-    { text': getString EMERGENCY_CONTACTS_CAN_TAKE_ACTION
+    { text': getString $ EMERGENCY_CONTACTS_CAN_TAKE_ACTION "EMERGENCY_CONTACTS_CAN_TAKE_ACTION"
     , isActive: true
     , textColor: Color.white900
     , useMargin: true
@@ -402,6 +408,7 @@ emergencyContactsView state push =
     , usePadding: false
     , image: Nothing
     , visibility: state.data.shareToEmergencyContacts && (not $ null state.data.emergencyContactsList)
+    , textStyle: FontStyle.Tags
     }
 
   configDescThree =
@@ -413,6 +420,7 @@ emergencyContactsView state push =
     , usePadding: false
     , image: Just "ny_ic_info_white"
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
 otherActionsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -516,6 +524,7 @@ otherActionsView state push =
     , useFullWidth: false
     , image: Just "ny_ic_police"
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
   configActionTwo =
@@ -527,6 +536,7 @@ otherActionsView state push =
     , useFullWidth: false
     , image: Just "ny_ic_issue_box"
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
   configActionTwo' =
@@ -538,6 +548,7 @@ otherActionsView state push =
     , useFullWidth: false
     , image: Just "ny_ic_support_unfilled"
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
   configActionThree =
@@ -549,6 +560,7 @@ otherActionsView state push =
     , useFullWidth: false
     , image: Just "ny_ic_police"
     , visibility: not state.props.showTestDrill
+    , textStyle: FontStyle.Tags
     }
 
 disclaimerView :: forall w. (Action -> Effect Unit) -> Visibility -> PrestoDOM (Effect Unit) w
@@ -784,7 +796,7 @@ driverRatingView ride =
       , color Color.white900
       , accessibilityHint $ "You Rated : " <> (show ride.rating) <> " stars"
       , accessibility ENABLE
-      ] <> FontStyle.body3 LanguageStyle
+      ] <> FontStyle.captions LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -795,7 +807,7 @@ driverRatingView ride =
                         linearLayout
                         [ height WRAP_CONTENT
                         , width WRAP_CONTENT
-                        , margin if (item /= 5) then (Margin 0 0 4 0) else (Margin 0 0 0 0)
+                        , margin if (item /= 5) then MarginRight 3 else MarginTop 0
                         ][imageView
                             [ height $ V 14
                             , width $ V 14
@@ -866,6 +878,7 @@ defaultTextConfig =  {
     , useFullWidth: false
     , image: Nothing
     , visibility: true
+    , textStyle: FontStyle.Tags
     }
 
 confirmSafetyDrillView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -881,7 +894,6 @@ confirmSafetyDrillView state push =
         , width WRAP_CONTENT
         , padding $ Padding 0 16 16 16
         , onClick push $ const BackPressed
-        , visibility $ boolToVisibility $ EHC.os == "IOS"
         ]
         [ imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
@@ -889,29 +901,52 @@ confirmSafetyDrillView state push =
             , width $ V 24
             ]
         ]
-    , layoutWithWeight
-    , imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
-        , width MATCH_PARENT
-        , height $ V 300
+    , relativeLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , padding $ Padding 0 16 16 0
+        , onClick push $ const BackPressed
         ]
-    , layoutWithWeight
-    , textView
-        $ [ text $ getString ARE_YOU_READY_TO_START_DRILL
-          , color Color.white900
-          , gravity CENTER
+        [ imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
           , width MATCH_PARENT
+          , height $ V 200
           ]
-        <> FontStyle.h1 TypoGraphy
-    , textView
-        $ [ text $ getString TEST_DRILL_DESC
-          , color Color.white900
-          , gravity CENTER
-          , margin $ MarginTop 16
-          ]
-        <> FontStyle.body5 TypoGraphy
+        ]
+    , textView $
+      [ text $ getString PREPARE_EMERGENCY_CONTACTS
+      , color Color.white900
+      , margin $ MarginTop 16
+      ] <> FontStyle.h2 TypoGraphy
+    , imageWithTextView configActionOne
+    , imageWithTextView configActionTwo
+    , layoutWithWeight
     , PrimaryButton.view (push <<< StartTestDrill) $ startTestDrillButtonConfig state
     ]
+  where
+    configActionOne =
+      { text': getString EMERGENCY_CONTACTS_WILL_BE_NOTIFIED
+      , isActive: true
+      , textColor: Color.white900
+      , useMargin: true
+      , usePadding: false
+      , useFullWidth: false
+      , image: Nothing
+      , visibility: true
+      , textStyle: FontStyle.Body1
+      }
+
+    configActionTwo =
+      { text': getString INFORM_EMERGENCY_CONTACTS_ABOUT_TEST
+      , isActive: true
+      , textColor: Color.white900
+      , useMargin: true
+      , usePadding: false
+      , useFullWidth: false
+      , image: Nothing
+      , visibility: true
+      , textStyle: FontStyle.Body1
+      }
 
 warningView :: forall w. String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 warningView text' visibility' useMargin =

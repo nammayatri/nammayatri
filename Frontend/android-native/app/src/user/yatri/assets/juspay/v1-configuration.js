@@ -42,7 +42,8 @@ window.getMerchantConfig = function () {
       "SAFETY_TEAM_WILL_BE_ALERTED",
       "SHARE_RIDE_DESCRIPTION",
       "PLEASE_STAY_CALM_TEAM_ALERTED",
-      "INDICATION_TO_EMERGENCY_CONTACTS"
+      "INDICATION_TO_EMERGENCY_CONTACTS",
+      "EMERGENCY_CONTACTS_CAN_TAKE_ACTION"
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
@@ -142,7 +143,8 @@ window.getMerchantConfig = function () {
       "SAFETY_TEAM_WILL_BE_ALERTED" : "Upon SOS  Yatri safety team will be notified",
       "SHARE_RIDE_DESCRIPTION" : "On choosing this, Yatri will send app push notification to the emergency contacts",
       "PLEASE_STAY_CALM_TEAM_ALERTED" : "Please stay calm, Yatri safety team is alerted!",
-      "INDICATION_TO_EMERGENCY_CONTACTS" : "Yatri will indicate to your emergency contacts that this is a test drill, ensuring a stress-free experience."
+      "INDICATION_TO_EMERGENCY_CONTACTS" : "Yatri will indicate to your emergency contacts that this is a test drill, ensuring a stress-free experience.",
+      "EMERGENCY_CONTACTS_CAN_TAKE_ACTION" : "Emergency Contacts can follow/ take emergency response actions on Yatri App"
     },
     "malayalamStrings": {
       "MOST_LOVED_APP" : "",
@@ -173,7 +175,8 @@ window.getMerchantConfig = function () {
       "SAFETY_TEAM_WILL_BE_ALERTED": "SOS ലെയ്പിലുള്ള സമയത്ത് യാത്ര സുരക്ഷാ ടീമിനെ അറിയിക്കുന്നതും",
       "SHARE_RIDE_DESCRIPTION": "ഇത് തിരഞ്ഞെടുക്കുമ്പോൾ, യാത്രി ആപ്പ് പുതിയ യാത്രക്കുള്ള അപ്ലിക്കേഷൻ പുശ് നോട്ടിഫിക്കേഷൻ അതിരുകൾക്ക് അയയ്ക്കും",
       "PLEASE_STAY_CALM_TEAM_ALERTED": "ദയവായി നിങ്ങൾക്ക് നിരീക്ഷണം നിരസിച്ചിരിക്കാനായി യാത്ര സുരക്ഷാ ടീമിനെ അറിയിക്കുക!",
-      "INDICATION_TO_EMERGENCY_CONTACTS": "ഈ ഒരു പരീക്ഷണ പ്രവർത്തനം ആകുന്നത് നിങ്ങളുടെ അത്തം കാൾമുറിക്കുകളെ അറിയിപ്പ് ചെയ്യുന്നതാണെന്ന് യാത്ര പരിചയകൾ തെളിയിക്കും"
+      "INDICATION_TO_EMERGENCY_CONTACTS": "ഈ ഒരു പരീക്ഷണ പ്രവർത്തനം ആകുന്നത് നിങ്ങളുടെ അത്തം കാൾമുറിക്കുകളെ അറിയിപ്പ് ചെയ്യുന്നതാണെന്ന് യാത്ര പരിചയകൾ തെളിയിക്കും",
+      "EMERGENCY_CONTACTS_CAN_TAKE_ACTION" : "എമർജൻസി കോൺടാക്ടുകൾ യാത്ര ആപ്പിൽ നിന്നും പിന്തുണയ്ക്കാം/ എമർജൻസി പ്രതിക്രിയകൾ എടുക്കാം"
     },
     "hindiStrings" : {
       "MOST_LOVED_APP" : "",

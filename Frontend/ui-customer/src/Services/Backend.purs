@@ -906,10 +906,11 @@ callbackRequestBT lazyCheck = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
-makeUserSosReq :: UserSosFlow -> String -> UserSosReq
-makeUserSosReq flow rideId = UserSosReq {
+makeUserSosReq :: UserSosFlow -> String -> Boolean -> UserSosReq
+makeUserSosReq flow rideId isRideEnded = UserSosReq {
      "flow" : flow,
-     "rideId" : rideId
+     "rideId" : rideId,
+     "isRideEnded" : isRideEnded
 }
 
 createUserSosFlow :: String -> String -> UserSosFlow
@@ -1125,10 +1126,10 @@ updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
     where
         unwrapResponse (x) = x
 
-markRideAsSafe :: String -> Boolean -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
-markRideAsSafe sosId isMock = do
+markRideAsSafe :: String -> Boolean -> Boolean -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
+markRideAsSafe sosId isMock isRideEnded = do
         headers <- getHeaders "" false
-        let reqBody = UpdateAsSafeReqBody{isMock : isMock}
+        let reqBody = UpdateAsSafeReqBody {isMock : isMock, isRideEnded : isRideEnded}
         withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId reqBody)
     where
         unwrapResponse (x) = x

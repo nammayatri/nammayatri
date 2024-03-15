@@ -48,6 +48,7 @@ import Data.Either (Either(..))
 import Helpers.Pooling (delay)
 import Data.Time.Duration (Milliseconds(..))
 import Components.PopUpModal as PopUpModal
+import JBridge as JB
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -82,7 +83,11 @@ checkAndStatus push state = do
           liftFlow $ handleLastRide eiResp
       liftFlow $ push $ UpdateEmergencySettings response
       liftFlow $ push $ DisableShimmer
-    Left _ -> pure unit
+    Left err -> do
+      let errMessage = if err.code == 400 
+                        then err.response.errorMessage 
+                        else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+      void $ pure $ JB.toast errMessage
   EHU.toggleLoader false
   where
   getLastRide checkPastRide =

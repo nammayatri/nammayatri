@@ -82,18 +82,21 @@ eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
 eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
   let
     contacts =
-      map
-        ( \(ContactDetails item) ->
-            { number: item.mobileNumber
-            , name: item.name
-            , isSelected: true
-            , enableForFollowing: fromMaybe false item.enableForFollowing
-            , enableForShareRide: fromMaybe false item.enableForShareRide
-            , onRide : fromMaybe false item.onRide
-            , priority: fromMaybe 1 item.priority
-            }
-        )
-        response.defaultEmergencyNumbers
+      if state.props.reportPastRide
+        then []
+        else 
+          map
+            ( \(ContactDetails item) ->
+                { number: item.mobileNumber
+                , name: item.name
+                , isSelected: true
+                , enableForFollowing: fromMaybe false item.enableForFollowing
+                , enableForShareRide: fromMaybe false item.enableForShareRide
+                , onRide : fromMaybe false item.onRide
+                , priority: fromMaybe 1 item.priority
+                }
+            )
+            response.defaultEmergencyNumbers
   continue
     state
       { data
