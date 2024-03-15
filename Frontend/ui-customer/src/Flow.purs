@@ -630,7 +630,6 @@ homeScreenFlow = do
         modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{fromHomeScreen = updateProfile , updateProfile = updateProfile, changeAccessibility = true, isBtnEnabled = true , genderOptionExpanded = false , showOptions = false, expandEnabled = true }})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES updatedState -> do
-      let _ = spy "dsjfhlaskhdlfasdjhfklsahjdfjasdlfhdwalkjhsdlfasjhfklsda" updatedState
       if updatedState.data.source == getString STR.CURRENT_LOCATION then do
         PlaceName address <- getPlaceName updatedState.props.sourceLat updatedState.props.sourceLong HomeScreenData.dummyLocation
         modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{ data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing updatedState.props.sourceLat updatedState.props.sourceLong } })
@@ -660,7 +659,7 @@ homeScreenFlow = do
       when (state.data.startTimeUTC /= "" && not isIntercity) do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{props{showNormalRideNotSchedulablePopUp = true}})
         homeScreenFlow
-      let startTimeUTC = if (state.data.fareProductType == FPT.INTER_CITY && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
+      let startTimeUTC = if (isIntercity && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
       (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC)
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
       case rideSearchRes.routeInfo of
@@ -3587,7 +3586,9 @@ rideScheduledFlow = do
     RideScheduledScreenOutput.CancelRentalRide state -> do 
       resp <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
       case resp of 
-        Right resp -> homeScreenFlow
+        Right resp -> do 
+          updateUserInfoToState currentState.homeScreen
+          homeScreenFlow
         Left _ -> do 
           void $ pure $ toast "Failed To Cancel Ride"
           rideScheduledFlow

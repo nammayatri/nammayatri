@@ -1491,7 +1491,7 @@ chooseYourRideConfig state = let
     {
       rideDistance = state.data.rideDistance,
       rideDuration = state.data.rideDuration,
-      quoteList = if isIntercity then state.data.quoteList else state.data.specialZoneQuoteList,
+      quoteList = if DA.any (_ == state.data.fareProductType) [FPT.INTER_CITY, FPT.ONE_WAY_SPECIAL_ZONE] then state.data.quoteList else state.data.specialZoneQuoteList,
       showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
       nearByDrivers = state.data.nearByDrivers,
       showPreferences = state.data.showPreferences,
