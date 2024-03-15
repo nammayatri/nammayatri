@@ -70,7 +70,7 @@ data RideAssignedInfo = RideAssignedInfo
   }
 
 data ValidatedOnConfirmReq
-  = ValidatedRideAssigned DCommon.RideAssignedReq
+  = ValidatedRideAssigned DCommon.ValidatedRideAssignedReq
   | ValidatedBookingConfirmed ValidatedBookingConfirmedReq
 
 data ValidatedBookingConfirmedReq = ValidatedBookingConfirmedReq
@@ -125,4 +125,5 @@ validateRequest (BookingConfirmed BookingConfirmedInfo {..}) = do
   return $ ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}
 validateRequest (RideAssigned RideAssignedInfo {..}) = do
   let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
-  return $ ValidatedRideAssigned DCommon.RideAssignedReq {..}
+  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
+  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {..}

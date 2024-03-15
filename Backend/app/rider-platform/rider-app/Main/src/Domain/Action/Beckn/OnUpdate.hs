@@ -91,10 +91,10 @@ data OnUpdateReq
       }
 
 data ValidatedOnUpdateReq
-  = ValidatedRideAssignedReq Common.RideAssignedReq
-  | ValidatedRideStartedReq Common.RideStartedReq
-  | ValidatedRideCompletedReq Common.RideCompletedReq
-  | ValidatedBookingCancelledReq Common.BookingCancelledReq
+  = ValidatedRideAssignedReq Common.ValidatedRideAssignedReq
+  | ValidatedRideStartedReq Common.ValidatedRideStartedReq
+  | ValidatedRideCompletedReq Common.ValidatedRideCompletedReq
+  | ValidatedBookingCancelledReq Common.ValidatedBookingCancelledReq
   | ValidatedBookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
@@ -102,7 +102,7 @@ data ValidatedOnUpdateReq
         booking :: SRB.Booking,
         ride :: SRide.Ride
       }
-  | ValidatedDriverArrivedReq Common.DriverArrivedReq
+  | ValidatedDriverArrivedReq Common.ValidatedDriverArrivedReq
   | ValidatedEstimateRepetitionReq
       { searchRequestId :: Id DSR.SearchRequest,
         bppEstimateId :: Id DEstimate.BPPEstimate,
@@ -235,19 +235,24 @@ validateRequest ::
   m ValidatedOnUpdateReq
 validateRequest = \case
   OURideAssignedReq req -> do
-    return $ ValidatedRideAssignedReq req
+    validatedRequest <- Common.validateRideAssignedReq req
+    return $ ValidatedRideAssignedReq validatedRequest
   OURideStartedReq req -> do
-    return $ ValidatedRideStartedReq req
+    validatedRequest <- Common.validateRideStartedReq req
+    return $ ValidatedRideStartedReq validatedRequest
   OURideCompletedReq req -> do
-    return $ ValidatedRideCompletedReq req
+    validatedRequest <- Common.validateRideCompletedReq req
+    return $ ValidatedRideCompletedReq validatedRequest
   OUBookingCancelledReq req -> do
-    return $ ValidatedBookingCancelledReq req
+    validatedRequest <- Common.validateBookingCancelledReq req
+    return $ ValidatedBookingCancelledReq validatedRequest
   BookingReallocationReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     return $ ValidatedBookingReallocationReq {..}
   OUDriverArrivedReq req -> do
-    return $ ValidatedDriverArrivedReq req
+    validatedRequest <- Common.validateDriverArrivedReq req
+    return $ ValidatedDriverArrivedReq validatedRequest
   NewMessageReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)

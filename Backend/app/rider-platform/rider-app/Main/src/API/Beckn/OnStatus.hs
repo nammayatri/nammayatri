@@ -25,6 +25,7 @@ import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
 import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -43,14 +44,27 @@ onStatus ::
   FlowHandler AckResponse
 onStatus _ reqBS = withFlowHandlerBecknAPI do
   req <- decodeReq reqBS
-  mbDOnStatusReq <- case req of
+  (mbDOnStatusReq, messageId) <- case req of
     Right reqV2 -> do
       transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
-      Utils.withTransactionIdLogTag transactionId $ ACL.buildOnStatusReqV2 reqV2
+      messageId <- Utils.getMessageIdText reqV2.onStatusReqContext
+      onStatusReq <- Utils.withTransactionIdLogTag transactionId $ ACL.buildOnStatusReqV2 reqV2
+      return (onStatusReq, messageId)
     Left reqV1 ->
       throwError $ InvalidRequest $ "On Status v1 req shouldn't come" <> show reqV1
-  whenJust mbDOnStatusReq DOnStatus.onStatus
+  whenJust mbDOnStatusReq $ \onStatusReq ->
+    Redis.whenWithLockRedis (onStatusLockKey messageId) 60 $ do
+      validatedOnStatusReq <- DOnStatus.validateRequest onStatusReq
+      fork "on update processing" $ do
+        Redis.whenWithLockRedis (onStatusProcessngLockKey messageId) 60 $
+          DOnStatus.onStatus validatedOnStatusReq
   pure Ack
+
+onStatusLockKey :: Text -> Text
+onStatusLockKey id = "Customer:OnStatus:MessageId-" <> id
+
+onStatusProcessngLockKey :: Text -> Text
+onStatusProcessngLockKey id = "Customer:OnStatus:Processing:MessageId-" <> id
 
 decodeReq :: MonadFlow m => ByteString -> m (Either OnStatus.OnStatusReq OnStatus.OnStatusReqV2)
 decodeReq reqBS =
