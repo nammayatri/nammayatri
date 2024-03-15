@@ -22,7 +22,7 @@ BecknConfig:
     collectedBy: PaymentCollectedBy
     staticTermsUrl: Maybe BaseUrl
     buyerFinderFee: Maybe Text
-    settlementWindow : Maybe Text
+    settlementWindow: Maybe Text
     searchTTLSec: Maybe Int
     selectTTLSec: Maybe Int
     initTTLSec: Maybe Int
