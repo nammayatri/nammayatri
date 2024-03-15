@@ -973,6 +973,7 @@ homeScreenFlow = do
                                       void $ pure $ metaLogEvent "ny_user_ride_completed"
                                       void $ updateLocalStage HomeScreen
                                       setValueToLocalStore IS_SOS_ACTIVE "false"
+                                      deleteValueFromLocalStore SELECTED_VARIANT
                                       removeChatService ""
                                       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
                                       if (state.props.bookingId /= "") then do
