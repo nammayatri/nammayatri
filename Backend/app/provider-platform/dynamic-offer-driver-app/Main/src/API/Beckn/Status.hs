@@ -21,17 +21,22 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.Utils
 import qualified Domain.Action.Beckn.Status as DStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Domain as Domain
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -54,6 +59,10 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     let context = reqV2.statusReqContext
     callbackUrl <- Utils.getContextBapUri context
     dStatusRes <- DStatus.handler transporterId dStatusReq
+    fork "status received pushing ondc logs" do
+      let transactionLog = TransactionLogReq "status" $ ReqLog (toJSON reqV2.statusReqContext) (maskSensitiveData $ toJSON reqV2.statusReqMessage)
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle dStatusRes.booking.providerId "MOBILITY" (Utils.mapVariantToVehicle dStatusRes.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     onStautusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info
     Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStautusReq.onStatusReqContext) $
