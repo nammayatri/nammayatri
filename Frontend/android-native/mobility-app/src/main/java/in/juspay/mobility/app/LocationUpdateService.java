@@ -27,6 +27,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.location.LocationManager;
@@ -164,7 +165,11 @@ public class LocationUpdateService extends Service {
         initialiseJSONObjects();
         context = getApplicationContext();
         isLocationUpdating = false;
-        this.startForeground(notificationServiceId, createNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            this.startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        } else{
+            this.startForeground(notificationServiceId, createNotification());
+        }
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         fusedLocClientForDistanceCal = LocationServices.getFusedLocationProviderClient(this);
         executorLocUpdate = Executors.newSingleThreadExecutor();
@@ -211,8 +216,13 @@ public class LocationUpdateService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         /* Start the service if the driver is active*/
         Log.i("LOCATION_UPDATE_WORKER", "Location update service is started");
-        startForeground(notificationServiceId, createNotification());
-		if (intent != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        }else {
+            startForeground(notificationServiceId, createNotification());
+        }
+
+        if (intent != null) {
             String startDistanceCalStr = intent.hasExtra("TRIP_STATUS") ? intent.getStringExtra("TRIP_STATUS") : null;
             if (!isDistanceCalulation && startDistanceCalStr != null && startDistanceCalStr.equals("started")) {
                 Log.d(LOG_TAG, "OnStart - StartDistanceCalculation");
