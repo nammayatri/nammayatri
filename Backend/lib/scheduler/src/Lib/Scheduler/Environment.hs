@@ -32,9 +32,9 @@ import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
@@ -152,11 +152,12 @@ runSchedulerM schedulerConfig env action = do
       fork
         "Fetching Kv configs"
         ( forever $ do
-            kvConfigs <-
-              QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
-                >>= fromMaybeM (InternalError "Couldn't find kv_configs table for scheduler app")
-            L.setOption KBT.Tables kvConfigs
+            handleExceptions $ do
+              kvConfigs <- QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
+              L.setOption KBT.Tables (fromMaybe (KUC.Tables [] []) kvConfigs)
             threadDelay (env.kvConfigUpdateFrequency * 1000000)
         )
       pure flowRt
     runFlowR flowRt' env action
+  where
+    handleExceptions = handle (\(e :: SomeException) -> L.logError ("KV_FETCH_FAILED_ALLOCATOR" :: Text) $ "Error fetching kv configs: " <> show e)
