@@ -928,7 +928,7 @@ getFleetDriverAssociation ::
   Bool ->
   Flow Common.DrivertoVehicleAssociationRes
 getFleetDriverAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo mbIsActive _isSearch = do
-  let limit = fromMaybe 10 mbLimit
+  let limit = min 5 $ fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   listOfAllDrivers <- FDV.findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId mbIsActive limit offset
   listItems <- filterForSearch <$> createFleetDriverAssociationListItem listOfAllDrivers
@@ -987,7 +987,7 @@ getFleetVehicleAssociation ::
   Bool ->
   Flow Common.DrivertoVehicleAssociationRes
 getFleetVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbDriverPhNo _isSearch = do
-  let limit = fromMaybe 10 mbLimit
+  let limit = min 5 $ fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   listOfAllVehicle <- RCQuery.findAllByFleetOwnerId fleetOwnerId limit offset
   listItems <- filterForSearch <$> createFleetVehicleAssociationListItem listOfAllVehicle

@@ -128,8 +128,8 @@ login LoginReq {..} = do
   (merchant', city') <- case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
     merchantAccessList' -> do
-      let sortedMerchantAccessList = sortOn DAccess.merchantId merchantAccessList'
-      let groupedByMerchant = head $ groupBy ((==) `on` DAccess.merchantId) sortedMerchantAccessList
+      let sortedMerchantAccessList = sortOn DAccess.merchantShortId merchantAccessList'
+      let groupedByMerchant = head $ groupBy ((==) `on` DAccess.merchantShortId) sortedMerchantAccessList
       let merchantWithCityList = DP.AvailableCitiesForMerchant ((.merchantShortId) (head groupedByMerchant)) (map (.operatingCity) groupedByMerchant)
       merchant <- QMerchant.findByShortId merchantWithCityList.merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantWithCityList.merchantShortId.getShortId)
       let defaultCityPresent = elem merchant.defaultOperatingCity merchantWithCityList.operatingCity
