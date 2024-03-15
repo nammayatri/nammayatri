@@ -15,6 +15,7 @@ import qualified Domain.Types.Station
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
@@ -24,6 +25,16 @@ data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {paymentOrder :: Data.Maybe.M
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data FRFSBookingPaymentStatusAPI = NEW | PENDING | SUCCESS | FAILURE | REFUNDED deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data FRFSCanCancelStatus = FRFSCanCancelStatus
+  { cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    isCancellable :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    refundAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data FRFSCancelStatus = FRFSCancelStatus {cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney, refundAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
@@ -58,6 +69,7 @@ data FRFSTicketAPI = FRFSTicketAPI {qrData :: Data.Text.Text, status :: Domain.T
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
+    city :: Kernel.Types.Beckn.Context.City,
     createdAt :: Kernel.Prelude.UTCTime,
     payment :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentAPI,
     price :: Kernel.Types.Common.HighPrecMoney,
@@ -65,6 +77,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     tickets :: [API.Types.UI.FRFSTicketService.FRFSTicketAPI],
+    updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Domain.Types.Station.FRFSVehicleType
   }

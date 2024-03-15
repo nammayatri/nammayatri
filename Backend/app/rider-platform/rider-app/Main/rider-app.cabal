@@ -109,6 +109,7 @@ library
       Beckn.ACL.FRFS.Cancel
       Beckn.ACL.FRFS.Confirm
       Beckn.ACL.FRFS.Init
+      Beckn.ACL.FRFS.OnCancel
       Beckn.ACL.FRFS.OnConfirm
       Beckn.ACL.FRFS.OnInit
       Beckn.ACL.FRFS.OnSearch
@@ -143,6 +144,7 @@ library
       Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.Common
       Domain.Action.Beckn.FRFS.Common
+      Domain.Action.Beckn.FRFS.OnCancel
       Domain.Action.Beckn.FRFS.OnConfirm
       Domain.Action.Beckn.FRFS.OnInit
       Domain.Action.Beckn.FRFS.OnSearch

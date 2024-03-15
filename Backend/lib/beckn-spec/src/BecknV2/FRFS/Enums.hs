@@ -91,3 +91,22 @@ instance FromJSON PaymentStatus where
 
 instance ToJSON PaymentStatus where
   toJSON = genericToJSON constructorsWithHyphens
+
+data CancellationType = SOFT_CANCEL | CONFIRM_CANCEL
+  deriving (Eq, Ord, Show, Read, Generic)
+
+data CancellationParams = REFUND | CANCELLATION_CHARGES | BASE_FARE
+  deriving (Eq, Ord, Show, Read, Generic)
+
+data OnCancelOrderStatus = ON_CANCEL_SOFT_CANCEL | ON_CANCEL_CANCELLED
+  deriving (Eq, Ord, Show, Read, Generic)
+
+instance FromJSON OnCancelOrderStatus where
+  parseJSON (String "SOFT_CANCEL") = pure ON_CANCEL_SOFT_CANCEL
+  parseJSON (String "CANCELLED") = pure ON_CANCEL_CANCELLED
+  parseJSON (String _) = parseFail "Invalid OnCancel Order Status"
+  parseJSON e = typeMismatch "String" e
+
+instance ToJSON OnCancelOrderStatus where
+  toJSON ON_CANCEL_SOFT_CANCEL = String "SOFT_CANCEL"
+  toJSON ON_CANCEL_CANCELLED = String "CANCELLED"
