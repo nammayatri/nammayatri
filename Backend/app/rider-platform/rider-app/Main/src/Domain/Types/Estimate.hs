@@ -16,6 +16,7 @@
 
 module Domain.Types.Estimate where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
 import Domain.Types.BppDetails
 import qualified Domain.Types.Merchant as DM
@@ -150,13 +151,15 @@ mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -
 mkEstimateAPIEntity Estimate {..} = do
   valueAddNPRes <- QNP.isValueAddNP providerId
   (bppDetails :: BppDetails) <- CQBppDetails.findBySubscriberIdAndDomain providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found " <> providerId)
+  let mbBaseFareEB = find (\x -> x.title == show Enums.BASE_FARE) estimateBreakupList
+      mbBaseDistanceFareEB = maybeToList $ addBaseDisatanceFareEB mbBaseFareEB -- TODO::Remove it after UI stops consuming it,
   return
     EstimateAPIEntity
       { agencyName = providerName,
         agencyNumber = providerMobileNumber,
         agencyCompletedRidesCount = providerCompletedRidesCount,
         tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
-        estimateFareBreakup = mkEstimateBreakupAPIEntity <$> estimateBreakupList,
+        estimateFareBreakup = mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB),
         driversLatLong = driversLocation,
         nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
         providerId = providerId,
@@ -166,6 +169,9 @@ mkEstimateAPIEntity Estimate {..} = do
         isValueAddNP = valueAddNPRes,
         ..
       }
+  where
+    addBaseDisatanceFareEB :: Maybe EstimateBreakup -> Maybe EstimateBreakup
+    addBaseDisatanceFareEB = fmap (\baseFareEB -> EstimateBreakup {id = baseFareEB.id, estimateId = baseFareEB.estimateId, title = "BASE_DISTANCE_FARE", price = baseFareEB.price})
 
 mkNightShiftRateAPIEntity :: NightShiftInfo -> NightShiftRateAPIEntity
 mkNightShiftRateAPIEntity NightShiftInfo {..} = do
