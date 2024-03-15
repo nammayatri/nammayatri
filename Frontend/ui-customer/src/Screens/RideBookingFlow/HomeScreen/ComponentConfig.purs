@@ -189,7 +189,7 @@ skipButtonConfig state =
   let
     config = PrimaryButton.config
     buttonText =
-      if state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow 
+      if state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow && issueFaced
       then
         REPORT_ISSUE_
       else
