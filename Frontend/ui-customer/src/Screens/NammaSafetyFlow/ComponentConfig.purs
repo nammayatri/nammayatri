@@ -235,15 +235,15 @@ pastRideSOSConfirmationPopConfig state = PopUpModal.config
         , gravity = CENTER
         , margin = MarginHorizontal 20 20
         , primaryText
-          { text = "Safety Center"
+          { text = getString SAFETY_CENTER
           , margin = Margin 16 16 16 10
           }
         , secondaryText
-          { text = "If you have issues with your recent ride please select the below option"
+          { text = getString RECENT_RIDE_ISSUE_DESC
           , margin = MarginHorizontal 16 16
           }
         , option1
-          { text = "I need help with my recent ride"
+          { text = getString I_NEED_HELP_WITH_MY_RECENT_RIDE
           , color = Color.black700
           , background = Color.white900
           , width = MATCH_PARENT
@@ -251,7 +251,7 @@ pastRideSOSConfirmationPopConfig state = PopUpModal.config
           , enableRipple = true
           }
         , option2
-          { text = "Continue with safety settings"
+          { text = getString CONTINUE_WITH_SAFETY_SETTINGS
           , color = Color.yellow900
           , background = Color.black900
           , strokeColor = Color.transparent

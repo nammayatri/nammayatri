@@ -715,7 +715,6 @@ type HomeScreenStateProps =
   , isEstimateChanged :: Boolean
   , showRateCard :: Boolean
   , showRateCardIcon :: Boolean
-  , emergencyHelpModal :: Boolean
   , sendMessageActive :: Boolean
   , chatcallbackInitiated :: Boolean
   , estimatedDistance :: Maybe Int
