@@ -39,6 +39,7 @@ data FRFSReconT f = FRFSReconT
     totalOrderValue :: B.C f Kernel.Types.Common.HighPrecMoney,
     transactionRefNumber :: B.C f Kernel.Prelude.Text,
     transactionUUID :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    txnId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

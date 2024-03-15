@@ -41,7 +41,6 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QTicket
-import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Station as QStation
@@ -83,8 +82,7 @@ buildReconTable merchant booking _dOrder tickets = do
   toStation <- runInReplica $ QStation.findById booking.toStationId >>= fromMaybeM (InternalError "Station not found")
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
-  paymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-  txn <- runInReplica $ QPaymentTransaction.findNewTransactionByOrderId paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  txn <- runInReplica $ QPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId")
   mRiderNumber <- mapM decrypt person.mobileNumber
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
@@ -116,6 +114,7 @@ buildReconTable merchant booking _dOrder tickets = do
             Recon.ticketNumber = "",
             Recon.ticketQty = booking.quantity,
             Recon.time = show now,
+            Recon.txnId = txn.txnId,
             Recon.totalOrderValue = booking.price,
             Recon.transactionRefNumber = transactionRefNumber,
             Recon.merchantId = booking.merchantId,
