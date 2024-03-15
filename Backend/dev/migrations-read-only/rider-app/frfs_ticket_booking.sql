@@ -38,3 +38,10 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_bank_account_number tex
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN final_price double precision ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN estimated_price double precision NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN refund_amount double precision ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cancellation_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_booking_cancellable boolean ;

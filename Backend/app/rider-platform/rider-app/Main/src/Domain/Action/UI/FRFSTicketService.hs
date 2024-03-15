@@ -31,13 +31,14 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Station as Station
 import qualified Environment
-import EulerHS.Prelude hiding (id, map)
+import EulerHS.Prelude hiding (all, and, id, map)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error (MerchantError (MerchantOperatingCityNotFound))
 import Kernel.Types.Id
@@ -150,13 +151,13 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
   (rider, dConfirmRes) <- confirm
   -- handle (errHandler dConfirmRes.booking) $
   --   void $ withShortRetry $ CallBPP.init dConfirmRes.bppSubscriberUrl becknInitReq
+  merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking dConfirmRes
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   now <- getCurrentTime
 
   when (dConfirmRes.status == DFRFSTicketBooking.NEW && dConfirmRes.validTill > now) $ do
     providerUrl <- dConfirmRes.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
-    merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking dConfirmRes
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber
     -- Add default TTL of 30 seconds or the value provided in the config
@@ -166,7 +167,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
     bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes' bapConfig Utils.BppData {bppId = dConfirmRes.bppSubscriberId, bppUri = dConfirmRes.bppSubscriberUrl} merchantOperatingCity.city
     logDebug $ "FRFS InitReq " <> encodeToText bknInitReq
     void $ CallBPP.init providerUrl bknInitReq
-  return $ makeBookingStatusAPI dConfirmRes stations
+  return $ makeBookingStatusAPI dConfirmRes stations merchantOperatingCity.city
   where
     -- errHandler booking exc
     --   | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = cancelFRFSTicketBooking booking
@@ -200,14 +201,20 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
                 paymentTxnId = Nothing,
                 bppBankAccountNumber = Nothing,
                 bppBankCode = Nothing,
+                cancellationCharges = Nothing,
+                refundAmount = Nothing,
+                isBookingCancellable = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking
       return (rider, booking)
 
-    makeBookingStatusAPI booking stations =
+    makeBookingStatusAPI booking stations city =
       FRFSTicketService.FRFSTicketBookingStatusAPIRes
         { bookingId = booking.id,
+          city,
+          updatedAt = booking.updatedAt,
+          createdAt = booking.createdAt,
           _type = booking._type,
           price = booking.price,
           quantity = booking.quantity,
@@ -216,7 +223,6 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
           status = booking.status,
           payment = Nothing,
           tickets = [],
-          createdAt = booking.createdAt,
           ..
         }
 
@@ -240,7 +246,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   unless (personId == booking'.riderId) $ throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
-  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.validTill < now) $
+  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && booking'.validTill < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking booking
@@ -317,6 +323,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                           paymentOrder = paymentOrder_
                         }
               buildFRFSTicketBookingStatusAPIRes booking paymentObj
+    DFRFSTicketBooking.CANCELLED -> buildFRFSTicketBookingStatusAPIRes booking Nothing
   where
     paymentSuccess =
       Just $
@@ -387,6 +394,7 @@ getFrfsBookingList (mbPersonId, _) = do
 buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe FRFSTicketService.FRFSBookingPaymentAPI -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes
 buildFRFSTicketBookingStatusAPIRes booking payment = do
   stations <- decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
+  merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking booking
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
   let tickets =
         map
@@ -397,13 +405,15 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
   return $
     FRFSTicketService.FRFSTicketBookingStatusAPIRes
       { bookingId = booking.id,
+        city = merchantOperatingCity.city,
+        updatedAt = booking.updatedAt,
+        createdAt = booking.createdAt,
         _type = booking._type,
         price = booking.price,
         quantity = booking.quantity,
         validTill = booking.validTill,
         vehicleType = booking.vehicleType,
         status = booking.status,
-        createdAt = booking.createdAt,
         ..
       }
 
@@ -424,3 +434,49 @@ cancelFRFSTicketBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.F
 cancelFRFSTicketBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+
+postFrfsBookingCanCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow APISuccess.APISuccess
+postFrfsBookingCanCancel (_, merchantId) bookingId = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
+  ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid ticketBookingId")
+
+  unless (ticketBooking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest "Cancellation during incorrect status")
+  -- tickets <- QFRFSTicket.findAllByTicketBookingId ticketBooking.id
+  -- unless (all (\ticket -> ticket.status == DFRFSTicket.ACTIVE) tickets) $ throwError (InvalidRequest "Cancellation during incorrect status")
+  DACFOC.callBPPCancel ticketBooking bapConfig Spec.SOFT_CANCEL
+  return APISuccess.Success
+
+getFrfsBookingCanCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
+getFrfsBookingCanCancelStatus _ bookingId = do
+  ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid ticketBookingId")
+  return $
+    FRFSCanCancelStatus
+      { cancellationCharges = getAbsoluteValue ticketBooking.cancellationCharges,
+        refundAmount = getAbsoluteValue ticketBooking.refundAmount,
+        isCancellable = ticketBooking.isBookingCancellable
+      }
+
+postFrfsBookingCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow APISuccess.APISuccess
+postFrfsBookingCancel (_, merchantId) bookingId = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
+  ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  DACFOC.callBPPCancel ticketBooking bapConfig Spec.CONFIRM_CANCEL
+  return APISuccess.Success
+
+getFrfsBookingCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow FRFSTicketService.FRFSCancelStatus
+getFrfsBookingCancelStatus _ bookingId = do
+  ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  pure
+    FRFSTicketService.FRFSCancelStatus
+      { cancellationCharges = getAbsoluteValue ticketBooking.cancellationCharges,
+        refundAmount = if (ticketBooking.status == DFRFSTicketBooking.CANCELLED) then getAbsoluteValue ticketBooking.refundAmount else Nothing
+      }
+
+getAbsoluteValue :: Maybe HighPrecMoney -> Maybe HighPrecMoney
+getAbsoluteValue mbRefundAmount = case mbRefundAmount of
+  Nothing -> Nothing
+  Just rfValue -> do
+    let HighPrecMoney value = rfValue
+    Just (HighPrecMoney $ abs value)
