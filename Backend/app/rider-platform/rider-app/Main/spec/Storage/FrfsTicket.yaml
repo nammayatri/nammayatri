@@ -174,12 +174,12 @@ FRFSTicketBooking:
     estimatedPrice: Price
     finalPrice: Maybe Price
     validTill: UTCTime
-    paymentTxnId : Maybe Text
+    paymentTxnId: Maybe Text
     bppBankAccountNumber: Maybe Text
-    bppBankCode : Maybe Text
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
-    isBookingCancellable : Maybe Bool
+    bppBankCode: Maybe Text
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+    isBookingCancellable: Maybe Bool
 
   beamFields:
     price:
@@ -234,7 +234,7 @@ FRFSTicketBooking:
       where: id
     updateStatusValidTillAndPaymentTxnById:
       kvFunction: updateWithKV
-      params: [status, validTill, paymentTxnId , updatedAt]
+      params: [status, validTill, paymentTxnId, updatedAt]
       where: id
     updateBPPOrderIdAndStatusById:
       kvFunction: updateWithKV
@@ -254,13 +254,13 @@ FRFSTicketBooking:
       where: id
     updateRefundCancellationChargesAndIsCancellableByBookingId:
       kvFunction: updateOneWithKV
-      params: [refundAmount, cancellationCharges, isBookingCancellable, updatedAt]
+      params:
+        [refundAmount, cancellationCharges, isBookingCancellable, updatedAt]
       where: id
     updateIsBookingCancellableByBookingId:
       kvFunction: updateOneWithKV
       params: [isBookingCancellable, updatedAt]
       where: id
-
 
 # Make use of FareBreakup to store the fare breakup of a ticket
 
@@ -297,7 +297,7 @@ FRFSTicket:
       params: [status, updatedAt]
       where:
         and: [frfsTicketBookingId, ticketNumber]
-    updateAllStausByBookingId :
+    updateAllStausByBookingId:
       kvFunction: updateWithKV
       params: [status, updatedAt]
       where:
@@ -351,7 +351,8 @@ FRFSRecon:
     ticketQty: Int # ticket quantity
     ticketNumber: Text
     transactionRefNumber: Text # transactionId
-    transactionUUID : Maybe Text # transaction uuid
+    transactionUUID: Maybe Text # transaction uuid
+    txnId: Maybe Text # transaction uuid
     fare: Price # per ticket price
     buyerFinderFee: Price # populated from bapConfig
     totalOrderValue: Price # amount paid by customer

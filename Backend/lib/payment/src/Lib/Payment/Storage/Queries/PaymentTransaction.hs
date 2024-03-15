@@ -55,6 +55,9 @@ updateMultiple transaction = do
 findByTxnUUID :: BeamFlow m r => Text -> m (Maybe PaymentTransaction)
 findByTxnUUID txnUUID = findOneWithKV [Se.Is BeamPT.txnUUID $ Se.Eq $ Just txnUUID]
 
+findById :: BeamFlow m r => Id PaymentTransaction -> m (Maybe PaymentTransaction)
+findById (Id id) = findOneWithKV [Se.Is BeamPT.id $ Se.Eq id]
+
 findAllByOrderId :: BeamFlow m r => Id PaymentOrder -> m [PaymentTransaction]
 findAllByOrderId (Id orderId) =
   findAllWithOptionsKV
