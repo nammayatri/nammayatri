@@ -206,7 +206,6 @@ initData = {
     , showRateCardIcon : false
     , sendMessageActive : false
     , chatcallbackInitiated : false
-    , emergencyHelpModal : false
     , estimatedDistance : Nothing
     , waitingTimeTimerIds : []
     , tagType : Nothing

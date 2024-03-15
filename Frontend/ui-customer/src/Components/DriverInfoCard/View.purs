@@ -67,7 +67,7 @@ import PrestoDOM.List as PrestoList
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
-  let enableShareRide = state.data.config.feature.enableShareRide && state.props.currentStage == RideStarted
+  let enableShareRide = state.data.config.feature.enableShareRide && (not $ rideNotStarted state)
       enableSupport = state.data.config.feature.enableSupport && (Array.any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
   in
   linearLayout
@@ -238,7 +238,7 @@ otpAndWaitView push state =
        , cornerRadius if os == "IOS" then 20.0 else 32.0
        , background Color.white900
        , gravity CENTER
-       , visibility $ boolToVisibility $ Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]
+       , visibility $ boolToVisibility $ rideNotStarted state
        , clickable true
        , accessibility DISABLE
        , margin $ Margin 8 8 6 8
@@ -262,7 +262,7 @@ otpAndWaitView push state =
            linearLayout
            [ width WRAP_CONTENT
            , height $ V 40
-           , visibility $ boolToVisibility $ Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]
+           , visibility $ boolToVisibility $ rideNotStarted state
            , cornerRadius if os == "IOS" then 20.0 else 32.0
            , background Color.white900
            , clickable true
@@ -410,7 +410,7 @@ trackRideView push state =
   , width WRAP_CONTENT
   , clipChildren false
   , clickable true
-  , visibility $ boolToVisibility $ state.props.currentStage == RideStarted
+  , visibility $ boolToVisibility $ not $ rideNotStarted state
   ][ linearLayout
     [ height $ V 40
     , width WRAP_CONTENT
@@ -451,7 +451,7 @@ titleAndETA push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  ][ if state.props.currentStage == RideAccepted then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
+  ][ if rideNotStarted state then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
      else distanceView push state
   ]
 
@@ -517,7 +517,7 @@ navigateView push state =
   , accessibility ENABLE
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
-  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES && rideNotStarted state
   , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
   ][ imageView
      [ width $ V 20
@@ -537,6 +537,7 @@ navigateView push state =
 driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoView push state =
   let tagConfig = specialZoneTagConfig state.props.zoneType
+      rideStarted = not $ rideNotStarted state
   in
   linearLayout
   [ width MATCH_PARENT
@@ -614,13 +615,13 @@ driverInfoView push state =
                   , cornerRadius if os == "IOS" then 2.0 else 4.0
                   ][]
                   , contactView push state
-                  , if state.props.currentStage == RideStarted then distanceView push state else dummyView push
-                  , if state.props.showBanner then maybe (dummyView push) (\item -> CarouselHolder.carouselView push $ getCarouselConfig item state) state.data.bannerData.bannerItem else dummyView push
+                  , if rideStarted then distanceView push state else dummyView push
+                  , if rideStarted then maybe (dummyView push) (\item -> CarouselHolder.carouselView push $ getCarouselConfig item state) state.data.bannerData.bannerItem else dummyView push
                   , linearLayout
                       [ height WRAP_CONTENT
                       , width MATCH_PARENT
                       , orientation VERTICAL
-                      , margin $ MarginTop if state.props.showBanner then 12 else 0
+                      , margin $ MarginTop if rideStarted then 12 else 0
                       ][driverDetailsView (getDriverDetails state) "DriverDetailsView" "NumberPlate"
                       , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
                       , sizedBox (V 12) MATCH_PARENT
@@ -733,7 +734,7 @@ cancelRideLayout push state =
   , onAnimationEnd push $ const $ NoAction
   , margin $ if state.data.config.showPickUpandDrop then MarginTop 0 else MarginTop 12
   , padding $ PaddingBottom if os == "IOS" then if safeMarginBottom == 0 then 24 else safeMarginBottom else 0
-  , visibility $ boolToVisibility $ Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]
+  , visibility $ boolToVisibility $ rideNotStarted state
   ][ linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -767,7 +768,7 @@ contactView push state =
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
     , padding $ Padding 16 4 16 8
-    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
+    , visibility $ boolToVisibility $ rideNotStarted state
     ][ linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -933,17 +934,17 @@ specialZoneShimmerView push state =
       [ height $ V 40
       , width MATCH_PARENT
       , gravity CENTER_VERTICAL
-      ][ customTextView (if state.props.currentStage == RideAccepted then 40 else 20) ((screenWidth unit) / 10 * 6) 0]
+      ][ customTextView (if rideNotStarted state then 40 else 20) ((screenWidth unit) / 10 * 6) 0]
       , linearLayout
         [ width $ MATCH_PARENT
         , height $ V 44
-        , visibility $ boolToVisibility $ state.props.currentStage == RideAccepted
+        , visibility $ boolToVisibility $ rideNotStarted state
         , margin $ MarginVertical 4 12
         , cornerRadius 8.0
         , stroke $ "1," <> Color.grey900
         , gravity CENTER
         ][ customTextView 20 ((screenWidth unit) / 10 * 6) 0]
-      , if state.props.currentStage == RideStarted then driverInfoShimmer else dummyView push
+      , if not $ rideNotStarted state then driverInfoShimmer else dummyView push
       , paymentMethodShimmer push state
       , addressShimmerView
       , linearLayout
@@ -986,7 +987,7 @@ shimmerView push state =
          [ height $ V 40
          , width $ V 64
          , cornerRadius 52.0
-         , visibility $ boolToVisibility $ state.props.currentStage == RideAccepted
+         , visibility $ boolToVisibility $ rideNotStarted state
          ][linearLayout
            [ height $ V 40
            , width $ V 64
@@ -1260,3 +1261,9 @@ driverPickUpStatusText state _ =
   case state.props.zoneType of
     SPECIAL_PICKUP -> getString DRIVER_AT_PICKUP_LOCATION
     _ -> if state.data.waitingTime == "--" then getString DRIVER_IS_ON_THE_WAY else getString DRIVER_IS_WAITING_AT_PICKUP 
+
+
+rideNotStarted :: DriverInfoCardState -> Boolean
+rideNotStarted state = 
+  let lastStage = if state.props.isChatWithEMEnabled then RideStarted else RideAccepted
+  in Array.any (_ == state.props.currentStage) [RideAccepted, ChatWithDriver] && lastStage == RideAccepted
