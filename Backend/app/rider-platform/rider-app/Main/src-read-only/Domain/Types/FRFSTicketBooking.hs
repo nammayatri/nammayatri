@@ -25,8 +25,10 @@ data FRFSTicketBooking = FRFSTicketBooking
     bppSubscriberUrl :: Kernel.Prelude.Text,
     estimatedPrice :: Kernel.Types.Common.HighPrecMoney,
     finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
+    isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     price :: Kernel.Types.Common.HighPrecMoney,
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -34,6 +36,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     providerName :: Kernel.Prelude.Text,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     stationsJson :: Kernel.Prelude.Text,
@@ -48,6 +51,6 @@ data FRFSTicketBooking = FRFSTicketBooking
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingStatus))

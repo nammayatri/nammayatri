@@ -32,9 +32,10 @@ buildCancelReq ::
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Utils.BppData ->
+  Spec.CancellationType ->
   Context.City ->
   m (Spec.CancelReq)
-buildCancelReq booking bapConfig bppData city = do
+buildCancelReq booking bapConfig bppData cancellationType city = do
   now <- getCurrentTime
   let transactionId = booking.searchId.getId
       validTill = addUTCTime (intToNominalDiffTime 30) now
@@ -47,18 +48,18 @@ buildCancelReq booking bapConfig bppData city = do
   pure $
     Spec.CancelReq
       { cancelReqContext = context,
-        cancelReqMessage = tfCancelMessage bppOrderId
+        cancelReqMessage = tfCancelMessage bppOrderId cancellationType
       }
 
-tfCancelMessage :: Text -> Spec.CancelReqMessage
-tfCancelMessage bppOrderId =
+tfCancelMessage :: Text -> Spec.CancellationType -> Spec.CancelReqMessage
+tfCancelMessage bppOrderId cancellationType =
   Spec.CancelReqMessage
     { cancelReqMessageCancellationReasonId = Just "7", -- TODO: Get details around this from ONDC
       cancelReqMessageDescriptor =
         Just $
           Spec.Descriptor
             { descriptorName = Just "Ride Cancellation",
-              descriptorCode = Just "CONFIRM_CANCEL",
+              descriptorCode = Just $ show cancellationType,
               descriptorImages = Nothing
             },
       cancelReqMessageOrderId = bppOrderId
