@@ -75,6 +75,50 @@ _:
           cd ..
           treefmt --verbose
           hpack
+
+          # Automatically applies Redundant bracket hint
+          applyHintArg=false
+          allArg=false
+          for arg in "$@"; do
+            if [[ "$arg" == "--apply-hint" ]];
+            then applyHintArg=true
+            elif [[ "$arg" == "--all" ]];
+            then allArg=true
+            fi
+          done
+
+          function applyHint {
+          while read -r fileName; do
+          prefix="''${FLAKE_ROOT}/"
+          if "$2" || (git diff --name-only | grep "''${fileName/#$prefix}")
+          then
+              # recursive because sometimes we have hints inside of other hints
+              for i in {1..3}
+              do
+                  if hlint --only "Redundant bracket" "$fileName" | grep "No hints"
+                  then
+                      echo "No hints found: loop $i; file: $fileName"
+                      break
+                  else
+                      # FIXME avoid creating extra file
+                      echo "Applying redundant bracket hints automatically: loop $i; file: $fileName"
+                      hlint --refactor --only "Redundant bracket" "$fileName" > "$fileName".tmp
+                      cp "$fileName".tmp "$fileName"
+                      rm "$fileName".tmp
+                  fi
+              done
+          fi
+          done <<< "$(find "$1" -iname "*.hs")"
+          echo "Redundant bracket hints applied: $1; allArgs: $2"
+          }
+
+          if "$applyHintArg"
+          then
+            applyHint "''${FLAKE_ROOT}/Backend/app/rider-platform/rider-app/Main/src-read-only" "$allArg"
+            applyHint "''${FLAKE_ROOT}/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only" "$allArg"
+          else
+            echo "No hints applied"
+          fi
         '';
       };
 
