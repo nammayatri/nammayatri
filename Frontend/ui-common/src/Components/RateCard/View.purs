@@ -185,6 +185,21 @@ defaultRateCardView push config =
           , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_horizontal_dash"
           , margin $ Margin 20 12 20 0
           ]
+        , textView $
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , color Color.black700
+          , margin $ MarginTop 8
+          , text "Waiting Charges applicable @₹1.50 per minute after the first 3 minutes of waiting"
+          , padding $ PaddingHorizontal 20 20
+          ] <> FontStyle.paragraphText TypoGraphy
+        , imageView
+          [ width MATCH_PARENT
+          , height $ V 2 
+          , visibility if config.showDetails then VISIBLE else GONE
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_horizontal_dash"
+          , margin $ Margin 20 12 20 0
+          ]
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT

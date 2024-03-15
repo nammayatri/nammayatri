@@ -686,7 +686,7 @@ rateCardConfig state =
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
         , driverAdditionsImage = fetchImage FF_ASSET $ if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2"  else "ny_ic_driver_additions_yatri" 
         , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
-                                 else (getString DAY_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+                                 else (getString DAY_TIMES_OF) <> "1.50" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
         , title = if state.data.config.estimateAndQuoteConfig.enableOnlyAuto then getString RATE_CARD else getVehicleTitle state.data.rateCard.vehicleVariant
         , fareList = if state.data.config.estimateAndQuoteConfig.enableOnlyAuto then nyRateCardList state else yatriRateCardList state.data.rateCard.vehicleVariant state
         , otherOptions  = [
