@@ -194,7 +194,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
           "variantList" : ["AutoCategory"]
-        }
+        },
+        "showEarningSection" : true
       },
       {
         "cityName" : "Hyderabad",
@@ -218,7 +219,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : true
       },
       {
         "cityName" : "Mysore",
@@ -242,7 +244,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : true
       },
       {
         "cityName" : "Delhi",
@@ -266,7 +269,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : true
       },
       {
         "cityName" : "Chennai",
@@ -290,7 +294,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : false
       },
       {
         "cityName" : "Coimbatore",
@@ -314,7 +319,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : true
       },
       {
         "cityName" : "Puducherry",
@@ -338,7 +344,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : false
       },
       {
         "cityName" : "Tumakuru",
@@ -361,7 +368,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : true
       },
       {
         "cityName" : "Gurugram",
@@ -385,7 +393,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : true
       },
       {
         "cityName" : "Noida",
@@ -408,7 +417,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : true
       },
       {
         "cityName" : "TamilNaduCities",
@@ -432,7 +442,8 @@ window.getMerchantConfig = function () {
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
-        }
+        },
+        "showEarningSection" : false
       }
   ]
   , "dashboard" : {
