@@ -151,8 +151,8 @@ cancelRideModalConfig state = let
   in cancelRideModalConfig'
 
 ---------------------------------- statsModelConfig --------------------------------
-statsModelConfig :: ST.HomeScreenState -> StatsModel.Config
-statsModelConfig state =
+statsModelConfig :: ST.HomeScreenState -> Boolean -> StatsModel.Config
+statsModelConfig state bonusVisibility =
   let
     config = StatsModel.config
     config' = config
@@ -163,6 +163,7 @@ statsModelConfig state =
       , totalRidesOfDay = state.data.totalRidesOfDay
       , totalEarningsOfDay = state.data.totalEarningsOfDay
       , bonusEarned = state.data.bonusEarned
+      , showBonus = bonusVisibility
       }
   in config'
 
