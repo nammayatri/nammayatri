@@ -100,7 +100,8 @@ type CityConfig = {
   enableYatriCoins :: Boolean,
   registration :: RegistrationConfig,
   vehicleNSImg :: String,
-  variantSubscriptionConfig :: VariantSubscriptionConfig
+  variantSubscriptionConfig :: VariantSubscriptionConfig,
+  showEarningSection :: Boolean
 }
 
 type DashboardConfig = {

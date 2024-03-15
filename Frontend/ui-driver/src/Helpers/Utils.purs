@@ -632,7 +632,8 @@ getCityConfig cityConfig cityName = do
                           variantSubscriptionConfig : {
                             enableVariantBasedSubscription : true,
                             variantList : ["AutoCategory"]
-                          }
+                          },
+                          showEarningSection: true
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   

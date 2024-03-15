@@ -143,7 +143,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : true,
                 variantList : ["AutoCategory"]
-              }
+              },
+              showEarningSection : true
             },
             {
               cityName : "Hyderabad",
@@ -163,7 +164,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : true
             },
             {
               cityName : "Mysore",
@@ -183,7 +185,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : true
             },
             {
               cityName : "Delhi",
@@ -203,7 +206,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : true
             },
             {
               cityName : "Chennai",
@@ -223,7 +227,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : false
             },
             {
               cityName : "Coimbatore",
@@ -243,7 +248,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : true
             },
             {
               cityName : "Puducherry",
@@ -263,7 +269,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : false
             },
             {
               cityName : "Gurugram",
@@ -283,7 +290,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : true
             },
             {             
               cityName : "Noida",
@@ -303,7 +311,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : true
             },
             {
               cityName : "TamilNaduCities",
@@ -323,7 +332,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : false
             },
             {
               cityName : "Kolkata",
@@ -347,7 +357,8 @@ config =
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : false,
                 variantList : []
-              }
+              },
+              showEarningSection : true
             }
             --, For future use
             -- {
