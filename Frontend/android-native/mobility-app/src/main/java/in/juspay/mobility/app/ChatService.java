@@ -9,8 +9,7 @@
 package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.startMediaPlayer;
-import static android.graphics.Color.rgb;
-
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -107,7 +106,12 @@ public class ChatService extends Service {
         merchant = getApplicationContext().getResources().getString(R.string.service);
         merchantType = merchant.contains("partner") || merchant.contains("driver") || merchant.contains("provider") ? "DRIVER" : "USER";
         sharedPrefs = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        this.startForeground(serviceNotificationID, createNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            );
+        }else {
+            this.startForeground(serviceNotificationID, createNotification());
+        }
         if (sharedPrefs != null) {
             chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");
             baseUrl = sharedPrefs.getString("BASE_URL", "null");
@@ -118,7 +122,11 @@ public class ChatService extends Service {
         sendMessageCallBackOverlay = this::sendMessages;
         MessageOverlayService.registerSendMessageCallBack(sendMessageCallBackOverlay);
         if (!isChatServiceRunning) {
-            this.startForeground(serviceNotificationID, createNotification());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            }else {
+                this.startForeground(serviceNotificationID, createNotification());
+            }
             FirebaseUser user = firebaseAuth.getCurrentUser();
             if (user != null) {
                 startChatService();
@@ -131,7 +139,11 @@ public class ChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        this.startForeground(serviceNotificationID, createNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        }else{
+            this.startForeground(serviceNotificationID, createNotification());
+        }
         handleMessages();
         return START_STICKY;
     }

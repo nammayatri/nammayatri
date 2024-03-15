@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.graphics.BitmapFactory;
 import android.location.LocationManager;
 import android.os.Build;
@@ -70,7 +71,11 @@ public class GpsListeningService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        }else {
+            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        }
         IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
         registerReceiver(gpsReceiver, intentFilter);
         return START_STICKY;
@@ -85,7 +90,11 @@ public class GpsListeningService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        }else{
+            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        }
     }
 
     @Override

@@ -86,7 +86,6 @@
             android:name=".WidgetService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection"
             android:permission="android.permission.SYSTEM_ALERT_WINDOW" />
         <service android:name=".OverlayMessagingService"
             android:enabled="true"
