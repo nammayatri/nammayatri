@@ -126,7 +126,6 @@ data AppCfg = AppCfg
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
-    isBecknSpecVersion2 :: Bool,
     _version :: Text,
     hotSpotExpiry :: Seconds,
     collectRouteData :: Bool
@@ -196,7 +195,6 @@ data AppEnv = AppEnv
     incomingAPIResponseTimeout :: Int,
     maxShards :: Int,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
-    isBecknSpecVersion2 :: Bool,
     _version :: Text,
     hotSpotExpiry :: Seconds,
     collectRouteData :: Bool,

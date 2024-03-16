@@ -92,7 +92,6 @@ data HandlerEnv = HandlerEnv
     schedulerSetName :: Text,
     kvConfigUpdateFrequency :: Int,
     nwAddress :: BaseUrl,
-    isBecknSpecVersion2 :: Bool,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     schedulerType :: SchedulerType,
     requestId :: Maybe Text,

@@ -22,7 +22,6 @@ import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.FRFS as FRFS
 import qualified API.Internal as Internal
-import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
 import Data.OpenApi
@@ -52,7 +51,6 @@ type MainAPI =
   UI.API
     -- :<|> Beckn.API -- TODO :: Needs to be deprecated  -- TODO : Revert after 2.x release
     -- :<|> Beckn.APIV2 -- TODO : Revert after 2.x release
-    :<|> MetroBeckn.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Juspay.JuspayWebhookAPI
          )
@@ -75,7 +73,6 @@ mainServer =
   UI.handler
     -- :<|> Beckn.handler  -- TODO : Revert after 2.x release
     -- :<|> const Beckn.handler  -- TODO : Revert after 2.x release
-    :<|> MetroBeckn.handler
     :<|> juspayWebhookHandler
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2

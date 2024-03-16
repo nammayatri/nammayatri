@@ -249,7 +249,6 @@ in  { esqDBCfg
     , internalEndPointMap = common.internalEndPointMap
     , schedulerSetName = "rider-scheduler-set"
     , schedulerType = common.schedulerType.RedisBased
-    , isBecknSpecVersion2 = True
     , _version = "2.0.0"
     , hotSpotExpiry = +604800
     , collectRouteData = True

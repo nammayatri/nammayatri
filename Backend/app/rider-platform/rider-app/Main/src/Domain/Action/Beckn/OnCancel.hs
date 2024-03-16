@@ -72,7 +72,6 @@ onCancel ::
     HasLongDurationRetryCfg r c,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["isBecknSpecVersion2" ::: Bool],
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds

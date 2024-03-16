@@ -42,8 +42,8 @@ getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMa
 getMessageId :: (MonadFlow m) => Spec.Context -> m Text
 getMessageId context = context.contextMessageId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
 
-decodeReq :: (MonadFlow m, A.FromJSON v1, A.FromJSON v2) => ByteString -> m (Either v1 v2)
-decodeReq reqBS =
+_decodeReq :: (MonadFlow m, A.FromJSON v1, A.FromJSON v2) => ByteString -> m (Either v1 v2)
+_decodeReq reqBS =
   case A.eitherDecodeStrict reqBS of
     Right reqV1 -> pure $ Left reqV1
     Left _ ->

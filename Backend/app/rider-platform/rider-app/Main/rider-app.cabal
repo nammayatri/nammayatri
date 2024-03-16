@@ -66,8 +66,6 @@ library
       API.FRFS
       API.Internal
       API.Internal.Rating
-      API.MetroBeckn
-      API.MetroBeckn.OnSearch
       API.UI
       API.UI.AadhaarVerification
       API.UI.AppInstalls
@@ -115,8 +113,6 @@ library
       Beckn.ACL.FRFS.Status
       Beckn.ACL.FRFS.Utils
       Beckn.ACL.Init
-      Beckn.ACL.Metro.OnSearch
-      Beckn.ACL.Metro.Search
       Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit

@@ -62,7 +62,6 @@ sendSearchRequestToDrivers ::
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasField "isBecknSpecVersion2" r Bool,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
@@ -95,7 +94,6 @@ sendSearchRequestToDrivers' ::
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasField "isBecknSpecVersion2" r Bool,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]

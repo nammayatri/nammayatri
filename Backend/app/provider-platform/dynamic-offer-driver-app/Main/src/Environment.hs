@@ -127,7 +127,6 @@ data AppCfg = AppCfg
     modelNamesMap :: M.Map Text Text,
     incomingAPIResponseTimeout :: Int,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
-    isBecknSpecVersion2 :: Bool,
     _version :: Text
   }
   deriving (Generic, FromDhall)
@@ -206,7 +205,6 @@ data AppEnv = AppEnv
     modelNamesHashMap :: HMS.HashMap Text Text,
     incomingAPIResponseTimeout :: Int,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
-    isBecknSpecVersion2 :: Bool,
     _version :: Text,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
