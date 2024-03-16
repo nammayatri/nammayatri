@@ -148,20 +148,16 @@ bookingSync merchant merchantOpCityId reqBookingId = do
         QBooking.updateStatus bookingId bookingNewStatus
         when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
       let updBooking = booking{status = bookingNewStatus}
-      let dStatusReq = DStatusReq {booking = updBooking, merchant, city}
-      isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-      if isBecknSpecVersion2
-        then do
-          becknStatusReq <- buildStatusReqV2 dStatusReq
-          void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
-        else do
-          becknStatusReq <- buildStatusReq dStatusReq
-          void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
+          dStatusReq = DStatusReq {booking = updBooking, merchant, city}
+      becknStatusReq <- buildStatusReqV2 dStatusReq
+      logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqV2:-" <> show becknStatusReq
+      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
     Nothing -> do
       let cancellationReason = mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing bookingId
       QBooking.updateStatus bookingId DBooking.CANCELLED
       QBCR.upsert cancellationReason
       let updBooking = booking{status = DBooking.CANCELLED}
-      let dStatusReq = DStatusReq {booking = updBooking, merchant, city}
-      becknStatusReq <- buildStatusReq dStatusReq
-      void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
+          dStatusReq = DStatusReq {booking = updBooking, merchant, city}
+      becknStatusReq <- buildStatusReqV2 dStatusReq
+      logTagDebug ("bookingId:-" <> bookingId.getId) $ "bookingSync:-becknStatusReqv2:-" <> show becknStatusReq
+      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq

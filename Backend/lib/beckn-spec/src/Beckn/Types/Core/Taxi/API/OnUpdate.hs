@@ -19,7 +19,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
-import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnUpdateReq = BecknCallbackReq OnUpdateMessage
@@ -27,14 +26,6 @@ type OnUpdateReq = BecknCallbackReq OnUpdateMessage
 type OnUpdateReqV2 = Spec.OnUpdateReq
 
 type OnUpdateRes = AckResponse
-
-type OnUpdateAPI =
-  "on_update"
-    :> ReqBody '[JSONBS] ByteString
-    :> Post '[JSON] OnUpdateRes
-
-onUpdateAPI :: Proxy OnUpdateAPI
-onUpdateAPI = Proxy
 
 type OnUpdateAPIV1 =
   "on_update"

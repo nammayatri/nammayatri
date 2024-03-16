@@ -17,9 +17,6 @@ module API.Beckn.Rating (API, handler) where
 import qualified Beckn.ACL.Rating as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
-import qualified Data.Aeson as A
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.Rating as DRating
 import Domain.Types.Merchant (Merchant)
 import Environment
@@ -32,12 +29,11 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import Tools.Error (GenericError (InvalidRequest))
 
 type API =
   Capture "merchantId" (Id Merchant)
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> Rating.RatingAPI
+    :> Rating.RatingAPIV2
 
 handler :: FlowServer API
 handler = rating
@@ -45,41 +41,23 @@ handler = rating
 rating ::
   Id Merchant ->
   SignatureAuthResult ->
-  -- Rating.RatingReq ->
-  ByteString ->
+  Rating.RatingReqV2 ->
   FlowHandler AckResponse
-rating merchantId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBecknAPI $ do
-  req <- decodeReq reqBS
-  dRatingReq <-
-    case req of
-      Right reqV2 -> do
-        transactionId <- Utils.getTransactionId reqV2.ratingReqContext
-        Utils.withTransactionIdLogTag transactionId $ do
-          logTagInfo "ratingAPIV2" "Received rating API call."
-          ACL.buildRatingReqV2 subscriber reqV2
-      Left reqV1 -> do
-        withTransactionIdLogTag reqV1 $ do
-          logTagInfo "ratingAPI" "Received rating API call."
-          ACL.buildRatingReq subscriber reqV1
+rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $ do
+  transactionId <- Utils.getTransactionId reqV2.ratingReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
+    logTagInfo "ratingAPIV2" $ "Received rating API call:-" <> show reqV2
+    dRatingReq <- ACL.buildRatingReqV2 subscriber reqV2
 
-  Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
-    ride <- DRating.validateRequest dRatingReq
-    fork "rating request processing" $
-      Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
-        DRating.handler merchantId dRatingReq ride
-  pure Ack
+    Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
+      ride <- DRating.validateRequest dRatingReq
+      fork "rating request processing" $
+        Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
+          DRating.handler merchantId dRatingReq ride
+    pure Ack
 
 ratingLockKey :: Text -> Text
 ratingLockKey id = "Driver:Rating:BookingId-" <> id
 
 ratingProcessingLockKey :: Text -> Text
 ratingProcessingLockKey id = "Driver:Rating:Processing:BookingId-" <> id
-
-decodeReq :: MonadFlow m => ByteString -> m (Either Rating.RatingReq Rating.RatingReqV2)
-decodeReq reqBS =
-  case A.eitherDecodeStrict reqBS of
-    Right reqV1 -> pure $ Left reqV1
-    Left _ ->
-      case A.eitherDecodeStrict reqBS of
-        Right reqV2 -> pure $ Right reqV2
-        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

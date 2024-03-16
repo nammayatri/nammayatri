@@ -141,7 +141,6 @@ data AppCfg = AppCfg
     modelNamesMap :: M.Map Text Text,
     incomingAPIResponseTimeout :: Int,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
-    isBecknSpecVersion2 :: Bool,
     _version :: Text,
     cacConfig :: CacConfig,
     superPositionConfig :: SuperPositionConfig
@@ -222,7 +221,6 @@ data AppEnv = AppEnv
     modelNamesHashMap :: HMS.HashMap Text Text,
     incomingAPIResponseTimeout :: Int,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
-    isBecknSpecVersion2 :: Bool,
     _version :: Text,
     cacConfig :: CacConfig,
     superPositionConfig :: SuperPositionConfig,

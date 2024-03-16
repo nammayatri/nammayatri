@@ -16,11 +16,9 @@ module BecknV2.OnDemand.Utils.Common where
 import BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
-import qualified Data.Aeson as A
 import Data.Data (Data, gmapQ)
 import Data.Generics.Aliases (ext1Q)
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import qualified Data.UUID as UUID
 import EulerHS.Prelude
 import Kernel.Prelude (intToNominalDiffTime)
@@ -44,15 +42,6 @@ getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMa
 
 getMessageId :: (MonadFlow m) => Spec.Context -> m Text
 getMessageId context = context.contextMessageId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
-
-decodeReq :: (MonadFlow m, A.FromJSON v1, A.FromJSON v2) => ByteString -> m (Either v1 v2)
-decodeReq reqBS =
-  case A.eitherDecodeStrict reqBS of
-    Right reqV1 -> pure $ Left reqV1
-    Left _ ->
-      case A.eitherDecodeStrict reqBS of
-        Right reqV2 -> pure $ Right reqV2
-        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
 
 gpsToText :: Gps.Gps -> Maybe Text
 gpsToText Gps.Gps {..} = Just $ T.pack (printf "%.6f" lat) <> ", " <> T.pack (printf "%.6f" lon)
