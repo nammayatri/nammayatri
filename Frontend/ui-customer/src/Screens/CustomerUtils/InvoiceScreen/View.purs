@@ -32,7 +32,7 @@ import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig,
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (isHaveFare, getCityFromString)
+import Helpers.Utils (isHaveFare, getCityFromString, formatFareType)
 import MerchantConfig.Utils (getMerchant, Merchant (..))
 import Storage
 
@@ -236,4 +236,4 @@ getFareText fareType baseDistance = case fareType of
                       "PLATFORM_FEE" -> getString PLATFORM_FEE
                       "SGST" -> getString PLATFORM_GST
                       "CUSTOMER_CANCELLATION_DUES" -> getString CUSTOMER_CANCELLATION_DUES
-                      _ -> "BASE_FARE"
+                      _ -> formatFareType fareType

@@ -328,9 +328,13 @@ rideSearchBT payload = do
         withAPIResultBT (EP.searchReq "") identity errorHandler (lift $ lift $ callAPI headers payload)
     where
       errorHandler errorPayload = do
-            if errorPayload.code == 400 then
+            let errResp = errorPayload.response
+                codeMessage = decodeError errResp.errorMessage "errorCode"
+            if  errorPayload.code == 400 && codeMessage == "RIDE_NOT_SERVICEABLE" then
                 pure $ toast (getString RIDE_NOT_SERVICEABLE)
-              else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            else if errorPayload.code == 400 then
+                pure $ toast codeMessage
+            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
             _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
             BackT $ pure GoBack
