@@ -5,7 +5,7 @@
 {
   hooks = {
     eslint = {
-      enable = false;
+      enable = true;
       files = lib.mkForce "(Frontend/ui-common/src/.*\\.js$)|(Frontend/ui-customer/src/.*\\.js$)|(Frontend/ui-driver/src/.*\\.js$)";
     };
   };
