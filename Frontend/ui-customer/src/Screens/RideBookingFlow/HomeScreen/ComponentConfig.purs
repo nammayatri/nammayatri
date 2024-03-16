@@ -847,6 +847,8 @@ rateCardConfig state =
     nightShiftMultiplier = if city == Delhi then "1.25" else "1.5"
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
+    dayChargeFrom = "5 AM"
+    dayChargeTill = if city == Delhi then "11 PM" else "10 PM"
     freeWaitingTime = " 3 "
     waitingChargesPerMin = cityBasedWaitingCharge city
     rateCardConfig' =
@@ -857,10 +859,10 @@ rateCardConfig state =
         , onFirstPage = state.data.rateCard.onFirstPage
         , showDetails = state.data.config.searchLocationConfig.showRateCardDetails
         , alertDialogPrimaryColor = state.data.config.alertDialogPrimaryColor
-        , description = if state.data.rateCard.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
+        , description = if state.data.rateCard.nightCharges then (getString $ NIGHT_TIME_CHARGES nightChargeFrom nightChargeTill) else (getString $ DAY_TIME_CHARGES dayChargeFrom dayChargeTill )
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
         , driverAdditionsImage = fetchImage FF_ASSET $ if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2"  else "ny_ic_driver_additions_yatri" 
-        , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
+        , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString $ DAYTIME_CHARGES_APPLIED_AT_NIGHT nightChargeFrom nightChargeTill)
                                  else (getString DAY_TIMES_OF) <> (nightShiftMultiplier) <> (getString $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill)
         , title = case MU.getMerchant FunctionCall of
                       MU.NAMMAYATRI ->  case city of
