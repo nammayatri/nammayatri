@@ -121,7 +121,6 @@ library
       Beckn.ACL.Status
       Beckn.ACL.Track
       Beckn.ACL.Update
-      Beckn.Core
       Beckn.OnDemand.Transformer.Init
       Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.OnUpdate

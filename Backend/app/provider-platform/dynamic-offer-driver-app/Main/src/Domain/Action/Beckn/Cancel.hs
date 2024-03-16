@@ -87,8 +87,7 @@ cancel ::
     LT.HasLocationService m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasField "isBecknSpecVersion2" r Bool
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   CancelReq ->
   DM.Merchant ->

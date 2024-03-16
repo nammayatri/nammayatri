@@ -49,7 +49,7 @@ status ::
 status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
   txnId <- Utils.getTransactionId reqV2.statusReqContext
   Utils.withTransactionIdLogTag txnId $ do
-    logTagInfo "Status APIV2 Flow" "Reached"
+    logTagInfo "Status APIV2 Flow" $ "Reached:-" <> show reqV2
     dStatusReq <- ACL.buildStatusReqV2 subscriber reqV2
     let context = reqV2.statusReqContext
     callbackUrl <- Utils.getContextBapUri context

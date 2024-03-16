@@ -15,7 +15,6 @@
 module App.Server where
 
 import API
--- import Beckn.Core (logBecknRequest)
 import Environment
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.Init

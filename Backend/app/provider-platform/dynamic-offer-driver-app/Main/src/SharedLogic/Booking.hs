@@ -29,7 +29,6 @@ cancelBooking ::
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasField "isBecknSpecVersion2" r Bool,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
