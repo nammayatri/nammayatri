@@ -75,6 +75,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public int createRecord(SQLiteDatabase db, String tableName, JSONObject record) throws Exception {
         try {
+            db.beginTransaction();
             ContentValues contentValues = new ContentValues();
             String[] columns = db.query(tableName, null, null, null, null, null, null).getColumnNames();
             for (String col : columns) {
@@ -82,10 +83,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     contentValues.put(col, record.optString(col, ""));
                 }
             }
-            return (int) db.insert(tableName, null, contentValues);
+            int rowId = (int) db.insert(tableName, null, contentValues);
+            db.setTransactionSuccessful();
+            return rowId;
         } catch (Exception e) {
             Log.i("SQLiteLog", "Error writing to " + tableName + ":" + e);
             throw e;
+        } finally {
+            db.endTransaction();
         }
     }
 
@@ -102,6 +107,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
         }
         cursor.close();
+        System.out.println("zxc-> "+ data);
         return data;
     }
 

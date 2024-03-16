@@ -85,9 +85,9 @@ onConnectivityEvent triggertype = do
                   "LOCATION_DISABLED" -> do
                     modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                     Flow.permissionScreenFlow
-                  "INTERNET_ACTION" -> do
-                    modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-                    Flow.permissionScreenFlow
+                  -- "INTERNET_ACTION" -> do
+                  --   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
+                  --   Flow.permissionScreenFlow
                   "REFRESH" -> Flow.baseAppFlow payload' false
                   _ -> Flow.baseAppFlow payload' false
                 pure unit

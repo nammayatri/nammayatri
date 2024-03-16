@@ -329,8 +329,10 @@ public class MobilityCommonBridge extends HyperBridge {
     public void createTable(String dbName, String tableName, String _columns){
         try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
             JSONArray columns = new JSONObject(_columns).getJSONArray("columns");
+            System.out.println("zxc createTable 1 -> " + columns);
             SQLiteDatabase db = dbHelper.getWritableDatabase();
             dbHelper.createTable(db, tableName, columns);
+            System.out.println("Table Created "+ tableName + " in " + dbName + " with columns " + columns);
         } catch (Exception e){
             Log.i("SQLiteLog", "Error creating table : " + e);
         }
@@ -352,6 +354,7 @@ public class MobilityCommonBridge extends HyperBridge {
         try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
             SQLiteDatabase db = dbHelper.getWritableDatabase();
             JSONObject recordObj = new JSONObject(record);
+            System.out.println("Adding to zxc" + tableName + " : " + recordObj);
             return dbHelper.createRecord(db, tableName, recordObj);
         } catch (Exception e){
             Log.i("SQLiteLog", "Error writing to " + tableName + ":" + e);
@@ -371,7 +374,9 @@ public class MobilityCommonBridge extends HyperBridge {
             } else {
                 for (int i = 0; i < selectionArgs.length(); i++) selectionArgsArr[i] = selectionArgs.get(i).toString();
             }
-            return dbHelper.readRecord(db, tableName, selection, selectionArgsArr).toString();
+            String d = dbHelper.readRecord(db, tableName, selection, selectionArgsArr).toString();
+            System.out.println("zxc readFromSqlite -> " + d);
+            return d;
         } catch (Exception e){
             Log.i("SQLiteLog", "Error reading from " + tableName + ": " + e);
             return "NULL";

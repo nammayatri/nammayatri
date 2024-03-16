@@ -192,6 +192,8 @@ import LocalStorage.Cache (clearCache)
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldMap)
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
+import Engineering.Helpers.SQLiteUtils
+import Engineering.Helpers.SQLiteUtils.Schema
 
 import Services.FlowCache as FlowCache
 
@@ -868,24 +870,22 @@ homeScreenFlow = do
           srcLon = state.data.driverInfoCardState.sourceLng
           dstLat = state.data.driverInfoCardState.destinationLat
           dstLon = state.data.driverInfoCardState.destinationLng
+          _ = spy "inside ONGOING_RIDE zxc " state
       updateLocalStage state.props.currentStage
-      if spy "ONGOING_RIDEONGOING_RIDE CURRENT" state.props.currentStage == RideCompleted then
-        do
-          let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
-              destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
-          void $ pure $ spy "INSIDE IF OF ONGOING" state.props.currentStage
-          void $ Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "DRIVER_LOCATION_UPDATE" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon true getPolylineAnimationConfig) 
-          homeScreenFlow
-        else if state.props.currentStage == HomeScreen then
-          do
-            void $ pure $ removeAllPolylines ""
-            void $ pure $ spy "INSIDE ELSE IF OF ONGOING" state.props.currentStage
-            void $ updateLocalStage HomeScreen
-            updateUserInfoToState state
-            homeScreenFlow
-          else do
-            lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
-            homeScreenFlow
+      if spy "ONGOING_RIDEONGOING_RIDE CURRENT" state.props.currentStage == RideCompleted then do
+        let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
+            destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
+        void $ pure $ spy "INSIDE IF OF ONGOING" state.props.currentStage
+        void $ Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "DRIVER_LOCATION_UPDATE" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon true getPolylineAnimationConfig)
+      else if state.props.currentStage == HomeScreen then do
+        void $ pure $ removeAllPolylines ""
+        void $ pure $ spy "INSIDE ELSE IF OF ONGOING" state.props.currentStage
+        void $ updateLocalStage HomeScreen
+        updateUserInfoToState state
+      else do
+        _ <- pure $ spy "INSIDE ELSE OF ONGOING zxc" state.props.currentStage
+        lift $ lift $ triggerRideStatusEvent "DRIVER_ASSIGNMENT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+      homeScreenFlow
     CANCEL_RIDE_REQUEST state -> do
       void $ pure $ currentPosition ""
       void $ updateLocalStage HomeScreen

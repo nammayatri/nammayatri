@@ -2189,5 +2189,6 @@ derive instance genericLocationType :: Generic LocationType _
 instance eqLocationType :: Eq LocationType where eq = genericEq
 
 type GlobalFlowCache = {
-  savedLocations :: Maybe SavedLocationsListRes
+  savedLocations :: Maybe SavedLocationsListRes,
+  isOffline :: Boolean
 }

@@ -2370,7 +2370,7 @@ eval (NotificationListener notificationType) state = do
   _ <- pure $ printLog "storeCallBackCustomer notificationType" notificationType
   case notificationType of
     "DRIVER_QUOTE_INCOMING" -> continue state
-    _ -> exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
+    _ -> continue state -- exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
 
 eval RecenterCurrentLocation state = recenterCurrentLocation state
 
@@ -3044,6 +3044,7 @@ normalRideFlow  (RideBookingRes response) state = do
         , data
           { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)
           }}
+      _ = spy "normalRideFlow zxc "  response
   exit $ RideConfirmed newState { props { isInApp = true } }
 
 specialZoneRideFlow :: RideBookingRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -3060,6 +3061,7 @@ specialZoneRideFlow  (RideBookingRes response) state = do
           { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)
           }
         }
+    _ = spy "specialZoneRideFlow zxc "  response
   exit $ RideConfirmed newState { props { isInApp = true } }
 
 getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}

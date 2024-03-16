@@ -3,57 +3,66 @@ import { callbackMapper } from "presto-ui";
 const JBridge = window.JBridge;
 
 export const createTable = function(dbName, tableName, columns){
-    if(window.JBridge.createTable) {
-      return window.JBridge.createTable(dbName, tableName, JSON.stringify({"columns": columns}));
+  if(window.JBridge.createTable) {
+    console.log("createTable found");
+    console.log("dbName", dbName);
+    console.log("tableName", tableName);
+    console.log("columns", JSON.stringify({"columns": columns}));
+    return window.JBridge.createTable(dbName, tableName, JSON.stringify({"columns": columns}));
+  }
+  else {
+    console.log("createTable not found");
+     
+  }
+}
+ 
+export const deleteTable = function(dbName, tableName){
+  if(window.JBridge.deleteTable)
+    return window.JBridge.deleteTable(dbName, tableName);
+  else return false
+}
+ 
+export const deleteDb = function(dbName){
+  if (window.JBridge.deleteDB)
+    return window.JBridge.deleteDB(dbName);
+}
+ 
+export const addToSqlite = function(dbName, tableName, record){
+  if (window.JBridge.addToSqlite){
+    console.log("zxc addToSqlite found");
+    console.log("zxc  dbName", dbName);
+    console.log("zxc tableName", tableName);
+    console.log("zxc record", JSON.stringify(record));
+    return window.JBridge.addToSqlite(dbName, tableName, JSON.stringify(record));
+  }
+}
+ 
+export const readFromSqlite = function(dbName, tableName, selection, selectionArgs, just, nothing){
+  if (window.JBridge.readFromSqlite){
+    const jsonstr = window.JBridge.readFromSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}));
+    console.log("readFromSqlite zxc -> ", jsonstr);
+    try{
+
+      const record = JSON.parse(jsonstr);
+      return just(record);
+    } catch(e){
+      console.log("Error reading from sqlite", e);
+      return nothing;
     }
-    else {
-     return
-    }
   }
+  else {
+    return nothing
+  }
+}
  
-  export const deleteTable = function(dbName, tableName){
-    if(window.JBridge.deleteTable)
-      return window.JBridge.deleteTable(dbName, tableName);
-    else return false
-  }
+export const deleteFromSqlite = function(dbName, tableName, selection, selectionArgs){
+  if (window.JBridge.deleteFromSqlite) 
+    return window.JBridge.deleteFromSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs})) == "1" ? true : false;
+  else return false
+}
  
-  export const deleteDb = function(dbName){
-    if (window.JBridge.deleteDB)
-      return window.JBridge.deleteDB(dbName);
-    else return
-  }
- 
-  export const addToSqlite = function(dbName, tableName, record){
-    if (window.JBridge.addToSqlite){
-      return window.JBridge.addToSqlite(dbName, tableName, JSON.stringify(record));
-    }
-    else return
-  }
- 
-  export const readFromSqlite = function(dbName, tableName, selection, selectionArgs, just, nothing){
-    if (window.JBridge.readFromSqlite){
-        var jsonstr = window.JBridge.readFromSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}));
-        try{
-          var record = JSON.parse(jsonstr);
-          return just(record);
-        } catch(e){
-        console.log("Error reading from sqlite", e);
-          return nothing;
-        }
-    }
-    else {
-        return nothing
-    }
-  }
- 
-  export const deleteFromSqlite = function(dbName, tableName, selection, selectionArgs){
-    if (window.JBridge.deleteFromSqlite) 
-      return window.JBridge.deleteFromSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs})) == "1" ? true : false;
-    else return false
-  }
- 
-  export const updateInSqlite = function(dbName, tableName, selection, selectionArgs, record){
-    if (window.JBridge.updateInSqlite)
-      return window.JBridge.updateInSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}), JSON.stringify(record));
-    else return -1
-  }
+export const updateInSqlite = function(dbName, tableName, selection, selectionArgs, record){
+  if (window.JBridge.updateInSqlite)
+    return window.JBridge.updateInSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}), JSON.stringify(record));
+  else return -1
+}
