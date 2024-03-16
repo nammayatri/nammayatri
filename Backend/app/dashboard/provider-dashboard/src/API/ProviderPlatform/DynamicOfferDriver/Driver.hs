@@ -833,9 +833,10 @@ sendMessageToDriverViaDashboard merchantShortId opCity apiTokenInfo driverId req
 
 sendDummyRideRequestToDriverViaDashboard :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 sendDummyRideRequestToDriverViaDashboard merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
-  _ <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  _ <- buildManagementServerTransaction Common.SendDummyRideRequestToDriverViaDashboardEndPoint apiTokenInfo driverId T.emptyRequest
-  return Success
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildManagementServerTransaction Common.SendDummyRideRequestToDriverViaDashboardEndPoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.sendDummyRideRequestToDriverViaDashboard) driverId
 
 changeOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ChangeOperatingCityReq -> FlowHandler APISuccess
 changeOperatingCity merchantShortId opCity apiTokenInfo driverId req =
