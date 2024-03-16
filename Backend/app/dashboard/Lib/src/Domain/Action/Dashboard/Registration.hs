@@ -55,9 +55,7 @@ import qualified Tools.Utils as Utils
 data LoginReq = LoginReq
   { email :: Maybe Text,
     password :: Text,
-    merchantId :: ShortId DMerchant.Merchant,
-    otp :: Maybe Text,
-    city :: Maybe City.City
+    otp :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
