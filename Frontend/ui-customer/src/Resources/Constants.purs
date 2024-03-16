@@ -23,7 +23,7 @@ import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
-import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex)
+import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex, formatFareType)
 import Engineering.Helpers.Commons (os)
 import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
@@ -226,7 +226,7 @@ getFaresList fares baseDistance =
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
                       "SGST" -> getEN PLATFORM_GST
                       "CUSTOMER_CANCELLATION_DUES" -> getEN CUSTOMER_CANCELLATION_DUES
-                      _ -> getEN BASE_FARES
+                      _ -> formatFareType $ item.description
           }
     )
     (getFilteredFares fares)

@@ -92,6 +92,7 @@ import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function.Uncurried (runFn1)
 import Constants (defaultDensity)
+import Mobility.Prelude
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -758,3 +759,10 @@ getDefaultPixelSize size =
   else let pixels = runFn1 getPixels FunctionCall
            androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall) / defaultDensity
        in ceil $ (toNumber size / pixels) * androidDensity
+
+
+formatFareType :: String -> String
+formatFareType fareType = 
+  let str = DS.replace (DS.Pattern "_") (DS.Replacement " ") fareType
+  in
+  spaceSeparatedPascalCase str
