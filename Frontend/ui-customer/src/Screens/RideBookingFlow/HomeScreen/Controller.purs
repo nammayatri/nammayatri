@@ -1944,7 +1944,7 @@ eval (PredictionClickedAction (LocationListItemController.OnClick item)) state =
 eval (SuggestedDestinationClicked item) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_sd_list_item"
   let _ = unsafePerformEffect $ Events.addEventData "External.OneClick.SuggestedDestinationClicked" "true"
-  locationSelected item true state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}}}
+  locationSelected item true state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false, rideSearchProps{sessionId = generateSessionId unit}, suggestedRideFlow = true}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do
@@ -2508,7 +2508,7 @@ eval (RepeatRide index item) state = do
   void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
   void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
   void $ pure $ setValueToLocalStore TEST_POLLING_COUNT $ "22" 
-  updateAndExit state{props{currentStage = LoadMap}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true}} item
+  updateAndExit state{props{currentStage = LoadMap, suggestedRideFlow = true}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true, suggestedRideFlow = true}} item
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do

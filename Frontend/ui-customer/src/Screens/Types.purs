@@ -786,6 +786,7 @@ type HomeScreenStateProps =
   , rideSearchProps :: RideSearchProps
   , selectedEstimateHeight :: Int
   , isSafetyCenterDisabled :: Boolean
+  , suggestedRideFlow :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

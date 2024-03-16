@@ -310,6 +310,7 @@ initData = {
         }
     , selectedEstimateHeight : 0
     , isSafetyCenterDisabled : false
+    , suggestedRideFlow : false
     }
 }
 
