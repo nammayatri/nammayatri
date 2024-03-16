@@ -334,7 +334,7 @@ rideSearchBT payload = do
                 pure $ toast (getString RIDE_NOT_SERVICEABLE)
             else if errorPayload.code == 400 then
                 pure $ toast codeMessage
-              else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
             _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
             BackT $ pure GoBack
