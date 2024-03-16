@@ -21,6 +21,8 @@ module Domain.Action.Beckn.OnStatus
     NewRideInfo (..),
     RideStartedInfo (..),
     RideCompletedInfo (..),
+    ValidatedOnStatusReq (..),
+    validateRequest,
   )
 where
 
@@ -48,6 +50,11 @@ import Tools.Metrics (HasBAPMetrics)
 data DOnStatusReq = DOnStatusReq
   { bppBookingId :: Id DB.BPPBooking,
     rideDetails :: RideDetails
+  }
+
+data ValidatedOnStatusReq = ValidatedOnStatusReq
+  { bppBookingId :: Id DB.BPPBooking,
+    validatedRideDetails :: ValidatedRideDetails
   }
 
 data NewRideInfo = NewRideInfo
@@ -90,6 +97,18 @@ data RideDetails
         reallocationSource :: DBCR.CancellationSource
       }
   | DriverArrivedDetails DCommon.DriverArrivedReq
+
+data ValidatedRideDetails
+  = ValidatedNewBookingDetails
+  | ValidatedRideAssignedDetails DCommon.ValidatedRideAssignedReq
+  | ValidatedRideStartedDetails DCommon.ValidatedRideStartedReq
+  | ValidatedRideCompletedDetails DCommon.ValidatedRideCompletedReq
+  | ValidatedBookingCancelledDetails DCommon.ValidatedBookingCancelledReq
+  | ValidatedBookingReallocationDetails
+      { bookingDetails :: DCommon.BookingDetails,
+        reallocationSource :: DBCR.CancellationSource
+      }
+  | ValidatedDriverArrivedDetails DCommon.ValidatedDriverArrivedReq
 
 -- the same as OnUpdateFareBreakup
 data OnStatusFareBreakup = OnStatusFareBreakup
@@ -152,12 +171,12 @@ onStatus ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     HasField "hotSpotExpiry" r Seconds
   ) =>
-  DOnStatusReq ->
+  ValidatedOnStatusReq ->
   m ()
 onStatus req = do
   booking <- QB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> req.bppBookingId.getId)
-  case req.rideDetails of
-    NewBookingDetails -> do
+  case req.validatedRideDetails of
+    ValidatedNewBookingDetails -> do
       mbExistingRide <- B.runInReplica $ QRide.findActiveByRBId booking.id
       unless (booking.status == bookingNewStatus) $ do
         QB.updateStatus booking.id bookingNewStatus
@@ -167,12 +186,12 @@ onStatus req = do
       where
         bookingNewStatus = DB.NEW
         rideNewStatus = DRide.CANCELLED
-    RideAssignedDetails request -> DCommon.rideAssignedReqHandler request
-    DriverArrivedDetails request -> DCommon.driverArrivedReqHandler request
-    RideStartedDetails request -> DCommon.rideStartedReqHandler request
-    RideCompletedDetails request -> DCommon.rideCompletedReqHandler request
-    BookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request
-    BookingReallocationDetails {bookingDetails, reallocationSource} -> do
+    ValidatedRideAssignedDetails request -> DCommon.rideAssignedReqHandler request
+    ValidatedDriverArrivedDetails request -> DCommon.driverArrivedReqHandler request
+    ValidatedRideStartedDetails request -> DCommon.rideStartedReqHandler request
+    ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request
+    ValidatedBookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request
+    ValidatedBookingReallocationDetails {bookingDetails, reallocationSource} -> do
       rideEntity <- buildRideEntity booking updateReallocatedRide bookingDetails
       let rideId = case rideEntity of
             UpdatedRide {ride} -> ride.id
@@ -185,6 +204,52 @@ onStatus req = do
         bookingNewStatus = DB.AWAITING_REASSIGNMENT
         rideNewStatus = DRide.CANCELLED
         updateReallocatedRide newRide = newRide{status = rideNewStatus}
+
+validateRequest ::
+  ( MonadFlow m,
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasBAPMetrics m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    EventStreamFlow m r,
+    EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasField "hotSpotExpiry" r Seconds
+  ) =>
+  DOnStatusReq ->
+  m ValidatedOnStatusReq
+validateRequest req@DOnStatusReq {..} = do
+  case req.rideDetails of
+    NewBookingDetails -> do
+      let validatedRideDetails = ValidatedNewBookingDetails
+      return ValidatedOnStatusReq {..}
+    RideAssignedDetails request -> do
+      rideDetails' <- DCommon.validateRideAssignedReq request
+      let validatedRideDetails = ValidatedRideAssignedDetails rideDetails'
+      return ValidatedOnStatusReq {..}
+    DriverArrivedDetails request -> do
+      rideDetails' <- DCommon.validateDriverArrivedReq request
+      let validatedRideDetails = ValidatedDriverArrivedDetails rideDetails'
+      return ValidatedOnStatusReq {..}
+    RideStartedDetails request -> do
+      rideDetails' <- DCommon.validateRideStartedReq request
+      let validatedRideDetails = ValidatedRideStartedDetails rideDetails'
+      return ValidatedOnStatusReq {..}
+    RideCompletedDetails request -> do
+      rideDetails' <- DCommon.validateRideCompletedReq request
+      let validatedRideDetails = ValidatedRideCompletedDetails rideDetails'
+      return ValidatedOnStatusReq {..}
+    BookingCancelledDetails request -> do
+      rideDetails' <- DCommon.validateBookingCancelledReq request
+      let validatedRideDetails = ValidatedBookingCancelledDetails rideDetails'
+      return ValidatedOnStatusReq {..}
+    BookingReallocationDetails {..} -> do
+      let validatedRideDetails = ValidatedBookingReallocationDetails {..}
+      return ValidatedOnStatusReq {..}
 
 buildNewRide :: MonadFlow m => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
 buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
