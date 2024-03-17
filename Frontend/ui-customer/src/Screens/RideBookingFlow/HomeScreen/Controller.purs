@@ -78,7 +78,7 @@ import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistance
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<))
 import Control.Monad (unless)
@@ -2304,6 +2304,7 @@ eval (StartLocationTracking item) state = do
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
+  logInfo "estimates_and_quotes" quotesRes
   case null quotesRes.quotes of
     false -> specialZoneFlow quotesRes.quotes state
     true -> estimatesListFlow quotesRes.estimates state 
