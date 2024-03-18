@@ -74,6 +74,8 @@ where
 import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as BL
 import Data.Either.Extra (eitherToMaybe)
 import Data.List (intersect, nub, (\\))
 import qualified Data.List as DL
@@ -113,6 +115,7 @@ import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
 import Environment
 import EulerHS.Prelude hiding (id, state)
+import qualified EulerHS.Types as Euler
 import qualified GHC.List as GHCL
 import GHC.Records.Extra
 import qualified IssueManagement.Domain.Types.MediaFile as Domain
@@ -126,10 +129,12 @@ import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime)
+import Kernel.ServantMultipart
 import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -149,6 +154,8 @@ import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
+import Servant hiding (Unauthorized, throwError)
+import Servant.Client
 import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
@@ -343,10 +350,26 @@ data DriverPhotoUploadReq = DriverPhotoUploadReq
   { image :: Text,
     fileType :: S3.FileType,
     reqContentType :: Text,
-    brisqueFeatures :: [Double]
+    brisqueFeatures :: [Double],
+    file :: FilePath
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp DriverPhotoUploadReq where
+  fromMultipart form =
+    DriverPhotoUploadReq
+      <$> (lookupInput "image" form)
+      <*> (Right Image)
+      <*> (lookupInput "reqContentType" form)
+      <*> Right []
+      <*> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp DriverPhotoUploadReq where
+  toMultipart DriverPhotoUploadReq {..} =
+    MultipartData
+      []
+      [FileData "image" (T.pack file) "" file]
 
 data DriverAlternateNumberReq = DriverAlternateNumberReq
   { mobileCountryCode :: Text,
@@ -992,14 +1015,15 @@ getStats (driverId, _, merchantOpCityId) date = do
            in Money $ GHCL.sum driverSelFares' + GHCL.sum customerExtFees' + GHCL.sum deadKmFare'
       }
 
-driverPhotoUploadHitsCountKey :: Id SP.Person -> Text
-driverPhotoUploadHitsCountKey driverId = "BPP:ProfilePhoto:verify:" <> getId driverId <> ":hitsCount"
+-- driverPhotoUploadHitsCountKey :: Id SP.Person -> Text
+-- driverPhotoUploadHitsCountKey driverId = "BPP:ProfilePhoto:verify:" <> getId driverId <> ":hitsCount"
 
 driverPhotoUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverPhotoUploadReq -> Flow APISuccess
-driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq {..} = do
-  checkSlidingWindowLimit (driverPhotoUploadHitsCountKey driverId)
+driverPhotoUpload (driverId, merchantId, merchantOpCityId) rq@DriverPhotoUploadReq {..} = do
+  --checkSlidingWindowLimit (driverPhotoUploadHitsCountKey driverId)
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
   imageExtension <- validateContentType
+  _ <- callFaceVerificationAPI rq
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when transporterConfig.enableFaceVerification
     let req = IF.FaceValidationReq {file = image, brisqueFeatures}
@@ -1630,3 +1654,46 @@ getDummyRideRequest ::
 getDummyRideRequest (personId, _, merchantOpCityId) = do
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   DriverNotify.triggerDummyRideRequest driver merchantOpCityId False
+
+defBaseUrl :: BaseUrl
+defBaseUrl =
+  BaseUrl
+    { baseUrlScheme = Https,
+      baseUrlHost = "sgp.idv.hyperverge.co",
+      baseUrlPort = 443,
+      baseUrlPath = T.unpack ""
+    }
+
+type FaceValidationAPI =
+  "v1"
+    :> "checkLiveness"
+    :> Header "Content-Type" Text
+    :> Header "transacrionId" Text
+    :> Header "appId" Text
+    :> Header "appKey" Text
+    :> MultipartForm Tmp DriverPhotoUploadReq
+    :> Post '[JSON] (Either String A.Object)
+
+faceValidationClient ::
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  (BL.ByteString, DriverPhotoUploadReq) ->
+  Euler.EulerClient (Either String A.Object)
+faceValidationClient = Euler.client (Proxy :: Proxy FaceValidationAPI)
+
+callFaceVerificationAPI ::
+  (MonadFlow m, CoreMetrics m) =>
+  DriverPhotoUploadReq ->
+  m (Either String A.Object)
+callFaceVerificationAPI req = do
+  logDebug $ "The request is : " <> (show req)
+  r <- callAPI defBaseUrl (faceValidationClient (Just "multipart/form-data; boundary=xx00xx") (Just "abcd1234") (Just "dummy") (Just "dummy") ("xx00xx", (DriverPhotoUploadReq req.image req.fileType req.reqContentType req.brisqueFeatures req.file))) "validateFaceImage" (Proxy @FaceValidationAPI)
+  _ <- logDebug $ "Response from HyperVerge: " <> show (fromRight (Left "error occured didnt get response") r)
+  case r of
+    Left e -> do
+      logError $ "Error in face verification: error is :" <> show e
+    Right r' -> do
+      logDebug $ "Response from HyperVerge: " <> show r'
+  return $ fromRight (Left "") r

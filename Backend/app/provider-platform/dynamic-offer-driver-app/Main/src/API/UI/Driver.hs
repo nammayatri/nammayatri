@@ -47,6 +47,7 @@ import qualified Domain.Types.Plan as DPlan
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
+import Kernel.ServantMultipart
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -114,7 +115,7 @@ type API =
                       :> Get '[JSON] DDriver.DriverStatsRes
                     :<|> "photo"
                       :> ( TokenAuth
-                             :> ReqBody '[JSON] DDriver.DriverPhotoUploadReq
+                             :> MultipartForm Tmp DDriver.DriverPhotoUploadReq
                              :> Post '[JSON] APISuccess
                              :<|> "media"
                                :> TokenAuth

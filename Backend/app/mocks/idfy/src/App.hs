@@ -43,7 +43,7 @@ defaultConfig =
       secret = "xxxxxxx",
       httpClientOptions =
         HttpClientOptions
-          { timeoutMs = 2000
+          { timeoutMs = 20000
           },
       shortDurationRetryCfg =
         RetryCfg

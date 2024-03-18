@@ -309,7 +309,7 @@ in  { esqDBCfg
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
     , modelNamesMap
-    , incomingAPIResponseTimeout = +15
+    , incomingAPIResponseTimeout = +20
     , internalEndPointMap = common.internalEndPointMap
     , isBecknSpecVersion2 = True
     , _version = "2.0.0"
