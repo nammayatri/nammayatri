@@ -50,4 +50,5 @@
     <string name="and">and</string>
     <string name="error_app_not_found">App not found</string>
     <string name="no_enabled_browser">No enabled browser found in your device, please enable or install a browser</string>
+    <string name="merchant_id" translatable="false">passculture</string>
 </resources>

@@ -121,6 +121,9 @@ public class CameraUtils {
             PermissionUtils.askRequestedPermissions(activity, context, new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, null);
 
             try {
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    return;
+                }
                 videoCapture.startRecording(
                         new VideoCapture.OutputFileOptions.Builder(
                                 activity.getContentResolver(),
