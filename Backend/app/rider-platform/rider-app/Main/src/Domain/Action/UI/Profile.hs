@@ -99,7 +99,8 @@ data ProfileRes = ProfileRes
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     followsRide :: Bool,
-    frontendConfigHash :: Maybe Text
+    frontendConfigHash :: Maybe Text,
+    isSafetyCenterDisabled :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -174,14 +175,16 @@ getPersonDetails (personId, _) mbToss = do
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   frntndfgs <- if useCACConfig then getFrontendConfigs person mbToss else return $ Just DAKM.empty
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
-  return $ makeProfileRes decPerson tag mbMd5Digest
+  isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash =
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ =
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
           hasTakenRide = hasTakenValidRide,
           frontendConfigHash = md5DigestHash,
+          isSafetyCenterDisabled = isSafetyCenterDisabled_,
           ..
         }
 
@@ -323,7 +326,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
   newlyAddedContacts <- filterM filterNewContacts newList
   SPDEN.notifyEmergencyContacts person (notificationMessage person) "Emergency Contact Added" Notification.EMERGENCY_CONTACT_ADDED (Just message) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts
   where
-    notificationMessage person = "You have been added as an emergency contact by " <> SLP.getName person <> "."
+    notificationMessage person = SLP.getName person <> " has added you as the emergency contact."
 
 getDefaultEmergencyNumbers :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
 getDefaultEmergencyNumbers (personId, _) = do
