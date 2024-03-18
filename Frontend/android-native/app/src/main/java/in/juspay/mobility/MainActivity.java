@@ -519,21 +519,22 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannelGroup safetyGroup = new NotificationChannelGroup("1_safety", "Enhanced Safety");
-            safetyGroup.setDescription("Notifications related to Safety");
-            notificationManager.createNotificationChannelGroup(safetyGroup);
-
             NotificationChannelGroup rideRelatedGroup = new NotificationChannelGroup("2_ride_related", "Essential - Ride related");
-            rideRelatedGroup.setDescription("Notifications related to ride starts, end");
-            notificationManager.createNotificationChannelGroup(rideRelatedGroup);
-
             NotificationChannelGroup serviceGroup = new NotificationChannelGroup("3_services", "Services");
-            serviceGroup.setDescription("Notifications related to Services");
-            notificationManager.createNotificationChannelGroup(serviceGroup);
-
             NotificationChannelGroup promotionalGroup = new NotificationChannelGroup("4_promotional", "Promotional");
-            promotionalGroup.setDescription("Notifications related to promotional");
+
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
+                safetyGroup.setDescription("Notifications related to Safety");
+                rideRelatedGroup.setDescription("Notifications related to ride starts, end");
+                serviceGroup.setDescription("Notifications related to Services");
+                promotionalGroup.setDescription("Notifications related to promotional");
+            }
+
+            notificationManager.createNotificationChannelGroup(safetyGroup);
+            notificationManager.createNotificationChannelGroup(rideRelatedGroup);
+            notificationManager.createNotificationChannelGroup(serviceGroup);
             notificationManager.createNotificationChannelGroup(promotionalGroup);
         }
 
