@@ -40,6 +40,7 @@ updateByPrimaryKey Domain.Types.RiderConfig.RiderConfig {..} = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.appUrl appUrl,
+      Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
       Se.Set Beam.collectAutoCompleteData collectAutoCompleteData,
       Se.Set Beam.collectMMIRouteData collectMMIRouteData,
       Se.Set Beam.distanceWeightage distanceWeightage,
@@ -69,6 +70,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
       Just
         Domain.Types.RiderConfig.RiderConfig
           { appUrl = appUrl,
+            autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
             collectAutoCompleteData = collectAutoCompleteData,
             collectMMIRouteData = collectMMIRouteData,
             distanceWeightage = distanceWeightage,
@@ -93,6 +95,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
   toTType' Domain.Types.RiderConfig.RiderConfig {..} = do
     Beam.RiderConfigT
       { Beam.appUrl = appUrl,
+        Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
         Beam.collectAutoCompleteData = collectAutoCompleteData,
         Beam.collectMMIRouteData = collectMMIRouteData,
         Beam.distanceWeightage = distanceWeightage,

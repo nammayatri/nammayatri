@@ -14,7 +14,8 @@ import Servant
 import Tools.Auth
 
 data MarkAsSafeReq = MarkAsSafeReq
-  { isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  { isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -31,6 +32,7 @@ data SosDetailsRes = SosDetailsRes
 
 data SosReq = SosReq
   { flow :: Domain.Types.Sos.SosType,
+    isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

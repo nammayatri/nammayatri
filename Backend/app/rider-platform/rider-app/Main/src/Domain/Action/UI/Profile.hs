@@ -139,7 +139,8 @@ getPersonDetails (personId, _) = do
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
   decPerson <- decrypt person
-  return $ Person.makePersonAPIEntity decPerson tag
+  isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled decPerson
+  return $ Person.makePersonAPIEntity decPerson tag isSafetyCenterDisabled
 
 updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do
@@ -279,7 +280,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
   newlyAddedContacts <- filterM filterNewContacts newList
   SPDEN.notifyEmergencyContacts person (notificationMessage person) "Emergency Contact Added" Notification.EMERGENCY_CONTACT_ADDED (Just message) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts
   where
-    notificationMessage person = "You have been added as an emergency contact by " <> SLP.getName person <> "."
+    notificationMessage person = SLP.getName person <> " has added you as the emergency contact."
 
 getDefaultEmergencyNumbers :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
 getDefaultEmergencyNumbers (personId, _) = do

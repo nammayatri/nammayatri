@@ -51,6 +51,7 @@ import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Location as QL
@@ -157,6 +158,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
   let tag = customerDisability <&> (.tag)
   decRider <- decrypt rider
+  isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled rider
   return $
     GetRideStatusResp
       { fromLocation = makeLocationAPIEntity booking.fromLocation,
@@ -167,7 +169,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.InterCityDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
-        customer = SPerson.makePersonAPIEntity decRider tag,
+        customer = SPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled,
         driverPosition = mbPos <&> (.currPoint)
       }
 
