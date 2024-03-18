@@ -108,7 +108,12 @@ dummyCityConfig = {
                       enableVariantBasedSubscription : true,
                       variantList : ["AutoCategory"]
                     },
-                    showEarningSection: true
+                    showEarningSection: true,
+                    referral : {
+                        domain : ""
+                      , customerAppId : ""
+                      , driverAppId : ""
+                    }
                   }
           
 type VehicleInfo = {

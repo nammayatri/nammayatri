@@ -296,6 +296,11 @@ window.getMerchantConfig = function () {
       "variantSubscriptionConfig" : {
         "enableVariantBasedSubscription" : false,
         "variantList" : []
+      },
+      "referral" : {
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
       }
     }
   ]

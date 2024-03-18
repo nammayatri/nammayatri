@@ -102,7 +102,14 @@ type CityConfig = {
   registration :: RegistrationConfig,
   vehicleNSImg :: String,
   variantSubscriptionConfig :: VariantSubscriptionConfig,
-  showEarningSection :: Boolean
+  showEarningSection :: Boolean,
+  referral :: Referral
+}
+
+type Referral = {
+    domain :: String
+  , customerAppId :: String
+  , driverAppId :: String
 }
 
 type DashboardConfig = {

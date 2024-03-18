@@ -144,7 +144,12 @@ config =
                 enableVariantBasedSubscription : true,
                 variantList : ["AutoCategory"]
               },
-              showEarningSection : true
+              showEarningSection : true,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              }
             },
             {
               cityName : "Hyderabad",
@@ -165,7 +170,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : true
+              showEarningSection : true,
+              referral : {
+                  domain : "https://www.manayatri.in"
+                , customerAppId : "in.mobility.manayatri"
+                , driverAppId : "in.mobility.manayatripartner"
+              }
             },
             {
               cityName : "Mysore",
@@ -186,7 +196,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : true
+              showEarningSection : true,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              }
             },
             {
               cityName : "Delhi",
@@ -207,7 +222,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : true
+              showEarningSection : true,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              }
             },
             {
               cityName : "Chennai",
@@ -228,7 +248,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : false
+              showEarningSection : false,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              }
             },
             {
               cityName : "Coimbatore",
@@ -249,7 +274,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : true
+              showEarningSection : true,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              }
             },
             {
               cityName : "Puducherry",
@@ -270,7 +300,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : false
+              showEarningSection : false,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              }
             },
             {
               cityName : "Gurugram",
@@ -291,7 +326,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : true
+              showEarningSection : true,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              }
             },
             {             
               cityName : "Noida",
@@ -312,7 +352,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : true
+              showEarningSection : true,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              }
             },
             {
               cityName : "TamilNaduCities",
@@ -333,7 +378,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : false
+              showEarningSection : false,
+              referral : {
+                  domain : "https://nammayatri.in"
+                , customerAppId : "in.juspay.nammayatri"
+                , driverAppId : "in.juspay.nammayatripartner"
+              }
             },
             {
               cityName : "Kolkata",
@@ -358,7 +408,12 @@ config =
                 enableVariantBasedSubscription : false,
                 variantList : []
               },
-              showEarningSection : true
+              showEarningSection : true,
+              referral : {
+                  domain : "https://www.yatrisathi.in"
+                , customerAppId : "in.juspay.jatrisaathi"
+                , driverAppId : "in.juspay.jatrisaathidriver"
+              }
             }
             --, For future use
             -- {

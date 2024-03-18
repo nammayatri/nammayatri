@@ -109,7 +109,7 @@ eval ShowQRCode state = do
 eval ShareQRLink state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_share_referral_code_click"
   let title = getString $ SHARE_NAMMA_YATRI "SHARE_NAMMA_YATRI"
-  let message = (getString SHARE_NAMMA_YATRI_MESSAGE) <> title <> " " <> (getString NOW) <> "! \n" <> (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType state.data.config.appData.website) <> (getString BE_OPEN_CHOOSE_OPEN) 
+  let message = (getString SHARE_NAMMA_YATRI_MESSAGE) <> title <> " " <> (getString NOW) <> "! \n" <> (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) <> (getString BE_OPEN_CHOOSE_OPEN) 
   _ <- pure $ shareTextMessage title message
   continue state
 
@@ -146,11 +146,10 @@ eval (UpdateLeaderBoard (LeaderBoardRes resp)) state = do
   continue state {data {totalEligibleDrivers = resp.totalEligibleDrivers, rank = currentDriverRank}}
 
 eval (ChangeTab tab) state = do
-  let referralAppId = if tab == DRIVER then state.data.config.referral.driverAppId else state.data.config.referral.customerAppId
-      _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_driver_referral_scn_changetab" $ [{key : "Tab", value : unsafeToForeign (show tab)}]
+  let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_driver_referral_scn_changetab" $ [{key : "Tab", value : unsafeToForeign (show tab)}]
   continueWithCmd state {props {driverReferralType = tab}}
     [ do
-      runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode tab state.data.config.appData.website) (getNewIDWithTag "ReferralQRCode") 500 0
+      runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode tab) (getNewIDWithTag "ReferralQRCode") 500 0
       pure $ RenderQRCode
     ]
 
