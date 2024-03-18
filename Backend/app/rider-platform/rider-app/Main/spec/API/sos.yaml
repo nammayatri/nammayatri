@@ -17,6 +17,7 @@ types:
   SosReq:
     flow: SosType
     rideId: Id Ride
+    isRideEnded: Maybe Bool
 
   SosUpdateReq:
     status: SosStatus
@@ -28,6 +29,7 @@ types:
 
   MarkAsSafeReq:
     isMock: Maybe Bool
+    isRideEnded: Maybe Bool
 
 apis:
   # GET /sos/getDetails

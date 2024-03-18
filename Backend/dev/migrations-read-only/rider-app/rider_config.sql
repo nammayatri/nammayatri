@@ -36,3 +36,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN collect_mmi_route_data boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN is_avoid_toll boolean NOT NULL default true;
+ALTER TABLE atlas_app.rider_config ADD COLUMN auto_unblock_safety_center_after_days integer NOT NULL default 14;

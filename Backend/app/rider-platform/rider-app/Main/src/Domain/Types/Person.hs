@@ -114,7 +114,9 @@ data PersonE e = Person
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double,
     useFakeOtp :: Maybe Text,
-    followsRide :: Bool
+    followsRide :: Bool,
+    falseSafetyAlarmCount :: Int,
+    safetyCenterDisabledOnDate :: Maybe UTCTime
   }
   deriving (Generic)
 
@@ -158,7 +160,8 @@ data PersonAPIEntity = PersonAPIEntity
     hasCompletedMockSafetyDrill :: Maybe Bool,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
-    followsRide :: Bool
+    followsRide :: Bool,
+    isSafetyCenterDisabled :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -169,8 +172,8 @@ data PersonCityInformation = PersonCityInformation
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> PersonAPIEntity
-makePersonAPIEntity Person {..} disability =
+makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> Bool -> PersonAPIEntity
+makePersonAPIEntity Person {..} disability isSafetyCenterDisabled =
   PersonAPIEntity
     { maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = maskText <$> deviceToken,

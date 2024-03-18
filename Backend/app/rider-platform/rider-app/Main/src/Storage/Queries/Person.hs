@@ -339,6 +339,18 @@ updateSafetyDrillStatus (Id personId) hasCompletedMockSafetyDrill = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
+updateSafetyCenterBlockingCounter :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Maybe Int -> Maybe UTCTime -> m ()
+updateSafetyCenterBlockingCounter personId counter mbDate = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [ Se.Set BeamP.updatedAt now,
+        Se.Set BeamP.safetyCenterDisabledOnDate mbDate
+      ]
+        <> [Se.Set BeamP.falseSafetyAlarmCount counter | isJust counter]
+    )
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
 instance FromTType' BeamP.Person Person where
   fromTType' BeamP.PersonT {..} = do
     bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
@@ -359,6 +371,7 @@ instance FromTType' BeamP.Person Person where
             clientVersion = clientVersion',
             rating = Just $ fromIntegral totalRatingScore / fromIntegral totalRatings,
             currentCity = currentCity',
+            falseSafetyAlarmCount = fromMaybe 0 falseSafetyAlarmCount,
             ..
           }
     where
@@ -424,5 +437,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.registrationLat = registrationLat,
         BeamP.registrationLon = registrationLon,
         BeamP.useFakeOtp = useFakeOtp,
-        BeamP.followsRide = followsRide
+        BeamP.followsRide = followsRide,
+        BeamP.falseSafetyAlarmCount = Just falseSafetyAlarmCount,
+        BeamP.safetyCenterDisabledOnDate = safetyCenterDisabledOnDate
       }
