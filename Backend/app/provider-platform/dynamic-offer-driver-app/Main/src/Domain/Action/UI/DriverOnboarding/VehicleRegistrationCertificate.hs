@@ -537,9 +537,9 @@ compareMaybe (Just x) (Just y) = compare x y
 
 compareVehicles :: ODC.VehicleClassVariantMap -> ODC.VehicleClassVariantMap -> Ordering
 compareVehicles a b =
-  compareMaybe a.vehicleCapacity b.vehicleCapacity
-    `mappend` compareMaybe a.manufacturer b.manufacturer
+  compareMaybe a.manufacturer b.manufacturer
     `mappend` compareMaybe a.manufacturerModel b.manufacturerModel
+    `mappend` compareMaybe a.vehicleCapacity b.vehicleCapacity
 
 -- Function to sort list of Maybe values
 sortMaybe :: [ODC.VehicleClassVariantMap] -> [ODC.VehicleClassVariantMap]
