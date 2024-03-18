@@ -47,6 +47,7 @@ data TransporterConfigT f = TransporterConfigT
     checkImageExtractionForDashboard :: B.C f Bool,
     searchRepeatLimit :: B.C f Int,
     actualRideDistanceDiffThreshold :: B.C f HighPrecMeters,
+    recomputeIfPickupDropNotOutsideOfThreshold :: B.C f Bool,
     upwardsRecomputeBuffer :: B.C f HighPrecMeters,
     approxRideDistanceDiffThreshold :: B.C f HighPrecMeters,
     driverPaymentCycleBuffer :: B.C f Seconds,
