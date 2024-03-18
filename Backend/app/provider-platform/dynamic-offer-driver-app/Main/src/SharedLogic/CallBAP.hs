@@ -23,7 +23,6 @@ module SharedLogic.CallBAP
     sendEstimateRepetitionUpdateToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
-    callOnConfirm,
     callOnConfirmV2,
     callOnStatusV2,
     buildBppUrl,
@@ -43,7 +42,6 @@ import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
-import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -78,7 +76,6 @@ import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -97,6 +94,8 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 callOnSelectV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -128,6 +127,9 @@ callOnSelectV2 transporter searchRequest searchTry content = do
       ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttlToISO8601Duration)
   logDebug $ "on_selectV2 request bpp: " <> show content
+  fork "sending on select, pushing ondc logs" do
+    let transactionLog = TransactionLogReq "on_select" $ ReqLog (toJSON context) (maskSensitiveData $ toJSON (Just content))
+    void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
   where
     getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
@@ -190,30 +192,6 @@ callOnCancelV2 req retryConfig = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
 
-callOnConfirm ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasHttpClientOptions r c,
-    HasShortDurationRetryCfg r c,
-    CoreMetrics m
-  ) =>
-  DM.Merchant ->
-  Context.Context ->
-  OnConfirm.OnConfirmMessage ->
-  m ()
-callOnConfirm transporter contextFromConfirm content = do
-  let bapUri = contextFromConfirm.bap_uri
-      bapId = contextFromConfirm.bap_id
-      msgId = contextFromConfirm.message_id
-      city = contextFromConfirm.city
-      country = contextFromConfirm.country
-      bppSubscriberId = getShortId $ transporter.subscriberId
-      authKey = getHttpManagerKey bppSubscriberId
-  bppUri <- buildBppUrl transporter.id
-  internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
-  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV1 bapUri internalEndPointHashMap (BecknCallbackReq context_ $ Right content)
-
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -225,7 +203,6 @@ callOnConfirmV2 ::
   ) =>
   DM.Merchant ->
   Spec.Context ->
-  -- OnConfirm.OnConfirmMessageV2 ->
   Spec.ConfirmReqMessage ->
   DBC.BecknConfig ->
   m ()
@@ -244,6 +221,9 @@ callOnConfirmV2 transporter context content bppConfig = do
   let ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
       ttlToISO8601Duration = formatTimeDifference ttlToNominalDiffTime
   context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttlToISO8601Duration)
+  fork "sending on confirm, pushing ondc logs" do
+    let transactionLog = TransactionLogReq "on_confirm" $ ReqLog (toJSON context_) (maskSensitiveData $ toJSON (Just content))
+    void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
 
 buildBppUrl ::
@@ -308,6 +288,9 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
+  fork "sending on update, pushing ondc logs" do
+    let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON rideAssignedMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON rideAssignedMsgV2.onUpdateReqMessage)
+    void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
@@ -383,6 +366,9 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq
+  fork "sending on status, pushing ondc logs" do
+    let transactionLog = TransactionLogReq "on_status" $ ReqLog (toJSON rideStartedMsgV2.onStatusReqContext) (maskSensitiveData $ toJSON rideStartedMsgV2.onStatusReqMessage)
+    void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ callOnStatusV2 rideStartedMsgV2 retryConfig
 
 sendRideCompletedUpdateToBAP ::
@@ -413,6 +399,9 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking rideCompletedBuildReq
+  fork "sending on update, pushing ondc logs" do
+    let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON rideCompletedMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON rideCompletedMsgV2.onUpdateReqMessage)
+    void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig
 
 sendBookingCancelledUpdateToBAP ::
@@ -515,6 +504,9 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking driverArrivedBuildReq
+  fork "sending on update, pushing ondc logs" do
+    let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON driverArrivedMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON driverArrivedMsgV2.onUpdateReqMessage)
+    void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
   void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig
 
 sendStopArrivalUpdateToBAP ::
@@ -545,6 +537,9 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = do
         stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
     stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking stopArrivedBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
+    fork "sending on update, pushing ondc logs" do
+      let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON stopArrivedMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON stopArrivedMsgV2.onUpdateReqMessage)
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig
 
 sendNewMessageToBAP ::
@@ -578,6 +573,9 @@ sendNewMessageToBAP booking ride message = do
         newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking newMessageBuildReq
+    fork "sending on update, pushing ondc logs" do
+      let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON newMessageMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON newMessageMsgV2.onUpdateReqMessage)
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ callOnUpdateV2 newMessageMsgV2 retryConfig
 
 sendSafetyAlertToBAP ::
@@ -612,6 +610,9 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
 
     retryConfig <- asks (.shortDurationRetryCfg)
     safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking safetyAlertBuildReq
+    fork "sending on update, pushing ondc logs" do
+      let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON safetyAlertMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON safetyAlertMsgV2.onUpdateReqMessage)
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig
 
 sendEstimateRepetitionUpdateToBAP ::
@@ -645,6 +646,8 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
     let bookingDetails = ACL.BookingDetails {..}
         estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
-
     estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking estimateRepetitionBuildReq
+    fork "sending on update, pushing ondc logs" do
+      let transactionLog = TransactionLogReq "on_update" $ ReqLog (toJSON estimateRepMsgV2.onUpdateReqContext) (maskSensitiveData $ toJSON estimateRepMsgV2.onUpdateReqMessage)
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ callOnUpdateV2 estimateRepMsgV2 retryConfig

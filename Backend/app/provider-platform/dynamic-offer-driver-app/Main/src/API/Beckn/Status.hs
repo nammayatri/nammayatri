@@ -65,6 +65,10 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     onStautusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info
+    fork "sending on status, pushing ondc logs" do
+      let transactionLog = TransactionLogReq "on_status" $ ReqLog (toJSON onStautusReq.onStatusReqContext) (maskSensitiveData $ toJSON onStautusReq.onStatusReqMessage)
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle dStatusRes.booking.providerId "MOBILITY" (Utils.mapVariantToVehicle dStatusRes.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     Callback.withCallback dStatusRes.transporter "STATUS" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStautusReq.onStatusReqContext) $
       pure onStautusReq
 

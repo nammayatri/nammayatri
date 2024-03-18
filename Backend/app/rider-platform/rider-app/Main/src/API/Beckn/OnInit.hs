@@ -55,12 +55,16 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
       Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
         fork "oninit request processing" $ do
           (onInitRes, booking) <- DOnInit.onInit onInitReq
+          becknConfig <- QBC.findByMerchantIdDomainAndVehicle onInitRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle onInitRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
           fork "on init received pushing ondc logs" do
             let transactionLog = TransactionLogReq "on_init" $ ReqLog (toJSON reqV2.onInitReqContext) (maskSensitiveData $ toJSON reqV2.onInitReqMessage)
-            becknConfig <- QBC.findByMerchantIdDomainAndVehicle onInitRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle onInitRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
             void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
-          handle (errHandler booking) . void . withShortRetry $
-            CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+          handle (errHandler booking) . void . withShortRetry $ do
+            confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
+            fork "sending confirm, pushing ondc logs" do
+              let transactionLog = TransactionLogReq "confirm" $ ReqLog (toJSON confirmBecknReq.confirmReqContext) (maskSensitiveData $ toJSON confirmBecknReq.confirmReqMessage)
+              void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
+            CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq
     pure Ack
   where
     errHandler booking exc

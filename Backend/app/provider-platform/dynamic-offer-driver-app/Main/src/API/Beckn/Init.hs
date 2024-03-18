@@ -97,6 +97,9 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
               let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
+              fork "sending on init, pushing ondc logs" do
+                let transactionLog = TransactionLogReq "on_init" $ ReqLog (toJSON context) (maskSensitiveData $ toJSON (Just onInitMessage))
+                void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = bppConfig.logsToken, url = bppConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
               pure $
                 Spec.OnInitReq
                   { onInitReqContext = context,

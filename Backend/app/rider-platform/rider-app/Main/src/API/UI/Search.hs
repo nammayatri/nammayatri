@@ -26,9 +26,11 @@ module API.UI.Search
 where
 
 import qualified Beckn.ACL.Search as TaxiACL
+import BecknV2.Utils
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
+import Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
@@ -47,8 +49,11 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 -------- Search Flow --------
 
@@ -65,7 +70,7 @@ handler :: FlowServer API
 handler = search
 
 search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DSearch.SearchResp
-search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
   dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbDevice
@@ -73,6 +78,10 @@ search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHand
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
+    fork "sending search, pushing ondc logs" do
+      let transactionLog = TransactionLogReq "search" $ ReqLog (toJSON becknTaxiReqV2.searchReqContext) (maskSensitiveData $ toJSON becknTaxiReqV2.searchReqMessage)
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2
   -- fork "search metro" . withShortRetry $ do
   --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes

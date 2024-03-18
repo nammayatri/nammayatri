@@ -22,6 +22,8 @@ module API.UI.Cancel
 where
 
 import qualified Beckn.ACL.Cancel as ACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
+import BecknV2.Utils
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as Merchant
@@ -29,12 +31,17 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.Queries.Booking as QBooking
 import Tools.Auth
+import TransactionLogs.Interface
+import TransactionLogs.Interface.Types
 
 type API =
   CancelAPI
@@ -79,7 +86,13 @@ cancel ::
 cancel bookingId (personId, merchantId) req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
-    void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
+    cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes
+    fork "sending cancel, pushing ondc logs" do
+      let transactionLog = TransactionLogReq "cancel" $ ReqLog (toJSON cancelBecknReq.cancelReqContext) (maskSensitiveData $ toJSON cancelBecknReq.cancelReqMessage)
+      booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
+    void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl cancelBecknReq
     return Success
 
 softCancel ::
@@ -89,7 +102,13 @@ softCancel ::
 softCancel bookingId (personId, merchantId) =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dCancelRes <- DCancel.softCancel bookingId (personId, merchantId)
-    void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
+    cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes
+    fork "sending cancel, pushing ondc logs" do
+      let transactionLog = TransactionLogReq "cancel" $ ReqLog (toJSON cancelBecknReq.cancelReqContext) (maskSensitiveData $ toJSON cancelBecknReq.cancelReqMessage)
+      booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
+    void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl cancelBecknReq
     return Success
 
 disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler APISuccess

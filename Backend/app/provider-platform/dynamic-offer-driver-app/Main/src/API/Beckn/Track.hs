@@ -75,14 +75,20 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
       void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
     logTagInfo "track APIV2 Flow" "Sending OnTrack APIV2"
     context' <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId (Just transactionId) bapId callbackUrl context.contextBppId bppUri city country (Just "PT2M")
-    Callback.withCallback dTrackRes.transporter "TRACK" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler context') $
-      -- there should be DOnTrack.onTrack, but it is empty anyway
-      pure $
-        Spec.OnTrackReq
-          { onTrackReqContext = context',
-            onTrackReqError = Nothing,
-            onTrackReqMessage = Just $ ACL.mkOnTrackMessageV2 dTrackRes
-          }
+    let onTrackBecknReq = mkOnTrackRequest context (ACL.mkOnTrackMessageV2 dTrackRes)
+    fork "sending on track, pushing ondc logs" do
+      let transactionLog = TransactionLogReq "on_track" $ ReqLog (toJSON onTrackBecknReq.onTrackReqContext) (maskSensitiveData $ toJSON onTrackBecknReq.onTrackReqMessage)
+      becknConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId "MOBILITY" (Utils.mapVariantToVehicle dTrackRes.booking.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
+    Callback.withCallback dTrackRes.transporter "TRACK" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler context') $ pure onTrackBecknReq
+
+mkOnTrackRequest :: Spec.Context -> Spec.OnTrackReqMessage -> Spec.OnTrackReq
+mkOnTrackRequest context message =
+  Spec.OnTrackReq
+    { onTrackReqContext = context,
+      onTrackReqError = Nothing,
+      onTrackReqMessage = Just message
+    }
 
 errHandler :: Spec.Context -> BecknAPIError -> Spec.OnTrackReq
 errHandler context (BecknAPIError err) =

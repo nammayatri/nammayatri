@@ -92,9 +92,11 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
               onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country
               let context' = onSearchReq.onSearchReqContext
               logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-              void $
-                Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
-                  pure onSearchReq
+              fork "sending on search, pushing ondc logs" do
+                let transactionLog = TransactionLogReq "on_search" $ ReqLog (toJSON onSearchReq.onSearchReqContext) (maskSensitiveData $ toJSON onSearchReq.onSearchReqMessage)
+                becknConfig <- QBC.findByMerchantIdDomainAndVehicle validatedSReq.merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError "Beckn Config not found")
+                void $ pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = becknConfig.logsToken, url = becknConfig.logsUrl}) transactionLog -- shrey00 : Maybe validate ONDC response?
+              void $ Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ pure onSearchReq
             else pure ()
   pure Ack
 
