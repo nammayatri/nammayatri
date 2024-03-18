@@ -249,28 +249,39 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.sourcePinCode.setText(model.getSourcePinCode().trim());
                 holder.sourcePinCode.setVisibility(View.VISIBLE);
             } else {
-                String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
-                if(pincode != null){
-                    holder.sourcePinCode.setText(pincode);
-                    holder.sourcePinCode.setVisibility(View.VISIBLE);
-                }else {
-                    holder.sourceAddress.setMaxLines(2);
-                    holder.sourcePinCode.setVisibility(View.GONE);
-                }
+                Handler handler = new Handler();
+                Runnable runnable = () -> {
+                    String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
+                    if(holder != null && holder.sourcePinCode != null) {
+                        if (pincode != null) {
+                            holder.sourcePinCode.setText(pincode);
+                            holder.sourcePinCode.setVisibility(View.VISIBLE);
+                        } else {
+                            holder.sourceAddress.setMaxLines(2);
+                            holder.sourcePinCode.setVisibility(View.GONE);
+                        }
+                    }
+                };
+                handler.postDelayed(runnable, 300);
             }
             if (model.getDestinationPinCode() != null && model.getDestinationPinCode().trim().length() > 0) {
                 holder.destinationPinCode.setText(model.getDestinationPinCode());
                 holder.destinationPinCode.setVisibility(View.VISIBLE);
             } else {
-                String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
-                if(pincode != null){
-                    holder.destinationPinCode.setText(pincode);
-                    holder.destinationPinCode.setVisibility(View.VISIBLE);
-                }else {
-                    holder.destinationAddress.setMaxLines(2);
-                    holder.destinationPinCode.setVisibility(View.GONE);
-                }
-
+                Handler handler = new Handler();
+                Runnable runnable = () -> {
+                    String pincode = getPincodeFromRR(model.getSrcLat(), model.getSrcLng());
+                    if(holder != null && holder.sourcePinCode != null) {
+                        if (pincode != null) {
+                            holder.destinationPinCode.setText(pincode);
+                            holder.destinationPinCode.setVisibility(View.VISIBLE);
+                        } else {
+                            holder.destinationAddress.setMaxLines(2);
+                            holder.destinationPinCode.setVisibility(View.GONE);
+                        }
+                    }
+                };
+                handler.postDelayed(runnable, 300);
             }
             if (model.getspecialLocationTag() != null) {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
