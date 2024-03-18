@@ -16,55 +16,39 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantOperatingCity as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantOperatingCity.MerchantOperatingCity] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantIdAndState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
-findAllByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
-          Se.Is Beam.state $ Se.Eq state
-        ]
-    ]
+findAllByMerchantIdAndState ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m [Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
+findAllByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.state $ Se.Eq state]]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe (Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByMerchantIdAndCity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m (Maybe (Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
-findByMerchantIdAndCity (Kernel.Types.Id.Id merchantId) city = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
-          Se.Is Beam.city $ Se.Eq city
-        ]
-    ]
+findByMerchantIdAndCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m (Maybe Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
+findByMerchantIdAndCity (Kernel.Types.Id.Id merchantId) city = do findOneWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.city $ Se.Eq city]]
 
-findByMerchantShortIdAndCity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m (Maybe (Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
-findByMerchantShortIdAndCity (Kernel.Types.Id.ShortId merchantShortId) city = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantShortId $ Se.Eq merchantShortId,
-          Se.Is Beam.city $ Se.Eq city
-        ]
-    ]
+findByMerchantShortIdAndCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m (Maybe Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
+findByMerchantShortIdAndCity (Kernel.Types.Id.ShortId merchantShortId) city = do findOneWithKV [Se.And [Se.Is Beam.merchantShortId $ Se.Eq merchantShortId, Se.Is Beam.city $ Se.Eq city]]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe (Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ()
-updateByPrimaryKey Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateByPrimaryKey (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.city city,
@@ -76,13 +60,10 @@ updateByPrimaryKey Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..}
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.MerchantOperatingCity where
-  fromTType' Beam.MerchantOperatingCityT {..} = do
+  fromTType' (Beam.MerchantOperatingCityT {..}) = do
     pure $
       Just
         Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -98,7 +79,7 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
           }
 
 instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.MerchantOperatingCity where
-  toTType' Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..} = do
+  toTType' (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..}) = do
     Beam.MerchantOperatingCityT
       { Beam.city = city,
         Beam.id = Kernel.Types.Id.getId id,

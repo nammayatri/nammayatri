@@ -19,7 +19,6 @@ data LmsModuleVideoInformation = LmsModuleVideoInformation
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data VideoStatus = ACTIVE | INACTIVE
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data VideoStatus = ACTIVE | INACTIVE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VideoStatus)

@@ -27,8 +27,7 @@ data QuestionInformationT f = QuestionInformationT
   deriving (Generic, B.Beamable)
 
 instance B.Table QuestionInformationT where
-  data PrimaryKey QuestionInformationT f = QuestionInformationId (B.C f Kernel.External.Types.Language) (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey QuestionInformationT f = QuestionInformationId (B.C f Kernel.External.Types.Language) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = QuestionInformationId <$> language <*> questionId
 
 type QuestionInformation = QuestionInformationT Identity

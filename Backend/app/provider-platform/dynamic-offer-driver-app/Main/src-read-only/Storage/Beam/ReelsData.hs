@@ -39,8 +39,7 @@ data ReelsDataT f = ReelsDataT
   deriving (Generic, B.Beamable)
 
 instance B.Table ReelsDataT where
-  data PrimaryKey ReelsDataT f = ReelsDataId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey ReelsDataT f = ReelsDataId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = ReelsDataId . id
 
 type ReelsData = ReelsDataT Identity

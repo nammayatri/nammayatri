@@ -18,16 +18,15 @@ data SeatManagementT f = SeatManagementT
     date :: B.C f Data.Time.Calendar.Day,
     id :: B.C f Kernel.Prelude.Text,
     ticketServiceCategoryId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table SeatManagementT where
-  data PrimaryKey SeatManagementT f = SeatManagementId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey SeatManagementT f = SeatManagementId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = SeatManagementId . id
 
 type SeatManagement = SeatManagementT Identity

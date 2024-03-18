@@ -21,11 +21,9 @@ data ModuleCompletionInformation = ModuleCompletionInformation
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data EntityStatus = ENTITY_PASSED | ENTITY_FAILED | ENTITY_ONGOING
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data EntityStatus = ENTITY_PASSED | ENTITY_FAILED | ENTITY_ONGOING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ModuleEntity = QUIZ | VIDEO
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ModuleEntity = QUIZ | VIDEO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EntityStatus)
 

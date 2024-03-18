@@ -22,8 +22,7 @@ data DriverReferralT f = DriverReferralT
   deriving (Generic, B.Beamable)
 
 instance B.Table DriverReferralT where
-  data PrimaryKey DriverReferralT f = DriverReferralId (B.C f Data.Text.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey DriverReferralT f = DriverReferralId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = DriverReferralId . referralCode
 
 type DriverReferral = DriverReferralT Identity

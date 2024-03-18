@@ -29,11 +29,9 @@ data DriverModuleCompletion = DriverModuleCompletion
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ModuleCompletionEntity = QUIZ | VIDEO
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ModuleCompletionEntity = QUIZ | VIDEO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ModuleCompletionStatus = MODULE_NOT_YET_STARTED | MODULE_ONGOING | MODULE_COMPLETED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ModuleCompletionStatus = MODULE_NOT_YET_STARTED | MODULE_ONGOING | MODULE_COMPLETED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionEntity)
 

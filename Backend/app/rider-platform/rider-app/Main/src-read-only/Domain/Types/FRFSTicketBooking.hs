@@ -46,7 +46,6 @@ data FRFSTicketBooking = FRFSTicketBooking
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)

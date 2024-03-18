@@ -19,25 +19,21 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as Beam
 import Storage.Queries.RatingExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Rating.Rating -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Rating.Rating -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Rating.Rating] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Rating.Rating] -> m ())
 createMany = traverse_ create
 
-findAllRatingsForPerson :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.Rating.Rating])
-findAllRatingsForPerson (Kernel.Types.Id.Id driverId) = do
-  findAllWithKV
-    [ Se.Is Beam.driverId $ Se.Eq driverId
-    ]
+findAllRatingsForPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.Rating.Rating])
+findAllRatingsForPerson (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
-findRatingForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe (Domain.Types.Rating.Rating))
-findRatingForRide (Kernel.Types.Id.Id rideId) = do
-  findOneWithKV
-    [ Se.Is Beam.rideId $ Se.Eq rideId
-    ]
+findRatingForRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Rating.Rating))
+findRatingForRide (Kernel.Types.Id.Id rideId) = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq rideId]
 
-updateRating :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Rating.Rating -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
+updateRating ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Rating.Rating -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance (Kernel.Types.Id.Id id) (Kernel.Types.Id.Id driverId) = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -48,22 +44,13 @@ updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance (Ke
       Se.Set Beam.issueId issueId,
       Se.Set Beam.wasOfferedAssistance wasOfferedAssistance
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id,
-          Se.Is Beam.driverId $ Se.Eq driverId
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq id, Se.Is Beam.driverId $ Se.Eq driverId]]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Rating.Rating -> m (Maybe (Domain.Types.Rating.Rating))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Rating.Rating -> m (Maybe Domain.Types.Rating.Rating))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Rating.Rating -> m ()
-updateByPrimaryKey Domain.Types.Rating.Rating {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Rating.Rating -> m ())
+updateByPrimaryKey (Domain.Types.Rating.Rating {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
@@ -76,7 +63,4 @@ updateByPrimaryKey Domain.Types.Rating.Rating {..} = do
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.wasOfferedAssistance wasOfferedAssistance
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

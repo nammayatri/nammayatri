@@ -18,16 +18,15 @@ data LmsModuleTranslationT f = LmsModuleTranslationT
     moduleId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     thumbnailImage :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table LmsModuleTranslationT where
-  data PrimaryKey LmsModuleTranslationT f = LmsModuleTranslationId (B.C f Kernel.External.Types.Language) (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey LmsModuleTranslationT f = LmsModuleTranslationId (B.C f Kernel.External.Types.Language) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = LmsModuleTranslationId <$> language <*> moduleId
 
 type LmsModuleTranslation = LmsModuleTranslationT Identity

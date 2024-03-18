@@ -15,37 +15,29 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.LmsModuleVideoInformation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation] -> m ())
 createMany = traverse_ create
 
-findByVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation))
-findByVideoId (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findByVideoId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation))
+findByVideoId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-getAllVideos :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> [Domain.Types.LmsModuleVideoInformation.VideoStatus] -> m ([Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation])
-getAllVideos (Kernel.Types.Id.Id moduleId) videoStatus = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.moduleId $ Se.Eq moduleId,
-          Se.Is Beam.videoStatus $ Se.In videoStatus
-        ]
-    ]
+getAllVideos ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> [Domain.Types.LmsModuleVideoInformation.VideoStatus] -> m [Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation])
+getAllVideos (Kernel.Types.Id.Id moduleId) videoStatus = do findAllWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq moduleId, Se.Is Beam.videoStatus $ Se.In videoStatus]]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ()
-updateByPrimaryKey Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ())
+updateByPrimaryKey (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
@@ -54,13 +46,10 @@ updateByPrimaryKey Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformat
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.videoStatus videoStatus
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.LmsModuleVideoInformation Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation where
-  fromTType' Beam.LmsModuleVideoInformationT {..} = do
+  fromTType' (Beam.LmsModuleVideoInformationT {..}) = do
     pure $
       Just
         Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation
@@ -73,7 +62,7 @@ instance FromTType' Beam.LmsModuleVideoInformation Domain.Types.LmsModuleVideoIn
           }
 
 instance ToTType' Beam.LmsModuleVideoInformation Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation where
-  toTType' Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation {..} = do
+  toTType' (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation {..}) = do
     Beam.LmsModuleVideoInformationT
       { Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,

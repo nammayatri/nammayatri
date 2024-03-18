@@ -31,7 +31,6 @@ data TicketBookingService = TicketBookingService
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ServiceStatus = Pending | Failed | Confirmed | Verified
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ServiceStatus = Pending | Failed | Confirmed | Verified deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceStatus)

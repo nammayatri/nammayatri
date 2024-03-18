@@ -19,16 +19,15 @@ data FRFSSearchT f = FRFSSearchT
     riderId :: B.C f Kernel.Prelude.Text,
     toStationId :: B.C f Kernel.Prelude.Text,
     vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table FRFSSearchT where
-  data PrimaryKey FRFSSearchT f = FRFSSearchId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey FRFSSearchT f = FRFSSearchId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = FRFSSearchId . id
 
 type FRFSSearch = FRFSSearchT Identity

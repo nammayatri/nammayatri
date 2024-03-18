@@ -16,49 +16,32 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialOccasion as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SpecialOccasion.SpecialOccasion -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.SpecialOccasion.SpecialOccasion] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SpecialOccasion.SpecialOccasion] -> m ())
 createMany = traverse_ create
 
-findAllSpecialOccasionByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m ([Domain.Types.SpecialOccasion.SpecialOccasion])
-findAllSpecialOccasionByEntityId entityId date = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.entityId $ Se.Eq entityId,
-          Se.Is Beam.date $ Se.Eq date
-        ]
-    ]
+findAllSpecialOccasionByEntityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m [Domain.Types.SpecialOccasion.SpecialOccasion])
+findAllSpecialOccasionByEntityId entityId date = do findAllWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.date $ Se.Eq date]]
 
-findSpecialOccasionByEntityIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
-findSpecialOccasionByEntityIdAndDate entityId date = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.entityId $ Se.Eq entityId,
-          Se.Is Beam.date $ Se.Eq date
-        ]
-    ]
+findSpecialOccasionByEntityIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
+findSpecialOccasionByEntityIdAndDate entityId date = do findOneWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.date $ Se.Eq date]]
 
-findSpecialOccasionByEntityIdAndDayOfWeek :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
-findSpecialOccasionByEntityIdAndDayOfWeek entityId dayOfWeek = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.entityId $ Se.Eq entityId,
-          Se.Is Beam.dayOfWeek $ Se.Eq dayOfWeek
-        ]
-    ]
+findSpecialOccasionByEntityIdAndDayOfWeek ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
+findSpecialOccasionByEntityIdAndDayOfWeek entityId dayOfWeek = do findOneWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.dayOfWeek $ Se.Eq dayOfWeek]]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
-updateByPrimaryKey Domain.Types.SpecialOccasion.SpecialOccasion {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SpecialOccasion.SpecialOccasion -> m ())
+updateByPrimaryKey (Domain.Types.SpecialOccasion.SpecialOccasion {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
@@ -72,13 +55,10 @@ updateByPrimaryKey Domain.Types.SpecialOccasion.SpecialOccasion {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOccasion where
-  fromTType' Beam.SpecialOccasionT {..} = do
+  fromTType' (Beam.SpecialOccasionT {..}) = do
     pure $
       Just
         Domain.Types.SpecialOccasion.SpecialOccasion
@@ -96,7 +76,7 @@ instance FromTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOcc
           }
 
 instance ToTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOccasion where
-  toTType' Domain.Types.SpecialOccasion.SpecialOccasion {..} = do
+  toTType' (Domain.Types.SpecialOccasion.SpecialOccasion {..}) = do
     Beam.SpecialOccasionT
       { Beam.businessHours = Kernel.Types.Id.getId <$> businessHours,
         Beam.date = date,

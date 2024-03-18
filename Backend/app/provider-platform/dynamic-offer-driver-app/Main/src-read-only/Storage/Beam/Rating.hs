@@ -27,8 +27,7 @@ data RatingT f = RatingT
   deriving (Generic, B.Beamable)
 
 instance B.Table RatingT where
-  data PrimaryKey RatingT f = RatingId (B.C f Data.Text.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey RatingT f = RatingId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = RatingId . id
 
 type Rating = RatingT Identity

@@ -20,10 +20,22 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  TokenAuth :> "reels" :> "getAllReelVideos" :> QueryParam "language" (Kernel.External.Types.Language) :> MandatoryQueryParam "reelsKey" (Kernel.Prelude.Text) :> Get '[JSON] API.Types.UI.Reels.ReelsResp
+  ( TokenAuth :> "reels" :> "getAllReelVideos" :> QueryParam "language" Kernel.External.Types.Language :> MandatoryQueryParam "reelsKey" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.Reels.ReelsResp
+  )
 
 handler :: Environment.FlowServer API
 handler = getReelsGetAllReelVideos
 
-getReelsGetAllReelVideos :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.Reels.ReelsResp
+getReelsGetAllReelVideos ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler API.Types.UI.Reels.ReelsResp
+  )
 getReelsGetAllReelVideos a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Reels.getReelsGetAllReelVideos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

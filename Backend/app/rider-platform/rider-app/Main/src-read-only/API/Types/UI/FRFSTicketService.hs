@@ -20,14 +20,10 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
-  { paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
-    status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI
-  }
+data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp, status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data FRFSBookingPaymentStatusAPI = NEW | PENDING | SUCCESS | FAILURE | REFUNDED
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSBookingPaymentStatusAPI = NEW | PENDING | SUCCESS | FAILURE | REFUNDED deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
@@ -40,17 +36,9 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data FRFSSearchAPIReq = FRFSSearchAPIReq
-  { fromStationCode :: Data.Text.Text,
-    quantity :: Kernel.Prelude.Int,
-    toStationCode :: Data.Text.Text
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+data FRFSSearchAPIReq = FRFSSearchAPIReq {fromStationCode :: Data.Text.Text, quantity :: Kernel.Prelude.Int, toStationCode :: Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data FRFSSearchAPIRes = FRFSSearchAPIRes
-  { searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+data FRFSSearchAPIRes = FRFSSearchAPIRes {searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data FRFSStationAPI = FRFSStationAPI
   { address :: Data.Maybe.Maybe Data.Text.Text,
@@ -64,12 +52,7 @@ data FRFSStationAPI = FRFSStationAPI
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketAPI = FRFSTicketAPI
-  { qrData :: Data.Text.Text,
-    status :: Domain.Types.FRFSTicket.FRFSTicketStatus,
-    ticketNumber :: Data.Text.Text,
-    validTill :: Kernel.Prelude.UTCTime
-  }
+data FRFSTicketAPI = FRFSTicketAPI {qrData :: Data.Text.Text, status :: Domain.Types.FRFSTicket.FRFSTicketStatus, ticketNumber :: Data.Text.Text, validTill :: Kernel.Prelude.UTCTime}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes

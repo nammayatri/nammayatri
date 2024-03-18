@@ -16,28 +16,25 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.ModuleCompletionInformation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation] -> m ())
 createMany = traverse_ create
 
-findAllByCompletionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ([Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
-findAllByCompletionId (Kernel.Types.Id.Id completionId) = do
-  findAllWithKV
-    [ Se.Is Beam.completionId $ Se.Eq completionId
-    ]
+findAllByCompletionId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
+findAllByCompletionId (Kernel.Types.Id.Id completionId) = do findAllWithKV [Se.Is Beam.completionId $ Se.Eq completionId]
 
-findAllByCompletionIdAndEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> m ([Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
-findAllByCompletionIdAndEntity (Kernel.Types.Id.Id completionId) entity = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.completionId $ Se.Eq completionId,
-          Se.Is Beam.entity $ Se.Eq entity
-        ]
-    ]
+findAllByCompletionIdAndEntity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> m [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
+findAllByCompletionIdAndEntity (Kernel.Types.Id.Id completionId) entity = do findAllWithKV [Se.And [Se.Is Beam.completionId $ Se.Eq completionId, Se.Is Beam.entity $ Se.Eq entity]]
 
-findAllByCompletionIdAndEntityAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.ModuleCompletionInformation.ModuleEntity -> Domain.Types.ModuleCompletionInformation.EntityStatus -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ([Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
+findAllByCompletionIdAndEntityAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.ModuleCompletionInformation.ModuleEntity -> Domain.Types.ModuleCompletionInformation.EntityStatus -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
 findAllByCompletionIdAndEntityAndStatus entity entityStatus (Kernel.Types.Id.Id completionId) = do
   findAllWithKV
     [ Se.And
@@ -47,7 +44,9 @@ findAllByCompletionIdAndEntityAndStatus entity entityStatus (Kernel.Types.Id.Id 
         ]
     ]
 
-findByCompletionIdAndEntityAndEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m ([Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
+findByCompletionIdAndEntityAndEntityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> m [Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation])
 findByCompletionIdAndEntityAndEntityId limit offset entity entityId (Kernel.Types.Id.Id completionId) = do
   findAllWithOptionsKV
     [ Se.And
@@ -60,7 +59,9 @@ findByCompletionIdAndEntityAndEntityId limit offset entity entityId (Kernel.Type
     limit
     offset
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> Kernel.Prelude.Text -> m (Maybe (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation))
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverModuleCompletion.DriverModuleCompletion -> Domain.Types.ModuleCompletionInformation.ModuleEntity -> Kernel.Prelude.Text -> m (Maybe Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation))
 findByPrimaryKey attempt (Kernel.Types.Id.Id completionId) entity entityId = do
   findOneWithKV
     [ Se.And
@@ -71,8 +72,8 @@ findByPrimaryKey attempt (Kernel.Types.Id.Id completionId) entity entityId = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation -> m ()
-updateByPrimaryKey Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation -> m ())
+updateByPrimaryKey (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
@@ -89,7 +90,7 @@ updateByPrimaryKey Domain.Types.ModuleCompletionInformation.ModuleCompletionInfo
     ]
 
 instance FromTType' Beam.ModuleCompletionInformation Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation where
-  fromTType' Beam.ModuleCompletionInformationT {..} = do
+  fromTType' (Beam.ModuleCompletionInformationT {..}) = do
     pure $
       Just
         Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation
@@ -104,7 +105,7 @@ instance FromTType' Beam.ModuleCompletionInformation Domain.Types.ModuleCompleti
           }
 
 instance ToTType' Beam.ModuleCompletionInformation Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation where
-  toTType' Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation {..} = do
+  toTType' (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation {..}) = do
     Beam.ModuleCompletionInformationT
       { Beam.attempt = attempt,
         Beam.completionId = Kernel.Types.Id.getId completionId,

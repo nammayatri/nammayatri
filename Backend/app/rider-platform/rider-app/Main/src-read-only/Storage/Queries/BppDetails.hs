@@ -15,31 +15,20 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.BppDetails as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BppDetails.BppDetails -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BppDetails.BppDetails -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.BppDetails.BppDetails] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BppDetails.BppDetails] -> m ())
 createMany = traverse_ create
 
-findBySubscriberIdAndDomain :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe (Domain.Types.BppDetails.BppDetails))
-findBySubscriberIdAndDomain subscriberId domain = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.subscriberId $ Se.Eq subscriberId,
-          Se.Is Beam.domain $ Se.Eq domain
-        ]
-    ]
+findBySubscriberIdAndDomain :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.BppDetails.BppDetails))
+findBySubscriberIdAndDomain subscriberId domain = do findOneWithKV [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId, Se.Is Beam.domain $ Se.Eq domain]]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BppDetails.BppDetails -> m (Maybe (Domain.Types.BppDetails.BppDetails))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BppDetails.BppDetails -> m (Maybe Domain.Types.BppDetails.BppDetails))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.BppDetails.BppDetails -> m ()
-updateByPrimaryKey Domain.Types.BppDetails.BppDetails {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BppDetails.BppDetails -> m ())
+updateByPrimaryKey (Domain.Types.BppDetails.BppDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.description description,
@@ -51,13 +40,10 @@ updateByPrimaryKey Domain.Types.BppDetails.BppDetails {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.BppDetails Domain.Types.BppDetails.BppDetails where
-  fromTType' Beam.BppDetailsT {..} = do
+  fromTType' (Beam.BppDetailsT {..}) = do
     pure $
       Just
         Domain.Types.BppDetails.BppDetails
@@ -73,7 +59,7 @@ instance FromTType' Beam.BppDetails Domain.Types.BppDetails.BppDetails where
           }
 
 instance ToTType' Beam.BppDetails Domain.Types.BppDetails.BppDetails where
-  toTType' Domain.Types.BppDetails.BppDetails {..} = do
+  toTType' (Domain.Types.BppDetails.BppDetails {..}) = do
     Beam.BppDetailsT
       { Beam.description = description,
         Beam.domain = domain,

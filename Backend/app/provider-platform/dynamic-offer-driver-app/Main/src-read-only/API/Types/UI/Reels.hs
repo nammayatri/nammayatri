@@ -9,7 +9,4 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import Tools.Auth
 
-data ReelsResp = ReelsResp
-  { reels :: [Domain.Types.ReelsData.ReelsData]
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+data ReelsResp = ReelsResp {reels :: [Domain.Types.ReelsData.ReelsData]} deriving (Generic, ToJSON, FromJSON, ToSchema)

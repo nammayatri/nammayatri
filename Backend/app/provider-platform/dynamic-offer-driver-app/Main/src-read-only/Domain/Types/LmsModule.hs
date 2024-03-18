@@ -29,11 +29,9 @@ data LmsModule = LmsModule
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data LmsCategory = Safety | Financial | Training
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data LmsCategory = Safety | Financial | Training deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Kernel.Prelude.Int
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LmsCategory)
 

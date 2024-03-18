@@ -18,7 +18,7 @@ data IdfyVerificationT f = IdfyVerificationT
   { dashboardPassedVehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant),
     docType :: B.C f Domain.Types.DriverOnboarding.Image.ImageType,
     documentImageId1 :: B.C f Kernel.Prelude.Text,
-    documentImageId2 :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    documentImageId2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     documentNumberEncrypted :: B.C f Text,
     documentNumberHash :: B.C f DbHash,
     driverDateOfBirth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -32,16 +32,15 @@ data IdfyVerificationT f = IdfyVerificationT
     requestId :: B.C f Kernel.Prelude.Text,
     retryCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     status :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table IdfyVerificationT where
-  data PrimaryKey IdfyVerificationT f = IdfyVerificationId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey IdfyVerificationT f = IdfyVerificationId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = IdfyVerificationId . id
 
 type IdfyVerification = IdfyVerificationT Identity

@@ -25,8 +25,7 @@ data BppDetailsT f = BppDetailsT
   deriving (Generic, B.Beamable)
 
 instance B.Table BppDetailsT where
-  data PrimaryKey BppDetailsT f = BppDetailsId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey BppDetailsT f = BppDetailsId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = BppDetailsId . id
 
 type BppDetails = BppDetailsT Identity

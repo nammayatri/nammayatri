@@ -32,10 +32,18 @@ data TicketPlace = TicketPlace
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data PlaceStatus = Active | Inactive | ComingSoon
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PlaceStatus = Active | Inactive | ComingSoon deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PlaceType = Museum | ThemePark | AmusementPark | WaterPark | WildLifeSanctuary | ArtGallery | HeritageSite | ReligiousSite | Other
+data PlaceType
+  = Museum
+  | ThemePark
+  | AmusementPark
+  | WaterPark
+  | WildLifeSanctuary
+  | ArtGallery
+  | HeritageSite
+  | ReligiousSite
+  | Other
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlaceStatus)

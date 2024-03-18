@@ -16,37 +16,25 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.LmsModule as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.LmsModule.LmsModule -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModule.LmsModule -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.LmsModule.LmsModule] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LmsModule.LmsModule] -> m ())
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe (Domain.Types.LmsModule.LmsModule))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe Domain.Types.LmsModule.LmsModule))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-getAllModules :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.LmsModule.LmsModule])
-getAllModules limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do
-  findAllWithOptionsKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
-    ]
-    (Se.Desc Beam.createdAt)
-    limit
-    offset
+getAllModules ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LmsModule.LmsModule])
+getAllModules limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Desc Beam.createdAt) limit offset
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe (Domain.Types.LmsModule.LmsModule))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe Domain.Types.LmsModule.LmsModule))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.LmsModule.LmsModule -> m ()
-updateByPrimaryKey Domain.Types.LmsModule.LmsModule {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModule.LmsModule -> m ())
+updateByPrimaryKey (Domain.Types.LmsModule.LmsModule {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.category category,
@@ -62,13 +50,10 @@ updateByPrimaryKey Domain.Types.LmsModule.LmsModule {..} = do
       Se.Set Beam.variant variant,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
-  fromTType' Beam.LmsModuleT {..} = do
+  fromTType' (Beam.LmsModuleT {..}) = do
     pure $
       Just
         Domain.Types.LmsModule.LmsModule
@@ -88,7 +73,7 @@ instance FromTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
           }
 
 instance ToTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
-  toTType' Domain.Types.LmsModule.LmsModule {..} = do
+  toTType' (Domain.Types.LmsModule.LmsModule {..}) = do
     Beam.LmsModuleT
       { Beam.category = category,
         Beam.createdAt = createdAt,

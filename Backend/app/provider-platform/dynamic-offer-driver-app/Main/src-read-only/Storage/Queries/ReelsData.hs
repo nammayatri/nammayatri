@@ -19,13 +19,15 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.ReelsData as Beam
 import Storage.Queries.Transformers.ReelsData
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.ReelsData.ReelsData -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ReelsData.ReelsData -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ReelsData.ReelsData] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ReelsData.ReelsData] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantOpCityIdLanguageAndKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> Kernel.Prelude.Text -> m ([Domain.Types.ReelsData.ReelsData])
+findAllByMerchantOpCityIdLanguageAndKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> Kernel.Prelude.Text -> m [Domain.Types.ReelsData.ReelsData])
 findAllByMerchantOpCityIdLanguageAndKey (Kernel.Types.Id.Id merchantOperatingCityId) language reelKey = do
   findAllWithKV
     [ Se.And
@@ -35,19 +37,14 @@ findAllByMerchantOpCityIdLanguageAndKey (Kernel.Types.Id.Id merchantOperatingCit
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ReelsData.ReelsData -> m (Maybe (Domain.Types.ReelsData.ReelsData))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ReelsData.ReelsData -> m (Maybe Domain.Types.ReelsData.ReelsData))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.ReelsData.ReelsData -> m ()
-updateByPrimaryKey Domain.Types.ReelsData.ReelsData {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ReelsData.ReelsData -> m ())
+updateByPrimaryKey (Domain.Types.ReelsData.ReelsData {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bottomButtonConfig $ convertBottomButtonConfigToTable bottomButtonConfig,
+    [ Se.Set Beam.bottomButtonConfig (convertBottomButtonConfigToTable bottomButtonConfig),
       Se.Set Beam.carouselBigImageUrl carouselBigImageUrl,
       Se.Set Beam.carouselSmallImageUrl carouselSmallImageUrl,
       Se.Set Beam.carouselTextColor carouselTextColor,
@@ -59,7 +56,7 @@ updateByPrimaryKey Domain.Types.ReelsData.ReelsData {..} = do
       Se.Set Beam.rank rank,
       Se.Set Beam.reelKey reelKey,
       Se.Set Beam.shareLink shareLink,
-      Se.Set Beam.sideButtonConfig $ convertSideButtonConfigToTable sideButtonConfig,
+      Se.Set Beam.sideButtonConfig (convertSideButtonConfigToTable sideButtonConfig),
       Se.Set Beam.thresholdConfig thresholdConfig,
       Se.Set Beam.thumbnailImageUrl thumbnailImageUrl,
       Se.Set Beam.title title,
@@ -67,13 +64,10 @@ updateByPrimaryKey Domain.Types.ReelsData.ReelsData {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.ReelsData Domain.Types.ReelsData.ReelsData where
-  fromTType' Beam.ReelsDataT {..} = do
+  fromTType' (Beam.ReelsDataT {..}) = do
     pure $
       Just
         Domain.Types.ReelsData.ReelsData
@@ -100,7 +94,7 @@ instance FromTType' Beam.ReelsData Domain.Types.ReelsData.ReelsData where
           }
 
 instance ToTType' Beam.ReelsData Domain.Types.ReelsData.ReelsData where
-  toTType' Domain.Types.ReelsData.ReelsData {..} = do
+  toTType' (Domain.Types.ReelsData.ReelsData {..}) = do
     Beam.ReelsDataT
       { Beam.bottomButtonConfig = convertBottomButtonConfigToTable bottomButtonConfig,
         Beam.carouselBigImageUrl = carouselBigImageUrl,

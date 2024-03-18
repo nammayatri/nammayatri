@@ -32,8 +32,7 @@ data EstimateT f = EstimateT
   deriving (Generic, B.Beamable)
 
 instance B.Table EstimateT where
-  data PrimaryKey EstimateT f = EstimateId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey EstimateT f = EstimateId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = EstimateId . id
 
 type Estimate = EstimateT Identity

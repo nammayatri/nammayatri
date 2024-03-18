@@ -44,24 +44,67 @@ type DecryptedIdfyVerification = IdfyVerificationE 'AsUnencrypted
 
 instance EncryptedItem IdfyVerification where
   type Unencrypted IdfyVerification = (DecryptedIdfyVerification, HashSalt)
-  encryptItem (IdfyVerification {..}, salt) = do
-    documentNumber_ <- encryptItem $ (documentNumber, salt)
-    return IdfyVerification {documentNumber = documentNumber_, ..}
-
-  decryptItem IdfyVerification {..} = do
-    documentNumber_ <- fst <$> decryptItem documentNumber
-    return (IdfyVerification {documentNumber = documentNumber_, ..}, "")
+  encryptItem (entity, salt) = do
+    documentNumber_ <- encryptItem (documentNumber entity, salt)
+    pure
+      IdfyVerification
+        { dashboardPassedVehicleVariant = dashboardPassedVehicleVariant entity,
+          docType = docType entity,
+          documentImageId1 = documentImageId1 entity,
+          documentImageId2 = documentImageId2 entity,
+          documentNumber = documentNumber_,
+          driverDateOfBirth = driverDateOfBirth entity,
+          driverId = driverId entity,
+          id = id entity,
+          idfyResponse = idfyResponse entity,
+          imageExtractionValidation = imageExtractionValidation entity,
+          issueDateOnDoc = issueDateOnDoc entity,
+          multipleRC = multipleRC entity,
+          nameOnCard = nameOnCard entity,
+          requestId = requestId entity,
+          retryCount = retryCount entity,
+          status = status entity,
+          merchantId = merchantId entity,
+          merchantOperatingCityId = merchantOperatingCityId entity,
+          createdAt = createdAt entity,
+          updatedAt = updatedAt entity
+        }
+  decryptItem entity = do
+    documentNumber_ <- fst <$> decryptItem (documentNumber entity)
+    pure
+      ( IdfyVerification
+          { dashboardPassedVehicleVariant = dashboardPassedVehicleVariant entity,
+            docType = docType entity,
+            documentImageId1 = documentImageId1 entity,
+            documentImageId2 = documentImageId2 entity,
+            documentNumber = documentNumber_,
+            driverDateOfBirth = driverDateOfBirth entity,
+            driverId = driverId entity,
+            id = id entity,
+            idfyResponse = idfyResponse entity,
+            imageExtractionValidation = imageExtractionValidation entity,
+            issueDateOnDoc = issueDateOnDoc entity,
+            multipleRC = multipleRC entity,
+            nameOnCard = nameOnCard entity,
+            requestId = requestId entity,
+            retryCount = retryCount entity,
+            status = status entity,
+            merchantId = merchantId entity,
+            merchantOperatingCityId = merchantOperatingCityId entity,
+            createdAt = createdAt entity,
+            updatedAt = updatedAt entity
+          },
+        ""
+      )
 
 instance EncryptedItem' IdfyVerification where
   type UnencryptedItem IdfyVerification = DecryptedIdfyVerification
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data ImageExtractionValidation = Success | Skipped | Failed
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ImageExtractionValidation = Success | Skipped | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VerificationStatus = PENDING | VALID | INVALID
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data VerificationStatus = PENDING | VALID | INVALID deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageExtractionValidation)
 

@@ -39,11 +39,9 @@ data BecknConfig = BecknConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data PaymentCollectedBy = BAP | BPP
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PaymentCollectedBy = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VehicleCategory = CAB | AUTO_RICKSHAW | METRO
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data VehicleCategory = CAB | AUTO_RICKSHAW | METRO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
 

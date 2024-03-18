@@ -32,16 +32,15 @@ data SubscriptionConfigT f = SubscriptionConfigT
     sendInAppFcmNotifications :: B.C f Kernel.Prelude.Bool,
     serviceName :: B.C f Domain.Types.Plan.ServiceNames,
     useOverlayService :: B.C f Kernel.Prelude.Bool,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table SubscriptionConfigT where
-  data PrimaryKey SubscriptionConfigT f = SubscriptionConfigId (B.C f Domain.Types.Plan.ServiceNames) (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
-    deriving (Generic, B.Beamable)
+  data PrimaryKey SubscriptionConfigT f = SubscriptionConfigId (B.C f Domain.Types.Plan.ServiceNames) (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)) deriving (Generic, B.Beamable)
   primaryKey = SubscriptionConfigId <$> serviceName <*> merchantOperatingCityId
 
 type SubscriptionConfig = SubscriptionConfigT Identity

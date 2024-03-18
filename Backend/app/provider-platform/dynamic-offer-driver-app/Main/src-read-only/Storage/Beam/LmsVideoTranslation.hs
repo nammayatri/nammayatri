@@ -36,8 +36,7 @@ data LmsVideoTranslationT f = LmsVideoTranslationT
   deriving (Generic, B.Beamable)
 
 instance B.Table LmsVideoTranslationT where
-  data PrimaryKey LmsVideoTranslationT f = LmsVideoTranslationId (B.C f Kernel.External.Types.Language) (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey LmsVideoTranslationT f = LmsVideoTranslationId (B.C f Kernel.External.Types.Language) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = LmsVideoTranslationId <$> language <*> videoId
 
 type LmsVideoTranslation = LmsVideoTranslationT Identity

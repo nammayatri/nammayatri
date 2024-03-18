@@ -20,16 +20,15 @@ data FRFSTripT f = FRFSTripT
     stationName :: B.C f Kernel.Prelude.Text,
     stationType :: B.C f Domain.Types.FRFSTrip.StationType,
     stopSequence :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table FRFSTripT where
-  data PrimaryKey FRFSTripT f = FRFSTripId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey FRFSTripT f = FRFSTripId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = FRFSTripId . id
 
 type FRFSTrip = FRFSTripT Identity

@@ -51,11 +51,7 @@ data PeopleCategoriesResp = PeopleCategoriesResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data PeopleCategoriesVerificationRes = PeopleCategoriesVerificationRes
-  { id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
-    name :: Data.Text.Text,
-    pricePerUnit :: Kernel.Types.Common.HighPrecMoney
-  }
+data PeopleCategoriesVerificationRes = PeopleCategoriesVerificationRes {id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory, name :: Data.Text.Text, pricePerUnit :: Kernel.Types.Common.HighPrecMoney}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data TicketBookingAPIEntity = TicketBookingAPIEntity
@@ -77,10 +73,7 @@ data TicketBookingCategoryDetails = TicketBookingCategoryDetails
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data TicketBookingCategoryReq = TicketBookingCategoryReq
-  { categoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
-    peopleCategories :: [API.Types.UI.TicketService.TicketBookingPeopleCategoryReq]
-  }
+data TicketBookingCategoryReq = TicketBookingCategoryReq {categoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, peopleCategories :: [API.Types.UI.TicketService.TicketBookingPeopleCategoryReq]}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data TicketBookingDetails = TicketBookingDetails
@@ -95,24 +88,13 @@ data TicketBookingDetails = TicketBookingDetails
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data TicketBookingPeopleCategoryDetails = TicketBookingPeopleCategoryDetails
-  { name :: Data.Text.Text,
-    numberOfUnits :: Kernel.Prelude.Int,
-    pricePerUnit :: Kernel.Types.Common.HighPrecMoney
-  }
+data TicketBookingPeopleCategoryDetails = TicketBookingPeopleCategoryDetails {name :: Data.Text.Text, numberOfUnits :: Kernel.Prelude.Int, pricePerUnit :: Kernel.Types.Common.HighPrecMoney}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data TicketBookingPeopleCategoryReq = TicketBookingPeopleCategoryReq
-  { numberOfUnits :: Kernel.Prelude.Int,
-    peopleCategoryId :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory
-  }
+data TicketBookingPeopleCategoryReq = TicketBookingPeopleCategoryReq {numberOfUnits :: Kernel.Prelude.Int, peopleCategoryId :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data TicketBookingReq = TicketBookingReq
-  { services :: [API.Types.UI.TicketService.TicketBookingServicesReq],
-    visitDate :: Data.Time.Calendar.Day
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+data TicketBookingReq = TicketBookingReq {services :: [API.Types.UI.TicketService.TicketBookingServicesReq], visitDate :: Data.Time.Calendar.Day} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data TicketBookingServiceDetails = TicketBookingServiceDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
@@ -169,5 +151,12 @@ data TicketServiceVerificationResp = TicketServiceVerificationResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data TicketVerificationStatus = BookingSuccess | BookingExpired | BookingFuture | BookingAlreadyVerified | DifferentService | PaymentPending | InvalidBooking
+data TicketVerificationStatus
+  = BookingSuccess
+  | BookingExpired
+  | BookingFuture
+  | BookingAlreadyVerified
+  | DifferentService
+  | PaymentPending
+  | InvalidBooking
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)

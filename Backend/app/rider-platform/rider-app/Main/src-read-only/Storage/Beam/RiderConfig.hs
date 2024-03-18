@@ -29,15 +29,14 @@ data RiderConfigT f = RiderConfigT
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
     videoFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table RiderConfigT where
-  data PrimaryKey RiderConfigT f = RiderConfigId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey RiderConfigT f = RiderConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = RiderConfigId . merchantOperatingCityId
 
 type RiderConfig = RiderConfigT Identity

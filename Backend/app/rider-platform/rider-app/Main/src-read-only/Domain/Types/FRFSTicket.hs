@@ -27,7 +27,6 @@ data FRFSTicket = FRFSTicket
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketStatus = ACTIVE | EXPIRED | USED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSTicketStatus = ACTIVE | EXPIRED | USED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketStatus)

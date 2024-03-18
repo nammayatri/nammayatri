@@ -17,46 +17,32 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.IdfyVerification as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.IdfyVerification.IdfyVerification -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IdfyVerification.IdfyVerification -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.IdfyVerification.IdfyVerification] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.IdfyVerification.IdfyVerification] -> m ())
 createMany = traverse_ create
 
-deleteByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
-deleteByPersonId (Kernel.Types.Id.Id driverId) = do
-  deleteWithKV
-    [ Se.Is Beam.driverId $ Se.Eq driverId
-    ]
+deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+deleteByPersonId (Kernel.Types.Id.Id driverId) = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
-findAllByDriverId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.IdfyVerification.IdfyVerification])
-findAllByDriverId (Kernel.Types.Id.Id driverId) = do
-  findAllWithKV
-    [ Se.Is Beam.driverId $ Se.Eq driverId
-    ]
+findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.IdfyVerification.IdfyVerification])
+findAllByDriverId (Kernel.Types.Id.Id driverId) = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq driverId]
 
-findAllByDriverIdAndDocType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m ([Domain.Types.IdfyVerification.IdfyVerification])
-findAllByDriverIdAndDocType (Kernel.Types.Id.Id driverId) docType = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq driverId,
-          Se.Is Beam.docType $ Se.Eq docType
-        ]
-    ]
+findAllByDriverIdAndDocType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m [Domain.Types.IdfyVerification.IdfyVerification])
+findAllByDriverIdAndDocType (Kernel.Types.Id.Id driverId) docType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.docType $ Se.Eq docType]]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe (Domain.Types.IdfyVerification.IdfyVerification))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe Domain.Types.IdfyVerification.IdfyVerification))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByRequestId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m (Maybe (Domain.Types.IdfyVerification.IdfyVerification))
-findByRequestId requestId = do
-  findOneWithKV
-    [ Se.Is Beam.requestId $ Se.Eq requestId
-    ]
+findByRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.IdfyVerification.IdfyVerification))
+findByRequestId requestId = do findOneWithKV [Se.Is Beam.requestId $ Se.Eq requestId]
 
-findLatestByDriverIdAndDocType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m ([Domain.Types.IdfyVerification.IdfyVerification])
+findLatestByDriverIdAndDocType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverOnboarding.Image.ImageType -> m [Domain.Types.IdfyVerification.IdfyVerification])
 findLatestByDriverIdAndDocType limit offset (Kernel.Types.Id.Id driverId) docType = do
   findAllWithOptionsKV
     [ Se.And
@@ -68,55 +54,32 @@ findLatestByDriverIdAndDocType limit offset (Kernel.Types.Id.Id driverId) docTyp
     limit
     offset
 
-updateExtractValidationStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.IdfyVerification.ImageExtractionValidation -> Kernel.Prelude.Text -> m ()
+updateExtractValidationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IdfyVerification.ImageExtractionValidation -> Kernel.Prelude.Text -> m ())
 updateExtractValidationStatus imageExtractionValidation requestId = do
   _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.imageExtractionValidation imageExtractionValidation,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.Is Beam.requestId $ Se.Eq requestId
-    ]
+  updateWithKV [Se.Set Beam.imageExtractionValidation imageExtractionValidation, Se.Set Beam.updatedAt _now] [Se.Is Beam.requestId $ Se.Eq requestId]
 
-updateResponse :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ()
+updateResponse :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
 updateResponse status idfyResponse requestId = do
   _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.status status,
-      Se.Set Beam.idfyResponse idfyResponse,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.Is Beam.requestId $ Se.Eq requestId
-    ]
+  updateWithKV [Se.Set Beam.status status, Se.Set Beam.idfyResponse idfyResponse, Se.Set Beam.updatedAt _now] [Se.Is Beam.requestId $ Se.Eq requestId]
 
-updateStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ()
-updateStatus status requestId = do
-  _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.status status,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.Is Beam.requestId $ Se.Eq requestId
-    ]
+updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateStatus status requestId = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.requestId $ Se.Eq requestId]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe (Domain.Types.IdfyVerification.IdfyVerification))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IdfyVerification.IdfyVerification -> m (Maybe Domain.Types.IdfyVerification.IdfyVerification))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.IdfyVerification.IdfyVerification -> m ()
-updateByPrimaryKey Domain.Types.IdfyVerification.IdfyVerification {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IdfyVerification.IdfyVerification -> m ())
+updateByPrimaryKey (Domain.Types.IdfyVerification.IdfyVerification {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.dashboardPassedVehicleVariant dashboardPassedVehicleVariant,
       Se.Set Beam.docType docType,
       Se.Set Beam.documentImageId1 (Kernel.Types.Id.getId documentImageId1),
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
-      Se.Set Beam.documentNumberEncrypted $ documentNumber & unEncrypted . (.encrypted),
-      Se.Set Beam.documentNumberHash $ documentNumber & (.hash),
+      Se.Set Beam.documentNumberEncrypted $ documentNumber & unEncrypted . encrypted,
+      Se.Set Beam.documentNumberHash $ documentNumber & hash,
       Se.Set Beam.driverDateOfBirth driverDateOfBirth,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.idfyResponse idfyResponse,
@@ -132,13 +95,10 @@ updateByPrimaryKey Domain.Types.IdfyVerification.IdfyVerification {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVerification where
-  fromTType' Beam.IdfyVerificationT {..} = do
+  fromTType' (Beam.IdfyVerificationT {..}) = do
     pure $
       Just
         Domain.Types.IdfyVerification.IdfyVerification
@@ -165,14 +125,14 @@ instance FromTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVeri
           }
 
 instance ToTType' Beam.IdfyVerification Domain.Types.IdfyVerification.IdfyVerification where
-  toTType' Domain.Types.IdfyVerification.IdfyVerification {..} = do
+  toTType' (Domain.Types.IdfyVerification.IdfyVerification {..}) = do
     Beam.IdfyVerificationT
       { Beam.dashboardPassedVehicleVariant = dashboardPassedVehicleVariant,
         Beam.docType = docType,
         Beam.documentImageId1 = Kernel.Types.Id.getId documentImageId1,
         Beam.documentImageId2 = Kernel.Types.Id.getId <$> documentImageId2,
-        Beam.documentNumberEncrypted = documentNumber & unEncrypted . (.encrypted),
-        Beam.documentNumberHash = documentNumber & (.hash),
+        Beam.documentNumberEncrypted = documentNumber & unEncrypted . encrypted,
+        Beam.documentNumberHash = documentNumber & hash,
         Beam.driverDateOfBirth = driverDateOfBirth,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,

@@ -25,7 +25,8 @@ data ModuleCompletionInformationT f = ModuleCompletionInformationT
   deriving (Generic, B.Beamable)
 
 instance B.Table ModuleCompletionInformationT where
-  data PrimaryKey ModuleCompletionInformationT f = ModuleCompletionInformationId (B.C f Kernel.Prelude.Int) (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.ModuleCompletionInformation.ModuleEntity) (B.C f Kernel.Prelude.Text)
+  data PrimaryKey ModuleCompletionInformationT f
+    = ModuleCompletionInformationId (B.C f Kernel.Prelude.Int) (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.ModuleCompletionInformation.ModuleEntity) (B.C f Kernel.Prelude.Text)
     deriving (Generic, B.Beamable)
   primaryKey = ModuleCompletionInformationId <$> attempt <*> completionId <*> entity <*> entityId
 

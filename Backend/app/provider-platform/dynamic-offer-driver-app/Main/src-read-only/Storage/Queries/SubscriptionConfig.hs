@@ -19,13 +19,15 @@ import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SubscriptionConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SubscriptionConfig.SubscriptionConfig -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SubscriptionConfig.SubscriptionConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.SubscriptionConfig.SubscriptionConfig] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SubscriptionConfig.SubscriptionConfig] -> m ())
 createMany = traverse_ create
 
-findSubscriptionConfigsByMerchantOpCityIdAndServiceName :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Plan.ServiceNames -> m (Maybe (Domain.Types.SubscriptionConfig.SubscriptionConfig))
+findSubscriptionConfigsByMerchantOpCityIdAndServiceName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.Plan.ServiceNames -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
 findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName = do
   findOneWithKV
     [ Se.And
@@ -34,7 +36,9 @@ findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId 
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe (Domain.Types.SubscriptionConfig.SubscriptionConfig))
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.SubscriptionConfig.SubscriptionConfig))
 findByPrimaryKey serviceName merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
@@ -43,8 +47,8 @@ findByPrimaryKey serviceName merchantOperatingCityId = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.SubscriptionConfig.SubscriptionConfig -> m ()
-updateByPrimaryKey Domain.Types.SubscriptionConfig.SubscriptionConfig {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SubscriptionConfig.SubscriptionConfig -> m ())
+updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.allowDriverFeeCalcSchedule allowDriverFeeCalcSchedule,
@@ -52,11 +56,11 @@ updateByPrimaryKey Domain.Types.SubscriptionConfig.SubscriptionConfig {..} = do
       Se.Set Beam.allowManualPaymentLinks allowManualPaymentLinks,
       Se.Set Beam.deepLinkExpiryTimeInMinutes deepLinkExpiryTimeInMinutes,
       Se.Set Beam.genericBatchSizeForJobs genericBatchSizeForJobs,
-      Se.Set Beam.genericJobRescheduleTime $ Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime,
+      Se.Set Beam.genericJobRescheduleTime (Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime),
       Se.Set Beam.isTriggeredAtEndRide isTriggeredAtEndRide,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.paymentLinkChannel paymentLinkChannel,
-      Se.Set Beam.paymentLinkJobTime $ Kernel.Utils.Common.nominalDiffTimeToSeconds paymentLinkJobTime,
+      Se.Set Beam.paymentLinkJobTime (Kernel.Utils.Common.nominalDiffTimeToSeconds paymentLinkJobTime),
       Se.Set Beam.paymentServiceName paymentServiceName,
       Se.Set Beam.sendDeepLink sendDeepLink,
       Se.Set Beam.sendInAppFcmNotifications sendInAppFcmNotifications,
@@ -65,14 +69,10 @@ updateByPrimaryKey Domain.Types.SubscriptionConfig.SubscriptionConfig {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.serviceName $ Se.Eq serviceName,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
-        ]
-    ]
+    [Se.And [Se.Is Beam.serviceName $ Se.Eq serviceName, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]]
 
 instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.SubscriptionConfig where
-  fromTType' Beam.SubscriptionConfigT {..} = do
+  fromTType' (Beam.SubscriptionConfigT {..}) = do
     pure $
       Just
         Domain.Types.SubscriptionConfig.SubscriptionConfig
@@ -98,7 +98,7 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
           }
 
 instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.SubscriptionConfig where
-  toTType' Domain.Types.SubscriptionConfig.SubscriptionConfig {..} = do
+  toTType' (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = do
     Beam.SubscriptionConfigT
       { Beam.allowDriverFeeCalcSchedule = allowDriverFeeCalcSchedule,
         Beam.allowDueAddition = allowDueAddition,

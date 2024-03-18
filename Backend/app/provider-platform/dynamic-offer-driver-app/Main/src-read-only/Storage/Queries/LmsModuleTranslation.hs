@@ -16,38 +16,27 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.LmsModuleTranslation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.LmsModuleTranslation.LmsModuleTranslation] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LmsModuleTranslation.LmsModuleTranslation] -> m ())
 createMany = traverse_ create
 
-getAllTranslationsByModuleId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m ([Domain.Types.LmsModuleTranslation.LmsModuleTranslation])
-getAllTranslationsByModuleId (Kernel.Types.Id.Id moduleId) = do
-  findAllWithKV
-    [ Se.Is Beam.moduleId $ Se.Eq moduleId
-    ]
+getAllTranslationsByModuleId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m [Domain.Types.LmsModuleTranslation.LmsModuleTranslation])
+getAllTranslationsByModuleId (Kernel.Types.Id.Id moduleId) = do findAllWithKV [Se.Is Beam.moduleId $ Se.Eq moduleId]
 
-getByModuleIdAndLanguage :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.External.Types.Language -> m (Maybe (Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
-getByModuleIdAndLanguage (Kernel.Types.Id.Id moduleId) language = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.moduleId $ Se.Eq moduleId,
-          Se.Is Beam.language $ Se.Eq language
-        ]
-    ]
+getByModuleIdAndLanguage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> Kernel.External.Types.Language -> m (Maybe Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
+getByModuleIdAndLanguage (Kernel.Types.Id.Id moduleId) language = do findOneWithKV [Se.And [Se.Is Beam.moduleId $ Se.Eq moduleId, Se.Is Beam.language $ Se.Eq language]]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe (Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
-findByPrimaryKey language (Kernel.Types.Id.Id moduleId) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.language $ Se.Eq language,
-          Se.Is Beam.moduleId $ Se.Eq moduleId
-        ]
-    ]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe Domain.Types.LmsModuleTranslation.LmsModuleTranslation))
+findByPrimaryKey language (Kernel.Types.Id.Id moduleId) = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.moduleId $ Se.Eq moduleId]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ()
-updateByPrimaryKey Domain.Types.LmsModuleTranslation.LmsModuleTranslation {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsModuleTranslation.LmsModuleTranslation -> m ())
+updateByPrimaryKey (Domain.Types.LmsModuleTranslation.LmsModuleTranslation {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.description description,
@@ -58,14 +47,10 @@ updateByPrimaryKey Domain.Types.LmsModuleTranslation.LmsModuleTranslation {..} =
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.language $ Se.Eq language,
-          Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)
-        ]
-    ]
+    [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)]]
 
 instance FromTType' Beam.LmsModuleTranslation Domain.Types.LmsModuleTranslation.LmsModuleTranslation where
-  fromTType' Beam.LmsModuleTranslationT {..} = do
+  fromTType' (Beam.LmsModuleTranslationT {..}) = do
     pure $
       Just
         Domain.Types.LmsModuleTranslation.LmsModuleTranslation
@@ -81,7 +66,7 @@ instance FromTType' Beam.LmsModuleTranslation Domain.Types.LmsModuleTranslation.
           }
 
 instance ToTType' Beam.LmsModuleTranslation Domain.Types.LmsModuleTranslation.LmsModuleTranslation where
-  toTType' Domain.Types.LmsModuleTranslation.LmsModuleTranslation {..} = do
+  toTType' (Domain.Types.LmsModuleTranslation.LmsModuleTranslation {..}) = do
     Beam.LmsModuleTranslationT
       { Beam.description = description,
         Beam.language = language,

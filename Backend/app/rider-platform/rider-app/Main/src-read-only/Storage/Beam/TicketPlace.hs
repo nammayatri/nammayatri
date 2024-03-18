@@ -28,15 +28,14 @@ data TicketPlaceT f = TicketPlaceT
     shortDesc :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.TicketPlace.PlaceStatus,
     termsAndConditions :: B.C f [Kernel.Prelude.Text],
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table TicketPlaceT where
-  data PrimaryKey TicketPlaceT f = TicketPlaceId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey TicketPlaceT f = TicketPlaceId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = TicketPlaceId . id
 
 type TicketPlace = TicketPlaceT Identity

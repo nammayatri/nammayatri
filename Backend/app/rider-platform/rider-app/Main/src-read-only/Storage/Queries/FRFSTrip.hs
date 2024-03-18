@@ -15,34 +15,23 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTrip as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSTrip.FRFSTrip -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTrip.FRFSTrip -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSTrip.FRFSTrip] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTrip.FRFSTrip] -> m ())
 createMany = traverse_ create
 
-findAllByQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ([Domain.Types.FRFSTrip.FRFSTrip])
-findAllByQuoteId (Kernel.Types.Id.Id quoteId) = do
-  findAllWithKV
-    [ Se.Is Beam.quoteId $ Se.Eq quoteId
-    ]
+findAllByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m [Domain.Types.FRFSTrip.FRFSTrip])
+findAllByQuoteId (Kernel.Types.Id.Id quoteId) = do findAllWithKV [Se.Is Beam.quoteId $ Se.Eq quoteId]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTrip.FRFSTrip -> m (Maybe (Domain.Types.FRFSTrip.FRFSTrip))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTrip.FRFSTrip -> m (Maybe Domain.Types.FRFSTrip.FRFSTrip))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTrip.FRFSTrip -> m (Maybe (Domain.Types.FRFSTrip.FRFSTrip))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTrip.FRFSTrip -> m (Maybe Domain.Types.FRFSTrip.FRFSTrip))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTrip.FRFSTrip -> m ()
-updateByPrimaryKey Domain.Types.FRFSTrip.FRFSTrip {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTrip.FRFSTrip -> m ())
+updateByPrimaryKey (Domain.Types.FRFSTrip.FRFSTrip {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bppFulfillmentId bppFulfillmentId,
@@ -56,13 +45,10 @@ updateByPrimaryKey Domain.Types.FRFSTrip.FRFSTrip {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.FRFSTrip Domain.Types.FRFSTrip.FRFSTrip where
-  fromTType' Beam.FRFSTripT {..} = do
+  fromTType' (Beam.FRFSTripT {..}) = do
     pure $
       Just
         Domain.Types.FRFSTrip.FRFSTrip
@@ -80,7 +66,7 @@ instance FromTType' Beam.FRFSTrip Domain.Types.FRFSTrip.FRFSTrip where
           }
 
 instance ToTType' Beam.FRFSTrip Domain.Types.FRFSTrip.FRFSTrip where
-  toTType' Domain.Types.FRFSTrip.FRFSTrip {..} = do
+  toTType' (Domain.Types.FRFSTrip.FRFSTrip {..}) = do
     Beam.FRFSTripT
       { Beam.bppFulfillmentId = bppFulfillmentId,
         Beam.id = Kernel.Types.Id.getId id,

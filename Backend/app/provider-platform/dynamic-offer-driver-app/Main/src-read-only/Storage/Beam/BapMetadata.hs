@@ -22,8 +22,7 @@ data BapMetadataT f = BapMetadataT
   deriving (Generic, B.Beamable)
 
 instance B.Table BapMetadataT where
-  data PrimaryKey BapMetadataT f = BapMetadataId (B.C f Data.Text.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey BapMetadataT f = BapMetadataId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = BapMetadataId . id
 
 type BapMetadata = BapMetadataT Identity

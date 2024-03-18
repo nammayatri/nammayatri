@@ -47,8 +47,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table DriverPoolConfigT where
-  data PrimaryKey DriverPoolConfigT f = DriverPoolConfigId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey DriverPoolConfigT f = DriverPoolConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = DriverPoolConfigId . id
 
 type DriverPoolConfig = DriverPoolConfigT Identity

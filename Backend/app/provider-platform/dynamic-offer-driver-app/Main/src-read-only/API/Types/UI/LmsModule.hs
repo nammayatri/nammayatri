@@ -21,19 +21,11 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data LmsEntityCompletionStatus = ENTITY_COMPLETED | ENTITY_INCOMPLETE
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data LmsEntityCompletionStatus = ENTITY_COMPLETED | ENTITY_INCOMPLETE deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-data LmsGetModuleRes = LmsGetModuleRes
-  { completed :: [API.Types.UI.LmsModule.LmsModuleRes],
-    remaining :: [API.Types.UI.LmsModule.LmsModuleRes]
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+data LmsGetModuleRes = LmsGetModuleRes {completed :: [API.Types.UI.LmsModule.LmsModuleRes], remaining :: [API.Types.UI.LmsModule.LmsModuleRes]} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data LmsGetQuizRes = LmsGetQuizRes
-  { questions :: [API.Types.UI.LmsModule.LmsQuestionRes],
-    selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
-  }
+data LmsGetQuizRes = LmsGetQuizRes {questions :: [API.Types.UI.LmsModule.LmsQuestionRes], selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data LmsGetVideosRes = LmsGetVideosRes
@@ -74,14 +66,9 @@ data LmsQuestionRes = LmsQuestionRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data LmsQuestionStatus = CORRECT | INCORRECT
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data LmsQuestionStatus = CORRECT | INCORRECT deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-data LmsQuizHistory = LmsQuizHistory
-  { attemptNumber :: Kernel.Prelude.Int,
-    selectedOptions :: [Data.Text.Text],
-    status :: API.Types.UI.LmsModule.LmsQuestionStatus
-  }
+data LmsQuizHistory = LmsQuizHistory {attemptNumber :: Kernel.Prelude.Int, selectedOptions :: [Data.Text.Text], status :: API.Types.UI.LmsModule.LmsQuestionStatus}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data LmsTranslatedModuleInfoRes = LmsTranslatedModuleInfoRes
@@ -124,10 +111,7 @@ data LmsVideoRes = LmsVideoRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data Options = Options
-  { options :: [Domain.Types.QuestionInformation.OptionEntity]
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+data Options = Options {options :: [Domain.Types.QuestionInformation.OptionEntity]} deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
 
 data QuestionConfirmReq = QuestionConfirmReq
   { language :: Kernel.External.Types.Language,
@@ -137,29 +121,21 @@ data QuestionConfirmReq = QuestionConfirmReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data QuestionConfirmRes = QuestionConfirmRes
-  { validation :: API.Types.UI.LmsModule.QuestionValidation,
-    validationRes :: API.Types.UI.LmsModule.SelectedOptionValidation
-  }
+data QuestionConfirmRes = QuestionConfirmRes {validation :: API.Types.UI.LmsModule.QuestionValidation, validationRes :: API.Types.UI.LmsModule.SelectedOptionValidation}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data QuestionValidation = CORRECT_ANSWER | INCORRECT_ANSWER
+data QuestionValidation = CORRECT_ANSWER | INCORRECT_ANSWER deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data QuizOptions = SingleSelect API.Types.UI.LmsModule.Options | MultiSelect API.Types.UI.LmsModule.Options deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data SelectedOption = SingleSelectedOption Data.Text.Text | MultiSelectedOption [Data.Text.Text] deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data SelectedOptionValidation
+  = SingleSelectedOptionValidation API.Types.UI.LmsModule.ValidationResult
+  | MultiSelectedOptionValidation [API.Types.UI.LmsModule.ValidationResult]
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-data QuizOptions = SingleSelect API.Types.UI.LmsModule.Options | MultiSelect API.Types.UI.LmsModule.Options
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
-
-data SelectedOption = SingleSelectedOption Data.Text.Text | MultiSelectedOption [Data.Text.Text]
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
-
-data SelectedOptionValidation = SingleSelectedOptionValidation API.Types.UI.LmsModule.ValidationResult | MultiSelectedOptionValidation [API.Types.UI.LmsModule.ValidationResult]
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
-
-data ValidationResult = ValidationResult
-  { id :: Data.Text.Text,
-    isCorrect :: Kernel.Prelude.Bool
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show, Eq)
+data ValidationResult = ValidationResult {id :: Data.Text.Text, isCorrect :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema, Show, Eq)
 
 data VideoUpdateAPIReq = VideoUpdateAPIReq
   { language :: Kernel.External.Types.Language,

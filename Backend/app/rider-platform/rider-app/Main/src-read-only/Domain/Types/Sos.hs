@@ -26,20 +26,13 @@ data Sos = Sos
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data EmergencyContactId = EmergencyContactId Kernel.Prelude.Text
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data EmergencyContactId = EmergencyContactId Kernel.Prelude.Text deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SosMockDrill = SosMockDrill
-  { personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    status :: Domain.Types.Sos.SosStatus
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+data SosMockDrill = SosMockDrill {personId :: Kernel.Types.Id.Id Domain.Types.Person.Person, status :: Domain.Types.Sos.SosStatus} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SosStatus = Resolved | NotResolved | Pending | MockPending | MockResolved
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SosStatus = Resolved | NotResolved | Pending | MockPending | MockResolved deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SosType = Police | CustomerCare | EmergencyContact Domain.Types.Sos.EmergencyContactId | SafetyFlow
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SosType = Police | CustomerCare | EmergencyContact Domain.Types.Sos.EmergencyContactId | SafetyFlow deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EmergencyContactId)
 

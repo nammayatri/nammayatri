@@ -15,31 +15,20 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as Beam
 import Storage.Queries.Transformers.CancellationReason
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.CancellationReason.CancellationReason -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationReason.CancellationReason -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.CancellationReason.CancellationReason] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.CancellationReason.CancellationReason] -> m ())
 createMany = traverse_ create
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Prelude.Bool -> m ([Domain.Types.CancellationReason.CancellationReason])
-findAll limit offset enabled = do
-  findAllWithOptionsDb
-    [ Se.Is Beam.enabled $ Se.Eq enabled
-    ]
-    (Se.Desc Beam.priority)
-    limit
-    offset
+findAll :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Bool -> m [Domain.Types.CancellationReason.CancellationReason])
+findAll limit offset enabled = do findAllWithOptionsDb [Se.Is Beam.enabled $ Se.Eq enabled] (Se.Desc Beam.priority) limit offset
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.CancellationReason.CancellationReasonCode -> m (Maybe (Domain.Types.CancellationReason.CancellationReason))
-findByPrimaryKey reasonCode = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.reasonCode $ Se.Eq $ reasonCodeToText reasonCode
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationReason.CancellationReasonCode -> m (Maybe Domain.Types.CancellationReason.CancellationReason))
+findByPrimaryKey reasonCode = do findOneWithKV [Se.And [Se.Is Beam.reasonCode $ Se.Eq (reasonCodeToText reasonCode)]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.CancellationReason.CancellationReason -> m ()
-updateByPrimaryKey Domain.Types.CancellationReason.CancellationReason {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CancellationReason.CancellationReason -> m ())
+updateByPrimaryKey (Domain.Types.CancellationReason.CancellationReason {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.description description,
@@ -48,13 +37,10 @@ updateByPrimaryKey Domain.Types.CancellationReason.CancellationReason {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.reasonCode $ Se.Eq $ reasonCodeToText reasonCode
-        ]
-    ]
+    [Se.And [Se.Is Beam.reasonCode $ Se.Eq (reasonCodeToText reasonCode)]]
 
 instance FromTType' Beam.CancellationReason Domain.Types.CancellationReason.CancellationReason where
-  fromTType' Beam.CancellationReasonT {..} = do
+  fromTType' (Beam.CancellationReasonT {..}) = do
     pure $
       Just
         Domain.Types.CancellationReason.CancellationReason
@@ -67,7 +53,7 @@ instance FromTType' Beam.CancellationReason Domain.Types.CancellationReason.Canc
           }
 
 instance ToTType' Beam.CancellationReason Domain.Types.CancellationReason.CancellationReason where
-  toTType' Domain.Types.CancellationReason.CancellationReason {..} = do
+  toTType' (Domain.Types.CancellationReason.CancellationReason {..}) = do
     Beam.CancellationReasonT
       { Beam.description = description,
         Beam.enabled = enabled,

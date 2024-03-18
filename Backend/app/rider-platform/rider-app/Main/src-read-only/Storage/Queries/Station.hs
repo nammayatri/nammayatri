@@ -16,25 +16,21 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.Station as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Station.Station -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.Station -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Station.Station] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Station.Station] -> m ())
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe (Domain.Types.Station.Station))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByStationCode :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m (Maybe (Domain.Types.Station.Station))
-findByStationCode code = do
-  findOneWithKV
-    [ Se.Is Beam.code $ Se.Eq code
-    ]
+findByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
+findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 
-getTicketPlacesByMerchantOperatingCityIdAndVehicleType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Station.FRFSVehicleType -> m ([Domain.Types.Station.Station])
+getTicketPlacesByMerchantOperatingCityIdAndVehicleType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Station.FRFSVehicleType -> m [Domain.Types.Station.Station])
 getTicketPlacesByMerchantOperatingCityIdAndVehicleType (Kernel.Types.Id.Id merchantOperatingCityId) vehicleType = do
   findAllWithKV
     [ Se.And
@@ -43,42 +39,31 @@ getTicketPlacesByMerchantOperatingCityIdAndVehicleType (Kernel.Types.Id.Id merch
         ]
     ]
 
-getTicketPlacesByVehicleType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Station.FRFSVehicleType -> m ([Domain.Types.Station.Station])
-getTicketPlacesByVehicleType vehicleType = do
-  findAllWithKV
-    [ Se.Is Beam.vehicleType $ Se.Eq vehicleType
-    ]
+getTicketPlacesByVehicleType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.FRFSVehicleType -> m [Domain.Types.Station.Station])
+getTicketPlacesByVehicleType vehicleType = do findAllWithKV [Se.Is Beam.vehicleType $ Se.Eq vehicleType]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe (Domain.Types.Station.Station))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Station.Station -> m ()
-updateByPrimaryKey Domain.Types.Station.Station {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.Station -> m ())
+updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.address address,
       Se.Set Beam.code code,
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.Station Domain.Types.Station.Station where
-  fromTType' Beam.StationT {..} = do
+  fromTType' (Beam.StationT {..}) = do
     pure $
       Just
         Domain.Types.Station.Station
@@ -96,7 +81,7 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
           }
 
 instance ToTType' Beam.Station Domain.Types.Station.Station where
-  toTType' Domain.Types.Station.Station {..} = do
+  toTType' (Domain.Types.Station.Station {..}) = do
     Beam.StationT
       { Beam.address = address,
         Beam.code = code,

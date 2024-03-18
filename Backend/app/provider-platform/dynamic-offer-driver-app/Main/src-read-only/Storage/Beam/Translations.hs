@@ -24,8 +24,7 @@ data TranslationsT f = TranslationsT
   deriving (Generic, B.Beamable)
 
 instance B.Table TranslationsT where
-  data PrimaryKey TranslationsT f = TranslationsId (B.C f Data.Text.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey TranslationsT f = TranslationsId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = TranslationsId . id
 
 type Translations = TranslationsT Identity

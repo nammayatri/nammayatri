@@ -22,17 +22,16 @@ data QuestionInformation = QuestionInformation
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data OptionEntity = OptionEntity
-  { isCorrect :: Kernel.Prelude.Bool,
-    option :: Domain.Types.QuestionInformation.SingleOption,
-    optionId :: Kernel.Types.Id.Id Domain.Types.QuestionInformation.OptionEntity
-  }
+data OptionEntity = OptionEntity {isCorrect :: Kernel.Prelude.Bool, option :: Domain.Types.QuestionInformation.SingleOption, optionId :: Kernel.Types.Id.Id Domain.Types.QuestionInformation.OptionEntity}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq, Ord)
 
-data QuizQuestionType = SingleSelect | MultiSelect
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data QuizQuestionType = SingleSelect | MultiSelect deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SingleOption = TextOption Kernel.Prelude.Text | SingleLineImage Kernel.Prelude.Text Kernel.Prelude.Int Kernel.Prelude.Int | TwoColumnImage Kernel.Prelude.Text Kernel.Prelude.Int Kernel.Prelude.Int | TwoColumnOption Kernel.Prelude.Text
+data SingleOption
+  = TextOption Kernel.Prelude.Text
+  | SingleLineImage Kernel.Prelude.Text Kernel.Prelude.Int Kernel.Prelude.Int
+  | TwoColumnImage Kernel.Prelude.Text Kernel.Prelude.Int Kernel.Prelude.Int
+  | TwoColumnOption Kernel.Prelude.Text
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''QuizQuestionType)

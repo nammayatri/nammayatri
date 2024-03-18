@@ -17,56 +17,42 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.QuestionInformation as Beam
 import Storage.Queries.Transformers.QuestionInformation
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.QuestionInformation.QuestionInformation -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.QuestionInformation.QuestionInformation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.QuestionInformation.QuestionInformation] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.QuestionInformation.QuestionInformation] -> m ())
 createMany = traverse_ create
 
-findByIdAndLanguage :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> Kernel.External.Types.Language -> m (Maybe (Domain.Types.QuestionInformation.QuestionInformation))
-findByIdAndLanguage (Kernel.Types.Id.Id questionId) language = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.questionId $ Se.Eq questionId,
-          Se.Is Beam.language $ Se.Eq language
-        ]
-    ]
+findByIdAndLanguage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> Kernel.External.Types.Language -> m (Maybe Domain.Types.QuestionInformation.QuestionInformation))
+findByIdAndLanguage (Kernel.Types.Id.Id questionId) language = do findOneWithKV [Se.And [Se.Is Beam.questionId $ Se.Eq questionId, Se.Is Beam.language $ Se.Eq language]]
 
-getAllTranslationsByQuestionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m ([Domain.Types.QuestionInformation.QuestionInformation])
-getAllTranslationsByQuestionId (Kernel.Types.Id.Id questionId) = do
-  findAllWithKV
-    [ Se.Is Beam.questionId $ Se.Eq questionId
-    ]
+getAllTranslationsByQuestionId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m [Domain.Types.QuestionInformation.QuestionInformation])
+getAllTranslationsByQuestionId (Kernel.Types.Id.Id questionId) = do findAllWithKV [Se.Is Beam.questionId $ Se.Eq questionId]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe (Domain.Types.QuestionInformation.QuestionInformation))
-findByPrimaryKey language (Kernel.Types.Id.Id questionId) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.language $ Se.Eq language,
-          Se.Is Beam.questionId $ Se.Eq questionId
-        ]
-    ]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping -> m (Maybe Domain.Types.QuestionInformation.QuestionInformation))
+findByPrimaryKey language (Kernel.Types.Id.Id questionId) = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.questionId $ Se.Eq questionId]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.QuestionInformation.QuestionInformation -> m ()
-updateByPrimaryKey Domain.Types.QuestionInformation.QuestionInformation {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.QuestionInformation.QuestionInformation -> m ())
+updateByPrimaryKey (Domain.Types.QuestionInformation.QuestionInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.options $ convertOptionsToTable options,
+    [ Se.Set Beam.options (convertOptionsToTable options),
       Se.Set Beam.question question,
       Se.Set Beam.questionType questionType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.language $ Se.Eq language,
-          Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)
-        ]
-    ]
+    [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)]]
 
 instance FromTType' Beam.QuestionInformation Domain.Types.QuestionInformation.QuestionInformation where
-  fromTType' Beam.QuestionInformationT {..} = do
+  fromTType' (Beam.QuestionInformationT {..}) = do
     options' <- getOptionsFromTable options
-
     pure $
       Just
         Domain.Types.QuestionInformation.QuestionInformation
@@ -80,7 +66,7 @@ instance FromTType' Beam.QuestionInformation Domain.Types.QuestionInformation.Qu
           }
 
 instance ToTType' Beam.QuestionInformation Domain.Types.QuestionInformation.QuestionInformation where
-  toTType' Domain.Types.QuestionInformation.QuestionInformation {..} = do
+  toTType' (Domain.Types.QuestionInformation.QuestionInformation {..}) = do
     Beam.QuestionInformationT
       { Beam.language = language,
         Beam.options = convertOptionsToTable options,

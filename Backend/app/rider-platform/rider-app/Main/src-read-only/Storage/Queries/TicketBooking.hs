@@ -16,25 +16,21 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBooking as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketBooking.TicketBooking -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBooking.TicketBooking -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TicketBooking.TicketBooking] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TicketBooking.TicketBooking] -> m ())
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m (Maybe (Domain.Types.TicketBooking.TicketBooking))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m (Maybe Domain.Types.TicketBooking.TicketBooking))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m (Maybe (Domain.Types.TicketBooking.TicketBooking))
-findByShortId (Kernel.Types.Id.ShortId shortId) = do
-  findOneWithKV
-    [ Se.Is Beam.shortId $ Se.Eq shortId
-    ]
+findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m (Maybe Domain.Types.TicketBooking.TicketBooking))
+findByShortId (Kernel.Types.Id.ShortId shortId) = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
 
-getAllBookingsByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.TicketBooking.BookingStatus -> m ([Domain.Types.TicketBooking.TicketBooking])
+getAllBookingsByPersonId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.TicketBooking.BookingStatus -> m [Domain.Types.TicketBooking.TicketBooking])
 getAllBookingsByPersonId limit offset (Kernel.Types.Id.Id personId) (Kernel.Types.Id.Id merchantOperatingCityId) status = do
   findAllWithOptionsKV
     [ Se.And
@@ -47,26 +43,14 @@ getAllBookingsByPersonId limit offset (Kernel.Types.Id.Id personId) (Kernel.Type
     limit
     offset
 
-updateStatusByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBooking.BookingStatus -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m ()
-updateStatusByShortId status (Kernel.Types.Id.ShortId shortId) = do
-  _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.status status,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.Is Beam.shortId $ Se.Eq shortId
-    ]
+updateStatusByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBooking.BookingStatus -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m ())
+updateStatusByShortId status (Kernel.Types.Id.ShortId shortId) = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.shortId $ Se.Eq shortId]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m (Maybe (Domain.Types.TicketBooking.TicketBooking))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m (Maybe Domain.Types.TicketBooking.TicketBooking))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBooking.TicketBooking -> m ()
-updateByPrimaryKey Domain.Types.TicketBooking.TicketBooking {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBooking.TicketBooking -> m ())
+updateByPrimaryKey (Domain.Types.TicketBooking.TicketBooking {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount amount,
@@ -80,13 +64,10 @@ updateByPrimaryKey Domain.Types.TicketBooking.TicketBooking {..} = do
       Se.Set Beam.visitDate visitDate,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking where
-  fromTType' Beam.TicketBookingT {..} = do
+  fromTType' (Beam.TicketBookingT {..}) = do
     pure $
       Just
         Domain.Types.TicketBooking.TicketBooking
@@ -104,7 +85,7 @@ instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking 
           }
 
 instance ToTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking where
-  toTType' Domain.Types.TicketBooking.TicketBooking {..} = do
+  toTType' (Domain.Types.TicketBooking.TicketBooking {..}) = do
     Beam.TicketBookingT
       { Beam.amount = amount,
         Beam.createdAt = createdAt,

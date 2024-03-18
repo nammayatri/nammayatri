@@ -22,7 +22,6 @@ data BusinessHour = BusinessHour
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BusinessHourType = Slot Kernel.Prelude.TimeOfDay | Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BusinessHourType = Slot Kernel.Prelude.TimeOfDay | Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BusinessHourType)

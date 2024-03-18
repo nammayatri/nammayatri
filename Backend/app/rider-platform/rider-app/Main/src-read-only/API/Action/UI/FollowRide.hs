@@ -19,16 +19,24 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  TokenAuth :> "follow" :> "ride" :> Get '[JSON] [API.Types.UI.FollowRide.Followers]
-    :<|> TokenAuth :> "share" :> "ride" :> ReqBody '[JSON] API.Types.UI.FollowRide.ShareRideReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  ( TokenAuth :> "follow" :> "ride" :> Get '[JSON] [API.Types.UI.FollowRide.Followers] :<|> TokenAuth :> "share" :> "ride"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FollowRide.ShareRideReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
 
 handler :: Environment.FlowServer API
-handler =
-  getFollowRide
-    :<|> postShareRide
+handler = getFollowRide :<|> postShareRide
 
-getFollowRide :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.FollowRide.Followers]
+getFollowRide :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.FollowRide.Followers])
 getFollowRide a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.getFollowRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
-postShareRide :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.FollowRide.ShareRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+postShareRide ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.FollowRide.ShareRideReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
 postShareRide a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.postShareRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

@@ -17,16 +17,15 @@ data ServicePeopleCategoryT f = ServicePeopleCategoryT
     id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table ServicePeopleCategoryT where
-  data PrimaryKey ServicePeopleCategoryT f = ServicePeopleCategoryId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey ServicePeopleCategoryT f = ServicePeopleCategoryId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = ServicePeopleCategoryId . id
 
 type ServicePeopleCategory = ServicePeopleCategoryT Identity

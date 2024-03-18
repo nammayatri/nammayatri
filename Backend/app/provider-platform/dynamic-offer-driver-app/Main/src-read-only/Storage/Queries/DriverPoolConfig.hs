@@ -16,31 +16,22 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverPoolConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DriverPoolConfig.DriverPoolConfig] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverPoolConfig.DriverPoolConfig] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DriverPoolConfig.DriverPoolConfig])
-findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do
-  findAllWithOptionsKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
-    ]
-    (Se.Desc Beam.tripDistance)
-    limit
-    offset
+findAllByMerchantOpCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DriverPoolConfig.DriverPoolConfig])
+findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCityId) = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Desc Beam.tripDistance) limit offset
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig -> m (Maybe (Domain.Types.DriverPoolConfig.DriverPoolConfig))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig -> m (Maybe Domain.Types.DriverPoolConfig.DriverPoolConfig))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ()
-updateByPrimaryKey Domain.Types.DriverPoolConfig.DriverPoolConfig {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverPoolConfig.DriverPoolConfig -> m ())
+updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.actualDistanceThreshold actualDistanceThreshold,
@@ -70,13 +61,10 @@ updateByPrimaryKey Domain.Types.DriverPoolConfig.DriverPoolConfig {..} = do
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleVariant vehicleVariant
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPoolConfig where
-  fromTType' Beam.DriverPoolConfigT {..} = do
+  fromTType' (Beam.DriverPoolConfigT {..}) = do
     pure $
       Just
         Domain.Types.DriverPoolConfig.DriverPoolConfig
@@ -110,7 +98,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
           }
 
 instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPoolConfig where
-  toTType' Domain.Types.DriverPoolConfig.DriverPoolConfig {..} = do
+  toTType' (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
     Beam.DriverPoolConfigT
       { Beam.actualDistanceThreshold = actualDistanceThreshold,
         Beam.createdAt = createdAt,

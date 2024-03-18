@@ -14,22 +14,17 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSRecon as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSRecon.FRFSRecon -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRecon.FRFSRecon -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSRecon.FRFSRecon] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSRecon.FRFSRecon] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSRecon.FRFSRecon -> m (Maybe (Domain.Types.FRFSRecon.FRFSRecon))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSRecon.FRFSRecon -> m (Maybe Domain.Types.FRFSRecon.FRFSRecon))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSRecon.FRFSRecon -> m ()
-updateByPrimaryKey Domain.Types.FRFSRecon.FRFSRecon {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSRecon.FRFSRecon -> m ())
+updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.beneficiaryBankAccount beneficiaryBankAccount,
@@ -61,13 +56,10 @@ updateByPrimaryKey Domain.Types.FRFSRecon.FRFSRecon {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
-  fromTType' Beam.FRFSReconT {..} = do
+  fromTType' (Beam.FRFSReconT {..}) = do
     pure $
       Just
         Domain.Types.FRFSRecon.FRFSRecon
@@ -103,7 +95,7 @@ instance FromTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
           }
 
 instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
-  toTType' Domain.Types.FRFSRecon.FRFSRecon {..} = do
+  toTType' (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
     Beam.FRFSReconT
       { Beam.beneficiaryBankAccount = beneficiaryBankAccount,
         Beam.beneficiaryIFSC = beneficiaryIFSC,
