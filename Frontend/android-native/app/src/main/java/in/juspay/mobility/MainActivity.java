@@ -83,6 +83,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.Timer;
 import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.Callable;
@@ -91,6 +92,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
@@ -132,7 +134,8 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("StaticFieldLeak")
     private static InAppNotification inAppNotification;
     ShowNotificationCallBack inappCallBack;
-    private Future<JSONObject> initFutureTask;
+    private Future<JSONObject> driverInfoFutureTask;
+    private Future<JSONObject> preInitFutureTask;
     long onCreateTimeStamp = 0;
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
@@ -298,6 +301,63 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    protected JSONObject preInitFlow() {
+        Vector<String> res = handleDeepLinkIfAvailable(getIntent());
+        Vector<String> notificationDeepLinkVector = notificationTypeHasDL(getIntent());
+
+        String viewParam = null, deepLinkJson =null;
+        if (res!=null ){
+            viewParam = res.get(0);
+            deepLinkJson = res.get(1);
+        }
+        else if (notificationDeepLinkVector != null) {
+            viewParam = notificationDeepLinkVector.get(0);
+            deepLinkJson = notificationDeepLinkVector.get(1);
+        }
+
+        if (MERCHANT_TYPE.equals("DRIVER")) {
+            widgetService = new Intent(this, WidgetService.class);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            if (sharedPref != null) {
+                Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
+            }
+        }
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+        MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
+        mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
+
+        updateConfigURL();
+
+        JSONObject results = new JSONObject();
+        try {
+            if (viewParam != null) results.put("viewParam", viewParam);
+            if (viewParam != null) results.put("view_param", viewParam);
+            if (deepLinkJson != null) results.put("deepLinkJSON", deepLinkJson);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return results;
+    }
+
+    protected JSONObject getDriverInfoFlow() {
+        String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+
+        boolean shouldCallAPI = MERCHANT_TYPE.equals("DRIVER") && !token.equals("null") && !token.equals("__failed") && !token.equals("");
+
+        JSONObject results = new JSONObject();
+        try {
+            if (shouldCallAPI) {
+                String driverProfile = getDriverProfile();
+                if (driverProfile != null) {
+                    results.put("driverInfoResponse", new JSONObject(driverProfile));
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return results;
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     @AddTrace(name = "onCreateTrace", enabled = true /* optional */)
@@ -310,61 +370,8 @@ public class MainActivity extends AppCompatActivity {
         activity = this;
 
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());
-        initFutureTask = Executors.newSingleThreadExecutor().submit(() -> {
-            String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
-
-            boolean shouldCallAPI = MERCHANT_TYPE.equals("DRIVER") && !token.equals("null") && !token.equals("__failed") && !token.equals("");
-
-            Future<String> getDriverProfileFuture = null;
-
-            if (shouldCallAPI) {
-                Callable<String> getDriverProfileCallable = this::getDriverProfile;
-                getDriverProfileFuture = Executors.newSingleThreadExecutor().submit(getDriverProfileCallable);
-            }
-
-            Vector<String> res = handleDeepLinkIfAvailable(getIntent());
-            Vector<String> notificationDeepLinkVector = notificationTypeHasDL(getIntent());
-
-            String viewParam = null, deepLinkJson =null;
-            if (res!=null ){
-                viewParam = res.get(0);
-                deepLinkJson = res.get(1);
-            }
-            else if (notificationDeepLinkVector != null) {
-                viewParam = notificationDeepLinkVector.get(0);
-                deepLinkJson = notificationDeepLinkVector.get(1);
-            }
-
-            if (MERCHANT_TYPE.equals("DRIVER")) {
-                widgetService = new Intent(this, WidgetService.class);
-                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                if (sharedPref != null) {
-                    Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
-                }
-            }
-            MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
-            MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
-            mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
-
-            updateConfigURL();
-
-            JSONObject results = new JSONObject();
-            try {
-                if (viewParam != null) results.put("viewParam", viewParam);
-                if (viewParam != null) results.put("view_param", viewParam);
-                if (deepLinkJson != null) results.put("deepLinkJSON", deepLinkJson);
-
-                if (shouldCallAPI) {
-                    String driverProfile = getDriverProfileFuture.get();
-                    if (driverProfile != null) {
-                        results.put("driverInfoResponse", new JSONObject(driverProfile));
-                    }
-                }
-            } catch (ExecutionException | InterruptedException | JSONException e) {
-                e.printStackTrace();
-            }
-            return results;
-        });
+        preInitFutureTask = Executors.newSingleThreadExecutor().submit(this::preInitFlow);
+        driverInfoFutureTask = Executors.newSingleThreadExecutor().submit(this::getDriverInfoFlow);
 
         initApp();
 
@@ -609,11 +616,31 @@ public class MainActivity extends AppCompatActivity {
                     case "initiate_result":
                         try {
                             JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
-                            JSONObject result = initFutureTask.get();
-                            Log.i("APP_PERF", "INIT_FUTURE_TASK_RESULT : " + System.currentTimeMillis());
 
-                            String viewParam = result.optString("viewParam"), deepLinkJSON = result.optString("deepLinkJson");
-                            JSONObject driverInfoResponse = result.optJSONObject("driverInfoResponse");
+                            String viewParam = null, deepLinkJSON = null;
+                            JSONObject driverInfoResponse = null;
+                            try {
+                                JSONObject preInitFutureTaskResult = preInitFutureTask.get(4500, TimeUnit.MILLISECONDS);
+                                Log.i("APP_PERF", "PRE_INIT_NO_EXCEPTION : " + System.currentTimeMillis());
+                                viewParam = preInitFutureTaskResult.optString("viewParam");
+                                deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                                preInitFutureTask.cancel(true);
+                                JSONObject preInitFutureTaskResult = preInitFlow();
+                                Log.i("APP_PERF", "PRE_INIT_EXCEPTION : " + System.currentTimeMillis());
+                                viewParam = preInitFutureTaskResult.optString("viewParam");
+                                deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                            }
+                            try {
+                                JSONObject driverInfoFutureTaskResult = driverInfoFutureTask.get(4500, TimeUnit.MILLISECONDS);
+                                driverInfoResponse = driverInfoFutureTaskResult.optJSONObject("driverInfoResponse");
+                                Log.i("APP_PERF", "PRE_INIT_CALL_API_NO_EXCEPTION : " + System.currentTimeMillis());
+                            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                                driverInfoFutureTask.cancel(true);
+                                Log.i("APP_PERF", "PRE_INIT_CALL_API_EXCEPTION : " + System.currentTimeMillis());
+                                e.printStackTrace();
+                            }
+                            Log.i("APP_PERF", "INIT_FUTURE_TASK_RESULT : " + System.currentTimeMillis());
 
                             innerPayload.put("action", "process");
                             innerPayload.put("viewParam", viewParam);
@@ -628,7 +655,7 @@ public class MainActivity extends AppCompatActivity {
                             mFirebaseAnalytics.logEvent("ny_hyper_process", null);
                             Log.i("APP_PERF", "INIT_HYPER_SERVICE_INITIATE_RESULT : " + System.currentTimeMillis());
                             hyperServices.process(json);
-                        } catch (JSONException | ExecutionException | InterruptedException e) {
+                        } catch (JSONException e) {
                             throw new RuntimeException(e);
                         }
                         break;
