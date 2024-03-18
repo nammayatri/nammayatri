@@ -14,28 +14,20 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.BusinessHour as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BusinessHour.BusinessHour -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BusinessHour.BusinessHour -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.BusinessHour.BusinessHour] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BusinessHour.BusinessHour] -> m ())
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m (Maybe (Domain.Types.BusinessHour.BusinessHour))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m (Maybe Domain.Types.BusinessHour.BusinessHour))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m (Maybe (Domain.Types.BusinessHour.BusinessHour))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m (Maybe Domain.Types.BusinessHour.BusinessHour))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.BusinessHour.BusinessHour -> m ()
-updateByPrimaryKey Domain.Types.BusinessHour.BusinessHour {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BusinessHour.BusinessHour -> m ())
+updateByPrimaryKey (Domain.Types.BusinessHour.BusinessHour {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.btype btype,
@@ -45,13 +37,10 @@ updateByPrimaryKey Domain.Types.BusinessHour.BusinessHour {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour where
-  fromTType' Beam.BusinessHourT {..} = do
+  fromTType' (Beam.BusinessHourT {..}) = do
     pure $
       Just
         Domain.Types.BusinessHour.BusinessHour
@@ -65,7 +54,7 @@ instance FromTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour whe
           }
 
 instance ToTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour where
-  toTType' Domain.Types.BusinessHour.BusinessHour {..} = do
+  toTType' (Domain.Types.BusinessHour.BusinessHour {..}) = do
     Beam.BusinessHourT
       { Beam.btype = btype,
         Beam.categoryId = Kernel.Types.Id.getId <$> categoryId,

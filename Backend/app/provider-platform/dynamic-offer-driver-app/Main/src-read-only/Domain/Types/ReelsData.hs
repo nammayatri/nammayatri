@@ -59,10 +59,7 @@ data ReelButtonConfig = ReelButtonConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-data ReelRowButtonConfig = ReelRowButtonConfig
-  { row :: [Domain.Types.ReelsData.ReelButtonConfig]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
+data ReelRowButtonConfig = ReelRowButtonConfig {row :: [Domain.Types.ReelsData.ReelButtonConfig]} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
 data ReelVideoThresholdConfig = ReelVideoThresholdConfig
   { endThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

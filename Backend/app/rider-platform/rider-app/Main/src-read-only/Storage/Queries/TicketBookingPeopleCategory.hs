@@ -15,34 +15,29 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBookingPeopleCategory as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory] -> m ())
 createMany = traverse_ create
 
-findAllByServiceCategoryId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ([Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory])
-findAllByServiceCategoryId (Kernel.Types.Id.Id ticketBookingServiceCategoryId) = do
-  findAllWithKV
-    [ Se.Is Beam.ticketBookingServiceCategoryId $ Se.Eq ticketBookingServiceCategoryId
-    ]
+findAllByServiceCategoryId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m [Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory])
+findAllByServiceCategoryId (Kernel.Types.Id.Id ticketBookingServiceCategoryId) = do findAllWithKV [Se.Is Beam.ticketBookingServiceCategoryId $ Se.Eq ticketBookingServiceCategoryId]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m (Maybe (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m (Maybe Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m (Maybe (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m (Maybe Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m ()
-updateByPrimaryKey Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m ())
+updateByPrimaryKey (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.name name,
@@ -54,13 +49,10 @@ updateByPrimaryKey Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleC
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory where
-  fromTType' Beam.TicketBookingPeopleCategoryT {..} = do
+  fromTType' (Beam.TicketBookingPeopleCategoryT {..}) = do
     pure $
       Just
         Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory
@@ -76,7 +68,7 @@ instance FromTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingP
           }
 
 instance ToTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory where
-  toTType' Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory {..} = do
+  toTType' (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory {..}) = do
     Beam.TicketBookingPeopleCategoryT
       { Beam.id = Kernel.Types.Id.getId id,
         Beam.name = name,

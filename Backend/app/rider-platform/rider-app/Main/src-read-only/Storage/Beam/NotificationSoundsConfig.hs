@@ -24,8 +24,7 @@ data NotificationSoundsConfigT f = NotificationSoundsConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table NotificationSoundsConfigT where
-  data PrimaryKey NotificationSoundsConfigT f = NotificationSoundsConfigId (B.C f Kernel.Prelude.Text) (B.C f Kernel.External.Notification.Interface.Types.Category)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey NotificationSoundsConfigT f = NotificationSoundsConfigId (B.C f Kernel.Prelude.Text) (B.C f Kernel.External.Notification.Interface.Types.Category) deriving (Generic, B.Beamable)
   primaryKey = NotificationSoundsConfigId <$> merchantOperatingCityId <*> notificationType
 
 type NotificationSoundsConfig = NotificationSoundsConfigT Identity

@@ -16,28 +16,23 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.BecknConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BecknConfig.BecknConfig -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BecknConfig.BecknConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.BecknConfig.BecknConfig] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BecknConfig.BecknConfig] -> m ())
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m (Maybe (Domain.Types.BecknConfig.BecknConfig))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m (Maybe Domain.Types.BecknConfig.BecknConfig))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByMerchantIdAndDomain :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> m ([Domain.Types.BecknConfig.BecknConfig])
-findByMerchantIdAndDomain merchantId domain = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
-          Se.Is Beam.domain $ Se.Eq domain
-        ]
-    ]
+findByMerchantIdAndDomain ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> m [Domain.Types.BecknConfig.BecknConfig])
+findByMerchantIdAndDomain merchantId domain = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.domain $ Se.Eq domain]]
 
-findByMerchantIdDomainAndVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Domain.Types.BecknConfig.VehicleCategory -> m (Maybe (Domain.Types.BecknConfig.BecknConfig))
+findByMerchantIdDomainAndVehicle ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Domain.Types.BecknConfig.VehicleCategory -> m (Maybe Domain.Types.BecknConfig.BecknConfig))
 findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory = do
   findOneWithKV
     [ Se.And
@@ -47,16 +42,11 @@ findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory = do
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m (Maybe (Domain.Types.BecknConfig.BecknConfig))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m (Maybe Domain.Types.BecknConfig.BecknConfig))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.BecknConfig.BecknConfig -> m ()
-updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BecknConfig.BecknConfig -> m ())
+updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bapIFSC bapIFSC,
@@ -65,17 +55,17 @@ updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
       Se.Set Beam.confirmBufferTTLSec confirmBufferTTLSec,
       Se.Set Beam.confirmTTLSec confirmTTLSec,
       Se.Set Beam.domain domain,
-      Se.Set Beam.gatewayUrl $ Kernel.Prelude.showBaseUrl gatewayUrl,
+      Se.Set Beam.gatewayUrl (Kernel.Prelude.showBaseUrl gatewayUrl),
       Se.Set Beam.initTTLSec initTTLSec,
       Se.Set Beam.paymentParamsJson paymentParamsJson,
-      Se.Set Beam.registryUrl $ Kernel.Prelude.showBaseUrl registryUrl,
+      Se.Set Beam.registryUrl (Kernel.Prelude.showBaseUrl registryUrl),
       Se.Set Beam.searchTTLSec searchTTLSec,
       Se.Set Beam.selectTTLSec selectTTLSec,
       Se.Set Beam.settlementType settlementType,
       Se.Set Beam.settlementWindow settlementWindow,
-      Se.Set Beam.staticTermsUrl $ (Kernel.Prelude.fmap showBaseUrl) staticTermsUrl,
+      Se.Set Beam.staticTermsUrl (Kernel.Prelude.fmap showBaseUrl staticTermsUrl),
       Se.Set Beam.subscriberId subscriberId,
-      Se.Set Beam.subscriberUrl $ Kernel.Prelude.showBaseUrl subscriberUrl,
+      Se.Set Beam.subscriberUrl (Kernel.Prelude.showBaseUrl subscriberUrl),
       Se.Set Beam.uniqueKeyId uniqueKeyId,
       Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -83,18 +73,14 @@ updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
-  fromTType' Beam.BecknConfigT {..} = do
+  fromTType' (Beam.BecknConfigT {..}) = do
     gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
     registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
-    staticTermsUrl' <- (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl)) staticTermsUrl
+    staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
     subscriberUrl' <- Kernel.Prelude.parseBaseUrl subscriberUrl
-
     pure $
       Just
         Domain.Types.BecknConfig.BecknConfig
@@ -125,7 +111,7 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
           }
 
 instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
-  toTType' Domain.Types.BecknConfig.BecknConfig {..} = do
+  toTType' (Domain.Types.BecknConfig.BecknConfig {..}) = do
     Beam.BecknConfigT
       { Beam.bapIFSC = bapIFSC,
         Beam.buyerFinderFee = buyerFinderFee,
@@ -142,7 +128,7 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Beam.selectTTLSec = selectTTLSec,
         Beam.settlementType = settlementType,
         Beam.settlementWindow = settlementWindow,
-        Beam.staticTermsUrl = (Kernel.Prelude.fmap showBaseUrl) staticTermsUrl,
+        Beam.staticTermsUrl = Kernel.Prelude.fmap showBaseUrl staticTermsUrl,
         Beam.subscriberId = subscriberId,
         Beam.subscriberUrl = Kernel.Prelude.showBaseUrl subscriberUrl,
         Beam.uniqueKeyId = uniqueKeyId,

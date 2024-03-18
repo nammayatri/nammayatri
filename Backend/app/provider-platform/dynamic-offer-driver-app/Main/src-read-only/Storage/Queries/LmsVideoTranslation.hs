@@ -18,72 +18,51 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.LmsVideoTranslation as Beam
 import qualified Storage.Queries.Transformers.ReelsData
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.LmsVideoTranslation.LmsVideoTranslation] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.LmsVideoTranslation.LmsVideoTranslation] -> m ())
 createMany = traverse_ create
 
-getAllTranslationsForVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m ([Domain.Types.LmsVideoTranslation.LmsVideoTranslation])
-getAllTranslationsForVideoId (Kernel.Types.Id.Id videoId) = do
-  findAllWithKV
-    [ Se.Is Beam.videoId $ Se.Eq videoId
-    ]
+getAllTranslationsForVideoId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m [Domain.Types.LmsVideoTranslation.LmsVideoTranslation])
+getAllTranslationsForVideoId (Kernel.Types.Id.Id videoId) = do findAllWithKV [Se.Is Beam.videoId $ Se.Eq videoId]
 
-getVideoByLanguageAndVideoId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m (Maybe (Domain.Types.LmsVideoTranslation.LmsVideoTranslation))
-getVideoByLanguageAndVideoId (Kernel.Types.Id.Id videoId) language = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.videoId $ Se.Eq videoId,
-          Se.Is Beam.language $ Se.Eq language
-        ]
-    ]
+getVideoByLanguageAndVideoId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m (Maybe Domain.Types.LmsVideoTranslation.LmsVideoTranslation))
+getVideoByLanguageAndVideoId (Kernel.Types.Id.Id videoId) language = do findOneWithKV [Se.And [Se.Is Beam.videoId $ Se.Eq videoId, Se.Is Beam.language $ Se.Eq language]]
 
-updateCompletedWatchCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ()
+updateCompletedWatchCount ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ())
 updateCompletedWatchCount completedWatchCount (Kernel.Types.Id.Id videoId) language = do
   _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.completedWatchCount completedWatchCount,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.And
-        [ Se.Is Beam.videoId $ Se.Eq videoId,
-          Se.Is Beam.language $ Se.Eq language
-        ]
-    ]
+  updateOneWithKV [Se.Set Beam.completedWatchCount completedWatchCount, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.videoId $ Se.Eq videoId, Se.Is Beam.language $ Se.Eq language]]
 
-updateViewCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ()
+updateViewCount ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> Kernel.External.Types.Language -> m ())
 updateViewCount viewCount (Kernel.Types.Id.Id videoId) language = do
   _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.viewCount viewCount,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.And
-        [ Se.Is Beam.videoId $ Se.Eq videoId,
-          Se.Is Beam.language $ Se.Eq language
-        ]
-    ]
+  updateOneWithKV [Se.Set Beam.viewCount viewCount, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.videoId $ Se.Eq videoId, Se.Is Beam.language $ Se.Eq language]]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe (Domain.Types.LmsVideoTranslation.LmsVideoTranslation))
-findByPrimaryKey language (Kernel.Types.Id.Id videoId) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.language $ Se.Eq language,
-          Se.Is Beam.videoId $ Se.Eq videoId
-        ]
-    ]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation -> m (Maybe Domain.Types.LmsVideoTranslation.LmsVideoTranslation))
+findByPrimaryKey language (Kernel.Types.Id.Id videoId) = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.videoId $ Se.Eq videoId]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ()
-updateByPrimaryKey Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.LmsVideoTranslation.LmsVideoTranslation -> m ())
+updateByPrimaryKey (Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bottomButtonConfig $ Storage.Queries.Transformers.ReelsData.convertBottomButtonConfigToTable bottomButtonConfig,
+    [ Se.Set Beam.bottomButtonConfig (Storage.Queries.Transformers.ReelsData.convertBottomButtonConfigToTable bottomButtonConfig),
       Se.Set Beam.completedThresholdInPercentage completedThresholdInPercentage,
       Se.Set Beam.completedWatchCount completedWatchCount,
       Se.Set Beam.description description,
       Se.Set Beam.duration duration,
-      Se.Set Beam.sideButtonConfig $ Storage.Queries.Transformers.ReelsData.convertSideButtonConfigToTable sideButtonConfig,
+      Se.Set Beam.sideButtonConfig (Storage.Queries.Transformers.ReelsData.convertSideButtonConfigToTable sideButtonConfig),
       Se.Set Beam.startThresholdInPercentage startThresholdInPercentage,
       Se.Set Beam.thresholdEnabled thresholdEnabled,
       Se.Set Beam.thumbnailImage thumbnailImage,
@@ -95,14 +74,10 @@ updateByPrimaryKey Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..} = d
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.language $ Se.Eq language,
-          Se.Is Beam.videoId $ Se.Eq (Kernel.Types.Id.getId videoId)
-        ]
-    ]
+    [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.videoId $ Se.Eq (Kernel.Types.Id.getId videoId)]]
 
 instance FromTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.LmsVideoTranslation where
-  fromTType' Beam.LmsVideoTranslationT {..} = do
+  fromTType' (Beam.LmsVideoTranslationT {..}) = do
     pure $
       Just
         Domain.Types.LmsVideoTranslation.LmsVideoTranslation
@@ -127,7 +102,7 @@ instance FromTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.Lm
           }
 
 instance ToTType' Beam.LmsVideoTranslation Domain.Types.LmsVideoTranslation.LmsVideoTranslation where
-  toTType' Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..} = do
+  toTType' (Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..}) = do
     Beam.LmsVideoTranslationT
       { Beam.bottomButtonConfig = Storage.Queries.Transformers.ReelsData.convertBottomButtonConfigToTable bottomButtonConfig,
         Beam.completedThresholdInPercentage = completedThresholdInPercentage,

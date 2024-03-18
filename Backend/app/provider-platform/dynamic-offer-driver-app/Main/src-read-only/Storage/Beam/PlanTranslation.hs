@@ -24,8 +24,7 @@ data PlanTranslationT f = PlanTranslationT
   deriving (Generic, B.Beamable)
 
 instance B.Table PlanTranslationT where
-  data PrimaryKey PlanTranslationT f = PlanTranslationId (B.C f Kernel.External.Types.Language) (B.C f Data.Text.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey PlanTranslationT f = PlanTranslationId (B.C f Kernel.External.Types.Language) (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = PlanTranslationId <$> language <*> planId
 
 type PlanTranslation = PlanTranslationT Identity

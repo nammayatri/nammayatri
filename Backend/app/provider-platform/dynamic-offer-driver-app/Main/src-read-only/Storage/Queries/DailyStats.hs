@@ -19,22 +19,18 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.DailyStats as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.DailyStats.DailyStats -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DailyStats.DailyStats -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.DailyStats.DailyStats] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DailyStats.DailyStats] -> m ())
 createMany = traverse_ create
 
-findByDriverIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m (Maybe (Domain.Types.DailyStats.DailyStats))
-findByDriverIdAndDate (Kernel.Types.Id.Id driverId) merchantLocalDate = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq driverId,
-          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
-        ]
-    ]
+findByDriverIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m (Maybe Domain.Types.DailyStats.DailyStats))
+findByDriverIdAndDate (Kernel.Types.Id.Id driverId) merchantLocalDate = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
-updateByDriverId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Common.Money -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ()
+updateByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Common.Money -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
 updateByDriverId totalEarnings numRides totalDistance (Kernel.Types.Id.Id driverId) merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -43,22 +39,13 @@ updateByDriverId totalEarnings numRides totalDistance (Kernel.Types.Id.Id driver
       Se.Set Beam.totalDistance totalDistance,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.driverId $ Se.Eq driverId,
-          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
-        ]
-    ]
+    [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Data.Text.Text -> m (Maybe (Domain.Types.DailyStats.DailyStats))
-findByPrimaryKey id = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.DailyStats.DailyStats))
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.DailyStats.DailyStats -> m ()
-updateByPrimaryKey Domain.Types.DailyStats.DailyStats {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DailyStats.DailyStats -> m ())
+updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
@@ -69,13 +56,10 @@ updateByPrimaryKey Domain.Types.DailyStats.DailyStats {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
 instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
-  fromTType' Beam.DailyStatsT {..} = do
+  fromTType' (Beam.DailyStatsT {..}) = do
     pure $
       Just
         Domain.Types.DailyStats.DailyStats
@@ -90,7 +74,7 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
           }
 
 instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
-  toTType' Domain.Types.DailyStats.DailyStats {..} = do
+  toTType' (Domain.Types.DailyStats.DailyStats {..}) = do
     Beam.DailyStatsT
       { Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = id,

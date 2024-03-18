@@ -21,15 +21,14 @@ data StationT f = StationT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table StationT where
-  data PrimaryKey StationT f = StationId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey StationT f = StationId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = StationId . id
 
 type Station = StationT Identity

@@ -26,7 +26,6 @@ data FRFSTrip = FRFSTrip
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data StationType = START | END | TRANSIT | INTERMEDIATE
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data StationType = START | END | TRANSIT | INTERMEDIATE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''StationType)

@@ -24,8 +24,7 @@ data InterCityTravelCitiesT f = InterCityTravelCitiesT
   deriving (Generic, B.Beamable)
 
 instance B.Table InterCityTravelCitiesT where
-  data PrimaryKey InterCityTravelCitiesT f = InterCityTravelCitiesId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey InterCityTravelCitiesT f = InterCityTravelCitiesId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = InterCityTravelCitiesId <$> cityName <*> merchantId
 
 type InterCityTravelCities = InterCityTravelCitiesT Identity

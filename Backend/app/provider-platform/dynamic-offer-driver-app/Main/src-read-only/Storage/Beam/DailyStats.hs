@@ -27,8 +27,7 @@ data DailyStatsT f = DailyStatsT
   deriving (Generic, B.Beamable)
 
 instance B.Table DailyStatsT where
-  data PrimaryKey DailyStatsT f = DailyStatsId (B.C f Data.Text.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey DailyStatsT f = DailyStatsId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = DailyStatsId . id
 
 type DailyStats = DailyStatsT Identity

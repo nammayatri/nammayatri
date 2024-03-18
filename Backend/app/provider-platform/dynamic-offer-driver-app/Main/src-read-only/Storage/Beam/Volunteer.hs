@@ -17,14 +17,13 @@ data VolunteerT f = VolunteerT
     id :: B.C f Data.Text.Text,
     place :: B.C f Data.Text.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Data.Text.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Data.Text.Text))
+    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text)
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table VolunteerT where
-  data PrimaryKey VolunteerT f = VolunteerId (B.C f Data.Text.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey VolunteerT f = VolunteerId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = VolunteerId . id
 
 type Volunteer = VolunteerT Identity

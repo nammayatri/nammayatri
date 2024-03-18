@@ -26,7 +26,6 @@ data Exophone = Exophone
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ExophoneType = CALL_RIDE | END_RIDE
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ExophoneType = CALL_RIDE | END_RIDE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExophoneType)

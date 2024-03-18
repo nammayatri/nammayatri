@@ -13,7 +13,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Storage.Beam.Translations as Beam
 
 instance FromTType' Beam.Translations Domain.Types.Translations.Translations where
-  fromTType' Beam.TranslationsT {..} = do
+  fromTType' (Beam.TranslationsT {..}) = do
     pure $
       Just
         Domain.Types.Translations.Translations
@@ -26,7 +26,7 @@ instance FromTType' Beam.Translations Domain.Types.Translations.Translations whe
           }
 
 instance ToTType' Beam.Translations Domain.Types.Translations.Translations where
-  toTType' Domain.Types.Translations.Translations {..} = do
+  toTType' (Domain.Types.Translations.Translations {..}) = do
     Beam.TranslationsT
       { Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,

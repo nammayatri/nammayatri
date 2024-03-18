@@ -24,8 +24,7 @@ data MetaDataT f = MetaDataT
   deriving (Generic, B.Beamable)
 
 instance B.Table MetaDataT where
-  data PrimaryKey MetaDataT f = MetaDataId (B.C f Data.Text.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey MetaDataT f = MetaDataId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = MetaDataId . driverId
 
 type MetaData = MetaDataT Identity

@@ -23,8 +23,7 @@ data LmsModuleVideoInformationT f = LmsModuleVideoInformationT
   deriving (Generic, B.Beamable)
 
 instance B.Table LmsModuleVideoInformationT where
-  data PrimaryKey LmsModuleVideoInformationT f = LmsModuleVideoInformationId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey LmsModuleVideoInformationT f = LmsModuleVideoInformationId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = LmsModuleVideoInformationId . id
 
 type LmsModuleVideoInformation = LmsModuleVideoInformationT Identity

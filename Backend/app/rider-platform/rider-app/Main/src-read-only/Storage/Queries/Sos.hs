@@ -15,44 +15,26 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.Sos as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Sos.Sos -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Sos.Sos -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Sos.Sos] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Sos.Sos] -> m ())
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe (Domain.Types.Sos.Sos))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe (Domain.Types.Sos.Sos))
-findByRideId (Kernel.Types.Id.Id rideId) = do
-  findOneWithKV
-    [ Se.Is Beam.rideId $ Se.Eq rideId
-    ]
+findByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Sos.Sos))
+findByRideId (Kernel.Types.Id.Id rideId) = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq rideId]
 
-updateStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ()
-updateStatus status (Kernel.Types.Id.Id id) = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.status status,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
+updateStatus status (Kernel.Types.Id.Id id) = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe (Domain.Types.Sos.Sos))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Sos.Sos -> m ()
-updateByPrimaryKey Domain.Types.Sos.Sos {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Sos.Sos -> m ())
+updateByPrimaryKey (Domain.Types.Sos.Sos {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.flow flow,
@@ -65,13 +47,10 @@ updateByPrimaryKey Domain.Types.Sos.Sos {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.Sos Domain.Types.Sos.Sos where
-  fromTType' Beam.SosT {..} = do
+  fromTType' (Beam.SosT {..}) = do
     pure $
       Just
         Domain.Types.Sos.Sos
@@ -88,7 +67,7 @@ instance FromTType' Beam.Sos Domain.Types.Sos.Sos where
           }
 
 instance ToTType' Beam.Sos Domain.Types.Sos.Sos where
-  toTType' Domain.Types.Sos.Sos {..} = do
+  toTType' (Domain.Types.Sos.Sos {..}) = do
     Beam.SosT
       { Beam.flow = flow,
         Beam.id = Kernel.Types.Id.getId id,

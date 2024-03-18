@@ -18,16 +18,15 @@ data TicketBookingPeopleCategoryT f = TicketBookingPeopleCategoryT
     numberOfUnits :: B.C f Kernel.Prelude.Int,
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
     ticketBookingServiceCategoryId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table TicketBookingPeopleCategoryT where
-  data PrimaryKey TicketBookingPeopleCategoryT f = TicketBookingPeopleCategoryId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey TicketBookingPeopleCategoryT f = TicketBookingPeopleCategoryId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = TicketBookingPeopleCategoryId . id
 
 type TicketBookingPeopleCategory = TicketBookingPeopleCategoryT Identity

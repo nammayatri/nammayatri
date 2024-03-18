@@ -22,8 +22,7 @@ data MerchantStateT f = MerchantStateT
   deriving (Generic, B.Beamable)
 
 instance B.Table MerchantStateT where
-  data PrimaryKey MerchantStateT f = MerchantStateId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Types.Beckn.Context.IndianState)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey MerchantStateT f = MerchantStateId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Types.Beckn.Context.IndianState) deriving (Generic, B.Beamable)
   primaryKey = MerchantStateId <$> merchantId <*> state
 
 type MerchantState = MerchantStateT Identity

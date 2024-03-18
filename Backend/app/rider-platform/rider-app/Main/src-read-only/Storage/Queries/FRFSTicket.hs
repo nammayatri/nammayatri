@@ -16,53 +16,33 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicket as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.FRFSTicket.FRFSTicket -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicket.FRFSTicket -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSTicket.FRFSTicket] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicket.FRFSTicket] -> m ())
 createMany = traverse_ create
 
-findAllByStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicket.FRFSTicketStatus -> m (Maybe (Domain.Types.FRFSTicket.FRFSTicket))
-findAllByStatus status = do
-  findOneWithKV
-    [ Se.Is Beam.status $ Se.Eq status
-    ]
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicket.FRFSTicketStatus -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
+findAllByStatus status = do findOneWithKV [Se.Is Beam.status $ Se.Eq status]
 
-findAllByTicketBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ([Domain.Types.FRFSTicket.FRFSTicket])
-findAllByTicketBookingId (Kernel.Types.Id.Id frfsTicketBookingId) = do
-  findAllWithKV
-    [ Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId
-    ]
+findAllByTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m [Domain.Types.FRFSTicket.FRFSTicket])
+findAllByTicketBookingId (Kernel.Types.Id.Id frfsTicketBookingId) = do findAllWithKV [Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe (Domain.Types.FRFSTicket.FRFSTicket))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-updateStatusByTBookingIdAndTicketNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicket.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Text -> m ()
+updateStatusByTBookingIdAndTicketNumber ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.FRFSTicket.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Text -> m ())
 updateStatusByTBookingIdAndTicketNumber status (Kernel.Types.Id.Id frfsTicketBookingId) ticketNumber = do
   _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.status status,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.And
-        [ Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId,
-          Se.Is Beam.ticketNumber $ Se.Eq ticketNumber
-        ]
-    ]
+  updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId, Se.Is Beam.ticketNumber $ Se.Eq ticketNumber]]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe (Domain.Types.FRFSTicket.FRFSTicket))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicket.FRFSTicket -> m ()
-updateByPrimaryKey Domain.Types.FRFSTicket.FRFSTicket {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicket.FRFSTicket -> m ())
+updateByPrimaryKey (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
@@ -76,13 +56,10 @@ updateByPrimaryKey Domain.Types.FRFSTicket.FRFSTicket {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
-  fromTType' Beam.FRFSTicketT {..} = do
+  fromTType' (Beam.FRFSTicketT {..}) = do
     pure $
       Just
         Domain.Types.FRFSTicket.FRFSTicket
@@ -100,7 +77,7 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
           }
 
 instance ToTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
-  toTType' Domain.Types.FRFSTicket.FRFSTicket {..} = do
+  toTType' (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
     Beam.FRFSTicketT
       { Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,

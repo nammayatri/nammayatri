@@ -29,8 +29,7 @@ data ExophoneT f = ExophoneT
   deriving (Generic, B.Beamable)
 
 instance B.Table ExophoneT where
-  data PrimaryKey ExophoneT f = ExophoneId (B.C f Data.Text.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey ExophoneT f = ExophoneId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = ExophoneId . id
 
 type Exophone = ExophoneT Identity

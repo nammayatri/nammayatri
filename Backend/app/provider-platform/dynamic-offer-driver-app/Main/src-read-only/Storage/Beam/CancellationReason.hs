@@ -24,8 +24,7 @@ data CancellationReasonT f = CancellationReasonT
   deriving (Generic, B.Beamable)
 
 instance B.Table CancellationReasonT where
-  data PrimaryKey CancellationReasonT f = CancellationReasonId (B.C f Domain.Types.CancellationReason.CancellationReasonCode)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey CancellationReasonT f = CancellationReasonId (B.C f Domain.Types.CancellationReason.CancellationReasonCode) deriving (Generic, B.Beamable)
   primaryKey = CancellationReasonId . reasonCode
 
 type CancellationReason = CancellationReasonT Identity

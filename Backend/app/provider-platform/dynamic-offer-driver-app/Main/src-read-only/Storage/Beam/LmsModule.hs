@@ -27,13 +27,12 @@ data LmsModuleT f = LmsModuleT
     rank :: B.C f Kernel.Prelude.Int,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     variant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant.Variant),
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table LmsModuleT where
-  data PrimaryKey LmsModuleT f = LmsModuleId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey LmsModuleT f = LmsModuleId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = LmsModuleId . id
 
 type LmsModule = LmsModuleT Identity

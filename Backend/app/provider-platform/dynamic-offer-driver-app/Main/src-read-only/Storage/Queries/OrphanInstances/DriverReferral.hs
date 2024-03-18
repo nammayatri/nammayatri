@@ -13,7 +13,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Storage.Beam.DriverReferral as Beam
 
 instance FromTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferral where
-  fromTType' Beam.DriverReferralT {..} = do
+  fromTType' (Beam.DriverReferralT {..}) = do
     pure $
       Just
         Domain.Types.DriverReferral.DriverReferral
@@ -25,7 +25,7 @@ instance FromTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferr
           }
 
 instance ToTType' Beam.DriverReferral Domain.Types.DriverReferral.DriverReferral where
-  toTType' Domain.Types.DriverReferral.DriverReferral {..} = do
+  toTType' (Domain.Types.DriverReferral.DriverReferral {..}) = do
     Beam.DriverReferralT
       { Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.linkedAt = linkedAt,

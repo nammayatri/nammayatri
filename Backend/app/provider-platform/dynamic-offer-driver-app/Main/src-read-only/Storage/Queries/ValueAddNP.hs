@@ -14,55 +14,25 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.ValueAddNP as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.ValueAddNP.ValueAddNP -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ValueAddNP.ValueAddNP -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ValueAddNP.ValueAddNP] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ValueAddNP.ValueAddNP] -> m ())
 createMany = traverse_ create
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Bool -> m ([Domain.Types.ValueAddNP.ValueAddNP])
-findAll enabled = do
-  findAllWithKV
-    [ Se.Is Beam.enabled $ Se.Eq enabled
-    ]
+findAll :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> m [Domain.Types.ValueAddNP.ValueAddNP])
+findAll enabled = do findAllWithKV [Se.Is Beam.enabled $ Se.Eq enabled]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m (Maybe (Domain.Types.ValueAddNP.ValueAddNP))
-findByPrimaryKey subscriberId = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.subscriberId $ Se.Eq subscriberId
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.ValueAddNP.ValueAddNP))
+findByPrimaryKey subscriberId = do findOneWithKV [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.ValueAddNP.ValueAddNP -> m ()
-updateByPrimaryKey Domain.Types.ValueAddNP.ValueAddNP {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ValueAddNP.ValueAddNP -> m ())
+updateByPrimaryKey (Domain.Types.ValueAddNP.ValueAddNP {..}) = do
   _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.enabled enabled,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
-    ]
-    [ Se.And
-        [ Se.Is Beam.subscriberId $ Se.Eq subscriberId
-        ]
-    ]
+  updateWithKV [Se.Set Beam.enabled enabled, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId]]
 
 instance FromTType' Beam.ValueAddNP Domain.Types.ValueAddNP.ValueAddNP where
-  fromTType' Beam.ValueAddNPT {..} = do
-    pure $
-      Just
-        Domain.Types.ValueAddNP.ValueAddNP
-          { enabled = enabled,
-            subscriberId = subscriberId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
+  fromTType' (Beam.ValueAddNPT {..}) = do pure $ Just Domain.Types.ValueAddNP.ValueAddNP {enabled = enabled, subscriberId = subscriberId, createdAt = createdAt, updatedAt = updatedAt}
 
 instance ToTType' Beam.ValueAddNP Domain.Types.ValueAddNP.ValueAddNP where
-  toTType' Domain.Types.ValueAddNP.ValueAddNP {..} = do
-    Beam.ValueAddNPT
-      { Beam.enabled = enabled,
-        Beam.subscriberId = subscriberId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }
+  toTType' (Domain.Types.ValueAddNP.ValueAddNP {..}) = do Beam.ValueAddNPT {Beam.enabled = enabled, Beam.subscriberId = subscriberId, Beam.createdAt = createdAt, Beam.updatedAt = updatedAt}

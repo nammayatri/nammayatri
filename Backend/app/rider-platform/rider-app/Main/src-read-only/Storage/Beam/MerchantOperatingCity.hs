@@ -26,8 +26,7 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
   deriving (Generic, B.Beamable)
 
 instance B.Table MerchantOperatingCityT where
-  data PrimaryKey MerchantOperatingCityT f = MerchantOperatingCityId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey MerchantOperatingCityT f = MerchantOperatingCityId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = MerchantOperatingCityId . id
 
 type MerchantOperatingCity = MerchantOperatingCityT Identity

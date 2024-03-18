@@ -31,8 +31,7 @@ data TicketBooking = TicketBooking
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BookingStatus = Pending | Failed | Booked
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BookingStatus = Pending | Failed | Booked deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 

@@ -16,37 +16,27 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.PlanTranslation as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.PlanTranslation.PlanTranslation -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PlanTranslation.PlanTranslation -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.PlanTranslation.PlanTranslation] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PlanTranslation.PlanTranslation] -> m ())
 createMany = traverse_ create
 
-findByPlanIdAndLanguage :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Kernel.External.Types.Language -> m (Maybe (Domain.Types.PlanTranslation.PlanTranslation))
-findByPlanIdAndLanguage (Kernel.Types.Id.Id planId) language = do
-  findOneWithKV
-    [ Se.Is Beam.planId $ Se.Eq planId,
-      Se.Is Beam.language $ Se.Eq language
-    ]
+findByPlanIdAndLanguage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Kernel.External.Types.Language -> m (Maybe Domain.Types.PlanTranslation.PlanTranslation))
+findByPlanIdAndLanguage (Kernel.Types.Id.Id planId) language = do findOneWithKV [Se.Is Beam.planId $ Se.Eq planId, Se.Is Beam.language $ Se.Eq language]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m (Maybe (Domain.Types.PlanTranslation.PlanTranslation))
-findByPrimaryKey language (Kernel.Types.Id.Id planId) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.language $ Se.Eq language,
-          Se.Is Beam.planId $ Se.Eq planId
-        ]
-    ]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m (Maybe Domain.Types.PlanTranslation.PlanTranslation))
+findByPrimaryKey language (Kernel.Types.Id.Id planId) = do findOneWithKV [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.planId $ Se.Eq planId]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.PlanTranslation.PlanTranslation -> m ()
-updateByPrimaryKey Domain.Types.PlanTranslation.PlanTranslation {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PlanTranslation.PlanTranslation -> m ())
+updateByPrimaryKey (Domain.Types.PlanTranslation.PlanTranslation {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.description description,
-      Se.Set Beam.name name,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
-    ]
+    [Se.Set Beam.description description, Se.Set Beam.name name, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.language $ Se.Eq language,
           Se.Is Beam.planId $ Se.Eq (Kernel.Types.Id.getId planId)
@@ -54,7 +44,7 @@ updateByPrimaryKey Domain.Types.PlanTranslation.PlanTranslation {..} = do
     ]
 
 instance FromTType' Beam.PlanTranslation Domain.Types.PlanTranslation.PlanTranslation where
-  fromTType' Beam.PlanTranslationT {..} = do
+  fromTType' (Beam.PlanTranslationT {..}) = do
     pure $
       Just
         Domain.Types.PlanTranslation.PlanTranslation
@@ -67,7 +57,7 @@ instance FromTType' Beam.PlanTranslation Domain.Types.PlanTranslation.PlanTransl
           }
 
 instance ToTType' Beam.PlanTranslation Domain.Types.PlanTranslation.PlanTranslation where
-  toTType' Domain.Types.PlanTranslation.PlanTranslation {..} = do
+  toTType' (Domain.Types.PlanTranslation.PlanTranslation {..}) = do
     Beam.PlanTranslationT
       { Beam.description = description,
         Beam.language = language,

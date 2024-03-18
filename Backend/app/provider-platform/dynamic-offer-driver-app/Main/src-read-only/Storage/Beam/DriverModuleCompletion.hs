@@ -30,8 +30,7 @@ data DriverModuleCompletionT f = DriverModuleCompletionT
   deriving (Generic, B.Beamable)
 
 instance B.Table DriverModuleCompletionT where
-  data PrimaryKey DriverModuleCompletionT f = DriverModuleCompletionId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey DriverModuleCompletionT f = DriverModuleCompletionId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = DriverModuleCompletionId . completionId
 
 type DriverModuleCompletion = DriverModuleCompletionT Identity

@@ -15,34 +15,23 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.Volunteer as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Volunteer.Volunteer -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Volunteer.Volunteer -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Volunteer.Volunteer] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Volunteer.Volunteer] -> m ())
 createMany = traverse_ create
 
-findAllByPlace :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Data.Text.Text -> m ([Domain.Types.Volunteer.Volunteer])
-findAllByPlace place = do
-  findAllWithKV
-    [ Se.Is Beam.place $ Se.Eq place
-    ]
+findAllByPlace :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m [Domain.Types.Volunteer.Volunteer])
+findAllByPlace place = do findAllWithKV [Se.Is Beam.place $ Se.Eq place]
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe (Domain.Types.Volunteer.Volunteer))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe Domain.Types.Volunteer.Volunteer))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe (Domain.Types.Volunteer.Volunteer))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe Domain.Types.Volunteer.Volunteer))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Volunteer.Volunteer -> m ()
-updateByPrimaryKey Domain.Types.Volunteer.Volunteer {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Volunteer.Volunteer -> m ())
+updateByPrimaryKey (Domain.Types.Volunteer.Volunteer {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
@@ -51,13 +40,10 @@ updateByPrimaryKey Domain.Types.Volunteer.Volunteer {..} = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
-  fromTType' Beam.VolunteerT {..} = do
+  fromTType' (Beam.VolunteerT {..}) = do
     pure $
       Just
         Domain.Types.Volunteer.Volunteer
@@ -70,7 +56,7 @@ instance FromTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
           }
 
 instance ToTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
-  toTType' Domain.Types.Volunteer.Volunteer {..} = do
+  toTType' (Domain.Types.Volunteer.Volunteer {..}) = do
     Beam.VolunteerT
       { Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,

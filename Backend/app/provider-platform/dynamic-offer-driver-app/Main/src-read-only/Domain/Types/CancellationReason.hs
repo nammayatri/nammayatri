@@ -18,7 +18,6 @@ data CancellationReason = CancellationReason
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-newtype CancellationReasonCode = CancellationReasonCode Data.Text.Text
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+newtype CancellationReasonCode = CancellationReasonCode Data.Text.Text deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationReasonCode)

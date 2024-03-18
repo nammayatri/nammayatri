@@ -14,28 +14,20 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.ServiceCategory as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.ServiceCategory.ServiceCategory -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ServiceCategory.ServiceCategory -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ServiceCategory.ServiceCategory] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ServiceCategory.ServiceCategory] -> m ())
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe (Domain.Types.ServiceCategory.ServiceCategory))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe Domain.Types.ServiceCategory.ServiceCategory))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe (Domain.Types.ServiceCategory.ServiceCategory))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe Domain.Types.ServiceCategory.ServiceCategory))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.ServiceCategory.ServiceCategory -> m ()
-updateByPrimaryKey Domain.Types.ServiceCategory.ServiceCategory {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ServiceCategory.ServiceCategory -> m ())
+updateByPrimaryKey (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.allowedSeats allowedSeats,
@@ -48,13 +40,10 @@ updateByPrimaryKey Domain.Types.ServiceCategory.ServiceCategory {..} = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCategory where
-  fromTType' Beam.ServiceCategoryT {..} = do
+  fromTType' (Beam.ServiceCategoryT {..}) = do
     pure $
       Just
         Domain.Types.ServiceCategory.ServiceCategory
@@ -71,7 +60,7 @@ instance FromTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCat
           }
 
 instance ToTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCategory where
-  toTType' Domain.Types.ServiceCategory.ServiceCategory {..} = do
+  toTType' (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
     Beam.ServiceCategoryT
       { Beam.allowedSeats = allowedSeats,
         Beam.availableSeats = availableSeats,

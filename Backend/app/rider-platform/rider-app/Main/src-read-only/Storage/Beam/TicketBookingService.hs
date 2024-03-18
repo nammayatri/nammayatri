@@ -27,13 +27,12 @@ data TicketBookingServiceT f = TicketBookingServiceT
     ticketServiceId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     verificationCount :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table TicketBookingServiceT where
-  data PrimaryKey TicketBookingServiceT f = TicketBookingServiceId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey TicketBookingServiceT f = TicketBookingServiceId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = TicketBookingServiceId . id
 
 type TicketBookingService = TicketBookingServiceT Identity

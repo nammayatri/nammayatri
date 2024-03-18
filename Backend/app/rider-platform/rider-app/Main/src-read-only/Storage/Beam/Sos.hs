@@ -19,16 +19,15 @@ data SosT f = SosT
     rideId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.Sos.SosStatus,
     ticketId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table SosT where
-  data PrimaryKey SosT f = SosId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey SosT f = SosId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = SosId . id
 
 type Sos = SosT Identity

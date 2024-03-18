@@ -15,56 +15,36 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.BapMetadata as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BapMetadata.BapMetadata -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BapMetadata.BapMetadata -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.BapMetadata.BapMetadata] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BapMetadata.BapMetadata] -> m ())
 createMany = traverse_ create
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe (Domain.Types.BapMetadata.BapMetadata))
-findById (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
-    ]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
+findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe (Domain.Types.BapMetadata.BapMetadata))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
-        ]
-    ]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.BapMetadata.BapMetadata -> m ()
-updateByPrimaryKey Domain.Types.BapMetadata.BapMetadata {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BapMetadata.BapMetadata -> m ())
+updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.logoUrl $ Kernel.Prelude.showBaseUrl logoUrl,
+    [ Se.Set Beam.logoUrl (Kernel.Prelude.showBaseUrl logoUrl),
       Se.Set Beam.name name,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-        ]
-    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
-  fromTType' Beam.BapMetadataT {..} = do
+  fromTType' (Beam.BapMetadataT {..}) = do
     logoUrl' <- Kernel.Prelude.parseBaseUrl logoUrl
-
-    pure $
-      Just
-        Domain.Types.BapMetadata.BapMetadata
-          { id = Kernel.Types.Id.Id id,
-            logoUrl = logoUrl',
-            name = name,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
+    pure $ Just Domain.Types.BapMetadata.BapMetadata {id = Kernel.Types.Id.Id id, logoUrl = logoUrl', name = name, createdAt = createdAt, updatedAt = updatedAt}
 
 instance ToTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
-  toTType' Domain.Types.BapMetadata.BapMetadata {..} = do
+  toTType' (Domain.Types.BapMetadata.BapMetadata {..}) = do
     Beam.BapMetadataT
       { Beam.id = Kernel.Types.Id.getId id,
         Beam.logoUrl = Kernel.Prelude.showBaseUrl logoUrl,

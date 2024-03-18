@@ -13,7 +13,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Storage.Beam.Rating as Beam
 
 instance FromTType' Beam.Rating Domain.Types.Rating.Rating where
-  fromTType' Beam.RatingT {..} = do
+  fromTType' (Beam.RatingT {..}) = do
     pure $
       Just
         Domain.Types.Rating.Rating
@@ -30,7 +30,7 @@ instance FromTType' Beam.Rating Domain.Types.Rating.Rating where
           }
 
 instance ToTType' Beam.Rating Domain.Types.Rating.Rating where
-  toTType' Domain.Types.Rating.Rating {..} = do
+  toTType' (Domain.Types.Rating.Rating {..}) = do
     Beam.RatingT
       { Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,

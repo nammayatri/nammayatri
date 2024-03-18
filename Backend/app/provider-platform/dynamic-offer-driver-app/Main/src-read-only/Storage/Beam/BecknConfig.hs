@@ -33,16 +33,15 @@ data BecknConfigT f = BecknConfigT
     subscriberUrl :: B.C f Kernel.Prelude.Text,
     uniqueKeyId :: B.C f Kernel.Prelude.Text,
     vehicleCategory :: B.C f Domain.Types.BecknConfig.VehicleCategory,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table BecknConfigT where
-  data PrimaryKey BecknConfigT f = BecknConfigId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey BecknConfigT f = BecknConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = BecknConfigId . id
 
 type BecknConfig = BecknConfigT Identity

@@ -16,13 +16,15 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.NotificationSoundsConfig as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig -> m ())
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig] -> m ())
 createMany = traverse_ create
 
-findByNotificationType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.External.Notification.Interface.Types.Category -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig))
+findByNotificationType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.External.Notification.Interface.Types.Category -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig))
 findByNotificationType notificationType (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findOneWithKV
     [ Se.And
@@ -31,7 +33,9 @@ findByNotificationType notificationType (Kernel.Types.Id.Id merchantOperatingCit
         ]
     ]
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Notification.Interface.Types.Category -> m (Maybe (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig))
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Notification.Interface.Types.Category -> m (Maybe Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig))
 findByPrimaryKey (Kernel.Types.Id.Id merchantOperatingCityId) notificationType = do
   findOneWithKV
     [ Se.And
@@ -40,8 +44,8 @@ findByPrimaryKey (Kernel.Types.Id.Id merchantOperatingCityId) notificationType =
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig -> m ()
-updateByPrimaryKey Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig {..} = do
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig -> m ())
+updateByPrimaryKey (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.blindSound blindSound,
@@ -50,14 +54,10 @@ updateByPrimaryKey Domain.Types.NotificationSoundsConfig.NotificationSoundsConfi
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.notificationType $ Se.Eq notificationType
-        ]
-    ]
+    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.notificationType $ Se.Eq notificationType]]
 
 instance FromTType' Beam.NotificationSoundsConfig Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig where
-  fromTType' Beam.NotificationSoundsConfigT {..} = do
+  fromTType' (Beam.NotificationSoundsConfigT {..}) = do
     pure $
       Just
         Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig
@@ -71,7 +71,7 @@ instance FromTType' Beam.NotificationSoundsConfig Domain.Types.NotificationSound
           }
 
 instance ToTType' Beam.NotificationSoundsConfig Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig where
-  toTType' Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig {..} = do
+  toTType' (Domain.Types.NotificationSoundsConfig.NotificationSoundsConfig {..}) = do
     Beam.NotificationSoundsConfigT
       { Beam.blindSound = blindSound,
         Beam.defaultSound = defaultSound,
