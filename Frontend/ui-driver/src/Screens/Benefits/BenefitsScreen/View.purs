@@ -242,7 +242,7 @@ driverReferralCode push state =
                 , gravity CENTER
                 , padding (Padding 5 5 5 5)
                 , afterRender (\action -> do
-                                runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType config.referralDomain) (getNewIDWithTag "ReferralQRCode") 500 0
+                                runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) (getNewIDWithTag "ReferralQRCode") 500 0
                               ) (const RenderQRCode)
                 ]
             , textView
@@ -434,7 +434,7 @@ appQRCodeView push state =
             , id (getNewIDWithTag "ExpandedReferralQRCode")
             , padding (Padding 5 5 5 5)
             , afterRender (\action -> do
-                            runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType state.data.config.appData.website) (getNewIDWithTag "ExpandedReferralQRCode") 280 0
+                            runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) (getNewIDWithTag "ExpandedReferralQRCode") 280 0
                           ) (const RenderQRCode)
             ]
         , PrimaryButton.view (push <<< PrimaryButtonActionController state) (primaryButtonConfig state)

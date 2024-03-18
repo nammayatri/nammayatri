@@ -633,7 +633,12 @@ getCityConfig cityConfig cityName = do
                             enableVariantBasedSubscription : true,
                             variantList : ["AutoCategory"]
                           },
-                          showEarningSection: true
+                          showEarningSection: true,
+                          referral : {
+                              domain : ""
+                            , customerAppId : ""
+                            , driverAppId : ""
+                          }
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   
@@ -661,11 +666,13 @@ splitBasedOnLanguage str =
                 "TE_IN" | len > 6 -> 6
                 _ -> 0
 
-generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String -> String
-generateReferralLink source medium term content campaign driverReferralType domain =
+generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String
+generateReferralLink source medium term content campaign driverReferralType =
   let config = getAppConfig appConfig 
+      cityConfig = getCityConfig config.cityConfig source
       path = if driverReferralType == DRIVER then "/driverRefer" else "/refer"
-      packageId = if driverReferralType == DRIVER then config.referral.driverAppId else config.referral.customerAppId
+      packageId = if driverReferralType == DRIVER then cityConfig.referral.driverAppId else cityConfig.referral.customerAppId
+      domain = cityConfig.referral.domain
   in domain <> path <> "?referrer=" 
       <> "utm_source%3D" <> source 
       <> "%26utm_medium%3D" <> medium 

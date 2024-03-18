@@ -195,7 +195,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : true,
           "variantList" : ["AutoCategory"]
         },
-        "showEarningSection" : true
+        "showEarningSection" : true,
+        "referral" : {
+            "domain" : "https://nammayatri.in"
+          , "customerAppId" : "in.juspay.nammayatri"
+          , "driverAppId" : "in.juspay.nammayatripartner"
+        }
       },
       {
         "cityName" : "Hyderabad",
@@ -220,7 +225,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : true
+        "showEarningSection" : true,
+        "referral" : {
+            "domain" : "https://www.manayatri.in"
+          , "customerAppId" : "in.mobility.manayatri"
+          , "driverAppId" : "in.mobility.manayatripartner"
+        }
       },
       {
         "cityName" : "Mysore",
@@ -245,7 +255,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : true
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       },
       {
         "cityName" : "Delhi",
@@ -270,7 +285,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : true
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       },
       {
         "cityName" : "Chennai",
@@ -295,7 +315,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : false
+        "showEarningSection" : false,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       },
       {
         "cityName" : "Coimbatore",
@@ -320,7 +345,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : true
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       },
       {
         "cityName" : "Puducherry",
@@ -345,7 +375,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : false
+        "showEarningSection" : false,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       },
       {
         "cityName" : "Tumakuru",
@@ -369,7 +404,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : true
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       },
       {
         "cityName" : "Gurugram",
@@ -394,7 +434,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : true
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       },
       {
         "cityName" : "Noida",
@@ -418,7 +463,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : true
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       },
       {
         "cityName" : "TamilNaduCities",
@@ -443,7 +493,12 @@ window.getMerchantConfig = function () {
           "enableVariantBasedSubscription" : false,
           "variantList" : []
         },
-        "showEarningSection" : false
+        "showEarningSection" : false,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
       }
   ]
   , "dashboard" : {
