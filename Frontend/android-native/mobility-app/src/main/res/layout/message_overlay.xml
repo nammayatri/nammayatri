@@ -69,6 +69,7 @@
                         android:textSize="16dp" />
 
                     <LinearLayout
+                        android:orientation="horizontal"
                         android:layout_marginTop="10dp"
                         android:layout_width="match_parent"
                         android:id="@+id/dynamic_views"

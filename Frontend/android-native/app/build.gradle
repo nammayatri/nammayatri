@@ -235,7 +235,7 @@ android {
         // To check for a certain build type, use variant.buildType.name == "<buildType>"
         def names = variant.flavors*.name
         def build = variant.buildType.name
-        if (names.contains("dev") && build.contains("release")) {
+        if ((names.contains("dev") && build.contains("release")) || names.any { it.contains("passCulture") }) {
             // Gradle ignores any variants that satisfy the conditions above.
             setIgnore(true)
         }
