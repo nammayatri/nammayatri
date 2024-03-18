@@ -182,6 +182,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.checkImageExtractionForDashboard = checkImageExtractionForDashboard,
         BeamTC.searchRepeatLimit = searchRepeatLimit,
         BeamTC.actualRideDistanceDiffThreshold = actualRideDistanceDiffThreshold,
+        BeamTC.recomputeIfPickupDropNotOutsideOfThreshold = recomputeIfPickupDropNotOutsideOfThreshold,
         BeamTC.upwardsRecomputeBuffer = upwardsRecomputeBuffer,
         BeamTC.approxRideDistanceDiffThreshold = approxRideDistanceDiffThreshold,
         BeamTC.driverPaymentCycleBuffer = nominalDiffTimeToSeconds driverPaymentCycleBuffer,
