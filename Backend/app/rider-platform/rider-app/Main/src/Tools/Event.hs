@@ -144,7 +144,7 @@ data AutoCompleteEventData = AutoCompleteEventData
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Show, Eq, Generic, FromJSON)
+  deriving (Show, Eq, Generic, FromJSON, ToJSON)
 
 data RouteDataEvent = RouteDataEvent
   { mapsProvider :: Maybe Text,
