@@ -15,6 +15,7 @@
 
 module Domain.Types.SearchRequestForDriver where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Types.BapMetadata as DSM
 import Domain.Types.Common as DTC
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
@@ -143,8 +144,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       durationToPickup = nearbyReq.durationToPickup,
       baseFare = searchTry.baseFare,
       customerExtraFee = searchTry.customerExtraFee,
-      fromLocation = convertDomainType searchRequest.fromLocation,
-      toLocation = convertDomainType <$> searchRequest.toLocation,
+      fromLocation = convertDomainType "Pick Up" searchRequest.fromLocation,
+      toLocation = convertDomainType "Drop" <$> searchRequest.toLocation,
       newFromLocation = searchRequest.fromLocation,
       newToLocation = searchRequest.toLocation,
       distance = searchRequest.estimatedDistance,
@@ -177,8 +178,8 @@ extractDriverPickupCharges farePolicyDetails =
     DFP.ProgressiveDetails det -> Just det.deadKmFare
     _ -> Nothing
 
-convertDomainType :: DLoc.Location -> DSSL.SearchReqLocation
-convertDomainType DLoc.Location {..} =
+convertDomainType :: Text -> DLoc.Location -> DSSL.SearchReqLocation
+convertDomainType pincodePlaceHolder DLoc.Location {..} =
   DSSL.SearchReqLocation
     { id = cast id,
       street = address.street,
@@ -187,7 +188,7 @@ convertDomainType DLoc.Location {..} =
       state = address.state,
       country = address.country,
       building = address.building,
-      areaCode = address.areaCode,
+      areaCode = address.areaCode <|> Just pincodePlaceHolder,
       area = address.area,
       full_address = address.fullAddress,
       ..
