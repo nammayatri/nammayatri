@@ -25,6 +25,7 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
+import Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -45,6 +46,8 @@ data BookingStatus
   | CANCELLED
   | TRIP_ASSIGNED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance CH.ClickhouseValue BookingStatus
 
 $(mkBeamInstancesForEnum ''BookingStatus)
 
