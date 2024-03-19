@@ -103,6 +103,7 @@ foreign import resetIdMap :: EffectFn1 String Unit
 foreign import updatePushInIdMap :: Fn2 String Boolean Unit
 foreign import getValueFromIdMap :: EffectFn1 String CarouselHolderData
 foreign import getRandomID :: Int -> String
+foreign import toStringJSON :: forall a. a -> String
 
 foreign import isTrue :: forall a. a -> Boolean
 os :: String

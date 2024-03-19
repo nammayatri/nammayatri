@@ -16,6 +16,7 @@ import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode, class Encode)
 import Data.Generic.Rep (class Generic)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
+import Data.Maybe
 
 data Action = Support
             | RideDetails
@@ -80,7 +81,8 @@ config = {
       text : "",
       background : Color.black900,
       textColor : Color.white900,
-      visible : false
+      visible : false,
+      icon : Nothing
     },
     infoPill : {
       image : "",
@@ -254,7 +256,8 @@ type TopPill = {
   visible :: Boolean,
   background :: String,
   text :: String,
-  textColor :: String
+  textColor :: String,
+  icon :: Maybe String
 }
 
 type LottieQRAnim = {

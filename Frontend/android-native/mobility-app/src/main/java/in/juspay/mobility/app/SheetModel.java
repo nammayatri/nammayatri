@@ -11,7 +11,7 @@ package in.juspay.mobility.app;
 public class SheetModel {
     private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant;
     private String requestId;
-    private int startTime;
+    private int startTime, specialZoneExtraTip;
     private double updatedAmount;
     private double offeredPrice;
     private int customerExtraFee;
@@ -25,7 +25,7 @@ public class SheetModel {
 
     private final Boolean disabilityTag;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
-    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated;
+    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup;
     private double srcLat, srcLng, destLat, destLng;
 
     public SheetModel(String pickUpDistance,
@@ -56,7 +56,10 @@ public class SheetModel {
                       double srcLat,
                       double srcLng,
                       double destLat,
-                      double destLng){
+                      double destLng,
+                      boolean specialZonePickup,
+                      int specialZoneExtraTip
+    ){
 
         this.srcLat = srcLat;
         this.srcLng = srcLng;
@@ -78,10 +81,10 @@ public class SheetModel {
         this.driverMaxExtraFee = driverMaxExtraFee;
         this.rideRequestPopupDelayDuration = rideRequestPopupDelayDuration;
         this.negotiationUnit = negotiationUnit;
-        this.buttonIncreasePriceAlpha = 1.0f;
-        this.buttonIncreasePriceClickable = true;
-        this.buttonDecreasePriceAlpha = 0.5f;
-        this.buttonDecreasePriceClickable = false;
+        this.buttonIncreasePriceAlpha = specialZoneExtraTip <= 0 ? 1.0f : 0.5f;
+        this.buttonIncreasePriceClickable = specialZoneExtraTip <= 0;
+        this.buttonDecreasePriceAlpha = specialZoneExtraTip > 0 ? 1.0f : 0.5f;
+        this.buttonDecreasePriceClickable = specialZoneExtraTip > 0;
         this.currency = currency;
         this.specialLocationTag = specialLocationTag;
         this.customerExtraFee = customerExtraFee;
@@ -93,6 +96,20 @@ public class SheetModel {
         this.gotoTag = gotoTag;
         this.isTranslated = isTranslated;
         this.driverPickUpCharges = driverPickUpCharges;
+        this.specialZonePickup = specialZonePickup;
+        this.specialZoneExtraTip = specialZoneExtraTip;
+    }
+
+    public boolean getSpecialZonePickup(){
+        return specialZonePickup;
+    }
+
+    public int getSpecialZoneExtraTip (){
+        return specialZoneExtraTip;
+    }
+
+    public void setSpecialZoneExtraTip(int updatedAmount) {
+        this.specialZoneExtraTip = updatedAmount;
     }
 
     public boolean isGotoTag() {

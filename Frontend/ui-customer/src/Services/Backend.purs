@@ -35,8 +35,8 @@ import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime)
-import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
+import JBridge as JB
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -59,6 +59,8 @@ import ConfigProvider as CP
 import Locale.Utils
 import MerchantConfig.Types (GeoCodeConfig)
 import Debug
+import Effect.Uncurried (runEffectFn9)
+import Engineering.Helpers.BackTrack (liftFlowBT)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -340,8 +342,8 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> Boolean -> Boolean -> String -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd sourceManuallyMoved destManuallyMoved sessionToken =
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> Boolean -> Boolean -> String -> Boolean -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation =
     let appConfig = CP.getAppConfig CP.appConfig
     in  SearchReq { "contents" : OneWaySearchReq{
                                     "destination" : SearchReqLocation {
@@ -361,7 +363,8 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd sourceManuallyMoved destMa
                                     "isReallocationEnabled" : Just appConfig.feature.enableReAllocation,
                                     "isSourceManuallyMoved" : Just sourceManuallyMoved,
                                     "isDestinationManuallyMoved" : Just destManuallyMoved,
-                                    "sessionToken" : Just sessionToken
+                                    "sessionToken" : Just sessionToken,
+                                    "isSpecialLocation" : Just isSpecialLocation
                                 },
                     "fareProductType" : "ONE_WAY"
                    }
@@ -716,9 +719,9 @@ sendIssueBT req = do
             BackT $ pure GoBack
 
 ----------------------------------------------------------------------------------------------
-drawMapRoute :: Number -> Number -> Number -> Number -> Markers -> String -> String -> String -> Maybe Route -> String -> MapRouteConfig -> FlowBT String (Maybe Route)
-drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddress existingRoute routeAPIType specialLocation = do
-    _ <- pure $ removeAllPolylines ""
+drawMapRoute :: Number -> Number -> Number -> Number -> JB.MarkerConfig -> JB.MarkerConfig -> String -> Maybe Route -> String -> MapRouteConfig -> FlowBT String (Maybe Route)
+drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig routeType existingRoute routeAPIType specialLocation = do
+    void $ pure $ removeAllPolylines ""
     case existingRoute of
         Just (Route route) -> do
             let (Snapped points) = route.points
@@ -735,14 +738,14 @@ drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddr
             callDrawRoute route
     where
         callDrawRoute :: Maybe Route -> FlowBT String (Maybe Route)
-        callDrawRoute route =
+        callDrawRoute route = do
             case route of
                 Just (Route routes) ->
                     if (routes.distance <= 50000) then do
-                      lift $ lift $ liftFlow $ drawRoute (walkCoordinates routes.points) "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation
+                      void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinates routes.points) "LineString" "#323643" true sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
                       pure route
                     else do
-                      lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation
+                      void $ liftFlowBT $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false sourceMarkerConfig destMarkerConfig 8 routeType specialLocation
                       pure route 
                 Nothing -> pure route
 

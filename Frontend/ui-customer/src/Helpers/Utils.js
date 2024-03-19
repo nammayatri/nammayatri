@@ -227,10 +227,6 @@ export const decodeError = function (er) {
   }
 };
 
-export const toStringJSON = function (attr) {
-  return JSON.stringify(attr);
-};
-
 export const didReceiverMessage = function() {
   try {
     return window.didReceiverMessage || false;

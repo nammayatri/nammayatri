@@ -1294,3 +1294,12 @@ getKN stringKey =
         ADD_VEHICLE -> "ವಾಹನ ಸೇರಿಸಿ"
         SELECT_YOUR_VEHICLE_TYPE -> "ನಿಮ್ಮ ವಾಹನದ ರೀತಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
         CAR -> "ಕಾರು"
+        SPECIAL_PICKUP_ZONE_NEARBY -> "ಹತ್ತಿರದ ವಿಶೇಷ ಪಿಕಪ್ ಜೋನ್"
+        ZONE_PICKUP -> "ಪಿಕಪ್ ಜೋನ್"
+        SPECIAL_PICKUP_ZONE_RIDE -> "ವಿಶೇಷ ಪಿಕಪ್ ಜೋನ್ ಸವಾರಿ"
+        SPECIAL_PICKUP_ZONE -> "ವಿಶೇಷ ಪಿಕಪ್ ಜೋನ್"
+        SPECIAL_PICKUP_ZONE_POPUP_INFO -> "ವಿಶೇಷ ಜೋನ್ ನಲ್ಲಿ, ನೀವು ಹತ್ತಿರದ ಗ್ರಾಹಕರಿಂದ ಆದ್ಯತೆಯ ರೈಡ್ ವಿನಂತಿಗಳನ್ನು ಪಡೆಯುತ್ತೀರಿ!”"
+        INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> "ವಿಶೇಷ ಪಿಕಪ್ ವಲಯದಲ್ಲಿ ಆದ್ಯತೆಯ ರೈಡ್ ವಿನಂತಿಗಳನ್ನು ಪಡೆಯಿರಿ"
+        SELECT_A_GREEN_AREA_FOR_PRIORITY_RIDES -> "ಆದ್ಯತೆಯ ಸವಾರಿಗಳಿಗಾಗಿ ಹಸಿರು ಪ್ರದೇಶವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
+        PRIORITY_RIDE_EXPIERENCE -> "ಆದ್ಯತೆಯ ಸವಾರಿ ಅನುಭವ"
+        

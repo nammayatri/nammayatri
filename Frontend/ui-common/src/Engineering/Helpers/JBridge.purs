@@ -46,13 +46,13 @@ import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
 import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
-import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2,Fn5)
 import Foreign.Class (encode)
 import Effect.Aff (makeAff, nonCanceler, Fiber,  launchAff)
 import Prelude((<<<))
 import Effect.Class (liftEffect)
+import Common.Resources.Constants as Constant
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -114,8 +114,8 @@ foreign import renderBase64Image :: String -> String -> Boolean -> String -> Eff
 foreign import storeCallBackUploadMultiPartData :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
-foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
-foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit
+foreign import drawRoute :: EffectFn9 Locations String String Boolean MarkerConfig MarkerConfig Int String MapRouteConfig (Effect Unit)
+foreign import updateMarker :: MarkerConfig -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
 foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
 -- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
@@ -285,6 +285,7 @@ foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit
 foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
+foreign import jBridgeMethodExists :: String -> Boolean
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
@@ -450,6 +451,13 @@ type LocateOnMapConfig = {
   , points :: (Array Location)
   , zoomLevel :: Number
   , labelId :: String
+  , markerCallbackForTags :: Array String
+  , markerCallback :: String
+  , specialZoneMarkerConfig :: SpecialZoneMarkerConfig
+  , navigateToNearestGate :: Boolean
+  , locationName :: String
+  , locateOnMapPadding :: LocateOnMapPadding
+  , enableMapClickListener :: Boolean
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -459,10 +467,70 @@ locateOnMapConfig = {
   , lon : 0.0
   , geoJson : ""
   , points : []
-  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+  , zoomLevel : Constant.zoomLevel
   , labelId : ""
+  , markerCallbackForTags : []
+  , markerCallback : ""
+  , specialZoneMarkerConfig : {
+        showLabel : false
+      , showLabelActionImage : false
+      , labelImage : ""
+      , labelActionImage : ""
+      , theme : "LIGHT"
+      , spotIcon : "ny_ic_zone_pickup_marker_green"
+      , selectedSpotIcon : "ny_ic_selected_zone_pickup_marker_green"
+      , showZoneLabel : false
+      }
+  , navigateToNearestGate : true
+  , locationName : ""
+  , locateOnMapPadding : { left : 1.0, top : 1.0, right : 1.0, bottom : 1.0 }
+  , enableMapClickListener : false
 }
 
+type LocateOnMapPadding = {
+    left :: Number
+  , top :: Number
+  , right :: Number
+  , bottom :: Number
+}
+
+type SpecialZoneMarkerConfig = {
+    showLabelActionImage :: Boolean
+  , labelActionImage :: String
+  , theme :: String
+  , spotIcon :: String
+  , selectedSpotIcon :: String
+  , showLabel :: Boolean
+  , labelImage :: String
+  , showZoneLabel :: Boolean
+}
+
+type MarkerConfig = {
+    showPointer :: Boolean
+  , pointerIcon :: String
+  , primaryText :: String
+  , secondaryText :: String
+  , labelImage :: String
+  , labelActionImage :: String
+  , markerCallback :: String
+  , markerCallbackForTags :: Array String
+  , theme :: String
+  , position :: Paths
+}
+
+defaultMarkerConfig :: MarkerConfig
+defaultMarkerConfig = {
+    showPointer : true
+  , pointerIcon : ""
+  , primaryText : ""
+  , secondaryText : ""
+  , labelImage : ""
+  , labelActionImage : ""
+  , markerCallback : ""
+  , markerCallbackForTags : []
+  , theme : "DARK"
+  , position : { lat : 0.0, lng : 0.0 }
+}
 
 type MapRouteConfig = {
     sourceSpecialTagIcon :: String
@@ -487,16 +555,8 @@ type Location = {
   lng :: Number,
   place :: String,
   address :: Maybe String,
-  city :: Maybe String
-}
-
-type UpdateRouteMarker = {
-    locations :: Locations
-  , sourceName :: String
-  , destName :: String
-  , sourceIcon :: String
-  , destIcon :: String
-  , mapRouteConfig :: MapRouteConfig
+  city :: Maybe String,
+  isSpecialPickUp :: Maybe Boolean
 }
 
 type Suggestions = Array

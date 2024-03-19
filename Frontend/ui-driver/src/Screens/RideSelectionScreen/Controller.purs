@@ -195,6 +195,7 @@ rideHistoryListTransformer list categoryAction =
     , gotoTagVisibility : toPropValue if isJust ride.driverGoHomeRequestId then "visible" else "gone"
     , purpleTagVisibility : toPropValue if isJust ride.disabilityTag then "visible" else "gone"
     , tipTagVisibility : toPropValue if isJust ride.customerExtraFee then "visible" else "gone"
+    , specialZonePickup : toPropValue if (HU.checkSpecialPickupZone ride.specialLocationTag) then "visible" else "gone"
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 
@@ -234,6 +235,7 @@ rideListResponseTransformer list categoryAction =
     , specialZoneLayoutBackground : ""
     , specialZoneImage : ""
     , specialZoneText : ""
+    , specialZonePickup : false
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

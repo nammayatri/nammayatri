@@ -2,6 +2,7 @@ module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
 import Common.DefaultConfig
+import JBridge as JB
 
 config :: AppConfig 
 config =
@@ -227,7 +228,8 @@ config =
     enableSafetyFlow : true, 
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,
-    enableCustomerSupportForSafety : false
+    enableCustomerSupportForSafety : false,
+    enableSpecialPickup : JB.jBridgeMethodExists "locateOnMapV2"
   }
 
   , rideCompletedCardConfig : {
@@ -253,9 +255,9 @@ config =
             apiTriggerRadius : 10.0,
             pickUpToSourceThreshold : 1.0,
             hotSpotConfig :
-              { goToNearestPointWithinRadius : 30.0
+              { goToNearestPointWithinRadius : 8.0
               , showHotSpotsWithinRadius : 150.0
-              , enableHotSpot : false
+              , enableHotSpot : JB.jBridgeMethodExists "locateOnMapV2"
               }
           }
       , labelTextSize : 30

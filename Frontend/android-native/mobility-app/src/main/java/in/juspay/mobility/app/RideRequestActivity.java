@@ -138,7 +138,11 @@ public class RideRequestActivity extends AppCompatActivity {
                     srcLat,
                     srcLng,
                     destLat,
-                    destLng);
+                    destLng,
+                    rideRequestBundle.getBoolean("specialZonePickup"),
+                    rideRequestBundle.getInt("specialZoneExtraTip")
+            );
+
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
@@ -151,17 +155,24 @@ public class RideRequestActivity extends AppCompatActivity {
     @SuppressLint("SetTextI18n")
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
+            boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String variant = model.getRequestedVehicleVariant();
             String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
             String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION)) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
                 pickupChargesText = model.getCustomerTip() > 0 ?
                         (formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip)) :
                         formattedPickupChargesText;
+                if (showSpecialLocationTag && model.getSpecialZoneExtraTip() > 0) {
+                    model.setOfferedPrice(model.getSpecialZoneExtraTip());
+                    model.setUpdatedAmount(model.getSpecialZoneExtraTip());
+                    holder.specialLocExtraTip.setVisibility(View.VISIBLE);
+                }
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
                 holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
@@ -169,7 +180,8 @@ public class RideRequestActivity extends AppCompatActivity {
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
-
+                
+                updateExtraChargesString(holder, model);
                 if (!variant.equals(NO_VARIANT) && service.equals("yatrisathiprovider")) {
                     if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
                         holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
@@ -228,6 +240,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     updateIndicators();
                     holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
                     holder.currency.setText(String.valueOf(model.getCurrency()));
+                    updateExtraChargesString(holder, model);
                     updateIncreaseDecreaseButtons(holder, model);
                     return;
                 case "time":
@@ -237,7 +250,7 @@ public class RideRequestActivity extends AppCompatActivity {
             }
 
             holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
-            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
+            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount() + model.getSpecialZoneExtraTip()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
 
             if( service.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
@@ -346,9 +359,18 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
             });
             holder.buttonDecreasePrice.setOnClickListener(view -> {
+                int specialZoneExtraTip = model.getSpecialZoneExtraTip();
                 if (model.getOfferedPrice() > 0) {
-                    model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
-                    model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
+                    if(specialZoneExtraTip > 0) {
+                        model.setUpdatedAmount(model.getUpdatedAmount() - specialZoneExtraTip);
+                        model.setOfferedPrice(model.getOfferedPrice() - specialZoneExtraTip);
+                        model.setSpecialZoneExtraTip(0);
+                        holder.specialLocExtraTip.setVisibility(View.GONE);
+                    }
+                    else {
+                        model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
+                        model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
+                    }
                     sheetAdapter.notifyItemChanged(position, "inc");
                     if (model.getOfferedPrice() == 0) {
                         mainLooper.post(() -> {
@@ -390,6 +412,20 @@ public class RideRequestActivity extends AppCompatActivity {
         Handler handler = new Handler(Looper.getMainLooper());
         handler.post(() -> {
             Toast.makeText(getApplicationContext(), getString(R.string.test_request_successful), Toast.LENGTH_SHORT).show();
+        });
+    }
+    
+    private void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        mainLooper.post(() -> {
+            String pickupChargesText = model.getCustomerTip() > 0 ?
+                    getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
+                    getString(R.string.includes_pickup_charges_10);
+            if (model.getSpecialZoneExtraTip() > 0) {
+                String pickUpChargesWithZone = pickupChargesText += " " + getString(R.string.and) + " " + sharedPref.getString("CURRENCY", "₹") + " " + model.getSpecialZoneExtraTip() + " " + "Zone pickup extra";
+                holder.textIncludesCharges.setText(pickUpChargesWithZone);
+            } else {
+                holder.textIncludesCharges.setText(pickupChargesText);
+            }
         });
     }
 
@@ -522,13 +558,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     findViewById(R.id.indicator3)));
 
             for (int i = 0; i < 3; i++) {
-                if (viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
-                    indicatorList.get(i).setBackgroundColor(getColor(R.color.grey900));
-                    progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
-                } else {
-                    indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
-                    progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
-                }
+                updateTopBarBackground(i);
                 if (i < sheetArrayList.size()) {
                     indicatorTextList.get(i).setText(
                             (sheetArrayList.get(i).getRequestedVehicleVariant().equals(NotificationUtils.NO_VARIANT) ? "" : (sheetArrayList.get(i).getRequestedVehicleVariant() + "\n")) +
@@ -541,6 +571,17 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void updateTopBarBackground(int i) {
+        if (viewPager2.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
+            boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
+            indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ? R.color.green100 : R.color.grey900));
+            progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
+        } else {
+            indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
+            progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
+        }
     }
 
     private void setIndicatorClickListener() {

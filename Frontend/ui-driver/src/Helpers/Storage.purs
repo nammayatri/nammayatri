@@ -131,6 +131,9 @@ data KeyStore = USER_NAME
                 | ANOTHER_ACTIVITY_LAUNCHED
                 | DRIVER_PROFILE_STATS_RESPONSE
                 | VEHICLE_CATEGORY
+                | SPECIAL_LOCATION_LIST
+                | SPECIAL_LOCATION_LIST_EXPIRY
+                | ENABLE_SPECIAL_PICKUP_WIDGET
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

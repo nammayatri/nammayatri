@@ -1406,3 +1406,13 @@ getReelsVideo reelsKey language = do
   withAPIResult (EP.getReelsData reelsKey language) unwrapResponse $ callAPI headers (GetAllReelsVideosReq reelsKey language)
   where
     unwrapResponse x = x
+    
+----------------------------------------------------------------------- specialLocation list -------------------------------------------------------------------------------
+
+getSpecialLocationListBT ::  SpecialLocationFullReq -> FlowBT String SpecialLocationFullRes
+getSpecialLocationListBT req = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.specialLocationList "") identity errorHandler (lift $ lift $ callAPI headers req)
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack

@@ -56,7 +56,7 @@ import DecodeUtil (stringifyJSON)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff, launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2)
+import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2, runEffectFn9)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, markPerformance, setEventTimestamp, getTimeStampObject)
 import Engineering.Helpers.Commons as EHC
@@ -132,6 +132,7 @@ import Screens.Benefits.LmsQuizScreen.Transformer (transformQuizRespToQuestions)
 import Screens.OnBoardingSubscriptionScreen.Transformer (transformReelsRespToReelsData)
 import Helpers.API as HelpersAPI
 import LocalStorage.Cache (getValueFromCache)
+import Effect.Unsafe (unsafePerformEffect)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -189,6 +190,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
       setValueToLocalStore DISABLE_WIDGET "false"
       setValueToLocalStore BUNDLE_TIME_OUT "500"
+      setValueToLocalStore ENABLE_SPECIAL_PICKUP_WIDGET "true"
       when baseFlow $ setValueToLocalStore APP_SESSION_TRACK_COUNT if (appSessionCount /= "false") then "false" else "true"
       if ((movedToOfflineDate /= "" && isYesterday movedToOfflineDate) || movedToOfflineDate == "__failed") 
         then setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE "" 
@@ -1621,7 +1623,8 @@ myRidesScreenFlow = do
       spLocTagVisibility = selectedCard.spLocTagVisibility,
       specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
       specialZoneImage = selectedCard.specialZoneImage,
-      specialZoneText = selectedCard.specialZoneText
+      specialZoneText = selectedCard.specialZoneText,
+      specialZonePickup = selectedCard.specialZonePickup
       }})
 
       tripDetailsScreenFlow
@@ -2021,13 +2024,15 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalNativeStore RIDE_ID id
           liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
-          void $ lift $ lift $ toggleLoader false
+          void $ pure $ hideKeyboardOnNavigation true
+          void $ pure $ JB.exitLocateOnMap ""
           void $ updateStage $ HomeScreenStage RideStarted
           void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
           void $ pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
+          void $ lift $ lift $ toggleLoader false
           currentRideFlow Nothing Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -2049,9 +2054,10 @@ homeScreenFlow = do
           liftFlowBT $ logEvent logField_ "ny_driver_special_zone_ride_start"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ pure $ hideKeyboardOnNavigation true
-          void $ lift $ lift $ toggleLoader false
+          void $ pure $ JB.exitLocateOnMap ""
           void $ updateStage $ HomeScreenStage RideStarted
           void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
+          void $ lift $ lift $ toggleLoader false
           currentRideFlow Nothing Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -2129,7 +2135,8 @@ homeScreenFlow = do
               spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag),
               specialZoneLayoutBackground = specialZoneConfig.backgroundColor,
               specialZoneImage = specialZoneConfig.imageUrl,
-              specialZoneText = specialZoneConfig.text
+              specialZoneText = specialZoneConfig.text,
+              specialZonePickup = HU.checkSpecialPickupZone response.specialLocationTag
             }})
           let payerVpa = fromMaybe "" response.payerVpa
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
@@ -2156,6 +2163,7 @@ homeScreenFlow = do
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
       void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
       void $ pure $ removeAllPolylines ""
+      void $ pure $ JB.exitLocateOnMap ""
       void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       void $ Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
@@ -2184,7 +2192,7 @@ homeScreenFlow = do
         "DRIVER_ASSIGNMENT" -> do
           let (GlobalState defGlobalState) = defaultGlobalState
           when (isJust defGlobalState.homeScreen.data.activeRide.disabilityTag) $ do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showAccessbilityPopup = true}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showAccessbilityPopup = true, specialZoneProps{ currentGeoHash = "" }}})
           currentRideFlow Nothing Nothing
         "RIDE_REQUESTED"    -> do
           void $ updateStage $ HomeScreenStage RideRequested
@@ -2215,6 +2223,7 @@ homeScreenFlow = do
         Left _ -> pure unit
       homeScreenFlow
     UPDATE_ROUTE state -> do
+      void $ pure $ JB.exitLocateOnMap ""
       let srcLat = if state.props.currentStage == RideAccepted then state.data.currentDriverLat else state.data.activeRide.src_lat
           srcLon = if state.props.currentStage == RideAccepted then state.data.currentDriverLon else state.data.activeRide.src_lon
           destLat = if state.props.currentStage == RideAccepted then state.data.activeRide.src_lat else state.data.activeRide.dest_lat
@@ -2222,37 +2231,56 @@ homeScreenFlow = do
           source = if state.props.currentStage == RideAccepted then "" else state.data.activeRide.source
           destination = if state.props.currentStage == RideAccepted then state.data.activeRide.source else state.data.activeRide.destination
           routeType = if state.props.currentStage == RideAccepted then "pickup" else "trip"
-      if state.props.showDottedRoute then do
+          srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = source }
+          destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_dest_marker", primaryText = destination }
+          
+      if state.data.config.feature.enableSpecialPickup && state.props.currentStage == RideAccepted && state.data.activeRide.specialLocationTag == Just "SpecialZonePickup" then do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
+        let specialPickupZone = HU.findSpecialPickupZone destLat destLon
+        case specialPickupZone of
+          Just pickupZone -> do
+            void $ pure $ removeAllPolylines ""
+            let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = destLat
+                                                                                          , lon = destLon
+                                                                                          , geoJson = pickupZone.geoJson
+                                                                                          , points = pickupZone.gates
+                                                                                          , locationName = pickupZone.locationName
+                                                                                          , navigateToNearestGate = false
+                                                                                          , specialZoneMarkerConfig { showZoneLabel = true
+                                                                                                                    , showLabelActionImage = true }
+                                                                                          , locateOnMapPadding = { left : 2.0, top : 2.0, right : 2.0, bottom : 4.0 } }
+            pure unit
+          Nothing -> pure unit
+      else if state.props.showDottedRoute then do
         let coors = (walkCoordinate srcLon srcLat destLon destLat)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
         void $ pure $ removeAllPolylines ""
-        liftFlowBT $ drawRoute coors "DOT" "#323643" false "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+        void $ liftFlowBT $ runEffectFn9 drawRoute coors "DOT" "#323643" false srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
         homeScreenFlow
-        else if not null state.data.route then do
-          let shortRoute = (state.data.route !! 0)
-          case shortRoute of
-            Just (Route route) -> do
-              let coor = walkCoordinates route.points
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
-              pure $ removeMarker "ic_vehicle_side"
-              void $ pure $ removeAllPolylines ""
-              liftFlowBT $ drawRoute coor "LineString" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-              pure unit
-            Nothing -> pure unit
-          homeScreenFlow
-          else do
-            GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
-            let shortRoute = (routeApiResponse !! 0)
-            case shortRoute of
-              Just (Route route) -> do
-                let coor = walkCoordinates route.points
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
-                pure $ removeMarker "ny_ic_auto"
-                void $ pure $ removeAllPolylines ""
-                liftFlowBT $ drawRoute coor "ic_vehicle_side" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
-                pure unit
-              Nothing -> pure unit
-            homeScreenFlow
+      else if not null state.data.route then do
+        let shortRoute = (state.data.route !! 0)
+        case shortRoute of
+          Just (Route route) -> do
+            let coor = walkCoordinates route.points
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
+            pure $ removeMarker "ic_vehicle_side"
+            void $ pure $ removeAllPolylines ""
+            void $ liftFlowBT $ runEffectFn9 drawRoute coor "LineString" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            pure unit
+          Nothing -> pure unit
+      else do
+        GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq srcLat srcLon destLat destLon) routeType
+        let shortRoute = (routeApiResponse !! 0)
+        case shortRoute of
+          Just (Route route) -> do
+            let coor = walkCoordinates route.points
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
+            pure $ removeMarker "ny_ic_auto"
+            void $ pure $ removeAllPolylines ""
+            void $ liftFlowBT $ runEffectFn9 drawRoute coor "ic_vehicle_side" "#323643" true srcMarkerConfig destMarkerConfig 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+            pure unit
+          Nothing -> pure unit
+      homeScreenFlow
     UPDATE_STAGE stage -> do
       void $ updateStage $ HomeScreenStage stage
       homeScreenFlow
@@ -2345,6 +2373,10 @@ homeScreenFlow = do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverRideStats = Just $ driverStats }      
       updateDriverDataToStates
       modifyScreenState $ HomeScreenStateType $ \currentState -> currentState { data { driverStats = true } }
+      homeScreenFlow
+    UPDATE_SPECIAL_LOCATION_LIST -> do
+      resp <- HelpersAPI.callApiBT $ API.SpecialLocationFullReq
+      void $ pure $ HU.transformSpecialLocationList resp
       homeScreenFlow
   homeScreenFlow
 
@@ -3457,6 +3489,7 @@ driverEarningsFlow = do
       specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
       specialZoneImage = selectedCard.specialZoneImage,
       specialZoneText = selectedCard.specialZoneText,
+      specialZonePickup = selectedCard.specialZonePickup,
       goBackTo = ST.Earning
       }})
       tripDetailsScreenFlow

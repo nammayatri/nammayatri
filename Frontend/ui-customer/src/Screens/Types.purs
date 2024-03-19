@@ -44,6 +44,7 @@ import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
 import PrestoDOM.List
+import JBridge (Location)
 
 type Contacts = {
   name :: String,
@@ -608,6 +609,7 @@ type HomeScreenStateData =
   , contactList :: Maybe (Array NewContacts)
   , followers :: Maybe (Array Followers)
   , vehicleVariant :: String
+  , hotSpotInfo :: Array HotSpotData
   }
 
 type RentalsInfo = 
@@ -743,7 +745,7 @@ type HomeScreenStateProps =
   , findingRidesAgain :: Boolean
   , routeEndPoints :: Maybe RouteEndPoints
   , findingQuotesProgress :: Number
-  , confirmLocationCategory :: String
+  , confirmLocationCategory :: ZoneType
   , zoneTimerExpired :: Boolean
   , canSendSuggestion :: Boolean
   , sheetState :: Maybe BottomSheetState
@@ -788,6 +790,9 @@ type HomeScreenStateProps =
   , selectedEstimateHeight :: Int
   , suggestedRideFlow :: Boolean
   , isSafetyCenterDisabled :: Boolean
+  , locateOnMapProps :: LocateOnMapProps
+  , showSpecialZoneInfoPopup :: Boolean
+  , hotSpot :: HotSpotProps
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1104,14 +1109,6 @@ data ErrorType = INVALID_EMAIL | EMAIL_EXISTS | EMAIL_CANNOT_BE_BLANK | INVALID_
 
 derive instance genericErrorType :: Generic ErrorType _
 instance eqErrorType :: Eq ErrorType where eq = genericEq
-
-type Location = {
-  place :: String,
-  lat :: Number,
-  lng :: Number,
-  address :: Maybe String,
-  city :: Maybe String
-}
 
 type DriverInfoCard =
   { otp :: String
@@ -1451,6 +1448,10 @@ newtype FlowStatusData = FlowStatusData {
   , destination :: Location
   , sourceAddress :: Address
   , destinationAddress :: Address
+  , sourceLabelIcon :: Maybe String
+  , destLabelIcon :: Maybe String
+  , sourceGeoJson :: Maybe String
+  , sourceGates :: Maybe (Array Location)
 }
 
 derive instance genericFlowStatusData :: Generic FlowStatusData _
@@ -1459,12 +1460,14 @@ instance encodeFlowStatusData :: Encode FlowStatusData where encode = defaultEnc
 instance decodeFlowStatusData :: Decode FlowStatusData where decode = defaultDecode
 
 data ZoneType = METRO
+              | SHOPPING_MALL
               | HOSPITAL
               | AIRPORT
               | SCHOOL
               | RAILWAY
               | NOZONE
               | AUTO_BLOCKED
+              | SPECIAL_PICKUP
 
 derive instance genericZoneType :: Generic ZoneType _
 instance showZoneType :: Show ZoneType where show = genericShow
@@ -1895,7 +1898,7 @@ type SearchLocationScreenData =
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
-    confirmLocCategory :: String,
+    confirmLocCategory :: ZoneType,
     metroStations :: Array Station,
     updatedMetroStations :: Array Station
   }
@@ -2168,7 +2171,6 @@ type MetroTicketStatusScreenData = {
   quoteId :: String
 }
 
-
 type MetroTicketStatusScreenProps = {
   showShimmer :: Boolean
 , paymentStatus :: PP.PaymentStatus
@@ -2194,4 +2196,26 @@ instance eqLocationType :: Eq LocationType where eq = genericEq
 
 type GlobalFlowCache = {
   savedLocations :: Maybe SavedLocationsListRes
+}
+
+type LocateOnMapProps = {
+    sourceLocationName :: Maybe String
+  , sourceGeoJson :: Maybe String
+  , sourceGates :: Maybe (Array Location)
+  , isSpecialPickUpGate :: Boolean
+}
+
+data NavigationMode = WALK | DRIVE
+
+derive instance genericNavigationMode :: Generic NavigationMode _
+instance showNavigationMode :: Show NavigationMode where show = genericShow
+
+type HotSpotProps = {
+    selectedSpot :: Maybe Location
+  , centroidPoint :: Maybe Paths
+}
+
+type HotSpotData = {
+    lat :: Number
+  , lon :: Number
 }

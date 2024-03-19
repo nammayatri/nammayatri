@@ -14,7 +14,6 @@
 -}
 module Common.Types.Config where
 
-
 type CommonAppConfig = (
     colors :: Colors
   , primaryButtonConfig :: PrimaryButtonConfig
@@ -131,4 +130,27 @@ type BannerCarousalConfig = {
 type VariantSubscriptionConfig = {
   enableVariantBasedSubscription :: Boolean,
   variantList :: Array String
+}
+
+type GeoJson = {
+    type :: String
+  , features :: Array GeoJsonFeature
+}
+
+type GeoJsonFeature = {
+    type :: String
+  , properties :: GeoJsonProperties
+  , geometry :: GeoJsonGeometry
+}
+
+type GeoJsonProperties = {
+    name :: String
+  , id :: String
+  , defaultDriverExtra :: Int
+  , canQueueUpOnGate :: Boolean
+}
+
+type GeoJsonGeometry = {
+    type :: String
+  , coordinates :: Array (Array (Array (Array Number)))
 }

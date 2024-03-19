@@ -140,16 +140,23 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     @SuppressLint("SetTextI18n")
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
+            boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String variant = model.getRequestedVehicleVariant();
             String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
             String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) || showSpecialLocationTag) {
                 pickupChargesText = model.getCustomerTip() > 0 ?
                         formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
                         formattedPickupChargesText;
+                if (showSpecialLocationTag && model.getSpecialZoneExtraTip() > 0) {
+                    model.setOfferedPrice(model.getSpecialZoneExtraTip());
+                    model.setUpdatedAmount(model.getSpecialZoneExtraTip());
+                    holder.specialLocExtraTip.setVisibility(View.VISIBLE);
+                }
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
+                holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
                 holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);
@@ -159,6 +166,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
 
+                updateExtraChargesString(holder, model);
                 if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
                     if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
                         holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
@@ -218,6 +226,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     updateIndicators();
                     holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
                     holder.currency.setText(String.valueOf(model.getCurrency()));
+                    updateExtraChargesString(holder, model);
                     updateIncreaseDecreaseButtons(holder, model);
                     return;
                 case "time":
@@ -227,7 +236,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
 
             holder.pickUpDistance.setText(model.getPickUpDistance() + " km ");
-            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
+            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount() + model.getSpecialZoneExtraTip()));
             holder.currency.setText(String.valueOf(model.getCurrency()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
 
@@ -407,10 +416,20 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             });
             holder.buttonDecreasePrice.setOnClickListener(view -> {
+                int specialZoneExtraTip = model.getSpecialZoneExtraTip();
                 if (model.getOfferedPrice() > 0) {
-                    model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
-                    firebaseLogEvent("price_is_decreased");
-                    model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
+                    if(specialZoneExtraTip > 0) {
+                        model.setUpdatedAmount(model.getUpdatedAmount() - specialZoneExtraTip);
+                        firebaseLogEvent("price_is_decreased");
+                        model.setOfferedPrice(model.getOfferedPrice() - specialZoneExtraTip);
+                        model.setSpecialZoneExtraTip(0);
+                        holder.specialLocExtraTip.setVisibility(View.GONE);
+                    }
+                    else {
+                        model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
+                        firebaseLogEvent("price_is_decreased");
+                        model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
+                    }
                     sheetAdapter.notifyItemChanged(position, "inc");
                     Handler handler = new Handler(Looper.getMainLooper());
                     if (model.getOfferedPrice() == 0) {
@@ -479,6 +498,20 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         } else {
             return null;
         }
+    }
+    
+    private void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        mainLooper.post(() -> {
+            String pickupChargesText = model.getCustomerTip() > 0 ?
+                    getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
+                    getString(R.string.includes_pickup_charges_10);
+            if (model.getSpecialZoneExtraTip() > 0) {
+                String pickUpChargesWithZone = pickupChargesText + " " + getString(R.string.and) + " " + sharedPref.getString("CURRENCY", "₹") + " " + model.getSpecialZoneExtraTip() + " " + getString(R.string.zone_pickup_extra);
+                holder.textIncludesCharges.setText(pickUpChargesWithZone);
+            } else {
+                holder.textIncludesCharges.setText(pickupChargesText);
+            }
+        });
     }
 
     private void removeCard(int position) {
@@ -619,6 +652,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     Boolean disabilityTag = rideRequestBundle.getBoolean("disabilityTag");
                     Boolean isTranslated = rideRequestBundle.getBoolean("isTranslated");
                     int driverPickUpCharges = rideRequestBundle.getInt("driverPickUpCharges");
+                    int specialZoneExtraTip = rideRequestBundle.getInt("specialZoneExtraTip") ;
+                    boolean specialZonePickup = rideRequestBundle.getBoolean("specialZonePickup");
                     df.setMaximumFractionDigits(2);
                     final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -667,7 +702,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             srcLat,
                             srcLng,
                             destLat,
-                            destLng);
+                            destLng,
+                            specialZonePickup,
+                            specialZoneExtraTip);
 
                     if (floatyView == null) {
                         startTimer();
@@ -1065,15 +1102,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             tipsList = new ArrayList<>(Arrays.asList(indicatorTip1, indicatorTip2, indicatorTip3));
             shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3));
             for (int i = 0; i < 3; i++) {
-                if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
-                    indicatorList.get(i).setBackgroundColor(getColor(R.color.grey900));
-                    progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
-                    shimmerTipList.get(i).stopShimmer();
-                } else {
-                    indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
-                    progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
-                    shimmerTipList.get(i).startShimmer();
-                }
+                updateTopBarBackground(i);
                 if (i < sheetArrayList.size()) {
                     vehicleVariantList.get(i).setVisibility(View.VISIBLE);
                     String variant = sheetArrayList.get(i).getRequestedVehicleVariant();
@@ -1092,16 +1121,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     }
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
-
+                    boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
                     if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0) {
-                        indicatorList.get(i).setBackgroundColor(Color.parseColor("#FEEBB9"));
+                        indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ?  R.color.green100 : R.color.yellow200));
                     }
-
-                    if (sheetArrayList.get(i).getCustomerTip() > 0) {
-                        tipsList.get(i).setVisibility(View.VISIBLE);
-                    } else {
-                        tipsList.get(i).setVisibility(View.INVISIBLE);
-                    }
+                    updateTopBar(i);
                 } else {
                     indicatorTextList.get(i).setText("--");
                     vehicleVariantList.get(i).setVisibility(View.GONE);
@@ -1112,6 +1136,30 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         });
     }
 
+    private void updateTopBarBackground(int i) {
+        if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
+            boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
+            indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ? R.color.green100 : R.color.grey900));
+            progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
+            shimmerTipList.get(i).stopShimmer();
+        } else {
+            indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
+            progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
+            shimmerTipList.get(i).startShimmer();
+        }
+    }
+
+    private void updateTopBar (int i){
+        boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
+        if (sheetArrayList.get(i).getCustomerTip() > 0 || isSpecialZone) {
+            tipsList.get(i).setVisibility(View.VISIBLE);
+            tipsList.get(i).setText(isSpecialZone? "Zone" : "TIP");
+            tipsList.get(i).setTextColor(isSpecialZone ? getColor(R.color.white) : getColor(R.color.black650));
+            tipsList.get(i).setBackground(getDrawable(isSpecialZone ? R.drawable.zone_curve : R.drawable.rectangle_9506));
+        } else {
+            tipsList.get(i).setVisibility(View.INVISIBLE);
+        }
+    }
     private void setIndicatorClickListener() {
         if (viewPager == null || floatyView == null) return;
         indicatorList = new ArrayList<>(Arrays.asList(

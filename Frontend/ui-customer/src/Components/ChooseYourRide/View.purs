@@ -8,7 +8,7 @@ import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (mapWithIndex, length, (!!))
+import Data.Array (mapWithIndex, length, (!!), any)
 import Data.Function.Uncurried (runFn1)
 import Data.Maybe (fromMaybe, isJust)
 import Effect (Effect)
@@ -20,7 +20,7 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import JBridge (getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-))
+import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), (/=))
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -30,6 +30,7 @@ import PrestoDOM.Properties (sheetState)
 import Data.Int (toNumber,ceil)
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
+import Screens.Types (ZoneType(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -272,6 +273,8 @@ chooseYourRideView push config isSingleEstimate =
       anims = if EHC.os == "IOS"
               then [fadeIn true]
               else [translateYAnimFromTop $ Animation.chooseRideAnimConfig]
+      tagConfig = HU.specialZoneTagConfig config.zoneType
+      showTag = any (_ == config.zoneType) [SPECIAL_PICKUP, METRO]
   in
   PrestoAnim.animationSet anims $
   linearLayout
@@ -300,61 +303,90 @@ chooseYourRideView push config isSingleEstimate =
          ]
        ]
     , linearLayout
-      [ orientation VERTICAL
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , width MATCH_PARENT
-      , background Color.white900
-      , margin $ MarginTop 10
-      , clickable true
-      , padding $ PaddingTop if EHC.os == "IOS" then 13 else 7
-      , stroke $ "1," <> Color.grey900
-      , gravity CENTER
+      , orientation VERTICAL
+      , background tagConfig.backgroundColor
       , cornerRadii $ Corners 24.0 true true false false
-      ]
-      [ linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , orientation VERTICAL
-          , id $ EHC.getNewIDWithTag "rideEstimateHeaderLayout"
-          ][ 
-            -- linearLayout
-            --   [ layoutGravity "center_horizontal"
-            --   , background Color.transparentGrey
-            --   , height $ V 4
-            --   , width $ V 34
-            --   , margin $ MarginBottom 10
-            --   , cornerRadius if EHC.os == "IOS" then 2.0 else 4.0
-            --   ][]
-            -- , 
-            textView (
-              [ text 
-                  if length config.quoteList > 1 
-                  then (getString CHOOSE_YOUR_RIDE)
-                  else (getString CONFIRM_YOUR_RIDE)
-              , color Color.black800
-              , gravity CENTER_HORIZONTAL
-              , height WRAP_CONTENT
-              , width MATCH_PARENT
-              ] <> FontStyle.h1 TypoGraphy)
-            , estimatedTimeAndDistanceView push config
-            , textView $
-              [ text $ getString TOLL_CHARGES_WILL_BE_EXTRA
-              , color Color.black650
-              , gravity CENTER_HORIZONTAL
-              , height WRAP_CONTENT
-              , gravity CENTER_HORIZONTAL
-              , width MATCH_PARENT
-              , visibility $ boolToVisibility config.showTollExtraCharges
-              ] <> FontStyle.paragraphText TypoGraphy
-            , linearLayout
-              [ height $ V 1
-              , width MATCH_PARENT
-              , margin $ MarginTop 12
-              , background Color.grey900
-              ][]
-          ]
-      , quoteListView push config isSingleEstimate
-      ]
+      ][linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        , gravity CENTER
+        , background tagConfig.backgroundColor
+        , padding (PaddingVertical 4 4)
+        , cornerRadii $ Corners 24.0 true true false false
+        , visibility $ boolToVisibility showTag
+        , clickable $ isJust tagConfig.infoPopUpConfig
+        , onClick push $ const $ SpecialZoneInfoTag
+        ] [ imageView
+            [ width (V 20)
+            , height (V 20)
+            , margin (MarginRight 6)
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET tagConfig.icon
+            ]
+          , textView
+            [ width if EHC.os == "IOS" && config.zoneType == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
+            , height WRAP_CONTENT
+            , gravity CENTER
+            , textSize FontSize.a_14
+            , text tagConfig.text
+            , color Color.white900
+            ]
+          , imageView
+            [ width (V 18)
+            , height (V 18)
+            , visibility $ boolToVisibility $ isJust tagConfig.infoPopUpConfig
+            , margin (MarginLeft 6)
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_white_info"
+            ]
+          ] 
+      , linearLayout
+        [ orientation VERTICAL
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        , clickable true
+        , padding $ PaddingTop if EHC.os == "IOS" then 13 else 7
+        , stroke $ "1," <> Color.grey900
+        , gravity CENTER
+        , cornerRadii $ Corners 24.0 true true false false
+        ][ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , id $ EHC.getNewIDWithTag "rideEstimateHeaderLayout"
+            ][ textView (
+                [ text 
+                    if length config.quoteList > 1 
+                    then (getString CHOOSE_YOUR_RIDE)
+                    else (getString CONFIRM_YOUR_RIDE)
+                , color Color.black800
+                , gravity CENTER_HORIZONTAL
+                , height WRAP_CONTENT
+                , width MATCH_PARENT
+                ] <> FontStyle.h1 TypoGraphy)
+                , estimatedTimeAndDistanceView push config
+                , textView $
+                  [ text $ getString TOLL_CHARGES_WILL_BE_EXTRA
+                  , color Color.black650
+                  , gravity CENTER_HORIZONTAL
+                  , height WRAP_CONTENT
+                  , gravity CENTER_HORIZONTAL
+                  , width MATCH_PARENT
+                  , visibility $ boolToVisibility config.showTollExtraCharges
+                  ] <> FontStyle.paragraphText TypoGraphy
+                , linearLayout
+                  [ height $ V 1
+                  , width MATCH_PARENT
+                  , margin $ MarginTop 12
+                  , background Color.grey900
+                  , visibility $ boolToVisibility $ not isSingleEstimate
+                  ][]
+                ]
+          , quoteListView push config isSingleEstimate
+          ]  
+       ]
   ]
 
 estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
