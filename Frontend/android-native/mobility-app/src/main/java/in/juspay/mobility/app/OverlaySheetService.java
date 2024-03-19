@@ -25,7 +25,6 @@ import android.location.Geocoder;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -49,7 +48,6 @@ import androidx.annotation.Nullable;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.airbnb.lottie.LottieAnimationView;
-import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -66,22 +64,16 @@ import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -90,6 +82,7 @@ import javax.net.ssl.HttpsURLConnection;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
+import in.juspay.mobility.app.dataModel.VariantConfig;
 import in.juspay.mobility.common.services.TLSSocketFactory;
 
 public class OverlaySheetService extends Service implements View.OnTouchListener {
@@ -123,6 +116,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     private SheetModel modelForLogs;
     private final String BRAND_VIVO = "vivo";
+    private final String NON_AC = "Non AC";
+    private final String AC_TAXI = "AC Taxi";
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -145,7 +141,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
             String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) || showSpecialLocationTag) {
+            boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag) {
                 pickupChargesText = model.getCustomerTip() > 0 ?
                         formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
                         formattedPickupChargesText;
@@ -165,23 +162,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
-
                 updateExtraChargesString(holder, model);
-                if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
-                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                    } else {
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_orange_tag);
-                        holder.rideTypeImage.setVisibility(View.GONE);
-                    }
-                    holder.rideTypeText.setText(variant);
-                }
+                holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
-
             holder.textIncludesCharges.setText(pickupChargesText);
         });
     }
@@ -669,6 +654,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     double srcLng = rideRequestBundle.getDouble("srcLng");
                     double destLat = rideRequestBundle.getDouble("destLat");
                     double destLng = rideRequestBundle.getDouble("destLng");
+                    boolean downgradeEnabled = rideRequestBundle.getBoolean("downgradeEnabled", false);
                    
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
@@ -704,7 +690,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             destLat,
                             destLng,
                             specialZonePickup,
-                            specialZoneExtraTip);
+                            specialZoneExtraTip,
+                            downgradeEnabled);
 
                     if (floatyView == null) {
                         startTimer();
@@ -1074,6 +1061,32 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }
     }
 
+    private void handleIndicatorVariant(int i) {
+        if (vehicleVariantList == null) return;
+        String requestedVariant = sheetArrayList.get(i).getRequestedVehicleVariant();
+        VariantConfig variantConfig = null;
+        try {
+            variantConfig = RideRequestUtils.getVariantConfig(requestedVariant, this);
+        }catch (JSONException e){
+            firebaseLogEvent("exception_in_get_variant_config");
+        }
+        if (!requestedVariant.equals(NotificationUtils.NO_VARIANT) && key.equals("yatrisathiprovider") && variantConfig !=null){
+            String variant = variantConfig.getText();
+            vehicleVariantList.get(i).setVisibility(View.VISIBLE);
+            vehicleVariantList.get(i).setText(variant);
+            if (variant.equals(AC_TAXI)) {
+                vehicleVariantList.get(i).setTextColor(getColor(R.color.blue800));
+            } else if (variant.equals(NON_AC)) {
+                vehicleVariantList.get(i).setTextColor(getColor(R.color.orange900));
+            } else {
+                vehicleVariantList.get(i).setTextColor(getColor(R.color.Black800));
+            }
+            vehicleVariantList.get(i).setText(variant);
+        }else {
+            vehicleVariantList.get(i).setVisibility(View.GONE);
+        }
+    }
+
     private void updateIndicators() {
         mainLooper.post(() -> {
             if (floatyView == null || viewPager == null) return;
@@ -1104,21 +1117,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             for (int i = 0; i < 3; i++) {
                 updateTopBarBackground(i);
                 if (i < sheetArrayList.size()) {
-                    vehicleVariantList.get(i).setVisibility(View.VISIBLE);
-                    String variant = sheetArrayList.get(i).getRequestedVehicleVariant();
-                    if (variant == NotificationUtils.NO_VARIANT || key.equals("yatrisathiprovider")){
-                        vehicleVariantList.get(i).setVisibility(View.GONE);
-                    }else {
-                        vehicleVariantList.get(i).setText(variant);
-                        if (variant == "AC Taxi") {
-                            vehicleVariantList.get(i).setTextColor(getColor(R.color.blue800));
-                        } else if (variant == "Non AC") {
-                            vehicleVariantList.get(i).setTextColor(getColor(R.color.orange900));
-                        } else {
-                            vehicleVariantList.get(i).setTextColor(getColor(R.color.Black800));
-                        }
-                        vehicleVariantList.get(i).setText(variant);
-                    }
+//                    handleIndicatorVariant(i); // Not needed @Rohit
+                    vehicleVariantList.get(i).setVisibility(View.GONE);
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
                     boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();

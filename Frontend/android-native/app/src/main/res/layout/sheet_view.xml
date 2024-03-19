@@ -152,7 +152,7 @@
                             <LinearLayout
                                 android:id="@+id/rideTypeTag"
                                 android:layout_width="wrap_content"
-                                android:layout_height="match_parent"
+                                android:layout_height="wrap_content"
                                 android:gravity="center_vertical"
                                 android:orientation="horizontal"
                                 android:layout_marginHorizontal="8dp"
@@ -161,8 +161,8 @@
                                 android:visibility="gone">
                                 <ImageView
                                     android:id="@+id/rideTypeImage"
-                                    android:layout_width="17dp"
-                                    android:layout_height="17dp"
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
                                     android:src="@drawable/ny_ic_snow"/>
                                 <TextView
                                     android:id="@+id/rideTypeText"

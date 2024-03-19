@@ -109,6 +109,7 @@ public class RideRequestActivity extends AppCompatActivity {
             double srcLng = rideRequestBundle.getDouble("srcLng");
             double destLat = rideRequestBundle.getDouble("destLat");
             double destLng = rideRequestBundle.getDouble("destLng");
+            boolean downgradeEnabled = rideRequestBundle.getBoolean("downgradeEnabled", false);
                     
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     (df.format(distanceTobeCovered / 1000)),
@@ -140,7 +141,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     destLat,
                     destLng,
                     rideRequestBundle.getBoolean("specialZonePickup"),
-                    rideRequestBundle.getInt("specialZoneExtraTip")
+                    rideRequestBundle.getInt("specialZoneExtraTip"),
+                    downgradeEnabled
             );
 
             sheetArrayList.add(sheetModel);
@@ -160,7 +162,8 @@ public class RideRequestActivity extends AppCompatActivity {
             String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
             String pickupChargesText = formattedPickupChargesText;
             String searchRequestId = model.getSearchRequestId();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag) {
+            boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
                 pickupChargesText = model.getCustomerTip() > 0 ?
@@ -180,20 +183,8 @@ public class RideRequestActivity extends AppCompatActivity {
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
                         ColorStateList.valueOf(getColor(R.color.Black900)) :
                         ColorStateList.valueOf(getColor(R.color.green900)));
-                
                 updateExtraChargesString(holder, model);
-                if (!variant.equals(NO_VARIANT) && service.equals("yatrisathiprovider")) {
-                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                    } else {
-                        holder.rideTypeTag.setVisibility(View.VISIBLE);
-                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_orange_tag);
-                        holder.rideTypeImage.setVisibility(View.GONE);
-                    }
-                    holder.rideTypeText.setText(variant);
-                }
-
+                holder.rideTypeTag.setVisibility(showVariant ? View.VISIBLE : View.GONE);
             } else {
                 holder.tagsBlock.setVisibility(View.GONE);
             }
