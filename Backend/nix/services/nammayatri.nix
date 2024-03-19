@@ -176,7 +176,7 @@ in
 
           kafka-consumers-exe = {
             environment = {
-              CONSUMER_TYPE = "AVAILABILITY_TIME";
+              CONSUMER_TYPE = "LOCATION_UPDATE";
             };
           };
 
