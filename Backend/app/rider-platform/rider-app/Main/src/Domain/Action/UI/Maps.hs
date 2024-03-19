@@ -89,10 +89,12 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
               let currentSting = record.autocompleteInputs
               let updatedRecord = AutoCompleteEventData (currentSting <> "|" <> input) record.customerId record.id record.isLocationSelectedOnMap record.searchRequestId record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
               triggerAutoCompleteEvent updatedRecord
+              Redis.setExp key updatedRecord 300
             Nothing -> do
               uid <- generateGUID
               let autoCompleteData = AutoCompleteEventData input personId uid Nothing Nothing (show typeOfSearch) token merchantId merchantOperatingCityId (show reqOrigin.lat) (show reqOrigin.lon) now now
               triggerAutoCompleteEvent autoCompleteData
+              Redis.setExp key autoCompleteData 300
   Maps.autoComplete
     merchantId
     merchantOperatingCityId
