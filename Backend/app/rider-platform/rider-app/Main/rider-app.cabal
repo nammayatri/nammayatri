@@ -179,6 +179,7 @@ library
       Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
+      Domain.Action.UI.Invoice
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
       Domain.Action.UI.PersonStats
@@ -348,6 +349,10 @@ library
       Storage.CachedQueries.Sos
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.WhiteListOrg
+      Storage.Clickhouse.Booking
+      Storage.Clickhouse.FareBreakup
+      Storage.Clickhouse.Location
+      Storage.Clickhouse.Ride
       Storage.Queries.AadhaarVerification.AadhaarOtp
       Storage.Queries.AadhaarVerification.AadhaarVerification
       Storage.Queries.AppInstalls
@@ -419,10 +424,12 @@ library
       API.Action.UI.Cac
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
+      API.Action.UI.Invoice
       API.Action.UI.Sos
       API.Action.UI.TicketService
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
+      API.Types.UI.Invoice
       API.Types.UI.Sos
       API.Types.UI.TicketService
       Domain.Types.BecknConfig
@@ -545,6 +552,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       PackageImports
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
@@ -663,6 +671,7 @@ executable rider-app-exe
       TypeSynonymInstances
       UndecidableInstances
       PackageImports
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
