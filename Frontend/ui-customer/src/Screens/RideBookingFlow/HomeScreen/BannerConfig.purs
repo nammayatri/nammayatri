@@ -22,7 +22,7 @@ import RemoteConfig as RC
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
-  (if state.props.city == ST.Chennai
+  (if state.props.city == ST.Chennai || state.props.city == ST.Kochi
   then [metroBannerConfig state action]
   else [])
   <>

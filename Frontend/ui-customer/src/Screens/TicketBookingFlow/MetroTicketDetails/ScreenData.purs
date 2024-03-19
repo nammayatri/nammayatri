@@ -18,12 +18,16 @@ import Prelude
 
 import Common.Types.App as Common
 import ConfigProvider
-import Screens.Types 
+import Screens.Types
+import Data.Maybe (Maybe(..))
 
 initData :: MetroTicketDetailsScreenState
 initData = {
   data : {
     dummyData : ""
+  , bookingId : ""
+  , city : AnyCity
+  , bookingUpdatedAt : ""
   , metroRoute : []
   , ticketsInfo : []
   , ticketType : ""
@@ -31,8 +35,12 @@ initData = {
   }
 , props :  {
     dummyProps : ""
+  , showLoader : false
   , stage : MetroTicketDetailsStage
   , currentTicketIndex : 0
   , previousScreenStage : MetroMyTicketsStage 
+  , isBookingCancellable : Nothing
+  , cancellationCharges : Nothing
+  , refundAmount : Nothing
   }
 }
