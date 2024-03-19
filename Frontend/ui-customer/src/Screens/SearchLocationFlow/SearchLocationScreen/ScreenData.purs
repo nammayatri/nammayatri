@@ -15,7 +15,7 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo)
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
@@ -40,7 +40,7 @@ initData = {
         , defaultGate : ""
         , nearByGates : []
         , specialZoneCoordinates : ""
-        , confirmLocCategory : ""
+        , confirmLocCategory : NOZONE
         , metroStations : []
         , updatedMetroStations : []
   } ,

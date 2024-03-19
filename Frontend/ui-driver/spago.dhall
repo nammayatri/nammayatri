@@ -13,6 +13,8 @@ to generate this file without the comments in this block.
 { name = "ui-driver"
 , dependencies =
   [ "aff"
+  , "argonaut-codecs"
+  , "argonaut-core"
   , "arrays"
   , "backtrack"
   , "beckn-common"

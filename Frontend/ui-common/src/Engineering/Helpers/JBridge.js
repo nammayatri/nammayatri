@@ -605,46 +605,20 @@ export const parseAddress = function (json) {
   return JSON.parse(json);
 };
 
-export const drawRoute = function (data) {
-  return function (style) {
-    return function (trackColor) {
-      return function (isActual) {
-        return function (sourceMarker) {
-          return function (destMarker) {
-            return function (polylineWidth) {
-              return function (type) {
-                return function (sourceName) {
-                  return function (destinationName) {
-                    return function (mapRouteConfig) {
-                      return function () {
-                        console.log("I AM HERE ------------------ IN DRAW ROUTE");
+export const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfig, destMarkerConfig, polylineWidth, type, mapRouteConfig) {
+  console.log("I AM HERE ------------------ IN DRAW ROUTE");
+  try {
+    return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig));
+  } catch (err) {
+    console.log("error in draw route", err);
+    return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarkerConfig.pointerIcon, destMarkerConfig.pointerIcon, polylineWidth, type, sourceMarkerConfig.primaryText, destMarkerConfig.primaryText, JSON.stringify(mapRouteConfig));
+  }
+}
 
-                        try {
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));
-                        } catch (err) {
-                          /*
-                           * This Function is deprecated on 10 Jul- 2023
-                           * Remove this function once it is not begin used.
-                           */
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);
-                        }
-                      }
-                    };
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-};
-
-export const updateRouteMarker = function (data) {
+export const updateMarker = function (markerConfig) {
   return function () {
-    if (window.JBridge.updateRouteMarker) {
-      return window.JBridge.updateRouteMarker(JSON.stringify(data));
+    if (window.JBridge.updateMarker) {
+      return window.JBridge.updateMarker(JSON.stringify(markerConfig));
     }
   }
 }
@@ -1052,6 +1026,7 @@ export const checkOverlayPermission = function (str) {
 
 export const reallocateMapFragment = function (str) {
   return function () {
+    console.log("debug zone reallocateMapFragment js");
     window.JBridge.reallocateMapFragment(str);
   };
 };
@@ -1816,16 +1791,35 @@ export const showKeyboard = function (id) {
 }
 
 export const locateOnMap = (configObj) => {
-  try {
-    if ( window.__OS == "IOS" || (window.__OS == "ANDROID" && methodArgumentCount("locateOnMap") == 1))
-      return JBridge.locateOnMap(JSON.stringify(configObj));
-    else
-      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, JSON.stringify(configObj.geoJson), JSON.stringify(configObj.points));
-  } catch (err) {
-    try{
-      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon);
-    } catch (e) {
-      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, configObj.zoomLevel);
+  if (JBridge.locateOnMapV2) {
+    return JBridge.locateOnMapV2(JSON.stringify(configObj));
+  } else {
+    try {
+      // TODO :: backward compatible for IOS
+      try {
+        const geoJson = JSON.parse(configObj.geoJson);
+        let backwardCompatibleGeoJson = "";
+        for (let i = 0; i < geoJson.features.length; i++) {
+          const feature = geoJson.features[i];
+          if (feature.properties.name == "") {
+            backwardCompatibleGeoJson = feature.geometry;
+          }
+        }
+        configObj.geoJson = JSON.stringify(backwardCompatibleGeoJson);
+      } catch (err) {
+        console.error("error in locateOnMap", err)
+      }
+
+      if (window.__OS == "IOS" || (window.__OS == "ANDROID" && methodArgumentCount("locateOnMap") == 1)) {
+        return JBridge.locateOnMap(JSON.stringify(configObj));
+      } else
+        return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, JSON.stringify(configObj.geoJson), JSON.stringify(configObj.points));
+    } catch (err) {
+      try {
+        return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon);
+      } catch (e) {
+        return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, configObj.zoomLevel);
+      }
     }
   }
 };
@@ -2535,4 +2529,11 @@ export const clearAudioPlayer = function () {
   if (JBridge.clearAudioPlayer) {
     JBridge.clearAudioPlayer()
   }
+}
+
+export const jBridgeMethodExists = function (method) {
+  if (window.JBridge[method]) {
+    return true;
+  }
+  return false;
 }

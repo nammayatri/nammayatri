@@ -31,19 +31,19 @@ import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
 import Data.Function.Uncurried (runFn1)
-import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage)
+import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage, getDistanceBwCordinates)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData)
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import JBridge (fromMetersToKm, getLatLonFromAddress)
+import JBridge (fromMetersToKm, getLatLonFromAddress, Location)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..), Paths)
@@ -583,18 +583,21 @@ getSpecialTag specialTag =
   case specialTag of
     Just tag ->
       let zones = split (Pattern "_") tag
-          sourceTag = getZoneType $ zones DA.!! 0
-          destinationTag = getZoneType $ zones DA.!! 1
+          pickupZone = getZoneType $ fromMaybe "" (zones DA.!! 3)
+          sourceTag = if pickupZone == SPECIAL_PICKUP then SPECIAL_PICKUP else getZoneType $ fromMaybe "" (DA.head zones)
+          destinationTag = getZoneType $ fromMaybe "" (zones DA.!! 1)
           priorityTag = if zones DA.!! 2 == Just "PriorityPickup" then sourceTag else destinationTag
       in { sourceTag : sourceTag, destinationTag : destinationTag, priorityTag : priorityTag}
     Nothing -> dummyZoneType
 
-getZoneType :: Maybe String -> ZoneType
+getZoneType :: String -> ZoneType
 getZoneType tag =
   case tag of
-    Just "SureMetro" -> METRO
-    Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
-    _                -> NOZONE
+    "SureMetro" -> METRO
+    "SureBlockedAreaForAutos" -> AUTO_BLOCKED
+    "PickupZone" -> SPECIAL_PICKUP
+    "SureShoppingMall" -> SHOPPING_MALL
+    _ -> NOZONE
 
 getTripFromRideHistory :: MyRidesScreenState -> Trip
 getTripFromRideHistory state = {
@@ -627,8 +630,6 @@ getActiveBooking = do
       Right (RideBookingListRes listResp) -> DA.head $ listResp.list
       Left _ -> Nothing
   
-
-
 getFormattedContacts :: FlowBT String (Array NewContacts)
 getFormattedContacts = do
   (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
@@ -641,3 +642,43 @@ getFormattedContacts = do
       onRide : fromMaybe false item.onRide,
       priority: fromMaybe 1 item.priority
     }) res.defaultEmergencyNumbers
+        
+transformHotSpotInfo :: Array HotSpotInfo -> Array HotSpotData
+transformHotSpotInfo hotSpotInfo = map (\hotSpot -> transformHotSpot hotSpot) hotSpotInfo
+
+transformHotSpot :: HotSpotInfo -> HotSpotData
+transformHotSpot (HotSpotInfo hotSpot) =
+  let (LatLong centroidLatLong) = hotSpot.centroidLatLong
+  in { lat : centroidLatLong.lat, lon : centroidLatLong.lon }
+
+filterHotSpots :: HomeScreenState -> Array HotSpotInfo -> Number -> Number -> Array Location
+filterHotSpots state hotSpots lat lon =
+  if DA.null hotSpots then []
+  else
+    let hotSpotInfo = transformHotSpotInfo $ DA.take 3 (filter (\(HotSpotInfo hotSpot) ->
+                                                                  let (LatLong point) = hotSpot.centroidLatLong
+                                                                      distance = (getDistanceBwCordinates lat lon point.lat point.lon) * 1000.0
+                                                                  in
+                                                                    distance < state.data.config.mapConfig.locateOnMapConfig.hotSpotConfig.showHotSpotsWithinRadius
+                                                                ) hotSpots)
+        selectedSpot = case state.props.hotSpot.selectedSpot of
+                          Just spot -> [spot]
+                          Nothing -> []
+        points = DA.nub $ (map (\item -> {  place: "",
+                                            lat  : item.lat,
+                                            lng : item.lon,
+                                            address : Nothing,
+                                            city : Nothing,
+                                            isSpecialPickUp : Just false
+                                          }) hotSpotInfo) <> selectedSpot
+    in points
+
+mapSpecialZoneGates :: Array GateInfoFull -> Array Location
+mapSpecialZoneGates gates = 
+  map (\(GateInfoFull item) -> { place: item.name,
+                              lat  : (item.point)^._lat,
+                              lng : (item.point)^._lon,
+                              address : item.address,
+                              city : Nothing,
+                              isSpecialPickUp : Just $ isJust item.geoJson
+                            }) gates

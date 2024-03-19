@@ -18,10 +18,11 @@ module Screens.AddNewAddressScreen.ScreenData where
 import Data.Maybe (Maybe(..))
 import PrestoDOM (Visibility(..))
 import Screens.HomeScreen.ScreenData (dummyAddress)
-import Screens.Types (AddNewAddressScreenState, CardType(..), Location)
+import Screens.Types (AddNewAddressScreenState, CardType(..))
 import Services.API (Prediction(..))
 import ConfigProvider
 import Screens(ScreenName(..), getScreen)
+import JBridge (Location)
  
 initData :: AddNewAddressScreenState
 initData = {
@@ -105,5 +106,6 @@ dummyLocation = {
    lat : 0.0,
    lng : 0.0,
    address : Nothing,
-   city : Nothing
+   city : Nothing,
+   isSpecialPickUp : Nothing
  }

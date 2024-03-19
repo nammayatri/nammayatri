@@ -64,7 +64,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn2)
+import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn9)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
 import Engineering.Helpers.Utils (showAndHideLoader)
@@ -73,8 +73,8 @@ import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -133,6 +133,7 @@ import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Services.FlowCache as FlowCache
 import Engineering.Helpers.BackTrack
 import Types.App
+import Mobility.Prelude
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -220,6 +221,11 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                  when (initialState.props.zoneType.priorityTag == SPECIAL_PICKUP && initialState.data.config.feature.enableSpecialPickup) $ do
+                    let specialPickupZone = findSpecialPickupZone initialState.props.locateOnMapProps.sourceGeoJson initialState.props.locateOnMapProps.sourceGates initialState.data.driverInfoCardState.sourceLat initialState.data.driverInfoCardState.sourceLng
+                    case specialPickupZone of
+                      Just pickUpZone -> runEffectFn1 locateOnMap locateOnMapConfig { geoJson = pickUpZone.geoJson, points = pickUpZone.gates, locationName = pickUpZone.locationName, navigateToNearestGate = false }
+                      Nothing -> pure unit
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 1
                 else pure unit
                 push LoadMessages
@@ -288,7 +294,7 @@ isCurrentLocationEnabled = if (isLocalStageOn HomeScreen) then enableCurrentLoca
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  let showLabel = if state.props.defaultPickUpPoint == "" then false else true
+  let showLabel = not $ DS.null state.props.defaultPickUpPoint
   in
   frameLayout
     [ height MATCH_PARENT
@@ -335,14 +341,16 @@ view push state =
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
                   , if isHomeScreenView state then emptyTextView state else mapView push state (if os == "IOS" then "CustomerHomeScreenMap" else "CustomerHomeScreen")
                     ]
-                , linearLayout
+                , if not state.data.config.feature.enableSpecialPickup then
+                    linearLayout
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom if os == "IOS" then 53 else 70)
+                    , padding (PaddingBottom if os == "IOS" then 60 else 70)
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
+                    , visibility $ boolToVisibility $ not state.data.config.feature.enableSpecialPickup
                     ]
                     [ textView
                         [ width WRAP_CONTENT
@@ -357,7 +365,7 @@ view push state =
                         , padding (Padding 5 5 5 5)
                         , margin (MarginBottom 5)
                         , cornerRadius 5.0
-                        , visibility if (showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)) then VISIBLE else INVISIBLE
+                        , visibility $ boolToInvisibility $ showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
                         , id (getNewIDWithTag "LocateOnMapPin")
                         ]
                     , imageView
@@ -367,7 +375,45 @@ view push state =
                         , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
                             true  -> "ny_ic_src_marker"
                             false -> "ny_ic_dest_marker"
-                        , visibility if ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap) then VISIBLE else GONE
+                        , visibility $ boolToVisibility ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
+                        ]
+                    ]
+                  else
+                    linearLayout
+                    [ width MATCH_PARENT
+                    , height MATCH_PARENT
+                    , background Color.transparent
+                    , padding (PaddingBottom 95)
+                    , gravity CENTER
+                    , accessibility DISABLE
+                    , orientation VERTICAL
+                    , visibility $ boolToVisibility $ state.data.config.feature.enableSpecialPickup && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
+                    ][ imageView
+                        [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , accessibility DISABLE_DESCENDANT
+                        , visibility $ boolToInvisibility (showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap))
+                        , id (getNewIDWithTag "LocateOnMapPin")
+                        ]
+                     ]
+                , linearLayout
+                    [ width MATCH_PARENT
+                    , height MATCH_PARENT
+                    , background Color.transparent
+                    , padding (PaddingBottom 36)
+                    , gravity CENTER
+                    , accessibility DISABLE
+                    , orientation VERTICAL
+                    , visibility $ boolToVisibility $ state.data.config.feature.enableSpecialPickup && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
+                    ]
+                    [ imageView
+                        [ width $ V 35
+                        , height $ V 35
+                        , accessibility DISABLE
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
+                            true  -> "ny_ic_src_marker"
+                            false -> "ny_ic_dest_marker"
+                        , visibility $ boolToVisibility ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
                         ]
                     ]
                 ]
@@ -414,6 +460,7 @@ view push state =
             , if isJust state.props.safetyAlertType && state.props.currentStage == RideStarted then safetyAlertPopup push state else  emptyTextView state
             , if state.props.showShareRide then PopupWithCheckbox.view (push <<< ShareRideAction) (shareRideConfig state) else emptyTextView state
             , if state.props.referral.referralStatus /= NO_REFERRAL then referralPopUp push state else emptyTextView state 
+            , if state.props.showSpecialZoneInfoPopup then specialZoneInfoPopup push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -1446,11 +1493,13 @@ topLeftIconView state push =
 ----------- estimatedFareView ----------------
 estimatedFareView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 estimatedFareView push state =
+  let tagConfig = specialZoneTagConfig state.props.zoneType.priorityTag
+  in
   linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
   , width MATCH_PARENT
-  , background Color.blue800
+  , background tagConfig.backgroundColor
   , clickable true
   , visibility if (state.props.currentStage == SettingPrice) then VISIBLE else GONE
   , stroke ("1," <> Color.grey900)
@@ -1468,20 +1517,29 @@ estimatedFareView push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER
-      , padding (PaddingVertical 4 4)
-      , visibility if state.props.zoneType.priorityTag == METRO then VISIBLE else GONE
+      , padding (Padding 8 4 8 4)
+      , visibility if state.props.zoneType.priorityTag /= NOZONE then VISIBLE else GONE
+      , clickable $ isJust tagConfig.infoPopUpConfig
+      , onClick push $ const $ SpecialZoneInfoTag
       ] [ imageView
           [ width (V 15)
           , height (V 15)
           , margin (MarginRight 6)
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_metro_white"
+          , imageWithFallback $ fetchImage FF_ASSET tagConfig.icon
           ]
         , textView
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , textSize FontSize.a_14
-          , text (getString METRO_RIDE)
+          , text tagConfig.text
           , color Color.white900
+          ]
+        , imageView
+          [ width (V 18)
+          , height (V 18)
+          , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
+          , margin (MarginLeft 6)
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_info"
           ]
         ]
     , linearLayout
@@ -2098,6 +2156,8 @@ locationTrackingData lazyCheck =
 confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmPickUpLocationView push state =
   let zonePadding = if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
+      confirmLocationCategory = if state.props.locateOnMapProps.isSpecialPickUpGate then SPECIAL_PICKUP else state.props.confirmLocationCategory
+      tagConfig = specialZoneTagConfig confirmLocationCategory
   in
   linearLayout
     [ orientation VERTICAL
@@ -2118,7 +2178,7 @@ confirmPickUpLocationView push state =
         , orientation VERTICAL
         , stroke $ "1," <> Color.grey900
         , cornerRadii $ Corners 24.0 true true false false
-        , background Color.blue800
+        , background tagConfig.backgroundColor
         ]
         [ linearLayout
             [ width MATCH_PARENT
@@ -2127,23 +2187,29 @@ confirmPickUpLocationView push state =
             , gravity CENTER
             , padding (Padding zonePadding 4 zonePadding 4)
             , cornerRadii $ Corners 24.0 true true false false
-            , visibility if state.props.confirmLocationCategory /= "" then VISIBLE else GONE
+            , visibility if confirmLocationCategory /= NOZONE && not (DS.null state.props.defaultPickUpPoint) then VISIBLE else GONE
+            , clickable $ isJust tagConfig.infoPopUpConfig
+            , onClick push $ const $ SpecialZoneInfoTag
             ] [ imageView
-                [ width (V 20)
-                , height (V 20)
+                [ width (V 15)
+                , height (V 15)
                 , margin (MarginRight 6)
-                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_zone_walk"
+                , imageWithFallback $ fetchImage FF_ASSET tagConfig.icon
                 ]
               , textView
-                [ width if os == "IOS" && state.props.confirmLocationCategory == "SureBlockedAreaForAutos" then (V 230) else WRAP_CONTENT
+                [ width if os == "IOS" && confirmLocationCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
                 , height WRAP_CONTENT
                 , gravity CENTER
                 , textSize FontSize.a_14
-                , text if state.props.confirmLocationCategory == "SureBlockedAreaForAutos" then
-                        (getString GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED)
-                       else
-                        (getString GO_TO_SELECTED_PICKUP_SPOT)
+                , text tagConfig.text
                 , color Color.white900
+                ]
+              , imageView
+                [ width (V 18)
+                , height (V 18)
+                , visibility if isJust tagConfig.infoPopUpConfig then VISIBLE else GONE
+                , margin (MarginLeft 6)
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_info"
                 ]
               ]
         , linearLayout
@@ -2653,17 +2719,27 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               dstLon = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
               trackingType = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then Remote.DRIVER_TRACKING else Remote.RIDE_TRACKING
               markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType 
-              sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
-              destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
+              sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
+              destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
               specialLocationTag =  if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then
                                       specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon true getPolylineAnimationConfig
                                     else
                                       specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
+            -- TODO :: may use in future
+            -- if isSpecialPickupZone then do
+            --   let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
+            --       destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText 0 }
+            --   _ <- pure $ removeAllPolylines ""
+            --   _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+            --   void $ delay $ Milliseconds duration
+            --   driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
             if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
+                let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
+                    destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker }
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 _ <- pure $ removeAllPolylines ""
-                _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" specialLocationTag
+                _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
                 void $ delay $ Milliseconds duration
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
@@ -2680,7 +2756,9 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                         else
                                           walkCoordinate srcLat srcLon dstLat dstLon
                             newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
-                        liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance (state.props.currentStage == RideStarted)) specialLocationTag
+                            srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
+                            destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText routes.distance }
+                        void $ liftFlow $ runEffectFn9 drawRoute newPoints "LineString" "#323643" true srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
                         _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                         void $ delay $ Milliseconds duration
                         driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState expCounter
@@ -2700,7 +2778,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                                       specialLocationConfig "" sourceSpecialTagIcon true getPolylineAnimationConfig
                                                     else
                                                       specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
-                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta =  (metersToKm locationResp.distance (state.props.currentStage == RideStarted)), srcMarker =  markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
+                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta = getMarkerPrimaryText locationResp.distance, srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
                           _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                           void $ delay $ Milliseconds duration
                           driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
@@ -2715,6 +2793,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     pure unit
   where
     getDuration factor counter = duration * (toNumber $ pow factor counter)
+    isSpecialPickupZone = state.props.currentStage == RideAccepted && state.props.zoneType.priorityTag == SPECIAL_PICKUP && isJust state.data.driverInfoCardState.sourceAddress.area && state.data.config.feature.enableSpecialPickup
     handleRideBookingResp (RideBookingRes respBooking) = do
       let bookingStatus = respBooking.status
       void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.currentSearchResultType == QUOTES)}}}
@@ -2730,6 +2809,12 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                   doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime)
                 else pure unit
               Nothing -> pure unit
+    
+    getMarkerPrimaryText distance =
+      if isSpecialPickupZone then
+        fromMaybe "" state.data.driverInfoCardState.sourceAddress.area
+      else 
+        metersToKm distance (state.props.currentStage == RideStarted)
 
 
 confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
@@ -2900,7 +2985,8 @@ editButtontView push state =
 
 currentLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w 
 currentLocationView push state =
-  linearLayout
+  let showCurrentLocationView = DS.null state.props.defaultPickUpPoint
+  in linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
@@ -2911,7 +2997,7 @@ currentLocationView push state =
             , gravity CENTER_VERTICAL
             , accessibility DISABLE
             , cornerRadius 5.0
-            , visibility if state.props.defaultPickUpPoint /= "" then GONE else VISIBLE
+            , visibility $ boolToVisibility showCurrentLocationView
             ]
             [ imageView
                 [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
@@ -2943,7 +3029,7 @@ nearByPickUpPointsView state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 5 20 0 5
-  , visibility if state.props.defaultPickUpPoint /= "" then VISIBLE else GONE
+  , visibility $ boolToVisibility (not (DS.null state.props.defaultPickUpPoint))
   , id $ getNewIDWithTag "scrollViewParent"
   ][linearLayout
     [ height WRAP_CONTENT
@@ -4087,3 +4173,21 @@ referralPopUp push state =
   , width MATCH_PARENT
   , background Color.blackLessTrans
   ][PopUpModal.view (push <<< PopUpModalReferralAction) (referralPopUpConfig state)]
+
+specialZoneInfoPopup :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+specialZoneInfoPopup push state =
+  let zoneType = if isLocalStageOn ConfirmingLocation then
+                    if state.props.locateOnMapProps.isSpecialPickUpGate then
+                      SPECIAL_PICKUP
+                    else
+                      state.props.confirmLocationCategory
+                 else state.props.zoneType.priorityTag
+      tagConfig = specialZoneTagConfig zoneType
+  in case tagConfig.infoPopUpConfig of
+        Just infoPopUpConfig -> 
+          PrestoAnim.animationSet [ Anim.fadeIn true ]
+            $ linearLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (specialZoneInfoPopupConfig infoPopUpConfig) ]
+        Nothing -> emptyTextView state

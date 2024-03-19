@@ -1025,3 +1025,10 @@ getEN stringKey =
         RIDE_CANCELLED -> "Ride Cancelled"
         TRACK_RIDE_STRING appName driverName trackLink vehicleNumber -> "👋 Hey,\n\nI am riding with " <> appName <>" Driver " <> driverName <> "! Track this ride on: " <> trackLink <> "\n\nVehicle number: " <> vehicleNumber
         SAFETY_CENTER_IS_DISABLED -> "SOS feature is disabled as it was misused thrice"
+        TRACK_ON_GOOGLE_MAP -> "Track on Google Maps  >"
+        SHOW_WALKING_DIRECTION -> "Show Walking Directions  >"
+        SPECIAL_PICKUP_ZONE -> "Special Pickup Zone"
+        SPECIAL_PICKUP_ZONE_RIDE -> "Special Pickup Zone Ride"
+        WE_WILL_TRY_TO_CONNECT_YOU_WITH_DRIVER_IN_CLOSEST_PICKUP_ZONE -> "We will try to connect you with a driver in the closest special pickup zone."
+        THIS_PROVIDES_YOU_AN_INSTANT_PICKUP_EXPERIENCE -> "This provides you an instant pickup experience."
+        IS_AT_PICKUP_LOCATION -> "is at pickup location"

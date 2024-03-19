@@ -33,7 +33,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize, specialZoneTagConfig)
 import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
@@ -44,8 +44,8 @@ import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Shadow(.
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
-import Storage (isLocalStageOn, getValueToLocalStore)
+import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..), NavigationMode(..))
+import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
 import Storage (KeyStore(..))
@@ -254,7 +254,7 @@ otpAndWaitView push state =
           ] <> FontStyle.body26 TypoGraphy
         , otpView push state
         ]
-      , trackRideView push state
+      -- , trackRideView push state -- TODO :: may use in future
      ] <> if (state.props.currentSearchResultType == QUOTES || state.data.driverArrived) then 
            [(PrestoAnim.animationSet [ fadeIn true ] $ 
            let isQuotes = state.props.currentSearchResultType == QUOTES
@@ -518,7 +518,7 @@ navigateView push state =
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
   , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted
-  , onClick push $ const $ OnNavigateToZone
+  , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
   ][ imageView
      [ width $ V 20
      , height $ V 20
@@ -536,6 +536,8 @@ navigateView push state =
 
 driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoView push state =
+  let tagConfig = specialZoneTagConfig state.props.zoneType
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -548,7 +550,7 @@ driverInfoView push state =
          [ orientation VERTICAL
          , height WRAP_CONTENT
          , width MATCH_PARENT
-         , background if state.props.zoneType == METRO then Color.blue800 else Color.grey900
+         , background if state.props.zoneType /= NOZONE then tagConfig.backgroundColor else Color.grey900
          , gravity CENTER
          , cornerRadii $ Corners 24.0 true true false false
          , stroke $ state.data.config.driverInfoConfig.cardStroke
@@ -560,18 +562,20 @@ driverInfoView push state =
               ][linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
-                , background Color.blue800
+                , background tagConfig.backgroundColor
                 , cornerRadii $ Corners 24.0 true true false false
                 , gravity CENTER
                 , orientation HORIZONTAL
-                , padding (PaddingVertical 4 4)
-                , visibility $ boolToVisibility $ state.props.zoneType == METRO
+                , padding (PaddingVertical 6 6)
+                , visibility $ boolToVisibility $ Array.any (_ == state.props.zoneType) [ METRO, SPECIAL_PICKUP ]
+                , clickable $ isJust tagConfig.infoPopUpConfig
+                , onClick push $ const $ SpecialZoneInfoTag
                 ][imageView
                   [ width (V 15)
                   , height (V 15)
                   , margin (MarginRight 6)
                   , accessibility DISABLE
-                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_metro_white"
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET tagConfig.icon
                   ]
                 , textView
                   [ width WRAP_CONTENT
@@ -579,8 +583,15 @@ driverInfoView push state =
                   , textSize FontSize.a_14
                   , accessibility if state.props.zoneType == METRO then ENABLE else DISABLE
                   , accessibilityHint "Metro Ride"
-                  , text (getString METRO_RIDE)
+                  , text tagConfig.text
                   , color Color.white900
+                  ]
+                , imageView
+                  [ width (V 18)
+                  , height (V 18)
+                  , visibility $ boolToVisibility $ isJust tagConfig.infoPopUpConfig
+                  , margin (MarginLeft 6)
+                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_info"
                   ]
                 ]
               , linearLayout
@@ -660,12 +671,20 @@ distanceView push state =
     , width WRAP_CONTENT
     , accessibility ENABLE
     , accessibilityHint $ getEN ENJOY_THE_RIDE
+    , orientation VERTICAL
     ][ textView $
        [ text $ getString ENJOY_THE_RIDE
        , color Color.black900
        , ellipsize true
        , singleLine true
        ] <> FontStyle.body7 TypoGraphy
+     , textView $
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , color Color.blue900
+        , text $ getString TRACK_ON_GOOGLE_MAP
+        , onClick push $ const $ OnNavigate DRIVE state.data.destinationLat state.data.destinationLng
+        ] <> FontStyle.body6 TypoGraphy
      ]
   , if state.props.isChatWithEMEnabled then chatButtonView push state else dummyView push
   ]
@@ -747,40 +766,45 @@ contactView push state =
     , height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
-    , padding $ Padding 16 4 16 16
+    , padding $ Padding 16 4 16 8
     , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
-    ][  linearLayout
-        [ width (V (((screenWidth unit)/3 * 2)-27))
+    ][ linearLayout
+        [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , accessibilityHint $ "Ride Status : " <> if eta /= "--" then (state.data.driverName <> " is " <> eta <> " Away") else if state.data.waitingTime == "--" then (state.data.driverName <> " is on the way") else (state.data.driverName <> " is waiting for you.") 
-        , accessibility ENABLE
-        , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
-        ][  textView $
-            [ text $ state.data.driverName <> " "
-            , color Color.black900
-            , ellipsize true
-            , singleLine true
-            ] <> FontStyle.body7 TypoGraphy
-          , linearLayout
+        , orientation VERTICAL
+        ][ linearLayout
+            [ width (V (((screenWidth unit)/3 * 2)-27))
+            , height WRAP_CONTENT
+            , accessibilityHint $ "Ride Status : " <> if eta /= "--" then (state.data.driverName <> " is " <> eta <> " Away") else if state.data.waitingTime == "--" then (state.data.driverName <> " is on the way") else (state.data.driverName <> " is waiting for you.") 
+            , accessibility ENABLE
+            , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
+            ][  textView $
+                [ text $ state.data.driverName <> " "
+                , color Color.black900
+                , ellipsize true
+                , singleLine true
+                ] <> FontStyle.body7 TypoGraphy
+              , linearLayout
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , orientation HORIZONTAL
+                ][ textView $
+                    [ text $ driverPickUpStatusText state eta
+                    , color Color.black900
+                    ] <> FontStyle.body7 TypoGraphy
+                  ]
+              ]
+          , textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , orientation HORIZONTAL
-            ][ textView $
-                [ text $"is " <> eta
-                , color Color.black900
-                , visibility $ boolToVisibility $ eta /= "--"
-                ] <> FontStyle.body7 TypoGraphy
-              , textView $
-                [ text case eta /= "--" of
-                    true -> getString AWAY
-                    false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_AT_PICKUP
-                , color Color.black900
-                ] <> FontStyle.body7 TypoGraphy
-              ]
-          ]
+            , color Color.blue900
+            , text $ getString SHOW_WALKING_DIRECTION
+            , visibility $ boolToVisibility $ state.props.zoneType == SPECIAL_PICKUP
+            , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
+            ] <> FontStyle.body6 TypoGraphy
+         ]
       , chatButtonView push state
     ]
-
 
 chatButtonView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 chatButtonView push state = 
@@ -1179,7 +1203,7 @@ openGoogleMap push state =
       , cornerRadius 30.0
       , gravity CENTER
       , orientation HORIZONTAL
-      , onClick push (const OnNavigate)
+      , onClick push $ const $ OnNavigate DRIVE state.data.destinationLat state.data.destinationLng
       ][ textView (
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -1241,3 +1265,11 @@ getTripDetails state = {
   , backgroundColor : Color.white900
   , enablePaddingBottom : true
 }
+
+driverPickUpStatusText :: DriverInfoCardState -> String -> String
+driverPickUpStatusText state eta = 
+  case state.props.zoneType of
+    SPECIAL_PICKUP -> getString IS_AT_PICKUP_LOCATION
+    _ -> case eta of
+          "--" -> "is " <> eta <> getString AWAY
+          _    -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_AT_PICKUP

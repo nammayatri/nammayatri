@@ -1405,7 +1405,7 @@ zoneTimerExpiredConfig state = let
   }
   in popUpConfig'
 
-menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
+menuButtonConfig :: ST.HomeScreenState -> JB.Location -> MenuButton.Config
 menuButtonConfig state item = let
     config = MenuButton.config
     menuButtonConfig' = config {
@@ -1450,17 +1450,9 @@ chooseYourRideConfig state = ChooseYourRide.config
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore,
     flowWithoutOffers = state.props.flowWithoutOffers,
     enableSingleEstimate = state.data.config.enableSingleEstimate,
-    selectedEstimateHeight = state.props.selectedEstimateHeight
+    selectedEstimateHeight = state.props.selectedEstimateHeight,
+    zoneType = state.props.zoneType.sourceTag
   }
-
-
-specialLocationIcons :: ZoneType -> String
-specialLocationIcons tag =
-  case tag of
-    METRO -> "ny_ic_metro_black"
-    _     -> ""
-
-
 
 specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
 specialLocationConfig srcIcon destIcon isAnim animConfig = {
@@ -1470,16 +1462,6 @@ specialLocationConfig srcIcon destIcon isAnim animConfig = {
   , isAnimation : isAnim
   , autoZoom : true
   , polylineAnimationConfig : animConfig
-}
-
-updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> JB.UpdateRouteMarker
-updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon mapRouteConfig = {
-    locations : locations
-  , sourceName : sourceName
-  , destName : destName
-  , sourceIcon : sourceIcon
-  , destIcon : destIcon
-  , mapRouteConfig : mapRouteConfig
 }
 
 setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit
@@ -2024,3 +2006,36 @@ referralPopUpConfig state =
         }
       }
   in popUpConfig'
+
+specialZoneInfoPopupConfig :: HU.SpecialZoneInfoPopUp -> RequestInfoCard.Config
+specialZoneInfoPopupConfig infoConfig = let
+  config = RequestInfoCard.config
+  specialZonePopupConfig = config{
+      title {
+        text = infoConfig.title
+      }
+    , primaryText {
+        text = infoConfig.primaryText,
+        padding = Padding 16 16 0 0,
+        color = Color.black700
+      }
+    , secondaryText {
+        text = infoConfig.secondaryText,
+        visibility = VISIBLE,
+        padding = PaddingLeft 16,
+        color = Color.black700,
+        textStyle = FontStyle.ParagraphText,
+        width = (V $ JB.getWidthFromPercent 75)
+      }
+    , imageConfig {
+        imageUrl = fetchImage FF_ASSET infoConfig.icon,
+        height = V 130,
+        width = V 130,
+        padding = Padding 0 2 2 0
+      }
+    , buttonConfig {
+        text = infoConfig.primaryButtonText,
+        padding = PaddingVertical 16 20
+      }
+  }
+  in specialZonePopupConfig

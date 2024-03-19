@@ -75,6 +75,7 @@ data Action = NoAction
             | MenuButtonAC MenuButtonController.Action
             | BackpressAction
             | BackPressed
+            | SpecialZoneInfoTag
 
 data ScreenOutput = NoOutput  
                   | Reload SearchLocationScreenState
@@ -230,7 +231,7 @@ eval (SetLocationOnMap) state = do
       { lat, lng } = 
         MB.maybe { lat : currentLat, lng : currentLng} (\loc -> mkLatLong currentLat currentLng loc) focussedField
   void $ pure $ hideKeyboardOnNavigation true
-  void $ pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lng, geoJson = "", points = [], zoomLevel = 17.0, labelId = getNewIDWithTag "LocateOnMapSLSPin"}
+  void $ pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lng, geoJson = "", points = [], zoomLevel = 17.0, labelId = getNewIDWithTag "LocateOnMapSLSPin"}
   let newState = state{props{searchLocStage = LocateOnMapStage, locUnserviceable = false}}
   updateAndExit newState $ Reload newState
   where 

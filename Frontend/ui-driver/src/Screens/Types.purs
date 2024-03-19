@@ -731,7 +731,8 @@ type IndividualRideCardState =
     specialZoneLayoutBackground :: String,
     specialZoneImage :: String,
     specialZoneText :: String,
-    spLocTagVisibility :: Boolean
+    spLocTagVisibility :: Boolean,
+    specialZonePickup :: Boolean
   }
 
 
@@ -762,7 +763,8 @@ type ItemState =
     specialZoneLayoutBackground :: PropValue,
     gotoTagVisibility :: PropValue,
     purpleTagVisibility :: PropValue,
-    tipTagVisibility :: PropValue
+    tipTagVisibility :: PropValue,
+    specialZonePickup :: PropValue
   }
 -----------------------------------------------ApplicationStatusScreen -------------------
 
@@ -947,7 +949,8 @@ type EndRideData = {
     rating :: Int,
     feedback :: String,
     disability :: Maybe String,
-    payerVpa :: String
+    payerVpa :: String,
+    specialZonePickup :: Maybe Boolean
   }
 type PaymentState = {
   rideCount :: Int,
@@ -1098,7 +1101,8 @@ type HomeScreenProps =  {
   isStatsModelExpanded :: Boolean,
   tobeLogged :: Boolean,
   safetyAudioAutoPlay :: Boolean,
-  vehicleNSPopup :: Boolean
+  vehicleNSPopup :: Boolean,
+  specialZoneProps :: SpecialZoneProps
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1117,7 +1121,7 @@ instance showSubscriptionPopupType :: Show SubscriptionPopupType where show = ge
 instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where encode = defaultEnumEncode
 instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where decode = defaultEnumDecode
 
-data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY | SAFETY
+data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY | SAFETY | SPECIAL_ZONE_PICKUP
 
 derive instance genericPwdType :: Generic DisabilityType _
 instance eqPwdType :: Eq DisabilityType where eq = genericEq
@@ -1216,7 +1220,8 @@ type TripDetailsScreenData =
     specialZoneImage :: String,
     specialZoneText :: String,
     config :: AppConfig,
-    goBackTo :: GoBackToScreen
+    goBackTo :: GoBackToScreen,
+    specialZonePickup :: Boolean
   }
 
 type TripDetailsScreenProps =
@@ -2487,4 +2492,10 @@ type SelectedOption = {
   optionId :: String,
   isCorrect :: Boolean,
   validated :: Boolean
+}
+
+type SpecialZoneProps = {
+    specialZonePopup :: Boolean
+  , nearBySpecialZone :: Boolean
+  , currentGeoHash :: String
 }

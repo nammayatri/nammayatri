@@ -5,6 +5,7 @@ import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import ConfigProvider
 import MerchantConfig.Types
+import Screens.Types (ZoneType(..))
 
 data Action
   = NoAction
@@ -13,6 +14,7 @@ data Action
   | PreferencesDropDown
   | RadioButtonClick Boolean
   | OnIconClick Boolean
+  | SpecialZoneInfoTag
 
 
 type Config
@@ -27,6 +29,7 @@ type Config
     , flowWithoutOffers :: Boolean
     , enableSingleEstimate :: Boolean
     , selectedEstimateHeight :: Int
+    , zoneType :: ZoneType
     }
 
 config :: Config
@@ -42,4 +45,5 @@ config =
   , flowWithoutOffers : false
   , enableSingleEstimate : false
   , selectedEstimateHeight : 0
+  , zoneType : NOZONE
   }

@@ -151,7 +151,8 @@ tagList _ = [
   {background : Colors.yellow200, image : "ny_ic_tip_icon", visibility : true, text : "tipTagVisibility", textColor : ""},
   {background : Colors.black200, image : "ny_ic_loc_black", visibility : true, text : "gotoTagVisibility", textColor : ""},
   {background : Colors.purple100, image : "ny_ic_disability_purple", visibility : true, text : "purpleTagVisibility", textColor : ""},
-  {background : Colors.blue100, image : "ny_ic_star", visibility : true, text : "spLocTagVisibility", textColor : ""}
+  {background : Colors.blue100, image : "ny_ic_star", visibility : true, text : "spLocTagVisibility", textColor : ""},
+  {background : Colors.green100, image : "ny_ic_sp_zone_green", visibility : true, text : "specialZonePickup", textColor : ""}
 ]
 
 selectCardView :: forall w. (RideSelectionScreen.Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w

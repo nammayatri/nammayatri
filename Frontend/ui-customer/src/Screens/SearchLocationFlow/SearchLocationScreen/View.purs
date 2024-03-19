@@ -20,7 +20,7 @@ import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig)
 import Components.InputView as InputView
 import Effect (Effect)
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station)
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..))
 import Styles.Colors as Color
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, rippleColor)
@@ -46,8 +46,8 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Debug(spy)
 import Control.Monad.Free (runFree)
-import Helpers.Utils (fetchAndUpdateCurrentLocation)
-import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe) as MB
+import Helpers.Utils (fetchAndUpdateCurrentLocation, specialZoneTagConfig)
+import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
 import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC
 import Data.String (length, null, take) as DS
@@ -160,6 +160,7 @@ confirmLocationView push state = let
   zonePadding = 0 --if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
   viewVisibility = boolToVisibility $ currentStageOn state ConfirmLocationStage
   headerText = MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_STOP_LOCATION)) state.props.focussedTextField 
+  tagConfig = specialZoneTagConfig state.data.confirmLocCategory
   in 
   relativeLayout
     [ height MATCH_PARENT
@@ -179,7 +180,9 @@ confirmLocationView push state = let
               , orientation VERTICAL
               , stroke $ "1," <> Color.grey900
               , cornerRadii $ Corners 24.0 true true false false
-              , background Color.blue800
+              , background tagConfig.backgroundColor
+              , clickable $ MB.isJust tagConfig.infoPopUpConfig
+              , onClick push $ const $ SpecialZoneInfoTag
               ]
               [ linearLayout
                   [ width MATCH_PARENT
@@ -188,22 +191,19 @@ confirmLocationView push state = let
                   , gravity CENTER
                   , padding (Padding zonePadding 4 zonePadding 4)
                   , cornerRadii $ Corners 24.0 true true false false
-                  , visibility $ boolToVisibility $ state.data.confirmLocCategory /= ""
+                  , visibility $ boolToVisibility $ state.data.confirmLocCategory /= NOZONE
                   ] [ imageView
                       [ width (V 20)
                       , height (V 20)
                       , margin (MarginRight 6)
-                      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_zone_walk"
+                      , imageWithFallback $ fetchImage FF_ASSET tagConfig.icon
                       ]
                     , textView
-                      [ width if os == "IOS" && state.data.confirmLocCategory == "SureBlockedAreaForAutos" then (V 230) else WRAP_CONTENT
+                      [ width if os == "IOS" && state.data.confirmLocCategory == AUTO_BLOCKED then (V 230) else WRAP_CONTENT
                       , height WRAP_CONTENT
                       , gravity CENTER
                       , textSize FontSize.a_14
-                      , text if state.data.confirmLocCategory == "SureBlockedAreaForAutos" then
-                              (getString GO_TO_SELECTED_PICKUP_SPOT_AS_AUTOS_ARE_RESTRICTED)
-                            else
-                              (getString GO_TO_SELECTED_PICKUP_SPOT)
+                      , text tagConfig.text
                       , color Color.white900
                       ]
                     ]

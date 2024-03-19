@@ -53,18 +53,19 @@
 
 
                         <TextView
-                            android:layout_width="50dp"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="$120"
-                            android:gravity="end"
+                            android:gravity="center"
                             android:textColor="#FFFFFF"
                             android:layout_marginLeft="54dp"
-                            android:textSize="20dp"
+                            android:textSize="13dp"
                             android:id="@+id/ride_fare" />
 
                         <ImageView
                             android:layout_width="4dp"
                             android:layout_height="4dp"
+                            android:id="@+id/dot_view"
                             android:layout_marginHorizontal="6dp"
                             android:src="@drawable/separator_silent_mode"></ImageView>
 
@@ -80,8 +81,9 @@
                             android:layout_width="80dp"
                             android:layout_height="wrap_content"
                             android:gravity="end"
+                            android:layout_marginHorizontal="2dp"
                             android:text="View now"
-                            android:textSize="18sp"
+                            android:textSize="18dp"
                             android:textColor="#FCC32C"></TextView>
                     </LinearLayout>
 
@@ -143,6 +145,16 @@
                         android:paddingLeft="20dp"
                         android:id="@+id/messageTextView_right" />
                 </LinearLayout>
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginLeft="35dp"
+                    android:visibility="gone"
+                    android:id="@+id/notification_dot"
+                    android:src="@drawable/ny_ic_green_circle">
+                </ImageView>
+
             </FrameLayout>
         </LinearLayout>
     </LinearLayout>

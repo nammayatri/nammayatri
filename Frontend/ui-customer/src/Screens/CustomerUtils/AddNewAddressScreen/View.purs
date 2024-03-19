@@ -51,6 +51,7 @@ import Data.String as DS
 import Styles.Colors as Color
 import Common.Resources.Constants (pickupZoomLevel)
 import Locale.Utils
+import Mobility.Prelude
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -102,35 +103,70 @@ view push state =
       , accessibility DISABLE_DESCENDANT
       , id (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap")
       ][]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , background Color.transparent
-      , accessibility DISABLE_DESCENDANT
-      , padding $ PaddingBottom 80
-      , gravity CENTER
-      , orientation VERTICAL
-      ][ textView
-         [ width WRAP_CONTENT
-         , height WRAP_CONTENT
-         , background Color.black900
-         , color Color.white900
-         , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
-                     (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
-                  else
-                     state.props.defaultPickUpPoint
-         , padding (Padding 7 7 7 7)
-         , margin (MarginBottom 5)
-         , cornerRadius 5.0
-         , visibility if showLabel then VISIBLE else INVISIBLE
-         , id (EHC.getNewIDWithTag "AddAddressPin")
-         ]
-       , imageView
-         [ width $ V 60
-         , height $ V 60 
-         , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetLink FunctionCall) <> "ny_ic_customer_current_location.png"
-         ]
-       ]
+    , if not state.data.config.feature.enableSpecialPickup then
+        linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , background Color.transparent
+        , accessibility DISABLE_DESCENDANT
+        , padding $ PaddingBottom $ if EHC.os == "IOS" then 40 else 80
+        , gravity CENTER
+        , orientation VERTICAL
+        ][ textView
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , background Color.black900
+          , color Color.white900
+          , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
+                      (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
+                    else
+                      state.props.defaultPickUpPoint
+          , padding (Padding 7 7 7 7)
+          , margin (MarginBottom 5)
+          , cornerRadius 5.0
+          , visibility $ boolToInvisibility showLabel
+          , id (EHC.getNewIDWithTag "AddAddressPin")
+          ]
+        , imageView
+          [ width $ V 60
+          , height $ V 60 
+          , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetLink FunctionCall) <> "ny_ic_customer_current_location.png"
+          ]
+        ]
+      else
+          linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , background Color.transparent
+          , accessibility DISABLE_DESCENDANT
+          , padding $ PaddingBottom 110
+          , gravity CENTER
+          , orientation VERTICAL
+          ][ imageView
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , accessibility DISABLE_DESCENDANT
+              , visibility $ boolToVisibility showLabel
+              , id (EHC.getNewIDWithTag "AddAddressPin")
+              ]
+          ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , background Color.transparent
+          , padding (PaddingBottom 46)
+          , gravity CENTER
+          , accessibility DISABLE
+          , orientation VERTICAL
+          , visibility $ boolToVisibility state.data.config.feature.enableSpecialPickup
+          ]
+          [ imageView
+              [ width $ V 60
+              , height $ V 60
+              , accessibility DISABLE
+              , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetLink FunctionCall) <> "ny_ic_customer_current_location.png"
+              ]
+          ]
     , relativeLayout
       [ background (if state.props.isLocateOnMap then Color.transparent else "#F5F5F5")
       , height MATCH_PARENT

@@ -213,7 +213,7 @@ screen initialState =
                                 _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
-                                _ <- checkPermissionAndUpdateDriverMarker initialState
+                                _ <- checkPermissionAndUpdateDriverMarker initialState true
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 pure unit
@@ -264,6 +264,7 @@ view push state =
       , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
+      , if state.props.specialZoneProps.specialZonePopup then specialZonePopup push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
       , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
@@ -360,24 +361,88 @@ driverMapsHeaderView push state =
                       ][ statsModel push state
                        , expandedStatsModel push state
                       ]
-                      , if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
                   ]
                 , offlineNavigationLinks push state
-              ] <> getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-                <> [gotoRecenterAndSupport state push]
+              ] <> [gotoRecenterAndSupport state push]
+                <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             , linearLayout
               [ width MATCH_PARENT
               , height MATCH_PARENT
               , orientation VERTICAL
               , background Color.transparent
               , gravity BOTTOM
-              ] $ [addAadhaarOrOTPView state push] <> getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+              ] $ [addAadhaarOrOTPView state push]
+                <> [specialPickupZone push state]
+                <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             ]
         ]
         , bottomNavBar push state
   ]
   where
     getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
+
+specialPickupZone :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+specialPickupZone push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 12 6 12 8
+    , margin $ Margin 16 5 16 16
+    , cornerRadius 8.0
+    , stroke $ "1," <> Color.darkMint
+    , gravity BOTTOM
+    , background Color.green300
+    , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) && state.props.specialZoneProps.nearBySpecialZone
+    , orientation HORIZONTAL
+    ]
+    [ linearLayout 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , gravity CENTER_VERTICAL
+      , weight 1.0
+      ] [ textView
+          $ [ text $ getString SPECIAL_PICKUP_ZONE_NEARBY
+            , color Color.green400
+            ]
+          <> FontStyle.body4 TypoGraphy
+        , textView
+          $ [ text $ getString SELECT_A_GREEN_AREA_FOR_PRIORITY_RIDES
+            , color Color.green400
+            ]
+          <> FontStyle.body2 TypoGraphy
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , cornerRadius 24.0
+            , background Color.green400
+            , orientation HORIZONTAL
+            , margin $ MarginTop 8
+            , onClick push $ const $ SpecialZonePopup
+            ]
+            [ imageView
+              [ height $ V 30
+              , width $ V 30
+              , padding $ PaddingHorizontal 10 5
+              , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_questionmark_white"
+              ]
+            , textView
+              $ [ height MATCH_PARENT
+                , width MATCH_PARENT
+                , color Color.white900
+                , padding $ Padding 0 4 10 0
+                , text $ getString LEARN_MORE 
+                ]
+              <> FontStyle.body1 TypoGraphy
+            ] 
+      ]
+    , imageView
+      [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_location_unserviceable_green"
+      , height $ V 64
+      , width $ V 92
+      ]  
+    ]
 
 bannersCarousal :: forall w. ListItem -> Boolean -> HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bannersCarousal view bottomMargin state push =
@@ -386,7 +451,6 @@ bannersCarousal view bottomMargin state push =
   , width MATCH_PARENT
   , margin if bottomMargin then MarginVertical 12 12 else MarginTop 12
   ][CarouselHolder.carouselView push $ getCarouselConfig view state]
-
 
 getCarouselConfig ∷ forall a. ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
 getCarouselConfig view state = {
@@ -416,25 +480,49 @@ genericAccessibilityPopUpView push state =
   
 gotoRecenterAndSupport :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 gotoRecenterAndSupport state push =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , margin $ Margin 12 8 12 0
-  , gravity if centerView then CENTER_HORIZONTAL else RIGHT
-  , visibility if state.props.driverStatusSet /= ST.Offline then VISIBLE else GONE
+  horizontalScrollView
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , scrollBarX false
   ][ linearLayout
-      [ width WRAP_CONTENT
-      , height if showReportText then MATCH_PARENT else WRAP_CONTENT
-      , gravity CENTER_VERTICAL
-      ][ if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto
-      then gotoButton push state else linearLayout[][]
-        , helpAndSupportBtnView push showReportText
-        , recenterBtnView state push
-      ]
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin $ Margin 12 4 12 0
+    , padding $ PaddingRight 30
+    , gravity if centerView then CENTER_HORIZONTAL else RIGHT
+    , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)
+    ][ linearLayout
+        [ width WRAP_CONTENT
+        , height if showReportText then MATCH_PARENT else WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ][ locationUpdateView push state
+          , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
+            then gotoButton push state else linearLayout[][]
+          , helpAndSupportBtnView push showReportText
+          , recenterBtnView state push
+        ]
+    ]
   ]
   where 
     showReportText = state.props.currentStage == ST.HomeScreen
     centerView = state.data.driverGotoState.gotoEnabledForMerchant && state.props.driverStatusSet /= ST.Offline && state.props.currentStage == ST.HomeScreen && state.data.config.gotoConfig.enableGoto
+
+locationUpdateView :: forall w .(Action -> Effect Unit) -> HomeScreenState  ->  PrestoDOM (Effect Unit) w
+locationUpdateView push state =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , margin $ MarginRight 10
+  , cornerRadius 22.0
+  , background Color.white900
+  , padding $ Padding 16 12 16 12
+  , gravity CENTER
+  , stroke $ "1,"<> Color.grey900
+  , rippleColor Color.rippleShade
+  ][ updateButtonIconAndText push state
+   , locationLastUpdatedTextAndTimeView push state
+  ]
 
 rateCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rateCardView push state =
@@ -553,7 +641,7 @@ recenterBtnView state push =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , stroke $ "1," <> Color.grey900
-  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) then GONE else VISIBLE
+  , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)
   , cornerRadius 24.0
   , margin $ MarginLeft 12
   , rippleColor Color.rippleShade
@@ -730,7 +818,7 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
   linearLayout
   [ weight 1.0
   , height MATCH_PARENT
-  , gravity CENTER
+  , gravity LEFT
   , visibility if isJust state.data.activeRide.disabilityTag then VISIBLE else GONE
   , margin (Margin 10 10 10 10)
   , background accessibilityHeaderconfig.background
@@ -741,7 +829,7 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
     [ width $ V 25
     , imageWithFallback accessibilityHeaderconfig.imageUrl
     , height $ V 22
-    , margin $ MarginRight 13
+    , margin $ Margin 13 5 13 0
     ]
   , linearLayout
     [ height WRAP_CONTENT
@@ -815,20 +903,6 @@ driverStatusPill pillConfig push state index =
         ] <> FontStyle.body1 TypoGraphy
       )
       ]
-
-  ]
-
-updateLocationAndLastUpdatedView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-updateLocationAndLastUpdatedView state push =
-  linearLayout
-  [ width MATCH_PARENT
-  , padding $ Padding 16 8 16 8
-  , margin $ Margin 16 8 16 16
-  , cornerRadius 7.0
-  , orientation HORIZONTAL
-  , background Color.blue600
-  ][ locationLastUpdatedTextAndTimeView push state
-    , updateButtonIconAndText push state
   ]
 
 statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -841,7 +915,7 @@ statsModel push state =
     , orientation VERTICAL
     , visibility $ boolToVisibility showStatsModel
     , gravity CENTER
-    , padding $ Padding 16 10 16 10
+    , padding $ Padding 16 2 16 6
     ][  if not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then
           StatsModel.view (push <<< StatsModelAction) (statsModelConfig state cityConfig.showEarningSection)
         else linearLayout
@@ -1070,7 +1144,7 @@ gotoButton push state =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) then GONE else VISIBLE
+  , visibility $ boolToVisibility $ not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline)
   , margin $ MarginTop 3
   ] [ linearLayout
       [ width WRAP_CONTENT
@@ -1603,17 +1677,11 @@ locationLastUpdatedTextAndTimeView push state =
     , gravity CENTER_VERTICAL
   ][
     textView $
-    [ text $ (getString UPDATED_AT) <> ": "
-    , lineHeight "15"
-    , color Color.brownishGrey
-    , gravity LEFT
-    , height WRAP_CONTENT
-    ] <> FontStyle.paragraphText TypoGraphy
-    , textView $
       [  width WRAP_CONTENT
         , height WRAP_CONTENT
         , ellipsize true
         , singleLine true
+        , color Color.black800
         , gravity CENTER_VERTICAL
         , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
       ] <> FontStyle.body4 TypoGraphy
@@ -1624,29 +1692,21 @@ updateButtonIconAndText push state =
   linearLayout
   [ width WRAP_CONTENT
   , height MATCH_PARENT
+  , margin $ MarginTop 1
   , orientation HORIZONTAL
   , visibility if not state.props.rideActionModal && state.props.statusOnline then VISIBLE else GONE
   , onClick (\action -> do
         _<- push action
         pure unit
         ) (const RetryTimeUpdate)
-  , gravity RIGHT
   ]
   [ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)]
     $ imageView
-    [ width $ V 20
-    , height $ V 20
+    [ width $ V 17
+    , height $ V 17
     , margin $ MarginRight 5
     , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_refresh"
-    , gravity RIGHT
-    ],
-    textView $
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , text (getString UPDATE)
-    , color Color.blueTextColor
-    , gravity RIGHT
-    ] <> FontStyle.body4 TypoGraphy
+    ]
   ]
 
 waitTimeInfoPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1727,6 +1787,14 @@ requestInfoCardView push state =
         , width MATCH_PARENT
         ]
         [ RequestInfoCard.view (push <<< RequestInfoCardAction) (requestInfoCardConfig FunctionCall) ]
+
+specialZonePopup :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+specialZonePopup push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ]
+    $ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        ][ RequestInfoCard.view (push <<< SpecialZoneCardAC) (specialZonePopupConfig state) ]
 
 gotoRequestPopupView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 gotoRequestPopupView push state = 

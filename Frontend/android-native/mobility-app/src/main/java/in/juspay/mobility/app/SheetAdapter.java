@@ -66,11 +66,11 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public static class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText;
+        TextView pickUpDistance, durationToPickup, acceptRejTimer, baseFare, sourceArea, currency, durationToPickupImage, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges, sourcePinCode , destinationPinCode, accessibilityTagText, rideTypeText, specialLocExtraTip;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
         ImageView assetZonePickup, assetZoneDrop, rideTypeImage;
-        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag;
+        LinearLayout tagsBlock, accessibilityTag, customerTipTag, gotoTag, rideTypeTag, testRequestTag, specialLocTag;
 
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -107,6 +107,8 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             durationToPickupImage = itemView.findViewById(R.id.durationToPickupImage);
             gotoTag = itemView.findViewById(R.id.gotoTag);
             testRequestTag = itemView.findViewById(R.id.testRequestTag);
+            specialLocTag = itemView.findViewById(R.id.spZoneTag);
+            specialLocExtraTip = itemView.findViewById(R.id.spZoneExtraTip);
         }
     }
 
