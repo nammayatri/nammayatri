@@ -491,6 +491,14 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public void requestBackgroundLocation(){
+        Activity activity = bridgeComponents.getActivity();
+        if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, 19032024);
+        }
+    }
+
+    @JavascriptInterface
     public void requestLocation() {
         if (!isLocationPermissionEnabled()) {
             requestPermission();
