@@ -727,6 +727,13 @@ getDriverProfileStatsBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+getDriverProfileStats :: DriverProfileStatsReq -> Flow GlobalState (Either ErrorResponse DriverProfileStatsResp)
+getDriverProfileStats payload = do
+     headers <- getHeaders "" false
+     withAPIResult ((EP.getstatsInfo "" )) unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse x = x
+
 driverArrived :: String -> DriverArrivedReq -> Flow GlobalState (Either ErrorResponse DriverArrivedRes)
 driverArrived rideId payload = do
      headers <- getHeaders "" false

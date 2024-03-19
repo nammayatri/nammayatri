@@ -35,6 +35,7 @@ data KeyStore = USER_NAME
                 | TEST_FLOW_FOR_REGISTRATOION
                 | MOBILE_NUMBER_KEY
                 | IS_RIDE_ACTIVE
+                | IS_DRIVER_STATS_CALLED
                 | IS_DRIVER_ENABLED
                 | DRIVER_STATUS
                 | DRIVER_STATUS_N
