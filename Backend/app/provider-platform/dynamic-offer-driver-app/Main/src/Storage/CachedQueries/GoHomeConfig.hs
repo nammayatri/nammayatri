@@ -132,15 +132,15 @@ findByMerchantOpCityId id stickyId idName = do
 
 getConfigsFromMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
 getConfigsFromMemory id = do
-  ghc <- L.getOption DTC.GoHomeConfig
+  ghc <- L.getOption (DTC.GoHomeConfig id.getId)
   maybe
-    (L.setOption DTC.GoHomeConfig /=<< getGoHomeConfigFromCAC id 1 Nothing Nothing)
+    (L.setOption (DTC.GoHomeConfig id.getId) /=<< getGoHomeConfigFromCAC id 1 Nothing Nothing)
     ( \ghc' -> do
         isUpdateReq <- DTC.updateConfig DTC.LastUpdatedGoHomeConfig
         if isUpdateReq
           then do
             ghc'' <- getGoHomeConfigFromCAC id 1 Nothing Nothing
-            L.setOption DTC.GoHomeConfig ghc''
+            L.setOption (DTC.GoHomeConfig id.getId) ghc''
             pure ghc''
           else pure ghc'
     )
