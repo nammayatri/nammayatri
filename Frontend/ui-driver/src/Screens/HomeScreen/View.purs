@@ -349,20 +349,21 @@ driverMapsHeaderView push state =
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
-                  , PP.cornerRadii $ PTD.Corners 24.0  false false true true
                   , background $ Color.white900
-                  , padding $ PaddingBottom 12
                   , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
                   ][  driverDetail push state
                     , relativeLayout 
                       [ width MATCH_PARENT
                       , height WRAP_CONTENT
                       , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+                      , PP.cornerRadii $ PTD.Corners 24.0  false false true true
+                      , padding $ PaddingBottom 12
                       ][ statsModel push state
                        , expandedStatsModel push state
                       ]
                   ]
                 , offlineNavigationLinks push state
+                , accessibilityHeaderView push state (getAccessibilityHeaderText state)
               ] <> [gotoRecenterAndSupport state push]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             , linearLayout
@@ -763,87 +764,178 @@ popupModelSilentAsk push state =
 
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverDetail push state =
-  let driverImage = case state.data.gender of
-                      "MALE" -> "ny_ic_new_avatar_profile"
-                      "FEMALE" -> "ny_ic_profile_female"
-                      _ -> "ny_ic_generic_mascot"
-  in
-  linearLayout
-  [ width MATCH_PARENT
+  linearLayout[ 
+    width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , background Color.white900
   , clickable true
   , margin (MarginTop 5)
-  ][  linearLayout
-      [ width WRAP_CONTENT
-      , height MATCH_PARENT
-      , gravity CENTER
-      , padding (Padding 16 20 12 16)
-      ][ linearLayout [
-          width $ V 42
-        , height $ V 42
-        , onClick push $ const GoToProfile
-        ][ imageView
-           [ width $ V 42
-           , height $ V 42
-           , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
-           ]
-         ]
-      ]
-    , accessibilityHeaderView push state (getAccessibilityHeaderText state)
-    , linearLayout
-      [ width MATCH_PARENT
+  ] if rideAccStage then [
+        tripStageTopBar push state
+    ]
+    else [ 
+      driverProfile push state,
+      defaultTopBar
+    ]
+
+  where
+    defaultTopBar = 
+      linearLayout[ 
+        width MATCH_PARENT
       , height MATCH_PARENT
       , orientation HORIZONTAL
       , gravity CENTER_HORIZONTAL
       , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red)
-               else if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true")&& ((state.props.driverStatusSet == Online) || state.props.driverStatusSet == Silent )) then ("2," <> Color.yellow900)
-               else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint)
-               else ("2," <> Color.blue800)
+              else if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true")&& ((state.props.driverStatusSet == Online) || state.props.driverStatusSet == Silent )) then ("2," <> Color.yellow900)
+              else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint)
+              else ("2," <> Color.blue800)
       , cornerRadius 50.0
-      , alpha if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])then 0.5 else 1.0
       , margin (Margin 0 10 10 10)
-      , visibility if isJust state.data.activeRide.disabilityTag then GONE else VISIBLE 
+      , visibility $ boolToVisibility $ not $ rideAccStage
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
         ) driverStatusIndicators
       ) 
+    
+    rideAccStage =  DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]
+
+driverProfile :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+driverProfile push state = 
+  let 
+    driverImage = case state.data.gender of
+      "MALE" -> "ny_ic_new_avatar_profile"
+      "FEMALE" -> "ny_ic_profile_female"
+      _ -> "ny_ic_generic_mascot"
+  in
+   linearLayout
+    [ width WRAP_CONTENT
+    , height MATCH_PARENT
+    , gravity CENTER
+    , padding $ Padding 16 20 12 16
+    ][ linearLayout [
+        width $ V 42
+      , height $ V 42
+      , onClick push $ const GoToProfile
+      ][ imageView
+          [ width $ V 42
+          , height $ V 42
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
+          ]
+        ]
+    ]
+
+
+tripStageTopBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+tripStageTopBar push state = 
+  horizontalScrollView[
+    width MATCH_PARENT,
+    height WRAP_CONTENT,
+    scrollBarX false,
+    background Color.white900
+  ][
+    linearLayout[
+      width MATCH_PARENT,
+      height WRAP_CONTENT,
+      background Color.white900,
+      margin $ MarginRight 16
+    ] $ [ 
+      driverProfile push state,
+      advanceBookingSwitch
+    ] <> ( 
+      map tripStageTopBarPill [
+        [
+          pillIcon  "ny_ic_blue_shield_white_plus",
+          pillText  "Safety Center"
+        ],
+        [ pillIcon "ny_ic_red_triangle_warning",
+          pillText "Report Issue"
+        ]
+      ]
+    )
   ]
+  where 
+    tripStageTopBarPill = 
+      linearLayout [
+        width WRAP_CONTENT,
+        height WRAP_CONTENT,
+        padding $ Padding 16 16 16 16,
+        margin $ Margin 12 12 0 12,
+        cornerRadius 32.0,
+        background Color.blue600
+      ] 
+    
+    pillIcon imgStr = 
+      imageView [
+        width $ V 20,
+        height $ V 20,
+        imageWithFallback $ HU.fetchImage HU.FF_ASSET imgStr
+      ]
+    
+    pillText str = 
+      textView $ [
+        text str,
+        color Color.blue900,
+        margin $ MarginLeft 8
+      ] <> FontStyle.body6 TypoGraphy
+
+    advanceBookingSwitch = 
+      linearLayout [
+        width WRAP_CONTENT,
+        height WRAP_CONTENT,
+        margin $ Margin 12 12 0 12,
+        cornerRadius 32.0,
+        background Color.blue600,
+        padding $ Padding 4 4 4 4 
+      ][
+        swichBtn "Current" "Current",
+        swichBtn "Advance" "Advance"
+      ]
+
+    swichBtn txt stage = 
+      textView $ [
+        text $ txt,
+        color if state.props.bookingStage == stage then Color.aliceBlueLight else Color.blue900,
+        background if state.props.bookingStage == stage then Color.blue900 else Color.blue600,
+        padding $ Padding 12 12 12 12,
+        onClick push $ const $ SwitchBookingStage stage,
+        cornerRadius 32.0
+      ] <> FontStyle.body6 TypoGraphy
+    
 
 
 accessibilityHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> ContentConfig -> PrestoDOM (Effect Unit) w
 accessibilityHeaderView push state accessibilityHeaderconfig = 
   linearLayout
-  [ weight 1.0
-  , height MATCH_PARENT
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
   , gravity LEFT
-  , visibility if isJust state.data.activeRide.disabilityTag then VISIBLE else GONE
-  , margin (Margin 10 10 10 10)
+  , visibility $ boolToVisibility $ isJust state.data.activeRide.disabilityTag
+  , margin $ Margin 12 16 12 0
   , background accessibilityHeaderconfig.background
   , cornerRadius 50.0
-  , padding (Padding 8 8 8 8)
+  , padding $ Padding 16 8 16 8
   ][
     imageView
-    [ width $ V 25
+    [ width $ V 24
     , imageWithFallback accessibilityHeaderconfig.imageUrl
-    , height $ V 22
+    , height $ V 24
     , margin $ Margin 13 5 13 0
     ]
   , linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
+    , width MATCH_PARENT
     , orientation VERTICAL
     ][ textView $
-        [ width WRAP_CONTENT
+        [ width MATCH_PARENT
             , height WRAP_CONTENT
             , padding $ PaddingRight 4
             , text accessibilityHeaderconfig.primaryText
             , color accessibilityHeaderconfig.textColor
         ] <> FontStyle.body1 TypoGraphy
       , textView $
-        [ width WRAP_CONTENT
+        [ width MATCH_PARENT
         , height WRAP_CONTENT
         , text accessibilityHeaderconfig.secondaryText
         , color accessibilityHeaderconfig.textColor

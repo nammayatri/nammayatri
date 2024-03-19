@@ -323,3 +323,6 @@ black7000 = "#B32C2F3A"
 
 white13 :: Color 
 white13 = "#21000000"
+
+aliceBlueLight :: Color
+aliceBlueLight = "#F4F7FF"
