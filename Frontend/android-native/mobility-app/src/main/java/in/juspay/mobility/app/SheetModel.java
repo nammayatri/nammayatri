@@ -25,7 +25,7 @@ public class SheetModel {
 
     private final Boolean disabilityTag;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
-    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup;
+    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled;
     private double srcLat, srcLng, destLat, destLng;
 
     public SheetModel(String pickUpDistance,
@@ -58,8 +58,8 @@ public class SheetModel {
                       double destLat,
                       double destLng,
                       boolean specialZonePickup,
-                      int specialZoneExtraTip
-    ){
+                      int specialZoneExtraTip,
+                      boolean downgradeEnabled){
 
         this.srcLat = srcLat;
         this.srcLng = srcLng;
@@ -98,6 +98,7 @@ public class SheetModel {
         this.driverPickUpCharges = driverPickUpCharges;
         this.specialZonePickup = specialZonePickup;
         this.specialZoneExtraTip = specialZoneExtraTip;
+        this.downgradeEnabled = downgradeEnabled;
     }
 
     public boolean getSpecialZonePickup(){
@@ -112,6 +113,9 @@ public class SheetModel {
         this.specialZoneExtraTip = updatedAmount;
     }
 
+    public boolean isDowngradeEnabled(){
+        return downgradeEnabled;
+    }
     public boolean isGotoTag() {
         return gotoTag;
     }

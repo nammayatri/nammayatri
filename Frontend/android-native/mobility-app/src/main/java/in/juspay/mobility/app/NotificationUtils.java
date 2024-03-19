@@ -191,12 +191,13 @@ public class NotificationUtils {
                     sheetData.putBoolean("isTranslated", (!entity_payload.has("isTranslated") || entity_payload.isNull("isTranslated") || entity_payload.getBoolean("isTranslated")));
                     sheetData.putString("sourcePinCode", addressPickUp.has("areaCode") && !addressPickUp.isNull("areaCode") ? addressPickUp.getString("areaCode"): "");
                     sheetData.putString("destinationPinCode", addressDrop.has("areaCode") && !addressDrop.isNull("areaCode") ? addressDrop.getString("areaCode") : "");
-                    sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
+                    sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? entity_payload.getString("requestedVehicleVariant") : NO_VARIANT);
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
                     sheetData.putInt("driverPickUpCharges", entity_payload.has("driverPickUpCharges") ? entity_payload.optInt("driverPickUpCharges", 10): 10);
                     sheetData.putInt("specialZoneExtraTip", entity_payload.optInt("specialZoneExtraTip", 0)); 
                     sheetData.putBoolean("specialZonePickup", isSpecialPickupZone); 
+                    sheetData.putBoolean("downgradeEnabled", entity_payload.optBoolean("downgradeEnabled", true));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);
