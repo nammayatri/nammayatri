@@ -59,11 +59,8 @@ import ConfigProvider as CP
 import Locale.Utils
 import MerchantConfig.Types (GeoCodeConfig)
 import Debug
-import Engineering.Helpers.SQLiteUtils
-import Engineering.Helpers.SQLiteUtils.Schema
 import Effect.Class (liftEffect)
 import Data.Function.Uncurried (Fn3, runFn3, runFn4, runFn6, runFn2)
-
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -416,17 +413,7 @@ selectList estimateId = do
 ------------------------------------------------------------------------ RideBooking Function -----------------------------------------------------------------------------------------
 rideBooking bookingId = do
         headers <- getHeaders "" true
-        resp <- withAPIResult (EP.ridebooking bookingId) unwrapResponse $ callAPI headers (RideBookingReq bookingId)
-        case resp of    
-            Right res -> do 
-                void $ pure $ runFn3 addToSqlite dbName driverTableName $ transformRideToTable res
-                pure resp
-            Left err -> do
-                
-                let cachedResp = transformFromTableToResp $ runFn6 readFromSqlite dbName driverTableName "userId = ?" [getValueToLocalStore CUSTOMER_ID] Just Nothing
-                    _ = spy "err rideBooking zxc " err
-                    _ = spy "cachedResp rideBooking zxc " cachedResp
-                pure $ Right cachedResp
+        withAPIResult (EP.ridebooking bookingId) unwrapResponse $ callAPI headers (RideBookingReq bookingId)
     where
         unwrapResponse (x) = x
 
@@ -507,7 +494,6 @@ getProfileBT _  = do
     errorHandler (errorPayload) =  do
         BackT $ pure GoBack
 
--- updateProfileBT :: UpdateProfileReq -> FlowBT String UpdateProfileRes
 updateProfile (UpdateProfileReq payload) = do
         headers <- getHeaders "" false
         withAPIResult (EP.profile "") unwrapResponse $ callAPI headers (UpdateProfileReq payload)

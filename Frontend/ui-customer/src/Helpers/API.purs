@@ -28,6 +28,7 @@ import Presto.Core.Types.Language.Flow (loadS, APIResult(..), Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Array (singleton)
 import Data.Maybe (maybe, Maybe(..))
+import SQLStorage
 
 data CustomerDefaultErrorHandler = CustomerDefaultErrorHandler
 instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler GlobalState where
@@ -91,6 +92,12 @@ callApi :: forall a b.
   Flow GlobalState (APIResult b)
 callApi payload =
   callApiWithOptions payload []
+
+
+callAPIWithFallback payload dbName transformToTable transformFromTable tableName query = do
+  regToken <- loadS $ show REGISTERATION_TOKEN
+  let headers' = baseHeaders <> (tokenHeader regToken)
+  API.callAPIWithFallback payload headers' dbName transformToTable transformFromTable (show tableName) query (getTableSchema tableName)
 
 callGzipApiWithOptions :: forall a b.
   StandardEncode a =>

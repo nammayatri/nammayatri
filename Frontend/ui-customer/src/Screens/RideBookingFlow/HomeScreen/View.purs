@@ -133,6 +133,9 @@ import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Services.FlowCache as FlowCache
 import Engineering.Helpers.BackTrack
 import Types.App
+import Helpers.API as API
+import Engineering.Helpers.SQLiteUtils
+import SQLStorage
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -2621,10 +2624,10 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     let bookingId = if state.props.bookingId == "" then gbState.homeScreen.props.bookingId else state.props.bookingId
     if bookingId /= ""
       then do
-        respBooking <- rideBooking bookingId 
+      -- payload dbName transformToTable transformFromTable tableName custId
+        respBooking <- API.callAPIWithFallback (RideBookingReq bookingId) dbName transformRideToTable transformFromTableToResp RideT findActiveRide
         case respBooking of
-          Right respBooking -> do
-            handleRideBookingResp respBooking
+          Right resp -> handleRideBookingResp resp
           Left _ -> pure unit
       else do
         mbResp <- getActiveBooking

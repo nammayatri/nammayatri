@@ -26,6 +26,9 @@ import Data.Either (Either(..))
 import Debug (spy)
 import Foreign.Object (empty)
 import Control.Transformers.Back.Trans as App
+import Data.Function.Uncurried (Fn3, runFn3, Fn4, runFn4, Fn6, runFn6, runFn2)
+import Engineering.Helpers.SQLiteUtils
+import Data.Maybe
 
 callApi :: forall a b st.
   StandardEncode a =>
@@ -41,6 +44,27 @@ callApi payload headers' = do
     Right resp -> pure $ Right $ spy "Response :: " resp
     Left err -> do
       pure $ Left err
+  where
+    logRequest = do
+      let (Request req) = makeRequest payload (Headers headers')
+      void $ pure $ spy "Request :: " req
+
+callAPIWithFallback payload headers' dbName transformToTable transformFromTable tableName query tableSchema = do
+  logRequest
+  result <- callAPI (Headers headers') payload
+  case result of
+    Right resp -> do
+      void $ pure $ runFn2 deleteTable dbName tableName
+      void $ pure $ runFn3 createTable dbName tableName tableSchema
+      void $ pure $ runFn3 addToSqlite dbName tableName $ transformToTable resp.response
+      pure $ Right $ spy "Response :: " resp.response
+    Left err -> do
+      let cachedResp = runFn4 executeQuery dbName query Just Nothing
+      case cachedResp of
+        Nothing -> pure $ Left err
+        Just cachedRes -> do
+          void $ pure $ spy "sql Cached Response :: " cachedRes
+          pure $ Right $ spy "sql Transformed Cached Response ::" transformFromTable cachedRes
   where
     logRequest = do
       let (Request req) = makeRequest payload (Headers headers')

@@ -193,9 +193,10 @@ import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldMap)
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Engineering.Helpers.SQLiteUtils
-import Engineering.Helpers.SQLiteUtils.Schema
-
+import Control.Transformers.Back.Trans as CTBT
+import Helpers.API as API
 import Services.FlowCache as FlowCache
+import SQLStorage 
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -278,19 +279,33 @@ currentFlowStatus :: FlowBT String Unit
 currentFlowStatus = do
   void $ lift $ lift $ toggleLoader false
   verifyProfile "LazyCheck"
-  flowStatus <- Remote.flowStatusBT "LazyCheck"
-  case flowStatus ^. _currentStatus of
-    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
-    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
-    RIDE_ASSIGNED _                         -> checkRideStatus true
-    _                                       -> checkRideStatus false
+  flowStatus <- lift $ lift $ API.callAPIWithFallback (FlowStatusReq) dbName transformFromFlowStatusResp transformFromFlowsTable FlowStatusT findFlowStatus
+  case flowStatus of
+    Right response -> handleFlowStatusResponse response
+    Left err -> App.BackT $ pure App.GoBack
+
+  
   hideLoaderFlow
   void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?
   homeScreenFlow
   where
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
-      response <- Remote.getProfileBT ""
+      res <- lift $ lift $ API.callAPIWithFallback (GetProfileReq) dbName transformFromProfileToTable transformFromTableToProfile ProfileT findProfile
+      case res of 
+        Right response -> handleProfileResponse response
+        Left err -> App.BackT $ pure App.GoBack
+
+    handleFlowStatusResponse :: FlowStatusRes -> FlowBT String Unit
+    handleFlowStatusResponse flowStatus = 
+      case flowStatus ^. _currentStatus of
+        WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
+        DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
+        RIDE_ASSIGNED _                         -> checkRideStatus true
+        _                                       -> checkRideStatus false
+      
+    handleProfileResponse :: GetProfileRes -> FlowBT String Unit
+    handleProfileResponse response = do
       updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
       updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
       updateLanguageAndReferralCode $ response ^. _language
@@ -302,31 +317,31 @@ currentFlowStatus = do
           hideLoaderFlow
           accountSetUpScreenFlow
           handleDeepLinks Nothing true
-        else do
-          tag <- maybe (pure "") pure (response ^. _disability)
-          let hasCompletedSafetySetup = fromMaybe false $ response ^. _hasCompletedSafetySetup
-              hasCompletedMockSafetyDrill = fromMaybe false $ response ^. _hasCompletedMockSafetyDrill
-              sosBannerType = case hasCompletedSafetySetup, hasCompletedMockSafetyDrill of
-                false, _ -> Just ST.SETUP_BANNER
-                true, false -> Just ST.MOCK_DRILL_BANNER
-                _, _ -> Nothing
-          modifyScreenState $ HomeScreenStateType
-                  $ \homeScreen →
-                      homeScreen
-                        { data
-                          { disability = Just { tag: tag, id: "", description: "" }
-                          , followers = Nothing
-                          , settingSideBar
-                            { name = fromMaybe "" (response ^. _firstName)
-                            , gender = response ^. _gender
-                            , email = response ^. _email
-                            , hasCompletedSafetySetup = hasCompletedSafetySetup
-                            }
+      else do
+        tag <- maybe (pure "") pure (response ^. _disability)
+        let hasCompletedSafetySetup = fromMaybe false $ response ^. _hasCompletedSafetySetup
+            hasCompletedMockSafetyDrill = fromMaybe false $ response ^. _hasCompletedMockSafetyDrill
+            sosBannerType = case hasCompletedSafetySetup, hasCompletedMockSafetyDrill of
+              false, _ -> Just ST.SETUP_BANNER
+              true, false -> Just ST.MOCK_DRILL_BANNER
+              _, _ -> Nothing
+        modifyScreenState $ HomeScreenStateType
+                $ \homeScreen →
+                    homeScreen
+                      { data
+                        { disability = Just { tag: tag, id: "", description: "" }
+                        , followers = Nothing
+                        , settingSideBar
+                          { name = fromMaybe "" (response ^. _firstName)
+                          , gender = response ^. _gender
+                          , email = response ^. _email
+                          , hasCompletedSafetySetup = hasCompletedSafetySetup
                           }
-                        , props { isBanner = false
-                          , sosBannerType = sosBannerType
-                          , followsRide = fromMaybe false (response ^. _followsRide)}
-                        }          
+                        }
+                      , props { isBanner = false
+                        , sosBannerType = sosBannerType
+                        , followsRide = fromMaybe false (response ^. _followsRide)}
+                      }      
                         
     getUpdateToken :: String -> FlowBT String Unit --TODO:: Move this to common library
     getUpdateToken token =
@@ -1753,7 +1768,7 @@ rideSearchFlow flowType = do
                     else do
                       if flowType == "REPEAT_RIDE_FLOW" then liftFlowBT $ logEventWithParams logField_ "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
                       void $ pure $ updateLocalStage FindingEstimate
-                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isRepeatRide = true, searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, isShorterTrip = false}, data {source = finalState.data.source, sourceAddress = finalState.data.sourceAddress, nearByDrivers = Nothing}})
+                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isRepeatRide = (flowType == "REPEAT_RIDE_FLOW"), searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, isShorterTrip = false}, data {source = finalState.data.source, sourceAddress = finalState.data.sourceAddress, nearByDrivers = Nothing}})
                   void $ lift $ lift $ toggleLoader false
 
                 Nothing -> pure unit

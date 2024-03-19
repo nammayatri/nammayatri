@@ -111,6 +111,29 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return data;
     }
 
+
+    public JSONArray executeQuery(SQLiteDatabase db, String query) {
+        JSONArray data = new JSONArray();
+        try {
+            Cursor cursor = db.rawQuery(query, null);
+            String[] columns = cursor.getColumnNames();
+            while (cursor.moveToNext()) {
+                JSONObject row = new JSONObject();
+                for(String col : columns) {
+                    int index = cursor.getColumnIndex(col);
+                    if (index != -1) {
+                        row.put(col, cursor.getString(index));
+                    }
+                }
+                data.put(row);
+            }
+            cursor.close();
+        } catch (Exception e) {
+            Log.i("SQLiteLog", "Error executing query: " + e);
+        }
+        return data;
+    }
+
     public int updateRecord(SQLiteDatabase db, String tableName, JSONObject record, String selection, String[] selectionArgs) throws Exception {
         ContentValues newRec = new ContentValues();
         String[] columns = db.query(tableName, null, null, null, null, null, null).getColumnNames();

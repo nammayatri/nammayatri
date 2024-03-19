@@ -374,6 +374,7 @@ public class MobilityCommonBridge extends HyperBridge {
             } else {
                 for (int i = 0; i < selectionArgs.length(); i++) selectionArgsArr[i] = selectionArgs.get(i).toString();
             }
+            System.out.println("selectionArgs zxc "+ selectionArgs);
             String d = dbHelper.readRecord(db, tableName, selection, selectionArgsArr).toString();
             System.out.println("zxc readFromSqlite -> " + d);
             return d;
@@ -382,6 +383,17 @@ public class MobilityCommonBridge extends HyperBridge {
             return "NULL";
         }
     }
+
+    @JavascriptInterface
+    public String executeQuery(String dbName, String query){
+        try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            return dbHelper.executeQuery(db, query).toString();
+        } catch (Exception e){
+            Log.i("SQLiteLog", "Error executing query: " + e);
+            return new JSONArray().toString();
+        }
+    } 
 
     @JavascriptInterface
     public int updateInSqlite(String dbName, String tableName, String selection, String _selectionArgs, String _record){

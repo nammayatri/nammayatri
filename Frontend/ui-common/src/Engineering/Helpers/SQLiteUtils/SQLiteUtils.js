@@ -66,3 +66,31 @@ export const updateInSqlite = function(dbName, tableName, selection, selectionAr
     return window.JBridge.updateInSqlite(dbName, tableName, selection, JSON.stringify({"selectionArgs": selectionArgs}), JSON.stringify(record));
   else return -1
 }
+
+export const executeQuery = function(dbName, query, just, nothing){
+  if (window.JBridge.executeQuery){
+    const jsonstr = window.JBridge.executeQuery(dbName, query);
+    try{
+      const record = JSON.parse(jsonstr);
+      return just(record);
+    } catch(e){
+      console.log("Error executing query", e);
+      return nothing;
+    }
+  }
+  else {
+    return nothing
+  }
+}
+
+
+// @JavascriptInterface
+//     public JSONArray executeQuery(String dbName, String query){
+//         try(DatabaseHelper dbHelper = new DatabaseHelper(bridgeComponents.getContext(), dbName)){
+//             SQLiteDatabase db = dbHelper.getWritableDatabase();
+//             return dbHelper.executeQuery(db, query);
+//         } catch (Exception e){
+//             Log.i("SQLiteLog", "Error executing query: " + e);
+//             return new JSONArray();
+//         }
+//     } 

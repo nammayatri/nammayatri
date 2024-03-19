@@ -45,9 +45,7 @@ import Foreign.Generic (decodeJSON)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Common.Types.App as Common
 import Data.Function.Uncurried (Fn3, runFn3, runFn4, runFn6, runFn2)
-import Engineering.Helpers.SQLiteUtils
 import Debug
-import Engineering.Helpers.SQLiteUtils.Schema
 
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
@@ -82,10 +80,6 @@ checkRideStatus rideAssigned = do
                     , zoneType = getSpecialTag resp.specialLocationTag
                   }
                 }
-        void $ pure $ runFn3 createTable dbName driverTableName rideSchema
-        void $ pure $ runFn3 addToSqlite dbName driverTableName $ transformRideToTable (fromMaybe HSD.dummyRideBooking (head listResp.list))
-        let _offlineDriverInfo = runFn6 readFromSqlite dbName driverTableName "userId = ?" [getValueToLocalStore CUSTOMER_ID] Just Nothing
-            _ = spy "offlineDriverInfo zxc -> " _offlineDriverInfo
         setValueToLocalStore IS_SOS_ACTIVE $ show $ Just Common.Pending == resp.sosStatus
         if rideStatus == HomeScreen then
           updateLocalStage HomeScreen
