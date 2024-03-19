@@ -494,3 +494,12 @@ upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantO
   dropLoc <- buildLocation toLocation
   toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create dropLoc >> QLM.create toLocationMapping
+
+findLatestByTransactionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Booking)
+findLatestByTransactionId transactionId =
+  do
+    let options = [Se.Is BeamB.transactionId $ Se.Eq transactionId]
+        sortBy' = Se.Desc BeamB.createdAt
+        limit' = Just 1
+    findAllWithOptionsKV options sortBy' limit' Nothing
+    <&> listToMaybe

@@ -14,22 +14,34 @@
 
 module Beckn.ACL.OnInit (buildOnInitReqV2) where
 
+import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.OnInit as DOnInit
+import qualified Domain.Action.UI.Cancel as DCancel
 import Domain.Types.Booking (BPPBooking, Booking)
+import Domain.Types.CancellationReason
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.Queries.Booking as QRideB
 import Tools.Error
 
 buildOnInitReqV2 ::
-  ( HasFlowEnv m r '["_version" ::: Text]
+  ( EncFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["_version" ::: Text, "internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl]
   ) =>
   Spec.OnInitReq ->
   m (Maybe DOnInit.OnInitReq)
@@ -86,7 +98,7 @@ buildOnInitReqV2 req = do
     parseDecimalValue = DecimalValue.valueFromString
 
 handleErrorV2 ::
-  (MonadFlow m) =>
+  (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl]) =>
   Spec.OnInitReq ->
   (Spec.ConfirmReqMessage -> m (Maybe DOnInit.OnInitReq)) ->
   m (Maybe DOnInit.OnInitReq)
@@ -95,4 +107,18 @@ handleErrorV2 req action =
     Nothing -> req.onInitReqMessage & maybe (pure Nothing) action
     Just err -> do
       logTagError "on_init req" $ "on_init error: " <> show err
+      bookingIdText <- (fmap UUID.toText req.onInitReqContext.contextMessageId) & fromMaybeM (InvalidRequest "Missing messageId in context")
+      let bookingId = Id bookingIdText
+          cancelReq = buildCancelReq err.errorMessage
+      booking <- QRideB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+      dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
+      void $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
       pure Nothing
+
+buildCancelReq :: Maybe Text -> DCancel.CancelReq
+buildCancelReq mbErrorMessage =
+  DCancel.CancelReq
+    { reasonCode = CancellationReasonCode "BPP cancelled: on_init error",
+      reasonStage = OnConfirm,
+      additionalInfo = mbErrorMessage
+    }
