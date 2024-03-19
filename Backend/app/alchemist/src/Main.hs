@@ -3,7 +3,7 @@
 module Main where
 
 --import qualified Data.ByteString as BS
-import Data.List (isSuffixOf)
+import Data.List (isInfixOf, isSuffixOf)
 --import qualified Data.Yaml as Yaml
 import Kernel.Prelude
 import qualified NammaDSL.App as NammaDSL
@@ -47,7 +47,13 @@ findGitRoot dir = do
 --     Right yml -> return yml
 
 processSpecFolders :: Bool -> FilePath -> IO ()
-processSpecFolders isGenAll specFolderPath = do
+processSpecFolders isGenAll specFolderPath =
+  if ".direnv" `isInfixOf` specFolderPath
+    then putStrLn $ ("ignore folder: " :: String) <> show specFolderPath <> " containing: \".direnv\""
+    else processSpecFolders' isGenAll specFolderPath
+
+processSpecFolders' :: Bool -> FilePath -> IO ()
+processSpecFolders' isGenAll specFolderPath = do
   contents <- listDirectory specFolderPath
   forM_ contents $ \entry -> do
     let entryPath = specFolderPath </> entry
@@ -70,7 +76,7 @@ processSpecFolders isGenAll specFolderPath = do
                 \inputFile -> do
                   let inputFilePath = apiFolderPath </> inputFile
                   fileState <- NammaDSL.getFileState inputFilePath
-                  putStrLn $ show fileState ++ " " ++ inputFile
+                  putStrLn $ show fileState ++ " " ++ inputFilePath
                   when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
                     NammaDSL.runApiGenerator configPath inputFilePath
 
@@ -78,7 +84,7 @@ processSpecFolders isGenAll specFolderPath = do
                 \inputFile -> do
                   let inputFilePath = storageFolderPath </> inputFile
                   fileState <- NammaDSL.getFileState inputFilePath
-                  putStrLn $ show fileState ++ " " ++ inputFile
+                  putStrLn $ show fileState ++ " " ++ inputFilePath
                   when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
                     NammaDSL.runStorageGenerator configPath inputFilePath
         else processSpecFolders isGenAll entryPath
