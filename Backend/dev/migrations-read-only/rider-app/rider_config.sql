@@ -36,3 +36,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN collect_mmi_route_data boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN is_avoid_toll boolean NOT NULL default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN kapture_queue text NOT NULL default '';

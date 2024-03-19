@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN kapture_queue text DEFAULT '';

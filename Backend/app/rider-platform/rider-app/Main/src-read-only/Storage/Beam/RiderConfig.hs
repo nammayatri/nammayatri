@@ -13,25 +13,26 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RiderConfigT f = RiderConfigT
-  { appUrl :: B.C f Kernel.Prelude.Text,
-    collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    collectMMIRouteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    distanceWeightage :: B.C f Kernel.Prelude.Int,
-    enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
-    enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
-    enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
-    isAvoidToll :: B.C f Kernel.Prelude.Bool,
-    localPoliceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
-    safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,
-    specialZoneRadius :: B.C f Kernel.Prelude.Int,
-    timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
-    trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
-    videoFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { appUrl :: (B.C f Kernel.Prelude.Text),
+    collectAutoCompleteData :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    collectMMIRouteData :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    distanceWeightage :: (B.C f Kernel.Prelude.Int),
+    enableEmergencyContactAddedMessage :: (B.C f Kernel.Prelude.Bool),
+    enableLocalPoliceSupport :: (B.C f Kernel.Prelude.Bool),
+    enableSupportForSafety :: (B.C f Kernel.Prelude.Bool),
+    isAvoidToll :: (B.C f Kernel.Prelude.Bool),
+    kaptureQueue :: (B.C f Kernel.Prelude.Text),
+    localPoliceNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    safetyCheckEndTime :: (B.C f Kernel.Types.Common.Seconds),
+    safetyCheckStartTime :: (B.C f Kernel.Types.Common.Seconds),
+    specialZoneRadius :: (B.C f Kernel.Prelude.Int),
+    timeDiffFromUtc :: (B.C f Kernel.Types.Common.Seconds),
+    trackingShortUrlPattern :: (B.C f Kernel.Prelude.Text),
+    videoFileSizeUpperLimit :: (B.C f Kernel.Prelude.Int),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -41,6 +42,6 @@ instance B.Table RiderConfigT where
 
 type RiderConfig = RiderConfigT Identity
 
-$(enableKVPG ''RiderConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''RiderConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstances ''RiderConfigT "rider_config")
+$(mkTableInstances (''RiderConfigT) "rider_config")

@@ -360,6 +360,7 @@ rideInfo merchantId reqRideId = do
         driverRegisteredAt = ride.driverRegisteredAt,
         vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
+        vehicleVariant = castVehicleVariant ride.vehicleVariant,
         rideBookingTime = booking.createdAt,
         actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.rideStartTime,

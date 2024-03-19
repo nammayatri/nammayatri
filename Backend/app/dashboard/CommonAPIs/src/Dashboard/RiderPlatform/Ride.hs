@@ -97,6 +97,7 @@ data RideInfoRes = RideInfoRes
     driverRegisteredAt :: Maybe UTCTime,
     vehicleNo :: Text,
     vehicleModel :: Text,
+    vehicleVariant :: Variant,
     rideBookingTime :: UTCTime,
     actualDriverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
