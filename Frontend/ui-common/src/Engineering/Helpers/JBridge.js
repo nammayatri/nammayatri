@@ -320,6 +320,16 @@ export const isLocationPermissionEnabled = function (unit) {
   };
 };
 
+export const isBackgroundLocationEnabled = function(unit) {
+  return function () {
+    if(window.JBridge.isBackgroundLocationEnabled){
+      return window.JBridge.isBackgroundLocationEnabled();
+    }else{
+      return window.JBridge.isLocationPermissionEnabled(); 
+    }
+  }
+}
+
 export const getKeyInSharedPrefKeys = function (key) {
   return JBridge.getFromSharedPrefs(key);
 };
