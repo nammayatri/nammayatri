@@ -20,6 +20,7 @@ where
 
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FollowRide as FollowRide
+import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.UI.AadhaarVerification as AadhaarVerification
@@ -90,6 +91,7 @@ type API =
            :<|> AadhaarVerification.API
            :<|> Issue.API
            :<|> TicketService.API
+           :<|> Invoice.API
            :<|> FollowRide.API
            :<|> SosApi.API
            :<|> FRFSTicketService.API
@@ -129,6 +131,7 @@ handler =
     :<|> AadhaarVerification.handler
     :<|> Issue.handler
     :<|> TicketService.handler
+    :<|> Invoice.handler
     :<|> FollowRide.handler
     :<|> SosApi.handler
     :<|> FRFSTicketService.handler

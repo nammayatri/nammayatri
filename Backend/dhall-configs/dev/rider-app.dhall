@@ -185,6 +185,24 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
       ]
 
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_kafka"
+      , tls = False
+      }
+
+let riderClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_app"
+      , tls = False
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -253,4 +271,6 @@ in  { esqDBCfg
     , _version = "2.0.0"
     , hotSpotExpiry = +604800
     , collectRouteData = True
+    , kafkaClickhouseCfg
+    , riderClickhouseCfg
     }
