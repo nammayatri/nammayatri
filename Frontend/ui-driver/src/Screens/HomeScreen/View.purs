@@ -52,7 +52,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn3)
-import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas)
+import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas, liftFlow)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Utils (toggleLoader)
@@ -112,6 +112,15 @@ screen initialState =
                 Nothing -> do
                            setValueToLocalStore IS_RIDE_ACTIVE "false"
                            void $ pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
+          if getValueToLocalNativeStore IS_DRIVER_STATS_CALLED == "false"
+            then do
+              void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "true"
+              void $ launchAff $ EHC.flowRunner defaultGlobalState $ do                
+                driverStatsResp <- Remote.getDriverProfileStats (DriverProfileStatsReq (HU.getcurrentdate ""))
+                case driverStatsResp of
+                  Right driverStats -> liftFlow $ push $ DriverStats driverStats
+                  Left _ -> void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
+            else pure unit
           let localStage = getValueToLocalNativeStore LOCAL_STAGE
           if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "") then do
             void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
@@ -238,12 +247,6 @@ view push state =
           _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
           _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
           _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) push ShowMap
-          if state.data.driverStats == false
-            then do
-              void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-                driverStats <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (HU.getcurrentdate ""))            
-                lift $ lift $ doAff do liftEffect $ push $ DriverStats driverStats
-            else pure unit
           pure unit
         ) (const AfterRender)
       , onBackPressed push (const BackPressed)
