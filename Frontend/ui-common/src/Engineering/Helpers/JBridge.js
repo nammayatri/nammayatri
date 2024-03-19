@@ -1020,6 +1020,12 @@ export const requestLocation = (unit) => () => {
   window.JBridge.requestLocation();
 };
 
+export const requestBackgroundLocation = (unit) => () => {
+  if (window.JBridge.requestBackgroundLocation) {
+    window.JBridge.requestBackgroundLocation();
+  }
+};
+
 export const initiateLocationServiceClient = function () {
   if (window.__OS == "IOS") {
     return true;
