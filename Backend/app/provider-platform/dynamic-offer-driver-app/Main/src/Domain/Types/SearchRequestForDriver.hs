@@ -173,8 +173,11 @@ convertDomainType pincodePlaceHolder DLoc.Location {..} =
       state = address.state,
       country = address.country,
       building = address.building,
-      areaCode = address.areaCode <|> Just pincodePlaceHolder,
+      areaCode = (replaceEmpty address.areaCode) <|> Just pincodePlaceHolder,
       area = address.area,
       full_address = address.fullAddress,
       ..
     }
+  where
+    replaceEmpty :: Maybe Text -> Maybe Text
+    replaceEmpty string = if string == Just "" then Nothing else string
