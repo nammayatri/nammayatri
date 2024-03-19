@@ -14,21 +14,32 @@
 
 module Beckn.ACL.OnConfirm (buildOnConfirmReqV2) where
 
+import qualified Beckn.ACL.Cancel as CancelACL
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
+import qualified Domain.Action.UI.Cancel as DCancel
+import Domain.Types.CancellationReason
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.Queries.Booking as QRideB
 import Tools.Error
 
 buildOnConfirmReqV2 ::
-  ( HasFlowEnv m r '["_version" ::: Text],
-    MonadFlow m
+  ( EncFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["_version" ::: Text, "internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl]
   ) =>
   Spec.OnConfirmReq ->
   Bool ->
@@ -82,7 +93,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
         else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {bppBookingId, specialZoneOtp = mbRideOtp}
 
 handleErrorV2 ::
-  (MonadFlow m) =>
+  (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl]) =>
   Spec.OnConfirmReq ->
   (Spec.ConfirmReqMessage -> m (Maybe DOnConfirm.OnConfirmReq)) ->
   m (Maybe DOnConfirm.OnConfirmReq)
@@ -91,4 +102,17 @@ handleErrorV2 req action =
     Nothing -> req.onConfirmReqMessage & maybe (pure Nothing) action
     Just err -> do
       logTagError "on_confirm req" $ "on_confirm error:-" <> show err
+      transactionId <- (fmap UUID.toText req.onConfirmReqContext.contextTransactionId) & fromMaybeM (InvalidRequest "Missing transactionId in context")
+      let cancelReq = buildCancelReq err.errorMessage
+      booking <- QRideB.findLatestByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist transactionId)
+      dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
+      void $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
       pure Nothing
+
+buildCancelReq :: Maybe Text -> DCancel.CancelReq
+buildCancelReq mbErrorMessage =
+  DCancel.CancelReq
+    { reasonCode = CancellationReasonCode "BPP cancelled: on_init error",
+      reasonStage = OnConfirm,
+      additionalInfo = mbErrorMessage
+    }
