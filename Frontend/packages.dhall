@@ -252,8 +252,8 @@ in  upstream
       , "maybe"
       , "strings"
       ]
-    , repo = "https://github.com/juspay/purescript-tracker.git"
-    , version = "update/github-purescript-tracker-repo"
+    , repo = "ssh://git@ssh.bitbucket.juspay.net/picaf/purescript-tracker.git"
+    , version = "v2.1.26"
     }
   with otp-reader =
     { dependencies =
@@ -333,7 +333,7 @@ in  upstream
           , "web-html"
           ]
         , repo = "ssh://git@ssh.bitbucket.juspay.net/~sridatta.yalla_juspay.in/purescript-react-basic-hooks.git"
-        , version = "b9dff0ab3711caf67bcae94fe008f3ac993e5abd"
+        , version = "v9.2.1"
       }
   with beckn-common = ./ui-common/spago.dhall as Location
   

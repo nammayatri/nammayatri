@@ -26,13 +26,14 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
 import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import ConfigProvider
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.AboutUsScreenState -> ScopedScreen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -42,6 +43,7 @@ screen initialState =
   , globalEvents: []
   , eval
   , parent: Nothing
+  , backpressAction : Just (\s -> pure $ BackPressed initialState.props.demoModePopup)
   }
 
 view ::

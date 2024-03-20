@@ -37,7 +37,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), alignParentBottom, background, color, gravity, height, id, imageUrl, imageView, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alignParentBottom, background, color, gravity, height, id, imageUrl, imageView, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -52,6 +52,7 @@ import Components.BottomNavBar.View as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Screens as ScreenNames
 import Data.Maybe (Maybe(..))
+import React.Navigation.Types (ScopedScreen)
 
 
 screen :: NotificationsScreenState -> PrestoList.ListItem -> ScopedScreen Action NotificationsScreenState ScreenOutput
@@ -78,6 +79,7 @@ screen initialState notificationListItem =
           eval action state
       )
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> NotificationsScreenState -> PrestoDOM (Effect Unit) w

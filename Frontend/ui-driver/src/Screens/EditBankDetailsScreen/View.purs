@@ -15,11 +15,11 @@
 
 module Screens.EditBankDetailsScreen.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, visibility, onBackPressed, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, visibility, onBackPressed, afterRender, imageWithFallback)
 import Screens.EditBankDetailsScreen.Controller (Action(..), ScreenOutput, eval, getTitleFromList)
 import Screens.EditBankDetailsScreen.ScreenData (viewsItemList, ListOptions(..))
 import Screens.Types as ST
-import Prelude (Unit, const, map, ($), (==))
+import Prelude (pure, Unit, const, map, ($), (==))
 import Language.Strings (getString)
 import Animation as Anim
 import Language.Types (STR(..))
@@ -32,6 +32,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Data.Maybe (Maybe(..))
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.EditBankDetailsScreenState -> ScopedScreen Action ST.EditBankDetailsScreenState ScreenOutput
 screen initialState =
@@ -41,6 +42,7 @@ screen initialState =
   , globalEvents : []
   , eval
   , parent : Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view

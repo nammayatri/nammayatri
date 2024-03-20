@@ -14,11 +14,11 @@ import Font.Style as FontStyle
 import Halogen.VDom.DOM.Prop (Prop)
 import JBridge as JB
 import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Visibility(..), ScopedScreen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Visibility(..), afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.AcknowledgementScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.AcknowledgementScreenState -> ScopedScreen Action ST.AcknowledgementScreenState ScreenOutput
 screen initialState =
@@ -33,6 +33,7 @@ screen initialState =
           eval state action
       )
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 

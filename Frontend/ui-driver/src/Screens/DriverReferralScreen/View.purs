@@ -32,8 +32,10 @@ import Effect.Class (liftEffect)
 import Debug (spy)
 import Mobility.Prelude
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import Data.Maybe (Maybe(..))
+import React.Navigation.Types (ScopedScreen)
 
-screen :: DriverReferralScreenState -> Screen Action DriverReferralScreenState ScreenOutput
+screen :: DriverReferralScreenState -> ScopedScreen Action DriverReferralScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -52,6 +54,8 @@ screen initialState =
           let _ = spy "DriverReferralScreen --------action" action
           eval action state
       )
+  , parent : Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 

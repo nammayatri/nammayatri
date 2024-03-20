@@ -25,7 +25,7 @@ import Language.Strings (getString)
 import Components.IssueListFlow.Controller (getTitle)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback)
 import PrestoDOM.Elements.Elements (scrollView)
 import PrestoDOM.Events (onClick)
 import PrestoDOM.Properties (cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, padding, scrollBarY, weight)
@@ -49,6 +49,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Screens.Types as ST
 import Types.App (defaultGlobalState)
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.HelpAndSupportScreenState -> ScopedScreen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -62,6 +63,7 @@ screen initialState =
           lift $ lift $ doAff do liftEffect $ push $ FetchIssueListApiCall issueListResponse.issues
         pure $ pure unit)]
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view

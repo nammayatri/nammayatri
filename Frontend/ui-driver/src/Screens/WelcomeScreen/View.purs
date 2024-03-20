@@ -5,7 +5,7 @@ import Components.PrimaryButton as PrimaryButton
 import Debug (spy)
 import Effect (Effect)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<))
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, accessibility, afterRender, background, gravity, height, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, orientation, padding, weight, width)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, accessibility, afterRender, background, gravity, height, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, orientation, padding, weight, width)
 import Screens.WelcomeScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (WelcomeScreenState)
 import JBridge (addCarousel)
@@ -13,6 +13,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Function.Uncurried (runFn2)
 import Screens.WelcomeScreen.ComponentConfig
 import Data.Maybe (Maybe(..))
+import React.Navigation.Types (ScopedScreen)
 
 screen :: WelcomeScreenState -> ScopedScreen Action WelcomeScreenState ScreenOutput
 screen initialState =
@@ -27,6 +28,7 @@ screen initialState =
           let _ = spy "WelcomeScreen --------action" action
           eval state action
       )
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 

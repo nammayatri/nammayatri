@@ -16,7 +16,7 @@
 module Screens.VehicleDetailsScreen.View where
 
 import Prelude (Unit, const, map, not, ($), (<<<), (==), (<>), bind, pure, unit)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, visibility, stroke, onBackPressed, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, visibility, stroke, onBackPressed, afterRender, imageWithFallback)
 import Effect (Effect)
 import Screens.VehicleDetailsScreen.Controller (Action(..), ScreenOutput, eval, getTitle, getValue)
 import Screens.Types as ST
@@ -37,6 +37,7 @@ import Common.Types.App
 import Screens.VehicleDetailsScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.VehicleDetailsScreenState -> ScopedScreen Action ST.VehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -48,6 +49,7 @@ screen initialState =
     pure $ pure unit)]
   , eval
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view

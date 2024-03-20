@@ -37,7 +37,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, show, unit, void, ($), (-), (<<<), (<>), (==), (>), (/), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), afterRender, background, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.DriverSavedLocationScreen.ComponentConfig (confirmDeletePopupConfig, locationListItemConfig, primaryButtonConfig)
 import Screens.DriverSavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
@@ -46,6 +46,7 @@ import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), Pred
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import React.Navigation.Types (ScopedScreen)
 
 screen :: DriverSavedLocationScreenState -> ScopedScreen Action DriverSavedLocationScreenState ScreenOutput
 screen initialState =
@@ -80,6 +81,7 @@ screen initialState =
           eval action state
       )
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view :: forall w. (Action -> Effect Unit) -> DriverSavedLocationScreenState -> PrestoDOM (Effect Unit) w

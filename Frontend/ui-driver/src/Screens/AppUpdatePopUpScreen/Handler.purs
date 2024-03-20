@@ -15,7 +15,7 @@
 
 module Screens.AppUpdatePopUpScreen.Handler where
 
-import Prelude (bind, pure, ($), (<$>), unit, Unit)
+import Prelude (bind, pure, ($), (<$>), unit, Unit, identity)
 import Presto.Core.Types.Language.Flow (doAff, getLogFields)
 import Screens.AppUpdatePopUpScreen.Controller as CD
 import Screens.AppUpdatePopUpScreen.View as AppUpdatePopUpScreen
@@ -27,15 +27,19 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Data.Maybe (Maybe(..))
 import React.Navigation.Navigate (removeScaffold, navigateToOverlayScreen, initScaffold)
+import React.Basic (JSX)
 
 handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
 handleAppUpdatePopUp = do
   (GlobalState state) ← getState
-  _ <- lift $ lift $ initScaffold (Just "AppUpdatePopUpScreen") Nothing
+  _ <- lift $ lift $ initScaffold (Just "AppUpdatePopUpScreen") Nothing defaultNamespaceView
   act <- lift $ lift $ navigateToOverlayScreen (AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen)
-  json <- lift $ lift $ getLogFields
-  _ <- lift $ lift $ doAff $ liftEffect $ removeScaffold json $ Just "AppUpdatePopUpScreen"
+  -- json <- lift $ lift $ getLogFields
+  _ <- lift $ lift $ removeScaffold $ Just "AppUpdatePopUpScreen"
   case act of
     CD.Accept -> App.BackT $ App.NoBack <$> pure UpdateNow
     CD.Decline -> App.BackT $ App.BackPoint <$> pure Later
     CD.Exit -> pure Later
+
+defaultNamespaceView :: JSX -> JSX
+defaultNamespaceView = identity

@@ -15,7 +15,7 @@
 
 module Screens.NoInternetScreen.Handler where
 
-import Prelude (bind, ($), pure, (<$>))
+import Prelude (bind, ($), pure, (<$>), identity)
 import Engineering.Helpers.BackTrack (getState)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
@@ -28,16 +28,20 @@ import Screens.NoInternetScreen.Controller (ScreenOutput(..))
 import Types.App (FlowBT, GlobalState(..), NO_INTERNET_SCREEN_OUTPUT(..))
 import React.Navigation.Navigate (removeScaffold, navigateToScreen, initScaffold)
 import Debug (spy)
+import React.Basic (JSX)
 
 noInternetScreen :: String -> FlowBT String NO_INTERNET_SCREEN_OUTPUT
 noInternetScreen triggertype = do
   (GlobalState state) <- getState
-  _ <- lift $ lift $ initScaffold (Just "NoInternetScreen") Nothing
+  _ <- lift $ lift $ initScaffold (Just "NoInternetScreen") Nothing defaultNamespaceView
   act <- lift $ lift $ navigateToScreen $ NoInternetScreen.screen state.noInternetScreen triggertype
   json <- lift $ lift getLogFields
-  _ <- lift $ lift $ doAff $ liftEffect $ removeScaffold json $ Just "NoInternetScreen"
+  _ <- lift $ lift $ removeScaffold $ Just "NoInternetScreen"
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     Refresh -> App.BackT $ App.BackPoint <$> (pure REFRESH_INTERNET)
     LocationCallBack updatedState -> App.BackT $ App.NoBack <$> (pure TURN_ON_GPS)
     InternetCallBack updatedState -> App.BackT $ App.NoBack <$> (pure CHECK_INTERNET)
+
+defaultNamespaceView :: JSX -> JSX
+defaultNamespaceView = identity

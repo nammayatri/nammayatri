@@ -16,7 +16,7 @@
 module Screens.PopUpScreen.Handler where
 
 import Prelude
-import Engineering.Helpers.BackTrack (getState)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Screens.PopUpScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
@@ -31,14 +31,18 @@ import Effect.Class (liftEffect)
 import JBridge (deletePopUpCallBack)
 import Engineering.Helpers.Commons (liftFlow)
 import React.Navigation.Navigate (navigateToScreen, removeScaffold, initScaffold)
+import React.Basic (JSX)
 
 popUpScreen :: FlowBT String POPUP_SCREEN_OUTPUT
 popUpScreen = do
     (GlobalState state) <- getState
-    _ <- lift $ lift $ initScaffold (Just "PopUpScreen") Nothing
+    _ <- lift $ lift $ initScaffold (Just "PopUpScreen") Nothing defaultNamespaceView
     action <- lift $ lift $ navigateToScreen $ PopUpScreen.screen state.popUpScreen
-    json <- lift $ lift $ getLogFields
-    _ <- lift $ lift $ doAff $ liftEffect $ removeScaffold json $ Just "PopUpScreen"
+    -- json <- lift $ lift $ getLogFields
+    _ <- lift $ lift $  removeScaffold $ Just "PopUpScreen"
     case action of
         GoBack -> App.BackT $ pure App.GoBack
         RequestRide id extraFare -> App.BackT $ App.NoBack <$> ( pure (POPUP_REQUEST_RIDE id extraFare) )
+
+defaultNamespaceView :: JSX -> JSX
+defaultNamespaceView = identity

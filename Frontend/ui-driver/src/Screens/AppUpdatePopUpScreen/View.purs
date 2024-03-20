@@ -18,7 +18,7 @@ module Screens.AppUpdatePopUpScreen.View where
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Prelude (Unit, bind, const, pure, unit, ($), (<>), (<<<), (==),(/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), onBackPressed, Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, width, visibility, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), onBackPressed, Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, width, visibility, afterRender, imageWithFallback)
 import Screens.Types as ST
 import Screens.Types (UpdatePopupType(..))
 import Data.Maybe (Maybe(..))
@@ -44,7 +44,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import ConfigProvider
-
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.AppUpdatePopUpScreenState -> ScopedScreen Action ST.AppUpdatePopUpScreenState ScreenOutput
 screen initialState =
@@ -60,6 +60,7 @@ screen initialState =
       _ <- pure $ runFn2 JB.dateCallback push OnResumeCallBack
       pure $ pure $ runFn2 JB.storeOnResumeCallback push OnResumeCallBack
     )]
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view :: forall w . (Action  -> Effect Unit) -> ST.AppUpdatePopUpScreenState -> PrestoDOM (Effect Unit) w

@@ -19,7 +19,7 @@ import Prelude
 import React.Basic.Hooks (Component, component)
 import React.Basic.Roll (jempty, (+=))
 import Effect (Effect)
-import React.Render.CustomBase (linearLayout, textView)
+import React.Basic.Dom (linearLayout, textView)
 import Styles.Colors as Color
 import ReactComponents.IncrementDecrement.Controller (Config)
 import React.Basic.Hooks as React

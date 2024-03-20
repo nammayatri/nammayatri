@@ -16,7 +16,7 @@
 module Screens.PopUpScreen.View where
 
 import Prelude --(Unit, bind, const, map, pure, unit, ($), (&&), (<<<))
-import PrestoDOM --(Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM,  Visibility(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width)
+import PrestoDOM hiding (ScopedScreen)--(Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM,  Visibility(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width)
 import Effect (Effect)
 import Language.Strings(getString)
 import Language.Types (STR(..))
@@ -27,6 +27,7 @@ import Data.Maybe (Maybe(..))
 import Components.RideAllocationModal as RideAllocationModal
 import JBridge as JB
 import Screens.PopUpScreen.ComponentConfig
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.PopUpScreenState -> ScopedScreen Action ST.PopUpScreenState ScreenOutput
 screen initialState =
@@ -38,6 +39,7 @@ screen initialState =
     pure $ pure unit)]
   , eval
   , parent : Nothing 
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.PopUpScreenState -> PrestoDOM (Effect Unit) w

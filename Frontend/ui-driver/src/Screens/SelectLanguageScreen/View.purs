@@ -26,8 +26,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, ($), (<<<), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
+import Prelude (pure, Unit, const, ($), (<<<), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -38,6 +38,7 @@ import Prelude ((<>))
 import PrestoDOM.Animation as PrestoAnim
 import Debug
 import Data.Maybe (Maybe(..))
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.SelectLanguageScreenState -> ScopedScreen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -51,6 +52,7 @@ screen initialState =
         let _ = spy "SelectLanguageScreen state " state
         eval action state
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view

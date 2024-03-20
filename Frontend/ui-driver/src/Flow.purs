@@ -71,7 +71,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
+import Prelude (identity, Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork)
 import PrestoDOM (initUI)
 import Resource.Constants (decodeAddress)
@@ -122,6 +122,7 @@ import Types.ModifyScreenState (modifyScreenState, updateStage)
 import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
 import React.Navigation.Navigate (initScaffold)
+import React.Basic (JSX)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -132,7 +133,7 @@ baseAppFlow baseFlow event = do
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
-    when baseFlow $ lift $ lift $ initScaffold Nothing Nothing
+    when baseFlow $ lift $ lift $ initScaffold Nothing Nothing defaultNamespaceView
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
@@ -193,6 +194,9 @@ baseAppFlow baseFlow event = do
         chooseCityFlow
       else
         authenticationFlow ""
+
+defaultNamespaceView :: JSX -> JSX
+defaultNamespaceView = identity
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = 

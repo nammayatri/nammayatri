@@ -29,5 +29,6 @@ splashScreen :: SplashScreenState → FlowBT String Unit
 splashScreen screenState = do
     _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
     -- lift $ lift $ initUIWithScreen $ SplashScreen.screen screenState
-    _ <- lift $ lift $ initScaffold Nothing Nothing
-    lift $ lift $ navigateToScreen $ SplashScreen.screen screenState
+    -- _ <- lift $ lift $ initScaffold Nothing Nothing
+    _ <- lift $ lift $ navigateToScreen $ SplashScreen.screen screenState
+    pure unit

@@ -31,7 +31,7 @@ import PrestoDOM (linearLayout)
 import PrestoDOM.Elements.Elements (frameLayout, imageView, relativeLayout, textView)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
 import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, clickable)
-import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, ScopedScreen, Visibility(..))
+import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Visibility(..))
 import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig)
 import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ReportIssueChatScreenState)
@@ -48,6 +48,7 @@ import Components.RecordAudioModel.View (view) as RecordAudioModel
 import Data.String (length, trim) as STR
 import Components.ViewImageModel.View (view) as ViewImageModel
 import Data.Maybe (Maybe(..))
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ReportIssueChatScreenState -> ScopedScreen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
@@ -60,6 +61,7 @@ screen initialState =
     ]
     , eval
     , parent: Nothing
+    , backpressAction : Just (\s -> pure BackPressed)
     }
 
 view :: forall w . (Action -> Effect Unit) -> ReportIssueChatScreenState -> PrestoDOM (Effect Unit) w

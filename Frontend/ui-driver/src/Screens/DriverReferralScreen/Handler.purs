@@ -16,7 +16,7 @@ import PrestoDOM.Core.Types.Language.Flow (mapToScopedScreen)
 driverReferralScreen :: FlowBT String DRIVER_REFERRAL_SCREEN_OUTPUT
 driverReferralScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ navigateToScreen $ mapToScopedScreen $ DriverReferralScreen.screen state.driverReferralScreen
+  act <- lift $ lift $ navigateToScreen $ DriverReferralScreen.screen state.driverReferralScreen
   case act of
     GoBack -> do
       modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> DriverReferralScreenData.initData)

@@ -37,7 +37,7 @@ import JBridge (lottieAnimationConfig, startLottieProcess)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, editText, hint, pattern, onChange, ScopedScreen)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, editText, hint, pattern, onChange)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RegistrationScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (RegisterationStep(..), StageStatus(..), ValidationStatus(..))
@@ -50,6 +50,7 @@ import Engineering.Helpers.Commons as EHC
 import Data.String as DS
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Mobility.Prelude
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.RegistrationScreenState -> ScopedScreen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
@@ -64,6 +65,7 @@ screen initialState =
           eval state action
       )
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view ::

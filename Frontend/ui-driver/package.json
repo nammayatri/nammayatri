@@ -50,7 +50,7 @@
     "purty": "^7.0.0",
     "regenerator-runtime": "^0.13.5",
     "spago": "^0.21.0",
-    "presto-react": "git+ssh://git@ssh.bitbucket.juspay.net/proj/presto-react.git#v1.0.0",
+    "presto-react": "git+ssh://git@ssh.bitbucket.juspay.net/proj/presto-react.git#v1.0.7",
     "react": "^18.2.0"
   },
   "config": {

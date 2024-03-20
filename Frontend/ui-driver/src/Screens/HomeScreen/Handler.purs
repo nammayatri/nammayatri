@@ -37,13 +37,16 @@ import Screens.Types (KeyboardModalType(..))
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
 import React.Navigation.Navigate (navigateToScreen)
+import Debug (spy)
 
 
 homeScreen :: FlowBT String HOME_SCREENOUTPUT
 homeScreen = do
   logField_ <- lift $ lift $ getLogFields
   (GlobalState state) <- getState
+  let hello = spy "Hello world" "I am here"
   action <- lift $ lift $ navigateToScreen $ HomeScreen.screen state.homeScreen{data{logField = logField_}}
+  let hello2 = spy "Hello world" $ "I am here 3"
   case action of
     GoToVehicleDetailScreen updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)

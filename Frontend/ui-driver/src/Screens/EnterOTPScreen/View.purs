@@ -16,7 +16,7 @@
 module Screens.EnterOTPScreen.View where
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), discard)
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback, textFromHtml, ScopedScreen)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback, textFromHtml)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
@@ -38,6 +38,7 @@ import Common.Types.App
 import Screens.EnterOTPScreen.ComponentConfig
 import Data.Ring ((-))
 import Storage (getValueToLocalStore, KeyStore(..))
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.EnterOTPScreenState -> ScopedScreen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -50,6 +51,7 @@ screen initialState =
                       pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [ HU.startOtpReciever AutoFill ]
   , eval
   , parent : Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view

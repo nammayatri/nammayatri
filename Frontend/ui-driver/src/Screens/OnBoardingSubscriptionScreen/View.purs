@@ -41,7 +41,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import JBridge as JB
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getDateAfterNDays)
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig, popupModalConfig)
@@ -58,7 +58,7 @@ import Types.App (defaultGlobalState)
 import Components.PopUpModal as PopUpModal
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
-
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.OnBoardingSubscriptionScreenState -> ScopedScreen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
 screen initialState =
@@ -83,6 +83,7 @@ screen initialState =
           eval state action
       )
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w

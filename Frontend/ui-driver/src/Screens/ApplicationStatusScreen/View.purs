@@ -29,7 +29,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (/=), (==), (<<<), (||), (&&), discard, bind, pure, unit, not, void)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), ScopedScreen, background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout)
 import Screens.ApplicationStatusScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.API (DriverRegistrationStatusResp(..), DriverRegistrationStatusReq(..))
@@ -49,6 +49,7 @@ import PaymentPage (consumeBP)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Effect.Uncurried (runEffectFn1)
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.ApplicationStatusScreenState -> String -> ScopedScreen Action ST.ApplicationStatusScreenState ScreenOutput
 screen initialState screenType =
@@ -73,6 +74,7 @@ screen initialState screenType =
   ]
   , eval
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view :: forall w . String -> (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w

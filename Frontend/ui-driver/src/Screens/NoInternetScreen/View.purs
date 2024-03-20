@@ -17,7 +17,7 @@ module Screens.NoInternetScreen.View where
 
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>))
 import Effect (Effect)
-import PrestoDOM (Length(..), Margin(..), Gravity(..), Padding(..), Orientation(..), Visibility(..), PrestoDOM, ScopedScreen, linearLayout, clickable, height, width, gravity, background, padding, orientation, imageView, textView, text, imageUrl, textSize, fontStyle, color, margin, lineHeight, relativeLayout, alignParentBottom, onClick, visibility, afterRender, imageWithFallback)
+import PrestoDOM (Length(..), Margin(..), Gravity(..), Padding(..), Orientation(..), Visibility(..), PrestoDOM, linearLayout, clickable, height, width, gravity, background, padding, orientation, imageView, textView, text, imageUrl, textSize, fontStyle, color, margin, lineHeight, relativeLayout, alignParentBottom, onClick, visibility, afterRender, imageWithFallback)
 import Screens.NoInternetScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Components.PrimaryButton as PrimaryButton
@@ -32,6 +32,7 @@ import Common.Types.App
 import Screens.NoInternetScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.NoInternetScreenState -> String -> ScopedScreen Action ST.NoInternetScreenState ScreenOutput
 screen initialState triggertype = 
@@ -44,6 +45,7 @@ screen initialState triggertype =
     pure $ pure unit)]
   , eval
   , parent : Nothing -- Just "NoInternetScreen"
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view :: forall w . String -> (Action -> Effect Unit) -> ST.NoInternetScreenState -> PrestoDOM (Effect Unit) w 

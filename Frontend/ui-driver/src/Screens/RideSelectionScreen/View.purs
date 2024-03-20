@@ -31,7 +31,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (/), (<$>), (<<<), (<>), (==), (>))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), afterRender, alignParentBottom, background, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Elements.Elements (imageView)
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Properties (alpha, fontStyle, imageUrl, imageWithFallback, layoutGravity, lineHeight)
@@ -53,6 +53,7 @@ import Services.Backend as Remote
 import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Data.Maybe (Maybe(..))
+import React.Navigation.Types (ScopedScreen)
 
 screen :: RideSelectionScreenState -> PrestoList.ListItem -> ScopedScreen Action RideSelectionScreenState ScreenOutput
 screen initialState rideListItem =
@@ -72,6 +73,7 @@ screen initialState rideListItem =
     ]
   , eval
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> RideSelectionScreenState -> PrestoDOM (Effect Unit) w

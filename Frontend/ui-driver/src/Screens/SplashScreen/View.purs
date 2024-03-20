@@ -18,13 +18,14 @@ module Screens.SplashScreen.View where
 import Data.Int (round, toNumber)
 import Engineering.Helpers.Commons as EHC
 import Prelude (Unit, const, pure, unit, ($), (*))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, ScopedScreen, background, clickable, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, weight, width, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, background, clickable, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, weight, width, afterRender, imageWithFallback)
 import Effect (Effect)
 import Screens.SplashScreen.Controller (Action(..), eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Log
 import Data.Maybe (Maybe(..))
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.SplashScreenState -> ScopedScreen Action ST.SplashScreenState Unit
 screen initialState =
@@ -36,6 +37,7 @@ screen initialState =
                       pure (pure unit))]
   , eval
   , parent : Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 view
   :: forall w

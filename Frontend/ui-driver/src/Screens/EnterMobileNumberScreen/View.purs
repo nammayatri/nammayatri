@@ -17,7 +17,7 @@ module Screens.EnterMobileNumberScreen.View where
 
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, (==))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback, singleLine, textFromHtml, ScopedScreen)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback, singleLine, textFromHtml)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Components.MobileNumberEditor as MobileNumberEditor
@@ -41,6 +41,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Debug(spy)
 import ConfigProvider
+import React.Navigation.Types (ScopedScreen)
 
 screen :: ST.EnterMobileNumberScreenState -> ScopedScreen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -53,6 +54,7 @@ screen initialState =
       let _ = spy "EnterMobileNUmber--------action" action
       eval action state)
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.EnterMobileNumberScreenState -> PrestoDOM (Effect Unit) w

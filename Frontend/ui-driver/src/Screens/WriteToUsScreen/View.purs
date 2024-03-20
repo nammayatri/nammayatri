@@ -15,8 +15,8 @@
 
 module Screens.WriteToUsScreen.View where
 
-import Prelude (Unit, const, map, not, ($), (<<<), (==), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, onBackPressed, visibility, afterRender, imageWithFallback)
+import Prelude (pure, Unit, const, map, not, ($), (<<<), (==), (<>))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, onBackPressed, visibility, afterRender, imageWithFallback)
 import Effect (Effect)
 import Screens.WriteToUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.WriteToUsScreen.ScreenData (viewsItemList)
@@ -36,6 +36,7 @@ import Screens.WriteToUsScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import React.Navigation.Types (ScopedScreen)
 
 
 screen :: ST.WriteToUsScreenState -> ScopedScreen Action ST.WriteToUsScreenState ScreenOutput
@@ -46,6 +47,7 @@ screen initialState =
   , globalEvents : []
   , eval
   , parent: Nothing
+  , backpressAction : Just (\s -> pure BackPressed)
   }
 
 view
