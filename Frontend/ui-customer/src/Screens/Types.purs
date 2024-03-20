@@ -703,7 +703,6 @@ type HomeScreenStateProps =
   , isLocationTracking :: Boolean
   , isInApp :: Boolean
   , locateOnMap :: Boolean
-  , sourceSelectedOnMap :: Boolean
   , distance :: Int
   , isSrcServiceable :: Boolean
   , isDestServiceable :: Boolean
@@ -2184,6 +2183,7 @@ type RideSearchProps = {
   , sourceManuallyMoved :: Boolean
   , destManuallyMoved :: Boolean
   , autoCompleteType :: Maybe AutoCompleteReqType
+  , sourceSelectType :: LocationSelectType
 }
 
 data AutoCompleteReqType = PICKUP | DROP
@@ -2219,3 +2219,8 @@ type HotSpotData = {
     lat :: Number
   , lon :: Number
 }
+
+data LocationSelectType = SEARCH | MAP | FAVOURITE | REPEAT_RIDE | RETRY_SEARCH | SUGGESTION
+
+derive instance genericLocationSelectType :: Generic LocationSelectType _
+instance eqLocationSelectType :: Eq LocationSelectType where eq = genericEq

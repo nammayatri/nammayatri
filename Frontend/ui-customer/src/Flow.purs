@@ -72,7 +72,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*))
 import Mobility.Prelude (capitalize)
-import ModifyScreenState (modifyScreenState, updateRideDetails, updateRepeatRideDetails, FlowState(..))
+import ModifyScreenState (modifyScreenState, updateRepeatRideDetails, FlowState(..))
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, otherwise, identity, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling(delay)
@@ -707,10 +707,10 @@ homeScreenFlow = do
         void $ lift $ lift $ toggleLoader true
         (GlobalState newState) <- getState
         let state = newState.homeScreen
-
-        case state.props.sourceSelectedOnMap of
-          true | state.props.isSource == Just true -> pure unit
-          _ -> 
+            searchWithoutPlaceName = any (_ == state.props.rideSearchProps.sourceSelectType) [ST.MAP, ST.FAVOURITE, ST.RETRY_SEARCH, ST.SUGGESTION] && state.props.isSource == Just true
+        case searchWithoutPlaceName of
+          true -> pure unit
+          false -> 
             case state.props.isSource of
               Just true -> do
                 (GetPlaceNameResp sourceDetailResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) state.props.sourcePlaceId state.props.sourceLat state.props.sourceLong (if state.props.isSource == Just false then dummyLocationListItemState else item)
@@ -1514,7 +1514,7 @@ homeScreenFlow = do
           (\homeScreen -> 
             homeScreen
               { props
-                  { sourceSelectedOnMap = false }
+                  { rideSearchProps { sourceSelectType = ST.REPEAT_RIDE } }
               , data
                   { polygonCoordinates = geoJson
                   , nearByPickUpPoints = pickUpPoints
@@ -1710,14 +1710,16 @@ fetchLatAndLong state tag  =
 
 rideSearchFlow :: String -> FlowBT String Unit
 rideSearchFlow flowType = do
+  void $ pure $ hideKeyboardOnNavigation true
   logField_ <- lift $ lift $ getLogFields
   (GlobalState homeScreenModifiedState) <- getState
   void $ liftFlowBT $ setMapPadding 0 0 0 0
   let finalState = homeScreenModifiedState.homeScreen -- bothLocationChangedState{props{isSrcServiceable =homeScreenModifiedState.homeScreen.props.isSrcServiceable, isDestServiceable = homeScreenModifiedState.homeScreen.props.isDestServiceable, isRideServiceable = homeScreenModifiedState.homeScreen.props.isRideServiceable }}
   if (finalState.props.sourceLat /= 0.0 && finalState.props.sourceLong /= 0.0) && (finalState.props.destinationLat /= 0.0 && finalState.props.destinationLong /= 0.0) && (finalState.data.source /= "") && (finalState.data.destination /= "")
     then do
+      let searchWithoutConfirmPickup = any (_ == finalState.props.rideSearchProps.sourceSelectType) [ST.MAP, ST.RETRY_SEARCH, ST.REPEAT_RIDE] || (finalState.props.rideSearchProps.sourceSelectType == ST.FAVOURITE && not finalState.props.isSpecialZone)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{flowWithoutOffers = flowWithoutOffers WithoutOffers}})
-      case finalState.props.sourceSelectedOnMap of
+      case searchWithoutConfirmPickup of
         false -> do
           pure $ removeAllPolylines ""
           if finalState.data.source == (getString STR.CURRENT_LOCATION) then void $ pure $ currentPosition "" else pure unit
