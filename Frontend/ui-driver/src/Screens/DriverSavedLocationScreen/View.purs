@@ -301,7 +301,7 @@ bottomButtons state push =
             , textView
                 $ [ height MATCH_PARENT
                   , color Color.black800
-                  , text $ getString CURRENT_LOCATION
+                  , text $ ""
                   , margin $ MarginHorizontal 8 13
                   ]
                 <> FontStyle.body1 TypoGraphy

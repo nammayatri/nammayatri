@@ -60,7 +60,7 @@ view push state =
       , orientation VERTICAL
       , background case state.isSearchLocation of
                     SearchLocation -> Color.white900
-                    _           -> Color.transparent --"#FFFFFF"
+                    _           -> Color.transparent
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
       ][ PrestoAnim.animationSet
@@ -262,7 +262,7 @@ sourceDestinationEditTextView state push =
             , lineHeight "24"
             , accessibilityHint "Pickup Location Editable field"
             , accessibility ENABLE
-            , hint (getString START_)
+            , hint (getString CURRENT_LOCATION)
             , hintColor state.appConfig.searchLocationConfig.hintColor
             , id $ getNewIDWithTag "SourceEditText"
             , afterRender (\_ -> do
