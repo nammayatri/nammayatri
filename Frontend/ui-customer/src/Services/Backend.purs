@@ -35,14 +35,14 @@ import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime)
-import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
+import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader, inAppNotificationPayload, showInAppNotification)
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when, (<$>))
+import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when, (<$>), negate)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
 import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..), AutoCompleteReqType(..))
@@ -57,6 +57,7 @@ import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
 import Locale.Utils
+import Engineering.Helpers.BackTrack (liftFlowBT)
 import MerchantConfig.Types (GeoCodeConfig)
 import Debug
 import Effect.Class (liftEffect)
@@ -102,7 +103,9 @@ withAPIResult url f flow = do
     let end = getTime unit
     _ <- pure $ printLog "withAPIResult url" url
     case resp of
-        Right res -> void $ pure $ printLog "success resp" res
+        Right res -> do  
+            _ <- pure $ setValueToLocalStore IS_OFFLINE "false"
+            void $ pure $ printLog "success resp" res
         Left (err) -> do
             _ <- pure $ toggleBtnLoader "" false
             let errResp = err.response
@@ -127,6 +130,7 @@ withAPIResultBT url f errorHandler flow = do
     _ <- pure $ printLog "withAPIResultBT url" url
     case resp of
         Right res -> do
+            setValueToLocalStore IS_OFFLINE "false"
             pure res
         Left err -> do
             _ <- pure $ toggleBtnLoader "" false

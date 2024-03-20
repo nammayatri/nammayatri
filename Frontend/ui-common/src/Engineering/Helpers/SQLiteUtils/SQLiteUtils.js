@@ -71,8 +71,10 @@ export const executeQuery = function(dbName, query, just, nothing){
   if (window.JBridge.executeQuery){
     const jsonstr = window.JBridge.executeQuery(dbName, query);
     try{
+      console.log("executeQuery zxc -> ", jsonstr);
       const record = JSON.parse(jsonstr);
-      return just(record);
+      console.log("executeQuery zxc record -> ", record);
+      return record.length > 0 ? just(record) : nothing;
     } catch(e){
       console.log("Error executing query", e);
       return nothing;

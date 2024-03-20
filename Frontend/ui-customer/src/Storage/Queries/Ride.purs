@@ -6,6 +6,6 @@ findAllRides :: String
 findAllRides = "SELECT * FROM Ride"
 
 findActiveRide :: String
-findActiveRide = "SELECT * FROM Ride WHERE status = 'INPROGRESS' OR status = 'NEW'"
+findActiveRide = "SELECT * FROM Ride WHERE status = 'TRIP_ASSIGNED' OR status = 'TRIP_STARTED'"
 
 

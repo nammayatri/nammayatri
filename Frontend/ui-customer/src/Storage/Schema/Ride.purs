@@ -14,6 +14,7 @@ import Helpers.Utils
 import Storage
 import Accessor
 import Data.Lens((^.))
+import Debug
 
 rideSchema :: SqlSchema
 rideSchema = 
@@ -24,7 +25,7 @@ rideSchema =
     {"key": "time", "type": "string"},
     {"key": "source", "type": "string"},
     {"key": "destination", "type": "string"},
-    {"key": "totalAmount", "type": "string"},
+    {"key": "totalAmount", "type": "integer"},
     {"key": "driverImage", "type": "string"},
     {"key": "rating", "type": "REAL"}, 
     {"key": "driverName", "type": "string"},
@@ -40,7 +41,7 @@ rideSchema =
     {"key": "pickupCharges", "type": "string"},
     {"key": "extraFare", "type": "string"},
     {"key": "waitingCharges", "type": "string"},
-    {"key": "baseDistance", "type": "string"},
+    {"key": "baseDistance", "type": "integer"},
     {"key": "extraDistance", "type": "string"},
     {"key": "isSpecialZone", "type": "boolean"},
     {"key": "nightCharges", "type": "boolean"},
@@ -51,12 +52,19 @@ rideSchema =
     {"key": "sourceLat", "type": "REAL"}, 
     {"key": "sourceLon", "type": "REAL"}, 
     {"key": "destLat", "type": "REAL"},   
-    {"key": "destLon", "type": "REAL"}    
+    {"key": "destLon", "type": "REAL"},
+    {"key": "rideListEmpty", "type": "string"},
+    {"key": "driverRatings", "type": "REAL"},
+    {"key": "rideStatus", "type": "string"},
+    {"key": "fareProductType", "type" : "string"}
     ]
 
-transformFromTableToResp :: IndividualRideCard -> RideBookingRes
-transformFromTableToResp card =
-    let 
+
+
+
+transformFromTableToResp :: Array IndividualRideCard -> RideBookingRes
+transformFromTableToResp cardArr =
+    let card = fromMaybe dummyIndividualRideCard $ cardArr DA.!! 0
         toLocation = encodeAddress card.destination [] Nothing card.destLat card.destLon
         fromLocation = encodeAddress card.source [] Nothing card.sourceLat card.sourceLon
     in
@@ -69,14 +77,14 @@ transformFromTableToResp card =
             , fareBreakup : [] -- Define how to extract this from card
             , createdAt : "" -- Not provided in card
             , discount : Nothing -- Not provided in card
-            , estimatedTotalFare : 0 -- Not provided in card
+            , estimatedTotalFare : card.totalAmount -- Not provided in card
             , agencyName : "" -- Not provided in card
-            , rideList : [] -- Not provided in card
+            , rideList : if card.rideListEmpty == "true" then [] else [mkRideAPIEntity card]
             , estimatedFare : 0 -- Not provided in card
             , tripTerms : [] -- Not provided in card
             , id : card.rideId
             , updatedAt : "" -- Not provided in card
-            , bookingDetails : bookingDetails toLocation card.destLat card.destLon card.otp
+            , bookingDetails : bookingDetails toLocation card.destLat card.destLon card.otp card.fareProductType
             , fromLocation : mkBookingLocationAPIEntity fromLocation card.sourceLat card.sourceLon
             , merchantExoPhone : card.merchantExoPhone
             , specialLocationTag : Nothing -- Not provided in card
@@ -86,14 +94,40 @@ transformFromTableToResp card =
             }
     where
         -- Helper function to construct BookingDetails
-        bookingDetails toLocation lat lon otp = RideBookingAPIDetails 
+        bookingDetails toLocation lat lon otp fpt = RideBookingAPIDetails 
             { contents : RideBookingDetails 
                 { toLocation : mkBookingLocationAPIEntity toLocation lat lon
                 , estimatedDistance : Nothing
                 , otpCode : Just otp 
                 }
-            , fareProductType : "" 
+            , fareProductType : fpt
             }
+
+        mkRideAPIEntity :: IndividualRideCard -> RideAPIEntity
+        mkRideAPIEntity card = RideAPIEntity 
+            { computedPrice : Just 0
+            , status : card.rideStatus
+            , vehicleModel : ""
+            , createdAt : ""
+            , driverNumber : Just ""
+            , shortRideId : card.shortRideId
+            , driverRegisteredAt : ""
+            , vehicleNumber : card.vehicleNumber
+            , rideOtp : card.otp
+            , driverName : card.driverName
+            , chargeableRideDistance : Just card.baseDistance
+            , vehicleVariant : card.vehicleVariant
+            , driverRatings : Just card.driverRatings
+            , vehicleColor : ""
+            , id : card.rideId
+            , updatedAt : ""
+            , rideStartTime : Just card.rideStartTime
+            , rideEndTime : Just card.rideEndTime
+            , rideRating : Just card.rating
+            , driverArrivalTime : Just ""
+            , bppRideId : ""
+            }
+
 
         mkBookingLocationAPIEntity :: Address -> Number -> Number -> BookingLocationAPIEntity
         mkBookingLocationAPIEntity location lat lon = BookingLocationAPIEntity 
@@ -112,16 +146,16 @@ transformFromTableToResp card =
             }
 
 
-transformRideToTable :: RideBookingRes -> IndividualRideCard
+transformRideToTable :: RideBookingRes -> Array IndividualRideCard
 transformRideToTable rideAPI = 
   let
     (RideBookingRes ride) = rideAPI
     fares = getFares ride.fareBreakup
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0))
-    baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
+    _ = spy "rideDetails zxc " rideDetails
+    baseDistanceVal = fromMaybe 0 (rideDetails.chargeableRideDistance)
     timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
-    updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
     specialTags = getSpecialTag ride.specialLocationTag
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
@@ -129,14 +163,16 @@ transformRideToTable rideAPI =
     cust_id = (getValueToLocalStore CUSTOMER_ID)
     (BookingLocationAPIEntity fromLocation) = ride.fromLocation 
     (BookingLocationAPIEntity toLocation) = (ride.bookingDetails ^._contents^._toLocation)
+    rideList = ride.rideList 
   in
-    {
+    [{
       userId : cust_id,
+      rideListEmpty : if DA.null rideList then "true" else "false",
       date : (( (fromMaybe "" ((DS.split (DS.Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) DA.!!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
       time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
       source :  decodeAddress (Booking ride.fromLocation),
       destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
-      totalAmount :  ((getCurrency appConfig) <> " " <> show (fromMaybe (0) rideDetails.computedPrice)),
+      totalAmount : ride.estimatedTotalFare,
       driverImage : fetchImage FF_ASSET  "ny_ic_user",
       rating : (fromMaybe 0 rideDetails.rideRating),
       driverName : (rideDetails.driverName),
@@ -164,17 +200,34 @@ transformRideToTable rideAPI =
     , sourceLon : fromLocation.lon
     , destLat : toLocation.lat
     , destLon : toLocation.lon
-    }
+    , driverRatings : fromMaybe 0.0 rideDetails.driverRatings
+    , rideStatus : rideDetails.status
+    , fareProductType : ride.bookingDetails ^. _fareProductType
+    }]
 
--- transformRideListToTable :: RideBookingRes -> Array IndividualRideCard
--- transformRideListToTable resp = 
---   let
---     rideList = resp.rideList
---   in
---     DA.map transformRideToTable rideList
+-- newtype RideAPIEntity = RideAPIEntity {
+--   computedPrice :: Maybe Int,
+--   status :: String,
+--   vehicleModel :: String,
+--   createdAt :: String,
+--   driverNumber :: Maybe String,
+--   shortRideId :: String,
+--   driverRegisteredAt :: String,
+--   vehicleNumber :: String,
+--   rideOtp :: String,
+--   driverName :: String,
+--   chargeableRideDistance :: Maybe Int,
+--   vehicleColor :: String,
+--   id :: String,
+--   updatedAt :: String,
+--   rideStartTime :: Maybe String,
+--   rideEndTime:: Maybe String,
+--   rideRating :: Maybe Int,
+--   driverArrivalTime :: Maybe String,
+--   bppRideId :: String
+-- }
 
--- transformTableToRideList :: Array IndividualRideCard -> RideBookingRes
--- transformTableToRideList ridelist = 
+
 
 getZoneType :: Maybe String -> ZoneType
 getZoneType tag =
@@ -215,7 +268,7 @@ type IndividualRideCard =
     time :: String,
     source :: String,
     destination :: String,
-    totalAmount :: String,
+    totalAmount :: Int,
     driverImage :: String,
     rating :: Int,
     driverName :: String,
@@ -235,7 +288,7 @@ type IndividualRideCard =
   , pickupCharges :: String
   , extraFare :: String
   , waitingCharges :: String
-  , baseDistance :: String
+  , baseDistance :: Int
   , extraDistance :: String
   , isSpecialZone :: Boolean
   , nightCharges :: Boolean
@@ -243,6 +296,10 @@ type IndividualRideCard =
   , vehicleVariant :: String
   , merchantExoPhone :: String
   , otp :: String
+  , rideListEmpty :: String
+  , driverRatings :: Number
+  , rideStatus :: String
+  , fareProductType :: String
   }
 
 getFares ∷ Array FareBreakupAPIEntity → Fares
@@ -284,8 +341,10 @@ dummyIndividualRideCard = {
 , date : ""
 , time : ""
 , source : ""
+, rideListEmpty : "false"
+, fareProductType : ""
 , destination : ""
-, totalAmount : ""
+, totalAmount : 0
 , driverImage : ""
 , rating : 0
 , driverName : ""
@@ -296,6 +355,7 @@ dummyIndividualRideCard = {
 , status : ""
 , shortRideId : ""
 , bookingId : ""
+, driverRatings : 0.0
 , sourceLat : 0.0
 , sourceLon : 0.0
 , destLat : 0.0
@@ -305,7 +365,7 @@ dummyIndividualRideCard = {
 , pickupCharges : ""
 , extraFare : ""
 , waitingCharges : ""
-, baseDistance : ""
+, baseDistance : 0
 , extraDistance : ""
 , isSpecialZone : false
 , nightCharges : false
@@ -313,4 +373,25 @@ dummyIndividualRideCard = {
 , vehicleVariant : ""
 , merchantExoPhone : ""
 , otp : ""
+, rideStatus : ""
 }
+-- newtype RideBookingListRes = RideBookingListRes {
+--   list :: Array RideBookingRes
+-- }
+
+tranformToRideBookingListRes :: Array IndividualRideCard -> RideBookingListRes
+tranformToRideBookingListRes cardArr = 
+  let rideList = map (\item -> (transformFromTableToResp [item])) cardArr
+  in RideBookingListRes 
+      {
+        list : rideList
+      }
+
+tranformFromRideBookingListRes :: RideBookingListRes -> Array IndividualRideCard
+tranformFromRideBookingListRes (RideBookingListRes rideList) = 
+  let rideArr = rideList.list
+  in DA.concatMap transformRideToTable rideArr
+
+
+-- Array IndividualRideCard -> RideBookingListRes
+-- Array IndividualRideCard -> RideBookingRes

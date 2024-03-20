@@ -4,6 +4,7 @@ import Prelude
 import Engineering.Helpers.SQLiteUtils
 import Services.API as ApiTypes
 import Data.Maybe
+import Data.Array as DA
 
 flowStatusSchema :: SqlSchema
 flowStatusSchema =
@@ -18,6 +19,13 @@ type FlowStatusColumns =
         flow_id :: String
       , valid_till :: String
       , flow_type :: String
+    }
+dummyFlowStatusColumns :: FlowStatusColumns
+dummyFlowStatusColumns = 
+    {
+        flow_id : ""
+      , valid_till : ""
+      , flow_type : ""
     }
 
 -- newtype FlowStatusRes = FlowStatusRes
@@ -34,54 +42,36 @@ type FlowStatusColumns =
 --                 | RIDE_ASSIGNED { rideId :: String }
 --                 | PENDING_RATING { rideId :: String }
 
-transformFromFlowStatusResp :: ApiTypes.FlowStatusRes -> FlowStatusColumns
+transformFromFlowStatusResp :: ApiTypes.FlowStatusRes -> Array FlowStatusColumns
 transformFromFlowStatusResp (ApiTypes.FlowStatusRes resp) = 
     let flowStatus = resp.currentStatus
+        createFlowStatusColumns flowId validTill flowType = 
+            [{ flow_id : flowId
+            , valid_till : validTill
+            , flow_type : flowType
+            }]
     in case flowStatus of
         ApiTypes.IDLE _ -> 
-            { flow_id : ""
-            , valid_till : ""
-            , flow_type : "IDLE"
-            }
+            createFlowStatusColumns "" "" "IDLE"
         ApiTypes.SEARCHING currentStatus -> 
-            { flow_id : currentStatus.requestId
-            , valid_till : currentStatus.validTill
-            , flow_type : "SEARCHING"
-            }
+            createFlowStatusColumns currentStatus.requestId currentStatus.validTill "SEARCHING"
         ApiTypes.GOT_ESTIMATE currentStatus -> 
-            { flow_id : currentStatus.requestId
-            , valid_till : currentStatus.validTill
-            , flow_type : "GOT_ESTIMATE"
-            }
+            createFlowStatusColumns currentStatus.requestId currentStatus.validTill "GOT_ESTIMATE"
         ApiTypes.WAITING_FOR_DRIVER_OFFERS currentStatus -> 
-            { flow_id : currentStatus.estimateId
-            , valid_till : currentStatus.validTill
-            , flow_type : "WAITING_FOR_DRIVER_OFFERS"
-            }
+            createFlowStatusColumns currentStatus.estimateId currentStatus.validTill "WAITING_FOR_DRIVER_OFFERS"
         ApiTypes.DRIVER_OFFERED_QUOTE currentStatus -> 
-            { flow_id : currentStatus.estimateId
-            , valid_till : currentStatus.validTill
-            , flow_type : "DRIVER_OFFERED_QUOTE"
-            }
+            createFlowStatusColumns currentStatus.estimateId currentStatus.validTill "DRIVER_OFFERED_QUOTE"
         ApiTypes.WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> 
-            { flow_id : currentStatus.bookingId
-            , valid_till : currentStatus.validTill
-            , flow_type : "WAITING_FOR_DRIVER_ASSIGNMENT"
-            }
+            createFlowStatusColumns currentStatus.bookingId currentStatus.validTill "WAITING_FOR_DRIVER_ASSIGNMENT"
         ApiTypes.RIDE_ASSIGNED currentStatus -> 
-            { flow_id : currentStatus.rideId
-            , valid_till : ""
-            , flow_type : "RIDE_ASSIGNED"
-            }
+            createFlowStatusColumns currentStatus.rideId "" "RIDE_ASSIGNED"
         ApiTypes.PENDING_RATING currentStatus -> 
-            { flow_id : currentStatus.rideId
-            , valid_till : ""
-            , flow_type : "PENDING_RATING"
-            }
+            createFlowStatusColumns currentStatus.rideId "" "PENDING_RATING"
 
-transformFromFlowsTable :: FlowStatusColumns -> ApiTypes.FlowStatusRes
-transformFromFlowsTable flowStatus = 
-    let flowType = flowStatus
+transformFromFlowsTable :: Array FlowStatusColumns -> ApiTypes.FlowStatusRes
+transformFromFlowsTable flowStatusArr = 
+    let flowStatus = fromMaybe dummyFlowStatusColumns $ flowStatusArr DA.!! 0
+        flowType = flowStatus
     in case flowType.flow_type of
         "IDLE" -> 
             ApiTypes.FlowStatusRes 

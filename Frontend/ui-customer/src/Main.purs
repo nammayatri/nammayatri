@@ -43,6 +43,7 @@ import AssetsProvider (fetchAssets)
 import Timers
 import Effect.Uncurried
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Monad.Except.Trans (lift)
 import Storage (setValueToLocalStore, KeyStore(..))
 
 main :: Event -> Boolean -> Effect Unit
@@ -85,9 +86,11 @@ onConnectivityEvent triggertype = do
                   "LOCATION_DISABLED" -> do
                     modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                     Flow.permissionScreenFlow
-                  -- "INTERNET_ACTION" -> do
-                  --   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-                  --   Flow.permissionScreenFlow
+                  "INTERNET_ACTION" -> do
+                      lift $ lift $ liftFlow $  JBridge.showInAppNotification JBridge.inAppNotificationPayload{title = "No internet connection", message = "Please try again", channelId = "ApproxLoc", showLoader = true, durationInMilliSeconds = 50000}
+                      Flow.baseAppFlow payload' false
+                    -- modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
+                    -- Flow.permissionScreenFlow
                   "REFRESH" -> Flow.baseAppFlow payload' false
                   _ -> Flow.baseAppFlow payload' false
                 pure unit

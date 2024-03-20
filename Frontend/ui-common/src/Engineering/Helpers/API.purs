@@ -29,6 +29,7 @@ import Control.Transformers.Back.Trans as App
 import Data.Function.Uncurried (Fn3, runFn3, Fn4, runFn4, Fn6, runFn6, runFn2)
 import Engineering.Helpers.SQLiteUtils
 import Data.Maybe
+import JBridge
 
 callApi :: forall a b st.
   StandardEncode a =>
@@ -56,7 +57,7 @@ callAPIWithFallback payload headers' dbName transformToTable transformFromTable 
     Right resp -> do
       void $ pure $ runFn2 deleteTable dbName tableName
       void $ pure $ runFn3 createTable dbName tableName tableSchema
-      void $ pure $ runFn3 addToSqlite dbName tableName $ transformToTable resp.response
+      void $ pure $ addMultipleRowsToSQlite dbName tableName $ transformToTable resp.response
       pure $ Right $ spy "Response :: " resp.response
     Left err -> do
       let cachedResp = runFn4 executeQuery dbName query Just Nothing
@@ -64,7 +65,7 @@ callAPIWithFallback payload headers' dbName transformToTable transformFromTable 
         Nothing -> pure $ Left err
         Just cachedRes -> do
           void $ pure $ spy "sql Cached Response :: " cachedRes
-          pure $ Right $ spy "sql Transformed Cached Response ::" transformFromTable cachedRes
+          pure $ Right $ spy "sql Transformed Cached Response ::" $ transformFromTable cachedRes
   where
     logRequest = do
       let (Request req) = makeRequest payload (Headers headers')

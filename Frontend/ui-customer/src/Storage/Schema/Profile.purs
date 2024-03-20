@@ -44,10 +44,10 @@ type ProfileData =
   , followsRide :: Boolean
   }
 
-transformFromProfileToTable :: GetProfileRes -> ProfileData
+transformFromProfileToTable :: GetProfileRes -> Array ProfileData
 transformFromProfileToTable profile = 
   let (GetProfileRes unwrappedResp) = profile
-  in {
+  in [{
     middleName : fromMaybe "" unwrappedResp.middleName
   , lastName : fromMaybe "" unwrappedResp.lastName 
   , maskedDeviceToken : fromMaybe "" unwrappedResp.maskedDeviceToken
@@ -64,7 +64,7 @@ transformFromProfileToTable profile =
   , hasCompletedSafetySetup : fromMaybe true unwrappedResp.hasCompletedSafetySetup
   , hasCompletedMockSafetyDrill :fromMaybe true unwrappedResp.hasCompletedMockSafetyDrill
   , followsRide : fromMaybe false unwrappedResp.followsRide
-  }
+  }]
 
 transformFromTableToProfile :: ProfileData -> GetProfileRes
 transformFromTableToProfile cachedProfile = 

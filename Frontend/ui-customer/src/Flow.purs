@@ -197,6 +197,7 @@ import Control.Transformers.Back.Trans as CTBT
 import Helpers.API as API
 import Services.FlowCache as FlowCache
 import SQLStorage 
+import JBridge as JBridge
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do

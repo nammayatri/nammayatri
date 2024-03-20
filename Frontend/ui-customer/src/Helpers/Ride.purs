@@ -46,14 +46,17 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Common.Types.App as Common
 import Data.Function.Uncurried (Fn3, runFn3, runFn4, runFn6, runFn2)
 import Debug
+import Helpers.API as API
+import SQLStorage
 
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
   logField_ <- lift $ lift $ getLogFields
-  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+  rideBookingListResponse <- lift $ lift $ API.callAPIWithFallback  (RideBookingListReq "1" "0" "true" Nothing) dbName tranformFromRideBookingListRes tranformToRideBookingListRes RideT findActiveRide
   case rideBookingListResponse of
     Right (RideBookingListRes listResp) -> do
+      void $ pure $ spy "rideBookingListResponse zxc" listResp
       if not (null listResp.list) then do
         (GlobalState state') <- getState
         let state = state'.homeScreen

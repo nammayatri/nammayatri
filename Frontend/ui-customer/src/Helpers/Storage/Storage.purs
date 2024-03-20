@@ -98,7 +98,8 @@ data KeyStore
   | METRO_PAYMENT_STATUS_POOLING
   | METRO_STATIONS
   | METRO_PAYMENT_SDK_POLLING
-
+  | IS_OFFLINE
+  
 derive instance genericKeyStore :: Generic KeyStore _
 
 instance showKeyStore :: Show KeyStore where

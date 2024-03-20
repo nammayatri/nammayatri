@@ -82,7 +82,7 @@ foreign import fetchPackageName :: Unit -> Effect String
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
-foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
+foreign import showInAppNotification :: InAppNotificationPayload -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 foreign import checkAndAskNotificationPermission :: Boolean -> Effect Unit
@@ -319,6 +319,36 @@ lottieAnimationConfig = {
   , maxProgress : 1.0
   , forceToUseRemote : false
 }
+
+type InAppNotificationPayload = {
+  event :: String,
+  title :: String,
+  message :: String,
+  onTapAction :: String,
+  action1Text :: String,
+  action2Text :: String,
+  action1Image :: String,
+  action2Image :: String,
+  channelId :: String,
+  durationInMilliSeconds :: Int,
+  showLoader :: Boolean
+}
+
+inAppNotificationPayload :: InAppNotificationPayload
+inAppNotificationPayload = {
+  event : "in_app_notification",
+  title : "",
+  message : "",
+  onTapAction : "",
+  action1Text : "",
+  action2Text : "",
+  action1Image : "",
+  action2Image : "",
+  channelId : "channel",
+  durationInMilliSeconds : 30000,
+  showLoader : false
+}
+
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent

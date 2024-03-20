@@ -110,7 +110,6 @@ newtype GlobalState = GlobalState {
   , metroTicketBookingScreen :: MetroTicketBookingScreenState
   , metroTicketStatusScreen :: MetroTicketStatusScreenState
   , globalFlowCache :: GlobalFlowCache
-  , isOffline :: Boolean
   }
 
 defaultGlobalState :: GlobalState
@@ -152,7 +151,6 @@ defaultGlobalState = GlobalState {
   , metroTicketBookingScreen : MetroTicketBookingScreenData.initData
   , metroTicketStatusScreen : MetroTicketStatusScreenData.initData
   , globalFlowCache : defaultGlobalFlowCache
-  , isOffline : false
   }
 
 defaultGlobalProps :: GlobalProps 
