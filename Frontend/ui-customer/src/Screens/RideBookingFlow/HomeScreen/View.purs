@@ -74,7 +74,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone)
-import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, jBridgeMethodExists, currentPosition)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -247,8 +247,9 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
               ConfirmingLocation -> do
-                _ <- pure $ enableMyLocation true
-                _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                void $ pure $ enableMyLocation true
+                void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                void $ setMapPadding 0 0 0 112
                 _ <- storeCallBackLocateOnMap push UpdatePickupLocation
                 pure unit
               TryAgain -> do
@@ -294,7 +295,9 @@ isCurrentLocationEnabled = if (isLocalStageOn HomeScreen) then enableCurrentLoca
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  let showLabel = not $ DS.null state.props.defaultPickUpPoint
+  let 
+    showLabel = not $ DS.null state.props.defaultPickUpPoint
+    extraPadding = if state.props.currentStage == ConfirmingLocation then 112 else 0
   in
   frameLayout
     [ height MATCH_PARENT
@@ -3025,7 +3028,7 @@ currentLocationView push state =
 nearByPickUpPointsView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 nearByPickUpPointsView state push =
   scrollView
-  [ height $ V 130
+  [ height $ V $ getPickUpViewHeight state.data.nearByPickUpPoints
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 5 20 0 5
@@ -3044,6 +3047,19 @@ nearByPickUpPointsView state push =
                     , margin $ MarginBottom 12
                       ][MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state item)]) state.data.nearByPickUpPoints)
   ]
+  where 
+    getPickUpViewHeight nearByPickUpPoints =
+      let 
+        menuBtnHeight = 56 -- Update Menu Button Height
+        padding = 28
+        len = if (length nearByPickUpPoints > 3) then 3 else length nearByPickUpPoints
+        removeExtraPadding = if len > 1 then padding else 0
+        pickUpPointViewHeight = len * menuBtnHeight + len * padding - removeExtraPadding
+        finalHeight = if os == "IOS" 
+                            then pickUpPointViewHeight - len * 10
+                            else pickUpPointViewHeight
+      in
+      finalHeight
 
 confirmingLottieView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmingLottieView push state =
