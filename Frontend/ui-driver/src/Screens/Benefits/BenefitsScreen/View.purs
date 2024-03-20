@@ -520,6 +520,7 @@ rideLeaderBoardView push state =
         , background Color.greenGrey100
         , padding $ Padding 20 5 20 10
         , gravity CENTER_VERTICAL
+        , onClick push $ const GoToLeaderBoard
         , cornerRadius 12.0
         ]
         [ imageView
@@ -569,7 +570,6 @@ rideLeaderBoardView push state =
             , height $ V 32
             , gravity CENTER
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_arrow_right_circle_green"
-            , onClick push $ const GoToLeaderBoard
             ]
         ]
     ]
