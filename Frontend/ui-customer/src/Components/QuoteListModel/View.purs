@@ -255,7 +255,7 @@ findingRidesView state push =
       lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
-                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json", lottieId = (getNewIDWithTag "lottieLoaderAnim") }
+                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json", lottieId = (getNewIDWithTag "lottieLoaderAnim"), cacheEnabled = false }
                     pure unit)(const NoAction)
       , height $ V state.appConfig.quoteListModel.lottieHeight
       , accessibility DISABLE
