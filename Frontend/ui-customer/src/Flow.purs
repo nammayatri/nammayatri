@@ -1792,7 +1792,7 @@ rideSearchFlow flowType = do
                     else do
                       if flowType == "REPEAT_RIDE_FLOW" then liftFlowBT $ logEventWithParams logField_ "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
                       void $ pure $ updateLocalStage FindingEstimate
-                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isRepeatRide = true, searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, isShorterTrip = false}, data {source = finalState.data.source, sourceAddress = finalState.data.sourceAddress, nearByDrivers = Nothing}})
+                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isRepeatRide = (flowType == "REPEAT_RIDE_FLOW"), searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, isShorterTrip = false}, data {source = finalState.data.source, sourceAddress = finalState.data.sourceAddress, nearByDrivers = Nothing}})
                   void $ lift $ lift $ toggleLoader false
 
                 Nothing -> pure unit
