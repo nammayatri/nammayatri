@@ -28,6 +28,7 @@ defaultFontConfig :: FontConfig
 defaultFontConfig = {
     default : "PlusJakartaSans"
   , kannada : "NotoSansKannada"
+  , telugu : "NotoSansTelugu"
   , "type": "Assets"
   }
 

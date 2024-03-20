@@ -49,6 +49,7 @@ type PrimaryButtonConfig = {
 type FontConfig = {
     default :: String
   , kannada :: String
+  , telugu :: String
   , type :: String
 }
 
