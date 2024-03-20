@@ -22,7 +22,7 @@ import Engineering.Helpers.BackTrack (modifyState, getState)
 import Prelude (Unit, bind, ($))
 import Resources.Constants (encodeAddress, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreen
-import Screens.Types (MyRidesScreenState, Stage(..), Trip(..))
+import Screens.Types (MyRidesScreenState, Stage(..), Trip(..), LocationSelectType(..))
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
@@ -63,39 +63,6 @@ modifyScreenState st =
     MetroTicketStatusScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketStatusScreen = a state.metroTicketStatusScreen})
     GlobalFlowCacheType a -> modifyState (\(GlobalState state) -> GlobalState $ state {globalFlowCache = a state.globalFlowCache})
 
-updateRideDetails :: MyRidesScreenState -> FlowBT String Unit
-updateRideDetails state = do 
-  (GlobalState globalState) <- getState
-  modifyScreenState $ HomeScreenStateType 
-    (\homeScreen -> HomeScreen.initData{ 
-    data {
-      source =  state.data.selectedItem.source
-    , destination = state.data.selectedItem.destination
-    , locationList = homeScreen.data.locationList
-    , sourceAddress = getAddressFromBooking state.data.selectedItem.sourceLocation
-    , savedLocations = homeScreen.data.savedLocations
-    , destinationAddress = getAddressFromBooking state.data.selectedItem.destinationLocation 
-    , settingSideBar {
-        gender = globalState.homeScreen.data.settingSideBar.gender 
-      , email = globalState.homeScreen.data.settingSideBar.email
-      , hasCompletedSafetySetup = globalState.homeScreen.data.settingSideBar.hasCompletedSafetySetup
-    }
-    }
-    , props{
-      sourceSelectedOnMap = true
-    , sourceLat = state.data.selectedItem.sourceLocation^._lat
-    , sourceLong = state.data.selectedItem.sourceLocation^._lon
-    , destinationLat = state.data.selectedItem.destinationLocation^._lat
-    , destinationLong = state.data.selectedItem.destinationLocation^._lon
-    , currentStage = FindingEstimate
-    , rideRequestFlow = true
-    , isSpecialZone = state.data.selectedItem.isSpecialZone
-    , isBanner = globalState.homeScreen.props.isBanner
-    , sosBannerType = globalState.homeScreen.props.sosBannerType 
-    , followsRide = globalState.homeScreen.props.followsRide
-    , isSafetyCenterDisabled = globalState.homeScreen.props.isSafetyCenterDisabled
-    }
-    })
     
 updateRepeatRideDetails :: Trip -> FlowBT String Unit
 updateRepeatRideDetails state = do 
@@ -116,7 +83,7 @@ updateRepeatRideDetails state = do
     }
     }
     , props{
-      sourceSelectedOnMap = true
+      rideSearchProps { sourceSelectType = REPEAT_RIDE }
     , sourceLat = state.sourceLat
     , sourceLong = state.sourceLong
     , destinationLat = state.destLat

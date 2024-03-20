@@ -1271,5 +1271,5 @@ driverPickUpStatusText state eta =
   case state.props.zoneType of
     SPECIAL_PICKUP -> getString IS_AT_PICKUP_LOCATION
     _ -> case eta of
-          "--" -> "is " <> eta <> getString AWAY
-          _    -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_AT_PICKUP
+          "--" -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_AT_PICKUP
+          _    -> "is " <> eta <> getString AWAY

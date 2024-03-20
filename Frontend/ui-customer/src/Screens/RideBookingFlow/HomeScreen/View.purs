@@ -349,7 +349,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom if os == "IOS" then 60 else 70)
+                    , padding $ PaddingBottom $ (if os == "IOS" then 60 else 70) + extraPadding
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
@@ -386,7 +386,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom 95)
+                    , padding $ PaddingBottom $ 95 + extraPadding
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
@@ -403,7 +403,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom 36)
+                    , padding $ PaddingBottom $ 36 + extraPadding
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
