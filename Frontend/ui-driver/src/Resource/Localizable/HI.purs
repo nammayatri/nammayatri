@@ -1302,3 +1302,6 @@ getHI stringKey =
         INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> "एक विशेष पिकअप जोन में प्राथमिक राइड अनुरोध प्राप्त करें"
         SELECT_A_GREEN_AREA_FOR_PRIORITY_RIDES -> "प्राथमिकता से सवारी के लिए हरा क्षेत्र चुनें"
         PRIORITY_RIDE_EXPIERENCE -> "प्राथमिकता से सवारी का अनुभव"
+        ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "सवारी प्राप्त करने के लिए लोकेशन अनुमति सक्षम करें"
+        ENABLE_LOC_PER_FROM_SETTINGS -> "कृपया नॉन-स्टॉप सवारी प्राप्त करने के लिए सेटिंग्स से लोकेशन अनुमतियाँ सक्षम करें"
+        ENABLE_PERMISSION_STR -> "अनुमति सक्षम करें"

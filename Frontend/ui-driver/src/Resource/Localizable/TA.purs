@@ -1302,3 +1302,6 @@ getTA stringKey =
         INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> "சிறப்பு பிக்கப் ஜோனில், சவாரிகளுக்கு முன்னுரிமை பெறுங்கள்"
         SELECT_A_GREEN_AREA_FOR_PRIORITY_RIDES -> "முன்னுரிமை சவாரிகளுக்கு பரிந்துரைக்க பச்சை பகுதியைத் தேர்ந்தெடுக்கவும்"
         PRIORITY_RIDE_EXPIERENCE -> "முன்னுரிமை சவாரி அனுபவம்"
+        ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "சவாரிகளைப் பெற இருப்பிட அனுமதியை இயக்கவும்"
+        ENABLE_LOC_PER_FROM_SETTINGS -> "இடைவிடாத சவாரிகளைப் பெற, அமைப்புகளிலிருந்து இருப்பிட அனுமதிகளை இயக்கவும்"
+        ENABLE_PERMISSION_STR -> "அனுமதியை இயக்கு"

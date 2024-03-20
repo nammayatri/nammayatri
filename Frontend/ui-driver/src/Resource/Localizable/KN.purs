@@ -1302,4 +1302,6 @@ getKN stringKey =
         INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> "ವಿಶೇಷ ಪಿಕಪ್ ವಲಯದಲ್ಲಿ ಆದ್ಯತೆಯ ರೈಡ್ ವಿನಂತಿಗಳನ್ನು ಪಡೆಯಿರಿ"
         SELECT_A_GREEN_AREA_FOR_PRIORITY_RIDES -> "ಆದ್ಯತೆಯ ಸವಾರಿಗಳಿಗಾಗಿ ಹಸಿರು ಪ್ರದೇಶವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
         PRIORITY_RIDE_EXPIERENCE -> "ಆದ್ಯತೆಯ ಸವಾರಿ ಅನುಭವ"
-        
+        ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "ಸವಾರಿಗಳನ್ನು ಪಡೆಯಲು ಸ್ಥಳ ಅನುಮತಿಯನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ"
+        ENABLE_LOC_PER_FROM_SETTINGS -> "ತಡೆರಹಿತ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ನಿಂದ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ."
+        ENABLE_PERMISSION_STR -> "ಅನುಮತಿ ಸಕ್ರಿಯಗೊಳಿಸಿ"

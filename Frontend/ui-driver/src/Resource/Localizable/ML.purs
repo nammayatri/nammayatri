@@ -1302,3 +1302,6 @@ getML stringKey =
         INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> "ഒരു പ്രത്യേക പിക്കപ്പ് വേലികളിൽ പ്രധാന റൈഡ് അഭ്യർത്ഥനകൾ നേടുക"
         SELECT_A_GREEN_AREA_FOR_PRIORITY_RIDES -> "പ്രാധാന്യ റൈഡുകൾക്കായി പച്ച പ്രദേശം തിരഞ്ഞെടുക്കുക"
         PRIORITY_RIDE_EXPIERENCE -> "പ്രാധാന്യ റൈഡ് അനുഭവം"
+        ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "റൈഡുകൾ ലഭിക്കുന്നതിന് ലൊക്കേഷൻ അനുമതി പ്രവർത്തനക്ഷമമാക്കുക"
+        ENABLE_LOC_PER_FROM_SETTINGS -> "നിർത്താതെയുള്ള റൈഡുകൾ ലഭിക്കുന്നതിന് ക്രമീകരണങ്ങളിൽ നിന്ന് ലൊക്കേഷൻ അനുമതികൾ പ്രവർത്തനക്ഷമമാക്കുക"
+        ENABLE_PERMISSION_STR -> "അനുമതി പ്രവർത്തനക്ഷമമാക്കുക"
