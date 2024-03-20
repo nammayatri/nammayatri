@@ -75,7 +75,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, zoneLabelIcon)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo)
@@ -1394,22 +1394,49 @@ eval (DriverInfoCardActionController (DriverInfoCardController.SpecialZoneInfoTa
 eval DirectSearch state =continue state{props{currentStage = SearchLocationModel}}
 
 eval BackPressed state = do
-  _ <- pure $ toggleBtnLoader "" false
+  void $ pure $ toggleBtnLoader "" false
   case state.props.currentStage of
     SearchLocationModel -> do
       if state.props.isSaveFavourite then 
         continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
       else do
         if state.props.isSearchLocation == LocateOnMap then do
-          _ <- pure $ exitLocateOnMap ""
-          _ <- pure $ hideKeyboardOnNavigation true
+          void $ pure $ exitLocateOnMap ""
+          void $ pure $ hideKeyboardOnNavigation true
           continue state{props{isSearchLocation = SearchLocation, locateOnMap = false}}
         else do
           if (getSearchType unit) == "direct_search" then
             pure $ terminateApp state.props.currentStage false
           else 
             pure unit
-          updateAndExit state{props{autoScroll = false, currentStage = HomeScreen, homeScreenSheetState = COLLAPSED, showShimmer = true, isSearchLocation = NoView}} $ GoToHome state{data{tripSuggestions = state.data.tripSuggestions, destinationSuggestions = state.data.destinationSuggestions}}
+          void $ pure $ removeAllPolylines ""
+          void $ pure $ updateLocalStage HomeScreen
+          void $ pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
+          void $ pure $ enableMyLocation true
+          void $ pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
+          recenterCurrentLocation $ 
+            HomeScreenData.initData
+              { data
+                { disability = state.data.disability
+                , settingSideBar
+                  { gender = state.data.settingSideBar.gender
+                  , email = state.data.settingSideBar.email
+                  , hasCompletedSafetySetup = state.data.settingSideBar.hasCompletedSafetySetup
+                  }
+                  , destinationSuggestions = state.data.destinationSuggestions
+                  , tripSuggestions = state.data.tripSuggestions
+                  , followers = state.data.followers
+                }
+              , props { 
+                  isBanner = state.props.isBanner
+                , sourceLat = state.props.sourceLat
+                , sourceLong = state.props.sourceLong
+                , currentLocation = state.props.currentLocation
+                , sosBannerType = state.props.sosBannerType 
+                , followsRide = state.props.followsRide
+                , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                }
+              }
     SettingPrice -> do
       _ <- pure $ performHapticFeedback unit
       void $ pure $ clearTimerWithId state.props.repeatRideTimerId
@@ -1673,11 +1700,11 @@ eval OpenLiveDashboard state = do
   void $ pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_live_stats_dashboard"
   if os == "IOS" then do
-    continueWithCmd state [do
+    continueWithCmd state{props{showShimmer = false}} [do
       void $ openUrlInApp state.data.config.dashboard.url
       pure NoAction
     ]
-  else continue state {props {showLiveDashboard = true}}
+  else continue state {props {showShimmer = false,showLiveDashboard = true}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
   _ <- pure $ performHapticFeedback unit
