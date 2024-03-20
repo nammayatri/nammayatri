@@ -333,7 +333,7 @@ view push state =
                   , background Color.transparent
                   ][ 
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
-                  , if isHomeScreenView state then emptyTextView state else mapView push state (if os == "IOS" then "CustomerHomeScreenMap" else "CustomerHomeScreen")
+                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen"
                     ]
                 , linearLayout
                     [ width MATCH_PARENT
@@ -3402,12 +3402,6 @@ mapView push state idTag =
                 _ <- push action
                 _ <- getCurrentPosition push CurrentLocation
                 _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
-                if os == "IOS" then
-                  case state.props.currentStage of  
-                    HomeScreen -> void $ setMapPadding 0 0 0 0
-                    ConfirmingLocation -> void $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = state.props.sourceLat, lon = state.props.sourceLong, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin" }
-                    _ -> pure unit
-                else pure unit
                 if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
                 else pure unit
                 case state.props.currentStage of
