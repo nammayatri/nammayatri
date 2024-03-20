@@ -309,6 +309,7 @@ type LottieAnimationConfig = {
   , minProgress :: Number
   , maxProgress :: Number
   , forceToUseRemote :: Boolean
+  , cacheEnabled :: Boolean
 }
 
 lottieAnimationConfig :: LottieAnimationConfig
@@ -321,6 +322,7 @@ lottieAnimationConfig = {
   , minProgress : 0.0
   , maxProgress : 1.0
   , forceToUseRemote : false
+  , cacheEnabled : true
 }
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean

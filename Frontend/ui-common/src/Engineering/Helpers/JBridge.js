@@ -1974,7 +1974,11 @@ export const startLottieProcess = function (configObj) {
   }
   try {
     if (window.__OS == "IOS") {
-      return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType, JSON.stringify(configObj));
+      try {
+        return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType, JSON.stringify(configObj), configObj.forceToUseRemote );
+      } catch (err) {
+        return JBridge.startLottieProcess(lottieName, configObj.lottieId, configObj.repeat, configObj.speed, configObj.scaleType, JSON.stringify(configObj));
+      }
     }
     configObj.rawJson = lottieName;
     return JBridge.startLottieProcess(JSON.stringify(configObj));
