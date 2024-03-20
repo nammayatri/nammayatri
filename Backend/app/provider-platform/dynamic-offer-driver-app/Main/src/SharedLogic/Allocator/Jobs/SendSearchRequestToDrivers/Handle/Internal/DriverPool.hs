@@ -107,7 +107,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
         then return (res, poolType, nextScheduleIn)
         else calculateWithFallback fallbackPoolTypes fn
 
-    prepareDriverPoolBatch' previousBatchesDrivers batchNum doGoHomePooling merchantOpCityId_ txnId = withLogTag ("BatchNum - " <> show batchNum) $ do
+    prepareDriverPoolBatch' previousBatchesDrivers batchNum doSpecialPooling merchantOpCityId_ txnId = withLogTag ("BatchNum - " <> show batchNum) $ do
       radiusStep <- getPoolRadiusStep searchTry.id
       transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId_ Nothing Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
       intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId_ txnId (Just "driverId") >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
@@ -117,15 +117,15 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
       logDebug $ "Blocked Driver List-" <> show blockListedDrivers
       let poolTypesWithFallback =
             case batchNum of
-              (-1) | goHomeConfig.enableGoHome && doGoHomePooling && maybe False (\tag -> tag `elem` transporterConfig.specialLocationTags) searchReq.specialLocationTag && not (null transporterConfig.specialDrivers) -> [SpecialDriversPool, GoHomePool, NormalPool]
-              (-1) | isJust searchReq.pickupZoneGateId -> [SpecialZoneQueuePool] <> [GoHomePool | goHomeConfig.enableGoHome && doGoHomePooling] <> [NormalPool]
+              (-1) | goHomeConfig.enableGoHome && doSpecialPooling && maybe False (\tag -> tag `elem` transporterConfig.specialLocationTags) searchReq.specialLocationTag && not (null transporterConfig.specialDrivers) -> [SpecialDriversPool, GoHomePool, NormalPool]
+              (-1) | isJust searchReq.pickupZoneGateId -> [SpecialZoneQueuePool, SkipPool]
               (-1) -> [SkipPool]
-              0 | goHomeConfig.enableGoHome && doGoHomePooling -> [GoHomePool, NormalPool]
+              0 | goHomeConfig.enableGoHome && doSpecialPooling -> [GoHomePool, NormalPool]
               _ -> [NormalPool]
       logDebug $ "poolTypesWithFallback: " <> show poolTypesWithFallback
       let shouldDoMicroBatching = batchNum /= -1
       (currentDriverPoolBatch, poolType, nextScheduleTime) <-
-        calculateWithFallback poolTypesWithFallback $ \poolType -> do
+        calculateWithFallback poolTypesWithFallback $ \poolType -> withLogTag (show poolType <> "_step=" <> show radiusStep) $ do
           allDriversNotOnRide <- calcDriverPool poolType radiusStep merchantOpCityId_
           case poolType of
             SkipPool -> do
@@ -133,6 +133,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
               prepareDriverPoolBatch' previousBatchesDrivers (batchNum + 1) True merchantOpCityId_ txnId
             SpecialZoneQueuePool -> do
               (driversInQueue, _) <- splitDriverFromGateAndRest allDriversNotOnRide
+              logDebug $ "SpecialPickupZonePoolBatch DriversInQueue -" <> show driversInQueue
               goHomeDriversInQueue <-
                 case searchReq.toLocation of
                   Just toLoc | isGoHomeAvailable searchTry.tripCategory -> do
@@ -147,8 +148,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
                               merchantId = searchReq.providerId,
                               isRental = isRentalTrip searchTry.tripCategory
                             }
-                    take driverPoolCfg.driverBatchSize <$> filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False) driversInQueue) goHomeReq merchantOpCityId_
+                    filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False) driversInQueue) goHomeReq merchantOpCityId_
                   _ -> pure []
+              logDebug $ "SpecialPickupZonePoolBatch goHomeDriversInQueue -" <> show goHomeDriversInQueue
               let goHomeDriversInQueueId = map (\d -> d.driverPoolResult.driverId) goHomeDriversInQueue
               let normalDriversInQueue = filter (\d -> not (d.driverPoolResult.driverId `elem` goHomeDriversInQueueId)) driversInQueue
               normalDriversInQueueBatch <- mkDriverPoolBatch merchantOpCityId_ (take driverPoolCfg.driverBatchSize normalDriversInQueue) intelligentPoolConfig transporterConfig
@@ -175,6 +177,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
               allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId_
               (,poolType,Nothing) <$> calculateNormalBatch merchantOpCityId_ transporterConfig intelligentPoolConfig (allNearbyDriversCurrentlyOnRide <> allNearbyDriversCurrentlyNotOnRide) radiusStep blockListedDrivers txnId
       logDebug $ "finalPool: " <> show currentDriverPoolBatch
+      logDebug $ "finalPoolType: " <> show poolType
       cacheBatch currentDriverPoolBatch
       let poolWithMicroBatching =
             if shouldDoMicroBatching
@@ -193,17 +196,17 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry startingbatchNum goHome
         addSpecialZoneInfo driverDefaultExtraFee pool = map (\driverWithDistance -> driverWithDistance {pickupZone = True, specialZoneExtraTip = driverDefaultExtraFee}) pool
         addKeepHiddenInSeconds keepHiddenFor pool = map (\driverWithDistance -> driverWithDistance {keepHiddenForSeconds = keepHiddenFor}) pool
         splitDriverFromGateAndRest pool =
-          if isJust searchReq.pickupZoneGateId
-            then
+          case searchReq.pickupZoneGateId of
+            Just pickupZoneGateId ->
               partitionM
                 ( \dd -> do
                     mbDriverGate <- findGateInfoIfDriverInsideGatePickupZone (LatLong dd.driverPoolResult.lat dd.driverPoolResult.lon)
                     pure $ case mbDriverGate of
-                      Just driverGate -> Just driverGate.specialLocationId.getId == searchReq.pickupZoneGateId
+                      Just driverGate -> driverGate.id.getId == pickupZoneGateId
                       Nothing -> False
                 )
                 pool
-            else pure ([], pool)
+            Nothing -> pure ([], pool)
 
         calculateGoHomeBatch mOCityId transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers blockListedDrivers = do
           let allNearbyGoHomeDrivers' = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) allNearbyGoHomeDrivers
