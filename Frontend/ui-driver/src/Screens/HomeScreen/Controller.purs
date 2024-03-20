@@ -880,7 +880,7 @@ eval (TimeUpdate time lat lng) state = do
       newState = state { data{ currentDriverLat= driverLat,  currentDriverLon = driverLong, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a")}, props { specialZoneProps{ nearBySpecialZone = isJust nearestZone } }}
   void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show newState.data.activeRide.notifiedCustomer)
   void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
-  continueWithCmd newState{ props{ specialZoneProps{ currentGeoHash = if shouldUpdateGeoHash then geoHash else "" } } } [ do
+  continueWithCmd newState{ props{ specialZoneProps{ currentGeoHash = if shouldUpdateGeoHash then geoHash else "" }, mapRendered = true } } [ do
     if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then
       case nearestZone of
         Just zone -> do
@@ -907,9 +907,17 @@ eval (TimeUpdate time lat lng) state = do
 
 eval (OnMarkerClickCallBack tag lat lon) state = do
   case Number.fromString lat, Number.fromString lon of
-    Just lat', Just lon' -> void $ pure $ openNavigation lat' lon' "DRIVE"
-    _, _ -> pure unit
-  continue state
+    Just lat', Just lon' -> 
+      if getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon lat' lon' > 0.200
+        then do 
+          void $ pure $ openNavigation lat' lon' "DRIVE"
+          continue state
+      else 
+        continueWithCmd state [do
+          void $ openUrlInApp $ "https://www.google.com/maps/dir/?api=1&destination="<> lat <>","<> lon
+          pure NoAction
+        ]
+    _, _ -> continue state
 
 eval (UpdateLastLoc lat lon val) state = continue state {data { prevLatLon = Just {lat : lat, lon : lon, place : "", driverInsideThreshold : false}}}
   

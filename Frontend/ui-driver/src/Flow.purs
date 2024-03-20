@@ -2118,6 +2118,7 @@ homeScreenFlow = do
         Nothing -> pure unit
         Just (RidesInfo response) -> do
           let specialZoneConfig = HU.getRideLabelData response.specialLocationTag
+              isSpecialPickUpZone = HU.checkSpecialPickupZone response.specialLocationTag
           modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
               tripId = response.shortRideId,
               date = (convertUTCtoISC (response.createdAt) "D MMM"),
@@ -2136,12 +2137,12 @@ homeScreenFlow = do
               specialZoneLayoutBackground = specialZoneConfig.backgroundColor,
               specialZoneImage = specialZoneConfig.imageUrl,
               specialZoneText = specialZoneConfig.text,
-              specialZonePickup = HU.checkSpecialPickupZone response.specialLocationTag
+              specialZonePickup = isSpecialPickUpZone
             }})
           let payerVpa = fromMaybe "" response.payerVpa
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
             { data { 
-                endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }
+                endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa, specialZonePickup = if isSpecialPickUpZone then Just true else Nothing }
               },
               props {
                 isFreeRide = fromMaybe false response.isFreeRide
