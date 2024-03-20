@@ -1779,6 +1779,42 @@ vehicleNotSupportedPopup state =
       , height = V 315
       }
     }
+
+bgLocPopup :: ST.HomeScreenState -> PopUpModal.Config
+bgLocPopup state = 
+  PopUpModal.config {
+      gravity = CENTER,
+      backgroundClickable = false,
+      optionButtonOrientation = "HORIZONTAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      margin = MarginHorizontal 25 25, 
+      primaryText {
+        text = getString ENABLE_LOC_PERMISSION_TO_GET_RIDES
+      , textStyle = Heading2
+      , margin = Margin 16 0 16 10},
+      secondaryText{
+        text = getString ENABLE_LOC_PER_FROM_SETTINGS
+      , textStyle = Body5
+      , margin = Margin 16 0 16 15 },
+      option1 {
+        text = getString ENABLE_PERMISSION_STR
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , textStyle = FontStyle.SubHeading1
+      , width = MATCH_PARENT
+      },
+      option2 {
+      visibility = false
+    },
+      cornerRadius = PTD.Corners 15.0 true true true true,
+      coverImageConfig {
+        imageUrl = fetchImage FF_ASSET "ny_ic_bgloc"
+      , visibility = VISIBLE
+      , width = V 300
+      , height = V 315
+      }
+    }
   
     
 introducingCoinsPopup :: ST.HomeScreenState -> PopUpModal.Config

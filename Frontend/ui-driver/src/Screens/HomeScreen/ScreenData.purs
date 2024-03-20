@@ -213,6 +213,7 @@ initData = {
         tobeLogged : false,
         safetyAudioAutoPlay : false,
         vehicleNSPopup : false,
+        bgLocationPopup : false,
         specialZoneProps : { specialZonePopup : false, nearBySpecialZone : false, currentGeoHash : "" }
     }
 }

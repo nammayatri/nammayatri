@@ -268,7 +268,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
                     | EarningsScreen ST.HomeScreenState Boolean
-                    | DriverStatsUpdate DriverProfileStatsResp
+                    | DriverStatsUpdate DriverProfileStatsResp ST.HomeScreenState
                     | UpdateSpecialLocationList ST.HomeScreenState
 
 data Action = NoAction
@@ -378,6 +378,8 @@ data Action = NoAction
             | UpdateSpecialLocation
             | SpecialZonePopup
             | SpecialZoneCardAC RequestInfoCard.Action
+            | BgLocationAC
+            | BgLocationPopupAC PopUpModal.Action
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -393,6 +395,14 @@ eval (GoToButtonClickAC PrimaryButtonController.OnClick) state = do
 eval ClickInfo state = continue state {data { driverGotoState {goToInfo = true}}}
 
 eval (GotoKnowMoreAction PopUpModal.OnButton1Click) state = continue state { data { driverGotoState { goToInfo = false } }} 
+
+eval BgLocationAC state = continue state { props { bgLocationPopup = true}}
+
+eval (BgLocationPopupAC PopUpModal.OnButton1Click) state = 
+  continueWithCmd state { props { bgLocationPopup = false}} [do
+    void $ JB.requestBackgroundLocation unit
+    pure NoAction
+  ]
 
 eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { data { driverGotoState { confirmGotoCancel = false } }} 
 
@@ -491,6 +501,7 @@ eval BackPressed state = do
   else if state.props.accountBlockedPopup then continue state {props {accountBlockedPopup = false}}
   else if state.props.vehicleNSPopup then continue state { props { vehicleNSPopup = false}}
   else if state.props.specialZoneProps.specialZonePopup then continue state { props { specialZoneProps{specialZonePopup = false} }}
+  else if state.props.bgLocationPopup then continue state { props { bgLocationPopup = false}}
   else do
     _ <- pure $ minimizeApp ""
     continue state
@@ -1151,7 +1162,7 @@ eval (GoToEarningsScreen showCoinsView) state = do
   exit $ EarningsScreen state showCoinsView
 
 eval (DriverStats driverStats) state = do
-  exit $ DriverStatsUpdate driverStats
+  exit $ DriverStatsUpdate driverStats state
 
 eval _ state = continue state
 

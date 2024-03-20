@@ -1303,3 +1303,6 @@ getBN stringKey =
         INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> "একটি বিশেষ পিকআপ জোনে প্রাথমিক রাইড অনুরোধ পান"
         SELECT_A_GREEN_AREA_FOR_PRIORITY_RIDES -> "প্রাথমিকতা রাইডের জন্য একটি সবুজ এলাকা নির্বাচন করুন"
         PRIORITY_RIDE_EXPIERENCE -> "প্রাথমিকতা রাইড অভিজ্ঞতা"
+        ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "রাইড পেতে লোকেশন পারমিশন চালু করুন"
+        ENABLE_LOC_PER_FROM_SETTINGS -> "অনুগ্রহ করে নন-স্টপ রাইডগুলি পেতে সেটিংস থেকে অবস্থানের অনুমতিগুলি সক্ষম করুন৷"
+        ENABLE_PERMISSION_STR -> "অনুমতি সক্ষম করুন"

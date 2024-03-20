@@ -206,6 +206,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     public static final int REQUEST_CONTACTS = 7;
     public static final int LOCATION_PERMISSION_REQ_CODE = 1;
+    public static final int BACKGROUND_LOCATION_REQ_CODE = 190;
     public static final int REQUEST_CALL = 8;
     protected static final int STORAGE_PERMISSION = 67;
     //Constants
@@ -489,7 +490,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void requestBackgroundLocation(){
         Activity activity = bridgeComponents.getActivity();
         if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
-            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, 19032024);
+            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, BACKGROUND_LOCATION_REQ_CODE);
         }
     }
 

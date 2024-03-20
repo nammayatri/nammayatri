@@ -1302,3 +1302,6 @@ getEN stringKey =
         INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> "Get priority ride requests in a special pickup zone"
         SELECT_A_GREEN_AREA_FOR_PRIORITY_RIDES -> "Select a green area for priority rides"
         PRIORITY_RIDE_EXPIERENCE -> "Priority Ride Experience"
+        ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "Enable Location Permission to Get Rides"
+        ENABLE_LOC_PER_FROM_SETTINGS -> "Please enable location permissions from  settings to get non-stop rides"
+        ENABLE_PERMISSION_STR -> "Enable Permission"

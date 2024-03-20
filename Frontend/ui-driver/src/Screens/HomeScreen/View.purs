@@ -82,7 +82,7 @@ import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
-import Types.App (GlobalState, defaultGlobalState)
+import Types.App (GlobalState(..), defaultGlobalState)
 import Constants (defaultDensity)
 import Components.ErrorModal as ErrorModal
 import Timers
@@ -91,8 +91,8 @@ import CarouselHolder as CarouselHolder
 import PrestoDOM.List
 import Mobility.Prelude
 
-screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
-screen initialState =
+screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
+screen initialState (GlobalState globalState) =
   { initialState
   , view
   , name : "HomeScreen"
@@ -133,6 +133,7 @@ screen initialState =
             else if (initialState.data.driverGotoState.timerId /= "") then pure $ clearTimerWithId initialState.data.driverGotoState.timerId
             else pure unit
           when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
+          void $ launchAff $ flowRunner defaultGlobalState $ checkBgLocation push BgLocationAC initialState globalState.globalProps.bgLocPopupShown
           case localStage of
             "RideRequested"  -> do
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -291,7 +292,8 @@ view push state =
   ]
   where 
     showPopups = (DA.any (_ == true )
-      [ state.data.driverGotoState.gotoLocInRange,
+      [ state.props.bgLocationPopup,
+        state.data.driverGotoState.gotoLocInRange,
         state.data.driverGotoState.goToInfo,
         state.data.driverGotoState.confirmGotoCancel,
         state.props.accountBlockedPopup,
@@ -1816,6 +1818,7 @@ popupModals push state =
           ST.DisableGotoPopup -> disableGotoConfig state
           ST.AccountBlocked -> accountBlockedPopup state
           ST.VehicleNotSupported -> vehicleNotSupportedPopup state
+          ST.BgLocationPopup -> bgLocPopup state
       ]
   where 
   
@@ -1824,6 +1827,7 @@ popupModals push state =
       else if state.data.driverGotoState.confirmGotoCancel then ST.DisableGotoPopup
       else if state.props.accountBlockedPopup then ST.AccountBlocked
       else if state.props.vehicleNSPopup then ST.VehicleNotSupported
+      else if state.props.bgLocationPopup then ST.BgLocationPopup
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -1832,6 +1836,7 @@ popupModals push state =
           ST.DisableGotoPopup -> ConfirmDisableGoto
           ST.AccountBlocked -> AccountBlockedAC
           ST.VehicleNotSupported -> VehicleNotSupportedAC
+          ST.BgLocationPopup -> BgLocationPopupAC
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
@@ -1922,6 +1927,14 @@ launchMaps push action = do
     doAff do liftEffect $ push $ action
     else pure unit
   pure unit
+
+checkBgLocation :: forall action. (action -> Effect Unit) ->  action -> HomeScreenState -> Boolean -> Flow GlobalState Unit
+checkBgLocation push action state bgLocPopupShown = do
+  andv <- liftFlow $ JB.getAndroidVersion
+  bgp <- liftFlow $ JB.isBackgroundLocationEnabled unit
+  let onRide = (DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer])
+  if not bgLocPopupShown && andv >= 14 && not bgp && not onRide then doAff do liftEffect $ push $ action
+  else pure unit
 
 computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
 computeListItem push = do

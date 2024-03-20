@@ -635,6 +635,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     toast("Permission Denied");
                 }
                 break;
+            case BACKGROUND_LOCATION_REQ_CODE :
+                Utils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
+                break;
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }

@@ -1102,6 +1102,7 @@ type HomeScreenProps =  {
   tobeLogged :: Boolean,
   safetyAudioAutoPlay :: Boolean,
   vehicleNSPopup :: Boolean,
+  bgLocationPopup :: Boolean,
   specialZoneProps :: SpecialZoneProps
  }
 
@@ -1802,7 +1803,8 @@ type GlobalProps = {
   driverRideStats :: Maybe DriverProfileStatsResp,
   callScreen :: ScreenName,
   gotoPopupType :: GoToPopUpType,
-  addTimestamp :: Boolean
+  addTimestamp :: Boolean,
+  bgLocPopupShown :: Boolean
 }
 
 --------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
@@ -2149,7 +2151,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow

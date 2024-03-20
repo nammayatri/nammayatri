@@ -1302,3 +1302,6 @@ getTE stringKey =
         INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> "ప్రత్యేక పికప్ జోన్‌లో ప్రాధాన్యత గల రైడ్ అభ్యర్థనలను పొందండి"
         SELECT_A_GREEN_AREA_FOR_PRIORITY_RIDES -> "ప్రాధాన్యత గల రైడ్ కోసం పచ్చ ప్రాంతం ఎంచుకోండి"
         PRIORITY_RIDE_EXPIERENCE -> "ప్రాధాన్యత గల రైడ్ అనుభవం"
+        ENABLE_LOC_PERMISSION_TO_GET_RIDES -> "రైడ్‌లను పొందడానికి లొకేషన్ అనుమతిని ఇవ్వండి"
+        ENABLE_LOC_PER_FROM_SETTINGS -> "నాన్‌స్టాప్ రైడ్‌లను పొందడానికి దయచేసి సెట్టింగ్‌ల నుండి లొకేషన్ అనుమతులను ఇవ్వండి"
+        ENABLE_PERMISSION_STR -> "అనుమతిని ప్రారంభించు"
