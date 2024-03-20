@@ -99,6 +99,9 @@ dependencies:
   - warp
   - warp-tls
   - cereal
+  - postgresql-simple
+  - scientific
+  - filepath
 
 ghc-options:
   - -fwrite-ide-info
@@ -128,10 +131,7 @@ library:
           - -O2
           - -j4
   dependencies:
-    - dynamic-offer-driver-app
     - mobility-core
-    - payment
-    - shared-services
 
 executables:
   dynamic-offer-driver-drainer-exe:
@@ -158,6 +158,4 @@ executables:
           - -j4
     dependencies:
       - dynamic-offer-driver-drainer
-      - dynamic-offer-driver-app
       - mobility-core
-      - shared-services
