@@ -6,11 +6,11 @@ if (typeof __VERSION__ !== "undefined") {
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KL",
-    "DOCUMENT_LINK": "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0",
+    "RC_VALIDATION_TEXT": "KL|KA|AP|TS|DL|TN|PY|UP|HR|TG",
+    "DOCUMENT_LINK": "https://docs.google.com/document/d/17fnfcDCd2KNKSJjFQmEwm7TqsBIOt7kA/edit?usp=sharing&ouid=115428839751313950285&rtpof=true&sd=true",
     "APP_LINK": "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner",
     "USER_APP_LINK": "https://yatricustomer.page.link/pcJb",
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
+    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1j7REROF75Rpgx65if5guFpqtEKXqCY9O/edit?usp=sharing&ouid=115428839751313950285&rtpof=true&sd=true",
     "SPECIAL_ZONE_OTP_VIEW": "false",
     "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CORPORATE_ADDRESS", "CORPORATE_ADDRESS_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS", "REGISTERED_ADDRESS_DESCRIPTION", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL", "REFERRED_DRIVERS_INFO", "REFERRED_CUSTOMERS_INFO", "DOWNLOAD_NAMMA_YATRI", "SHARE_NAMMA_YATRI"],
     "fontType": "Assets",
@@ -38,7 +38,8 @@ window.getMerchantConfig = function () {
       "name": "മലയാളം",
       "value": "ML_IN",
       "subtitle": "Malayalam"
-    }
+    },
+    {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
     ],
     "engilshInNative" : "ഇംഗ്ലീഷ്",
     "englishStrings": {
@@ -86,9 +87,9 @@ window.getMerchantConfig = function () {
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-    , "termsLink" : "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
+    , "termsLink" : "https://docs.google.com/document/d/17fnfcDCd2KNKSJjFQmEwm7TqsBIOt7kA/edit?usp=drive_link&ouid=115428839751313950285&rtpof=true&sd=true"
     , "termsVersion" : 1.0
-    , "privacyLink" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8"
+    , "privacyLink" : "https://docs.google.com/document/d/1j7REROF75Rpgx65if5guFpqtEKXqCY9O/edit?usp=sharing&ouid=115428839751313950285&rtpof=true&sd=true"
     , "feature" : {
       "enableBonus" : false
       , "enableImageUpload" : true
@@ -135,7 +136,337 @@ window.getMerchantConfig = function () {
         { 
           "showNew" : true
         }
-    }
+    },
+    "cityConfig" : [
+      {
+        "cityName" : "Bangalore",
+        "mapImage" : "ny_ic_bangalore_map",
+        "cityCode" : "std:080",
+        "showSubscriptions" : true,
+        "cityLat" : 12.971599,
+        "cityLong" : 77.594566,
+        "supportNumber" : "",
+        "languageKey" : "KN_IN",
+        "showDriverReferral" : false,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : true,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+            "supportWAN" : "918618963188",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : true,
+          "variantList" : ["AutoCategory"]
+        },
+        "showEarningSection" : true,
+        "referral" : {
+            "domain" : "https://nammayatri.in"
+          , "customerAppId" : "in.juspay.nammayatri"
+          , "driverAppId" : "in.juspay.nammayatripartner"
+        }
+      },
+      {
+        "cityName" : "Hyderabad",
+        "mapImage" : "ny_ic_hyderabad_map",
+        "cityCode" : "std:040",
+        "showSubscriptions" : false,
+        "cityLat" : 17.402113,
+        "cityLong" : 78.499827,
+        "supportNumber" : "+918069724900",
+        "languageKey" : "TE_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "919392636637",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : true,
+        "referral" : {
+            "domain" : "https://www.manayatri.in"
+          , "customerAppId" : "in.mobility.manayatri"
+          , "driverAppId" : "in.mobility.manayatripartner"
+        }
+      },
+      {
+        "cityName" : "Mysore",
+        "mapImage" : "ny_ic_mysuru_map",
+        "cityCode" : "std:0821",
+        "showSubscriptions" : true,
+        "cityLat" : 12.295810,
+        "cityLong" : 76.639381,
+        "supportNumber" : "",
+        "languageKey" : "KN_IN",
+        "showDriverReferral" : false,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : true,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+            "supportWAN" : "918618963188",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
+      },
+      {
+        "cityName" : "Delhi",
+        "mapImage" : "ny_ic_delhi_map",
+        "cityCode" : "std:011",
+        "showSubscriptions" : false,
+        "cityLat" : 28.618978,
+        "cityLong" : 77.207795,
+        "supportNumber" : "+918069724848",
+        "languageKey" : "HI_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+            "supportWAN" : "919625724848",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
+      },
+      {
+        "cityName" : "Chennai",
+        "mapImage" : "ny_ic_chennai_map",
+        "cityCode" : "std:044",
+        "showSubscriptions" : false,
+        "cityLat" : 13.067439,
+        "cityLong" : 80.237617,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+            "supportWAN" : "917483117936",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : false,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
+      },
+      {
+        "cityName" : "Coimbatore",
+        "mapImage" : "ny_ic_coimbatore_map",
+        "cityCode" : "std:0422",
+        "showSubscriptions" : false,
+        "cityLat" : 11.023481,
+        "cityLong" : 76.966429,
+        "supportNumber" : "",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+            "supportWAN" : "",
+            "callSupport" : true,
+            "whatsappSupport" : false
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
+      },
+      {
+        "cityName" : "Puducherry",
+        "mapImage" : "ny_ic_puducherry_map",
+        "cityCode" : "std:0413",
+        "showSubscriptions" : false,
+        "cityLat" : 11.943852,
+        "cityLong" : 79.808292,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+          "supportWAN" : "917483117936",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : false,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
+      },
+      {
+        "cityName" : "Tumakuru",
+        "mapImage" : "ny_ic_tumakuru_map",
+        "cityCode" : "std:0816",
+        "showSubscriptions" : true,
+        "cityLat" : 15.32383804957557,
+        "cityLong" : 75.88071672412116,
+        "supportNumber" : "",
+        "languageKey" : "KN_IN",
+        "showDriverReferral" : false,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : true,
+        "registration" : {
+          "supportWAN" : "918618963188",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
+      },
+      {
+        "cityName" : "Gurugram",
+        "mapImage" : "ny_ic_gurugram_map",
+        "cityCode" : "std:0124",
+        "showSubscriptions" : false,
+        "cityLat" : 28.457523,
+        "cityLong" : 77.026344,
+        "supportNumber" : "+918069724848",
+        "languageKey" : "HI_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image",
+        "registration" : {
+          "supportWAN" : "919625724848",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
+      },
+      {
+        "cityName" : "Noida",
+        "mapImage" : "ny_ic_noida_map",
+        "cityCode" : "std:01189",
+        "showSubscriptions" : false,
+        "cityLat" : 28.535517,
+        "cityLong" : 77.391029,
+        "supportNumber" : "+918069724848",
+        "languageKey" : "HI_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "919625724848",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : true,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
+      },
+      {
+        "cityName" : "TamilNaduCities",
+        "mapImage" : "ny_ic_tamilnadu_map",
+        "cityCode" :  "std:0422",
+        "showSubscriptions" : false,
+        "cityLat" : 11.1271,
+        "cityLong" : 78.6569,
+        "supportNumber" : "08069724899",
+        "languageKey" : "TA_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "registration" : {
+          "supportWAN" : "917483117936",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "variantSubscriptionConfig" : {
+          "enableVariantBasedSubscription" : false,
+          "variantList" : []
+        },
+        "showEarningSection" : false,
+        "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      }
+      }
+  ]
   , "profile" : {
       "checkRCStatusForBookingOption" : false
     }
