@@ -62,7 +62,6 @@ instance loggableAction :: Loggable Action where
         NoAction -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "no_action"
         PopUpModalLogoutAction act -> case act of
             PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "on_goback"
-            PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "tip_button_click"
             PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "dismiss_popup"
             PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "call_support"
             PopUpModal.NoAction -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "no_action"

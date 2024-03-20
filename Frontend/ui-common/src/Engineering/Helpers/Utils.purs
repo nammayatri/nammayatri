@@ -47,7 +47,7 @@ import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, dela
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Data.Array (elem)
+import Data.Array (elem, slice, cons)
 import Data.Array as DA
 import Data.Tuple (Tuple(..), fst, snd)
 import ConfigProvider
@@ -377,3 +377,12 @@ findValueFromTuples tuples key =
   in case tuple of
         Just (Tuple _ b) -> Just b
         Nothing          -> Nothing
+
+splitIntoEqualParts :: forall a. Int -> Array a -> Array (Array a)
+splitIntoEqualParts _ [] = []
+splitIntoEqualParts n arr =
+  let 
+    part = slice 0 n arr
+    rest = slice n (DA.length arr) arr
+  in 
+    cons part (splitIntoEqualParts n rest)

@@ -176,8 +176,8 @@ initData = {
     , zoneTimerExpired : false
     , customerTip : {
         enableTips: false
-      , tipForDriver: 10
-      , tipActiveIndex: 1
+      , tipForDriver: 0
+      , tipActiveIndex: -1
       , isTipSelected: false
       }
     , searchId : ""
@@ -237,8 +237,8 @@ initData = {
       , isprimaryButtonVisible : false
       , primaryText : ""
       , secondaryText : ""
-      , customerTipArray : ["₹10 🙂", "₹20 😄", "₹30 🤩"]
-      , customerTipArrayWithValues : [10, 20, 30]
+      , customerTipArray : []
+      , customerTipArrayWithValues : []
       , activeIndex : -1
       , primaryButtonText : ""
       }
