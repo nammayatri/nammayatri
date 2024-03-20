@@ -487,9 +487,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     
     private void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
+            String formattedPickupChargesText = getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(model.getDriverPickUpCharges()));
             String pickupChargesText = model.getCustomerTip() > 0 ?
-                    getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
-                    getString(R.string.includes_pickup_charges_10);
+                    formattedPickupChargesText + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
+                    formattedPickupChargesText;
             if (model.getSpecialZoneExtraTip() > 0) {
                 String pickUpChargesWithZone = pickupChargesText + " " + getString(R.string.and) + " " + sharedPref.getString("CURRENCY", "₹") + " " + model.getSpecialZoneExtraTip() + " " + getString(R.string.zone_pickup_extra);
                 holder.textIncludesCharges.setText(pickUpChargesWithZone);
