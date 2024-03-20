@@ -171,10 +171,14 @@ public class LocationUpdateService extends Service {
         initialiseJSONObjects();
         context = getApplicationContext();
         isLocationUpdating = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            this.startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        } else{
-            this.startForeground(notificationServiceId, createNotification());
+        try{
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                this.startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            } else{
+                this.startForeground(notificationServiceId, createNotification());
+            }
+        }catch (Exception e) {
+            Log.e(LOG_TAG, "Error in onCreate -> ", e);
         }
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         fusedLocClientForDistanceCal = LocationServices.getFusedLocationProviderClient(this);
@@ -222,10 +226,14 @@ public class LocationUpdateService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         /* Start the service if the driver is active*/
         Log.i("LOCATION_UPDATE_WORKER", "Location update service is started");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        }else {
-            startForeground(notificationServiceId, createNotification());
+        try{
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            }else {
+                startForeground(notificationServiceId, createNotification());
+            }
+        }catch (Exception e){
+            Log.e(LOG_TAG, "Error in onStartCommand -> ",e);
         }
 
         if (intent != null) {

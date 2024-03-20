@@ -71,10 +71,14 @@ public class GpsListeningService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        }else {
-            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        try{
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            }else {
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+            }
+        }catch (Exception e){
+            Log.e(LOG_TAG, "Error in onStartCommand -> ", e);
         }
         IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
         registerReceiver(gpsReceiver, intentFilter);
@@ -90,10 +94,14 @@ public class GpsListeningService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-        }else{
-            startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        try{
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            }else{
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+            }
+        }catch (Exception e){
+            Log.e(LOG_TAG, "Error in onCreate -> ", e);
         }
     }
 
