@@ -378,6 +378,7 @@ data Action = NoAction
             | UpdateSpecialLocation
             | SpecialZonePopup
             | SpecialZoneCardAC RequestInfoCard.Action
+            | SwitchBookingStage String
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -1152,6 +1153,12 @@ eval (GoToEarningsScreen showCoinsView) state = do
 
 eval (DriverStats driverStats) state = do
   exit $ DriverStatsUpdate driverStats
+
+eval (SwitchBookingStage stage) state = continue state {
+  props {
+    bookingStage = stage
+  }
+}
 
 eval _ state = continue state
 

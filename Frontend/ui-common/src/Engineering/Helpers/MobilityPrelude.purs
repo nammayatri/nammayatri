@@ -24,6 +24,7 @@ import Data.Tuple (Tuple(..))
 import Data.Int (pow)
 import Data.Function.Uncurried (Fn3(..), runFn3)
 import Data.String as DS
+import Effect (Effect)
 
 foreign import swapElements :: forall a. Fn3 Int Int (Array a) (Array a)
 
@@ -114,3 +115,6 @@ findStringWithPrefix prefix arr = DA.filter (\item -> startsWith prefix item) ar
 
 startsWith :: String -> String -> Boolean
 startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)
+
+noView :: forall w . PD.PrestoDOM (Effect Unit) w
+noView = PD.textView [ PD.width $ PD.V 0 , PD.height $ PD.V 0, PD.visibility PD.GONE]

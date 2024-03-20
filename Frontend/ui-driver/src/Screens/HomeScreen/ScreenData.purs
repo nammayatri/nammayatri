@@ -213,7 +213,8 @@ initData = {
         tobeLogged : false,
         safetyAudioAutoPlay : false,
         vehicleNSPopup : false,
-        specialZoneProps : { specialZonePopup : false, nearBySpecialZone : false, currentGeoHash : "" }
+        specialZoneProps : { specialZonePopup : false, nearBySpecialZone : false, currentGeoHash : "" },
+        bookingStage : "Current"
     }
 }
 

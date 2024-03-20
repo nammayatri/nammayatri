@@ -436,6 +436,7 @@
       "ny_ic_suv_nav_on_map" : true,
       "ny_ic_switch_active" : true,
       "ny_ic_switch_inactive" : true,
+      "ny_ic_test_request_icon_white" : true,
       "ny_ic_thanks" : true,
       "ny_ic_tick" : true,
       "ny_ic_tick_black_white" : true,
