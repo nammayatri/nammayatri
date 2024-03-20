@@ -106,11 +106,14 @@ public class ChatService extends Service {
         merchant = getApplicationContext().getResources().getString(R.string.service);
         merchantType = merchant.contains("partner") || merchant.contains("driver") || merchant.contains("provider") ? "DRIVER" : "USER";
         sharedPrefs = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            );
-        }else {
-            this.startForeground(serviceNotificationID, createNotification());
+        try{
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            }else {
+                this.startForeground(serviceNotificationID, createNotification());
+            }
+        }catch (Exception e){
+            Log.e(LOG_TAG, "Error in onCreate ", e);
         }
         if (sharedPrefs != null) {
             chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");
@@ -122,10 +125,14 @@ public class ChatService extends Service {
         sendMessageCallBackOverlay = this::sendMessages;
         MessageOverlayService.registerSendMessageCallBack(sendMessageCallBackOverlay);
         if (!isChatServiceRunning) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-            }else {
-                this.startForeground(serviceNotificationID, createNotification());
+            try{
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+                }else {
+                    this.startForeground(serviceNotificationID, createNotification());
+                }
+            }catch (Exception e){
+                Log.e(LOG_TAG, "Error in onCreate -> ", e);
             }
             FirebaseUser user = firebaseAuth.getCurrentUser();
             if (user != null) {
@@ -139,10 +146,14 @@ public class ChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-        }else{
-            this.startForeground(serviceNotificationID, createNotification());
+        try{
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            }else {
+                this.startForeground(serviceNotificationID, createNotification());
+            }
+        }catch (Exception e){
+            Log.e(LOG_TAG, "Error in onStartCommand ", e);
         }
         handleMessages();
         return START_STICKY;
