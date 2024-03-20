@@ -562,8 +562,8 @@ getPoolRadiusStep searchTryId = do
     Just i -> return i
     Nothing -> do
       let expTime = 600
-      Redis.withCrossAppRedis $ Redis.setExp (poolRadiusStepKey searchTryId) (-1 :: Integer) expTime
-      return (-1)
+      Redis.withCrossAppRedis $ Redis.setExp (poolRadiusStepKey searchTryId) (0 :: Integer) expTime
+      return 0
 
 incrementPoolRadiusStep ::
   ( Redis.HedisFlow m r
